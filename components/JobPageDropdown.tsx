@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { Forward, MoreHorizontal, Sparkle } from "lucide-react";
+import { Forward, MoreHorizontal } from "lucide-react";
 import toast from "react-hot-toast";
 export default function JobPageDropdown() {
   return (
@@ -26,10 +26,6 @@ export default function JobPageDropdown() {
           <Forward className="h-4 w-4" />
           Share Job
         </DropdownMenuItem>
-        {/* <DropdownMenuItem disabled>
-          <Sparkle className="h-4 w-4" />
-          Summarize using AI (Coming Soon)
-        </DropdownMenuItem> */}
       </DropdownMenuContent>
     </DropdownMenu>
   );
