@@ -71,7 +71,7 @@ export default function JobDescriptionCard({
 
   const handleAISummary = () => {
     if (!user) {
-      router.push("/auth/sign-up");
+      router.push("/auth/sign-up?returnTo=/jobs/" + job.id);
       return;
     } else {
       if (isAISummary) {
@@ -113,7 +113,7 @@ export default function JobDescriptionCard({
             </CardTitle>
             {page === "all-jobs" && (
               <Button
-                variant={"ghost"}
+                variant={"link"}
                 className="underline pl-0 sm:pl-3"
                 onClick={handleAISummary}
                 // Disable button while loading or if description is missing
