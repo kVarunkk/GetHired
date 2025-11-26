@@ -93,7 +93,7 @@ export default async function JobPostPage({
         {/* --- Job Details Section --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Details Card */}
-          <JobDescriptionCard job={job} />
+          <JobDescriptionCard job={job} page={"job-posts"} />
 
           {/* Key Metrics/Details Sidebar */}
           <div className="grid gap-4">

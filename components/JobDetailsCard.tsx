@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ArrowDown, Loader2, Sparkle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { IJob } from "@/lib/types"; // Assuming IJob is fully typed
+import { IJob, IJobPosting } from "@/lib/types"; // Assuming IJob is fully typed
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import { User } from "@supabase/supabase-js";
@@ -13,15 +13,19 @@ import { useRouter } from "next/navigation";
 export default function JobDescriptionCard({
   job,
   user,
+  page = "all-jobs",
 }: {
-  job: IJob;
-  user: User | null;
+  job: IJob | IJobPosting;
+  user?: User | null;
+  page?: "job-posts" | "all-jobs";
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAISummary, setIsAISummary] = useState(false);
 
   // Initialize state with the existing summary from the server prop
-  const [aiSummary, setAiSummary] = useState(job.ai_summary);
+  const [aiSummary, setAiSummary] = useState(
+    page === "all-jobs" ? (job as IJob).ai_summary : null
+  );
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -79,9 +83,9 @@ export default function JobDescriptionCard({
         if (aiSummary) {
           // Summary already exists in state, just show it
           setIsAISummary(true);
-        } else if (job.ai_summary) {
+        } else if ((job as IJob).ai_summary) {
           // Summary exists on the job prop (first time after server render), use it
-          setAiSummary(job.ai_summary);
+          setAiSummary((job as IJob).ai_summary);
           setIsAISummary(true);
         } else {
           // Case 3: Summary does not exist, initiate API call
@@ -107,27 +111,29 @@ export default function JobDescriptionCard({
             <CardTitle className="text-xl font-semibold">
               Job Description
             </CardTitle>
-            <Button
-              variant={"ghost"}
-              className="underline pl-0 sm:pl-3"
-              onClick={handleAISummary}
-              // Disable button while loading or if description is missing
-              disabled={isLoading || !job.description}
-            >
-              {!isLoading && !isAISummary && <Sparkle className="h-4 w-4 " />}
-              {isLoading ? (
-                <>
-                  {/* <Loader2 className="animate-spin h-4 w-4 mr-2" />{" "} */}
-                  Processing...
-                </>
-              ) : !user ? (
-                "Sign up to Summarize with AI"
-              ) : isAISummary ? (
-                "Show Original"
-              ) : (
-                "Summarize with AI"
-              )}
-            </Button>
+            {page === "all-jobs" && (
+              <Button
+                variant={"ghost"}
+                className="underline pl-0 sm:pl-3"
+                onClick={handleAISummary}
+                // Disable button while loading or if description is missing
+                disabled={isLoading || !job.description}
+              >
+                {!isLoading && !isAISummary && <Sparkle className="h-4 w-4 " />}
+                {isLoading ? (
+                  <>
+                    {/* <Loader2 className="animate-spin h-4 w-4 mr-2" />{" "} */}
+                    Processing...
+                  </>
+                ) : !user ? (
+                  "Sign up to Summarize with AI"
+                ) : isAISummary ? (
+                  "Show Original"
+                ) : (
+                  "Summarize with AI"
+                )}
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent
