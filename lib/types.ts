@@ -119,6 +119,7 @@ export interface IJob {
   job_postings?: IJobPosting[];
   applications?: IApplication[];
   status: "active" | "inactive";
+  ai_summary?: string;
 }
 
 export interface IJobPosting {

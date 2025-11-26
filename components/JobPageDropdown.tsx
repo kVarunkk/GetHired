@@ -26,10 +26,10 @@ export default function JobPageDropdown() {
           <Forward className="h-4 w-4" />
           Share Job
         </DropdownMenuItem>
-        <DropdownMenuItem disabled>
+        {/* <DropdownMenuItem disabled>
           <Sparkle className="h-4 w-4" />
           Summarize using AI (Coming Soon)
-        </DropdownMenuItem>
+        </DropdownMenuItem> */}
       </DropdownMenuContent>
     </DropdownMenu>
   );
