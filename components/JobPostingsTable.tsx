@@ -105,7 +105,12 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
           </Button>
         ),
         cell: ({ row }) => (
-          <div className="font-medium">{row.original.title}</div>
+          <Link
+            href={`/company/job-posts/${row.original.id}`}
+            className="font-medium hover:underline"
+          >
+            {row.original.title}
+          </Link>
         ),
         filterFn: "includesString",
       },

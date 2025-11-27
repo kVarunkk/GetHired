@@ -172,3 +172,13 @@ export function getTimeLeftHours(): number {
   // Ensure the minimum return value is 0 (or 24 if just reset)
   return Math.max(0, hours);
 }
+
+export function currentPathEncoded() {
+  if (typeof window === "undefined") return "/";
+
+  // Get the full path including search parameters (e.g., /jobs?filter=true)
+  const fullPath = window.location.pathname + window.location.search;
+
+  // IMPORTANT: Use encodeURIComponent to ensure characters like & or ? don't break the URL.
+  return encodeURIComponent(fullPath);
+}

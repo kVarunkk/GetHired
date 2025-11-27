@@ -5,17 +5,26 @@ import { Button } from "./ui/button";
 import Image from "next/image";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 export default function GoogleAuthBtn() {
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
       const supabase = createClient();
+      const returnToPath = searchParams.get("returnTo");
+      let callbackUrl = `${window.location.origin}/auth/callback`;
+
+      if (returnToPath) {
+        callbackUrl += `?next=${encodeURIComponent(returnToPath)}`;
+      }
       await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl,
         },
       });
     } catch {
