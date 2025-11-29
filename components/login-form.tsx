@@ -68,6 +68,8 @@ export function LoginForm({
   const isCompany = searchParams.get("company") === "true";
   const startProgress = useProgress();
 
+  const returnToPath = searchParams.get("returnTo");
+
   const form = useForm({
     resolver: zodResolver(loginSchema(isCompany)),
     defaultValues: {
@@ -92,7 +94,7 @@ export function LoginForm({
         if (isCompany) {
           router.push("/company");
         } else {
-          router.push("/jobs");
+          router.push(returnToPath ?? "/jobs");
         }
       });
     } catch (error) {
@@ -193,7 +195,9 @@ export function LoginForm({
                 Don&apos;t have an account?{" "}
                 <Link
                   href={
-                    isCompany ? "/auth/sign-up?company=true" : "/auth/sign-up"
+                    isCompany
+                      ? "/auth/sign-up?company=true"
+                      : "/auth/sign-up?returnTo=" + returnToPath
                   }
                   className="underline underline-offset-4"
                 >

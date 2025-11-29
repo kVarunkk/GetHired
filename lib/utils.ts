@@ -182,3 +182,12 @@ export function currentPathEncoded() {
   // IMPORTANT: Use encodeURIComponent to ensure characters like & or ? don't break the URL.
   return encodeURIComponent(fullPath);
 }
+
+export function isValidUrl(url_string: string) {
+  try {
+    new URL(url_string);
+    return true;
+  } catch {
+    return false;
+  }
+}
