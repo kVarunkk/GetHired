@@ -73,6 +73,8 @@ export function SignUpForm({
   const isCompany = searchParams.get("company") === "true";
   const startProgress = useProgress();
 
+  const returnToPath = searchParams.get("returnTo");
+
   const form = useForm({
     resolver: zodResolver(signUpSchema(isCompany)),
     defaultValues: {
@@ -242,7 +244,11 @@ export function SignUpForm({
               <div className="mt-4 text-center text-sm">
                 Already have an account?{" "}
                 <Link
-                  href={isCompany ? "/auth/login?company=true" : "/auth/login"}
+                  href={
+                    isCompany
+                      ? "/auth/login?company=true"
+                      : "/auth/login?returnTo=" + returnToPath
+                  }
                   className="underline underline-offset-4"
                 >
                   Login

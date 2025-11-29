@@ -13,7 +13,6 @@ import { allJobsSelectString } from "@/lib/filterQueryBuilder";
 import { Metadata } from "next";
 
 import JobPageDropdown from "@/components/JobPageDropdown";
-import JobsFeedback from "@/components/JobFeedback";
 // import JobSchema from "@/components/jsonLdSchema";
 
 export async function generateMetadata({
@@ -142,7 +141,7 @@ export default async function JobPage({
               <p className="text-sm text-muted-foreground mt-2">
                 Posted on {format(new Date(job.created_at), "PPP")}
               </p>
-              {user && <JobsFeedback jobId={job_id} user={user} />}
+              {/* {user && <JobsFeedback jobId={job_id} user={user} />} */}
             </div>
             <div className="flex items-center gap-4">
               <JobApplyBtn

@@ -183,6 +183,8 @@ export interface IFormData {
   is_promotion_active?: boolean;
   is_job_digest_active?: boolean;
   ai_global_jobs_search_uses?: number;
+  linkedin_url?: string;
+  github_url?: string;
 }
 
 export interface ICompanyInfo {

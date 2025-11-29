@@ -9,6 +9,9 @@ import ProfileFavoriteStar from "@/components/ProfileFavoriteStar";
 import { buildSalaryRange } from "../../applicants/[applicant_id]/page";
 import ProfileActiveApplication from "@/components/ProfileActiveApplications";
 import SelectProfile from "@/components/SelectProfile";
+import { Mail } from "lucide-react";
+import Link from "next/link";
+import { GitHubLogoIcon, LinkedInLogoIcon } from "@radix-ui/react-icons";
 
 export default async function ProfilePage({
   params,
@@ -99,7 +102,33 @@ export default async function ProfilePage({
                 companyId={companyData.id}
               />
             </div>
-            <p className="text-muted-foreground">{applicantProfile.email}</p>
+            {/* <p className="text-muted-foreground">{applicantProfile.email}</p> */}
+            <div className="flex items-center gap-2">
+              <Link
+                href={`mailto:${applicantProfile.email}`}
+                className=" text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Mail className="h-6 w-6" />
+              </Link>
+              {applicantProfile.linkedin_url && (
+                <Link
+                  target="_blank"
+                  href={applicantProfile.linkedin_url}
+                  className=" text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <LinkedInLogoIcon className="h-6 w-6" />
+                </Link>
+              )}
+              {applicantProfile.github_url && (
+                <Link
+                  target="_blank"
+                  href={applicantProfile.github_url}
+                  className=" text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <GitHubLogoIcon className="h-6 w-6" />
+                </Link>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-5">
             <SelectProfile
@@ -117,19 +146,6 @@ export default async function ProfilePage({
           {/* Left Panel: Applicant Info Card */}
           <div className="md:col-span-1 space-y-4">
             <Card>
-              {/* <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>{applicantProfile.full_name || "N/A"}</CardTitle>
-                  {isFavorite && (
-                    <Badge variant="secondary" className="text-sm">
-                      Favorited
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {applicantProfile.email}
-                </p>
-              </CardHeader> */}
               <CardContent>
                 <div className="space-y-4 pt-5">
                   {signedUrl && (

@@ -121,7 +121,7 @@ export default function JobApplyBtn({
       ) : (
         <Link
           onClick={(e) => e.stopPropagation()}
-          href={"/auth/sign-up"}
+          href={"/auth/sign-up?returnTo=/jobs/" + job.id}
           rel="noopener noreferrer"
         >
           <Button>
