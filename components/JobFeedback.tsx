@@ -11,7 +11,6 @@ export default function JobsFeedback({
   jobId: string;
   user: User;
 }) {
-  console.log(jobId, user);
   return (
     <div className="flex items-center  text-sm mt-2">
       <Button
