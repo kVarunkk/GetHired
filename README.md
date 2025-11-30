@@ -1,91 +1,41 @@
-# GetHired: The AI-Powered Job and Candidate Platform
+# GetHired: Your Smartest Path To The Perfect Job
 
-**GetHired** is a full-stack application designed to streamline the hiring process for both job seekers and companies. The platform uses AI to provide a personalized experience, helping job seekers find the most relevant roles and enabling companies to discover the best-fit candidates for their job postings.
+[**GetHired**](https://gethired.devhub.co.in) is a modern, full-stack platform engineered to eliminate friction in the tech hiring market. We leverage Generative AI and vector search to provide unparalleled relevance, matching job seekers with ideal roles and enabling companies to hire quality talent instantly.
 
-## ✨ Features
+## Core Value Proposition
 
-### For Job Seekers:
+We are building the **Hyper-Personalized Job Feed**. We don't just search for keywords; we use conversational AI to understand user intent and match profiles based on skills, experience, and motivation.
 
-- **Personalized Job Matching:** AI-powered recommendations based on your profile, skills, and preferences.
+## Key Features and Benefits
 
-- **Job Board:** A comprehensive list of all available job postings with powerful filtering and sorting options.
+### For Job Seekers (Finding the Right Fit)
 
-- **Application Tracking:** Track the status of your job applications from submission to final decision.
+| **Feature** | **Benefit** |
+| :--- | :--- |
+| **Natural Language Search** | Type your dream job in plain English (e.g., "Remote Python jobs in NYC, min $150k")—our AI builds the filters instantly. |
+| **Personalized AI Matching** | Uses vector embeddings of your resume/profile to rank job relevance, ensuring you see the best roles first. |
+| **Weekly Job Digest** | Receive a curated email digest of the top 10 most suitable jobs, reducing time spent scrolling. |
+| **Simplified Authentication** | One-click login with Google; no separate passwords or complex forms required. |
+| **Full Application Tracking** | Manage and track the status of all your applications (Submitted, Reviewed, Interview, etc.). |
 
-- **Favorite Jobs:** Save job postings you're interested in for future reference.
+### For Companies (Finding the Right Candidate)
 
-### For Companies:
+| **Feature** | **Benefit** |
+| :--- | :--- |
+| **AI Candidate Re-Ranking** | Upload a job description and instantly re-rank applicants based on technical alignment and fit. |
+| **Instant Candidate Insights** | Quickly find the perfect match by filtering and searching candidate profiles based on AI-derived data. |
+| **Dedicated ATS Dashboard** | Streamlined management interface to view applications, update status, and manage interview pipelines. |
+| **Secure Resume Handling** | Resumes are managed securely in private Supabase Storage buckets, accessible only by authorized company users. |
 
-- **Job Post Management:** A dedicated dashboard to create, edit, and manage all your job postings.
+## Technology Stack & Architecture
 
-- **Applicant Tracking System (ATS):** View all applicants for each job posting, with the ability to filter and update their status.
+GetHired is built on a modern, high-performance stack designed for speed and scalability:
 
-- **AI-Powered Candidate Search:** Re-rank and filter candidate profiles based on a specific job's requirements to find the perfect fit.
-
-- **Secure Resume Management:** Resumes are securely handled and stored in a private bucket, accessible only by authorized company users.
-
-## 🛠️ Technology Stack
-
-- **Frontend:** **Next.js 15** with **React** for a performant and modern user interface.
-
-- **Styling:** **Tailwind CSS** for rapid and responsive UI development, with **Shadcn UI** components for a beautiful design.
-
-- **Backend:** **FastAPI** for the AI-powered search and embedding generation.
-
-- **Database:** **Supabase** (PostgreSQL) for authentication, database management, and file storage.
-
-- **AI/Vector Search:** **Google Gemini API** for re-ranking profiles and **`pgvector`** for storing and querying vector embeddings directly in PostgreSQL.
-
-<!-- ## 🚀 Getting Started
-
-To get the project up and running locally, follow these steps:
-
-1.  **Clone the repository:**
-
-    ```bash
-    git clone [https://github.com/your-username/your-app.git](https://github.com/your-username/your-app.git)
-    cd your-app
-    ```
-
-2.  **Install dependencies:**
-
-    ```bash
-    npm install
-    ```
-
-3.  **Set up Supabase:**
-
-    - Create a new project on [Supabase](https://supabase.com/).
-
-    - Copy your Project URL and Anon Key.
-
-    - Set up your database tables and RLS policies as defined in the `supabase/schemas` directory (if applicable).
-
-4.  **Configure Environment Variables:**
-
-    - Create a `.env.local` file in the root of your project.
-
-    - Add your Supabase credentials:
-
-      ```
-      NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
-      NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-      ```
-
-    - Add your Google API key for AI features.
-
-      ```
-      GOOGLE_API_KEY=YOUR_GOOGLE_API_KEY
-      ```
-
-5.  **Run the development server:**
-
-    ```bash
-    npm run dev
-    ```
-
-    Open [http://localhost:3000](https://www.google.com/search?q=http://localhost:3000) in your browser to see the result.
-
-## 🤝 Contribution
-
-We welcome contributions! If you have suggestions for new features, bug fixes, or improvements to the documentation, feel free to open an issue or submit a pull request. -->
+| **Layer** | **Technology** | **Purpose** |
+| :--- | :--- | :--- |
+| **Frontend/UI** | **Next.js (App Router)** | Performant, server-first rendering and routing. |
+| **Styling/Components** | **Tailwind CSS, Shadcn UI** | Rapid, responsive design and accessibility-focused components. |
+| **Authentication** | **Supabase Auth / Google OAuth** | Secure, passwordless authentication and user management. |
+| **Database/Storage** | **Supabase (PostgreSQL)** | Primary database, secure file storage, and real-time user preference tracking. |
+| **Vector Search Engine** | **`pgvector` (HNSW Index)** | High-speed similarity search for job and user embeddings, run directly in the database. |
+| **AI/LLM Processing** | **Vercel AI SDK / FastAPI** | Used for structured query parsing (Natural Language Search) and external AI re-ranking. |
