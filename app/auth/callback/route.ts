@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { SupabaseClient, User } from "@supabase/supabase-js";
+import { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 async function handleUserUpsert(user: User) {
