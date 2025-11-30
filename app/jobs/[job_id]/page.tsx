@@ -156,7 +156,11 @@ export default async function JobPage({
           {/* Details Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Details Card */}
-            <JobDescriptionCard job={job} user={user} />
+            <JobDescriptionCard
+              job={job}
+              user={user}
+              isCompanyUser={isCompanyUser}
+            />
 
             {/* Key Metrics/Details Sidebar */}
             <div className="grid gap-4">

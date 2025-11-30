@@ -20,7 +20,7 @@ export default function GoogleAuthBtn() {
 
       if (returnToPath) {
         callbackUrl += `?next=${encodeURIComponent(returnToPath)}`;
-      }
+      } else callbackUrl += `?next=/jobs`;
       await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

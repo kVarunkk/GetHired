@@ -10,7 +10,7 @@ import { usePathname } from "next/navigation";
 import toast from "react-hot-toast";
 import { v4 as uuidv4 } from "uuid";
 
-export default function BookmarkJobSearch({ user }: { user: User | null }) {
+export default function BookmarkJobSearch({ user }: { user: User }) {
   const [bookmarked, setBookmarked] = useState(false);
   const [loading, setLoading] = useState(false);
   const pathname = usePathname();
