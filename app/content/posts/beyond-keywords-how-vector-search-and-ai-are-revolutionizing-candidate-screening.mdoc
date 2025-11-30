@@ -1,0 +1,68 @@
+---
+title: >-
+  Beyond Keywords: How Vector Search and AI are Revolutionizing Candidate
+  Screening
+---
+## Introduction: The Fatal Flaw in Traditional ATS
+
+For the last two decades, the hiring industry has relied on a simple, flawed mechanism: **keyword matching**. Recruiters upload a job description, and the Applicant Tracking System (ATS) scans résumés for exact keyword counts—counting how many times "Java" or "Python" appears.
+
+The result is massive inefficiency: **Talent is filtered out due to semantic mismatch**, not a lack of skill. A candidate who wrote "Expert in Python back-end services" might be discarded because the job required the specific phrase "Python backend developer."
+
+The solution is not more keywords; it's a completely new method of understanding text: **Vector Search**. This technology, powered by Large Language Models (LLMs), is fundamentally redefining how candidates are screened and matched.
+
+## 1. What is Vector Search in Candidate Screening?
+
+Vector search transforms human language into **numerical vectors (embeddings)**—long arrays of numbers that capture the *meaning* and *context* of the text, not just the words.
+
+### The Shift from Text to Meaning
+
+{% table %}
+- Traditional ATS (Keyword Matching)
+- Vector Search (Semantic Matching)
+---
+- **Input:** "Does this CV contain 'TensorFlow'?"
+- **Input:** "How close is the *meaning* of the CV to the *meaning* of the job description?"
+---
+- **Output:** Boolean (Yes/No)
+- **Output:** A distance score (e.g., 0.98 similarity).
+---
+- **Flaw:** Cannot match "Azure ML" to "Cloud ML Platform."
+- **Advantage:** Can match "Experience with distributed computing" to "Built scalable Kafka pipelines."
+{% /table %}
+
+By converting both the job description and the candidate's résumé into vectors, we can calculate the **distance** between them. A smaller distance means higher relevance and a better skill-set alignment.
+
+## 2. Why Vector Search is Superior to Keywords
+
+### A. Semantic Relevance
+
+The model understands synonyms, adjacent skills, and contextual seniority. A candidate who lists "Designed and optimized full-stack applications using React and Node" is properly ranked for a job titled "Senior MERN Stack Developer," even if the word "MERN" never appears on their résumé.
+
+### B. Handling Noisy Data
+
+Résumés are notoriously inconsistent. Vector search excels at ignoring noise (formatting issues, filler words) and focusing solely on the underlying skills and technical experience embedded within the text.
+
+### C. Bias Reduction
+
+Traditional keyword filtering can unintentionally perpetuate bias by favoring candidates who use specific jargon or résumés written by a certain template. Vector search attempts to look past the surface structure and assess the core technical substance.
+
+## 3. The Two-Step Screening Revolution
+
+The most effective modern screening platforms combine vector search with a final AI re-ranking step. This is the model we use at GetHired:
+
+1. **Step 1: Broad, Fast Filtering (Vector Search):** The vector database (like `pgvector` HNSW index) instantly filters the entire candidate pool (millions of résumés) down to the Top 100 most semantically relevant profiles. This eliminates 99% of noise efficiently.
+1. **Step 2: Deep, Contextual Analysis (LLM Re-Ranking):** The Top 100 profiles and the job description are passed to an external LLM (e.g., Gemini or GPT-4o). The LLM performs a granular, structured analysis, checking for complex criteria:
+   - **Contextual Seniority:** Does the experience sound like a true "Senior" role?
+   - **Cultural Fit Keywords:** Does the candidate's summary mention "collaboration" or "distributed team experience"?
+   - **Specific Gaps:** Highlighting specific requirements that were not found, even if the overall vector distance was low.
+
+This two-step process ensures both high speed and high accuracy, which is impossible with keyword matching alone.
+
+## Conclusion: The Future of ATS is Here
+
+If your company is still using keyword matching to screen candidates, you are losing valuable talent every day due to semantic filtering errors.
+
+Vector search is not just an optional upgrade—it is a necessary architectural shift to remain competitive in tech recruiting. It allows your company to focus on the human elements of hiring (interviews, cultural fit) while trusting the AI to deliver candidates who are technically and contextually ready for the role.
+
+Ready to see how AI can transform your candidate pipeline? Use our platform today to instantly screen, assess, and qualify candidates using semantic matching.
