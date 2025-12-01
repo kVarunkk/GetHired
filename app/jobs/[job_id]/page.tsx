@@ -11,9 +11,8 @@ import JobFavoriteBtn from "@/components/JobFavoriteBtn";
 import JobApplyBtn from "@/components/JobApplyBtn";
 import { allJobsSelectString } from "@/lib/filterQueryBuilder";
 import { Metadata } from "next";
-
 import JobPageDropdown from "@/components/JobPageDropdown";
-// import JobSchema from "@/components/jsonLdSchema";
+import JobsFeedback from "@/components/JobFeedback";
 
 export async function generateMetadata({
   params,
@@ -98,7 +97,8 @@ export default async function JobPage({
             description,
             user_favorites(*),
             job_postings(*, company_info(*), applications(*)),
-            applications(*)
+            applications(*),
+            job_feedback(vote_type)
         `;
 
     const { data, error } = await supabase
@@ -141,7 +141,16 @@ export default async function JobPage({
               <p className="text-sm text-muted-foreground mt-2">
                 Posted on {format(new Date(job.created_at), "PPP")}
               </p>
-              {/* {user && <JobsFeedback jobId={job_id} user={user} />} */}
+              {user && (
+                <JobsFeedback
+                  jobId={job_id}
+                  initialVote={
+                    job.job_feedback!.length > 0
+                      ? job.job_feedback![0].vote_type
+                      : null
+                  }
+                />
+              )}
             </div>
             <div className="flex items-center gap-4">
               <JobApplyBtn
