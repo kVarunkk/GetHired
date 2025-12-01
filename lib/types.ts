@@ -87,6 +87,15 @@ export interface IPlatformField {
   };
 }
 
+export interface IJobFeedback {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  job_id: string;
+  vote_type: "upvote" | "downvote";
+}
+
 export interface IJob {
   id: string;
   job_name: string;
@@ -120,6 +129,7 @@ export interface IJob {
   applications?: IApplication[];
   status: "active" | "inactive";
   ai_summary?: string;
+  job_feedback?: IJobFeedback[];
 }
 
 export interface IJobPosting {
