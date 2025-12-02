@@ -27,7 +27,11 @@ export default function JobItem({
 }) {
   return (
     <>
-      <ModifiedLink href={`/jobs/${job.id}`} className="text-start">
+      <ModifiedLink
+        href={`/jobs/${job.id}`}
+        target="_blank"
+        className="text-start"
+      >
         <div
           className={cn(
             "flex flex-col gap-3 p-4 group  rounded-lg transition hover:bg-secondary "
@@ -39,6 +43,7 @@ export default function JobItem({
                 <div className="">
                   <Link
                     href={`/jobs/${job.id}`}
+                    target="_blank"
                     className="inline hover:underline underline sm:no-underline underline-offset-2"
                     onClick={(e) => e.stopPropagation()}
                   >

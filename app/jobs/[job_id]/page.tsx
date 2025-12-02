@@ -1,10 +1,9 @@
-import BackButton from "@/components/BackButton";
 import Error from "@/components/Error";
 import { createClient } from "@/lib/supabase/server";
 import { IJob } from "@/lib/types";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Briefcase, DollarSign, MapPin } from "lucide-react";
+import { ArrowLeft, Briefcase, DollarSign, MapPin } from "lucide-react";
 import JobDescriptionCard from "@/components/JobDetailsCard";
 import { Badge } from "@/components/ui/badge";
 import JobFavoriteBtn from "@/components/JobFavoriteBtn";
@@ -13,6 +12,7 @@ import { allJobsSelectString } from "@/lib/filterQueryBuilder";
 import { Metadata } from "next";
 import JobPageDropdown from "@/components/JobPageDropdown";
 import JobsFeedback from "@/components/JobFeedback";
+import Link from "next/link";
 
 export async function generateMetadata({
   params,
@@ -119,7 +119,13 @@ export default async function JobPage({
         {/* <JobSchema job={job} /> */}
         <div className="flex flex-col gap-8 w-full px-4 py-5 lg:px-20 xl:px-40 2xl:px-80">
           <div>
-            <BackButton />
+            {/* <BackButton /> */}
+            <Link
+              href="/jobs"
+              className="text-muted-foreground hover:text-primary transition-colors mt-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
           </div>
           {/* --- Header Section --- */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -141,7 +147,7 @@ export default async function JobPage({
               <p className="text-sm text-muted-foreground mt-2">
                 Posted on {format(new Date(job.created_at), "PPP")}
               </p>
-              {user && (
+              {user && !isCompanyUser && (
                 <JobsFeedback
                   jobId={job_id}
                   initialVote={
@@ -159,7 +165,11 @@ export default async function JobPage({
                 job={job}
                 isOnboardingComplete={onboardingComplete}
               />
-              <JobPageDropdown />
+              <JobPageDropdown
+                user={user}
+                jobId={job_id}
+                isCompanyUser={isCompanyUser}
+              />
             </div>
           </div>
           {/* Details Section */}

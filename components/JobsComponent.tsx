@@ -337,7 +337,10 @@ export default function JobsComponent({
       )}
 
       {jobs.length < totalCount && jobs.length !== 0 && (
-        <div ref={loaderRef} className="flex justify-center items-center p-4">
+        <div
+          ref={loaderRef}
+          className="flex justify-center items-center p-4 pt-20"
+        >
           <AppLoader size="md" />
         </div>
       )}

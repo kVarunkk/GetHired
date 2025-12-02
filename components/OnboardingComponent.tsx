@@ -67,6 +67,10 @@ export const OnboardingForm: React.FC = () => {
     job_type: [],
     email: "",
   });
+  const [initialResumePath, setInitialResumePath] = useState<string | null>(
+    null
+  );
+  const [isResumeParsed, setIsResumeParsed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [stepLoading, setStepLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +165,14 @@ export const OnboardingForm: React.FC = () => {
             is_promotion_active: data.is_promotion_active,
             is_job_digest_active: data.is_job_digest_active,
           }));
+          if (
+            data.experience_resume ||
+            data.skills_resume ||
+            data.projects_resume
+          ) {
+            setIsResumeParsed(true);
+          }
+          setInitialResumePath(data.resume_path || null);
           setFormData((prev) => ({
             ...prev,
             ...data,
@@ -373,10 +385,29 @@ export const OnboardingForm: React.FC = () => {
     }
   };
 
+  const parseResume = async (userId: string, resumePath: string) => {
+    try {
+      const res = await fetch("/api/parse-resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: userId, resumePath: resumePath }),
+      });
+      if (!res.ok) {
+        const errorResult = await res.json();
+        throw new Error(
+          errorResult.error || `Resume parsing failed with status ${res.status}`
+        );
+      }
+    } catch {
+      throw new Error("Resume parsing failed");
+    }
+  };
+
   const handleSubmit = async () => {
     setError(null);
     // setSuccessMessage(null);
     setIsLoading(true);
+    toast.loading("Hang tight! We're setting things up for you...");
 
     if (!user) {
       setError("User not authenticated. Please log in.");
@@ -440,6 +471,13 @@ export const OnboardingForm: React.FC = () => {
         throw new Error(errorData);
       }
 
+      if (
+        formData.resume_path &&
+        (formData.resume_path !== initialResumePath || !isResumeParsed)
+      ) {
+        await parseResume(user.id, formData.resume_path);
+      }
+
       const { error: dbError } = await supabase
         .from("user_info")
         .upsert(dataToSave, { onConflict: "user_id" });
@@ -447,10 +485,10 @@ export const OnboardingForm: React.FC = () => {
       if (dbError) {
         setError(`Failed to save data: ${dbError.message}`);
       } else {
-        toast.success("Your profile has been saved successfully!");
         router.push("/jobs");
       }
     } catch (submitException: unknown) {
+      toast.dismiss();
       setError(
         `An unexpected error occurred during submission: ${
           submitException instanceof Error
@@ -459,6 +497,8 @@ export const OnboardingForm: React.FC = () => {
         }`
       );
     } finally {
+      toast.dismiss();
+      toast.success("Your profile has been saved successfully!");
       setIsLoading(false);
     }
   };
@@ -494,6 +534,7 @@ export const OnboardingForm: React.FC = () => {
         {initialPreferencesState ? (
           <UserOnboardingPersonalization
             initialPreferences={initialPreferencesState}
+            disabled={isLoading}
           />
         ) : (
           ""
