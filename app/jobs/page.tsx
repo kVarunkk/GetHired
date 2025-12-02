@@ -172,6 +172,7 @@ export default async function JobsPage({
   const params = new URLSearchParams(
     searchParameters as Record<string, string>
   );
+
   try {
     params.set("tab", activeTab);
     params.set("limit", "20");
@@ -180,27 +181,54 @@ export default async function JobsPage({
       params.set("limit", "100");
       params.set("createdAfter", cutoffDate);
     }
-    const res = await fetch(`${url}/api/jobs?${params.toString()}`, {
+
+    const jobFetchPromise = fetch(`${url}/api/jobs?${params.toString()}`, {
       cache: "force-cache",
       next: { revalidate: 3600, tags: ["jobs-feed"] },
-      headers: {
-        Cookie: headersList.get("Cookie") || "",
-      },
+      headers: { Cookie: headersList.get("Cookie") || "" },
     });
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.message);
 
-    const resFilters = await fetch(`${url}/api/jobs/filters`, {
+    const filterFetchPromise = fetch(`${url}/api/jobs/filters`, {
       cache: "force-cache",
-      next: { revalidate: 86400 },
-      headers: {
-        Cookie: headersList.get("Cookie") || "",
-      },
+      next: { revalidate: 86400 }, // Filters can be cached much longer
+      headers: { Cookie: headersList.get("Cookie") || "" },
     });
 
-    const filterData = await resFilters.json();
+    const [jobsResponse, filtersResponse] = await Promise.all([
+      jobFetchPromise,
+      filterFetchPromise,
+    ]);
 
-    uniqueCompanies = resFilters.ok ? filterData.companies : [];
+    const result = await jobsResponse.json();
+    if (!jobsResponse.ok) throw new Error(result.message);
+
+    const filterData = await filtersResponse.json();
+    uniqueCompanies = filtersResponse.ok ? filterData.companies : [];
+
+    // initialJobs = result.data || [];
+    // totalCount = result.count || 0;
+
+    // const res = await fetch(`${url}/api/jobs?${params.toString()}`, {
+    //   cache: "force-cache",
+    //   next: { revalidate: 3600, tags: ["jobs-feed"] },
+    //   headers: {
+    //     Cookie: headersList.get("Cookie") || "",
+    //   },
+    // });
+    // const result = await res.json();
+    // if (!res.ok) throw new Error(result.message);
+
+    // const resFilters = await fetch(`${url}/api/jobs/filters`, {
+    //   cache: "force-cache",
+    //   next: { revalidate: 86400 },
+    //   headers: {
+    //     Cookie: headersList.get("Cookie") || "",
+    //   },
+    // });
+
+    // const filterData = await resFilters.json();
+
+    // uniqueCompanies = resFilters.ok ? filterData.companies : [];
 
     // --- AI Re-ranking Logic ---
 

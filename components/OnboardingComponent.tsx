@@ -485,6 +485,8 @@ export const OnboardingForm: React.FC = () => {
       if (dbError) {
         setError(`Failed to save data: ${dbError.message}`);
       } else {
+        toast.dismiss();
+        toast.success("Your profile has been saved successfully!");
         router.push("/jobs");
       }
     } catch (submitException: unknown) {
@@ -497,8 +499,6 @@ export const OnboardingForm: React.FC = () => {
         }`
       );
     } finally {
-      toast.dismiss();
-      toast.success("Your profile has been saved successfully!");
       setIsLoading(false);
     }
   };
@@ -557,7 +557,7 @@ export const OnboardingForm: React.FC = () => {
             setErrors={setFormErrors}
             loadingLocations={isLoadingLocations}
           />
-          {error ? toast.error(error) : ""}
+          {error && <p className="text-sm text-red-500">{error}</p>}
 
           <CardFooter className="flex items-center justify-between !p-0 mt-5">
             <Button
