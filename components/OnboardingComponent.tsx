@@ -557,7 +557,7 @@ export const OnboardingForm: React.FC = () => {
             setErrors={setFormErrors}
             loadingLocations={isLoadingLocations}
           />
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
 
           <CardFooter className="flex items-center justify-between !p-0 mt-5">
             <Button
