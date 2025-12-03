@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { getVertexClient } from "@/lib/serverUtils";
+import "pdf-parse/worker";
+import { CanvasFactory } from "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
 
 const ParsedProfileSchema = z.object({
@@ -25,7 +27,7 @@ const ParsedProfileSchema = z.object({
 type ParsedProfile = z.infer<typeof ParsedProfileSchema>;
 
 async function extractTextFromPdf(url: string): Promise<string> {
-  const parser = new PDFParse({ url: url });
+  const parser = new PDFParse({ url: url, CanvasFactory });
   const result = await parser.getText();
   const rawText = result.text.replace(/(\s{2,}|\n+)/g, " ").trim();
   return rawText;
