@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const { data } = await supabase
       .from("user_info")
       .select(
-        "desired_roles, experience_years, preferred_locations, min_salary, max_salary, top_skills, work_Style_preferences, company_type, company_size_preference, career_goals_short_term, career_goals_long_term, visa_sponsorship_required, work_style_preferences, ai_search_uses, job_type"
+        "desired_roles, experience_years, preferred_locations, min_salary, max_salary, top_skills, company_size_preference, career_goals_short_term, career_goals_long_term, visa_sponsorship_required, work_style_preferences, ai_search_uses, job_type, experience_resume, skills_resume, projects_resume"
       )
       .eq("user_id", userId)
       .single();
@@ -50,12 +50,14 @@ export async function POST(request: NextRequest) {
     const userQuery = `
       User is a candidate with the following preferences:
       - Desired Roles: ${userPreferences.desired_roles?.join(", ")}
-      - Experience: ${userPreferences.experience_years} years
+      - Work Experience: ${userPreferences.experience_resume}
+      - Skills: ${userPreferences.skills_resume + userPreferences.top_skills?.join(", ")}
+      - Projects: ${userPreferences.projects_resume}
+      - Years of Experience: ${userPreferences.experience_years} 
       - Preferred Locations: ${userPreferences.preferred_locations?.join(", ")}
       - Salary Range: $${userPreferences.min_salary} - $${
         userPreferences.max_salary
       }
-      - Top Skills: ${userPreferences.top_skills?.join(", ")}
       - Work Style: ${userPreferences.work_style_preferences?.join(", ")}
       - Job Type: ${userPreferences.job_type?.join(", ")}
       - Company Size: ${userPreferences.company_size_preference}

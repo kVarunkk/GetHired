@@ -205,33 +205,7 @@ export default async function JobsPage({
     const filterData = await filtersResponse.json();
     uniqueCompanies = filtersResponse.ok ? filterData.companies : [];
 
-    // initialJobs = result.data || [];
-    // totalCount = result.count || 0;
-
-    // const res = await fetch(`${url}/api/jobs?${params.toString()}`, {
-    //   cache: "force-cache",
-    //   next: { revalidate: 3600, tags: ["jobs-feed"] },
-    //   headers: {
-    //     Cookie: headersList.get("Cookie") || "",
-    //   },
-    // });
-    // const result = await res.json();
-    // if (!res.ok) throw new Error(result.message);
-
-    // const resFilters = await fetch(`${url}/api/jobs/filters`, {
-    //   cache: "force-cache",
-    //   next: { revalidate: 86400 },
-    //   headers: {
-    //     Cookie: headersList.get("Cookie") || "",
-    //   },
-    // });
-
-    // const filterData = await resFilters.json();
-
-    // uniqueCompanies = resFilters.ok ? filterData.companies : [];
-
     // --- AI Re-ranking Logic ---
-
     if (
       params.get("sortBy") === "relevance" &&
       user &&
