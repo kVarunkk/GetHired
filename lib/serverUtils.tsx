@@ -1,5 +1,6 @@
 import { createVertex } from "@ai-sdk/google-vertex";
 import fs from "fs/promises";
+import { Info, MoreHorizontal, Sparkle } from "lucide-react";
 import path from "path";
 
 export async function getVertexClient() {
@@ -33,26 +34,29 @@ export function getCutOffDate(daysAgo: number): string {
 }
 
 export const featureData = {
-  title: " AI Natural Language Search is LIVE!",
+  title: "Applying to Jobs Just Got Easier with Ask AI!",
   description:
-    "Stop wasting time with filters! Our upgraded search engine lets you describe your dream job in plain English (e.g., 'Remote Python jobs in NYC with visa sponsorship'). Click continue to start using it now.",
-  confirmButtonLabel: "Start Searching",
-  featureHighlight:
-    "Type any job query and our AI builds the filters instantly.",
-  promoImage: "/Screenshot 2025-11-05 001432.png", // Suggested custom image path
-  // customContent: (
-  //   // Provide concrete examples of what the user can now do
-  //   <ul className="list-disc ml-4 ">
-  //     <li className="text-sm">
-  //       "Show me senior remote frontend roles in Bangalore."
-  //     </li>
-  //     <li className="text-sm">
-  //       "Find jobs from Google or Microsoft, minimum $150k."
-  //     </li>
-  //     <li className="text-sm">"Display all jobs posted in the last 7 days."</li>
-  //   </ul>
-  // ),
-  currentDialogId: "AI_SEARCH_PROMO_V1", // Use a unique ID for this new feature tour
+    "Introducing our new Ask AI feature! Get personalized, ready-to-paste answers for tricky application and interview questions. The AI synthesizes your unique profile (skills, projects) directly with the job requirements.",
+  confirmButtonLabel: "Dismiss",
+  // featureHighlight:
+  //   "Instantly generate custom answers that relate your experience directly to the job description.",
+  promoImage: "/Screenshot 2025-12-02 191053.png", // Suggested new path for better context
+  // Provide concrete examples of questions the user can now answer effortlessly
+  customContent: (
+    <div className="flex items-center gap-3 rounded-md bg-secondary p-3 border border-border">
+      <Info className="h-4 w-4 shrink-0" />
+      <p className="text-sm">
+        Use the{" "}
+        <span className="font-bold inline-flex  gap-1">
+          <Sparkle className="h-4 w-4" /> Ask AI
+        </span>{" "}
+        feature by clicking
+        <MoreHorizontal className="h-4 w-4 inline-block mx-1" /> on any job
+        listing to get assistance with your application.
+      </p>
+    </div>
+  ),
+  currentDialogId: "AI_PREP_QANDA_V1", // New, unique ID for this feature tour
 };
 
 // export const featureData = null;

@@ -11,7 +11,7 @@ interface DisplayPromotionProps {
     title: string;
     description: string;
     confirmButtonLabel: string;
-    featureHighlight: string;
+    featureHighlight?: string;
     promoImage?: string;
     customContent?: React.ReactNode;
     currentDialogId: string;
