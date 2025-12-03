@@ -191,7 +191,7 @@ export default function AskAIDialog({
         {answer && (
           <div className="mt-4 p-4 border rounded-md">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold">Result</h3>
+              <h3 className="font-bold">Result</h3>
               <Button
                 size={"icon"}
                 variant={"ghost"}
@@ -200,7 +200,12 @@ export default function AskAIDialog({
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
-            <p>{answer}</p>
+            <p
+              className="whitespace-pre-wrap"
+              style={{ overflowWrap: "anywhere" }}
+            >
+              {answer}
+            </p>
           </div>
         )}
       </DialogContent>
