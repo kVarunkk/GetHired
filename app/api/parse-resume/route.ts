@@ -11,12 +11,12 @@ const ParsedProfileSchema = z.object({
   projects: z
     .string()
     .describe(
-      "A summary of the user's key projects, skills used, and outcomes."
+      "A detailed summary of 3-5 key projects, formatted as a markdown bulleted list. Each bullet must describe the project's goal, the technologies used, and the quantifiable outcome or achievement."
     ),
   experience: z
     .string()
     .describe(
-      "A chronological summary of the user's work history and career level (e.g., total years, focus areas)."
+      "A chronological summary of the user's work history. Format as a markdown bulleted list, including company/role, dates, and 2-3 key responsibilities or contributions per role."
     ),
   skills: z
     .string()
