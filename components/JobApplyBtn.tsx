@@ -4,7 +4,13 @@ import { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import JobApplicationDialog from "./JobApplicationDialog";
-import { ArrowRight, Loader2 } from "lucide-react";
+import {
+  ArrowRight,
+  Info,
+  Loader2,
+  MoreHorizontal,
+  Sparkle,
+} from "lucide-react";
 import { IJob } from "@/lib/types";
 import { useCallback, useState } from "react";
 import toast from "react-hot-toast";
@@ -23,6 +29,7 @@ import { TApplicationStatus } from "./ApplicationStatusBadge";
 import PropagationStopper from "./StopPropagation";
 import { revalidateCache } from "@/app/actions/revalidate";
 import InfoTooltip from "./InfoTooltip";
+import { useRouter } from "next/navigation";
 
 export default function JobApplyBtn({
   isCompanyUser,
@@ -153,6 +160,7 @@ function JobStatusDialog({
   onClose: (applicationStatus?: TApplicationStatus) => void;
   userId?: string;
 }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const updateJobApplicationStatus = async () => {
     try {
@@ -207,6 +215,29 @@ function JobStatusDialog({
               This helps us track your application status.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="flex items-center gap-3 rounded-md bg-secondary p-3 border border-border">
+            <Info className="h-4 w-4 shrink-0" />
+            <p className="text-sm">
+              Use the{" "}
+              <span className="font-bold inline-flex  gap-1">
+                <Sparkle className="h-4 w-4" /> Ask AI
+              </span>{" "}
+              feature by clicking
+              <MoreHorizontal className="h-4 w-4 inline-block mx-1" />{" "}
+              {window.location.pathname === "/jobs" && (
+                <span
+                  // href={"/jobs/" + job.id}
+                  // target="_blank"
+                  onClick={() => router.push("/jobs/" + job.id)}
+                  className="text-blue-400 underline"
+                >
+                  <button>on this page</button>
+                </span>
+              )}{" "}
+              to get assistance with your application once you close this
+              dialog.
+            </p>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
               <Button

@@ -128,7 +128,10 @@ export default function JobDescriptionCard({
             isExpanded && "max-h-[1000px] overflow-y-auto"
           )}
         >
-          <div className="whitespace-pre-line">
+          <div
+            className="whitespace-pre-line"
+            style={{ overflowWrap: "anywhere" }}
+          >
             {isLoading ? (
               <div className="flex flex-col gap-3 items-center w-full min-h-[200px] justify-center">
                 <Loader2 className="animate-spin h-6 w-6 mx-auto" />

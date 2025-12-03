@@ -20,10 +20,12 @@ interface IinitialPreferences {
 
 interface UserOnboardingPersonalizationProps {
   initialPreferences: IinitialPreferences;
+  disabled: boolean;
 }
 
 export default function UserOnboardingPersonalization({
   initialPreferences,
+  disabled,
 }: UserOnboardingPersonalizationProps) {
   const [promoActive, setPromoActive] = useState(
     initialPreferences.is_promotion_active
@@ -91,7 +93,7 @@ export default function UserOnboardingPersonalization({
               <Checkbox
                 id="job_digest"
                 checked={digestActive}
-                disabled={isLoading}
+                disabled={isLoading || disabled}
                 onCheckedChange={(checked: boolean) =>
                   handlePreferenceChange("is_job_digest_active", checked)
                 }
@@ -108,7 +110,7 @@ export default function UserOnboardingPersonalization({
               <Checkbox
                 id="promotions"
                 checked={promoActive}
-                disabled={isLoading}
+                disabled={isLoading || disabled}
                 onCheckedChange={(checked: boolean) =>
                   handlePreferenceChange("is_promotion_active", checked)
                 }
