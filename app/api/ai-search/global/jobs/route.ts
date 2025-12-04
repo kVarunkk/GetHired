@@ -3,6 +3,7 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { getVertexClient } from "@/lib/serverUtils";
 import { createClient } from "@/lib/supabase/server";
+import { TAICredits } from "@/lib/types";
 
 export async function POST(req: Request) {
   const { userQuery } = await req.json();
@@ -26,6 +27,29 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { data: userInfo } = await supabase
+    .from("user_info")
+    .select("ai_credits")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!userInfo) {
+    return NextResponse.json(
+      {
+        message: "User not found.",
+      },
+      { status: 404 }
+    );
+  }
+
+  if (userInfo.ai_credits < TAICredits.AI_GLOBAL_SEARCH) {
+    return NextResponse.json(
+      { message: "Insufficient AI credits. Please top up to continue." },
+      { status: 402 }
+    );
+  }
+
   // Initialize the client and model (as per your structure)
   const vertex = await getVertexClient();
   const model = vertex("gemini-2.0-flash-lite-001");
@@ -80,9 +104,18 @@ export async function POST(req: Request) {
       }),
       system: systemPrompt,
     });
-    // --- END CALL ---
 
-    // The structure of 'filters' will now match the snake_case keys you expect.
+    const { error } = await supabase
+      .from("user_info")
+      .update({
+        ai_credits: userInfo.ai_credits - TAICredits.AI_GLOBAL_SEARCH,
+      })
+      .eq("user_id", user.id);
+
+    if (error) {
+      throw error;
+    }
+
     return NextResponse.json({ filters });
   } catch (error) {
     // console.error("Query parsing failed:", error);

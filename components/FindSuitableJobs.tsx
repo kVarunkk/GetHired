@@ -33,6 +33,8 @@ import { SelectGroup } from "@radix-ui/react-select";
 import Link from "next/link";
 import { useProgress } from "react-transition-progress";
 import { Button } from "./ui/button";
+import InfoTooltip from "./InfoTooltip";
+import { TAICredits } from "@/lib/types";
 
 export default function FindSuitableJobs({
   user,
@@ -131,7 +133,7 @@ export default function FindSuitableJobs({
       addMultiParam(
         "visaRequirement",
         userInfo.visa_sponsorship_required
-          ? ["Will Sponsor"]
+          ? ["US Citizenship/Visa Not Required", "Will Sponsor"]
           : ["US Citizenship/Visa Not Required", "US Citizen/Visa Only"]
       );
 
@@ -189,109 +191,136 @@ export default function FindSuitableJobs({
 
   if (currentPage === "profiles" && companyId) {
     return (
-      <Select
-        value={suitableJobsSelectValue}
-        onValueChange={(value) => {
-          setSuitableJobsSelectValue(value);
-          handleAiSearch(value);
-          setTimeout(() => setSuitableJobsSelectValue(""), 100);
-        }}
-      >
-        <SelectTrigger
-          disabled={isPending}
-          className="rounded-full bg-primary shadow-lg w-[200px]"
+      <div className="flex items-center gap-2">
+        <InfoTooltip
+          content={
+            "AI Smart Search uses " +
+            TAICredits.AI_SMART_SEARCH_OR_ASK_AI +
+            " AI credits per use."
+          }
+        />
+        <Select
+          value={suitableJobsSelectValue}
+          onValueChange={(value) => {
+            setSuitableJobsSelectValue(value);
+            handleAiSearch(value);
+            setTimeout(() => setSuitableJobsSelectValue(""), 100);
+          }}
         >
-          {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-          <SelectValue
-            placeholder={
-              <p className="flex items-center gap-2 text-primary-foreground">
-                <Search className="w-4 h-4" /> Find Suitable Profiles
-              </p>
-            }
-          />
-        </SelectTrigger>
-        <SelectGroup>
-          <SelectContent>
-            <SelectLabel className="flex items-center text-sm justify-between gap-4 w-[200px]">
-              <div className="flex flex-col gap-1">
-                <p>Select a Job Posting</p>
-                <p className="text-xs text-muted-foreground">
-                  Suitable Profiles will be found according to the selected job
-                  post
+          <SelectTrigger
+            disabled={isPending}
+            className="rounded-full bg-primary shadow-lg w-[200px]"
+          >
+            {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            <SelectValue
+              placeholder={
+                <p className="flex items-center gap-2 text-primary-foreground">
+                  <Search className="w-4 h-4" /> Find Suitable Profiles
                 </p>
-              </div>
-              <Link href={"/company/job-posts"}>
-                <PlusCircle className="h-4 w-4" />
-              </Link>
-            </SelectLabel>
-            <SelectSeparator />
-            {jobPostings.map((each) => (
-              <SelectItem key={each.id} value={each.id}>
-                {each.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </SelectGroup>
-      </Select>
+              }
+            />
+          </SelectTrigger>
+          <SelectGroup>
+            <SelectContent>
+              <SelectLabel className="flex items-center text-sm justify-between gap-4 w-[200px]">
+                <div className="flex flex-col gap-1">
+                  <p>Select a Job Posting</p>
+                  <p className="text-xs text-muted-foreground">
+                    Suitable Profiles will be found according to the selected
+                    job post
+                  </p>
+                </div>
+                <Link href={"/company/job-posts"}>
+                  <PlusCircle className="h-4 w-4" />
+                </Link>
+              </SelectLabel>
+              <SelectSeparator />
+              {jobPostings.map((each) => (
+                <SelectItem key={each.id} value={each.id}>
+                  {each.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </SelectGroup>
+        </Select>
+      </div>
     );
   }
 
   if (currentPage === "companies") {
     return (
-      <Button
-        disabled={isPending}
-        onClick={() => handleAiSearch()}
-        className="rounded-full bg-primary shadow-lg "
-      >
-        {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-        <Search className="w-4 h-4" /> Find Suitable Companies
-      </Button>
+      <div className="flex items-center gap-2">
+        <InfoTooltip
+          content={
+            "AI Smart Search uses " +
+            TAICredits.AI_SMART_SEARCH_OR_ASK_AI +
+            " AI credits per use."
+          }
+        />
+        <Button
+          disabled={isPending}
+          onClick={() => handleAiSearch()}
+          className="rounded-full bg-primary shadow-lg "
+        >
+          {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Search className="w-4 h-4" /> Find Suitable Companies
+        </Button>
+      </div>
     );
   }
 
   return (
-    <Select
-      value={suitableJobsSelectValue}
-      onValueChange={(value) => {
-        setSuitableJobsSelectValue(value);
-        if (value === "find-suitable") {
-          handleFindSuitableJobs();
+    <div className="flex items-center gap-2">
+      <InfoTooltip
+        content={
+          "AI Smart Search uses " +
+          TAICredits.AI_SMART_SEARCH_OR_ASK_AI +
+          " AI credits per use."
         }
-        if (value === "ai-job-search") {
-          handleAiSearch();
-        }
-        setTimeout(() => setSuitableJobsSelectValue(""), 100);
-      }}
-    >
-      <SelectTrigger
-        disabled={isPending}
-        className="rounded-full bg-primary shadow-lg w-[180px]"
-      >
-        {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-        <SelectValue
-          placeholder={
-            <p className="flex items-center gap-2 text-primary-foreground">
-              <Search className="w-4 h-4" /> Find Suitable Jobs
-            </p>
+      />
+      <Select
+        value={suitableJobsSelectValue}
+        onValueChange={(value) => {
+          setSuitableJobsSelectValue(value);
+          if (value === "find-suitable") {
+            handleFindSuitableJobs();
           }
-        />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="find-suitable">
-          <div className="w-full flex items-center gap-2">
-            {" "}
-            <FolderSearch className="h-4 w-4" />
-            Find Jobs Matching My Profile
-          </div>
-        </SelectItem>
-        <SelectItem value="ai-job-search">
-          <div className="w-full flex items-center gap-2">
-            <Sparkle className="h-4 w-4" />
-            AI Smart Search
-          </div>
-        </SelectItem>
-        {/* You could add more options here if needed, e.g., "Reset to default" */}
-      </SelectContent>
-    </Select>
+          if (value === "ai-job-search") {
+            handleAiSearch();
+          }
+          setTimeout(() => setSuitableJobsSelectValue(""), 100);
+        }}
+      >
+        <SelectTrigger
+          disabled={isPending}
+          className="rounded-full bg-primary shadow-lg w-[180px]"
+        >
+          {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          <SelectValue
+            placeholder={
+              <p className="flex items-center gap-2 text-primary-foreground">
+                <Search className="w-4 h-4" /> Find Suitable Jobs
+              </p>
+            }
+          />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="find-suitable">
+            <div className="w-full flex items-center gap-2">
+              {" "}
+              <FolderSearch className="h-4 w-4" />
+              Find Jobs Matching My Profile
+            </div>
+          </SelectItem>
+          <SelectItem value="ai-job-search">
+            <div className="w-full flex items-center gap-2">
+              <Sparkle className="h-4 w-4" />
+              AI Smart Search
+            </div>
+          </SelectItem>
+          {/* You could add more options here if needed, e.g., "Reset to default" */}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

@@ -2,7 +2,7 @@ import FilterComponent from "@/components/FilterComponent";
 import { createClient } from "@/lib/supabase/server";
 import JobsList from "./JobsList";
 import { TabsContent } from "@/components/ui/tabs";
-import { IJob, JobListingSearchParams } from "@/lib/types";
+import { IJob, JobListingSearchParams, TAICredits } from "@/lib/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import { Metadata } from "next";
@@ -134,19 +134,19 @@ export default async function JobsPage({
 
   let isCompanyUser = false;
   let onboardingComplete = false;
-  let ai_search_uses = 0;
+  let ai_credits;
   if (user) {
     try {
       const { data: jobSeekerData, error: jobSeekerDataError } = await supabase
         .from("user_info")
-        .select("ai_search_uses, filled")
+        .select("ai_credits, filled")
         .eq("user_id", user?.id)
         .single();
 
       if (jobSeekerDataError) {
         const { data: companyData } = await supabase
           .from("company_info")
-          .select("id, ai_search_uses, filled")
+          .select("id, ai_credits, filled")
           .eq("user_id", user?.id)
           .single();
 
@@ -155,7 +155,7 @@ export default async function JobsPage({
         }
       } else if (jobSeekerData) {
         onboardingComplete = jobSeekerData.filled;
-        ai_search_uses = jobSeekerData.ai_search_uses;
+        ai_credits = jobSeekerData.ai_credits;
       }
     } catch {}
   }
@@ -212,7 +212,7 @@ export default async function JobsPage({
       result.data &&
       result.data.length > 0
     ) {
-      if (ai_search_uses <= 3) {
+      if (ai_credits >= TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
         try {
           const aiRerankRes = await fetch(`${url}/api/ai-search/jobs`, {
             method: "POST",
@@ -254,7 +254,10 @@ export default async function JobsPage({
         } catch (e) {
           throw e;
         }
-      } else if (result.matchedJobIds && ai_search_uses > 3) {
+      } else if (
+        result.matchedJobIds &&
+        ai_credits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
+      ) {
         const jobMap = new Map(result.data.map((job: IJob) => [job.id, job]));
         initialJobs =
           result.matchedJobIds
@@ -285,6 +288,7 @@ export default async function JobsPage({
             isAISearch={isAISearch}
             applicationStatusFilter={applicationStatusFilter}
             page="jobs"
+            aiCredits={ai_credits}
           >
             {!applicationStatusFilter && (
               <TabsContent value="all">

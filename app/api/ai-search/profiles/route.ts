@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { IFormData } from "@/lib/types";
+import { IFormData, TAICredits } from "@/lib/types";
 import { getVertexClient } from "@/lib/serverUtils";
 
 export async function POST(request: NextRequest) {
@@ -16,6 +16,28 @@ export async function POST(request: NextRequest) {
           message: "Required fields are missing in the request body.",
         },
         { status: 400 }
+      );
+    }
+
+    const { data: companyInfo } = await supabase
+      .from("company_info")
+      .select("ai_credits")
+      .eq("id", companyId)
+      .single();
+
+    if (!companyInfo) {
+      return NextResponse.json(
+        {
+          message: "Company not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    if (companyInfo.ai_credits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
+      return NextResponse.json(
+        { message: "Insufficient AI credits. Please top up to continue." },
+        { status: 402 }
       );
     }
 
@@ -56,15 +78,15 @@ export async function POST(request: NextRequest) {
       Location: ${jobPosting.location?.join(", ")}
       Job Type: ${jobPosting.job_type}
       Experience Required: ${jobPosting.min_experience || 0}-${
-      jobPosting.max_experience || "∞"
-    } years
+        jobPosting.max_experience || "∞"
+      } years
       Visa Sponsorship: ${jobPosting.visa_sponsorship}
       Salary: $${jobPosting.min_salary || "N/A"} - $${
-      jobPosting.max_salary || "N/A"
-    }
+        jobPosting.max_salary || "N/A"
+      }
       Equity: ${jobPosting.min_equity || "N/A"}% - ${
-      jobPosting.max_equity || "N/A"
-    }%
+        jobPosting.max_equity || "N/A"
+      }%
       Custom Questions: ${jobPosting.questions?.join(" | ") || "None"}
     `;
 
@@ -122,21 +144,17 @@ export async function POST(request: NextRequest) {
     });
 
     // Step 3: Increment AI search uses for the company
-    const { data: companyInfo, error: companyInfoError } = await supabase
-      .from("company_info")
-      .select("ai_search_uses")
-      .eq("id", companyId)
-      .single();
 
-    if (companyInfoError || !companyInfo) {
-      // console.error("Error fetching company info:", companyInfoError);
-    } else {
-      await supabase
-        .from("company_info")
-        .update({
-          ai_search_uses: (companyInfo.ai_search_uses || 0) + 1,
-        })
-        .eq("id", companyId);
+    const { error: companyInfoUpdateError } = await supabase
+      .from("company_info")
+      .update({
+        ai_credits:
+          companyInfo.ai_credits - TAICredits.AI_SMART_SEARCH_OR_ASK_AI,
+      })
+      .eq("id", companyId);
+
+    if (companyInfoUpdateError) {
+      throw companyInfoUpdateError;
     }
 
     return NextResponse.json({

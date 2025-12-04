@@ -16,10 +16,14 @@ export default function JobPageDropdown({
   user,
   jobId,
   isCompanyUser,
+  aiCredits,
+  isOnboardingComplete = false,
 }: {
   user: User | null;
   jobId: string;
   isCompanyUser: boolean;
+  aiCredits?: number;
+  isOnboardingComplete?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -61,8 +65,9 @@ export default function JobPageDropdown({
         <AskAIDialog
           isOpen={isOpen}
           setIsOpen={setIsOpen}
-          user={user}
           jobId={jobId}
+          aiCredits={aiCredits}
+          isOnboardingComplete={isOnboardingComplete}
         />
       )}
     </>

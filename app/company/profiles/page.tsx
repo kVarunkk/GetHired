@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { TabsContent } from "@/components/ui/tabs";
 import ProfilesList from "./ProfilesList";
 import FilterComponent from "@/components/FilterComponent";
-import { ICompanyInfo, IFormData } from "@/lib/types";
+import { ICompanyInfo, IFormData, TAICredits } from "@/lib/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 
@@ -24,7 +24,7 @@ export default async function ProfilesPage({
   const { data: companyDataData }: { data: ICompanyInfo | null } =
     await supabase
       .from("company_info")
-      .select("id, filled, ai_search_uses")
+      .select("id, filled, ai_credits")
       .eq("user_id", user?.id)
       .single();
 
@@ -94,7 +94,7 @@ export default async function ProfilesPage({
       onboarding_complete &&
       result.data &&
       result.data.length > 0 &&
-      companyData.ai_search_uses <= 3
+      companyData.ai_credits >= TAICredits.AI_SMART_SEARCH_OR_ASK_AI
     ) {
       try {
         const aiRerankRes = await fetch(`${url}/api/ai-search/profiles`, {
@@ -154,7 +154,7 @@ export default async function ProfilesPage({
       result.matchedProfileIds &&
       result.data &&
       result.data.length > 0 &&
-      companyData.ai_search_uses > 3
+      companyData.ai_credits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
     ) {
       const profilesMap: Map<string, IFormData> = new Map(
         result.data.map((profile: IFormData) => [profile.user_id, profile])

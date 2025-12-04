@@ -9,71 +9,36 @@ import {
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-
-import { getTimeLeftHours } from "@/lib/utils";
-import { User } from "@supabase/supabase-js";
+import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Copy, Loader2 } from "lucide-react";
 import Link from "next/link";
-
-const hoursLeft = getTimeLeftHours();
+import { TAICredits } from "@/lib/types";
+import InfoTooltip from "./InfoTooltip";
 
 export default function AskAIDialog({
-  user,
   isOpen,
   setIsOpen,
   jobId,
+  aiCredits = 0,
+  isOnboardingComplete,
 }: {
-  user: User;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   jobId: string;
+  aiCredits?: number;
+  isOnboardingComplete: boolean;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchUses, setSearchUses] = useState(0);
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
   const [answer, setAnswer] = useState<string | null>(null);
-  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
-
-  const fetchUserData = useCallback(async () => {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("user_info")
-      .select("ask_ai_job_uses, filled")
-      .eq("user_id", user.id)
-      .single();
-    if (data && !error) {
-      setIsOnboardingComplete(data.filled);
-      return data.ask_ai_job_uses;
-    } else return null;
-  }, [user]);
-
-  const updateUserData = async (search_uses: number) => {
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("user_info")
-      .update({ ask_ai_job_uses: search_uses + 1 })
-      .eq("user_id", user.id);
-    if (!error) {
-      setSearchUses((prev) => prev + 1);
-    }
-  };
-
-  useEffect(() => {
-    (async () => {
-      const search_uses = await fetchUserData();
-      setSearchUses(search_uses);
-    })();
-  }, [fetchUserData]);
+  const [creditsState, setCreditsState] = useState<number>(aiCredits);
 
   const handleSubmit = async (formData?: FormData) => {
     setError(null);
-    const search_uses = await fetchUserData();
-    if (search_uses >= 5) {
-      setError("No more Searches left today :(. Resets every day.");
+    if (creditsState < TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
+      setError("Insufficient AI credits. Please top up to continue.");
       return;
     }
     if (!isOnboardingComplete) {
@@ -111,15 +76,11 @@ export default function AskAIDialog({
       const { answer } = await response.json();
 
       setAnswer(answer);
-
-      await updateUserData(search_uses);
-
-      //   setIsOpen(false);
+      setCreditsState((prev) => prev - TAICredits.AI_SMART_SEARCH_OR_ASK_AI);
     } catch (error) {
       toast.error(
         `Search failed: ${(error as Error).message}. Please try again.`
       );
-      //   console.error("AI Search Error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -137,8 +98,15 @@ export default function AskAIDialog({
       <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
         <DialogHeader className="text-start">
           <DialogTitle>Ask AI to help you apply for this role</DialogTitle>
-          <DialogDescription>
-            {5 - searchUses} Questions left today. Resets in {hoursLeft} hours.
+          <DialogDescription className="flex items-center">
+            {creditsState} AI Credits available.
+            <InfoTooltip
+              content={
+                "This feature uses " +
+                TAICredits.AI_SMART_SEARCH_OR_ASK_AI +
+                " AI credits per use."
+              }
+            />
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
@@ -151,11 +119,12 @@ export default function AskAIDialog({
             className="flex flex-col space-y-4"
           >
             <Textarea
-              // type="text"
               required
               placeholder="e.g., Why do you think you are a good fit for this role?"
               name="searchQuery"
-              disabled={isLoading || searchUses >= 5}
+              disabled={
+                isLoading || creditsState < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
+              }
               className="bg-input text-sm"
               ref={searchInputRef}
             />
@@ -173,7 +142,11 @@ export default function AskAIDialog({
                 )}
               </div>
             )}
-            <Button disabled={isLoading || searchUses >= 5}>
+            <Button
+              disabled={
+                isLoading || creditsState < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
+              }
+            >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Submit
             </Button>
@@ -182,7 +155,9 @@ export default function AskAIDialog({
           <Button
             type="button"
             onClick={() => handleSubmit()}
-            disabled={isLoading || searchUses >= 5}
+            disabled={
+              isLoading || creditsState < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
+            }
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Generate Cover Letter

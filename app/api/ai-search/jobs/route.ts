@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { IJob } from "@/lib/types";
+import { IJob, TAICredits } from "@/lib/types";
 import { getVertexClient } from "@/lib/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const { data } = await supabase
       .from("user_info")
       .select(
-        "desired_roles, experience_years, preferred_locations, min_salary, max_salary, top_skills, company_size_preference, career_goals_short_term, career_goals_long_term, visa_sponsorship_required, work_style_preferences, ai_search_uses, job_type, experience_resume, skills_resume, projects_resume"
+        "desired_roles, experience_years, preferred_locations, min_salary, max_salary, top_skills, company_size_preference, career_goals_short_term, career_goals_long_term, visa_sponsorship_required, work_style_preferences, ai_credits, job_type, experience_resume, skills_resume, projects_resume"
       )
       .eq("user_id", userId)
       .single();
@@ -43,6 +43,13 @@ export async function POST(request: NextRequest) {
           message: "User not found.",
         },
         { status: 404 }
+      );
+    }
+
+    if (userPreferences.ai_credits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
+      return NextResponse.json(
+        { message: "Insufficient AI credits. Please top up to continue." },
+        { status: 402 }
       );
     }
 
@@ -128,7 +135,8 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("user_info")
       .update({
-        ai_search_uses: userPreferences.ai_search_uses + 1,
+        ai_credits:
+          userPreferences.ai_credits - TAICredits.AI_SMART_SEARCH_OR_ASK_AI,
       })
       .eq("user_id", userId);
 

@@ -1,7 +1,7 @@
 import FilterComponent from "@/components/FilterComponent";
 import { createClient } from "@/lib/supabase/server";
 import { TabsContent } from "@/components/ui/tabs";
-import { ICompanyInfo, IFormData } from "@/lib/types";
+import { ICompanyInfo, IFormData, TAICredits } from "@/lib/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import CompaniesList from "./companiesList";
@@ -35,17 +35,17 @@ export default async function JobsPage({
 
   let isCompanyUser = false;
   let onboardingComplete = false;
-  let ai_search_uses = 0;
+  let ai_credits;
   let companyId;
   if (user) {
     const { data: jobSeekerData } = await supabase
       .from("user_info")
-      .select("ai_search_uses, filled")
+      .select("ai_credits, filled")
       .eq("user_id", user?.id)
       .single();
     const { data: companyData } = await supabase
       .from("company_info")
-      .select("id, ai_search_uses, filled")
+      .select("id, ai_credits, filled")
       .eq("user_id", user?.id)
       .single();
 
@@ -56,7 +56,7 @@ export default async function JobsPage({
 
     if (jobSeekerData) {
       onboardingComplete = jobSeekerData.filled;
-      ai_search_uses = jobSeekerData.ai_search_uses;
+      ai_credits = jobSeekerData.ai_credits;
     }
   }
 
@@ -111,7 +111,7 @@ export default async function JobsPage({
       user &&
       result.data &&
       result.data.length > 0 &&
-      ai_search_uses <= 3
+      ai_credits >= TAICredits.AI_SMART_SEARCH_OR_ASK_AI
     ) {
       try {
         const aiRerankRes = await fetch(`${url}/api/ai-search/companies`, {
@@ -158,7 +158,7 @@ export default async function JobsPage({
       user &&
       result.data &&
       result.data.length > 0 &&
-      ai_search_uses > 3
+      ai_credits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
     ) {
       const companiesMap = new Map(
         result.data.map((company: ICompanyInfo) => [company.id, company])

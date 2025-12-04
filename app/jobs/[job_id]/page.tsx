@@ -72,10 +72,12 @@ export default async function JobPage({
     } = await supabase.auth.getUser();
     let isCompanyUser = false;
     let onboardingComplete = false;
+    let aiCredits;
+    let isOnboardingComplete;
     if (user) {
       const { data: jobSeekerData } = await supabase
         .from("user_info")
-        .select("filled")
+        .select("filled, ai_credits")
         .eq("user_id", user?.id)
         .single();
       const { data: companyData } = await supabase
@@ -90,6 +92,8 @@ export default async function JobPage({
 
       if (jobSeekerData) {
         onboardingComplete = jobSeekerData.filled;
+        aiCredits = jobSeekerData.ai_credits;
+        isOnboardingComplete = jobSeekerData.filled;
       }
     }
     const selectString = `
@@ -169,6 +173,8 @@ export default async function JobPage({
                 user={user}
                 jobId={job_id}
                 isCompanyUser={isCompanyUser}
+                aiCredits={aiCredits}
+                isOnboardingComplete={isOnboardingComplete}
               />
             </div>
           </div>
