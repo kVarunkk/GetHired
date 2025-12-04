@@ -113,7 +113,7 @@ export interface IJob {
   equity_max: number;
   visa_requirement: string;
   description: string;
-  job_url: string;
+  job_url: string | null;
   created_at: string;
   updated_at: string;
   locations: string[];

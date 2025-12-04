@@ -136,7 +136,17 @@ export default async function JobPage({
             <div>
               <div className="flex items-center gap-1">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white max-w-[400px]">
-                  {job.job_name}
+                  {job.job_url ? (
+                    <Link
+                      target="_blank"
+                      href={job.job_url}
+                      className="hover:underline"
+                    >
+                      {job.job_name}
+                    </Link>
+                  ) : (
+                    job.job_name
+                  )}
                 </h1>
                 <JobFavoriteBtn
                   isCompanyUser={isCompanyUser}
@@ -146,7 +156,18 @@ export default async function JobPage({
                 />
               </div>
               <p className="text-lg text-muted-foreground">
-                at {job.company_name}
+                at{" "}
+                {job.company_url ? (
+                  <Link
+                    target="_blank"
+                    href={job.company_url}
+                    className="hover:underline"
+                  >
+                    {job.company_name}
+                  </Link>
+                ) : (
+                  job.company_name
+                )}
               </p>
               <p className="text-sm text-muted-foreground mt-2">
                 Posted on {format(new Date(job.created_at), "PPP")}
@@ -175,6 +196,12 @@ export default async function JobPage({
                 isCompanyUser={isCompanyUser}
                 aiCredits={aiCredits}
                 isOnboardingComplete={isOnboardingComplete}
+                applicationStatus={
+                  job.applications && job.applications.length > 0
+                    ? job.applications[0].status
+                    : null
+                }
+                isPlatformJob={!job.job_url}
               />
             </div>
           </div>
