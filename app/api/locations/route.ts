@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const manipulateLocations = (data: { country: string; cities: string[] }[]) => {
   const locationSet = new Set<string>();
@@ -22,8 +22,11 @@ const manipulateLocations = (data: { country: string; cities: string[] }[]) => {
   return locations;
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const filterComponent = searchParams.get("filterComponent");
+
     const supabase = await createClient();
 
     const { data, error } = await supabase
@@ -38,9 +41,9 @@ export async function GET() {
       throw new Error("Data not available");
     }
 
-    const manipulatedLocations = manipulateLocations(data);
+    const finalLocations = filterComponent ? manipulateLocations(data) : data;
 
-    return NextResponse.json({ data: manipulatedLocations || [] });
+    return NextResponse.json({ data: finalLocations || [] });
   } catch (err: unknown) {
     return NextResponse.json(
       {

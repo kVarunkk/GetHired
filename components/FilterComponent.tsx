@@ -20,7 +20,6 @@ import { useProgress } from "react-transition-progress";
 import FilterActions from "./FilterActions";
 import useSWR from "swr";
 import { commonIndustries, fetcher } from "@/lib/utils";
-import { useCachedFetch } from "@/lib/hooks/useCachedFetch";
 
 type FilterConfig = {
   name: keyof FiltersState;
@@ -54,27 +53,13 @@ export type FiltersState = {
 };
 
 export default function FilterComponent({
-  // uniqueLocations,
-  // uniqueCompanies,
-  // uniqueIndustries,
   setOpenSheet,
-  // uniqueJobRoles,
-  // uniqueIndustryPreferences,
-  // uniqueWorkStylePreferences,
-  // uniqueSkills,
+
   currentPage,
   onboardingComplete,
 }: {
-  // uniqueLocations?: { location: string }[];
-  // uniqueCompanies?: { company_name: string }[];
-  // uniqueIndustries?: {
-  //   industry: string;
-  // }[];
   setOpenSheet?: Dispatch<SetStateAction<boolean>>;
-  // uniqueJobRoles?: { job_role: string }[];
-  // uniqueIndustryPreferences?: { industry_preference: string }[];
-  // uniqueWorkStylePreferences?: { work_style_preference: string }[];
-  // uniqueSkills?: { skill: string }[];
+
   currentPage: "jobs" | "profiles" | "companies";
   onboardingComplete: boolean;
 }) {
@@ -82,12 +67,6 @@ export default function FilterComponent({
   const searchParams = useSearchParams();
   const startProgress = useProgress();
   const [isPending, startTransition] = useTransition();
-  const { data: countries } = useCachedFetch<{ location: string }[]>(
-    "countryData",
-    "/api/locations",
-    undefined,
-    true
-  );
 
   const toOptions = (list?: { location: string }[]) =>
     list?.map((each) => ({ value: each.location, label: each.location })) || [];
@@ -137,6 +116,14 @@ export default function FilterComponent({
           : [],
       [filterData, filterError]
     );
+  const { data: countriesData, error: countriesError } = useSWR(
+    `/api/locations?filterComponent=true`,
+    fetcher
+  );
+  const countries: { location: string }[] = useMemo(
+    () => (countriesData && !countriesError ? countriesData.data : []),
+    [countriesData, countriesError]
+  );
 
   // Handle the static industry list
   const uniqueIndustries = useMemo(
