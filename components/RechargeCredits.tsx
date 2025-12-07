@@ -17,7 +17,13 @@ import toast from "react-hot-toast";
 import { sendInviteEmail } from "@/app/actions/send-invite-credit-email";
 import { User } from "@supabase/supabase-js";
 
-export default function RechargeCredits({ user }: { user: User }) {
+export default function RechargeCredits({
+  user,
+  invitationsCount,
+}: {
+  user: User;
+  invitationsCount: number;
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
@@ -75,7 +81,8 @@ export default function RechargeCredits({ user }: { user: User }) {
               <InfoTooltip content={"Earn 10 credits per Invite"} />
             </span>
             or Buy AI Credits (coming soon) for uninterrupted use of AI
-            features.
+            features. {5 - invitationsCount} invitations remaining for this
+            week.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">

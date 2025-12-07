@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     const { data: userInfoData, error: userInfoError } = await supabase
       .from("user_info")
       .select(
-        "full_name, email, ai_credits, updated_at, filled, invitations(*)"
+        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count"
       )
       .eq("user_id", user.id)
       .single();
@@ -145,22 +145,22 @@ export default async function DashboardPage() {
                 }[]
               ).map((job) => (
                 <Card key={job.id} className="p-4 shadow-none group">
-                  <CardHeader className="p-0 mb-2">
-                    <CardTitle className="text-lg font-bold flex items-center justify-between min-h-10">
-                      <Link
-                        className="hover:underline underline underline-offset-4 sm:no-underline"
-                        href={`/jobs/${job.id}`}
-                        target="_blank"
-                      >
-                        {job.job_name}
-                      </Link>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-2 p-0">
-                    <ApplicationStatusBadge status={job.status} />
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <p>{job.company_name}</p>
-                      <p>Applied {simpleTimeAgo(job.created_at, "variant1")}</p>
+                  <CardContent className="flex flex-col gap-2 p-0 h-full">
+                    <Link
+                      className="text-lg font-bold hover:underline underline underline-offset-4 sm:no-underline flex-1"
+                      href={`/jobs/${job.id}`}
+                      target="_blank"
+                    >
+                      {job.job_name}
+                    </Link>
+                    <div className="flex flex-col gap-2 ">
+                      <ApplicationStatusBadge status={job.status} />
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <p>{job.company_name}</p>
+                        <p>
+                          Applied {simpleTimeAgo(job.created_at, "variant1")}
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -194,13 +194,16 @@ export default async function DashboardPage() {
                     AI Credits left
                   </span>
                 </div>
-                <RechargeCredits user={user} />
+                <RechargeCredits
+                  user={user}
+                  invitationsCount={userInfoData.invitations_count}
+                />
               </CardContent>
             </Card>
 
             <Card className="flex flex-col  p-4 text-center shadow-none  transition-colors">
-              <CardHeader className="p-0"></CardHeader>
-              <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full">
+              {/* <CardHeader className="p-0"></CardHeader> */}
+              <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full flex-1">
                 <div className=" flex items-center gap-3 ">
                   {userInfoData.filled ? (
                     <span className="text-4xl font-extrabold">
