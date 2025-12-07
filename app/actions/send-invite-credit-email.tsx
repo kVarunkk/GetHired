@@ -35,12 +35,15 @@ export async function sendInviteEmail(
 
     const { data: referrerData, error: refError } = await supabase
       .from("user_info")
-      .select("referral_code, full_name, email")
+      .select("referral_code, full_name, email, invitations_count")
       .eq("user_id", referrerUserId)
       .single();
 
     if (refError || !referrerData) {
       throw new Error("Failed to retrieve inviter's code.");
+    }
+    if (referrerData.invitations_count >= 5) {
+      throw new Error("Invitation limit reached for this week.");
     }
     const referralCode = referrerData.referral_code;
 
@@ -104,6 +107,15 @@ export async function sendInviteEmail(
         });
 
       if (userInfoError) throw new Error("Error inserting Invitation record.");
+
+      const { error: userUpdateError } = await supabase
+        .from("user_info")
+        .update({
+          invitations_count: referrerData.invitations_count + 1,
+        })
+        .eq("user_id", referrerUserId);
+
+      if (userUpdateError) throw new Error("Error updating referrer record.");
 
       return {
         success: true,

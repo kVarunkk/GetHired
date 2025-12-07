@@ -29,15 +29,15 @@ export default function JobsComponent({
   initialJobs,
   totalJobs,
   user,
-  uniqueLocations,
-  uniqueCompanies,
-  uniqueIndustries,
+  // uniqueLocations,
+  // uniqueCompanies,
+  // uniqueIndustries,
   isCompanyUser,
   current_page,
-  uniqueJobRoles,
-  uniqueIndustryPreferences,
-  uniqueWorkStylePreferences,
-  uniqueSkills,
+  // uniqueJobRoles,
+  // uniqueIndustryPreferences,
+  // uniqueWorkStylePreferences,
+  // uniqueSkills,
   companyId,
   isOnboardingComplete,
   isAllJobsTab,
@@ -47,15 +47,15 @@ export default function JobsComponent({
   initialJobs: IJob[] | IFormData[];
   totalJobs: number;
   user: User | null;
-  uniqueLocations?: { location: string }[];
-  uniqueCompanies?: { company_name: string }[];
-  uniqueIndustries?: { industry: string }[];
+  // uniqueLocations?: { location: string }[];
+  // uniqueCompanies?: { company_name: string }[];
+  // uniqueIndustries?: { industry: string }[];
   isCompanyUser: boolean;
   current_page: "jobs" | "profiles" | "companies";
-  uniqueJobRoles?: { job_role: string }[];
-  uniqueIndustryPreferences?: { industry_preference: string }[];
-  uniqueWorkStylePreferences?: { work_style_preference: string }[];
-  uniqueSkills?: { skill: string }[];
+  // uniqueJobRoles?: { job_role: string }[];
+  // uniqueIndustryPreferences?: { industry_preference: string }[];
+  // uniqueWorkStylePreferences?: { work_style_preference: string }[];
+  // uniqueSkills?: { skill: string }[];
   companyId?: string;
   isOnboardingComplete: boolean;
   isAllJobsTab: boolean;
@@ -260,16 +260,16 @@ export default function JobsComponent({
           )}
 
           <FilterComponentSheet
-            uniqueLocations={uniqueLocations}
-            uniqueCompanies={uniqueCompanies ?? []}
-            uniqueJobRoles={uniqueJobRoles ?? []}
-            uniqueIndustryPreferences={uniqueIndustryPreferences ?? []}
-            uniqueWorkStylePreferences={uniqueWorkStylePreferences ?? []}
-            uniqueSkills={uniqueSkills ?? []}
+            // uniqueLocations={uniqueLocations}
+            // uniqueCompanies={uniqueCompanies ?? []}
+            // uniqueJobRoles={uniqueJobRoles ?? []}
+            // uniqueIndustryPreferences={uniqueIndustryPreferences ?? []}
+            // uniqueWorkStylePreferences={uniqueWorkStylePreferences ?? []}
+            // uniqueSkills={uniqueSkills ?? []}
             isCompanyUser={isCompanyUser}
             currentPage={current_page}
             onboardingComplete={isOnboardingComplete}
-            uniqueIndustries={uniqueIndustries ?? []}
+            // uniqueIndustries={uniqueIndustries ?? []}
           />
         </div>
       </div>

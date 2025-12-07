@@ -13,27 +13,13 @@ import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
 export default function FilterComponentSheet({
-  uniqueLocations,
-  uniqueCompanies,
-  uniqueJobRoles,
-  uniqueIndustryPreferences,
-  uniqueWorkStylePreferences,
-  uniqueSkills,
   isCompanyUser,
   currentPage,
   onboardingComplete,
-  uniqueIndustries,
 }: {
-  uniqueLocations?: { location: string }[];
-  uniqueCompanies: { company_name: string }[];
-  uniqueJobRoles: { job_role: string }[];
-  uniqueIndustryPreferences: { industry_preference: string }[];
-  uniqueWorkStylePreferences: { work_style_preference: string }[];
-  uniqueSkills: { skill: string }[];
   isCompanyUser: boolean;
   currentPage: "jobs" | "companies" | "profiles";
   onboardingComplete: boolean;
-  uniqueIndustries: { industry: string }[];
 }) {
   const [openSheet, setOpenSheet] = useState(false);
   const searchParams = useSearchParams();
@@ -78,28 +64,28 @@ export default function FilterComponentSheet({
         </SheetHeader>
         {currentPage === "profiles" && isCompanyUser ? (
           <FilterComponent
-            uniqueLocations={uniqueLocations}
-            uniqueJobRoles={uniqueJobRoles}
-            uniqueIndustryPreferences={uniqueIndustryPreferences}
-            uniqueWorkStylePreferences={uniqueWorkStylePreferences}
-            uniqueSkills={uniqueSkills}
+            // uniqueLocations={uniqueLocations}
+            // uniqueJobRoles={uniqueJobRoles}
+            // uniqueIndustryPreferences={uniqueIndustryPreferences}
+            // uniqueWorkStylePreferences={uniqueWorkStylePreferences}
+            // uniqueSkills={uniqueSkills}
             currentPage={currentPage}
             setOpenSheet={setOpenSheet}
             onboardingComplete={onboardingComplete}
           />
         ) : currentPage === "jobs" ? (
           <FilterComponent
-            uniqueLocations={uniqueLocations}
-            uniqueCompanies={uniqueCompanies}
+            // uniqueLocations={uniqueLocations}
+            // uniqueCompanies={uniqueCompanies}
             setOpenSheet={setOpenSheet}
             onboardingComplete={onboardingComplete}
             currentPage={currentPage}
           />
         ) : (
           <FilterComponent
-            uniqueLocations={uniqueLocations}
-            uniqueCompanies={uniqueCompanies}
-            uniqueIndustries={uniqueIndustries}
+            // uniqueLocations={uniqueLocations}
+            // uniqueCompanies={uniqueCompanies}
+            // uniqueIndustries={uniqueIndustries}
             setOpenSheet={setOpenSheet}
             onboardingComplete={onboardingComplete}
             currentPage={currentPage}
