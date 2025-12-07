@@ -226,8 +226,8 @@ export default async function JobPage({
                 <CardContent>
                   <div className="flex flex-wrap gap-2 text-2xl font-bold">
                     {job.locations && job.locations.length > 0 ? (
-                      job.locations.map((loc, index) => (
-                        <Badge key={index} variant="secondary" className="p-2">
+                      job.locations.map((loc) => (
+                        <Badge key={loc} variant="secondary" className="p-2">
                           {loc}
                         </Badge>
                       ))

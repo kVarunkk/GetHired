@@ -197,7 +197,9 @@ export function LoginForm({
                   href={
                     isCompany
                       ? "/auth/sign-up?company=true"
-                      : "/auth/sign-up?returnTo=" + returnToPath
+                      : returnToPath
+                        ? "/auth/sign-up?returnTo=" + returnToPath
+                        : "/auth/sign-up"
                   }
                   className="underline underline-offset-4"
                 >

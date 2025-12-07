@@ -159,6 +159,15 @@ export interface IJobPosting {
   job_id: string | null;
 }
 
+export interface IInvitation {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  referrer_user_id: string;
+  invited_email: string;
+  status: "pending" | "complete";
+}
+
 export interface IFormData {
   user_id?: string;
   full_name: string;
@@ -198,6 +207,7 @@ export interface IFormData {
   skills_resume?: string;
   experience_resume?: string;
   projects_resume?: string;
+  invitations?: IInvitation[];
 }
 
 export interface ICompanyInfo {

@@ -131,13 +131,13 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     let isApplicant = false;
     let isCompany = false;
-    let userInfo = null;
+    // let userInfo = null;
     let companyInfo = null;
     try {
       // Check if the user has an applicant profile
       const { data: userInfoData } = await supabase
         .from("user_info")
-        .select("filled")
+        .select("user_id")
         .eq("user_id", user.id)
         .single();
 
@@ -148,9 +148,9 @@ export async function updateSession(request: NextRequest) {
         .eq("user_id", user.id)
         .single();
 
-      isApplicant = userInfoData?.filled || false;
+      isApplicant = userInfoData?.user_id || false;
       isCompany = companyInfoData?.filled || false;
-      userInfo = userInfoData;
+      // userInfo = userInfoData;
       companyInfo = companyInfoData;
     } catch {}
 
@@ -158,7 +158,7 @@ export async function updateSession(request: NextRequest) {
     if (isAuthPath) {
       const url = request.nextUrl.clone();
       let pathname;
-      if (isApplicant === true && userInfo) {
+      if (isApplicant === true) {
         pathname = "/jobs";
         url.pathname = pathname;
         url.searchParams.forEach((value, key) => {
@@ -223,6 +223,13 @@ export async function updateSession(request: NextRequest) {
       if (companyInfo) {
         url.searchParams.set("company", "true");
       }
+      return NextResponse.redirect(url);
+    }
+
+    // --- Restrict Access to Applicant Dashboard ---
+    if (pathname.startsWith("/dashboard") && !isApplicant) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/company";
       return NextResponse.redirect(url);
     }
 

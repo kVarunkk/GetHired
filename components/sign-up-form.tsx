@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,6 +22,7 @@ import { Loader2 } from "lucide-react";
 import InfoTooltip from "./InfoTooltip";
 import { useProgress } from "react-transition-progress";
 import GoogleAuthBtn from "./GoogleAuthBtn";
+import { sendSignupEmail } from "@/app/actions/sign-up-email";
 
 const isGenericEmail = (email: string) => {
   const genericDomains = [
@@ -89,35 +89,17 @@ export function SignUpForm({
     password: string;
     repeatPassword: string;
   }) => {
-    const supabase = createClient();
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/${
-            isCompany ? "get-started?company=true" : "get-started"
-          }`,
-        },
-      });
-      if (error) throw error;
-      if (!data.user) throw new Error("User not found");
-      const dataToAdd = isCompany
-        ? {
-            user_id: data.user?.id,
-          }
-        : {
-            user_id: data.user?.id,
-            email: values.email,
-            is_job_digest_active: true,
-            is_promotion_active: true,
-          };
-      const { error: InfoError } = await supabase
-        .from(isCompany ? "company_info" : "user_info")
-        .insert(dataToAdd);
-      if (InfoError) throw InfoError;
+      const result = await sendSignupEmail(
+        values.email,
+        values.password,
+        isCompany
+      );
+
+      if (!result.success) throw new Error(result.error);
+
       form.reset();
 
       startTransition(() => {
@@ -247,7 +229,9 @@ export function SignUpForm({
                   href={
                     isCompany
                       ? "/auth/login?company=true"
-                      : "/auth/login?returnTo=" + returnToPath
+                      : returnToPath
+                        ? "/auth/login?returnTo=" + returnToPath
+                        : "/auth/login"
                   }
                   className="underline underline-offset-4"
                 >

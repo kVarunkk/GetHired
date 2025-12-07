@@ -89,7 +89,7 @@ export default function JobPageDropdown({
                 </DropdownMenuItem>
               </Link>
             ))}
-          {!isCompanyUser && user && appStatus && (
+          {!isCompanyUser && user && appStatus && !isPlatformJob && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <File className="h-4 w-4 " />
