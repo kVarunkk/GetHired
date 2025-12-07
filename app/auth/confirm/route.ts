@@ -12,19 +12,18 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") as EmailOtpType | null;
 
   let nextPathWithParams = searchParams.get("next") ?? DEFAULT_REDIRECT_PATH;
-
+  let nextRedirectPath = nextPathWithParams;
   let referralCode: string | null = null;
 
   try {
     const tempUrl = new URL(nextPathWithParams, origin);
     referralCode = tempUrl.searchParams.get("ref");
+    tempUrl.searchParams.delete("ref");
+    nextRedirectPath = tempUrl.pathname;
   } catch (e) {
     console.warn("Could not parse 'next' parameter for ref code:", e);
     nextPathWithParams = DEFAULT_REDIRECT_PATH;
   }
-
-  const nextRedirectPath =
-    nextPathWithParams.split("?")[0] || DEFAULT_REDIRECT_PATH;
 
   let next = nextRedirectPath;
 

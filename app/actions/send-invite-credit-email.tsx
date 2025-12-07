@@ -44,7 +44,7 @@ export async function sendInviteEmail(
     }
     const referralCode = referrerData.referral_code;
 
-    const finalRedirectUrl = `/get-started?ref=${referralCode}`;
+    const finalRedirectUrl = `/get-started?edit=true&ref=${referralCode}`;
 
     const { data, error } = await serviceRoleSupabase.auth.admin.generateLink({
       type: "signup",
