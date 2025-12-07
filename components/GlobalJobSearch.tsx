@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useCallback,
-  useRef,
-  useEffect,
-  startTransition,
-} from "react";
+import { useState, useCallback, useRef, startTransition } from "react";
 import { Loader2, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -25,11 +19,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"; // Assuming this path
-import { User } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
 import { useProgress } from "react-transition-progress";
-import { getTimeLeftHours } from "@/lib/utils";
 import { Textarea } from "./ui/textarea";
+import { TAICredits } from "@/lib/types";
+import InfoTooltip from "./InfoTooltip";
 
 interface ParsedFilters {
   [key: string]: string | string[] | undefined;
@@ -47,46 +40,17 @@ const premadePrompts = [
   "Show me contract DevOps roles.",
 ];
 
-const hoursLeft = getTimeLeftHours();
-
-export default function GlobalJobSearch({ user }: { user: User }) {
+export default function GlobalJobSearch({
+  aiCredits = 0,
+}: {
+  aiCredits?: number;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchUses, setSearchUses] = useState(0);
   const router = useRouter();
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
   const startProgress = useProgress();
-
-  const fetchUserData = useCallback(async () => {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("user_info")
-      .select("ai_global_jobs_search_uses")
-      .eq("user_id", user.id)
-      .single();
-    if (data && !error) {
-      return data.ai_global_jobs_search_uses;
-    } else return null;
-  }, [user]);
-
-  const updateUserData = async (search_uses: number) => {
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("user_info")
-      .update({ ai_global_jobs_search_uses: search_uses + 1 })
-      .eq("user_id", user.id);
-    if (!error) {
-      setSearchUses((prev) => prev + 1);
-    }
-  };
-
-  useEffect(() => {
-    (async () => {
-      const search_uses = await fetchUserData();
-      setSearchUses(search_uses);
-    })();
-  }, [fetchUserData]);
 
   const buildUrlParams = useCallback(
     (filters: ParsedFilters): URLSearchParams => {
@@ -110,9 +74,9 @@ export default function GlobalJobSearch({ user }: { user: User }) {
 
   const handleSubmit = async (formData: FormData) => {
     setError(null);
-    const search_uses = await fetchUserData();
-    if (search_uses >= 5) {
-      setError("No more Searches left today :(. Resets every day.");
+    if (aiCredits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
+      setError("Insufficient AI credits. Please top up to continue.");
+      return;
     }
     const query = formData.get("searchQuery")?.toString()?.trim();
 
@@ -144,8 +108,6 @@ export default function GlobalJobSearch({ user }: { user: User }) {
 
       const params = buildUrlParams(filters);
 
-      await updateUserData(search_uses);
-
       startTransition(() => {
         startProgress();
         router.push(`/jobs?${params.toString()}`);
@@ -156,7 +118,6 @@ export default function GlobalJobSearch({ user }: { user: User }) {
       toast.error(
         `Search failed: ${(error as Error).message}. Please try again.`
       );
-      //   console.error("AI Search Error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -185,8 +146,15 @@ export default function GlobalJobSearch({ user }: { user: User }) {
           <DialogTitle className="text-start">
             What kind of job are you looking for?
           </DialogTitle>
-          <DialogDescription className="text-start">
-            {5 - searchUses} Searches left today. Resets in {hoursLeft} hours.
+          <DialogDescription className="text-start flex items-center">
+            {aiCredits} AI Credits available.
+            <InfoTooltip
+              content={
+                "This feature uses " +
+                TAICredits.AI_GLOBAL_SEARCH +
+                " AI credits per search."
+              }
+            />
           </DialogDescription>
         </DialogHeader>
 
@@ -203,7 +171,9 @@ export default function GlobalJobSearch({ user }: { user: User }) {
             required
             placeholder="e.g., Senior Java jobs in London with visa sponsorship"
             name="searchQuery"
-            disabled={isLoading || searchUses >= 5}
+            disabled={
+              isLoading || aiCredits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
+            }
             className="bg-input text-sm"
             ref={searchInputRef}
           />
@@ -237,7 +207,12 @@ export default function GlobalJobSearch({ user }: { user: User }) {
             </AccordionItem>
           </Accordion>
 
-          <Button type="submit" disabled={isLoading || searchUses >= 5}>
+          <Button
+            type="submit"
+            disabled={
+              isLoading || aiCredits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
+            }
+          >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Search Jobs
           </Button>

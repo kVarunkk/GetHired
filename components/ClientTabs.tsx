@@ -17,6 +17,7 @@ export function ClientTabs({
   applicationStatusFilter,
   page,
   children,
+  aiCredits,
 }: {
   user: User | null;
   isCompanyUser: boolean;
@@ -24,6 +25,7 @@ export function ClientTabs({
   applicationStatusFilter?: string | false;
   page: "jobs" | "profiles" | "companies";
   children: React.ReactNode;
+  aiCredits?: number;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -159,7 +161,7 @@ export function ClientTabs({
 
         {page === "jobs" && user && !isCompanyUser && (
           <div className="flex items-center gap-2">
-            <GlobalJobSearch user={user} />
+            <GlobalJobSearch aiCredits={aiCredits} />
             <BookmarkJobSearch user={user} />
             <JobsPageDropdown user={user} />
           </div>

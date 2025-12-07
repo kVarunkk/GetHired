@@ -1,37 +1,6 @@
+import { handleUserUpsert } from "@/lib/serverUtils";
 import { createClient } from "@/lib/supabase/server";
-import { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-
-async function handleUserUpsert(user: User) {
-  const supabase = await createClient();
-  const { data: userData } = await supabase
-    .from("user_info")
-    .select("user_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  if (!userData || userData.length === 0) {
-    console.log(`OAuth: Inserting new user_info row for ID: ${user.id}`);
-
-    const newUserInfo = {
-      user_id: user.id,
-      email: user.email,
-      is_job_digest_active: true,
-      is_promotion_active: true,
-    };
-
-    const { error: insertError } = await supabase
-      .from("user_info")
-      .insert(newUserInfo);
-
-    if (insertError) {
-      console.error(
-        "CRITICAL DB ERROR: Failed to insert new user_info row:",
-        insertError
-      );
-    }
-  }
-}
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);

@@ -3,6 +3,7 @@ import { generateText } from "ai";
 import { createClient } from "@/lib/supabase/server";
 import { getVertexClient } from "@/lib/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { TAICredits } from "@/lib/types";
 
 const MAX_SUMMARY_LENGTH = 500;
 
@@ -26,6 +27,22 @@ export async function POST(req: Request) {
     );
   }
 
+  const { data, error } = await authenticatedSupabase
+    .from("user_info")
+    .select("ai_credits")
+    .eq("user_id", user.id)
+    .single();
+
+  if (error || !data) {
+    return NextResponse.json({ error: "User not found." }, { status: 404 });
+  }
+  if (data.ai_credits < TAICredits.AI_SUMMARY) {
+    return NextResponse.json(
+      { error: "Insufficient AI credits. Please top up to continue." },
+      { status: 402 }
+    );
+  }
+
   let jobDescription = "";
 
   try {
@@ -36,7 +53,6 @@ export async function POST(req: Request) {
       .single();
 
     if (fetchError || !job || !job.description) {
-      console.error(`Error fetching job ${job_id}:`, fetchError);
       return NextResponse.json(
         { error: "Job description not found." },
         { status: 404 }
@@ -75,16 +91,23 @@ Analyze the following job posting: "${job.job_name}". Text to summarize: ${jobDe
       .eq("id", job_id);
 
     if (updateError) {
-      console.error(`Error updating job ${job_id} with summary:`, updateError);
       return NextResponse.json(
         { error: "Failed to save summary to database." },
         { status: 500 }
       );
     }
 
+    const { error: creditError } = await authenticatedSupabase
+      .from("user_info")
+      .update({ ai_credits: data.ai_credits - TAICredits.AI_SUMMARY })
+      .eq("user_id", user.id);
+
+    if (creditError) {
+      throw creditError;
+    }
+
     return NextResponse.json({ summary: rawSummary });
-  } catch (e) {
-    console.error("Critical error in job summarization process:", e);
+  } catch {
     return NextResponse.json(
       { error: "Internal server processing failure." },
       { status: 500 }

@@ -12,7 +12,7 @@ import {
   Sparkle,
 } from "lucide-react";
 import { IJob } from "@/lib/types";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -50,6 +50,13 @@ export default function JobApplyBtn({
   };
   const [appStatus, setAppStatus] = useState(job.applications?.[0]?.status);
 
+  useEffect(() => {
+    const newStatus = job.applications?.[0]?.status;
+    if (newStatus !== appStatus) {
+      setAppStatus(newStatus);
+    }
+  }, [job.applications?.[0]?.status]);
+
   const handleCloseDialog = useCallback(
     (applicationStatus?: TApplicationStatus) => {
       if (applicationStatus) setAppStatus(applicationStatus);
@@ -70,19 +77,21 @@ export default function JobApplyBtn({
                 <InfoTooltip
                   content={
                     <p>
-                      Your current application status is <b>{appStatus}</b>.
-                      You&apos;ll have to manually track your application status
-                      via the{" "}
+                      Your current application status is{" "}
+                      <b className="capitalize">{appStatus}</b>. You&apos;ll
+                      have to manually track your application status via the{" "}
                       <Link
                         onClick={(e) => e.stopPropagation()}
-                        className="underline text-blue-600"
+                        className="underline text-blue-500"
                         href={job.job_url}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
                         Job Posting
                       </Link>
-                      .
+                      . You can update your status by clicking on{" "}
+                      <MoreHorizontal className="h-4 w-4 inline-block mx-1" />{" "}
+                      button.
                     </p>
                   }
                 />

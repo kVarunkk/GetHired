@@ -18,7 +18,6 @@ import FilterComponentSheet from "./FilterComponentSheet";
 import { Button } from "./ui/button";
 import { ArrowLeft, Search } from "lucide-react";
 import ProfileItem from "./ProfileItem";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import ScrollToTopButton from "./ScrollToTopButton";
 import SortingComponent from "./SortingComponent";
 import { useProgress } from "react-transition-progress";
@@ -239,21 +238,17 @@ export default function JobsComponent({
             )}
 
           {!isOnboardingComplete && user && !isCompanyUser && (
-            <Tooltip delayDuration={100}>
-              <TooltipTrigger className="cursor-default" asChild>
-                <Link href={"/get-started?edit=true"}>
-                  <Button className="flex items-center gap-2 rounded-full text-sm">
-                    <Search className="w-4 h-4" />
-                    {current_page === "companies"
-                      ? "Find Suitable Companies"
-                      : "Find Suitable Jobs"}
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>
-                Complete Onboarding to use this Feature.
-              </TooltipContent>
-            </Tooltip>
+            <div className="flex items-center gap-2">
+              <InfoTooltip content="Please complete your profile to use this feature" />
+              <Link href={"/get-started?edit=true"}>
+                <Button className="flex items-center gap-2 rounded-full text-sm">
+                  <Search className="w-4 h-4" />
+                  {current_page === "companies"
+                    ? "Find Suitable Companies"
+                    : "Find Suitable Jobs"}
+                </Button>
+              </Link>
+            </div>
           )}
 
           {searchParams.get("sortBy") !== "relevance" && (

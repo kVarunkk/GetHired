@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { ICompanyInfo } from "@/lib/types";
+import { ICompanyInfo, TAICredits } from "@/lib/types";
 import { getVertexClient } from "@/lib/serverUtils";
 
 export async function POST(request: NextRequest) {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const { data } = await supabase
       .from("user_info")
       .select(
-        "desired_roles, experience_years, preferred_locations, min_salary, max_salary, top_skills, work_Style_preferences, company_type, company_size_preference, career_goals_short_term, career_goals_long_term, visa_sponsorship_required, work_style_preferences, ai_search_uses"
+        "desired_roles, experience_years, preferred_locations, min_salary, max_salary, top_skills, company_size_preference, career_goals_short_term, career_goals_long_term, visa_sponsorship_required, work_style_preferences, ai_credits"
       )
       .eq("user_id", userId)
       .single();
@@ -38,6 +38,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (userPreferences.ai_credits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
+      return NextResponse.json(
+        { message: "Insufficient AI credits. Please top up to continue." },
+        { status: 402 }
+      );
+    }
+
     // Step 2: Construct the userQuery based on fetched preferences
     const userQuery = `
       User is a candidate with the following preferences:
@@ -49,7 +56,6 @@ export async function POST(request: NextRequest) {
       }
       - Top Skills: ${userPreferences.top_skills?.join(", ")}
       - Work Style: ${userPreferences.work_style_preferences?.join(", ")}
-      - company Type: ${userPreferences.company_type?.join(", ")}
       - Company Size: ${userPreferences.company_size_preference}
       - Career Goals: ${userPreferences.career_goals_short_term} and ${
         userPreferences.career_goals_long_term
@@ -117,7 +123,8 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("user_info")
       .update({
-        ai_search_uses: userPreferences.ai_search_uses + 1,
+        ai_credits:
+          userPreferences.ai_credits - TAICredits.AI_SMART_SEARCH_OR_ASK_AI,
       })
       .eq("user_id", userId);
 

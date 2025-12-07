@@ -2,25 +2,30 @@ import * as React from "react";
 import { BaseEmailLayout } from "@/emails/BaseEmailLayout";
 import { Heading, Text, Section, Button, Link } from "@react-email/components";
 
-export const AuthConfirmationEmail = ({ signupUrl }: { signupUrl: string }) => {
+export const ResetPasswordEmail = ({
+  email,
+  inviteUrl,
+}: {
+  email: string;
+  inviteUrl: string;
+}) => {
   return (
     <BaseEmailLayout previewText={""}>
       <Heading className="text-2xl font-bold text-gray-800 my-6 ">
-        Confirm Your Signup
+        Follow this link to reset your password for {email}
       </Heading>
 
       <Text className="text-base text-gray-700 mb-6 ">
-        Welcome to GetHired! Follow the link below to verify your email address
-        and activate your account.
+        Welcome to GetHired! Follow the link below to reset your password.
       </Text>
 
       <Section className=" my-8 ">
         <Button
-          href={signupUrl}
+          href={inviteUrl}
           className="bg-black text-white py-3 px-6 rounded-md text-lg font-bold no-underline"
           style={{ backgroundColor: "#000000", color: "#FFFFFF" }}
         >
-          Confirm Your Mail
+          Accept Invite
         </Button>
       </Section>
 
@@ -28,8 +33,8 @@ export const AuthConfirmationEmail = ({ signupUrl }: { signupUrl: string }) => {
         If the button above does not work, copy and paste this link into your
         browser:
         <br />
-        <Link href={signupUrl} className="text-blue-600 underline break-all">
-          {signupUrl}
+        <Link href={inviteUrl} className="text-blue-600 underline break-all">
+          {inviteUrl}
         </Link>
       </Text>
 
@@ -42,4 +47,4 @@ export const AuthConfirmationEmail = ({ signupUrl }: { signupUrl: string }) => {
   );
 };
 
-export default AuthConfirmationEmail;
+export default ResetPasswordEmail;

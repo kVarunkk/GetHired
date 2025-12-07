@@ -4,11 +4,12 @@ import { useState } from "react";
 import { ArrowDown, Loader2, Sparkle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { IJob, IJobPosting } from "@/lib/types";
+import { IJob, IJobPosting, TAICredits } from "@/lib/types";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import InfoTooltip from "./InfoTooltip";
 
 export default function JobDescriptionCard({
   job,
@@ -102,23 +103,34 @@ export default function JobDescriptionCard({
               Job Description
             </CardTitle>
             {page === "all-jobs" && !isCompanyUser && (
-              <Button
-                variant={"link"}
-                className="underline pl-0 sm:pl-3"
-                onClick={handleAISummary}
-                disabled={isLoading || !job.description}
-              >
-                {!isLoading && !isAISummary && <Sparkle className="h-4 w-4 " />}
-                {isLoading ? (
-                  <>Processing...</>
-                ) : !user ? (
-                  "Sign up to Summarize with AI"
-                ) : isAISummary ? (
-                  "Show Original"
-                ) : (
-                  "Summarize with AI"
-                )}
-              </Button>
+              <div className="flex items-center">
+                <Button
+                  variant={"link"}
+                  className="underline pl-0 sm:pl-3"
+                  onClick={handleAISummary}
+                  disabled={isLoading || !job.description}
+                >
+                  {!isLoading && !isAISummary && (
+                    <Sparkle className="h-4 w-4 " />
+                  )}
+                  {isLoading ? (
+                    <>Processing...</>
+                  ) : !user ? (
+                    "Sign up to Summarize with AI"
+                  ) : isAISummary ? (
+                    "Show Original"
+                  ) : (
+                    "Summarize with AI"
+                  )}
+                </Button>
+                <InfoTooltip
+                  content={
+                    "This feature uses " +
+                    TAICredits.AI_SUMMARY +
+                    " AI credits per use."
+                  }
+                />
+              </div>
             )}
           </div>
         </CardHeader>

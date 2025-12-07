@@ -113,7 +113,7 @@ export interface IJob {
   equity_max: number;
   visa_requirement: string;
   description: string;
-  job_url: string;
+  job_url: string | null;
   created_at: string;
   updated_at: string;
   locations: string[];
@@ -159,6 +159,15 @@ export interface IJobPosting {
   job_id: string | null;
 }
 
+export interface IInvitation {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  referrer_user_id: string;
+  invited_email: string;
+  status: "pending" | "complete";
+}
+
 export interface IFormData {
   user_id?: string;
   full_name: string;
@@ -192,13 +201,13 @@ export interface IFormData {
   applications?: IApplication[];
   is_promotion_active?: boolean;
   is_job_digest_active?: boolean;
-  ai_global_jobs_search_uses?: number;
-  ask_ai_job_uses?: number;
+  ai_credits?: number;
   linkedin_url?: string;
   github_url?: string;
   skills_resume?: string;
   experience_resume?: string;
   projects_resume?: string;
+  invitations?: IInvitation[];
 }
 
 export interface ICompanyInfo {
@@ -214,7 +223,7 @@ export interface ICompanyInfo {
   tag_line: string;
   created_at: string;
   updated_at: string;
-  ai_search_uses: number;
+  ai_credits: number;
   filled: boolean;
   user_favorites_companies: {
     id: string;
@@ -275,6 +284,12 @@ export enum TApplicationStatus {
   SELECTED = "selected",
   STAND_BY = "stand_by",
   REJECTED = "rejected",
+}
+
+export enum TAICredits {
+  AI_SMART_SEARCH_OR_ASK_AI = 5,
+  AI_GLOBAL_SEARCH = 3,
+  AI_SUMMARY = 1,
 }
 
 export type TAgentType = keyof typeof agentConfigs;

@@ -112,6 +112,15 @@ export default function ProfileDropdown({
             {isCompanyUser ? "Company" : "Applicant"}
           </Badge>
         </DropdownMenuLabel>
+        <DropdownMenuItem>
+          <Link
+            className="w-full flex items-center cursor-default gap-4"
+            href={isCompanyUser ? "/company" : "/dashboard"}
+          >
+            <LayoutDashboard className="text-muted-foreground h-4 w-4" />
+            Dashboard
+          </Link>
+        </DropdownMenuItem>
         {isUserInfo ? (
           <DropdownMenuItem>
             <Link
@@ -120,19 +129,6 @@ export default function ProfileDropdown({
             >
               <UserIcon className="text-muted-foreground  h-4 w-4" />
               Profile
-            </Link>
-          </DropdownMenuItem>
-        ) : (
-          ""
-        )}
-        {isCompanyUser ? (
-          <DropdownMenuItem>
-            <Link
-              className="w-full flex items-center cursor-default gap-4"
-              href={"/company"}
-            >
-              <LayoutDashboard className="text-muted-foreground h-4 w-4" />
-              Dashboard
             </Link>
           </DropdownMenuItem>
         ) : (

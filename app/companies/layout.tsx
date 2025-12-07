@@ -36,7 +36,7 @@ export default async function JobsLayout({
 
     const { data: companyData } = await supabase
       .from("company_info")
-      .select("id, ai_search_uses, filled")
+      .select("id")
       .eq("user_id", user?.id)
       .single();
 

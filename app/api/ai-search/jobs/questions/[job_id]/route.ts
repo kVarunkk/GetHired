@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateText } from "ai";
 import { getVertexClient } from "@/lib/serverUtils";
+import { TAICredits } from "@/lib/types";
 
 export async function POST(
   request: NextRequest,
@@ -37,10 +38,21 @@ export async function POST(
     const { data: userProfile } = await supabase
       .from("user_info")
       .select(
-        "desired_roles, skills_resume, experience_resume, projects_resume, experience_years, career_goals_short_term, career_goals_long_term"
+        "desired_roles, skills_resume, experience_resume, projects_resume, experience_years, career_goals_short_term, career_goals_long_term, ai_credits"
       )
       .eq("user_id", userId)
       .single();
+
+    if (!userProfile) {
+      return NextResponse.json({ error: "User not found." }, { status: 404 });
+    }
+
+    if (userProfile?.ai_credits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
+      return NextResponse.json(
+        { error: "Insufficient AI credits. Please top up to continue." },
+        { status: 402 }
+      );
+    }
 
     if (jobFetchError || !jobData || !jobData.description) {
       return NextResponse.json(
@@ -72,6 +84,19 @@ export async function POST(
       prompt: prompt,
     });
     answer = text;
+
+    const { error: deductError } = await supabase
+      .from("user_info")
+      .update({
+        ai_credits:
+          userProfile.ai_credits - TAICredits.AI_SMART_SEARCH_OR_ASK_AI,
+      })
+      .eq("user_id", userId);
+
+    if (deductError) {
+      //   console.error("Error deducting AI credits:", deductError);
+      throw deductError;
+    }
 
     return NextResponse.json({ success: true, answer: answer });
   } catch (e) {
