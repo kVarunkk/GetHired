@@ -191,3 +191,5 @@ export function isValidUrl(url_string: string) {
     return false;
   }
 }
+
+export const fetcher = (url: string) => fetch(url).then((res) => res.json());

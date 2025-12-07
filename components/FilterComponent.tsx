@@ -18,6 +18,8 @@ import InputFilter from "./InputFilterComponent";
 import { TApplicationStatus } from "@/lib/types";
 import { useProgress } from "react-transition-progress";
 import FilterActions from "./FilterActions";
+import useSWR from "swr";
+import { commonIndustries, fetcher } from "@/lib/utils";
 import { useCachedFetch } from "@/lib/hooks/useCachedFetch";
 
 type FilterConfig = {
@@ -52,27 +54,27 @@ export type FiltersState = {
 };
 
 export default function FilterComponent({
-  uniqueLocations,
-  uniqueCompanies,
-  uniqueIndustries,
+  // uniqueLocations,
+  // uniqueCompanies,
+  // uniqueIndustries,
   setOpenSheet,
-  uniqueJobRoles,
-  uniqueIndustryPreferences,
-  uniqueWorkStylePreferences,
-  uniqueSkills,
+  // uniqueJobRoles,
+  // uniqueIndustryPreferences,
+  // uniqueWorkStylePreferences,
+  // uniqueSkills,
   currentPage,
   onboardingComplete,
 }: {
-  uniqueLocations?: { location: string }[];
-  uniqueCompanies?: { company_name: string }[];
-  uniqueIndustries?: {
-    industry: string;
-  }[];
+  // uniqueLocations?: { location: string }[];
+  // uniqueCompanies?: { company_name: string }[];
+  // uniqueIndustries?: {
+  //   industry: string;
+  // }[];
   setOpenSheet?: Dispatch<SetStateAction<boolean>>;
-  uniqueJobRoles?: { job_role: string }[];
-  uniqueIndustryPreferences?: { industry_preference: string }[];
-  uniqueWorkStylePreferences?: { work_style_preference: string }[];
-  uniqueSkills?: { skill: string }[];
+  // uniqueJobRoles?: { job_role: string }[];
+  // uniqueIndustryPreferences?: { industry_preference: string }[];
+  // uniqueWorkStylePreferences?: { work_style_preference: string }[];
+  // uniqueSkills?: { skill: string }[];
   currentPage: "jobs" | "profiles" | "companies";
   onboardingComplete: boolean;
 }) {
@@ -80,7 +82,7 @@ export default function FilterComponent({
   const searchParams = useSearchParams();
   const startProgress = useProgress();
   const [isPending, startTransition] = useTransition();
-  const { data: countries, isLoading } = useCachedFetch<{ location: string }[]>(
+  const { data: countries } = useCachedFetch<{ location: string }[]>(
     "countryData",
     "/api/locations",
     undefined,
@@ -90,10 +92,63 @@ export default function FilterComponent({
   const toOptions = (list?: { location: string }[]) =>
     list?.map((each) => ({ value: each.location, label: each.location })) || [];
 
+  const { data: filterData, error: filterError } = useSWR(
+    `/api/${currentPage}/filters`,
+    fetcher
+  );
+
+  const uniqueCompanies: { company_name: string }[] = useMemo(
+    () => (filterData?.companies && !filterError ? filterData.companies : []),
+    [filterData, filterError]
+  );
+
+  const uniqueLocations: { location: string }[] = useMemo(
+    () => (filterData?.locations && !filterError ? filterData.locations : []),
+    [filterData, filterError]
+  );
+
+  const uniqueJobRoles: { job_role: string }[] = useMemo(
+    () =>
+      filterData?.uniqueJobRoles && !filterError
+        ? filterData.uniqueJobRoles
+        : [],
+    [filterData, filterError]
+  );
+
+  const uniqueIndustryPreferences: { industry_preference: string }[] = useMemo(
+    () =>
+      filterData?.uniqueIndustryPreferences && !filterError
+        ? filterData.uniqueIndustryPreferences
+        : [],
+    [filterData, filterError]
+  );
+
+  const uniqueSkills: { skill: string }[] = useMemo(
+    () =>
+      filterData?.uniqueSkills && !filterError ? filterData.uniqueSkills : [],
+    [filterData, filterError]
+  );
+
+  const uniqueWorkStylePreferences: { work_style_preference: string }[] =
+    useMemo(
+      () =>
+        filterData?.uniqueWorkStylePreferences && !filterError
+          ? filterData.uniqueWorkStylePreferences
+          : [],
+      [filterData, filterError]
+    );
+
+  // Handle the static industry list
+  const uniqueIndustries = useMemo(
+    () => commonIndustries.map((each) => ({ industry: each })),
+    [commonIndustries] // Assuming commonIndustries is a stable constant
+  );
+
   const FILTER_CONFIG: FilterConfig[] = useMemo(() => {
+    let config: FilterConfig[] = [];
     switch (currentPage) {
       case "jobs":
-        return [
+        config = [
           {
             name: "jobType",
             label: "Job Type",
@@ -132,7 +187,7 @@ export default function FilterComponent({
             label: "Location",
             type: "multi-select", // Changed to multi-select
             placeholder: "Select the location of Job",
-            options: !isLoading && countries ? toOptions(countries) : [],
+            options: countries ? toOptions(countries) : [],
 
             isVirtualized: true,
           },
@@ -203,8 +258,9 @@ export default function FilterComponent({
             placeholder: "e.g., 2",
           },
         ];
+        break;
       case "profiles":
-        return [
+        config = [
           {
             name: "jobType",
             label: "Job Type",
@@ -282,8 +338,9 @@ export default function FilterComponent({
             placeholder: "e.g., 2",
           },
         ];
+        break;
       case "companies":
-        return [
+        config = [
           {
             name: "name",
             label: "Company",
@@ -335,50 +392,56 @@ export default function FilterComponent({
             isVirtualized: false,
           },
         ];
+        break;
     }
+    return config;
   }, [
-    uniqueCompanies,
-    countries,
-    uniqueLocations,
-    isLoading,
-    uniqueJobRoles,
-    uniqueIndustries,
-    uniqueIndustryPreferences,
-    uniqueWorkStylePreferences,
-    uniqueSkills,
     currentPage,
     onboardingComplete,
+    uniqueCompanies,
+    uniqueIndustries,
+    uniqueIndustryPreferences,
+    uniqueJobRoles,
+    uniqueLocations,
+    uniqueSkills,
+    uniqueWorkStylePreferences,
+    countries,
   ]);
 
   const sortBy = searchParams.get("sortBy");
   const sortOrder = searchParams.get("sortOrder");
   const tab = searchParams.get("tab");
 
-  const getInitialState = useCallback((): FiltersState => {
-    const initialState: Partial<FiltersState> = {};
-    FILTER_CONFIG.forEach((filter) => {
-      const paramValue = searchParams.get(filter.name);
-      if (
-        filter.type === "multi-select" ||
-        filter.type === "multi-select-input"
-      ) {
-        (initialState[filter.name] as string[]) = paramValue
-          ? paramValue
-              .split("|")
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : [];
-      } else {
-        (initialState[filter.name] as string) = paramValue || "";
-      }
-    });
-    return initialState as FiltersState;
-  }, [FILTER_CONFIG, searchParams]);
+  const getInitialState = useCallback(
+    (config: FilterConfig[]): FiltersState => {
+      const initialState: Partial<FiltersState> = {};
+      config.forEach((filter) => {
+        const paramValue = searchParams.get(filter.name);
+        if (
+          filter.type === "multi-select" ||
+          filter.type === "multi-select-input"
+        ) {
+          (initialState[filter.name] as string[]) = paramValue
+            ? paramValue
+                .split("|")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : [];
+        } else {
+          (initialState[filter.name] as string) = paramValue || "";
+        }
+      });
+      return initialState as FiltersState;
+    },
+    [searchParams]
+  );
 
-  const [filters, setFilters] = useState<FiltersState>(getInitialState());
-
+  const [filters, setFilters] = useState<FiltersState>(
+    () => getInitialState(FILTER_CONFIG) // Use the memoized config to initialize
+  );
   useEffect(() => {
-    setFilters(getInitialState());
+    // If the currentPage or searchParams change, re-run initialization
+    setFilters(getInitialState(FILTER_CONFIG));
   }, [getInitialState]);
 
   const handleChange = useCallback(
@@ -474,7 +537,7 @@ export default function FilterComponent({
             className="mt-1 w-full"
             availableItems={config.options?.map((e) => e.value)}
             isVirtualized={config.isVirtualized}
-            loading={isLoading}
+            // loading={isLoading}
           />
         );
       case "multi-select-input":

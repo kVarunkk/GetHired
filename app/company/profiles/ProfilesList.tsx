@@ -7,23 +7,23 @@ import { ICompanyInfo, IFormData } from "@/lib/types";
 import JobsComponent from "@/components/JobsComponent";
 
 export default function ProfilesList({
-  uniqueLocations,
+  // uniqueLocations,
   user,
-  uniqueJobRoles,
-  uniqueIndustryPreferences,
-  uniqueWorkStylePreferences,
-  uniqueSkills,
+  // uniqueJobRoles,
+  // uniqueIndustryPreferences,
+  // uniqueWorkStylePreferences,
+  // uniqueSkills,
   companyData,
   onboardingComplete,
   initialProfiles,
   totalCount,
 }: {
-  uniqueLocations: { location: string }[];
+  // uniqueLocations: { location: string }[];
   user: User | null;
-  uniqueJobRoles: { job_role: string }[];
-  uniqueIndustryPreferences: { industry_preference: string }[];
-  uniqueWorkStylePreferences: { work_style_preference: string }[];
-  uniqueSkills: { skill: string }[];
+  // uniqueJobRoles: { job_role: string }[];
+  // uniqueIndustryPreferences: { industry_preference: string }[];
+  // uniqueWorkStylePreferences: { work_style_preference: string }[];
+  // uniqueSkills: { skill: string }[];
   companyData: ICompanyInfo;
   onboardingComplete: boolean;
   initialProfiles: IFormData[];
@@ -55,11 +55,11 @@ export default function ProfilesList({
         initialJobs={dataState || []}
         totalJobs={countState || 0}
         user={user}
-        uniqueLocations={uniqueLocations}
-        uniqueJobRoles={uniqueJobRoles}
-        uniqueIndustryPreferences={uniqueIndustryPreferences}
-        uniqueWorkStylePreferences={uniqueWorkStylePreferences}
-        uniqueSkills={uniqueSkills}
+        // uniqueLocations={uniqueLocations}
+        // uniqueJobRoles={uniqueJobRoles}
+        // uniqueIndustryPreferences={uniqueIndustryPreferences}
+        // uniqueWorkStylePreferences={uniqueWorkStylePreferences}
+        // uniqueSkills={uniqueSkills}
         isCompanyUser={true}
         current_page={"profiles"}
         companyId={companyData.id}

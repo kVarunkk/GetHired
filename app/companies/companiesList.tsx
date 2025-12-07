@@ -8,9 +8,9 @@ import JobsComponent from "@/components/JobsComponent";
 
 export default function CompaniesList({
   isCompanyUser,
-  uniqueLocations,
-  uniqueCompanies,
-  uniqueIndustries,
+  // uniqueLocations,
+  // uniqueCompanies,
+  // uniqueIndustries,
   user,
   companyId,
   onboardingComplete,
@@ -18,9 +18,9 @@ export default function CompaniesList({
   totalCount,
 }: {
   isCompanyUser: boolean;
-  uniqueLocations: { location: string }[];
-  uniqueCompanies: { company_name: string }[];
-  uniqueIndustries: { industry: string }[];
+  // uniqueLocations: { location: string }[];
+  // uniqueCompanies: { company_name: string }[];
+  // uniqueIndustries: { industry: string }[];
   user: User | null;
   companyId: string;
   onboardingComplete: boolean;
@@ -53,9 +53,9 @@ export default function CompaniesList({
         initialJobs={dataState || []}
         totalJobs={countState || 0}
         user={user}
-        uniqueLocations={uniqueLocations}
-        uniqueCompanies={uniqueCompanies}
-        uniqueIndustries={uniqueIndustries}
+        // uniqueLocations={uniqueLocations}
+        // uniqueCompanies={uniqueCompanies}
+        // uniqueIndustries={uniqueIndustries}
         isCompanyUser={isCompanyUser}
         current_page={"companies"}
         companyId={companyId}

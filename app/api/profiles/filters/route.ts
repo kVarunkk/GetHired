@@ -19,14 +19,14 @@ export async function GET() {
     const uniqueWorkStylePreferences =
       filterData?.uniqueWorkStylePreferences || [];
     const uniqueSkills = filterData?.uniqueSkills || [];
-    const uniqueLocations = filterData?.uniqueLocations || [];
+    const locations = filterData?.uniqueLocations || [];
     return NextResponse.json(
       {
         uniqueJobRoles,
         uniqueIndustryPreferences,
         uniqueWorkStylePreferences,
         uniqueSkills,
-        uniqueLocations,
+        locations,
       },
       { status: 200 }
     );
