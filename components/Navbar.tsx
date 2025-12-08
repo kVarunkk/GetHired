@@ -62,7 +62,7 @@ export default function NavbarComponent({
       )}
       <div className="flex items-center gap-5">
         {user ? (
-          <ProfileDropdown user={user} isAgentSidebar={false} />
+          <ProfileDropdown user={user} />
         ) : (
           <div className="">
             <AuthButton />

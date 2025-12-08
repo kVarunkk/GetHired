@@ -54,12 +54,10 @@ export type FiltersState = {
 
 export default function FilterComponent({
   setOpenSheet,
-
   currentPage,
   onboardingComplete,
 }: {
   setOpenSheet?: Dispatch<SetStateAction<boolean>>;
-
   currentPage: "jobs" | "profiles" | "companies";
   onboardingComplete: boolean;
 }) {

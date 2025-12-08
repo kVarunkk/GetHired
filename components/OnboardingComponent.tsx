@@ -60,7 +60,7 @@ export const OnboardingForm: React.FC = () => {
     career_goals_long_term: "",
     company_size_preference: "",
     resume_file: null,
-    resume_url: null,
+    // resume_url: null,
     resume_path: null,
     resume_name: null,
     default_locations: [],

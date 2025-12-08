@@ -29,11 +29,9 @@ import { Badge } from "./ui/badge";
 export default function ProfileDropdown({
   user,
   open,
-  isAgentSidebar,
 }: {
   user: User | null;
   open?: boolean;
-  isAgentSidebar: boolean;
 }) {
   const { theme, setTheme } = useTheme();
   const [isUserInfo, setIsUserInfo] = useState(false);
@@ -78,27 +76,13 @@ export default function ProfileDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        {isAgentSidebar ? (
-          <Button variant="ghost" className="w-full !justify-start !gap-5">
-            <AvatarComponent
-              user={user}
-              open={open}
-              isAgentSidebar={isAgentSidebar}
-              isCompanyUser={isCompanyUser}
-            />
-
-            {open && <span>Account</span>}
-          </Button>
-        ) : (
-          <button>
-            <AvatarComponent
-              user={user}
-              open={open}
-              isAgentSidebar={isAgentSidebar}
-              isCompanyUser={isCompanyUser}
-            />
-          </button>
-        )}
+        <button>
+          <AvatarComponent
+            user={user}
+            open={open}
+            isCompanyUser={isCompanyUser}
+          />
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         <DropdownMenuLabel className="flex items-center gap-2">
@@ -147,53 +131,45 @@ export default function ProfileDropdown({
         ) : (
           ""
         )}
-        {!isAgentSidebar && (
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              {theme === "light" ? (
-                <Sun
-                  key="light"
-                  size={16}
-                  className={"text-muted-foreground"}
-                />
-              ) : theme === "dark" ? (
-                <Moon
-                  key="dark"
-                  size={16}
-                  className={"text-muted-foreground"}
-                />
-              ) : (
-                <Laptop
-                  key="system"
-                  size={16}
-                  className={"text-muted-foreground"}
-                />
-              )}
-              <span className="ml-2">Theme</span>
-            </DropdownMenuSubTrigger>
-            <DropdownMenuPortal>
-              <DropdownMenuSubContent>
-                <DropdownMenuRadioGroup
-                  value={theme}
-                  onValueChange={(e) => setTheme(e)}
-                >
-                  <DropdownMenuRadioItem className="flex gap-2" value="light">
-                    <Sun size={16} className="text-muted-foreground" />{" "}
-                    <span>Light</span>
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem className="flex gap-2" value="dark">
-                    <Moon size={16} className="text-muted-foreground" />{" "}
-                    <span>Dark</span>
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem className="flex gap-2" value="system">
-                    <Laptop size={16} className="text-muted-foreground" />{" "}
-                    <span>System</span>
-                  </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuPortal>
-          </DropdownMenuSub>
-        )}
+
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            {theme === "light" ? (
+              <Sun key="light" size={16} className={"text-muted-foreground"} />
+            ) : theme === "dark" ? (
+              <Moon key="dark" size={16} className={"text-muted-foreground"} />
+            ) : (
+              <Laptop
+                key="system"
+                size={16}
+                className={"text-muted-foreground"}
+              />
+            )}
+            <span className="ml-2">Theme</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup
+                value={theme}
+                onValueChange={(e) => setTheme(e)}
+              >
+                <DropdownMenuRadioItem className="flex gap-2" value="light">
+                  <Sun size={16} className="text-muted-foreground" />{" "}
+                  <span>Light</span>
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem className="flex gap-2" value="dark">
+                  <Moon size={16} className="text-muted-foreground" />{" "}
+                  <span>Dark</span>
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem className="flex gap-2" value="system">
+                  <Laptop size={16} className="text-muted-foreground" />{" "}
+                  <span>System</span>
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+
         <DropdownMenuItem onClick={logout}>
           <LogOut className="mr-2 h-4 w-4 text-muted-foreground" />
           Logout
@@ -206,12 +182,10 @@ export default function ProfileDropdown({
 function AvatarComponent({
   user,
   open,
-  isAgentSidebar,
   isCompanyUser,
 }: {
   user: User | null;
   open?: boolean;
-  isAgentSidebar: boolean;
   isCompanyUser: boolean;
 }) {
   return (
@@ -219,7 +193,6 @@ function AvatarComponent({
       className={cn(
         "bg-muted",
         open && "-ml-1",
-        isAgentSidebar ? "h-6 w-6" : "",
         isCompanyUser ? "rounded-sm" : ""
       )}
     >

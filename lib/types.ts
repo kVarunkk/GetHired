@@ -1,59 +1,3 @@
-import { agentConfigs } from "./agentSchemas";
-
-export interface Agent {
-  id: string;
-  name: string;
-  user_id: string;
-  resume_url: string;
-  filter_url?: string;
-  messages?: Message[];
-  created_at: string;
-  updated_at: string;
-  workflows: IWorkflow[];
-  type: TAgentType;
-  platforms?: IPlatform;
-}
-
-export interface Message {
-  id: string;
-  content: string;
-  role: "user" | "agent";
-  created_at: string;
-}
-
-export interface IWorkflow {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  no_jobs: number;
-  required_keywords: string[];
-  excluded_keywords: string[];
-  job_title_contains: string[];
-  interval: string;
-  auto_apply: boolean;
-  user_id: string;
-  agent_id: string;
-  workflow_runs?: IWorkflowRun[];
-  agents?: Agent;
-  pause: boolean;
-  last_run_at: string | null;
-  running: boolean;
-}
-
-export interface IWorkflowRun {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  status: string;
-  error: string | null;
-  workflow_id: string;
-  started_at: string;
-  ended_at: string;
-  suitable_jobs_scraped_or_applied_in_current_run: string[];
-  job_results: Record<string, IJobResult>;
-  auto_apply: boolean;
-}
-
 export interface IJobResult {
   score?: number;
   suitable?: boolean;
@@ -186,7 +130,7 @@ export interface IFormData {
   career_goals_long_term: string;
   company_size_preference: string;
   resume_file: File | null;
-  resume_url: string | null;
+  // resume_url: string | null;
   resume_path: string | null;
   resume_name: string | null;
   default_locations: string[];
@@ -291,8 +235,6 @@ export enum TAICredits {
   AI_GLOBAL_SEARCH = 3,
   AI_SUMMARY = 1,
 }
-
-export type TAgentType = keyof typeof agentConfigs;
 
 export interface JobListingSearchParams {
   jobTitleKeywords?: string;

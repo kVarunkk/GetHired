@@ -166,7 +166,6 @@ export default async function JobsPage({
   const url = `${protocol}://${host}`;
 
   let initialJobs: IJob[] = [];
-  // let uniqueCompanies: { company_name: string }[] = [];
   let totalCount: number = 0;
   const params = new URLSearchParams(
     searchParameters as Record<string, string>
@@ -187,22 +186,10 @@ export default async function JobsPage({
       headers: { Cookie: headersList.get("Cookie") || "" },
     });
 
-    // const filterFetchPromise = fetch(`${url}/api/jobs/filters`, {
-    //   cache: "force-cache",
-    //   next: { revalidate: 86400 }, // Filters can be cached much longer
-    //   headers: { Cookie: headersList.get("Cookie") || "" },
-    // });
-
-    const [jobsResponse] = await Promise.all([
-      jobFetchPromise,
-      // filterFetchPromise,
-    ]);
+    const [jobsResponse] = await Promise.all([jobFetchPromise]);
 
     const result = await jobsResponse.json();
     if (!jobsResponse.ok) throw new Error(result.message);
-
-    // const filterData = await filtersResponse.json();
-    // uniqueCompanies = filtersResponse.ok ? filterData.companies : [];
 
     // --- AI Re-ranking Logic ---
     if (
@@ -275,7 +262,6 @@ export default async function JobsPage({
       <div className="flex items-start px-4 lg:px-20 xl:px-40 2xl:px-80 py-5 h-full gap-5">
         <div className="hidden md:block w-1/3 px-2 sticky top-0 z-10 max-h-[calc(100vh-1.5rem)] overflow-y-auto">
           <FilterComponent
-            // uniqueCompanies={uniqueCompanies}
             onboardingComplete={onboardingComplete}
             currentPage="jobs"
           />
@@ -294,7 +280,6 @@ export default async function JobsPage({
                 <JobsList
                   isCompanyUser={isCompanyUser}
                   user={user}
-                  // uniqueCompanies={uniqueCompanies}
                   onboardingComplete={onboardingComplete}
                   initialJobs={initialJobs}
                   totalCount={totalCount}
@@ -309,7 +294,6 @@ export default async function JobsPage({
                   <JobsList
                     isCompanyUser={isCompanyUser}
                     user={user}
-                    // uniqueCompanies={uniqueCompanies}
                     onboardingComplete={onboardingComplete}
                     initialJobs={initialJobs}
                     totalCount={totalCount}
@@ -322,7 +306,6 @@ export default async function JobsPage({
                   isCompanyUser={isCompanyUser}
                   user={user}
                   onboardingComplete={onboardingComplete}
-                  // uniqueCompanies={uniqueCompanies}
                   initialJobs={initialJobs}
                   totalCount={totalCount}
                 />
