@@ -1,6 +1,6 @@
 import { createClient } from "./supabase/server";
 
-const userInfoSelectString = `user_id, desired_roles, preferred_locations, min_salary, max_salary, experience_years, industry_preferences, visa_sponsorship_required, top_skills, work_style_preferences, career_goals_short_term, career_goals_long_term, company_size_preference, resume_url, created_at, updated_at, resume_name, job_type, resume_path, ai_credits, filled, full_name, email, salary_currency`;
+const userInfoSelectString = `user_id, desired_roles, preferred_locations, min_salary, max_salary, experience_years, industry_preferences, visa_sponsorship_required, top_skills, work_style_preferences, career_goals_short_term, career_goals_long_term, company_size_preference, created_at, updated_at, resume_name, job_type, resume_path, ai_credits, filled, full_name, email, salary_currency`;
 
 export async function buildProfileQuery({
   searchQuery,

@@ -4,31 +4,18 @@ import { useEffect, useState } from "react";
 import { Input } from "./ui/input";
 import { v4 as uuidv4 } from "uuid";
 import { Check, X } from "lucide-react";
-import { IFormValues } from "./CreateWorkflowForm";
 import { IFormData } from "@/lib/types";
 import { FiltersState } from "./FilterComponent";
 
 interface MultiKeywordInputProps {
   updateFormValues: (
-    type:
-      | keyof Pick<
-          IFormValues,
-          "included_keywords" | "excluded_keywords" | "title_included_keywords"
-        >
-      | keyof IFormData
-      | keyof FiltersState,
+    type: keyof IFormData | keyof FiltersState,
     keywords: {
       id: string;
       content: string;
     }[]
   ) => void;
-  type:
-    | keyof Pick<
-        IFormValues,
-        "included_keywords" | "excluded_keywords" | "title_included_keywords"
-      >
-    | keyof IFormData
-    | keyof FiltersState;
+  type: keyof IFormData | keyof FiltersState;
   placeholder?: string;
   initialKeywords?: {
     id: string;

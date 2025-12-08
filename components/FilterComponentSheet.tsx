@@ -64,28 +64,18 @@ export default function FilterComponentSheet({
         </SheetHeader>
         {currentPage === "profiles" && isCompanyUser ? (
           <FilterComponent
-            // uniqueLocations={uniqueLocations}
-            // uniqueJobRoles={uniqueJobRoles}
-            // uniqueIndustryPreferences={uniqueIndustryPreferences}
-            // uniqueWorkStylePreferences={uniqueWorkStylePreferences}
-            // uniqueSkills={uniqueSkills}
             currentPage={currentPage}
             setOpenSheet={setOpenSheet}
             onboardingComplete={onboardingComplete}
           />
         ) : currentPage === "jobs" ? (
           <FilterComponent
-            // uniqueLocations={uniqueLocations}
-            // uniqueCompanies={uniqueCompanies}
             setOpenSheet={setOpenSheet}
             onboardingComplete={onboardingComplete}
             currentPage={currentPage}
           />
         ) : (
           <FilterComponent
-            // uniqueLocations={uniqueLocations}
-            // uniqueCompanies={uniqueCompanies}
-            // uniqueIndustries={uniqueIndustries}
             setOpenSheet={setOpenSheet}
             onboardingComplete={onboardingComplete}
             currentPage={currentPage}
