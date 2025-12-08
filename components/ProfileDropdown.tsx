@@ -17,7 +17,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useRouter } from "next/navigation";
 import { Laptop, Moon, Sun } from "lucide-react";
