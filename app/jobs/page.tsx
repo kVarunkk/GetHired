@@ -6,8 +6,7 @@ import { IJob, JobListingSearchParams, TAICredits } from "@/lib/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import { Metadata } from "next";
-import { featureData, getCutOffDate } from "@/lib/serverUtils";
-import DisplayPromotion from "@/components/DisplayPromotionDialog";
+import { getCutOffDate } from "@/lib/serverUtils";
 
 export async function generateMetadata({
   searchParams,
@@ -332,9 +331,6 @@ export default async function JobsPage({
           </ClientTabs>
         </div>
       </div>
-      {user && featureData && (
-        <DisplayPromotion currentUserId={user.id} featureData={featureData} />
-      )}
     </div>
   );
 }

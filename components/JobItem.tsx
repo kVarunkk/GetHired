@@ -61,6 +61,7 @@ export default function JobItem({
                 {job.company_url ? (
                   <Link
                     href={job.company_url || ""}
+                    target="_blank"
                     className="text-muted-foreground hover:underline w-fit underline sm:no-underline underline-offset-2"
                     onClick={(e) => e.stopPropagation()}
                   >
