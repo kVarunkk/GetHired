@@ -38,11 +38,9 @@ export async function GET(request: NextRequest) {
       type,
       token_hash,
     });
-    if (!error && data.user) {
-      // await handleUserUpsert(data.user);
-
+    if (!error && data.user && data.user.email) {
       if (referralCode) {
-        await grantReferralCredits(referralCode);
+        await grantReferralCredits(referralCode, data.user.email);
       }
       redirect(next);
     } else {
