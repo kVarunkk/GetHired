@@ -117,7 +117,10 @@ export async function handleUserUpsert(user: User) {
 
 const REFERRAL_CREDITS = 10;
 
-export async function grantReferralCredits(referralCode: string) {
+export async function grantReferralCredits(
+  referralCode: string,
+  invited_email: string
+) {
   const supabase = createServiceRoleClient();
   const { data: referrerData, error: refError } = await supabase
     .from("user_info")
@@ -141,7 +144,8 @@ export async function grantReferralCredits(referralCode: string) {
     .update({
       status: "complete",
     })
-    .eq("referrer_user_id", referrerId);
+    .eq("referrer_user_id", referrerId)
+    .eq("invited_email", invited_email);
 
   if (invitationsError) {
     console.error("Error updating invitation status");
