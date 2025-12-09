@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { getAllDigestUsers, sendJobDigestEmail } from "@/lib/digest-utils";
 import { IFormData, IJob } from "@/lib/types";
-import { getCutOffDate } from "@/lib/serverUtils";
+import { getCutOffDate, sendEmailForStatusUpdate } from "@/lib/serverUtils";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
@@ -14,14 +14,10 @@ const URL =
       ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
       : "http://localhost:3000";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
 export async function GET() {
   const headersList = await headers();
 
   // --- 1. Security Check (CRITICAL) ---
-  // Ensure this route is only called by your trusted cron service
   const cronSecret = headersList.get("X-Internal-Secret");
   if (cronSecret !== INTERNAL_API_SECRET) {
     return NextResponse.json(
@@ -42,33 +38,53 @@ export async function GET() {
       processUserDigest(user, digestDate)
     );
 
-    // Wait for all user emails to be processed
     const results = await Promise.all(digestPromises);
 
-    const successCount = results.filter((res) => res.success).length;
-    const failureCount = results.length - successCount;
+    const successSends: string[] = [];
+    const failedSends: { email: string; reason: string }[] = [];
+
+    results.forEach((res) => {
+      if (res.success) {
+        successSends.push(res.userEmail);
+      } else {
+        failedSends.push({
+          email: res.userEmail,
+          reason: res.error || "Processing failed",
+        });
+      }
+    });
+
+    const totalUsers = users.length;
+    const totalSuccessful = successSends.length;
+
+    // 7. Send Final Admin Report
+    const report = [
+      `DIGEST EXECUTION REPORT (${new Date().toISOString()})`,
+      `Total Users Targeted: ${totalUsers}`,
+      `Successful Sends: ${totalSuccessful}`,
+      `Failed Sends: ${failedSends.length}`,
+      "-------------------------------------------------------",
+      `SUCCESSFUL EMAILS: ${successSends.join(", ")}`,
+      "-------------------------------------------------------",
+      `FAILED EMAILS:`,
+      ...failedSends.map((f) => `- ${f.email}: ${f.reason}`),
+    ].join("\n");
+
+    await sendEmailForStatusUpdate(report);
 
     return NextResponse.json({
       success: true,
-      message: `Processed digests for ${users.length} users. Success: ${successCount}, Failures: ${failureCount}.
-      Failure Details: ${results
-        .map((res, index) =>
-          !res.success
-            ? `User: ${users[index].email}, Error: ${res.error}`
-            : null
-        )
-        .filter((entry) => entry !== null)
-        .join("; ")}
-      
-      `,
+      message: `Processed ${totalUsers} users. Successful sends: ${totalSuccessful}.`,
     });
-
-    // return NextResponse.json({
-    //   success: true,
-    //   message: `Successfully processed digest for ${users.length} users.`,
-    // });
   } catch (error) {
     console.error("Global Job Digest Execution Failed:", error);
+    await sendEmailForStatusUpdate(
+      [
+        `DIGEST EXECUTION REPORT (${new Date().toISOString()})`,
+        "GLOBAL CRITICAL FAILURE:",
+        `Error: ${error instanceof Error ? error.message : String(error)}`,
+      ].join("\n")
+    );
     return NextResponse.json(
       {
         success: false,
@@ -84,14 +100,11 @@ export async function GET() {
  */
 async function processUserDigest(user: IFormData, digestDate: string) {
   try {
-    // --- 2. Initial Vector Search (Step 1) ---
-
-    const cutoffDate = getCutOffDate(10);
+    const cutoffDate = getCutOffDate(30);
 
     const jobFetchRes = await fetch(
       `${URL}/api/jobs?sortBy=relevance&limit=100&createdAfter=${cutoffDate}&userId=${user.user_id}`,
       {
-        cache: "force-cache",
         headers: {
           "X-Internal-Secret": INTERNAL_API_SECRET || "",
         },
@@ -119,7 +132,6 @@ async function processUserDigest(user: IFormData, digestDate: string) {
         },
         body: JSON.stringify({
           userId: user.user_id,
-          // Map only the data required for the LLM to process
           jobs: initialJobs.map((job) => ({
             id: job.id,
             job_name: job.job_name,
@@ -133,19 +145,16 @@ async function processUserDigest(user: IFormData, digestDate: string) {
       });
 
       if (!aiRerankRes.ok) {
-        // 1. Log the status code
         console.error(
           `AI Rerank API failed with status: ${aiRerankRes.status}`
         );
 
-        // 2. Read the full text body to see the HTML error page content
         const errorText = await aiRerankRes.text();
         console.error(
           "AI Rerank API error body:",
           errorText.substring(0, 500) + "..."
-        ); // Log the start of the HTML body
+        );
 
-        // 3. Throw a descriptive error
         throw new Error(`AI Rerank API failed (Status: ${aiRerankRes.status})`);
       }
 
@@ -162,7 +171,6 @@ async function processUserDigest(user: IFormData, digestDate: string) {
 
         const jobMap = new Map(initialJobs.map((job: IJob) => [job.id, job]));
 
-        // Re-order and filter the original job objects
         finalJobs = uniqueRerankedIds
           .map((id: string) => jobMap.get(id))
           .filter(
@@ -172,8 +180,9 @@ async function processUserDigest(user: IFormData, digestDate: string) {
       }
     }
 
+    // Fallback (If  AI search was too slow/skipped) ---
+
     // --- 4. Send Email (Top 10 Jobs) ---
-    // Ensure you only send a manageable number of jobs (e.g., top 10)
     const topJobs = finalJobs.slice(0, 10);
 
     if (topJobs.length > 0 && user.email && user.full_name) {
@@ -187,15 +196,20 @@ async function processUserDigest(user: IFormData, digestDate: string) {
         throw new Error(`Failed to send email: ${error}`);
       }
       console.log(`Sent digest to ${user.email} with ${topJobs.length} jobs.`);
-      return { success: true };
+      return { success: true, userEmail: user.email };
     } else {
       console.log(`Skipped digest for ${user?.email}: no suitable jobs found.`);
-      return { success: false, error: "No suitable jobs found" };
+      return {
+        success: false,
+        userEmail: user.email,
+        error: "No suitable jobs found",
+      };
     }
   } catch (e) {
     console.error(`Error processing digest for user ${user?.email}:`, e);
     return {
       success: false,
+      userEmail: user.email,
       error: e instanceof Error ? e.message : String(e),
     };
   }

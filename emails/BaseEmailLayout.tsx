@@ -72,7 +72,7 @@ export const BaseEmailLayout = ({
                   &copy; {new Date().getFullYear()} GetHired DevHub. All rights
                   reserved.
                 </Text>
-                <Text className="text-xs text-gray-500">
+                <Text className="text-xs text-gray-500 mb-2">
                   <Link
                     href="https://gethired.devhub.co.in/privacy-policy"
                     className="text-blue-600 underline"
@@ -85,6 +85,15 @@ export const BaseEmailLayout = ({
                     className="text-blue-600 underline"
                   >
                     Terms of Service
+                  </Link>
+                </Text>
+                <Text className="text-xs text-gray-500">
+                  To no longer receive these, manage your preferences{" "}
+                  <Link
+                    href="https://gethired.devhub.co.in/get-started?edit=true"
+                    className="text-blue-600 underline"
+                  >
+                    here
                   </Link>
                 </Text>
               </Section>

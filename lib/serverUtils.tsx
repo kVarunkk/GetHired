@@ -4,6 +4,7 @@ import fs from "fs/promises";
 import path from "path";
 import { createClient } from "./supabase/server";
 import { createServiceRoleClient } from "./supabase/service-role";
+import { Resend } from "resend";
 
 export async function getVertexClient() {
   const credentialsJson = process.env.GOOGLE_CREDENTIALS_JSON;
@@ -165,3 +166,21 @@ export async function grantReferralCredits(
     }
   }
 }
+
+export const sendEmailForStatusUpdate = async (emailText: string) => {
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    resend.emails.send({
+      from: "GetHired <varun@devhub.co.in>",
+      to: ["varunkumawatleap2@gmail.com"],
+      subject: `Important: Status Update`,
+      // html: emailHTML,
+      text: emailText,
+    });
+  } catch {
+    console.error(
+      "Some error occured while sending status update email to Varun Kumawat"
+    );
+  }
+};
