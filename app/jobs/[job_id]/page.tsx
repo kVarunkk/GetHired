@@ -3,7 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { IJob } from "@/lib/types";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Briefcase, DollarSign, MapPin } from "lucide-react";
+import {
+  ArrowLeft,
+  Briefcase,
+  DollarSign,
+  MapPin,
+  Sparkle,
+} from "lucide-react";
 import JobDescriptionCard from "@/components/JobDetailsCard";
 import { Badge } from "@/components/ui/badge";
 import JobFavoriteBtn from "@/components/JobFavoriteBtn";
@@ -13,6 +19,8 @@ import { Metadata } from "next";
 import JobPageDropdown from "@/components/JobPageDropdown";
 import JobsFeedback from "@/components/JobFeedback";
 import Link from "next/link";
+import AskAIDialog from "@/components/AskAIDialog";
+import { Button } from "@/components/ui/button";
 
 export async function generateMetadata({
   params,
@@ -183,19 +191,37 @@ export default async function JobPage({
                 />
               )}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <JobApplyBtn
                 isCompanyUser={isCompanyUser}
                 user={user}
                 job={job}
                 isOnboardingComplete={onboardingComplete}
               />
+              {isCompanyUser ? (
+                ""
+              ) : user ? (
+                <AskAIDialog
+                  // isOpen={isOpen}
+                  // setIsOpen={setIsOpen}
+                  jobId={job_id}
+                  aiCredits={aiCredits}
+                  isOnboardingComplete={isOnboardingComplete}
+                />
+              ) : (
+                <Button variant={"ghost"} asChild>
+                  <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
+                    <Sparkle className="h-4 w-4" />
+                    Ask AI
+                  </Link>
+                </Button>
+              )}
               <JobPageDropdown
                 user={user}
                 jobId={job_id}
                 isCompanyUser={isCompanyUser}
-                aiCredits={aiCredits}
-                isOnboardingComplete={isOnboardingComplete}
+                // aiCredits={aiCredits}
+                // isOnboardingComplete={isOnboardingComplete}
                 applicationStatus={
                   job.applications && job.applications.length > 0
                     ? job.applications[0].status

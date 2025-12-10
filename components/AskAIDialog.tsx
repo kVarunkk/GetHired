@@ -6,25 +6,26 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { Copy, Loader2 } from "lucide-react";
+import { Copy, Loader2, Sparkle } from "lucide-react";
 import Link from "next/link";
 import { TAICredits } from "@/lib/types";
 import InfoTooltip from "./InfoTooltip";
 
 export default function AskAIDialog({
-  isOpen,
-  setIsOpen,
+  // isOpen,
+  // setIsOpen,
   jobId,
   aiCredits = 0,
   isOnboardingComplete,
 }: {
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
+  // isOpen: boolean;
+  // setIsOpen: (isOpen: boolean) => void;
   jobId: string;
   aiCredits?: number;
   isOnboardingComplete: boolean;
@@ -94,7 +95,13 @@ export default function AskAIDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant={"ghost"}>
+          <Sparkle className="h-4 w-4" />
+          Ask AI
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
         <DialogHeader className="text-start">
           <DialogTitle>Ask AI to help you apply for this role</DialogTitle>

@@ -231,12 +231,9 @@ function JobStatusDialog({
               <span className="font-bold inline-flex  gap-1">
                 <Sparkle className="h-4 w-4" /> Ask AI
               </span>{" "}
-              feature by clicking
-              <MoreHorizontal className="h-4 w-4 inline-block mx-1" />{" "}
+              feature{" "}
               {window.location.pathname === "/jobs" && (
                 <span
-                  // href={"/jobs/" + job.id}
-                  // target="_blank"
                   onClick={() => router.push("/jobs/" + job.id)}
                   className="text-blue-400 underline"
                 >
