@@ -53,7 +53,7 @@ export default function ProfilesList({
     return (
       <JobsComponent
         initialJobs={dataState || []}
-        totalJobs={countState || 0}
+        // totalJobs={countState || 0}
         user={user}
         // uniqueLocations={uniqueLocations}
         // uniqueJobRoles={uniqueJobRoles}

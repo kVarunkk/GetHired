@@ -28,14 +28,14 @@ export default function CompaniesList({
   totalCount: number;
 }) {
   const [dataState, setData] = useState<IFormData[] | never[] | null>();
-  const [countState, setCount] = useState<number | null>();
+  // const [countState, setCount] = useState<number | null>();
   const [loading, setLoading] = useState(true);
 
   const searchParameters = useSearchParams();
 
   useEffect(() => {
     (async () => {
-      setCount(initialCompanies.length);
+      // setCount(initialCompanies.length);
       setData(initialCompanies);
       setLoading(false);
     })();
@@ -51,7 +51,7 @@ export default function CompaniesList({
     return (
       <JobsComponent
         initialJobs={dataState || []}
-        totalJobs={countState || 0}
+        // totalJobs={countState || 0}
         user={user}
         // uniqueLocations={uniqueLocations}
         // uniqueCompanies={uniqueCompanies}

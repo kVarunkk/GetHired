@@ -27,7 +27,7 @@ import InfoTooltip from "./InfoTooltip";
 
 export default function JobsComponent({
   initialJobs,
-  totalJobs,
+  // totalJobs,
   user,
   isCompanyUser,
   current_page,
@@ -38,7 +38,7 @@ export default function JobsComponent({
   totalCount,
 }: {
   initialJobs: IJob[] | IFormData[];
-  totalJobs: number;
+  // totalJobs: number;
   user: User | null;
   isCompanyUser: boolean;
   current_page: "jobs" | "profiles" | "companies";
