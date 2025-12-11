@@ -219,7 +219,7 @@ export default async function DashboardPage() {
                   </span>
                 </div>
                 <Button asChild>
-                  <Link href={"/get-started?edit=true"}>
+                  <Link href={"/get-started"}>
                     {userInfoData.filled
                       ? "Update Profile"
                       : "Complete Profile"}{" "}

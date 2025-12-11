@@ -34,7 +34,7 @@ export const OnboardingReminderEmail = ({
       {/* CTA Button */}
       <Section className="text-start my-16">
         <Button
-          href="https://gethired.devhub.co.in/get-started?edit=true"
+          href="https://gethired.devhub.co.in/get-started"
           className="bg-black text-white link-color py-3 px-6 rounded-md text-lg font-bold no-underline"
         >
           Complete Profile

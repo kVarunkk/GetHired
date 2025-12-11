@@ -107,7 +107,7 @@ export default function ProfileDropdown({
         {isUserInfo ? (
           <DropdownMenuItem>
             <Link
-              href={"/get-started?edit=true"}
+              href={"/get-started"}
               className="w-full flex items-center cursor-default gap-4"
             >
               <UserIcon className="text-muted-foreground  h-4 w-4" />
@@ -121,7 +121,7 @@ export default function ProfileDropdown({
           <DropdownMenuItem>
             <Link
               className="w-full flex items-center cursor-default gap-4"
-              href={"/get-started?company=true&edit=true"}
+              href={"/get-started?company=true"}
             >
               <UserIcon className="text-muted-foreground h-4 w-4" />
               Profile

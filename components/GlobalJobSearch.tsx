@@ -23,6 +23,7 @@ import { useProgress } from "react-transition-progress";
 import { Textarea } from "./ui/textarea";
 import { TAICredits } from "@/lib/types";
 import InfoTooltip from "./InfoTooltip";
+// import { User } from "@supabase/supabase-js";
 
 interface ParsedFilters {
   [key: string]: string | string[] | undefined;
@@ -40,11 +41,7 @@ const premadePrompts = [
   "Show me contract DevOps roles.",
 ];
 
-export default function GlobalJobSearch({
-  aiCredits = 0,
-}: {
-  aiCredits?: number;
-}) {
+export default function GlobalJobSearch() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,10 +71,7 @@ export default function GlobalJobSearch({
 
   const handleSubmit = async (formData: FormData) => {
     setError(null);
-    if (aiCredits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
-      setError("Insufficient AI credits. Please top up to continue.");
-      return;
-    }
+
     const query = formData.get("searchQuery")?.toString()?.trim();
 
     if (!query) return;
@@ -147,7 +141,7 @@ export default function GlobalJobSearch({
             What kind of job are you looking for?
           </DialogTitle>
           <DialogDescription className="text-start flex items-center">
-            {aiCredits} AI Credits available.
+            {/* {aiCredits} AI Credits available. */}
             <InfoTooltip
               content={
                 "This feature uses " +
@@ -171,9 +165,7 @@ export default function GlobalJobSearch({
             required
             placeholder="e.g., Senior Java jobs in London with visa sponsorship"
             name="searchQuery"
-            disabled={
-              isLoading || aiCredits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
-            }
+            disabled={isLoading}
             className="bg-input text-sm"
             ref={searchInputRef}
           />
@@ -207,12 +199,7 @@ export default function GlobalJobSearch({
             </AccordionItem>
           </Accordion>
 
-          <Button
-            type="submit"
-            disabled={
-              isLoading || aiCredits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
-            }
-          >
+          <Button type="submit" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Search Jobs
           </Button>

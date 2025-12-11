@@ -141,7 +141,7 @@ export default function AskAIDialog({
                 <p className="text-red-600 ">{error}</p>
                 {!isOnboardingComplete && (
                   <Link
-                    href={"/get-started?edit=true"}
+                    href={"/get-started"}
                     className="text-blue-400 underline"
                   >
                     Complete Profile

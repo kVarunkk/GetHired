@@ -127,10 +127,7 @@ export default function JobApplyBtn({
             isAppliedJobsTabActive={isAppliedJobsTabActive}
           />
         ) : (
-          <Link
-            onClick={(e) => e.stopPropagation()}
-            href={"/get-started?edit=true"}
-          >
+          <Link onClick={(e) => e.stopPropagation()} href={"/get-started"}>
             <Button>Complete Onboarding to Apply</Button>
           </Link>
         )

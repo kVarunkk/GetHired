@@ -29,6 +29,7 @@ import { Step6ResumeUpload } from "./onboarding-steps/Step6";
 import { Step7ReviewSubmit } from "./onboarding-steps/Step7";
 import { isValidUrl } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
 
 export interface StepProps {
   formData: IFormData;
@@ -485,6 +486,16 @@ export const OnboardingForm: React.FC = () => {
       if (dbError) {
         setError(`Failed to save data: ${dbError.message}`);
       } else {
+        const { error: updateAppMetaError } = await updateUserAppMetadata(
+          user.id,
+          {
+            type: "applicant",
+            onboarding_complete: true,
+          }
+        );
+
+        if (updateAppMetaError) throw new Error(updateAppMetaError);
+
         toast.dismiss();
         toast.success("Your profile has been saved successfully!");
         router.push("/jobs");

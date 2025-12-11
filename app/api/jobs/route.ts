@@ -2,6 +2,8 @@ import { buildQuery } from "@/lib/filterQueryBuilder";
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { rerankJobsIfApplicable } from "@/lib/ai-rerank-jobs";
+import { IJob } from "@/lib/types";
 
 let JOBS_PER_PAGE = 20;
 
@@ -42,36 +44,33 @@ export async function GET(request: NextRequest) {
 
   try {
     let userEmbedding = null;
+    let userId;
+    let aiCredits;
+    let isJobDigest = false;
+
     if (applicantUserId) {
+      userId = applicantUserId;
+      isJobDigest = true;
+    } else {
+      if (sortBy === "relevance") {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          userId = user.id;
+        }
+      }
+    }
+
+    if (userId) {
       const { data: userData, error } = await supabase
         .from("user_info")
-        .select("embedding")
-        .eq("user_id", applicantUserId)
+        .select("embedding, ai_credits")
+        .eq("user_id", userId)
         .single();
-      if (error || !userData) {
-        // console.error("Error fetching user embedding:", error);
-        // You might want to handle this gracefully for users without an embedding
-      } else {
+      if (!error && userData) {
         userEmbedding = userData.embedding;
-      }
-    } else {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (sortBy === "relevance" && user) {
-        const { data: userData, error } = await supabase
-          .from("user_info")
-          .select("embedding")
-          .eq("user_id", user.id)
-          .single();
-
-        if (error || !userData) {
-          // console.error("Error fetching user embedding:", error);
-          // You might want to handle this gracefully for users without an embedding
-        } else {
-          userEmbedding = userData.embedding;
-        }
+        aiCredits = userData.ai_credits;
       }
     }
 
@@ -97,11 +96,19 @@ export async function GET(request: NextRequest) {
     });
 
     if (error) {
-      // console.error("API Error fetching jobs:", error);
       return NextResponse.json({ error: error }, { status: 500 });
     }
 
-    return NextResponse.json({ data: data || [], count, matchedJobIds });
+    const { initialJobs, totalCount } = await rerankJobsIfApplicable({
+      initialJobs: data as unknown as IJob[],
+      initialCount: count,
+      userId,
+      aiCredits,
+      matchedJobIds,
+      isJobDigest,
+    });
+
+    return NextResponse.json({ data: initialJobs, totalCount });
   } catch (err: unknown) {
     return NextResponse.json(
       {

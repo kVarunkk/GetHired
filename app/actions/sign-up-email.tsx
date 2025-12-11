@@ -4,6 +4,7 @@ import AuthConfirmationEmail from "@/emails/AuthConfirmationEmail";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/components";
 import { Resend } from "resend";
+import { updateUserAppMetadata } from "./update-user-metadata";
 
 const productionUrl = "https://gethired.devhub.co.in";
 const URL =
@@ -23,17 +24,17 @@ export async function sendSignupEmail(
   try {
     const serviceRoleSupabase = createServiceRoleClient();
 
-    const { data: existingUsers } = await serviceRoleSupabase
-      .from("user_info")
-      .select("user_id")
-      .eq("email", email);
-    if (existingUsers && existingUsers.length > 0) {
-      throw new Error("This user is already registered. Please Login.");
-    }
+    // const { data: existingUsers } = await serviceRoleSupabase
+    //   .from("user_info")
+    //   .select("user_id")
+    //   .eq("email", email);
+    // if (existingUsers && existingUsers.length > 0) {
+    //   throw new Error("This user is already registered. Please Login.");
+    // }
 
     const finalRedirectUrl = isCompany
-      ? "/get-started?company=true&edit=true"
-      : "/get-started?edit=true";
+      ? "/get-started?company=true"
+      : "/get-started";
 
     const { data, error } = await serviceRoleSupabase.auth.admin.generateLink({
       type: "signup",
@@ -46,6 +47,16 @@ export async function sendSignupEmail(
         error ? error.message : "Error occured while creating Signup link."
       );
     } else {
+      const { error: updateAppMetaError } = await updateUserAppMetadata(
+        data.user?.id,
+        {
+          type: isCompany ? "company" : "applicant",
+          onboarding_complete: false,
+        }
+      );
+
+      if (updateAppMetaError) throw new Error(updateAppMetaError);
+
       const dataToAdd = isCompany
         ? {
             user_id: data.user?.id,

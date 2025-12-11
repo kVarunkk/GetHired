@@ -77,6 +77,7 @@ export const buildQuery = async ({
           data: [],
           error: "User not authenticated to view favorite jobs.",
           count: 0,
+          matchedJobIds: [],
         };
       }
       // Explicitly select columns and exclude 'embedding'
@@ -96,6 +97,7 @@ export const buildQuery = async ({
           data: [],
           error: "User not authenticated to view applied jobs.",
           count: 0,
+          matchedJobIds: [],
         };
       }
       // Explicitly select columns and exclude 'embedding'
@@ -208,7 +210,7 @@ export const buildQuery = async ({
     return {
       data,
       error: error?.details,
-      count,
+      count: count || 0,
       matchedJobIds,
     };
   } catch (e: unknown) {
@@ -219,6 +221,7 @@ export const buildQuery = async ({
           ? e.message
           : "Some error occurred while fetching Jobs",
       count: 0,
+      matchedJobIds: [],
     };
   }
 };

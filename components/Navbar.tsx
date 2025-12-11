@@ -24,6 +24,7 @@ export default function NavbarComponent({
   items: INavItemWithActive[];
 }) {
   const [user, setUser] = useState<User | null>(null);
+
   useEffect(() => {
     (async () => {
       const supabase = createClient();
@@ -34,6 +35,7 @@ export default function NavbarComponent({
       setUser(user);
     })();
   }, []);
+
   return (
     <div className="w-full flex items-center justify-between px-4 py-3 lg:px-20 xl:px-40 2xl:px-80 border-b">
       <div className="flex items-center gap-1">

@@ -226,7 +226,7 @@ export default function JobsComponent({
           {!isOnboardingComplete && user && !isCompanyUser && (
             <div className="flex items-center gap-2">
               <InfoTooltip content="Please complete your profile to use this feature" />
-              <Link href={"/get-started?edit=true"}>
+              <Link href={"/get-started"}>
                 <Button className="flex items-center gap-2 rounded-full text-sm">
                   <Search className="w-4 h-4" />
                   {current_page === "companies"

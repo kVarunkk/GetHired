@@ -5,6 +5,7 @@ import path from "path";
 import { createClient } from "./supabase/server";
 import { createServiceRoleClient } from "./supabase/service-role";
 import { Resend } from "resend";
+import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
 
 export async function getVertexClient() {
   const credentialsJson = process.env.GOOGLE_CREDENTIALS_JSON;
@@ -86,33 +87,74 @@ export function simpleTimeAgo(
 }
 
 export async function handleUserUpsert(user: User) {
-  const supabase = await createClient();
-  const { data: userData } = await supabase
-    .from("user_info")
-    .select("user_id")
-    .eq("user_id", user.id)
-    .limit(1);
+  try {
+    const supabase = await createClient();
 
-  if (!userData || userData.length === 0) {
-    console.log(`OAuth: Inserting new user_info row for ID: ${user.id}`);
-
-    const newUserInfo = {
-      user_id: user.id,
-      email: user.email,
-      is_job_digest_active: true,
-      is_promotion_active: true,
-    };
-
-    const { error: insertError } = await supabase
+    const { data: userData, error: selectError } = await supabase
       .from("user_info")
-      .insert(newUserInfo);
+      .select("user_id")
+      .eq("user_id", user.id)
+      .limit(1);
 
-    if (insertError) {
-      console.error(
-        "CRITICAL DB ERROR: Failed to insert new user_info row:",
-        insertError
+    if (selectError) {
+      throw new Error(
+        `DB select failed during upsert check: ${selectError.message}`
       );
     }
+
+    if (!userData || userData.length === 0) {
+      console.log(`OAuth: Inserting new user_info row for ID: ${user.id}`);
+
+      const { error: updateAppMetaError } = await updateUserAppMetadata(
+        user.id,
+        {
+          type: "applicant",
+          onboarding_complete: false,
+        }
+      );
+
+      if (updateAppMetaError) {
+        // Critical failure, throw immediately
+        throw new Error(`Admin metadata update failed: ${updateAppMetaError}`);
+      }
+      const newUserInfo = {
+        user_id: user.id,
+        email: user.email,
+        is_job_digest_active: true,
+        is_promotion_active: true,
+      };
+
+      const { error: insertError } = await supabase
+        .from("user_info")
+        .insert(newUserInfo);
+
+      if (insertError) {
+        console.error(
+          "CRITICAL DB ERROR: Failed to insert new user_info row:",
+          insertError
+        );
+        // Critical failure, throw immediately
+        throw new Error(`DB insert failed: ${insertError.message}`);
+      }
+      return {
+        metadataUpdated: true,
+        error: null,
+      };
+    }
+    return {
+      metadataUpdated: false,
+      error: null,
+    };
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    console.error(
+      `Fatal error during user upsert for ${user.id}: ${errorMessage}`
+    );
+    return {
+      metadataUpdated: false,
+      error: errorMessage,
+    };
+    // throw new Error(`FATAL_UPSERT_FAILURE: ${errorMessage}`);
   }
 }
 
