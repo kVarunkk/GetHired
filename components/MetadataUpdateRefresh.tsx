@@ -33,6 +33,6 @@ export default function MetadataUpdateRefresh() {
         }
       }
     })();
-  }, [searchParams, router]);
+  }, [searchParams, router, pathname]);
   return <></>;
 }

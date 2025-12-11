@@ -23,6 +23,8 @@ import { useProgress } from "react-transition-progress";
 import { Textarea } from "./ui/textarea";
 import { TAICredits } from "@/lib/types";
 import InfoTooltip from "./InfoTooltip";
+import useSWR, { mutate } from "swr";
+import { fetcher, PROFILE_API_KEY } from "@/lib/utils";
 // import { User } from "@supabase/supabase-js";
 
 interface ParsedFilters {
@@ -48,6 +50,11 @@ export default function GlobalJobSearch() {
   const router = useRouter();
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
   const startProgress = useProgress();
+  const { data } = useSWR(PROFILE_API_KEY, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const buildUrlParams = useCallback(
     (filters: ParsedFilters): URLSearchParams => {
@@ -101,6 +108,7 @@ export default function GlobalJobSearch() {
       const { filters } = await response.json();
 
       const params = buildUrlParams(filters);
+      mutate(PROFILE_API_KEY);
 
       startTransition(() => {
         startProgress();
@@ -141,7 +149,10 @@ export default function GlobalJobSearch() {
             What kind of job are you looking for?
           </DialogTitle>
           <DialogDescription className="text-start flex items-center">
-            {/* {aiCredits} AI Credits available. */}
+            {/* NEED TO SHOW USER THE AI CREDITS LEFT */}
+            {data && data.profile
+              ? `${data.profile.ai_credits} AI Credits available.`
+              : ""}
             <InfoTooltip
               content={
                 "This feature uses " +

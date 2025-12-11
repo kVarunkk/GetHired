@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { ICountry } from "@/lib/types";
 import { NextRequest, NextResponse } from "next/server";
 
 const manipulateLocations = (data: { country: string; cities: string[] }[]) => {
@@ -41,7 +42,9 @@ export async function GET(request: NextRequest) {
       throw new Error("Data not available");
     }
 
-    const finalLocations = filterComponent ? manipulateLocations(data) : data;
+    const finalLocations = filterComponent
+      ? manipulateLocations(data)
+      : (data as ICountry[]);
 
     return NextResponse.json({ data: finalLocations || [] });
   } catch (err: unknown) {

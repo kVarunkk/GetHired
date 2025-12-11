@@ -103,7 +103,6 @@ export default function JobsComponent({
   }, [
     isLoading,
     jobs.length,
-    totalJobs,
     page,
     searchParams,
     isCompanyUser,

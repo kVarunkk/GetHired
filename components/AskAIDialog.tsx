@@ -16,25 +16,33 @@ import { Copy, Loader2, Sparkle } from "lucide-react";
 import Link from "next/link";
 import { TAICredits } from "@/lib/types";
 import InfoTooltip from "./InfoTooltip";
+import useSWR, { mutate } from "swr";
+import { fetcher, PROFILE_API_KEY } from "@/lib/utils";
 
 export default function AskAIDialog({
   // isOpen,
   // setIsOpen,
   jobId,
-  aiCredits = 0,
+  // aiCredits = 0,
   isOnboardingComplete,
 }: {
   // isOpen: boolean;
   // setIsOpen: (isOpen: boolean) => void;
   jobId: string;
-  aiCredits?: number;
+  // aiCredits?: number;
   isOnboardingComplete: boolean;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
   const [answer, setAnswer] = useState<string | null>(null);
-  const [creditsState, setCreditsState] = useState<number>(aiCredits);
+  // const [creditsState, setCreditsState] = useState<number>(0);
+  const { data } = useSWR(PROFILE_API_KEY, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const creditsState = data && data.profile ? data.profile.ai_credits : 0;
 
   const handleSubmit = async (formData?: FormData) => {
     setError(null);
@@ -77,7 +85,8 @@ export default function AskAIDialog({
       const { answer } = await response.json();
 
       setAnswer(answer);
-      setCreditsState((prev) => prev - TAICredits.AI_SMART_SEARCH_OR_ASK_AI);
+      mutate(PROFILE_API_KEY);
+      // setCreditsState((prev) => prev - TAICredits.AI_SMART_SEARCH_OR_ASK_AI);
     } catch (error) {
       toast.error(
         `Search failed: ${(error as Error).message}. Please try again.`

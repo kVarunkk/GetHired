@@ -80,29 +80,11 @@ export default async function JobPage({
     } = await supabase.auth.getUser();
     let isCompanyUser = false;
     let onboardingComplete = false;
-    let aiCredits;
-    let isOnboardingComplete;
-    if (user) {
-      const { data: jobSeekerData } = await supabase
-        .from("user_info")
-        .select("filled, ai_credits")
-        .eq("user_id", user?.id)
-        .single();
-      const { data: companyData } = await supabase
-        .from("company_info")
-        .select("id, filled")
-        .eq("user_id", user?.id)
-        .single();
-
-      if (companyData) {
-        isCompanyUser = true;
-      }
-
-      if (jobSeekerData) {
-        onboardingComplete = jobSeekerData.filled;
-        aiCredits = jobSeekerData.ai_credits;
-        isOnboardingComplete = jobSeekerData.filled;
-      }
+    // let aiCredits;
+    // let isOnboardingComplete;
+    if (user && user.app_metadata) {
+      isCompanyUser = user.app_metadata.type === "company";
+      onboardingComplete = user.app_metadata.onboarding_complete;
     }
     const selectString = `
            ${allJobsSelectString},
@@ -205,8 +187,8 @@ export default async function JobPage({
                   // isOpen={isOpen}
                   // setIsOpen={setIsOpen}
                   jobId={job_id}
-                  aiCredits={aiCredits}
-                  isOnboardingComplete={isOnboardingComplete}
+                  // aiCredits={aiCredits}
+                  isOnboardingComplete={onboardingComplete}
                 />
               ) : (
                 <Button variant={"ghost"} asChild>

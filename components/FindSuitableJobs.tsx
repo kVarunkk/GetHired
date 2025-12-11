@@ -35,6 +35,8 @@ import { useProgress } from "react-transition-progress";
 import { Button } from "./ui/button";
 import InfoTooltip from "./InfoTooltip";
 import { TAICredits } from "@/lib/types";
+import useSWR, { mutate } from "swr";
+import { fetcher, PROFILE_API_KEY } from "@/lib/utils";
 
 export default function FindSuitableJobs({
   user,
@@ -54,6 +56,11 @@ export default function FindSuitableJobs({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const startProgress = useProgress();
+  const { data } = useSWR(PROFILE_API_KEY, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const findCompanyUsersJobPostings = useCallback(async (): Promise<
     IJobPost[]
@@ -144,6 +151,8 @@ export default function FindSuitableJobs({
         params.set("minExperience", userInfo.experience_years.toString());
       }
 
+      mutate(PROFILE_API_KEY);
+
       startTransition(() => {
         startProgress();
         router.push(`/jobs?${params.toString()}`);
@@ -193,11 +202,11 @@ export default function FindSuitableJobs({
     return (
       <div className="flex items-center gap-2">
         <InfoTooltip
-          content={
-            "AI Smart Search uses " +
-            TAICredits.AI_SMART_SEARCH_OR_ASK_AI +
-            " AI credits per use."
-          }
+          content={`AI Smart Search uses ${TAICredits.AI_SMART_SEARCH_OR_ASK_AI} AI credits per use. ${
+            data && data.profile
+              ? `${data.profile.ai_credits} AI Credits available.`
+              : ""
+          }`}
         />
         <Select
           value={suitableJobsSelectValue}
@@ -251,11 +260,11 @@ export default function FindSuitableJobs({
     return (
       <div className="flex items-center gap-2">
         <InfoTooltip
-          content={
-            "AI Smart Search uses " +
-            TAICredits.AI_SMART_SEARCH_OR_ASK_AI +
-            " AI credits per use."
-          }
+          content={`AI Smart Search uses ${TAICredits.AI_SMART_SEARCH_OR_ASK_AI} AI credits per use. ${
+            data && data.profile
+              ? `${data.profile.ai_credits} AI Credits available.`
+              : ""
+          }`}
         />
         <Button
           disabled={isPending}
@@ -272,11 +281,11 @@ export default function FindSuitableJobs({
   return (
     <div className="flex items-center gap-2">
       <InfoTooltip
-        content={
-          "AI Smart Search uses " +
-          TAICredits.AI_SMART_SEARCH_OR_ASK_AI +
-          " AI credits per use."
-        }
+        content={`AI Smart Search uses ${TAICredits.AI_SMART_SEARCH_OR_ASK_AI} AI credits per use. ${
+          data && data.profile
+            ? `${data.profile.ai_credits} AI Credits available.`
+            : ""
+        }`}
       />
       <Select
         value={suitableJobsSelectValue}
