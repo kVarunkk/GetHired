@@ -6,11 +6,11 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   // Set a default redirect path (without the flag initially)
-  let next = searchParams.get("next") ?? "/get-started";
+  let next = searchParams.get("next") ?? "/jobs";
 
   // Ensure 'next' is a safe, internal path
   if (!next.startsWith("/")) {
-    next = "/get-started";
+    next = "/jobs";
   }
   if (code) {
     try {

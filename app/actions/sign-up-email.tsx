@@ -24,17 +24,7 @@ export async function sendSignupEmail(
   try {
     const serviceRoleSupabase = createServiceRoleClient();
 
-    // const { data: existingUsers } = await serviceRoleSupabase
-    //   .from("user_info")
-    //   .select("user_id")
-    //   .eq("email", email);
-    // if (existingUsers && existingUsers.length > 0) {
-    //   throw new Error("This user is already registered. Please Login.");
-    // }
-
-    const finalRedirectUrl = isCompany
-      ? "/get-started?company=true"
-      : "/get-started";
+    const finalRedirectUrl = isCompany ? "/get-started?company=true" : "/jobs";
 
     const { data, error } = await serviceRoleSupabase.auth.admin.generateLink({
       type: "signup",
