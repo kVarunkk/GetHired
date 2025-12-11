@@ -5,21 +5,9 @@ import Hero from "@/components/landing-page/Hero";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
 import NavbarParent, { INavItem } from "@/components/NavbarParent";
-import { ensureUserRecordExists } from "@/lib/onboarding-utils";
-import { createClient } from "@/lib/supabase/server";
 import { v4 as uuidv4 } from "uuid";
 
 export default async function Home() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // --- Post-Auth Check ---
-  if (user) {
-    // This function is run on the server thread immediately after user session is established
-    await ensureUserRecordExists(user);
-  }
   const navItems: INavItem[] = [
     {
       id: uuidv4(),

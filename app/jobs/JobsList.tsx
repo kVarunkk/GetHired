@@ -23,9 +23,7 @@ export default function JobsList({
   return (
     <JobsComponent
       initialJobs={initialJobs || []}
-      totalJobs={initialJobs.length || 0}
       user={user}
-      // uniqueCompanies={uniqueCompanies}
       isCompanyUser={isCompanyUser}
       isOnboardingComplete={onboardingComplete}
       isAllJobsTab={!searchParameters.get("tab")}

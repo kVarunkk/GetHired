@@ -90,7 +90,7 @@ export const BaseEmailLayout = ({
                 <Text className="text-xs text-gray-500">
                   To no longer receive these, manage your preferences{" "}
                   <Link
-                    href="https://gethired.devhub.co.in/get-started?edit=true"
+                    href="https://gethired.devhub.co.in/get-started"
                     className="text-blue-600 underline"
                   >
                     here

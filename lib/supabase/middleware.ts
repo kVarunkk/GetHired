@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
+import { UserAppMetadata } from "@supabase/supabase-js";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -38,6 +39,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const deleteSearchParams = (url: URL) => {
+    url.searchParams.forEach((value, key) => {
+      url.searchParams.delete(key);
+    });
+  };
+
   const { pathname, searchParams } = request.nextUrl;
 
   const publicPaths = [
@@ -74,22 +81,14 @@ export async function updateSession(request: NextRequest) {
     "/auth/error",
     "/auth/confirm",
     "/auth/forgot-password",
-    "/auth/login?company=true",
-    "/auth/sign-up?company=true",
+    // "/auth/login?company=true",
+    // "/auth/sign-up?company=true",
   ];
 
-  const isAuthPath = authPaths.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`)
-  );
-
   const isApplicantOnboardingPath =
-    pathname === "/get-started" &&
-    !(searchParams.get("company") === "true") &&
-    !(searchParams.get("edit") === "true");
+    pathname === "/get-started" && !(searchParams.get("company") === "true");
   const isCompanyOnboardingPath =
-    pathname === "/get-started" &&
-    searchParams.get("company") === "true" &&
-    !(searchParams.get("edit") === "true");
+    pathname === "/get-started" && searchParams.get("company") === "true";
 
   const isJobPage =
     pathname.startsWith("/jobs/") && pathname.length > "/jobs/".length;
@@ -101,6 +100,14 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/companies/") &&
     pathname.length > "/companies/".length;
 
+  const isAuthPath = authPaths.some((path) => pathname.startsWith(`${path}`));
+  const isPublicPath =
+    publicPaths.some((path) => pathname === path) ||
+    isJobPage ||
+    isBlogPage ||
+    isCompanyPage;
+
+  const isProtectedPath = !isAuthPath && !isPublicPath;
   const isProtectedRelevanceSearch =
     pathname === "/jobs" && searchParams.get("sortBy") === "relevance";
 
@@ -108,19 +115,11 @@ export async function updateSession(request: NextRequest) {
   if (!user) {
     // If an unauthenticated user tries to access a protected page, redirect them to login.
 
-    const isProtectedPath =
-      !isAuthPath &&
-      !publicPaths.includes(pathname) &&
-      !isJobPage &&
-      !isBlogPage &&
-      !isCompanyPage;
-
     if (isProtectedPath || isProtectedRelevanceSearch) {
       const url = request.nextUrl.clone();
 
-      url.searchParams.forEach((value, key) => {
-        url.searchParams.delete(key);
-      });
+      deleteSearchParams(url);
+
       if (url.pathname.startsWith("/company")) {
         url.pathname = "/auth/login";
         url.searchParams.set("company", "true");
@@ -134,118 +133,115 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     let isApplicant = false;
     let isCompany = false;
-    // let userInfo = null;
-    let companyInfo = null;
-    try {
-      // Check if the user has an applicant profile
+    let isCompanyOnboarded = false;
+
+    const appMetadata: Partial<UserAppMetadata> = user?.app_metadata || {};
+
+    // Flags based on the new app_metadata keys
+    if (appMetadata.type) {
+      const userType = appMetadata.type;
+      const onboardingComplete = appMetadata.onboarding_complete === true;
+
+      isApplicant = userType === "applicant";
+      isCompany = userType === "company";
+      isCompanyOnboarded = isCompany && onboardingComplete;
+    } else {
+      // Fallback to old method if app_metadata.type is missing
       const { data: userInfoData } = await supabase
         .from("user_info")
         .select("user_id")
         .eq("user_id", user.id)
         .single();
 
-      // Check if the user has a company profile
-      const { data: companyInfoData } = await supabase
-        .from("company_info")
-        .select("filled")
-        .eq("user_id", user.id)
-        .single();
+      if (!userInfoData?.user_id) {
+        const { data: companyInfoData } = await supabase
+          .from("company_info")
+          .select("user_id, filled")
+          .eq("user_id", user.id)
+          .single();
 
-      isApplicant = userInfoData?.user_id || false;
-      isCompany = companyInfoData?.filled || false;
-      // userInfo = userInfoData;
-      companyInfo = companyInfoData;
-    } catch {}
+        if (companyInfoData?.user_id) {
+          isCompany = true;
+          isCompanyOnboarded = companyInfoData.filled;
+        }
+      } else {
+        isApplicant = true;
+      }
+    }
 
     // Redirect authenticated users away from auth pages
     if (isAuthPath) {
       const url = request.nextUrl.clone();
       let pathname;
-      if (isApplicant === true) {
+      if (isApplicant) {
         pathname = "/jobs";
         url.pathname = pathname;
-        url.searchParams.forEach((value, key) => {
-          url.searchParams.delete(key);
-        });
+        deleteSearchParams(url);
+
         return NextResponse.redirect(url);
-      } else if (isCompany === true && companyInfo) {
+      } else if (isCompany && isCompanyOnboarded) {
         pathname = "/company";
         url.pathname = pathname;
-        url.searchParams.forEach((value, key) => {
-          url.searchParams.delete(key);
-        });
+        deleteSearchParams(url);
+
         return NextResponse.redirect(url);
       } else {
         url.pathname = "/get-started";
-        url.searchParams.forEach((value, key) => {
-          url.searchParams.delete(key);
-        });
+        deleteSearchParams(url);
 
-        if (companyInfo) {
+        if (isCompany) {
           url.searchParams.set("company", "true");
         }
         return NextResponse.redirect(url);
       }
     }
 
-    // --- Enforce Onboarding ---
+    // --- Enforce Company Onboarding ---
     // If the user has no profile and is not on an onboarding page, redirect them.
     if (
-      !isApplicant &&
-      !isCompany &&
-      !isApplicantOnboardingPath &&
-      !publicPaths &&
-      !isJobPage &&
-      !isCompanyPage &&
-      !isBlogPage
+      isCompany &&
+      !isCompanyOnboarded &&
+      !isCompanyOnboardingPath &&
+      !publicPaths
     ) {
       const url = request.nextUrl.clone();
       url.pathname = "/get-started";
-      url.searchParams.forEach((value, key) => {
-        url.searchParams.delete(key);
-      });
-      if (companyInfo) {
-        url.searchParams.set("company", "true");
-      }
+      deleteSearchParams(url);
+
+      url.searchParams.set("company", "true");
       return NextResponse.redirect(url);
     }
 
     // --- Restrict Access to Company Routes ---
-    if (pathname.startsWith("/company") && !companyInfo) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/jobs";
-      return NextResponse.redirect(url);
-    }
-
-    if (pathname.startsWith("/company") && !isCompany && companyInfo) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/get-started";
-      url.searchParams.forEach((value, key) => {
-        url.searchParams.delete(key);
-      });
-      if (companyInfo) {
-        url.searchParams.set("company", "true");
-      }
-      return NextResponse.redirect(url);
-    }
-
-    // --- Restrict Access to Applicant Dashboard ---
-    if (pathname.startsWith("/dashboard") && !isApplicant) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/company";
-      return NextResponse.redirect(url);
-    }
-
-    // If a user has completed onboarding and tries to access the onboarding page, redirect them.
     if (
-      (isApplicant && isApplicantOnboardingPath) ||
-      (isCompany && isCompanyOnboardingPath)
+      (pathname.startsWith("/company") || isCompanyOnboardingPath) &&
+      !isCompany
     ) {
       const url = request.nextUrl.clone();
-      url.pathname = isCompany ? "/company" : "/jobs";
-      url.searchParams.forEach((value, key) => {
-        url.searchParams.delete(key);
-      });
+      url.pathname = "/jobs";
+      deleteSearchParams(url);
+
+      return NextResponse.redirect(url);
+    }
+
+    if (pathname.startsWith("/company") && !isCompanyOnboarded && isCompany) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/get-started";
+      deleteSearchParams(url);
+
+      url.searchParams.set("company", "true");
+      return NextResponse.redirect(url);
+    }
+
+    // --- Restrict Access to Applicant only routes(dashboard and get-started) ---
+    if (
+      (pathname.startsWith("/dashboard") || isApplicantOnboardingPath) &&
+      !isApplicant
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/login";
+      deleteSearchParams(url);
+
       return NextResponse.redirect(url);
     }
   }

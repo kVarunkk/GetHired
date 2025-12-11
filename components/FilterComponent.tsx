@@ -19,7 +19,7 @@ import { TApplicationStatus } from "@/lib/types";
 import { useProgress } from "react-transition-progress";
 import FilterActions from "./FilterActions";
 import useSWR from "swr";
-import { commonIndustries, fetcher } from "@/lib/utils";
+import { commonIndustries, fetcher, ONE_DAY_MS } from "@/lib/utils";
 
 type FilterConfig = {
   name: keyof FiltersState;
@@ -71,7 +71,21 @@ export default function FilterComponent({
 
   const { data: filterData, error: filterError } = useSWR(
     `/api/${currentPage}/filters`,
-    fetcher
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      staleTime: ONE_DAY_MS,
+    }
+  );
+  const { data: countriesData, error: countriesError } = useSWR(
+    `/api/locations?filterComponent=true`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      staleTime: ONE_DAY_MS,
+    }
   );
 
   const uniqueCompanies: { company_name: string }[] = useMemo(
@@ -114,10 +128,7 @@ export default function FilterComponent({
           : [],
       [filterData, filterError]
     );
-  const { data: countriesData, error: countriesError } = useSWR(
-    `/api/locations?filterComponent=true`,
-    fetcher
-  );
+
   const countries: { location: string }[] = useMemo(
     () => (countriesData && !countriesError ? countriesData.data : []),
     [countriesData, countriesError]

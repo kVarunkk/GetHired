@@ -2,7 +2,7 @@ import FilterComponent from "@/components/FilterComponent";
 import { createClient } from "@/lib/supabase/server";
 import JobsList from "./JobsList";
 import { TabsContent } from "@/components/ui/tabs";
-import { IJob, JobListingSearchParams, TAICredits } from "@/lib/types";
+import { IJob, JobListingSearchParams } from "@/lib/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import { Metadata } from "next";
@@ -133,9 +133,8 @@ export default async function JobsPage({
 
   let isCompanyUser = false;
   let onboardingComplete = false;
-  let ai_credits;
   if (user) {
-    try {
+    if (!user.app_metadata.type) {
       const { data: jobSeekerData, error: jobSeekerDataError } = await supabase
         .from("user_info")
         .select("ai_credits, filled")
@@ -154,9 +153,11 @@ export default async function JobsPage({
         }
       } else if (jobSeekerData) {
         onboardingComplete = jobSeekerData.filled;
-        ai_credits = jobSeekerData.ai_credits;
       }
-    } catch {}
+    } else {
+      isCompanyUser = user.app_metadata.type === "company";
+      onboardingComplete = user.app_metadata.onboarding_complete;
+    }
   }
 
   // --- Data Fetching ---
@@ -187,74 +188,11 @@ export default async function JobsPage({
     });
 
     const [jobsResponse] = await Promise.all([jobFetchPromise]);
-
+    if (!jobsResponse.ok) throw new Error("Failed to fetch jobs");
     const result = await jobsResponse.json();
-    if (!jobsResponse.ok) throw new Error(result.message);
 
-    // --- AI Re-ranking Logic ---
-    if (
-      params.get("sortBy") === "relevance" &&
-      user &&
-      result.data &&
-      result.data.length > 0
-    ) {
-      if (ai_credits >= TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
-        try {
-          const aiRerankRes = await fetch(`${url}/api/ai-search/jobs`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Cookie: headersList.get("Cookie") || "",
-            },
-            body: JSON.stringify({
-              userId: user.id,
-              jobs: result.data.map((job: IJob) => ({
-                id: job.id,
-                job_name: job.job_name,
-                description: job.description,
-                visa_requirement: job.visa_requirement,
-                salary_range: job.salary_range,
-                locations: job.locations,
-                experience: job.experience,
-              })),
-            }),
-          });
-
-          const aiRerankResult = await aiRerankRes.json();
-
-          if (aiRerankRes.ok && aiRerankResult.rerankedJobs) {
-            const rerankedIds = aiRerankResult.rerankedJobs;
-            const filteredOutIds = aiRerankResult.filteredOutJobs || [];
-            const jobMap = new Map(
-              result.data.map((job: IJob) => [job.id, job])
-            );
-            const reorderedJobs = rerankedIds
-              .map((id: string) => jobMap.get(id))
-              .filter(
-                (job: IJob) =>
-                  job !== undefined && !filteredOutIds.includes(job.id)
-              );
-            initialJobs = reorderedJobs || [];
-            totalCount = reorderedJobs.length || 0;
-          }
-        } catch (e) {
-          throw e;
-        }
-      } else if (
-        result.matchedJobIds &&
-        ai_credits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
-      ) {
-        const jobMap = new Map(result.data.map((job: IJob) => [job.id, job]));
-        initialJobs =
-          result.matchedJobIds
-            .map((id: string) => jobMap.get(id))
-            .filter((job: IJob) => job !== undefined) || [];
-        totalCount = result.count || 0;
-      }
-    } else {
-      initialJobs = result.data || [];
-      totalCount = result.count || 0;
-    }
+    initialJobs = result.data;
+    totalCount = result.totalCount;
   } catch {}
 
   return (
@@ -273,7 +211,7 @@ export default async function JobsPage({
             isAISearch={isAISearch}
             applicationStatusFilter={applicationStatusFilter}
             page="jobs"
-            aiCredits={ai_credits}
+            // aiCredits={ai_credits}
           >
             {!applicationStatusFilter && (
               <TabsContent value="all">

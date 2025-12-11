@@ -27,7 +27,7 @@ import InfoTooltip from "./InfoTooltip";
 
 export default function JobsComponent({
   initialJobs,
-  totalJobs,
+  // totalJobs,
   user,
   isCompanyUser,
   current_page,
@@ -38,7 +38,7 @@ export default function JobsComponent({
   totalCount,
 }: {
   initialJobs: IJob[] | IFormData[];
-  totalJobs: number;
+  // totalJobs: number;
   user: User | null;
   isCompanyUser: boolean;
   current_page: "jobs" | "profiles" | "companies";
@@ -103,7 +103,6 @@ export default function JobsComponent({
   }, [
     isLoading,
     jobs.length,
-    totalJobs,
     page,
     searchParams,
     isCompanyUser,
@@ -226,7 +225,7 @@ export default function JobsComponent({
           {!isOnboardingComplete && user && !isCompanyUser && (
             <div className="flex items-center gap-2">
               <InfoTooltip content="Please complete your profile to use this feature" />
-              <Link href={"/get-started?edit=true"}>
+              <Link href={"/get-started"}>
                 <Button className="flex items-center gap-2 rounded-full text-sm">
                   <Search className="w-4 h-4" />
                   {current_page === "companies"

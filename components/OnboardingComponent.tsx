@@ -19,7 +19,6 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
 import UserOnboardingPersonalization from "./UserOnboardingPersonalization";
-import { useCachedFetch } from "@/lib/hooks/useCachedFetch";
 import { Step1JobRole } from "./onboarding-steps/Step1";
 import { Step2LocationSalary } from "./onboarding-steps/Step2";
 import { Step3SkillsExperience } from "./onboarding-steps/Step3";
@@ -27,8 +26,10 @@ import { Step4VisaWorkStyle } from "./onboarding-steps/Step4";
 import { Step5CareerGoals } from "./onboarding-steps/Step5";
 import { Step6ResumeUpload } from "./onboarding-steps/Step6";
 import { Step7ReviewSubmit } from "./onboarding-steps/Step7";
-import { isValidUrl } from "@/lib/utils";
+import { fetcher, isValidUrl } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
+import useSWR from "swr";
 
 export interface StepProps {
   formData: IFormData;
@@ -83,9 +84,18 @@ export const OnboardingForm: React.FC = () => {
     is_promotion_active: boolean;
     is_job_digest_active: boolean;
   } | null>(null);
-  const { data: countries, isLoading: isLoadingLocations } = useCachedFetch<
-    { location: string }[]
-  >("countryData", "/api/locations", undefined, true);
+
+  const {
+    data: countriesData,
+    error: countriesError,
+    isLoading: isLoadingLocations,
+  } = useSWR(`/api/locations?filterComponent=true`, fetcher);
+
+  const countries: { location: string }[] = useMemo(
+    () => (countriesData && !countriesError ? countriesData.data : []),
+    [countriesData, countriesError]
+  );
+
   const router = useRouter();
   const steps = useMemo(() => {
     return [
@@ -407,7 +417,9 @@ export const OnboardingForm: React.FC = () => {
     setError(null);
     // setSuccessMessage(null);
     setIsLoading(true);
-    toast.loading("Hang tight! We're setting things up for you...");
+    toast.loading(
+      "Hang tight! We're setting things up for you. This might take a moment. Please do not close or refresh the page."
+    );
 
     if (!user) {
       setError("User not authenticated. Please log in.");
@@ -485,6 +497,16 @@ export const OnboardingForm: React.FC = () => {
       if (dbError) {
         setError(`Failed to save data: ${dbError.message}`);
       } else {
+        const { error: updateAppMetaError } = await updateUserAppMetadata(
+          user.id,
+          {
+            type: "applicant",
+            onboarding_complete: true,
+          }
+        );
+
+        if (updateAppMetaError) throw new Error(updateAppMetaError);
+
         toast.dismiss();
         toast.success("Your profile has been saved successfully!");
         router.push("/jobs");

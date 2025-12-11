@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LocationSelector } from "./LocationSelector";
 import { commonIndustries } from "@/lib/utils";
+import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -223,6 +224,16 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
       );
 
       if (error) throw error;
+
+      const { error: updateAppMetaError } = await updateUserAppMetadata(
+        user.id,
+        {
+          type: "company",
+          onboarding_complete: true,
+        }
+      );
+
+      if (updateAppMetaError) throw new Error(updateAppMetaError);
 
       setLogoFile(null);
       setDeletePending(false);

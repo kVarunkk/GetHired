@@ -134,7 +134,7 @@ export const JobDigestEmail = ({
       <Text className="text-base text-gray-700 text-color mt-8">
         Didn't find what you were looking for?{" "}
         <Link
-          href="https://gethired.devhub.co.in/get-started?edit=true"
+          href="https://gethired.devhub.co.in/get-started"
           className="text-blue-600 underline"
         >
           Adjust

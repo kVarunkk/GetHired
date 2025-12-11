@@ -118,67 +118,67 @@ async function processUserDigest(user: IFormData, digestDate: string) {
     }
 
     const result = await jobFetchRes.json();
-    const initialJobs: IJob[] = result.data || [];
+    const finalJobs: IJob[] = result.data || [];
 
     // --- 3. AI Re-ranking (Step 2) ---
-    let finalJobs: IJob[] = initialJobs;
+    // let finalJobs: IJob[] = initialJobs;
 
-    if (initialJobs.length > 0) {
-      const aiRerankRes = await fetch(`${URL}/api/ai-search/jobs`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Internal-Secret": INTERNAL_API_SECRET || "",
-        },
-        body: JSON.stringify({
-          userId: user.user_id,
-          jobs: initialJobs.map((job) => ({
-            id: job.id,
-            job_name: job.job_name,
-            description: job.description,
-            visa_requirement: job.visa_requirement,
-            salary_range: job.salary_range,
-            locations: job.locations,
-            experience: job.experience,
-          })),
-        }),
-      });
+    // if (initialJobs.length > 0) {
+    //   const aiRerankRes = await fetch(`${URL}/api/ai-search/jobs`, {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //       "X-Internal-Secret": INTERNAL_API_SECRET || "",
+    //     },
+    //     body: JSON.stringify({
+    //       userId: user.user_id,
+    //       jobs: initialJobs.map((job) => ({
+    //         id: job.id,
+    //         job_name: job.job_name,
+    //         description: job.description,
+    //         visa_requirement: job.visa_requirement,
+    //         salary_range: job.salary_range,
+    //         locations: job.locations,
+    //         experience: job.experience,
+    //       })),
+    //     }),
+    //   });
 
-      if (!aiRerankRes.ok) {
-        console.error(
-          `AI Rerank API failed with status: ${aiRerankRes.status}`
-        );
+    //   if (!aiRerankRes.ok) {
+    //     console.error(
+    //       `AI Rerank API failed with status: ${aiRerankRes.status}`
+    //     );
 
-        const errorText = await aiRerankRes.text();
-        console.error(
-          "AI Rerank API error body:",
-          errorText.substring(0, 500) + "..."
-        );
+    //     const errorText = await aiRerankRes.text();
+    //     console.error(
+    //       "AI Rerank API error body:",
+    //       errorText.substring(0, 500) + "..."
+    //     );
 
-        throw new Error(`AI Rerank API failed (Status: ${aiRerankRes.status})`);
-      }
+    //     throw new Error(`AI Rerank API failed (Status: ${aiRerankRes.status})`);
+    //   }
 
-      const aiRerankResult: {
-        rerankedJobs: string[];
-        filteredOutJobs: string[];
-      } = await aiRerankRes.json();
+    //   const aiRerankResult: {
+    //     rerankedJobs: string[];
+    //     filteredOutJobs: string[];
+    //   } = await aiRerankRes.json();
 
-      if (aiRerankRes.ok && aiRerankResult.rerankedJobs) {
-        const uniqueRerankedIds = Array.from(
-          new Set(aiRerankResult.rerankedJobs)
-        );
-        const filteredOutIds: string[] = aiRerankResult.filteredOutJobs || [];
+    //   if (aiRerankRes.ok && aiRerankResult.rerankedJobs) {
+    //     const uniqueRerankedIds = Array.from(
+    //       new Set(aiRerankResult.rerankedJobs)
+    //     );
+    //     const filteredOutIds: string[] = aiRerankResult.filteredOutJobs || [];
 
-        const jobMap = new Map(initialJobs.map((job: IJob) => [job.id, job]));
+    //     const jobMap = new Map(initialJobs.map((job: IJob) => [job.id, job]));
 
-        finalJobs = uniqueRerankedIds
-          .map((id: string) => jobMap.get(id))
-          .filter(
-            (job: IJob | undefined) =>
-              job !== undefined && !filteredOutIds.includes(job.id)
-          ) as IJob[];
-      }
-    }
+    //     finalJobs = uniqueRerankedIds
+    //       .map((id: string) => jobMap.get(id))
+    //       .filter(
+    //         (job: IJob | undefined) =>
+    //           job !== undefined && !filteredOutIds.includes(job.id)
+    //       ) as IJob[];
+    //   }
+    // }
 
     // Fallback (If  AI search was too slow/skipped) ---
 

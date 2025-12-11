@@ -127,10 +127,7 @@ export default function JobApplyBtn({
             isAppliedJobsTabActive={isAppliedJobsTabActive}
           />
         ) : (
-          <Link
-            onClick={(e) => e.stopPropagation()}
-            href={"/get-started?edit=true"}
-          >
+          <Link onClick={(e) => e.stopPropagation()} href={"/get-started"}>
             <Button>Complete Onboarding to Apply</Button>
           </Link>
         )
@@ -231,12 +228,9 @@ function JobStatusDialog({
               <span className="font-bold inline-flex  gap-1">
                 <Sparkle className="h-4 w-4" /> Ask AI
               </span>{" "}
-              feature by clicking
-              <MoreHorizontal className="h-4 w-4 inline-block mx-1" />{" "}
+              feature{" "}
               {window.location.pathname === "/jobs" && (
                 <span
-                  // href={"/jobs/" + job.id}
-                  // target="_blank"
                   onClick={() => router.push("/jobs/" + job.id)}
                   className="text-blue-400 underline"
                 >

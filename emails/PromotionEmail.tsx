@@ -84,7 +84,7 @@ export const PromotionEmail = ({
         </Link>{" "}
         to the platform and{" "}
         <Link
-          href="https://gethired.devhub.co.in/get-started?edit=true"
+          href="https://gethired.devhub.co.in/get-started"
           className="text-blue-600 underline"
         >
           adjust

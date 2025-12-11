@@ -8,9 +8,6 @@ import JobsComponent from "@/components/JobsComponent";
 
 export default function CompaniesList({
   isCompanyUser,
-  // uniqueLocations,
-  // uniqueCompanies,
-  // uniqueIndustries,
   user,
   companyId,
   onboardingComplete,
@@ -18,9 +15,6 @@ export default function CompaniesList({
   totalCount,
 }: {
   isCompanyUser: boolean;
-  // uniqueLocations: { location: string }[];
-  // uniqueCompanies: { company_name: string }[];
-  // uniqueIndustries: { industry: string }[];
   user: User | null;
   companyId: string;
   onboardingComplete: boolean;
@@ -28,14 +22,12 @@ export default function CompaniesList({
   totalCount: number;
 }) {
   const [dataState, setData] = useState<IFormData[] | never[] | null>();
-  const [countState, setCount] = useState<number | null>();
   const [loading, setLoading] = useState(true);
 
   const searchParameters = useSearchParams();
 
   useEffect(() => {
     (async () => {
-      setCount(initialCompanies.length);
       setData(initialCompanies);
       setLoading(false);
     })();
@@ -51,11 +43,7 @@ export default function CompaniesList({
     return (
       <JobsComponent
         initialJobs={dataState || []}
-        totalJobs={countState || 0}
         user={user}
-        // uniqueLocations={uniqueLocations}
-        // uniqueCompanies={uniqueCompanies}
-        // uniqueIndustries={uniqueIndustries}
         isCompanyUser={isCompanyUser}
         current_page={"companies"}
         companyId={companyId}

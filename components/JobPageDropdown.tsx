@@ -10,12 +10,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { Check, File, Forward, MoreHorizontal, Sparkle } from "lucide-react";
+import { Check, File, Forward, MoreHorizontal } from "lucide-react";
 import toast from "react-hot-toast";
 import { useState } from "react";
-import AskAIDialog from "./AskAIDialog";
 import { User } from "@supabase/supabase-js";
-import Link from "next/link";
 import { TApplicationStatus } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -26,20 +24,20 @@ export default function JobPageDropdown({
   user,
   jobId,
   isCompanyUser,
-  aiCredits,
-  isOnboardingComplete = false,
+  // aiCredits,
+  // isOnboardingComplete = false,
   applicationStatus,
   isPlatformJob,
 }: {
   user: User | null;
   jobId: string;
   isCompanyUser: boolean;
-  aiCredits?: number;
-  isOnboardingComplete?: boolean;
+  // aiCredits?: number;
+  // isOnboardingComplete?: boolean;
   applicationStatus: TApplicationStatus | null;
   isPlatformJob: boolean;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
+  // const [isOpen, setIsOpen] = useState(false);
   const [appStatus, setAppStatus] = useState(applicationStatus);
   const router = useRouter();
 
@@ -68,14 +66,14 @@ export default function JobPageDropdown({
 
   return (
     <>
-      <DropdownMenu modal={false}>
+      <DropdownMenu>
         <DropdownMenuTrigger asChild className="">
           <Button className="p-2" variant={"ghost"}>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          {!isCompanyUser &&
+          {/* {!isCompanyUser &&
             (user ? (
               <DropdownMenuItem onClick={() => setIsOpen(true)}>
                 <Sparkle className="h-4 w-4" />
@@ -88,7 +86,7 @@ export default function JobPageDropdown({
                   Ask AI
                 </DropdownMenuItem>
               </Link>
-            ))}
+            ))} */}
           {!isCompanyUser && user && appStatus && !isPlatformJob && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
@@ -130,15 +128,6 @@ export default function JobPageDropdown({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      {user && !isCompanyUser && (
-        <AskAIDialog
-          isOpen={isOpen}
-          setIsOpen={setIsOpen}
-          jobId={jobId}
-          aiCredits={aiCredits}
-          isOnboardingComplete={isOnboardingComplete}
-        />
-      )}
     </>
   );
 }

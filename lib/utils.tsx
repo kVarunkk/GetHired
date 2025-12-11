@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
-import { Info, MoreHorizontal, Sparkle } from "lucide-react";
+import { Info, Sparkle } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -194,6 +194,8 @@ export function isValidUrl(url_string: string) {
 }
 
 export const fetcher = (url: string) => fetch(url).then((res) => res.json());
+export const PROFILE_API_KEY = "/api/current-user";
+export const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export const featureData = {
   title: "Applying to Jobs Just Got Easier with Ask AI!",
@@ -212,9 +214,7 @@ export const featureData = {
         <span className="font-bold inline-flex  gap-1">
           <Sparkle className="h-4 w-4" /> Ask AI
         </span>{" "}
-        feature by clicking
-        <MoreHorizontal className="h-4 w-4 inline-block mx-1" /> on any job
-        listing to get assistance with your application.
+        feature on any job listing to get assistance with your application.
       </p>
     </div>
   ),

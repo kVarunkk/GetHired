@@ -5,6 +5,8 @@ import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "react-hot-toast";
 import { ProgressBar, ProgressBarProvider } from "react-transition-progress";
+import MetadataUpdateRefresh from "@/components/MetadataUpdateRefresh";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: {
@@ -57,6 +59,9 @@ export default function RootLayout({
               <ProgressBar className="fixed h-1 rounded-r-md shadow-lg shadow-sky-500/20 bg-primary top-0" />
               {children}
               <Toaster />
+              <Suspense>
+                <MetadataUpdateRefresh />
+              </Suspense>
             </TooltipProvider>
           </ThemeProvider>
         </ProgressBarProvider>

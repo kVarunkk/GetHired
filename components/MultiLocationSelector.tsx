@@ -9,10 +9,10 @@ import {
   SelectValue,
 } from "./ui/select";
 import { X, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, fetcher } from "@/lib/utils";
 import { ICountry } from "@/lib/types";
 import VirtualizedSelect from "./VirtualizedSelect";
-import { useCachedFetch } from "@/lib/hooks/useCachedFetch";
+import useSWR from "swr";
 
 interface MultiLocationSelectorProps {
   value: string[]; // controlled by RHF
@@ -25,16 +25,20 @@ export default function MultiLocationSelector({
   onChange,
   className = "",
 }: MultiLocationSelectorProps) {
-  // const [countries, setCountries] = useState<ICountry[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [isRemote, setIsRemote] = useState<"yes" | "no" | "">("");
-  // const [isLoading, setIsLoading] = useState(true);
 
-  const { data: countries, isLoading } = useCachedFetch<ICountry[]>(
-    "countryData",
-    "/api/locations"
+  const {
+    data: countriesData,
+    error: countriesError,
+    isLoading,
+  } = useSWR(`/api/locations`, fetcher);
+
+  const countries: ICountry[] = useMemo(
+    () => (countriesData && !countriesError ? countriesData.data : []),
+    [countriesData, countriesError]
   );
 
   // Load cities when country changes

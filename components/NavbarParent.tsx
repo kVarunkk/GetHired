@@ -31,8 +31,8 @@ export default function NavbarParent({
             each.type === "equals"
               ? pathname === each.href
               : each.type === "startswith"
-              ? pathname.startsWith(each.href)
-              : pathname.includes(each.href),
+                ? pathname.startsWith(each.href)
+                : pathname.includes(each.href),
         }));
       });
     }

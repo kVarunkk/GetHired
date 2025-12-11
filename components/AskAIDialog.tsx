@@ -6,34 +6,43 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { Copy, Loader2 } from "lucide-react";
+import { Copy, Loader2, Sparkle } from "lucide-react";
 import Link from "next/link";
 import { TAICredits } from "@/lib/types";
 import InfoTooltip from "./InfoTooltip";
+import useSWR, { mutate } from "swr";
+import { fetcher, PROFILE_API_KEY } from "@/lib/utils";
 
 export default function AskAIDialog({
-  isOpen,
-  setIsOpen,
+  // isOpen,
+  // setIsOpen,
   jobId,
-  aiCredits = 0,
+  // aiCredits = 0,
   isOnboardingComplete,
 }: {
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
+  // isOpen: boolean;
+  // setIsOpen: (isOpen: boolean) => void;
   jobId: string;
-  aiCredits?: number;
+  // aiCredits?: number;
   isOnboardingComplete: boolean;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
   const [answer, setAnswer] = useState<string | null>(null);
-  const [creditsState, setCreditsState] = useState<number>(aiCredits);
+  // const [creditsState, setCreditsState] = useState<number>(0);
+  const { data } = useSWR(PROFILE_API_KEY, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const creditsState = data && data.profile ? data.profile.ai_credits : 0;
 
   const handleSubmit = async (formData?: FormData) => {
     setError(null);
@@ -76,7 +85,8 @@ export default function AskAIDialog({
       const { answer } = await response.json();
 
       setAnswer(answer);
-      setCreditsState((prev) => prev - TAICredits.AI_SMART_SEARCH_OR_ASK_AI);
+      mutate(PROFILE_API_KEY);
+      // setCreditsState((prev) => prev - TAICredits.AI_SMART_SEARCH_OR_ASK_AI);
     } catch (error) {
       toast.error(
         `Search failed: ${(error as Error).message}. Please try again.`
@@ -94,7 +104,13 @@ export default function AskAIDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant={"ghost"}>
+          <Sparkle className="h-4 w-4" />
+          Ask AI
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
         <DialogHeader className="text-start">
           <DialogTitle>Ask AI to help you apply for this role</DialogTitle>
@@ -134,7 +150,7 @@ export default function AskAIDialog({
                 <p className="text-red-600 ">{error}</p>
                 {!isOnboardingComplete && (
                   <Link
-                    href={"/get-started?edit=true"}
+                    href={"/get-started"}
                     className="text-blue-400 underline"
                   >
                     Complete Profile
