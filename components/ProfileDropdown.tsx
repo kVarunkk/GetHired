@@ -33,7 +33,6 @@ export default function ProfileDropdown({
   open?: boolean;
 }) {
   const { theme, setTheme } = useTheme();
-  const [isUserInfo, setIsUserInfo] = useState(false);
   const [isCompanyUser, setIsCompanyUser] = useState(false);
 
   const router = useRouter();
@@ -46,29 +45,9 @@ export default function ProfileDropdown({
 
   useEffect(() => {
     (async () => {
-      try {
-        const supabase = createClient();
-
-        const { data, error } = await supabase
-          .from("user_info")
-          .select("user_id")
-          .eq("user_id", user?.id)
-          .single();
-
-        const { data: companyData, error: companyError } = await supabase
-          .from("company_info")
-          .select("id")
-          .eq("user_id", user?.id)
-          .single();
-
-        if (companyData && !companyError) {
-          setIsCompanyUser(true);
-        }
-
-        if (data && !error) {
-          setIsUserInfo(true);
-        }
-      } catch {}
+      if (user && user.app_metadata.type) {
+        setIsCompanyUser(user.app_metadata.type === "company");
+      }
     })();
   }, [user]);
 
@@ -104,32 +83,16 @@ export default function ProfileDropdown({
             Dashboard
           </Link>
         </DropdownMenuItem>
-        {isUserInfo ? (
-          <DropdownMenuItem>
-            <Link
-              href={"/get-started"}
-              className="w-full flex items-center cursor-default gap-4"
-            >
-              <UserIcon className="text-muted-foreground  h-4 w-4" />
-              Profile
-            </Link>
-          </DropdownMenuItem>
-        ) : (
-          ""
-        )}
-        {isCompanyUser ? (
-          <DropdownMenuItem>
-            <Link
-              className="w-full flex items-center cursor-default gap-4"
-              href={"/get-started?company=true"}
-            >
-              <UserIcon className="text-muted-foreground h-4 w-4" />
-              Profile
-            </Link>
-          </DropdownMenuItem>
-        ) : (
-          ""
-        )}
+
+        <DropdownMenuItem>
+          <Link
+            href={`/get-started${isCompanyUser ? "?company=true" : ""}`}
+            className="w-full flex items-center cursor-default gap-4"
+          >
+            <UserIcon className="text-muted-foreground  h-4 w-4" />
+            Profile
+          </Link>
+        </DropdownMenuItem>
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
