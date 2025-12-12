@@ -202,11 +202,19 @@ export default function FindSuitableJobs({
     return (
       <div className="flex items-center gap-2">
         <InfoTooltip
-          content={`AI Smart Search uses ${TAICredits.AI_SMART_SEARCH_OR_ASK_AI} AI credits per use. ${
-            data && data.profile
-              ? `${data.profile.ai_credits} AI Credits available.`
-              : ""
-          }`}
+          content={
+            <p>
+              <Sparkle className="h-3 w-3 inline-block mr-1" />
+              {`AI Smart Search uses ${TAICredits.AI_SMART_SEARCH_OR_ASK_AI} AI credits per use. ${
+                data && data.profile
+                  ? `${data.profile.ai_credits} AI Credits available.`
+                  : ""
+              }`}{" "}
+              <Link href={"/dashboard"} className="text-blue-500">
+                Recharge Credits
+              </Link>
+            </p>
+          }
         />
         <Select
           value={suitableJobsSelectValue}
@@ -260,11 +268,19 @@ export default function FindSuitableJobs({
     return (
       <div className="flex items-center gap-2">
         <InfoTooltip
-          content={`AI Smart Search uses ${TAICredits.AI_SMART_SEARCH_OR_ASK_AI} AI credits per use. ${
-            data && data.profile
-              ? `${data.profile.ai_credits} AI Credits available.`
-              : ""
-          }`}
+          content={
+            <p>
+              <Sparkle className="h-3 w-3 inline-block mr-1" />
+              {`AI Smart Search uses ${TAICredits.AI_SMART_SEARCH_OR_ASK_AI} AI credits per use. ${
+                data && data.profile
+                  ? `${data.profile.ai_credits} AI Credits available.`
+                  : ""
+              }`}{" "}
+              <Link href={"/dashboard"} className="text-blue-500">
+                Recharge Credits
+              </Link>
+            </p>
+          }
         />
         <Button
           disabled={isPending}
@@ -281,11 +297,19 @@ export default function FindSuitableJobs({
   return (
     <div className="flex items-center gap-2">
       <InfoTooltip
-        content={`AI Smart Search uses ${TAICredits.AI_SMART_SEARCH_OR_ASK_AI} AI credits per use. ${
-          data && data.profile
-            ? `${data.profile.ai_credits} AI Credits available.`
-            : ""
-        }`}
+        content={
+          <p>
+            <Sparkle className="h-3 w-3 inline-block mr-1" />
+            {`AI Smart Search uses ${TAICredits.AI_SMART_SEARCH_OR_ASK_AI} AI credits per use. ${
+              data && data.profile
+                ? `${data.profile.ai_credits} AI Credits available.`
+                : ""
+            }`}{" "}
+            <Link href={"/dashboard"} className="text-blue-500">
+              Recharge Credits
+            </Link>
+          </p>
+        }
       />
       <Select
         value={suitableJobsSelectValue}

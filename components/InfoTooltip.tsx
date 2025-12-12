@@ -29,7 +29,7 @@ export default function InfoTooltip({ content }: InfoTooltipProps) {
       </PopoverTrigger>
 
       <PopoverContent
-        className=" w-fit max-w-60 text-sm p-3 z-50 shadow-lg font-medium "
+        className=" w-fit max-w-60 text-sm p-3 z-50 shadow-lg bg-popover text-popover-foreground"
         align="start"
       >
         {content}
