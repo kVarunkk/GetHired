@@ -12,16 +12,18 @@ export async function rerankJobsIfApplicable({
   initialJobs,
   initialCount,
   userId,
+  jobId,
   aiCredits = 0,
   matchedJobIds,
-  isJobDigest,
+  relevanceSearchType,
 }: {
   initialJobs: IJob[];
   initialCount: number;
   userId?: string;
+  jobId: string | null;
   aiCredits?: number;
   matchedJobIds: string[];
-  isJobDigest: boolean;
+  relevanceSearchType: "standard" | "job_digest" | "similar_jobs" | null;
 }): Promise<RerankResult> {
   let finalJobs = initialJobs;
   let finalCount = initialCount;
@@ -31,17 +33,22 @@ export async function rerankJobsIfApplicable({
   const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
   const url = `${protocol}://${host}`;
 
-  if (!userId || !finalJobs || finalJobs.length === 0) {
+  if (
+    !finalJobs ||
+    finalJobs.length === 0 ||
+    !relevanceSearchType ||
+    (relevanceSearchType === "similar_jobs" && !jobId)
+  ) {
     return { initialJobs: finalJobs, totalCount: finalCount };
   }
 
   // --- 1. Check AI Credits ---
   const requiredCredits = TAICredits.AI_SMART_SEARCH_OR_ASK_AI;
 
-  if (aiCredits >= requiredCredits || isJobDigest) {
+  if (aiCredits >= requiredCredits || relevanceSearchType === "job_digest") {
     try {
       const requestHeaders: Record<string, string> = {};
-      if (isJobDigest && INTERNAL_API_SECRET) {
+      if (relevanceSearchType === "job_digest" && INTERNAL_API_SECRET) {
         requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
       } else {
         const cookie = headersList.get("Cookie");
@@ -49,25 +56,34 @@ export async function rerankJobsIfApplicable({
           requestHeaders["Cookie"] = cookie;
         }
       }
-      const aiRerankRes = await fetch(`${url}/api/ai-search/jobs`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...requestHeaders,
-        },
-        body: JSON.stringify({
-          userId: userId,
-          jobs: initialJobs.map((job: IJob) => ({
-            id: job.id,
-            job_name: job.job_name,
-            description: job.description,
-            visa_requirement: job.visa_requirement,
-            salary_range: job.salary_range,
-            locations: job.locations,
-            experience: job.experience,
-          })),
-        }),
-      });
+      console.log("AI RERANK FETCH CALL");
+      const aiRerankRes = await fetch(
+        `${url}/api/ai-search/jobs${
+          relevanceSearchType === "similar_jobs" ? "/similar-jobs" : ""
+        }`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...requestHeaders,
+          },
+          body: JSON.stringify({
+            userId: userId,
+            jobs: initialJobs.map((job: IJob) => ({
+              id: job.id,
+              job_name: job.job_name,
+              description: job.description,
+              visa_requirement: job.visa_requirement,
+              salary_range: job.salary_range,
+              locations: job.locations,
+              experience: job.experience,
+            })),
+            ...(relevanceSearchType === "similar_jobs"
+              ? { jobId: jobId, aiCredits }
+              : {}),
+          }),
+        }
+      );
 
       const aiRerankResult: {
         rerankedJobs: string[];
@@ -89,6 +105,8 @@ export async function rerankJobsIfApplicable({
 
         finalJobs = reorderedJobs;
         finalCount = reorderedJobs.length;
+
+        console.log("AI RERANK FETCH SUCCESS", finalJobs.length);
       }
     } catch (e) {
       console.error("Error during AI Rerank fetch:", e);

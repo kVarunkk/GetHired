@@ -34,35 +34,11 @@ export default async function ProfilesPage({
   const onboarding_complete = companyDataData.filled;
   const companyData: ICompanyInfo = companyDataData;
 
-  // let uniqueLocations = [];
-  // let uniqueJobRoles = [];
-  // let uniqueIndustryPreferences = [];
-  // let uniqueWorkStylePreferences = [];
-  // let uniqueSkills = [];
-
   // --- Data Fetching ---
   const headersList = await headers();
   const host = headersList.get("host");
   const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
   const url = `${protocol}://${host}`;
-
-  // const resFilters = await fetch(`${url}/api/profiles/filters`, {
-  //   cache: "force-cache",
-  //   next: { revalidate: 86400 },
-  //   headers: {
-  //     Cookie: headersList.get("Cookie") || "",
-  //   },
-  // });
-
-  // const filterData = await resFilters.json();
-
-  // if (resFilters.ok) {
-  //   uniqueJobRoles = filterData.uniqueJobRoles || [];
-  //   uniqueIndustryPreferences = filterData.uniqueIndustryPreferences || [];
-  //   uniqueWorkStylePreferences = filterData.uniqueWorkStylePreferences || [];
-  //   uniqueSkills = filterData.uniqueSkills || [];
-  //   uniqueLocations = filterData.uniqueLocations || [];
-  // }
 
   let initialProfiles: IFormData[] = [];
   let totalCount: number = 0;
@@ -180,11 +156,6 @@ export default async function ProfilesPage({
       <div className="flex items-start  h-full gap-5">
         <div className="hidden md:block w-1/3 px-2 sticky top-0 z-10 max-h-[calc(100vh-1.5rem)] overflow-y-auto">
           <FilterComponent
-            // uniqueLocations={uniqueLocations}
-            // uniqueJobRoles={uniqueJobRoles}
-            // uniqueIndustryPreferences={uniqueIndustryPreferences}
-            // uniqueWorkStylePreferences={uniqueWorkStylePreferences}
-            // uniqueSkills={uniqueSkills}
             currentPage={"profiles"}
             onboardingComplete={onboarding_complete}
           />
@@ -198,11 +169,6 @@ export default async function ProfilesPage({
           >
             <TabsContent value="all">
               <ProfilesList
-                // uniqueLocations={uniqueLocations}
-                // uniqueJobRoles={uniqueJobRoles}
-                // uniqueIndustryPreferences={uniqueIndustryPreferences}
-                // uniqueWorkStylePreferences={uniqueWorkStylePreferences}
-                // uniqueSkills={uniqueSkills}
                 user={user}
                 companyData={companyData}
                 initialProfiles={initialProfiles}
@@ -213,11 +179,6 @@ export default async function ProfilesPage({
             {user && !isAISearch && (
               <TabsContent value="saved">
                 <ProfilesList
-                  // uniqueLocations={uniqueLocations}
-                  // uniqueJobRoles={uniqueJobRoles}
-                  // uniqueIndustryPreferences={uniqueIndustryPreferences}
-                  // uniqueWorkStylePreferences={uniqueWorkStylePreferences}
-                  // uniqueSkills={uniqueSkills}
                   user={user}
                   companyData={companyData}
                   initialProfiles={initialProfiles}

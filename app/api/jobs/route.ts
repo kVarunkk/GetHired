@@ -11,15 +11,13 @@ export async function GET(request: NextRequest) {
   const internalSecret = request.headers.get("X-Internal-Secret");
   const isInternalCall = internalSecret === process.env.INTERNAL_API_SECRET;
 
-  // Choose the client based on the header
   const supabase = isInternalCall
-    ? createServiceRoleClient() // No session needed, bypasses RLS
+    ? createServiceRoleClient()
     : await createClient();
 
   const searchParams = request.nextUrl.searchParams;
   const page = parseInt(searchParams.get("page") || "1");
 
-  // Extract filter params
   const jobType = searchParams.get("jobType");
   const location = searchParams.get("location");
   const visaRequirement = searchParams.get("visaRequirement");
@@ -38,40 +36,65 @@ export async function GET(request: NextRequest) {
   );
   const createdAfter = searchParams.get("createdAfter");
   const applicantUserId = searchParams.get("userId");
+  const jobId = searchParams.get("jobId");
 
   const startIndex = (page - 1) * JOBS_PER_PAGE;
   const endIndex = startIndex + JOBS_PER_PAGE - 1;
 
   try {
     let userEmbedding = null;
+    let jobEmbedding = null;
     let userId;
     let aiCredits;
-    let isJobDigest = false;
 
-    if (applicantUserId) {
-      userId = applicantUserId;
-      isJobDigest = true;
-    } else {
-      if (sortBy === "relevance") {
+    let relevanceSearchType: "standard" | "job_digest" | "similar_jobs" | null =
+      null;
+
+    if (sortBy === "relevance") {
+      if (applicantUserId) {
+        userId = applicantUserId;
+        relevanceSearchType = "job_digest";
+      } else {
+        relevanceSearchType = jobId ? "similar_jobs" : "standard";
+
         const {
           data: { user },
+          error,
         } = await supabase.auth.getUser();
-        if (user) {
-          userId = user.id;
+
+        if (error || !user) {
+          relevanceSearchType = null;
+          return;
+        }
+
+        userId = user.id;
+
+        if (jobId) {
+          const { data: jobData, error: jobDataError } = await supabase
+            .from("all_jobs")
+            .select("embedding")
+            .eq("id", jobId)
+            .single();
+          if (jobDataError || !jobData) {
+            relevanceSearchType = null;
+            return;
+          }
+          jobEmbedding = jobData.embedding;
         }
       }
-    }
 
-    if (userId) {
-      const { data: userData, error } = await supabase
+      const { data: userData, error: userDataError } = await supabase
         .from("user_info")
         .select("embedding, ai_credits")
         .eq("user_id", userId)
         .single();
-      if (!error && userData) {
-        userEmbedding = userData.embedding;
-        aiCredits = userData.ai_credits;
+
+      if (userDataError || !userData) {
+        relevanceSearchType = null;
+        return;
       }
+      aiCredits = userData.ai_credits;
+      userEmbedding = userData.embedding;
     }
 
     const { data, error, count, matchedJobIds } = await buildQuery({
@@ -93,6 +116,8 @@ export async function GET(request: NextRequest) {
       applicationStatus,
       createdAfter,
       isInternalCall,
+      jobEmbedding,
+      relevanceSearchType,
     });
 
     if (error) {
@@ -103,9 +128,10 @@ export async function GET(request: NextRequest) {
       initialJobs: data as unknown as IJob[],
       initialCount: count,
       userId,
+      jobId,
       aiCredits,
       matchedJobIds,
-      isJobDigest,
+      relevanceSearchType,
     });
 
     return NextResponse.json({ data: initialJobs, totalCount });

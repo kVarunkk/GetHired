@@ -46,12 +46,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (userPreferences.ai_credits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
-      return NextResponse.json(
-        { message: "Insufficient AI credits. Please top up to continue." },
-        { status: 402 }
-      );
-    }
+    // if (userPreferences.ai_credits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
+    //   return NextResponse.json(
+    //     { message: "Insufficient AI credits. Please top up to continue." },
+    //     { status: 402 }
+    //   );
+    // }
 
     // Step 2: Construct the userQuery based on fetched preferences
     const userQuery = `
@@ -132,13 +132,15 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    await supabase
-      .from("user_info")
-      .update({
-        ai_credits:
-          userPreferences.ai_credits - TAICredits.AI_SMART_SEARCH_OR_ASK_AI,
-      })
-      .eq("user_id", userId);
+    if (!isInternalCall) {
+      await supabase
+        .from("user_info")
+        .update({
+          ai_credits:
+            userPreferences.ai_credits - TAICredits.AI_SMART_SEARCH_OR_ASK_AI,
+        })
+        .eq("user_id", userId);
+    }
 
     return NextResponse.json({
       rerankedJobs: object.reranked_job_ids,

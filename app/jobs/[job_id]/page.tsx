@@ -1,6 +1,6 @@
 import Error from "@/components/Error";
 import { createClient } from "@/lib/supabase/server";
-import { IJob } from "@/lib/types";
+import { IJob, TAICredits } from "@/lib/types";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -21,6 +21,7 @@ import JobsFeedback from "@/components/JobFeedback";
 import Link from "next/link";
 import AskAIDialog from "@/components/AskAIDialog";
 import { Button } from "@/components/ui/button";
+import InfoTooltip from "@/components/InfoTooltip";
 
 export async function generateMetadata({
   params,
@@ -59,7 +60,6 @@ export async function generateMetadata({
       ],
     };
   } catch {
-    // console.error("Error generating metadata:", err);
     return {
       title: "Job Details",
       description: "Detailed view of the job posting.",
@@ -80,8 +80,6 @@ export default async function JobPage({
     } = await supabase.auth.getUser();
     let isCompanyUser = false;
     let onboardingComplete = false;
-    // let aiCredits;
-    // let isOnboardingComplete;
     if (user && user.app_metadata) {
       isCompanyUser = user.app_metadata.type === "company";
       onboardingComplete = user.app_metadata.onboarding_complete;
@@ -104,25 +102,22 @@ export default async function JobPage({
     const job = data as IJob;
 
     if (error || !job) {
-      // console.error("Error fetching job posting:", error);
       return <Error />;
     }
 
     return (
       <>
-        {/* <JobSchema job={job} /> */}
-        <div className="flex flex-col gap-8 w-full px-4 py-5 lg:px-20 xl:px-40 2xl:px-80">
+        <div className="flex flex-col gap-4 w-full px-4 py-5 lg:px-20 xl:px-40 2xl:px-80">
           <div>
-            {/* <BackButton /> */}
             <Link
               href="/jobs"
-              className="text-muted-foreground hover:text-primary transition-colors mt-2"
+              className="text-muted-foreground hover:text-primary transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </div>
           {/* --- Header Section --- */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-4">
             <div>
               <div className="flex items-center gap-1">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white max-w-[400px]">
@@ -180,30 +175,11 @@ export default async function JobPage({
                 job={job}
                 isOnboardingComplete={onboardingComplete}
               />
-              {isCompanyUser ? (
-                ""
-              ) : user ? (
-                <AskAIDialog
-                  // isOpen={isOpen}
-                  // setIsOpen={setIsOpen}
-                  jobId={job_id}
-                  // aiCredits={aiCredits}
-                  isOnboardingComplete={onboardingComplete}
-                />
-              ) : (
-                <Button variant={"ghost"} asChild>
-                  <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
-                    <Sparkle className="h-4 w-4" />
-                    Ask AI
-                  </Link>
-                </Button>
-              )}
+
               <JobPageDropdown
                 user={user}
                 jobId={job_id}
                 isCompanyUser={isCompanyUser}
-                // aiCredits={aiCredits}
-                // isOnboardingComplete={isOnboardingComplete}
                 applicationStatus={
                   job.applications && job.applications.length > 0
                     ? job.applications[0].status
@@ -213,6 +189,60 @@ export default async function JobPage({
               />
             </div>
           </div>
+
+          {/* Features Section */}
+          <div className="flex items-center gap-3 mt-2 flex-wrap">
+            {isCompanyUser ? (
+              ""
+            ) : user ? (
+              <AskAIDialog
+                jobId={job_id}
+                isOnboardingComplete={onboardingComplete}
+              />
+            ) : (
+              <Button variant={"outline"} asChild>
+                <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
+                  <Sparkle className="h-4 w-4" />
+                  Ask AI
+                </Link>
+              </Button>
+            )}
+
+            {isCompanyUser ? (
+              ""
+            ) : user ? (
+              <div className="flex items-center">
+                <Button variant={"outline"} asChild>
+                  <Link
+                    target="_blank"
+                    href={`/jobs?sortBy=relevance&jobId=${job_id}`}
+                  >
+                    <Sparkle className="h-4 w-4" />
+                    Find Similar Jobs
+                  </Link>
+                </Button>
+                <InfoTooltip
+                  content={
+                    <p>
+                      This feature uses {TAICredits.AI_SMART_SEARCH_OR_ASK_AI}{" "}
+                      AI credits per use.{" "}
+                      <Link href={"/dashboard"} className="text-blue-500">
+                        Recharge Credits
+                      </Link>
+                    </p>
+                  }
+                />
+              </div>
+            ) : (
+              <Button variant={"outline"} asChild>
+                <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
+                  <Sparkle className="h-4 w-4" />
+                  Find Similar Jobs
+                </Link>
+              </Button>
+            )}
+          </div>
+
           {/* Details Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Details Card */}

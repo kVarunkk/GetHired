@@ -35,7 +35,7 @@ import { useProgress } from "react-transition-progress";
 import { Button } from "./ui/button";
 import InfoTooltip from "./InfoTooltip";
 import { TAICredits } from "@/lib/types";
-import useSWR, { mutate } from "swr";
+import useSWR from "swr";
 import { fetcher, PROFILE_API_KEY } from "@/lib/utils";
 
 export default function FindSuitableJobs({
@@ -92,8 +92,6 @@ export default function FindSuitableJobs({
   }, [findCompanyUsersJobPostings]);
 
   const handleFindSuitableJobs = async () => {
-    // const toastId = toast.loading("Finding suitable jobs..."); // Show loading toast
-
     try {
       if (!user) throw new Error("User not found");
       // 2. Fetch user_info
@@ -106,22 +104,19 @@ export default function FindSuitableJobs({
         .single();
 
       if (userInfoError && userInfoError.code !== "PGRST116") {
-        // PGRST116 means no rows found
-        // console.error("Error fetching user info:", userInfoError);
         toast.error("Failed to load your profile. Please try again.");
         return;
       }
 
       if (!userInfo) {
         toast.error("Please complete your profile first.");
-        router.push("/get-started"); // Redirect to onboarding
+        router.push("/get-started");
         return;
       }
 
       // 3. Construct URLSearchParams based on user_info
       const params = new URLSearchParams();
 
-      // Preserve current sort order if it exists
       const currentSortBy = searchParams.get("sortBy");
       const currentSortOrder = searchParams.get("sortOrder");
       if (currentSortBy && currentSortBy !== "relevance")
@@ -151,22 +146,15 @@ export default function FindSuitableJobs({
         params.set("minExperience", userInfo.experience_years.toString());
       }
 
-      mutate(PROFILE_API_KEY);
-
       startTransition(() => {
         startProgress();
         router.push(`/jobs?${params.toString()}`);
-        // toast.success("Filters applied based on your profile!", {
-        //   id: toastId,
-        // });
       });
     } catch (error: unknown) {
-      // console.error("Error in handleFindSuitableJobs:", error);
       toast.error(
         `An unexpected error occurred: ${
           error instanceof Error ? error.message : "Please try again."
         }`
-        // { id: toastId }
       );
     }
   };
@@ -193,7 +181,6 @@ export default function FindSuitableJobs({
         );
       });
     } catch {
-      // console.log(e);
       toast.error("Some error occured with AI Smart Search, Please try again");
     }
   };
@@ -326,14 +313,12 @@ export default function FindSuitableJobs({
       >
         <SelectTrigger
           disabled={isPending}
-          className="rounded-full bg-primary shadow-lg w-[180px]"
+          className="rounded-full bg-primary shadow-lg w-[180px] !text-primary-foreground"
         >
           {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           <SelectValue
             placeholder={
-              <p className="flex items-center gap-2 text-primary-foreground">
-                <Search className="w-4 h-4" /> Find Suitable Jobs
-              </p>
+              <p className="flex items-center gap-2 ">Find Suitable Jobs</p>
             }
           />
         </SelectTrigger>

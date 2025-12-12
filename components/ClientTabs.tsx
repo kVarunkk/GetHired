@@ -67,109 +67,113 @@ export function ClientTabs({
   return (
     <>
       <Tabs value={activeTab}>
-        <div className="flex items-center justify-between flex-wrap pt-4">
-          {user && !isCompanyUser && !isAISearch && page === "jobs" && (
-            <div className="flex items-center gap-2">
-              <TabsList className="!my-0">
-                {!applicationStatusFilter && (
+        {user ? (
+          <div className="flex items-center justify-between flex-wrap gap-4 py-6">
+            {!isCompanyUser && !isAISearch && page === "jobs" && (
+              <div className="flex items-center gap-2">
+                <TabsList className="!my-0">
+                  {!applicationStatusFilter && (
+                    <TabsTrigger
+                      value="all"
+                      className="p-0"
+                      onClick={() => handleTabChange("all")}
+                      disabled={isPending}
+                    >
+                      <span className="py-1 px-2">All Jobs</span>
+                    </TabsTrigger>
+                  )}
+                  {!applicationStatusFilter && (
+                    <TabsTrigger
+                      value="saved"
+                      className="p-0"
+                      onClick={() => handleTabChange("saved")}
+                      disabled={isPending}
+                    >
+                      <span className="py-1 px-2">Saved Jobs</span>
+                    </TabsTrigger>
+                  )}
+                  <TabsTrigger
+                    value="applied"
+                    className="p-0"
+                    onClick={() => handleTabChange("applied")}
+                    disabled={isPending}
+                  >
+                    <span className="py-1 px-2">Applied Jobs</span>
+                  </TabsTrigger>
+                </TabsList>
+                {isPending && (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
+            )}
+
+            {!isCompanyUser && !isAISearch && page === "companies" && (
+              <div className="flex items-center gap-2">
+                <TabsList className="!my-0">
+                  {
+                    <TabsTrigger
+                      value="all"
+                      className="p-0"
+                      onClick={() => handleTabChange("all")}
+                      disabled={isPending}
+                    >
+                      <span className="py-1 px-2">All Companies</span>
+                    </TabsTrigger>
+                  }
+                  {
+                    <TabsTrigger
+                      value="saved"
+                      className="p-0"
+                      onClick={() => handleTabChange("saved")}
+                      disabled={isPending}
+                    >
+                      <span className="py-1 px-2">Saved Companies</span>
+                    </TabsTrigger>
+                  }
+                </TabsList>
+                {isPending && (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
+            )}
+
+            {!isAISearch && page === "profiles" && (
+              <div className="flex items-center gap-2">
+                <TabsList>
                   <TabsTrigger
                     value="all"
                     className="p-0"
                     onClick={() => handleTabChange("all")}
                     disabled={isPending}
                   >
-                    <span className="py-1 px-2">All Jobs</span>
+                    <span className="py-1 px-2">All Profiles</span>
                   </TabsTrigger>
-                )}
-                {!applicationStatusFilter && (
                   <TabsTrigger
                     value="saved"
                     className="p-0"
                     onClick={() => handleTabChange("saved")}
                     disabled={isPending}
                   >
-                    <span className="py-1 px-2">Saved Jobs</span>
+                    <span className="py-1 px-2">Saved Profiles</span>
                   </TabsTrigger>
+                </TabsList>
+                {isPending && (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 )}
-                <TabsTrigger
-                  value="applied"
-                  className="p-0"
-                  onClick={() => handleTabChange("applied")}
-                  disabled={isPending}
-                >
-                  <span className="py-1 px-2">Applied Jobs</span>
-                </TabsTrigger>
-              </TabsList>
-              {isPending && (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
-          {user && !isCompanyUser && !isAISearch && page === "companies" && (
-            <div className="flex items-center gap-2">
-              <TabsList className="!my-0">
-                {
-                  <TabsTrigger
-                    value="all"
-                    className="p-0"
-                    onClick={() => handleTabChange("all")}
-                    disabled={isPending}
-                  >
-                    <span className="py-1 px-2">All Companies</span>
-                  </TabsTrigger>
-                }
-                {
-                  <TabsTrigger
-                    value="saved"
-                    className="p-0"
-                    onClick={() => handleTabChange("saved")}
-                    disabled={isPending}
-                  >
-                    <span className="py-1 px-2">Saved Companies</span>
-                  </TabsTrigger>
-                }
-              </TabsList>
-              {isPending && (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              )}
-            </div>
-          )}
-
-          {user && !isAISearch && page === "profiles" && (
-            <div className="flex items-center gap-2">
-              <TabsList>
-                <TabsTrigger
-                  value="all"
-                  className="p-0"
-                  onClick={() => handleTabChange("all")}
-                  disabled={isPending}
-                >
-                  <span className="py-1 px-2">All Profiles</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="saved"
-                  className="p-0"
-                  onClick={() => handleTabChange("saved")}
-                  disabled={isPending}
-                >
-                  <span className="py-1 px-2">Saved Profiles</span>
-                </TabsTrigger>
-              </TabsList>
-              {isPending && (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              )}
-            </div>
-          )}
-
-          {page === "jobs" && user && !isCompanyUser && (
-            <div className="flex items-center gap-2">
-              <GlobalJobSearch />
-              <BookmarkJobSearch user={user} />
-              <JobsPageDropdown user={user} />
-            </div>
-          )}
-        </div>
+            {page === "jobs" && !isCompanyUser && (
+              <div className="flex items-center gap-2">
+                <GlobalJobSearch />
+                <BookmarkJobSearch user={user} />
+                <JobsPageDropdown user={user} />
+              </div>
+            )}
+          </div>
+        ) : (
+          ""
+        )}
 
         {children}
       </Tabs>

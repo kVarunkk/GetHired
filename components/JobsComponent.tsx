@@ -139,6 +139,7 @@ export default function JobsComponent({
     const params = new URLSearchParams(searchParams.toString());
     const sortBy = params.get("sortBy");
     const jobPost = params.get("job_post");
+    const jobId = params.get("jobId");
 
     if (sortBy === "relevance") {
       params.delete("sortBy");
@@ -146,6 +147,10 @@ export default function JobsComponent({
 
     if (jobPost) {
       params.delete("job_post");
+    }
+
+    if (jobId) {
+      params.delete("jobId");
     }
 
     startTransition(() => {
@@ -200,8 +205,7 @@ export default function JobsComponent({
           {user &&
             isOnboardingComplete &&
             !isCompanyUser &&
-            !(current_page === "profiles") &&
-            isAllJobsTab && (
+            !(current_page === "profiles") && (
               <FindSuitableJobs
                 user={user}
                 setPage={setPage}

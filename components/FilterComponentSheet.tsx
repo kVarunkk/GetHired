@@ -49,14 +49,14 @@ export default function FilterComponentSheet({
 
   return (
     <Sheet open={openSheet} onOpenChange={setOpenSheet}>
-      <SheetTrigger className="md:hidden underline underline-offset-2 text-primary">
+      <SheetTrigger className="md:hidden underline underline-offset-2 text-primary py-2 pr-2">
         {filtersApplied.length > 0
           ? `${filtersApplied.length} Filter${
               filtersApplied.length > 1 ? "s" : ""
             } Applied`
           : "Apply Filters"}
       </SheetTrigger>
-      <SheetContent side={"left"} className="h-full">
+      <SheetContent side={"left"} className="h-ful w-full">
         <SheetHeader>
           <SheetTitle>
             {isCompanyUser ? "Profile" : "Job"} Search Filters
