@@ -48,7 +48,9 @@ export default function RechargeCredits({
 
       if (result.success) {
         toast.success(
-          "Invitation sent! You will earn 10 credits when they sign up."
+          "Invitation sent! You will earn 10 credits when " +
+            invitedEmail +
+            " signs up."
         );
         setError(null);
         setOpenDialog(false);
@@ -81,7 +83,7 @@ export default function RechargeCredits({
               <InfoTooltip content={"Earn 10 credits per Invite"} />
             </span>
             or Buy AI Credits (coming soon) for uninterrupted use of AI
-            features. {5 - invitationsCount} invitations remaining for this
+            features. {10 - invitationsCount} invitations remaining for this
             week.
           </DialogDescription>
         </DialogHeader>

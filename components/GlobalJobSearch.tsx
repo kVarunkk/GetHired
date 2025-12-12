@@ -25,6 +25,7 @@ import { TAICredits } from "@/lib/types";
 import InfoTooltip from "./InfoTooltip";
 import useSWR, { mutate } from "swr";
 import { fetcher, PROFILE_API_KEY } from "@/lib/utils";
+import Link from "next/link";
 // import { User } from "@supabase/supabase-js";
 
 interface ParsedFilters {
@@ -148,11 +149,14 @@ export default function GlobalJobSearch() {
           <DialogTitle className="text-start">
             What kind of job are you looking for?
           </DialogTitle>
-          <DialogDescription className="text-start flex items-center">
+          <DialogDescription className="text-start flex items-center gap-1">
             {/* NEED TO SHOW USER THE AI CREDITS LEFT */}
             {data && data.profile
               ? `${data.profile.ai_credits} AI Credits available.`
               : ""}
+            <Link href={"/dashboard"} className="text-blue-500">
+              Recharge Credits
+            </Link>
             <InfoTooltip
               content={
                 "This feature uses " +
