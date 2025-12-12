@@ -1,12 +1,12 @@
 import FilterComponent from "@/components/FilterComponent";
 import { createClient } from "@/lib/supabase/server";
-import JobsList from "./JobsList";
 import { TabsContent } from "@/components/ui/tabs";
 import { IJob, JobListingSearchParams } from "@/lib/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import { Metadata } from "next";
 import { getCutOffDate } from "@/lib/serverUtils";
+import JobsComponent from "@/components/JobsComponent";
 
 export async function generateMetadata({
   searchParams,
@@ -211,16 +211,18 @@ export default async function JobsPage({
             isAISearch={isAISearch}
             applicationStatusFilter={applicationStatusFilter}
             page="jobs"
-            // aiCredits={ai_credits}
           >
             {!applicationStatusFilter && (
               <TabsContent value="all">
-                <JobsList
-                  isCompanyUser={isCompanyUser}
+                <JobsComponent
+                  initialJobs={initialJobs || []}
                   user={user}
-                  onboardingComplete={onboardingComplete}
-                  initialJobs={initialJobs}
+                  isCompanyUser={isCompanyUser}
+                  isOnboardingComplete={onboardingComplete}
+                  isAllJobsTab={true}
+                  isAppliedJobsTabActive={false}
                   totalCount={totalCount}
+                  current_page="jobs"
                 />
               </TabsContent>
             )}
@@ -229,23 +231,29 @@ export default async function JobsPage({
               !applicationStatusFilter &&
               !isAISearch && (
                 <TabsContent value="saved">
-                  <JobsList
-                    isCompanyUser={isCompanyUser}
+                  <JobsComponent
+                    initialJobs={initialJobs || []}
                     user={user}
-                    onboardingComplete={onboardingComplete}
-                    initialJobs={initialJobs}
+                    isCompanyUser={isCompanyUser}
+                    isOnboardingComplete={onboardingComplete}
+                    isAllJobsTab={false}
+                    isAppliedJobsTabActive={false}
                     totalCount={totalCount}
+                    current_page="jobs"
                   />
                 </TabsContent>
               )}
             {user && !isCompanyUser && !isAISearch && (
               <TabsContent value="applied">
-                <JobsList
-                  isCompanyUser={isCompanyUser}
+                <JobsComponent
+                  initialJobs={initialJobs || []}
                   user={user}
-                  onboardingComplete={onboardingComplete}
-                  initialJobs={initialJobs}
+                  isCompanyUser={isCompanyUser}
+                  isOnboardingComplete={onboardingComplete}
+                  isAllJobsTab={false}
+                  isAppliedJobsTabActive={true}
                   totalCount={totalCount}
+                  current_page="jobs"
                 />
               </TabsContent>
             )}

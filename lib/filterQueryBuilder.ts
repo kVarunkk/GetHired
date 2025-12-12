@@ -32,6 +32,8 @@ export const buildQuery = async ({
   applicationStatus,
   createdAfter,
   isInternalCall,
+  jobEmbedding,
+  relevanceSearchType,
 }: {
   jobType?: string | null;
   visaRequirement?: string | null;
@@ -51,10 +53,12 @@ export const buildQuery = async ({
   applicationStatus?: string | null;
   createdAfter?: string | null;
   isInternalCall?: boolean;
+  jobEmbedding?: string | null;
+  relevanceSearchType: "standard" | "job_digest" | "similar_jobs" | null;
 }) => {
   try {
     const supabase = isInternalCall
-      ? createServiceRoleClient() // No session needed, bypasses RLS
+      ? createServiceRoleClient()
       : await createClient();
     const {
       data: { user },
@@ -80,7 +84,6 @@ export const buildQuery = async ({
           matchedJobIds: [],
         };
       }
-      // Explicitly select columns and exclude 'embedding'
       selectString = `
         ${allJobsSelectString},
         user_favorites!inner(*),
@@ -100,7 +103,6 @@ export const buildQuery = async ({
           matchedJobIds: [],
         };
       }
-      // Explicitly select columns and exclude 'embedding'
       selectString = `
        ${allJobsSelectString},
         user_favorites(*),
@@ -111,7 +113,6 @@ export const buildQuery = async ({
         .select(selectString, { count: "exact" })
         .eq("applications.applicant_user_id", user.id);
     } else {
-      // Explicitly select columns and exclude 'embedding'
       selectString = `
        ${allJobsSelectString},
         user_favorites(*),
@@ -123,18 +124,26 @@ export const buildQuery = async ({
         .eq("status", "active");
     }
 
-    // Filter out entries with null or empty job_name
     query = query.not("job_name", "is", null);
     query = query.not("job_name", "eq", "");
 
     let matchedJobIds: string[] = [];
 
-    // --- NEW: VECTOR SEARCH LOGIC ---
-    if (sortBy === "relevance" && userEmbedding && createdAfter) {
+    // --- VECTOR SEARCH FOR AI SMART SEARCH ---
+    if (
+      sortBy === "relevance" &&
+      createdAfter &&
+      relevanceSearchType &&
+      (userEmbedding || jobEmbedding)
+    ) {
+      console.log("VECTOR SEARCH TRIGGERED");
       const { data: searchData, error: searchError } = await supabase.rpc(
         "match_all_jobs_new",
         {
-          embedding: userEmbedding,
+          embedding:
+            relevanceSearchType === "similar_jobs"
+              ? jobEmbedding
+              : userEmbedding,
           match_threshold: 0.5,
           match_count: 100,
           min_created_at: createdAfter,
@@ -148,35 +157,29 @@ export const buildQuery = async ({
       matchedJobIds = searchData.map((job: { id: string }) => job.id);
 
       query = query.in("id", matchedJobIds);
+      console.log("VECTOR SEARCH FINISHED");
     }
 
-    // const jobTypesArray = parseMultiSelectParam(jobType);
     if (jobTypesArray.length > 0) {
       query = query.in("job_type", jobTypesArray);
     }
 
-    // const visaRequirementsArray = parseMultiSelectParam(visaRequirement);
     if (visaRequirementsArray.length > 0) {
       query = query.in("visa_requirement", visaRequirementsArray);
     }
-
-    // const locationsArray = parseMultiSelectParam(location);
 
     if (locationsArray.length > 0) {
       query = query.overlaps("normalized_locations", locationsArray);
     }
 
-    // const platformsArray = parseMultiSelectParam(platform);
     if (platformsArray.length > 0) {
       query = query.in("platform", platformsArray);
     }
 
-    // const companyNamesArray = parseMultiSelectParam(companyName);
     if (companyNamesArray.length > 0) {
       query = query.in("company_name", companyNamesArray);
     }
 
-    // const jobTitleKeywordsArray = parseMultiSelectParam(jobTitleKeywords);
     if (jobTitleKeywordsArray.length > 0) {
       const orConditions = jobTitleKeywordsArray
         .map((keyword) => `job_name.ilike.%${keyword}%`)
@@ -184,7 +187,6 @@ export const buildQuery = async ({
       query = query.or(orConditions);
     }
 
-    // const applicationStatusArray = parseMultiSelectParam(applicationStatus);
     if (applicationStatusArray.length > 0) {
       query = query.in("applications.status", applicationStatusArray);
     }
@@ -196,13 +198,11 @@ export const buildQuery = async ({
       query = query.lte("experience_min", parseInt(minExperience as string));
     }
 
-    // Apply sorting conditionally
     if (sortBy && sortBy !== "relevance") {
       query = query.order(sortBy, { ascending: sortOrder === "asc" });
       query = query.order("id", { ascending: sortOrder === "asc" }); // Tiebreaker
     }
 
-    // Apply pagination
     query = query.range(start_index, end_index);
 
     const { data, error, count } = await query;

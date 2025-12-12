@@ -137,11 +137,13 @@ export default function GlobalJobSearch() {
       <DialogTrigger asChild>
         <Button
           title="AI Search"
-          variant="ghost"
-          size="icon"
+          variant="link"
+          // size="link"
           aria-label="Open global job search"
+          className="rounded-full text-xs bg-secondary text-muted-foreground  !no-underline hover:text-primary transition-colors"
         >
           <Search className="h-5 w-5" />
+          Search Jobs with AI...
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">

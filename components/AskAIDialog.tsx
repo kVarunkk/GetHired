@@ -20,23 +20,16 @@ import useSWR, { mutate } from "swr";
 import { fetcher, PROFILE_API_KEY } from "@/lib/utils";
 
 export default function AskAIDialog({
-  // isOpen,
-  // setIsOpen,
   jobId,
-  // aiCredits = 0,
   isOnboardingComplete,
 }: {
-  // isOpen: boolean;
-  // setIsOpen: (isOpen: boolean) => void;
   jobId: string;
-  // aiCredits?: number;
   isOnboardingComplete: boolean;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
   const [answer, setAnswer] = useState<string | null>(null);
-  // const [creditsState, setCreditsState] = useState<number>(0);
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
@@ -86,7 +79,6 @@ export default function AskAIDialog({
 
       setAnswer(answer);
       mutate(PROFILE_API_KEY);
-      // setCreditsState((prev) => prev - TAICredits.AI_SMART_SEARCH_OR_ASK_AI);
     } catch (error) {
       toast.error(
         `Search failed: ${(error as Error).message}. Please try again.`
@@ -106,7 +98,7 @@ export default function AskAIDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant={"ghost"}>
+        <Button variant={"outline"}>
           <Sparkle className="h-4 w-4" />
           Ask AI
         </Button>

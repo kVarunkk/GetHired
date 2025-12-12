@@ -67,7 +67,7 @@ export function ClientTabs({
   return (
     <>
       <Tabs value={activeTab}>
-        <div className="flex items-center justify-between flex-wrap pt-4">
+        <div className="flex items-center justify-between flex-wrap gap-4 py-6">
           {user && !isCompanyUser && !isAISearch && page === "jobs" && (
             <div className="flex items-center gap-2">
               <TabsList className="!my-0">

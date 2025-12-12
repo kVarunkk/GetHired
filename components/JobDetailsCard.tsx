@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import InfoTooltip from "./InfoTooltip";
+import Link from "next/link";
 
 export default function JobDescriptionCard({
   job,
@@ -123,11 +124,16 @@ export default function JobDescriptionCard({
                     "Summarize with AI"
                   )}
                 </Button>
+
                 <InfoTooltip
                   content={
-                    "This feature uses " +
-                    TAICredits.AI_SUMMARY +
-                    " AI credits per use."
+                    <p>
+                      This feature uses {TAICredits.AI_SUMMARY} AI credits per
+                      use.{" "}
+                      <Link href={"/dashboard"} className="text-blue-500">
+                        Recharge Credits
+                      </Link>
+                    </p>
                   }
                 />
               </div>
