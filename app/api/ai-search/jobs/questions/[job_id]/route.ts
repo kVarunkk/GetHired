@@ -47,7 +47,7 @@ export async function POST(
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
-    if (userProfile?.ai_credits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
+    if (userProfile?.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI) {
       return NextResponse.json(
         { error: "Insufficient AI credits. Please top up to continue." },
         { status: 402 }
@@ -88,8 +88,7 @@ export async function POST(
     const { error: deductError } = await supabase
       .from("user_info")
       .update({
-        ai_credits:
-          userProfile.ai_credits - TAICredits.AI_SMART_SEARCH_OR_ASK_AI,
+        ai_credits: userProfile.ai_credits - TAICredits.AI_SEARCH_OR_ASK_AI,
       })
       .eq("user_id", userId);
 

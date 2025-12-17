@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // if (userPreferences.ai_credits < TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
+    // if (userPreferences.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI) {
     //   return NextResponse.json(
     //     { message: "Insufficient AI credits. Please top up to continue." },
     //     { status: 402 }
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
         .from("user_info")
         .update({
           ai_credits:
-            userPreferences.ai_credits - TAICredits.AI_SMART_SEARCH_OR_ASK_AI,
+            userPreferences.ai_credits - TAICredits.AI_SEARCH_OR_ASK_AI,
         })
         .eq("user_id", userId);
     }

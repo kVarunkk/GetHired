@@ -7,9 +7,10 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { Bookmark, MoreHorizontal } from "lucide-react";
+import { Bookmark, MoreHorizontal, Share } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import JobsPageCommonSheet from "./JobsPageCommonSheet";
+import { copyToClipboard } from "@/lib/utils";
 
 export default function JobsPageDropdown({ user }: { user: User | null }) {
   return (
@@ -28,6 +29,18 @@ export default function JobsPageDropdown({ user }: { user: User | null }) {
                 View Bookmarks
               </Button>
             </SheetTrigger>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            onClick={() => {
+              copyToClipboard(
+                window.location.href,
+                "Job Search URL copied to clipboard!"
+              );
+            }}
+          >
+            <Share className="h-4 w-4" />
+            Share Job Search
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

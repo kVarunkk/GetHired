@@ -61,6 +61,7 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/applicants/favorites",
     "/api/updates/applicants/onboarding",
     "/api/ai-search/jobs",
+    "/api/dodo/webhook",
     "/privacy-policy",
     "/terms-of-service",
     "/sitemap.xml",
@@ -81,8 +82,6 @@ export async function updateSession(request: NextRequest) {
     "/auth/error",
     "/auth/confirm",
     "/auth/forgot-password",
-    // "/auth/login?company=true",
-    // "/auth/sign-up?company=true",
   ];
 
   const isApplicantOnboardingPath =

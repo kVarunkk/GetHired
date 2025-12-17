@@ -1,3 +1,5 @@
+import { BillingAddress, Customer } from "dodopayments/resources/index.mjs";
+
 export interface IJobResult {
   score?: number;
   suitable?: boolean;
@@ -222,6 +224,38 @@ export interface IBookmark {
   name: string;
 }
 
+export interface IPricePlan {
+  id: string;
+  product_id: string;
+  credit_amount: number;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+}
+
+export interface IPayment {
+  id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  status: TPaymentStatus;
+  price_plan_id: string;
+  credit_amount: number;
+  currency: string;
+  credits_fulfilled: boolean;
+  fulfillment_date: string | null;
+  session_id: string;
+  product_id: string;
+  payment_id: string | null;
+  failure_reason: string | null;
+  total_amount: number;
+  price_plan?: IPricePlan;
+  customer: Customer;
+  billing: BillingAddress;
+  payment_method: string;
+}
+
 export enum TApplicationStatus {
   SUBMITTED = "submitted",
   REVIEWED = "reviewed",
@@ -230,9 +264,15 @@ export enum TApplicationStatus {
   REJECTED = "rejected",
 }
 
+export enum TPaymentStatus {
+  COMPLETE = "complete",
+  FAILED = "failed",
+  PENDING = "pending",
+  CANCELLED = "cancelled",
+}
+
 export enum TAICredits {
-  AI_SMART_SEARCH_OR_ASK_AI = 5,
-  AI_GLOBAL_SEARCH = 3,
+  AI_SEARCH_OR_ASK_AI = 2,
   AI_SUMMARY = 1,
 }
 

@@ -40,6 +40,12 @@ export default async function JobsLayout({
             href: "/companies",
             type: "startswith",
           },
+          {
+            id: uuidv4(),
+            label: "Dashboard",
+            href: "/dashboard",
+            type: "startswith",
+          },
         ]
       : [
           {

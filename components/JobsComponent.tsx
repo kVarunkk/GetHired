@@ -16,7 +16,7 @@ import JobItem from "./JobItem";
 import FindSuitableJobs from "./FindSuitableJobs";
 import FilterComponentSheet from "./FilterComponentSheet";
 import { Button } from "./ui/button";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, Share } from "lucide-react";
 import ProfileItem from "./ProfileItem";
 import ScrollToTopButton from "./ScrollToTopButton";
 import SortingComponent from "./SortingComponent";
@@ -24,6 +24,7 @@ import { useProgress } from "react-transition-progress";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 import CompanyItem from "./CompanyItem";
 import InfoTooltip from "./InfoTooltip";
+import { copyToClipboard } from "@/lib/utils";
 
 export default function JobsComponent({
   initialJobs,
@@ -238,6 +239,21 @@ export default function JobsComponent({
                 </Button>
               </Link>
             </div>
+          )}
+
+          {!user && (
+            <Button
+              variant={"ghost"}
+              title="Share"
+              onClick={() => {
+                copyToClipboard(
+                  window.location.href,
+                  "Job Search URL copied to clipboard!"
+                );
+              }}
+            >
+              <Share className="h-4 w-4" />
+            </Button>
           )}
 
           {searchParams.get("sortBy") !== "relevance" && (

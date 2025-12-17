@@ -17,7 +17,7 @@ import Link from "next/link";
 import { TAICredits } from "@/lib/types";
 import InfoTooltip from "./InfoTooltip";
 import useSWR, { mutate } from "swr";
-import { fetcher, PROFILE_API_KEY } from "@/lib/utils";
+import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/lib/utils";
 
 export default function AskAIDialog({
   jobId,
@@ -39,7 +39,7 @@ export default function AskAIDialog({
 
   const handleSubmit = async (formData?: FormData) => {
     setError(null);
-    if (creditsState < TAICredits.AI_SMART_SEARCH_OR_ASK_AI) {
+    if (creditsState < TAICredits.AI_SEARCH_OR_ASK_AI) {
       setError("Insufficient AI credits. Please top up to continue.");
       return;
     }
@@ -88,13 +88,6 @@ export default function AskAIDialog({
     }
   };
 
-  const copyResult = () => {
-    if (answer) {
-      navigator.clipboard.writeText(answer);
-      toast.success("Copied to clipboard!");
-    }
-  };
-
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -114,7 +107,7 @@ export default function AskAIDialog({
             <InfoTooltip
               content={
                 "This feature uses " +
-                TAICredits.AI_SMART_SEARCH_OR_ASK_AI +
+                TAICredits.AI_SEARCH_OR_ASK_AI +
                 " AI credits per use."
               }
             />
@@ -134,7 +127,7 @@ export default function AskAIDialog({
               placeholder="e.g., Why do you think you are a good fit for this role?"
               name="searchQuery"
               disabled={
-                isLoading || creditsState < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
+                isLoading || creditsState < TAICredits.AI_SEARCH_OR_ASK_AI
               }
               className="bg-input text-sm"
               ref={searchInputRef}
@@ -155,7 +148,7 @@ export default function AskAIDialog({
             )}
             <Button
               disabled={
-                isLoading || creditsState < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
+                isLoading || creditsState < TAICredits.AI_SEARCH_OR_ASK_AI
               }
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -167,7 +160,7 @@ export default function AskAIDialog({
             type="button"
             onClick={() => handleSubmit()}
             disabled={
-              isLoading || creditsState < TAICredits.AI_SMART_SEARCH_OR_ASK_AI
+              isLoading || creditsState < TAICredits.AI_SEARCH_OR_ASK_AI
             }
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -181,7 +174,7 @@ export default function AskAIDialog({
               <Button
                 size={"icon"}
                 variant={"ghost"}
-                onClick={() => copyResult()}
+                onClick={() => copyToClipboard(answer, "Copied to Clipboard")}
               >
                 <Copy className="h-4 w-4" />
               </Button>

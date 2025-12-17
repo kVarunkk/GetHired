@@ -11,7 +11,7 @@ import {
   MoreHorizontal,
   Sparkle,
 } from "lucide-react";
-import { IJob } from "@/lib/types";
+import { IJob, TApplicationStatus } from "@/lib/types";
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -25,7 +25,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { TApplicationStatus } from "./ApplicationStatusBadge";
 import PropagationStopper from "./StopPropagation";
 import { revalidateCache } from "@/app/actions/revalidate";
 import InfoTooltip from "./InfoTooltip";

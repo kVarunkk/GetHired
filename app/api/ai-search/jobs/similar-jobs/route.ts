@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("user_info")
       .update({
-        ai_credits: aiCredits - TAICredits.AI_SMART_SEARCH_OR_ASK_AI,
+        ai_credits: aiCredits - TAICredits.AI_SEARCH_OR_ASK_AI,
       })
       .eq("user_id", userId);
 
