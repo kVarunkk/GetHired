@@ -2,7 +2,7 @@
 
 import { Share } from "lucide-react";
 import { Button } from "./ui/button";
-import toast from "react-hot-toast";
+import { copyToClipboard } from "@/lib/utils";
 
 export default function ShareJobPosting({ job_id }: { job_id: string | null }) {
   return (
@@ -12,10 +12,10 @@ export default function ShareJobPosting({ job_id }: { job_id: string | null }) {
       variant={"ghost"}
       disabled={!job_id}
       onClick={() => {
-        navigator.clipboard.writeText(
-          window.location.origin + "/jobs/" + job_id
+        copyToClipboard(
+          window.location.origin + "/jobs/" + job_id,
+          "Job link copied to clipboard!"
         );
-        toast.success("Job link copied to clipboard!");
       }}
     >
       <Share className="h-4 w-4" />

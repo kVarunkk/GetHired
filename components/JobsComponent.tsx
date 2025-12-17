@@ -24,7 +24,7 @@ import { useProgress } from "react-transition-progress";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 import CompanyItem from "./CompanyItem";
 import InfoTooltip from "./InfoTooltip";
-import toast from "react-hot-toast";
+import { copyToClipboard } from "@/lib/utils";
 
 export default function JobsComponent({
   initialJobs,
@@ -246,8 +246,10 @@ export default function JobsComponent({
               variant={"ghost"}
               title="Share"
               onClick={() => {
-                navigator.clipboard.writeText(window.location.href);
-                toast.success("Job Search URL copied to clipboard!");
+                copyToClipboard(
+                  window.location.href,
+                  "Job Search URL copied to clipboard!"
+                );
               }}
             >
               <Share className="h-4 w-4" />

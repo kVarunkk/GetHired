@@ -36,6 +36,12 @@ export default async function GetStartedPage({
           href: "/companies",
           type: "startswith",
         },
+        {
+          id: uuidv4(),
+          label: "Dashboard",
+          href: "/dashboard",
+          type: "startswith",
+        },
       ]
     : [
         {

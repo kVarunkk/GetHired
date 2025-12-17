@@ -17,6 +17,7 @@ import { User } from "@supabase/supabase-js";
 import { TApplicationStatus } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { copyToClipboard } from "@/lib/utils";
 
 const applicationStatuses = Object.values(TApplicationStatus);
 
@@ -100,8 +101,10 @@ export default function JobPageDropdown({
           )}
           <DropdownMenuItem
             onClick={() => {
-              navigator.clipboard.writeText(window.location.href);
-              toast.success("Job link copied to clipboard!");
+              copyToClipboard(
+                window.location.href,
+                "Job link copied to clipboard!"
+              );
             }}
           >
             <Share className="h-4 w-4" />

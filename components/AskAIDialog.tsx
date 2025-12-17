@@ -17,7 +17,7 @@ import Link from "next/link";
 import { TAICredits } from "@/lib/types";
 import InfoTooltip from "./InfoTooltip";
 import useSWR, { mutate } from "swr";
-import { fetcher, PROFILE_API_KEY } from "@/lib/utils";
+import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/lib/utils";
 
 export default function AskAIDialog({
   jobId,
@@ -85,13 +85,6 @@ export default function AskAIDialog({
       );
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const copyResult = () => {
-    if (answer) {
-      navigator.clipboard.writeText(answer);
-      toast.success("Copied to clipboard!");
     }
   };
 
@@ -181,7 +174,7 @@ export default function AskAIDialog({
               <Button
                 size={"icon"}
                 variant={"ghost"}
-                onClick={() => copyResult()}
+                onClick={() => copyToClipboard(answer, "Copied to Clipboard")}
               >
                 <Copy className="h-4 w-4" />
               </Button>

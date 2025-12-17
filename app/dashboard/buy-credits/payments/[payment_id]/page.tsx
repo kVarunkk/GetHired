@@ -5,11 +5,12 @@ import { IPayment } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
-import { formatCurrency } from "@/lib/utils";
+import { copyToClipboard, formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Headset, Info } from "lucide-react";
+import { Copy, Headset, Info } from "lucide-react";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceBtn";
+import CopyBtn from "@/components/CopyBtn";
 
 export default async function PaymentIdPage({
   params,
@@ -48,7 +49,7 @@ export default async function PaymentIdPage({
 
         <div className="flex items-center justify-between flex-wrap gap-5">
           <h1 className="text-3xl font-medium">Payment Details</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4 flex-wrap">
             <Link href="mailto:varun@devhub.co.in">
               <Button variant="link" className="w-full ">
                 <Headset className="w-4 h-4 mr-2" />
@@ -225,9 +226,16 @@ export default async function PaymentIdPage({
                     {paymentData.credit_amount}
                   </span>
                   <span className="font-medium">Transaction ID:</span>
-                  <span className="text-right text-sm">
-                    {paymentData.payment_id || "N/A"}
-                  </span>
+                  <div className="flex items-center gap-1 justify-end">
+                    <span className="text-right text-xs truncate">
+                      {paymentData.payment_id || "N/A"}
+                    </span>
+                    {paymentData.payment_id ? (
+                      <CopyBtn content={paymentData.payment_id} />
+                    ) : (
+                      ""
+                    )}
+                  </div>
                   <span className="font-medium">Payment Method:</span>
                   <span className="text-right">
                     {paymentData.payment_method || "Card/UPI"}

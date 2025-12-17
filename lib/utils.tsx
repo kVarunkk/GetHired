@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { Info, Sparkle } from "lucide-react";
+import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -208,6 +209,13 @@ export const formatCurrency = (amount: number, currency: string) => {
 export const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export const PROFILE_API_KEY = "/api/current-user";
 export const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+export const copyToClipboard = (content: string, toastMessage: string) => {
+  if (content && toastMessage) {
+    navigator.clipboard.writeText(content);
+    toast.success(toastMessage);
+  }
+};
 
 export const featureData = {
   title: "Applying to Jobs Just Got Easier with Ask AI!",

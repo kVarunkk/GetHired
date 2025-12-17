@@ -10,7 +10,7 @@ import { Button } from "./ui/button";
 import { Bookmark, MoreHorizontal, Share } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import JobsPageCommonSheet from "./JobsPageCommonSheet";
-import toast from "react-hot-toast";
+import { copyToClipboard } from "@/lib/utils";
 
 export default function JobsPageDropdown({ user }: { user: User | null }) {
   return (
@@ -33,8 +33,10 @@ export default function JobsPageDropdown({ user }: { user: User | null }) {
 
           <DropdownMenuItem
             onClick={() => {
-              navigator.clipboard.writeText(window.location.href);
-              toast.success("Job Search URL copied to clipboard!");
+              copyToClipboard(
+                window.location.href,
+                "Job Search URL copied to clipboard!"
+              );
             }}
           >
             <Share className="h-4 w-4" />
