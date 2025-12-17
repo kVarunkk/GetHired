@@ -8,7 +8,7 @@ import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Copy, Headset, Info } from "lucide-react";
+import { Headset, Info } from "lucide-react";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceBtn";
 import CopyBtn from "@/components/CopyBtn";
 
