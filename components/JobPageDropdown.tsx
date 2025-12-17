@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { Check, File, Forward, MoreHorizontal } from "lucide-react";
+import { Check, File, MoreHorizontal, Share } from "lucide-react";
 import toast from "react-hot-toast";
 import { useState } from "react";
 import { User } from "@supabase/supabase-js";
@@ -24,20 +24,15 @@ export default function JobPageDropdown({
   user,
   jobId,
   isCompanyUser,
-  // aiCredits,
-  // isOnboardingComplete = false,
   applicationStatus,
   isPlatformJob,
 }: {
   user: User | null;
   jobId: string;
   isCompanyUser: boolean;
-  // aiCredits?: number;
-  // isOnboardingComplete?: boolean;
   applicationStatus: TApplicationStatus | null;
   isPlatformJob: boolean;
 }) {
-  // const [isOpen, setIsOpen] = useState(false);
   const [appStatus, setAppStatus] = useState(applicationStatus);
   const router = useRouter();
 
@@ -73,20 +68,6 @@ export default function JobPageDropdown({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          {/* {!isCompanyUser &&
-            (user ? (
-              <DropdownMenuItem onClick={() => setIsOpen(true)}>
-                <Sparkle className="h-4 w-4" />
-                Ask AI
-              </DropdownMenuItem>
-            ) : (
-              <Link href={"/auth/sign-up?returnTo=/jobs/" + jobId}>
-                <DropdownMenuItem>
-                  <Sparkle className="h-4 w-4" />
-                  Ask AI
-                </DropdownMenuItem>
-              </Link>
-            ))} */}
           {!isCompanyUser && user && appStatus && !isPlatformJob && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
@@ -123,7 +104,7 @@ export default function JobPageDropdown({
               toast.success("Job link copied to clipboard!");
             }}
           >
-            <Forward className="h-4 w-4" />
+            <Share className="h-4 w-4" />
             Share Job
           </DropdownMenuItem>
         </DropdownMenuContent>

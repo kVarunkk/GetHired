@@ -224,8 +224,8 @@ export default async function JobPage({
                 <InfoTooltip
                   content={
                     <p>
-                      This feature uses {TAICredits.AI_SMART_SEARCH_OR_ASK_AI}{" "}
-                      AI credits per use.{" "}
+                      This feature uses {TAICredits.AI_SEARCH_OR_ASK_AI} AI
+                      credits per use.{" "}
                       <Link href={"/dashboard"} className="text-blue-500">
                         Recharge Credits
                       </Link>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Forward } from "lucide-react";
+import { Share } from "lucide-react";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 
@@ -18,7 +18,7 @@ export default function ShareJobPosting({ job_id }: { job_id: string | null }) {
         toast.success("Job link copied to clipboard!");
       }}
     >
-      <Forward />
+      <Share className="h-4 w-4" />
     </Button>
   );
 }

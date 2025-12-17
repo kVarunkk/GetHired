@@ -16,6 +16,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { sendInviteEmail } from "@/app/actions/send-invite-credit-email";
 import { User } from "@supabase/supabase-js";
+import Link from "next/link";
 
 export default function RechargeCredits({
   user,
@@ -82,9 +83,8 @@ export default function RechargeCredits({
               Invite Friends{" "}
               <InfoTooltip content={"Earn 10 credits per Invite"} />
             </span>
-            or Buy AI Credits (coming soon) for uninterrupted use of AI
-            features. {10 - invitationsCount} invitations remaining for this
-            week.
+            or Buy AI Credits for uninterrupted use of AI features.{" "}
+            {10 - invitationsCount} invitations remaining for this week.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
@@ -112,8 +112,8 @@ export default function RechargeCredits({
             </Button>
           </form>
           <div className="text-center text-muted-foreground">OR</div>
-          <Button type="button" disabled>
-            Buy AI Credits (coming soon)
+          <Button asChild type="button">
+            <Link href={"/dashboard/buy-credits"}>Buy AI Credits</Link>
           </Button>
         </div>
       </DialogContent>

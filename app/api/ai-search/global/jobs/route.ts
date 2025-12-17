@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     );
   }
 
-  if (userInfo.ai_credits < TAICredits.AI_GLOBAL_SEARCH) {
+  if (userInfo.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI) {
     return NextResponse.json(
       { message: "Insufficient AI credits. Please top up to continue." },
       { status: 402 }
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
     const { error } = await supabase
       .from("user_info")
       .update({
-        ai_credits: userInfo.ai_credits - TAICredits.AI_GLOBAL_SEARCH,
+        ai_credits: userInfo.ai_credits - TAICredits.AI_SEARCH_OR_ASK_AI,
       })
       .eq("user_id", user.id);
 

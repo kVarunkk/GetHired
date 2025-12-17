@@ -193,6 +193,18 @@ export function isValidUrl(url_string: string) {
   }
 }
 
+export const formatCurrency = (amount: number, currency: string) => {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency,
+      minimumFractionDigits: 2,
+    }).format(amount / 100); // Amount is usually in cents/paise
+  } catch {
+    return `${amount / 100} ${currency?.toUpperCase() ?? ""}`;
+  }
+};
+
 export const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export const PROFILE_API_KEY = "/api/current-user";
 export const ONE_DAY_MS = 24 * 60 * 60 * 1000;
