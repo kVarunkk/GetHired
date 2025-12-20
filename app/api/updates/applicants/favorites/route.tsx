@@ -5,12 +5,12 @@ import { render } from "@react-email/render";
 import { headers } from "next/headers";
 import { sendEmailForStatusUpdate } from "@/lib/serverUtils";
 import FavoriteJobReminderEmail from "@/emails/FavoriteJobStatusReminderEmail";
+import React from "react";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const DAYS_AGO = 7;
 
-// FIX: Initialize Resend instance here
 const resend = new Resend(RESEND_API_KEY);
 
 export interface FavoritedJob {
@@ -27,7 +27,6 @@ export async function GET() {
   const headersList = await headers();
   const cronSecret = headersList.get("x-internal-secret");
 
-  // --- 1. Security Check ---
   if (cronSecret !== INTERNAL_API_SECRET) {
     console.error("CRON Unauthorized Access Attempt: Secret Mismatch");
     return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
@@ -39,8 +38,7 @@ export async function GET() {
   ).toISOString();
 
   try {
-    // 2. Fetch all favorited jobs in the last 7 days, along with application status
-
+    // Fetch all favorited jobs in the last 7 days, along with application status
     const { data: favorites, error: fetchError } = await serviceSupabase
       .from("user_favorites")
       .select(
@@ -52,13 +50,14 @@ export async function GET() {
       )
       .gte("created_at", sevenDaysAgo)
       .eq("user_info.is_promotion_active", true);
+
     if (fetchError) {
       throw new Error(
         `Database fetch failed: ${fetchError.message || "Unknown DB error"}`
       );
     }
 
-    // 3. Fetch all application IDs for all users found in the favorites list (past 7 days)
+    // Fetch all application IDs for all users found in the favorites list (past 7 days)
     const userIds = Array.from(new Set(favorites.map((fav) => fav.user_id)));
     const { data: userApplications, error: appFetchError } =
       await serviceSupabase
@@ -80,7 +79,7 @@ export async function GET() {
       }
     });
 
-    // 4. Aggregate and Filter: Group by user and exclude jobs that already have an application
+    // Aggregate and Filter: Group by user and exclude jobs that already have an application
     const usersToRemind = new Map<string, FavoritedJob[]>();
     const userDetailMap = new Map<
       string,
@@ -141,81 +140,66 @@ export async function GET() {
       });
     }
 
-    // 5. Send Emails and Collect Detailed Results
-    const sendPromisesWithContext = Array.from(usersToRemind.entries()).map(
-      async ([userId, jobs]) => {
-        const userContext = userDetailMap.get(userId);
-        const email = userContext?.email;
-        const userName = userContext?.fullName || "Applicant";
+    const processReminders = async () => {
+      const userEntries = Array.from(usersToRemind.entries());
+      const results: { email: string; success: boolean; error?: string }[] = [];
+      const BATCH_SIZE = 5;
 
-        if (!email) {
-          return Promise.reject({
-            userId,
-            email: "N/A",
-            reason: "No email found in user_info",
-          });
-        }
+      for (let i = 0; i < userEntries.length; i += BATCH_SIZE) {
+        const batch = userEntries.slice(i, i + BATCH_SIZE);
 
-        const emailHtml = await render(
-          <FavoriteJobReminderEmail userName={userName} favoritedJobs={jobs} />
-        );
+        const batchPromises = batch.map(async ([userId, jobs]) => {
+          const user = userDetailMap.get(userId);
+          if (!user?.email) return;
 
-        return resend.emails
-          .send({
-            from: "GetHired <varun@devhub.co.in>",
-            to: [email],
-            subject: `Reminder: Your ${jobs.length} Saved Jobs Are Waiting.`,
-            html: emailHtml,
-          })
-          .then(() => ({ userId, email, status: "SUCCESS" }))
-          .catch((err) => {
-            return Promise.reject({
-              userId,
-              email,
-              reason: err.message || "Unknown Resend Error",
+          try {
+            const emailHtml = await render(
+              React.createElement(FavoriteJobReminderEmail, {
+                userName: user.fullName,
+                favoritedJobs: jobs,
+              })
+            );
+
+            await resend.emails.send({
+              from: "GetHired <varun@devhub.co.in>",
+              to: [user.email],
+              subject: `Reminder: Your ${jobs.length} Saved Jobs Are Waiting.`,
+              html: emailHtml,
             });
-          });
-      }
-    );
-
-    // 6. Execute all promises and analyze results
-    const results = await Promise.allSettled(sendPromisesWithContext);
-
-    const successfulSends: string[] = [];
-    const failedSends: { email: string; reason: string }[] = [];
-
-    results.forEach((result) => {
-      if (result.status === "fulfilled") {
-        successfulSends.push(result.value.email);
-      } else {
-        const reason = result.reason;
-        failedSends.push({
-          email: reason.email || "Unknown",
-          reason: reason.reason || "Promise rejected",
+            results.push({ email: user.email, success: true });
+          } catch (err: unknown) {
+            results.push({
+              email: user.email,
+              success: false,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
         });
+
+        await Promise.allSettled(batchPromises);
       }
-    });
 
-    const totalSuccessful = successfulSends.length;
+      // Final Admin Report
+      const successful = results.filter((r) => r.success).length;
+      const failed = results.filter((r) => !r.success);
+      const report = [
+        `FAVORITE REMINDER REPORT (${new Date().toLocaleString()})`,
+        `Users Targeted: ${totalUsers}`,
+        `Successful: ${successful}`,
+        `Failed: ${failed.length}`,
+        ...(failed.length > 0
+          ? ["FAILED:", ...failed.map((f) => `- ${f.email}: ${f.error}`)]
+          : []),
+      ].join("\n");
 
-    // 7. Send Final Admin Report
-    const report = [
-      `FAVORITED JOB APPLICATION REMINDER:`,
-      `Total Users Targeted: ${totalUsers}`,
-      `Successful Sends: ${totalSuccessful}`,
-      `Failed Sends: ${failedSends.length}`,
-      "-------------------------------------------------------",
-      `SUCCESSFUL EMAILS: ${successfulSends.join(", ")}`,
-      "-------------------------------------------------------",
-      `FAILED EMAILS:`,
-      ...failedSends.map((f) => `- ${f.email}: ${f.reason}`),
-    ].join("\n");
+      await sendEmailForStatusUpdate(report);
+    };
 
-    await sendEmailForStatusUpdate(report);
+    processReminders();
 
     return NextResponse.json({
       success: true,
-      message: `Processed reminders for ${totalUsers} users. Sent ${totalSuccessful} emails.`,
+      message: `Background processing started for ${totalUsers} users.`,
     });
   } catch (e) {
     console.error("Critical processing error:", e);

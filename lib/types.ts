@@ -222,6 +222,7 @@ export interface IBookmark {
   user_id: string;
   url: string;
   name: string;
+  is_alert_on: boolean;
 }
 
 export interface IPricePlan {

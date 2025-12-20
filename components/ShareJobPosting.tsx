@@ -1,6 +1,6 @@
 "use client";
 
-import { Share } from "lucide-react";
+import { Share2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { copyToClipboard } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ export default function ShareJobPosting({ job_id }: { job_id: string | null }) {
         );
       }}
     >
-      <Share className="h-4 w-4" />
+      <Share2 className="h-4 w-4" />
     </Button>
   );
 }

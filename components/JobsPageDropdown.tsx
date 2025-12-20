@@ -7,15 +7,18 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { Bookmark, MoreHorizontal, Share } from "lucide-react";
+import { Bookmark, MoreHorizontal, Share2 } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import JobsPageCommonSheet from "./JobsPageCommonSheet";
 import { copyToClipboard } from "@/lib/utils";
+import { useState } from "react";
 
 export default function JobsPageDropdown({ user }: { user: User | null }) {
+  const [sheetOpen, setSheetOpen] = useState(false);
+
   return (
-    <Sheet>
-      <DropdownMenu>
+    <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild className="">
           <Button variant={"ghost"}>
             <MoreHorizontal className="h-4 w-4" />
@@ -24,7 +27,7 @@ export default function JobsPageDropdown({ user }: { user: User | null }) {
         <DropdownMenuContent>
           <DropdownMenuItem asChild>
             <SheetTrigger className="w-full" asChild>
-              <Button variant={"ghost"}>
+              <Button variant={"ghost"} onClick={() => setSheetOpen(true)}>
                 <Bookmark className=" h-4 w-4" />
                 View Bookmarks
               </Button>
@@ -39,13 +42,13 @@ export default function JobsPageDropdown({ user }: { user: User | null }) {
               );
             }}
           >
-            <Share className="h-4 w-4" />
+            <Share2 className="h-4 w-4" />
             Share Job Search
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <JobsPageCommonSheet user={user} />
+      {sheetOpen ? <JobsPageCommonSheet user={user} /> : ""}
     </Sheet>
   );
 }

@@ -187,22 +187,7 @@ export default function FindSuitableJobs({
 
   if (currentPage === "profiles" && companyId) {
     return (
-      <div className="flex items-center gap-2">
-        <InfoTooltip
-          content={
-            <p>
-              <Sparkle className="h-3 w-3 inline-block mr-1" />
-              {`AI Smart Search uses ${TAICredits.AI_SEARCH_OR_ASK_AI} AI credits per use. ${
-                data && data.profile
-                  ? `${data.profile.ai_credits} AI Credits available.`
-                  : ""
-              }`}{" "}
-              <Link href={"/dashboard"} className="text-blue-500">
-                Recharge Credits
-              </Link>
-            </p>
-          }
-        />
+      <div className="flex items-center ">
         <Select
           value={suitableJobsSelectValue}
           onValueChange={(value) => {
@@ -247,13 +232,7 @@ export default function FindSuitableJobs({
             </SelectContent>
           </SelectGroup>
         </Select>
-      </div>
-    );
-  }
 
-  if (currentPage === "companies") {
-    return (
-      <div className="flex items-center gap-2">
         <InfoTooltip
           content={
             <p>
@@ -269,6 +248,13 @@ export default function FindSuitableJobs({
             </p>
           }
         />
+      </div>
+    );
+  }
+
+  if (currentPage === "companies") {
+    return (
+      <div className="flex items-center ">
         <Button
           disabled={isPending}
           onClick={() => handleAiSearch()}
@@ -277,27 +263,28 @@ export default function FindSuitableJobs({
           {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           <Search className="w-4 h-4" /> Find Suitable Companies
         </Button>
+
+        <InfoTooltip
+          content={
+            <p>
+              <Sparkle className="h-3 w-3 inline-block mr-1" />
+              {`AI Smart Search uses ${TAICredits.AI_SEARCH_OR_ASK_AI} AI credits per use. ${
+                data && data.profile
+                  ? `${data.profile.ai_credits} AI Credits available.`
+                  : ""
+              }`}{" "}
+              <Link href={"/dashboard"} className="text-blue-500">
+                Recharge Credits
+              </Link>
+            </p>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <InfoTooltip
-        content={
-          <p>
-            <Sparkle className="h-3 w-3 inline-block mr-1" />
-            {`AI Smart Search uses ${TAICredits.AI_SEARCH_OR_ASK_AI} AI credits per use. ${
-              data && data.profile
-                ? `${data.profile.ai_credits} AI Credits available.`
-                : ""
-            }`}{" "}
-            <Link href={"/dashboard"} className="text-blue-500">
-              Recharge Credits
-            </Link>
-          </p>
-        }
-      />
+    <div className="flex items-center ">
       <Select
         value={suitableJobsSelectValue}
         onValueChange={(value) => {
@@ -339,6 +326,22 @@ export default function FindSuitableJobs({
           {/* You could add more options here if needed, e.g., "Reset to default" */}
         </SelectContent>
       </Select>
+
+      <InfoTooltip
+        content={
+          <p>
+            <Sparkle className="h-3 w-3 inline-block mr-1" />
+            {`AI Smart Search uses ${TAICredits.AI_SEARCH_OR_ASK_AI} AI credits per use. ${
+              data && data.profile
+                ? `${data.profile.ai_credits} AI Credits available.`
+                : ""
+            }`}{" "}
+            <Link href={"/dashboard"} className="text-blue-500">
+              Recharge Credits
+            </Link>
+          </p>
+        }
+      />
     </div>
   );
 }
