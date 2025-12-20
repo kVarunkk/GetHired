@@ -151,6 +151,9 @@ function JobDetailBadges({
     case "gethired":
       platform_url = "https://gethired.devhub.co.in";
       break;
+    case "weworkremotely":
+      platform_url = "https://weworkremotely.com";
+      break;
     default:
       platform_url = "";
       break;
