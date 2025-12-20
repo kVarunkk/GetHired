@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { Check, File, MoreHorizontal, Share } from "lucide-react";
+import { Check, File, MoreHorizontal, Share2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useState } from "react";
 import { User } from "@supabase/supabase-js";
@@ -107,7 +107,7 @@ export default function JobPageDropdown({
               );
             }}
           >
-            <Share className="h-4 w-4" />
+            <Share2 className="h-4 w-4" />
             Share Job
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -30,8 +30,8 @@ export async function generateMetadata({
     process.env.NODE_ENV === "production"
       ? productionUrl
       : process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : "http://localhost:3000";
+        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+        : "http://localhost:3000";
   const metadataBase = new URL(baseUrl);
 
   const postImagePath = post.image;
@@ -127,7 +127,7 @@ export default async function Post({
         {post.title}
       </h1>
 
-      <div className="prose prose-xl mt-8 mb-20 leading-8 text-lg !text-primary prose-headings:text-primary prose-strong:text-primary">
+      <div className="prose prose-xl mt-8 mb-20 leading-8 text-lg !text-primary prose-headings:text-primary prose-strong:text-primary prose-a:text-primary">
         {Markdoc.renderers.react(renderable, React)}
       </div>
 

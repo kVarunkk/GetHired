@@ -15,7 +15,6 @@ export async function GET() {
   const headersList = await headers();
   const cronSecret = headersList.get("x-internal-secret");
 
-  // --- 1. Security Check ---
   if (cronSecret !== INTERNAL_API_SECRET) {
     console.error("CRON Unauthorized Access Attempt: Secret Mismatch");
     return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
@@ -24,7 +23,6 @@ export async function GET() {
   const serviceSupabase = createServiceRoleClient();
 
   try {
-    // 2. Fetch users who have NOT filled their profile AND registered at least 48 hours ago
     const { data: users, error: fetchError } = await serviceSupabase
       .from("user_info")
       .select(`user_id, email, full_name, created_at`)
@@ -48,57 +46,69 @@ export async function GET() {
       });
     }
 
-    // 3. Send Emails
-    const sendPromises = users.map(async (user) => {
-      const userName = user.email.split("@")[0];
+    const processAllAlerts = async () => {
+      const results: {
+        email: string;
+        success: boolean;
+        error?: string;
+      }[] = [];
 
-      const emailHtml = await render(
-        <OnboardingReminderEmail userName={userName} />
-      );
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < users.length; i += BATCH_SIZE) {
+        const batch = users.slice(i, i + BATCH_SIZE);
 
-      return resend.emails
-        .send({
-          from: "GetHired <varun@devhub.co.in>",
-          to: [user.email],
-          subject: "Urgent: Complete Your Profile for Instant Job Matches",
-          html: emailHtml,
-        })
-        .then(() => ({ success: true, email: user.email }))
-        .catch((err) =>
-          Promise.reject({ email: user.email, reason: err.message })
-        );
-    });
+        const sendPromises = batch.map(async (user) => {
+          try {
+            const userName = user.email.split("@")[0];
 
-    const results = await Promise.allSettled(sendPromises);
-    const successfulSends = results.filter(
-      (r) => r.status === "fulfilled"
-    ).length;
-    const failedEmails = results
-      .filter((r) => r.status === "rejected")
-      .map(
-        (r) =>
-          (r as PromiseRejectedResult).reason as {
-            email: string;
-            reason: string;
+            const emailHtml = await render(
+              <OnboardingReminderEmail userName={userName} />
+            );
+
+            await resend.emails.send({
+              from: "GetHired <varun@devhub.co.in>",
+              to: [user.email],
+              subject: "Urgent: Complete Your Profile for Instant Job Matches",
+              html: emailHtml,
+            });
+
+            results.push({
+              email: user.email,
+              success: true,
+            });
+          } catch (err) {
+            results.push({
+              email: user.email,
+              success: false,
+              error: err instanceof Error ? err.message : String(err),
+            });
           }
-      );
+        });
 
-    // 4. Send Final Admin Report
-    const report = [
-      `ONBOARDING REMINDER REPORT (${new Date().toISOString()})`,
-      `Total Users Targeted: ${users.length}`,
-      `Successful Sends: ${successfulSends}`,
-      `Failed Sends: ${failedEmails.length}`,
-      "-------------------------------------------------------",
-      `FAILED EMAILS:`,
-      ...failedEmails.map((f) => `- ${f.email}: ${f.reason}`),
-    ].join("\n");
+        await Promise.allSettled(sendPromises);
+      }
 
-    await sendEmailForStatusUpdate(report);
+      const successfulSends = results.filter((r) => r.success);
+      const failedSends = results.filter((r) => !r.success);
+
+      const report = [
+        `ONBOARDING REMINDER REPORT (${new Date().toISOString()})`,
+        `Total Users Targeted: ${users.length}`,
+        `Successful Sends: ${successfulSends.map((each) => `${each.email}, `)}`,
+        `Failed Sends: ${failedSends.length}`,
+        "-------------------------------------------------------",
+        `FAILED EMAILS:`,
+        ...failedSends.map((f) => `- ${f.email}: ${f.error}`),
+      ].join("\n");
+
+      await sendEmailForStatusUpdate(report);
+    };
+
+    processAllAlerts();
 
     return NextResponse.json({
       success: true,
-      message: `Processed ${users.length} reminders. Sent ${successfulSends} emails.`,
+      message: `Processed ${users.length} reminders. Results will be emailed to admin.`,
     });
   } catch (e) {
     console.error("Critical processing error:", e);

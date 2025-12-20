@@ -33,63 +33,99 @@ export async function GET() {
   });
 
   try {
+    // 2. Fetch all users who have opted into the weekly digest
     const users = await getAllDigestUsers();
-    const digestPromises = users.map((user) =>
-      processUserDigest(user, digestDate)
-    );
 
-    const results = await Promise.all(digestPromises);
+    if (!users || users.length === 0) {
+      await sendEmailForStatusUpdate(
+        "JOB DIGEST USER NOT FOUND. EXITING SUCCESFULLY."
+      );
+      return NextResponse.json({
+        success: true,
+        message: "No users found for digest today.",
+      });
+    }
 
-    const successSends: string[] = [];
-    const failedSends: { email: string; reason: string }[] = [];
+    // --- 3. BACKGROUND EXECUTION (FIRE-AND-FORGET) ---
 
-    results.forEach((res) => {
-      if (res.success) {
-        successSends.push(res.userEmail);
-      } else {
-        failedSends.push({
-          email: res.userEmail,
-          reason: res.error || "Processing failed",
+    const processAllDigests = async () => {
+      const results: { userEmail: string; success: boolean; error?: string }[] =
+        [];
+      const BATCH_SIZE = 5;
+
+      console.log(
+        `[DIGEST JOB] Starting background processing for ${users.length} users.`
+      );
+
+      // Process users in batches to stay within rate limits and prevent CPU spikes
+      for (let i = 0; i < users.length; i += BATCH_SIZE) {
+        const batch = users.slice(i, i + BATCH_SIZE);
+
+        const digestPromises = batch.map((user) =>
+          processUserDigest(user, digestDate)
+        );
+
+        const batchResults = await Promise.allSettled(digestPromises);
+
+        batchResults.forEach((res) => {
+          if (res.status === "fulfilled") {
+            results.push(res.value);
+          } else {
+            results.push({
+              userEmail: "Unknown",
+              success: false,
+              error:
+                res.reason instanceof Error
+                  ? res.reason.message
+                  : "Promise rejected",
+            });
+          }
         });
       }
-    });
 
-    const totalUsers = users.length;
-    const totalSuccessful = successSends.length;
+      // --- 4. Final Admin Report (Runs after all background tasks finish) ---
+      const successfulSends = results
+        .filter((r) => r.success)
+        .map((r) => r.userEmail);
+      const failedSends = results.filter((r) => !r.success);
 
-    // 7. Send Final Admin Report
-    const report = [
-      `DIGEST EXECUTION REPORT (${new Date().toISOString()})`,
-      `Total Users Targeted: ${totalUsers}`,
-      `Successful Sends: ${totalSuccessful}`,
-      `Failed Sends: ${failedSends.length}`,
-      "-------------------------------------------------------",
-      `SUCCESSFUL EMAILS: ${successSends.join(", ")}`,
-      "-------------------------------------------------------",
-      `FAILED EMAILS:`,
-      ...failedSends.map((f) => `- ${f.email}: ${f.reason}`),
-    ].join("\n");
+      const report = [
+        `JOB DIGEST EXECUTION REPORT (${new Date().toLocaleString()})`,
+        `Total Users Targeted: ${users.length}`,
+        `Successful Emails: ${successfulSends.length}`,
+        `Failed/Skipped: ${failedSends.length}`,
+        "-------------------------------------------------------",
+        `SUCCESSFUL: ${successfulSends.join(", ") || "None"}`,
+        "-------------------------------------------------------",
+        `FAILED/SKIPPED DETAILS:`,
+        ...failedSends.map((f) => `- ${f.userEmail}: ${f.error}`),
+      ].join("\n");
 
-    await sendEmailForStatusUpdate(report);
+      await sendEmailForStatusUpdate(report);
+      console.log(
+        `[DIGEST JOB] Finished. Success: ${successfulSends.length}, Failed: ${failedSends.length}`
+      );
+    };
 
+    // Trigger the heavy background workload without 'await'
+    processAllDigests();
+
+    // 5. Respond immediately to the Cron scheduler
+    // This avoids the 5-10 second timeout from Supabase/Vercel
     return NextResponse.json({
       success: true,
-      message: `Processed ${totalUsers} users. Successful sends: ${totalSuccessful}.`,
+      message: `Job digest processing started for ${users.length} users. Results will be emailed to admin.`,
     });
   } catch (error) {
     console.error("Global Job Digest Execution Failed:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+
     await sendEmailForStatusUpdate(
-      [
-        `DIGEST EXECUTION REPORT (${new Date().toISOString()})`,
-        "GLOBAL CRITICAL FAILURE:",
-        `Error: ${error instanceof Error ? error.message : String(error)}`,
-      ].join("\n")
+      [`JOB DIGEST CRITICAL FAILURE:`, `Error: ${errorMsg}`].join("\n")
     );
+
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to process all job digests.",
-      },
+      { success: false, message: "Failed to initialize digest process." },
       { status: 500 }
     );
   }
@@ -119,68 +155,6 @@ async function processUserDigest(user: IFormData, digestDate: string) {
 
     const result = await jobFetchRes.json();
     const finalJobs: IJob[] = result.data || [];
-
-    // --- 3. AI Re-ranking (Step 2) ---
-    // let finalJobs: IJob[] = initialJobs;
-
-    // if (initialJobs.length > 0) {
-    //   const aiRerankRes = await fetch(`${URL}/api/ai-search/jobs`, {
-    //     method: "POST",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //       "X-Internal-Secret": INTERNAL_API_SECRET || "",
-    //     },
-    //     body: JSON.stringify({
-    //       userId: user.user_id,
-    //       jobs: initialJobs.map((job) => ({
-    //         id: job.id,
-    //         job_name: job.job_name,
-    //         description: job.description,
-    //         visa_requirement: job.visa_requirement,
-    //         salary_range: job.salary_range,
-    //         locations: job.locations,
-    //         experience: job.experience,
-    //       })),
-    //     }),
-    //   });
-
-    //   if (!aiRerankRes.ok) {
-    //     console.error(
-    //       `AI Rerank API failed with status: ${aiRerankRes.status}`
-    //     );
-
-    //     const errorText = await aiRerankRes.text();
-    //     console.error(
-    //       "AI Rerank API error body:",
-    //       errorText.substring(0, 500) + "..."
-    //     );
-
-    //     throw new Error(`AI Rerank API failed (Status: ${aiRerankRes.status})`);
-    //   }
-
-    //   const aiRerankResult: {
-    //     rerankedJobs: string[];
-    //     filteredOutJobs: string[];
-    //   } = await aiRerankRes.json();
-
-    //   if (aiRerankRes.ok && aiRerankResult.rerankedJobs) {
-    //     const uniqueRerankedIds = Array.from(
-    //       new Set(aiRerankResult.rerankedJobs)
-    //     );
-    //     const filteredOutIds: string[] = aiRerankResult.filteredOutJobs || [];
-
-    //     const jobMap = new Map(initialJobs.map((job: IJob) => [job.id, job]));
-
-    //     finalJobs = uniqueRerankedIds
-    //       .map((id: string) => jobMap.get(id))
-    //       .filter(
-    //         (job: IJob | undefined) =>
-    //           job !== undefined && !filteredOutIds.includes(job.id)
-    //       ) as IJob[];
-    //   }
-    // }
-
-    // Fallback (If  AI search was too slow/skipped) ---
 
     // --- 4. Send Email (Top 10 Jobs) ---
     const topJobs = finalJobs.slice(0, 10);

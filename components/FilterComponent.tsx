@@ -221,6 +221,7 @@ export default function FilterComponent({
             placeholder: "Select the platform",
 
             options: [
+              { value: "weworkremotely", label: "We Work Remotely" },
               { value: "remoteok", label: "Remote Ok" },
               { value: "uplers", label: "Uplers" },
               { value: "ycombinator", label: "YCombinator" },

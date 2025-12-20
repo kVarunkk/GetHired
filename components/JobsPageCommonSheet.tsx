@@ -9,11 +9,22 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { IBookmark } from "@/lib/types";
+import JobsBookmarkTable from "./JobsBookmarkTable";
 
-import JobsPageSheetItem from "./JobsPageSheetItem";
 export default function JobsPageCommonSheet({ user }: { user: User | null }) {
   const [items, setItems] = useState<IBookmark[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const updateLocalItem = useCallback((updatedItem: IBookmark) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
+    );
+  }, []);
+
+  // 2. Removes a bookmark from the list entirely
+  const removeLocalItem = useCallback((id: string) => {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  }, []);
 
   const fetchBookmarks = useCallback(async () => {
     try {
@@ -24,7 +35,9 @@ export default function JobsPageCommonSheet({ user }: { user: User | null }) {
         .select("*")
         .eq("user_id", user?.id);
       if (error) throw error;
-      if (data) setItems(data);
+      if (data) {
+        setItems(data);
+      }
     } catch {
     } finally {
       setLoading(false);
@@ -33,7 +46,7 @@ export default function JobsPageCommonSheet({ user }: { user: User | null }) {
 
   useEffect(() => {
     if (user) fetchBookmarks();
-  }, [user, fetchBookmarks]);
+  }, [fetchBookmarks]);
 
   return (
     <SheetContent className="!w-full sm:!max-w-2xl overflow-y-auto">
@@ -48,18 +61,12 @@ export default function JobsPageCommonSheet({ user }: { user: User | null }) {
           <div className="text-center my-20 text-muted-foreground text-sm">
             Loading...
           </div>
-        ) : items.length === 0 ? (
-          <div className="text-muted-foreground text-center my-20">
-            No bookmarks yet.
-          </div>
         ) : (
-          items.map((item) => (
-            <JobsPageSheetItem
-              key={item.id}
-              item={item}
-              callbackFunc={fetchBookmarks}
-            />
-          ))
+          <JobsBookmarkTable
+            data={items}
+            updateLocalItem={updateLocalItem}
+            removeLocalItem={removeLocalItem}
+          />
         )}
       </div>
     </SheetContent>

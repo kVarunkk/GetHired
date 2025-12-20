@@ -118,6 +118,7 @@ export async function GET(request: NextRequest) {
       isInternalCall,
       jobEmbedding,
       relevanceSearchType,
+      userId: applicantUserId,
     });
 
     if (error) {

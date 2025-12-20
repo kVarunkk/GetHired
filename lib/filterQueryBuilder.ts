@@ -34,6 +34,7 @@ export const buildQuery = async ({
   isInternalCall,
   jobEmbedding,
   relevanceSearchType,
+  userId,
 }: {
   jobType?: string | null;
   visaRequirement?: string | null;
@@ -55,14 +56,19 @@ export const buildQuery = async ({
   isInternalCall?: boolean;
   jobEmbedding?: string | null;
   relevanceSearchType: "standard" | "job_digest" | "similar_jobs" | null;
+  userId: string | null;
 }) => {
   try {
     const supabase = isInternalCall
       ? createServiceRoleClient()
       : await createClient();
+
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } =
+      isInternalCall && userId
+        ? await supabase.auth.admin.getUserById(userId)
+        : await supabase.auth.getUser();
 
     const jobTypesArray = parseMultiSelectParam(jobType);
     const visaRequirementsArray = parseMultiSelectParam(visaRequirement);
@@ -136,7 +142,6 @@ export const buildQuery = async ({
       relevanceSearchType &&
       (userEmbedding || jobEmbedding)
     ) {
-      console.log("VECTOR SEARCH TRIGGERED");
       const { data: searchData, error: searchError } = await supabase.rpc(
         "match_all_jobs_new",
         {
@@ -157,7 +162,10 @@ export const buildQuery = async ({
       matchedJobIds = searchData.map((job: { id: string }) => job.id);
 
       query = query.in("id", matchedJobIds);
-      console.log("VECTOR SEARCH FINISHED");
+    }
+
+    if (sortBy !== "relevance" && createdAfter) {
+      query = query.gte("created_at", createdAfter);
     }
 
     if (jobTypesArray.length > 0) {

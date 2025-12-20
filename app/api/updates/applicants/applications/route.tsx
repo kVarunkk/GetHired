@@ -5,6 +5,7 @@ import { render } from "@react-email/render";
 import ApplicationStatusReminderEmail from "@/emails/ApplicationStatusReminderEmail";
 import { headers } from "next/headers";
 import { sendEmailForStatusUpdate } from "@/lib/serverUtils";
+import React from "react";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
@@ -25,9 +26,7 @@ export async function GET() {
   const headersList = await headers();
   const cronSecret = headersList.get("x-internal-secret");
 
-  // --- 1. Security Check ---
   if (cronSecret !== INTERNAL_API_SECRET) {
-    // FIX: Use INTERNAL_API_SECRET for header check
     console.error("CRON Unauthorized Access Attempt: Secret Mismatch");
     return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
   }
@@ -38,7 +37,7 @@ export async function GET() {
   ).toISOString();
 
   try {
-    // 2. Fetch all unique users who applied to jobs in the last 7 days
+    // Fetch all unique users who applied to jobs in the last 7 days
     const { data: applications, error: fetchError } = await serviceSupabase
       .from("applications")
       .select(
@@ -59,7 +58,7 @@ export async function GET() {
       );
     }
 
-    // 3. Aggregate data by user (UserID -> [List of Applied Jobs] and User Detail Map)
+    //  Aggregate data by user (UserID -> [List of Applied Jobs] and User Detail Map)
     const usersToRemind = new Map<string, AppliedJob[]>();
     const userDetailMap = new Map<
       string,
@@ -73,9 +72,8 @@ export async function GET() {
         email: string;
         full_name: string;
         user_id: string;
-      }; // Fetched user info is now here
+      };
 
-      // Populate the user detail map immediately (safer)
       if (userInfo && userInfo.email) {
         userDetailMap.set(userId, {
           email: userInfo.email,
@@ -102,7 +100,6 @@ export async function GET() {
 
     const totalUsers = usersToRemind.size;
 
-    // --- 4. Final Exit Check (If no users were found) ---
     if (totalUsers === 0) {
       const report = [
         `Reminder Job Execution Report (${new Date().toISOString()})`,
@@ -116,88 +113,84 @@ export async function GET() {
       });
     }
 
-    // 5. Send Emails and Collect Detailed Results
-    const sendPromisesWithContext = Array.from(usersToRemind.entries()).map(
-      async ([userId, jobs]) => {
-        const userContext = userDetailMap.get(userId);
-        const email = userContext?.email;
-        const userName = userContext?.fullName || "Applicant";
+    const processAllReminders = async () => {
+      const userEntries = Array.from(usersToRemind.entries());
+      const results: { email: string; success: boolean; error?: string }[] = [];
+      const BATCH_SIZE = 5;
 
-        if (!email) {
-          return Promise.reject({
-            userId,
-            email: "N/A",
-            reason: "No email found in user_info",
-          });
-        }
+      console.log(
+        `[BACKGROUND JOB] Starting status reminders for ${totalUsers} users.`
+      );
 
-        const emailHtml = await render(
-          <ApplicationStatusReminderEmail
-            userName={userName}
-            appliedJobs={jobs}
-          />
-        );
+      for (let i = 0; i < userEntries.length; i += BATCH_SIZE) {
+        const batch = userEntries.slice(i, i + BATCH_SIZE);
 
-        return resend.emails
-          .send({
-            from: "GetHired <varun@devhub.co.in>",
-            to: [email],
-            subject: `Reminder: Check the status of your ${jobs.length} recent applications`,
-            html: emailHtml,
-          })
-          .then(() => ({ userId, email, status: "SUCCESS" }))
-          .catch((err) => {
-            return Promise.reject({
-              userId,
-              email,
-              reason: err.message || "Unknown Resend Error",
+        const batchPromises = batch.map(async ([userId, jobs]) => {
+          const userContext = userDetailMap.get(userId);
+          const email = userContext?.email;
+          const userName = userContext?.fullName || "Applicant";
+
+          if (!email) return;
+
+          try {
+            const emailHtml = await render(
+              React.createElement(ApplicationStatusReminderEmail, {
+                userName,
+                appliedJobs: jobs,
+              })
+            );
+
+            await resend.emails.send({
+              from: "GetHired <varun@devhub.co.in>",
+              to: [email],
+              subject: `Reminder: Check the status of your ${jobs.length} recent applications`,
+              html: emailHtml,
             });
-          });
-      }
-    );
 
-    // 6. Execute all promises and analyze results
-    const results = await Promise.allSettled(sendPromisesWithContext);
-
-    const successfulSends: string[] = [];
-    const failedSends: { email: string; reason: string }[] = [];
-
-    results.forEach((result) => {
-      if (result.status === "fulfilled") {
-        successfulSends.push(result.value.email);
-      } else {
-        const reason = result.reason;
-        failedSends.push({
-          email: reason.email || "Unknown",
-          reason: reason.reason || "Promise rejected",
+            results.push({ email, success: true });
+          } catch (err: unknown) {
+            results.push({
+              email: email || "Unknown",
+              success: false,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
         });
+
+        await Promise.allSettled(batchPromises);
       }
-    });
 
-    const totalSuccessful = successfulSends.length;
+      const successfulSends = results
+        .filter((r) => r.success)
+        .map((r) => r.email);
+      const failedSends = results.filter((r) => !r.success);
 
-    // 7. Send Final Admin Report
-    const report = [
-      "JOB APPLICATION STATUS CHECK REMINDER: ",
-      `Total Unique Users Targeted: ${totalUsers}`,
-      `Successful Sends: ${totalSuccessful}`,
-      `Failed Sends: ${failedSends.length}`,
-      "-------------------------------------------------------",
-      `SUCCESSFUL EMAILS: ${successfulSends.join(", ")}`,
-      "-------------------------------------------------------",
-      `FAILED EMAILS:`,
-      ...failedSends.map((f) => `- ${f.email}: ${f.reason}`),
-    ].join("\n");
+      const report = [
+        "JOB APPLICATION STATUS CHECK REMINDER:",
+        `Total Users Targeted: ${totalUsers}`,
+        `Successful Sends: ${successfulSends.length}`,
+        `Failed Sends: ${failedSends.length}`,
+        "-------------------------------------------------------",
+        `SUCCESSFUL EMAILS: ${successfulSends.join(", ") || "None"}`,
+        "-------------------------------------------------------",
+        `FAILED EMAILS:`,
+        ...failedSends.map((f) => `- ${f.email}: ${f.error}`),
+      ].join("\n");
 
-    await sendEmailForStatusUpdate(report);
+      await sendEmailForStatusUpdate(report);
+      console.log(
+        `[BACKGROUND JOB] Finished. Success: ${successfulSends.length}, Failed: ${failedSends.length}`
+      );
+    };
+
+    processAllReminders();
 
     return NextResponse.json({
       success: true,
-      message: `Successfully processed reminders for ${totalUsers} users. Sent ${totalSuccessful} emails.`,
+      message: `Background processing started for ${totalUsers} users. Results will be reported to admin.`,
     });
   } catch (e) {
     console.error("Critical processing error:", e);
-    // Ensure the error report is sent even on critical database failure
     await sendEmailForStatusUpdate(
       [
         "JOB APPLICATION STATUS CHECK REMINDER: ",

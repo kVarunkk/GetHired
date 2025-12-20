@@ -16,7 +16,7 @@ import JobItem from "./JobItem";
 import FindSuitableJobs from "./FindSuitableJobs";
 import FilterComponentSheet from "./FilterComponentSheet";
 import { Button } from "./ui/button";
-import { ArrowLeft, Search, Share } from "lucide-react";
+import { ArrowLeft, Search, Share2 } from "lucide-react";
 import ProfileItem from "./ProfileItem";
 import ScrollToTopButton from "./ScrollToTopButton";
 import SortingComponent from "./SortingComponent";
@@ -241,6 +241,14 @@ export default function JobsComponent({
             </div>
           )}
 
+          {searchParams.get("sortBy") !== "relevance" && (
+            <SortingComponent
+              isCompanyUser={isCompanyUser}
+              currentPage={current_page}
+              setPage={setPage}
+            />
+          )}
+
           {!user && (
             <Button
               variant={"ghost"}
@@ -252,16 +260,8 @@ export default function JobsComponent({
                 );
               }}
             >
-              <Share className="h-4 w-4" />
+              <Share2 className="h-4 w-4" />
             </Button>
-          )}
-
-          {searchParams.get("sortBy") !== "relevance" && (
-            <SortingComponent
-              isCompanyUser={isCompanyUser}
-              currentPage={current_page}
-              setPage={setPage}
-            />
           )}
 
           <FilterComponentSheet
