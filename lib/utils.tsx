@@ -217,6 +217,39 @@ export const copyToClipboard = (content: string, toastMessage: string) => {
   }
 };
 
+export function getCutOffDateClient(daysAgo: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  date.setUTCHours(0, 0, 0, 0);
+  return date.toISOString();
+}
+
+export function getDaysFromDate(encodedDateStr: string): number {
+  // 1. Decode the URI characters (e.g., %3A -> :)
+  const decodedDate = decodeURIComponent(encodedDateStr);
+
+  // 2. Parse the target date and current date
+  const targetDate = new Date(decodedDate);
+  const today = new Date();
+
+  // 3. Normalize both to UTC midnight to compare full days accurately
+  const utcTarget = Date.UTC(
+    targetDate.getUTCFullYear(),
+    targetDate.getUTCMonth(),
+    targetDate.getUTCDate()
+  );
+
+  const utcToday = Date.UTC(
+    today.getUTCFullYear(),
+    today.getUTCMonth(),
+    today.getUTCDate()
+  );
+
+  // 4. Calculate difference in milliseconds and convert to days
+  const diffInMs = utcToday - utcTarget;
+  return Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+}
+
 export const featureData = {
   title: "Applying to Jobs Just Got Easier with Ask AI!",
   description:
