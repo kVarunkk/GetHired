@@ -2,25 +2,13 @@
 
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 
 interface BrandProps {
   type: "long" | "short";
 }
 
 export default function Brand({ type }: BrandProps) {
-  const { theme, systemTheme } = useTheme();
-  const [currentTheme, setCurrentTheme] = useState<
-    "light" | "dark" | undefined
-  >(undefined);
-
-  useEffect(() => {
-    if (theme === "system") {
-      setCurrentTheme(systemTheme === "dark" ? "dark" : "light");
-    } else {
-      setCurrentTheme(theme === "dark" ? "dark" : "light");
-    }
-  }, [theme, systemTheme]);
+  const { resolvedTheme } = useTheme();
 
   const imageUrls = {
     long: {
@@ -34,10 +22,10 @@ export default function Brand({ type }: BrandProps) {
   };
 
   const getBrandImageSrc = () => {
-    if (!currentTheme) {
+    if (!resolvedTheme) {
       return null;
     }
-    return currentTheme === "dark"
+    return resolvedTheme === "dark"
       ? imageUrls[type].dark
       : imageUrls[type].light;
   };
@@ -59,7 +47,7 @@ export default function Brand({ type }: BrandProps) {
       >
         <Image
           src={src}
-          alt={`${type} brand logo (${currentTheme} mode)`}
+          alt={`${type} brand logo (${resolvedTheme} mode)`}
           fill
           style={{ objectFit: "contain" }}
           priority
