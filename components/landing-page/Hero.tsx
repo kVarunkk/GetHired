@@ -20,13 +20,12 @@ const HIRE_PAGE_DARK = "/hero/company-hero-dark.png";
 const HIRE_PAGE_LIGHT = "/hero/company-hero-light.png";
 
 export default function Hero() {
-  const { theme, systemTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const isHirePage = pathname.startsWith("/hire");
 
-  const currentTheme = theme === "system" ? systemTheme : theme;
-  const isDark = currentTheme === "dark";
+  const isDark = resolvedTheme === "dark";
 
   useEffect(() => {
     setMounted(true);

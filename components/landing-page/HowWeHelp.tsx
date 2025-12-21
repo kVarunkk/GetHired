@@ -64,7 +64,7 @@ const platforms = [
 
 export function HowWeHelp() {
   const [isPaused, setIsPaused] = useState(false);
-  const { theme, systemTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false); // State to track if component is mounted
   const pathname = usePathname();
   const isHirePage = pathname.startsWith("/hire");
@@ -90,14 +90,13 @@ export function HowWeHelp() {
             <Image
               alt="Feature"
               src={
-                theme === "dark" ||
-                (theme === "system" && systemTheme === "dark")
+                resolvedTheme === "dark"
                   ? isHirePage
                     ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-dark-1.png"
                     : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20205115.png"
                   : isHirePage
-                  ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-light-1.png"
-                  : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20204910.png"
+                    ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-light-1.png"
+                    : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20204910.png"
               }
               width={400}
               height={400}
@@ -120,14 +119,13 @@ export function HowWeHelp() {
             <Image
               alt="Feature"
               src={
-                theme === "dark" ||
-                (theme === "system" && systemTheme === "dark")
+                resolvedTheme === "dark"
                   ? isHirePage
                     ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-dark-2.png"
                     : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20203706.png"
                   : isHirePage
-                  ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-light-2.png"
-                  : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20204646.png"
+                    ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-light-2.png"
+                    : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20204646.png"
               }
               width={400}
               height={400}
@@ -149,8 +147,7 @@ export function HowWeHelp() {
               <Image
                 alt="Feature"
                 src={
-                  theme === "dark" ||
-                  (theme === "system" && systemTheme === "dark")
+                  resolvedTheme === "dark"
                     ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-dark-4.png"
                     : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-light-4.png"
                 }
@@ -244,14 +241,13 @@ export function HowWeHelp() {
             <Image
               alt="Feature"
               src={
-                theme === "dark" ||
-                (theme === "system" && systemTheme === "dark")
+                resolvedTheme === "dark"
                   ? isHirePage
                     ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-dark-3.png"
                     : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20223352.png"
                   : isHirePage
-                  ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-light-3.png"
-                  : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20223643.png"
+                    ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-light-3.png"
+                    : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20223643.png"
               }
               width={400}
               height={400}
@@ -265,7 +261,7 @@ export function HowWeHelp() {
         },
       ];
     } else return [];
-  }, [isPaused, setIsPaused, mounted, theme, systemTheme, isHirePage]);
+  }, [isPaused, setIsPaused, mounted, resolvedTheme, isHirePage]);
   return (
     <div
       id="howwehelp"
