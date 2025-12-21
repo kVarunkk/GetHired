@@ -592,6 +592,7 @@ export default function FilterComponent({
             availableItems={config.options?.map((e) => e.value)}
           />
         );
+
       case "number":
       case "text":
         return (
