@@ -19,19 +19,25 @@ import { TApplicationStatus } from "@/lib/types";
 import { useProgress } from "react-transition-progress";
 import FilterActions from "./FilterActions";
 import useSWR from "swr";
-import { commonIndustries, fetcher, ONE_DAY_MS } from "@/lib/utils";
+import {
+  commonIndustries,
+  fetcher,
+  getCutOffDateClient,
+  getDaysFromDate,
+  ONE_DAY_MS,
+} from "@/lib/utils";
 
 type FilterConfig = {
   name: keyof FiltersState;
   label: string;
-  type: "text" | "number" | "multi-select" | "multi-select-input"; // Removed 'select' type
+  type: "text" | "number" | "multi-select" | "multi-select-input";
   placeholder?: string;
-  options?: { value: string; label: string }[]; // Options for multi-select (for availableItems prop)
+  options?: { value: string; label: string }[];
   isVirtualized?: boolean;
   hidden?: boolean;
+  isSingleSelect?: boolean;
 };
 
-// Define the type for the component's state
 export type FiltersState = {
   jobType: string[];
   location: string[];
@@ -50,6 +56,7 @@ export type FiltersState = {
   industry?: string[];
   name?: string[];
   size?: string[];
+  createdAfter: string[];
 };
 
 export default function FilterComponent({
@@ -254,6 +261,19 @@ export default function FilterComponent({
             type: "number",
             placeholder: "e.g., 2",
           },
+          {
+            name: "createdAfter",
+            label: "Date Posted",
+            type: "multi-select",
+            placeholder: "Select Job Posting Date",
+            options: [
+              { value: "Last 24 hrs", label: "1" },
+              { value: "Last 3 days", label: "3" },
+              { value: "Last 7 days", label: "7" },
+              { value: "Last 14 days", label: "14" },
+            ],
+            isSingleSelect: true,
+          },
         ];
         break;
       case "profiles":
@@ -424,6 +444,21 @@ export default function FilterComponent({
                 .map((s) => s.trim())
                 .filter(Boolean)
             : [];
+
+          if (
+            filter.name === "createdAfter" &&
+            initialState["createdAfter"]?.length
+          ) {
+            const paramValue = initialState[filter.name]?.[0];
+            const daysAgo = String(getDaysFromDate(paramValue ?? ""));
+            const filterDisplayValue = filter.options?.find(
+              ({ label }) => label === daysAgo.trim()
+            )?.value;
+
+            if (daysAgo && paramValue && filterDisplayValue) {
+              (initialState[filter.name] as string[]) = [filterDisplayValue];
+            }
+          }
         } else {
           (initialState[filter.name] as string) = paramValue || "";
         }
@@ -481,7 +516,16 @@ export default function FilterComponent({
         filterConfig?.type === "multi-select-input"
       ) {
         if (Array.isArray(value) && value.length > 0) {
-          // params.set(key, value.join(","));
+          if (filterConfig.name === "createdAfter") {
+            const selectedValue = value[0].trim();
+            value[0] = getCutOffDateClient(
+              Number(
+                filterConfig.options?.find(
+                  ({ value }) => value === selectedValue
+                )?.label
+              )
+            );
+          }
           params.set(key, value.join("|"));
         }
       } else {
@@ -534,7 +578,7 @@ export default function FilterComponent({
             className="mt-1 w-full"
             availableItems={config.options?.map((e) => e.value)}
             isVirtualized={config.isVirtualized}
-            // loading={isLoading}
+            isSingleSelect={config.isSingleSelect}
           />
         );
       case "multi-select-input":
@@ -586,7 +630,6 @@ export default function FilterComponent({
       <div className="w-full !pt-4">
         <FilterActions
           currentPage={currentPage}
-          // isProfilesPage={currentPage === "profiles"}
           setOpenSheet={setOpenSheet}
           isApplyFiltersLoading={isPending}
         />

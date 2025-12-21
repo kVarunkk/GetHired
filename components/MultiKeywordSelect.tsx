@@ -54,6 +54,7 @@ interface MultiKeywordSelectProps {
     heading: string;
     description?: string;
   };
+  isSingleSelect?: boolean;
 }
 
 export default function MultiKeywordSelect({
@@ -67,6 +68,7 @@ export default function MultiKeywordSelect({
   showKeywords = true,
   loading = false,
   header,
+  isSingleSelect = false,
 }: MultiKeywordSelectProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -91,10 +93,14 @@ export default function MultiKeywordSelect({
       ) {
         return;
       }
-      onChange(name, [...initialKeywords, trimmed]);
+      if (isSingleSelect) {
+        onChange(name, [trimmed]);
+      } else {
+        onChange(name, [...initialKeywords, trimmed]);
+      }
       setSearchTerm("");
     },
-    [name, onChange, initialKeywords]
+    [name, onChange, initialKeywords, isSingleSelect]
   );
 
   const removeKeyword = useCallback(
