@@ -126,16 +126,14 @@ export default function JobsBookmarkTable({
         header: "URL",
         cell: ({ row }) => (
           <div className="flex items-center ">
-            <div
-              className="text-sm max-w-[200px] truncate"
-              title={row.original.url}
-            >
+            <div className="text-sm  truncate" title={row.original.url}>
               {row.original.url}
             </div>
             <InfoTooltip content={row.original.url} />
           </div>
         ),
         filterFn: "includesString",
+        size: 350,
       },
 
       {
