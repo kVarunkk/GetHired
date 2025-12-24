@@ -9,8 +9,8 @@ import BookmarkJobSearch from "./BookmarkJobSearch";
 import JobsPageDropdown from "./JobsPageDropdown";
 import { Loader2 } from "lucide-react";
 import GlobalJobSearch from "./GlobalJobSearch";
-import { featureData } from "@/lib/utils";
-import DisplayPromotion from "./DisplayPromotionDialog";
+// import { featureData } from "@/lib/utils";
+// import DisplayPromotion from "./DisplayPromotionDialog";
 
 export function ClientTabs({
   user,
@@ -177,9 +177,9 @@ export function ClientTabs({
 
         {children}
       </Tabs>
-      {user && featureData && (
+      {/* {user && featureData && (
         <DisplayPromotion currentUserId={user.id} featureData={featureData} />
-      )}
+      )} */}
     </>
   );
 }
