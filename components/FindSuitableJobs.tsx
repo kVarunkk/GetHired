@@ -169,7 +169,7 @@ export default function FindSuitableJobs({
       setPage(() => 1);
       toast.loading(
         "This might take a moment. Our AI is finding the best " +
-          { currentPage } +
+          `${currentPage}` +
           " out there for you."
       );
       startTransition(() => {
