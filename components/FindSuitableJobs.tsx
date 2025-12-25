@@ -167,7 +167,9 @@ export default function FindSuitableJobs({
         params.set("job_post", value);
       }
       setPage(() => 1);
-
+      toast.loading(
+        "This might take a moment. Our AI is finding the best jobs out there for you."
+      );
       startTransition(() => {
         startProgress();
         router.push(

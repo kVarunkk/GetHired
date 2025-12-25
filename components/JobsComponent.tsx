@@ -25,6 +25,7 @@ import { Link as ModifiedLink } from "react-transition-progress/next";
 import CompanyItem from "./CompanyItem";
 import InfoTooltip from "./InfoTooltip";
 import { copyToClipboard } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 export default function JobsComponent({
   initialJobs,
@@ -60,6 +61,7 @@ export default function JobsComponent({
   useEffect(() => {
     setJobs(initialJobs);
     setPage(1);
+    toast.dismiss();
   }, [initialJobs]);
 
   const loadMoreJobs = useCallback(async () => {
