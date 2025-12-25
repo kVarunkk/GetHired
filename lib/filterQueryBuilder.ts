@@ -149,8 +149,8 @@ export const buildQuery = async ({
             relevanceSearchType === "similar_jobs"
               ? jobEmbedding
               : userEmbedding,
-          match_threshold: 0.5,
-          match_count: 100,
+          match_threshold: 0.2,
+          match_count: 50,
           min_created_at: createdAfter,
         }
       );
