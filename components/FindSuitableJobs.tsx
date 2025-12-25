@@ -168,7 +168,9 @@ export default function FindSuitableJobs({
       }
       setPage(() => 1);
       toast.loading(
-        "This might take a moment. Our AI is finding the best jobs out there for you."
+        "This might take a moment. Our AI is finding the best " +
+          `${currentPage}` +
+          " out there for you."
       );
       startTransition(() => {
         startProgress();
