@@ -25,29 +25,22 @@ export default function BookmarkJobSearch({ user }: { user: User }) {
     if (!user || !pathname) return;
 
     const checkBookmark = async () => {
+      if (!user?.id || !fullUrl) return;
+
       setLoading(true);
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("bookmarks")
           .select("id")
           .eq("user_id", user.id)
           .eq("url", fullUrl)
-          .single();
+          .maybeSingle();
+
+        if (error) throw error;
 
         setBookmarked(!!data);
       } catch (error) {
-        if (
-          typeof error === "object" &&
-          error !== null &&
-          "code" in error &&
-          (error as { code?: string }).code === "PGRST116"
-        ) {
-          // No bookmark found
-          setBookmarked(false);
-          setLoading(false);
-          return;
-        }
-        // toast.error("Failed to check bookmark.");
+        setBookmarked(false);
       } finally {
         setLoading(false);
       }
