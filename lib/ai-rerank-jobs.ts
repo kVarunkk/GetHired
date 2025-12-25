@@ -56,7 +56,7 @@ export async function rerankJobsIfApplicable({
           requestHeaders["Cookie"] = cookie;
         }
       }
-      console.log("AI RERANK FETCH CALL");
+      // console.log("AI RERANK FETCH CALL");
       const aiRerankRes = await fetch(
         `${url}/api/ai-search/jobs${
           relevanceSearchType === "similar_jobs" ? "/similar-jobs" : ""
@@ -91,22 +91,25 @@ export async function rerankJobsIfApplicable({
       } = await aiRerankRes.json();
 
       if (aiRerankRes.ok && aiRerankResult.rerankedJobs) {
-        const rerankedIds = aiRerankResult.rerankedJobs;
-        const filteredOutIds = aiRerankResult.filteredOutJobs || [];
+        const uniqueRerankedIds = Array.from(
+          new Set(aiRerankResult.rerankedJobs as string[])
+        );
+        const filteredOutIdsSet = new Set(aiRerankResult.filteredOutJobs || []);
 
         const jobMap = new Map(initialJobs.map((job: IJob) => [job.id, job]));
 
-        const reorderedJobs = rerankedIds
+        const reorderedJobs = uniqueRerankedIds
           .map((id: string) => jobMap.get(id))
           .filter(
             (job: IJob | undefined): job is IJob =>
-              job !== undefined && !filteredOutIds.includes(job.id)
+              // Ensure the job exists in our map and hasn't been explicitly filtered out
+              job !== undefined && !filteredOutIdsSet.has(job.id)
           );
 
         finalJobs = reorderedJobs;
         finalCount = reorderedJobs.length;
 
-        console.log("AI RERANK FETCH SUCCESS", finalJobs.length);
+        // console.log("AI RERANK FETCH SUCCESS", finalJobs.length);
       }
     } catch (e) {
       console.error("Error during AI Rerank fetch:", e);

@@ -48,9 +48,7 @@ export async function POST(request: NextRequest) {
         `;
 
     const rerankPrompt = `
-            You are an expert search re-ranker. Your task is to evaluate a set of candidate job listings
-            and re-rank them based on their **semantic and technical similarity** to the target job description provided below. 
-            The goal is to find jobs that are almost identical in skill set, experience, and role type.
+           You are an expert search re-ranker specializing in technical recruitment. Your task is to evaluate a set of candidate job listings and rank them based on their **relevance** to a Target Job.
             
             **Target Job Query (Find jobs similar to this):**
             ${targetJobDescription}
@@ -73,10 +71,10 @@ export async function POST(request: NextRequest) {
               .join("\n")}
             
             **Instructions:**
-            1. Analyze each candidate job listing and its relevance to the Target Job Query.
-            2. Re-rank the job IDs from most similar to least similar.
-            3. Filter out any candidate jobs that are clearly different in role, technology stack, or seniority.
-            4. Output a JSON object. Do not include any other text.
+    1. **Rank by Relevance:** Order the jobs from the most relevant to the least relevant. Focus on transferable skills, domain expertise, and core technology overlap.
+    2. **Be Inclusive:** Do not discard jobs just because they have a different title or a slightly different seniority level, provided the technical skills overlap significantly (e.g., a "Frontend Engineer" is highly relevant to a "Javascript Developer" role).
+    3. **Filter Only Extremes:** Only exclude jobs that are completely unrelated in domain or function (e.g., exclude a 'Sales Executive' if the target is 'Software Engineer'). 
+    4. **Output Format:** Return a JSON object with a key "ranked_ids" containing an array of IDs in order of relevance.
         `;
 
     // Step 3: Call the AI with the augmented prompt
