@@ -75,7 +75,9 @@ export async function POST(req: Request) {
           ),
         visaRequirement: z
           .array(z.string())
-          .describe("List of visa requirement terms."),
+          .describe(
+            "List of visa requirement terms (allowed values: 'US Citizenship/Visa Not Required', 'US Citizen/Visa Only', 'Will Sponsor')."
+          ),
         platform: z.array(z.string()).describe("List of job source platforms."),
         companyName: z
           .array(z.string())
@@ -85,7 +87,9 @@ export async function POST(req: Request) {
           .describe("List of application status terms."),
         jobTitleKeywords: z
           .array(z.string())
-          .describe("The main functional keywords for job titles."),
+          .describe(
+            "List of keywords for the job title. Provide multiple variations, abbreviations, or synonymous spellings to maximize recall. Examples: for 'frontend', include ['front end', 'front-end', 'frontend']; for 'backend', include ['back end', 'back-end', 'backend']; for 'SDE', include ['software engineer', 'SDE', 'software developer']."
+          ),
         minSalary: z
           .string()
           .describe(
