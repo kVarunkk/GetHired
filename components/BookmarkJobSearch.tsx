@@ -29,17 +29,15 @@ export default function BookmarkJobSearch({ user }: { user: User }) {
 
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("bookmarks")
           .select("id")
           .eq("user_id", user.id)
           .eq("url", fullUrl)
           .maybeSingle();
 
-        if (error) throw error;
-
         setBookmarked(!!data);
-      } catch (error) {
+      } catch {
         setBookmarked(false);
       } finally {
         setLoading(false);
