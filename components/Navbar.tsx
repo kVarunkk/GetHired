@@ -17,6 +17,7 @@ import { INavItemWithActive } from "./NavbarParent";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Link as ModifiedLink } from "react-transition-progress/next";
+import FeedbackForm from "./FeedbackForm";
 
 export default function NavbarComponent({
   items,
@@ -62,9 +63,12 @@ export default function NavbarComponent({
       ) : (
         ""
       )}
-      <div className="flex items-center gap-5">
+      <div>
         {user ? (
-          <ProfileDropdown user={user} />
+          <div className="flex items-center gap-5">
+            <FeedbackForm user={user} />
+            <ProfileDropdown user={user} />
+          </div>
         ) : (
           <div className="">
             <AuthButton />
@@ -80,7 +84,6 @@ const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      {/* Using button instead of SheetTrigger to prevent the auto scrolling to the top of the page on closing the sheet */}
       <button onClick={() => setOpen(true)} className="md:hidden p-2">
         <Menu />
       </button>
