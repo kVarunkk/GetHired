@@ -38,15 +38,15 @@ const platforms = [
   },
   {
     id: uuidv4(),
-    name: "ycombinator",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/ycombinator.png",
-    href: "https://workatastartup.com",
+    name: "greenhouse",
+    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/greenhouse-logo.jpeg",
+    href: "https://my.greenhouse.io",
   },
   {
     id: uuidv4(),
-    name: "remoteok",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/remoteok.png",
-    href: "https://remoteok.com",
+    name: "weworkremotely",
+    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/weworkremotely-logo.png",
+    href: "https://weworkremotely.com",
   },
   {
     id: uuidv4(),

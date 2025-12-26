@@ -154,6 +154,9 @@ function JobDetailBadges({
     case "weworkremotely":
       platform_url = "https://weworkremotely.com";
       break;
+    case "greenhouse":
+      platform_url = "https://my.greenhouse.io";
+      break;
     default:
       platform_url = "";
       break;
