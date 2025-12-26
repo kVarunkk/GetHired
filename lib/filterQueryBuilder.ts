@@ -143,14 +143,14 @@ export const buildQuery = async ({
       (userEmbedding || jobEmbedding)
     ) {
       const { data: searchData, error: searchError } = await supabase.rpc(
-        "match_all_jobs_new",
+        "match_all_jobs_new_old",
         {
           embedding:
             relevanceSearchType === "similar_jobs"
               ? jobEmbedding
               : userEmbedding,
-          match_threshold: 0.2,
-          match_count: 50,
+          match_threshold: 0.45,
+          match_count: 200,
           min_created_at: createdAfter,
         }
       );
