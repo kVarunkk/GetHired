@@ -7,6 +7,7 @@ import React, { useEffect, useState } from "react";
 import {
   Sheet,
   SheetContent,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -18,6 +19,8 @@ import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 import FeedbackForm from "./FeedbackForm";
+import SocialsComponent from "./SocialsComponent";
+import { DiscordLogoIcon } from "@radix-ui/react-icons";
 
 export default function NavbarComponent({
   items,
@@ -70,7 +73,16 @@ export default function NavbarComponent({
             <ProfileDropdown user={user} />
           </div>
         ) : (
-          <div className="">
+          <div className="flex items-center gap-2">
+            <Link
+              className="hover:text-primary p-2"
+              href={"https://discord.gg/6xvKBqW5eW"}
+              target="_blank"
+              aria-label="Join Community"
+              title="Join Community"
+            >
+              <DiscordLogoIcon />
+            </Link>
             <AuthButton />
           </div>
         )}
@@ -100,13 +112,13 @@ const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
         </SheetHeader>
 
         {items ? (
-          <div className="flex flex-col gap-3 items-start ">
+          <div className="flex flex-col gap-4 items-start w-full">
             {items.map((item) => (
               <ModifiedLink
                 key={item.id}
                 href={item.href}
                 className={cn(
-                  "hover:underline underline-offset-2",
+                  "hover:underline underline-offset-2 p-2 w-full",
                   item.active && "underline underline-offset-2"
                 )}
                 onClick={() => setOpen(false)}
@@ -118,6 +130,9 @@ const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
         ) : (
           ""
         )}
+        <SheetFooter className="mt-4">
+          <SocialsComponent />
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );

@@ -9,8 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card"; // Shadcn Card components
-import { Pointer } from "../magicui/pointer";
-import { MousePointer2 } from "lucide-react";
 import { GridPattern } from "../magicui/grid-pattern";
 import { usePathname } from "next/navigation";
 
@@ -72,7 +70,7 @@ export default function TheGetHiredAdvantageSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 z-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 z-20 relative">
           <MetricCard
             value={isHirePage ? "90% Less Screening" : "5x Faster"}
             title={isHirePage ? "Source with Precision" : "Apply in Minutes"}
@@ -106,10 +104,6 @@ export default function TheGetHiredAdvantageSection() {
                 : "Gain a competitive edge with unique job postings straight from hiring companies."
             }
           />
-          <Pointer>
-            <MousePointer2 className="w-6 h-6 text-yellow-500 fill-yellow-300" />{" "}
-            {/* Style your pointer icon */}
-          </Pointer>
         </div>
       </div>
       <GridPattern

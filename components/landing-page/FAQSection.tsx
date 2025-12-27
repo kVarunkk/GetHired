@@ -16,20 +16,21 @@ export default function FAQSection() {
         "We use advanced AI that analyzes your profile and job details to provide highly personalized, relevant recommendations, going beyond simple keyword matching.",
     },
     {
-      question: "Can I really auto-apply to jobs on multiple platforms?",
+      question: "Which job boards do I have access to with GetHired?",
       answer:
-        "Yes! Our system streamlines applications across various job boards and company career sites. This saves you significant time and effort, maximizing your reach.",
+        "We aggregate jobs from platforms like Y Combinator, Greenhouse, Wellfound, RemoteOK, We Work Remotely, Uplers and more on a weekly basis so that you have access to the latest jobs posted all across the globe.",
+    },
+    {
+      question: "Can I really apply to jobs on multiple platforms?",
+      answer:
+        "Yes! Our system aggregates jobs from various job boards and company career sites. This saves you significant time and effort, maximizing your reach.",
     },
     {
       question: "Is GetHired free for job seekers?",
       answer:
         "Yes, GetHired offers a suite of powerful free features designed to accelerate your job search and simplify the application process.",
     },
-    {
-      question: "How do you ensure my data and privacy are protected?",
-      answer:
-        "Your privacy is paramount. We implement industry-standard encryption and adhere to strict data protection policies to ensure your personal information remains secure.",
-    },
+
     {
       question: "Do companies post jobs directly on GetHired?",
       answer:

@@ -53,9 +53,8 @@ export default function Hero() {
         </p>
       ) : (
         <p>
-          Uncover <strong>Personalized</strong> opportunities,{" "}
-          <strong>Automate</strong> your applications, and connect{" "}
-          <strong>Directly</strong> with hiring companies
+          Find your next job from over 2000 quailty listings with the power of
+          AI
         </p>
       )}
       <div className="flex items-center gap-5">
@@ -79,7 +78,7 @@ export default function Hero() {
 
       {mounted && (
         <Image
-          className="rounded-xl border border-border drop-shadow-xl"
+          className="rounded-xl border border-border drop-shadow-xl mt-8"
           src={getImagePath()} // Using the new local path function
           style={maskStyle}
           height={2000}
