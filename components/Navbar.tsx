@@ -27,7 +27,7 @@ export default function NavbarComponent({
 }: {
   items: INavItemWithActive[];
 }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null | undefined>(undefined);
 
   useEffect(() => {
     (async () => {
@@ -41,15 +41,15 @@ export default function NavbarComponent({
   }, []);
 
   return (
-    <div className="w-full flex items-center justify-between px-4 py-3 lg:px-20 xl:px-40 2xl:px-80 border-b">
-      <div className="flex items-center gap-1">
+    <div className="w-full flex items-center justify-between relative px-4 py-3 lg:px-20 xl:px-40 2xl:px-80 border-b">
+      <div className="flex items-center gap-1 justify-start">
         {items ? <NavbarSheet items={items} /> : ""}
         <Link href={"/"}>
           <Brand type="long" />
         </Link>
       </div>
-      {items ? (
-        <div className=" items-center gap-4 text-sm hidden md:flex">
+      {items && (
+        <div className=" absolute left-1/2 -translate-x-1/2 items-center gap-4 text-sm hidden md:flex">
           {items.map((item) => (
             <ModifiedLink
               key={item.id}
@@ -63,16 +63,15 @@ export default function NavbarComponent({
             </ModifiedLink>
           ))}
         </div>
-      ) : (
-        ""
       )}
-      <div>
-        {user ? (
+      <div className="justify-end">
+        {user && (
           <div className="flex items-center gap-5">
             <FeedbackForm user={user} />
             <ProfileDropdown user={user} />
           </div>
-        ) : (
+        )}
+        {user === null && (
           <div className="flex items-center gap-2">
             <Link
               className="hover:text-primary p-2"

@@ -147,7 +147,7 @@ export default function JobDescriptionCard({
           )}
         >
           <div
-            className="whitespace-pre-line"
+            className="whitespace-pre-line leading-[25px]"
             style={{ overflowWrap: "anywhere" }}
           >
             {isLoading ? (
