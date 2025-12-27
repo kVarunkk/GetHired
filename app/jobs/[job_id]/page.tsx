@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Briefcase,
   DollarSign,
+  ExternalLink,
   MapPin,
   Sparkle,
 } from "lucide-react";
@@ -121,17 +122,7 @@ export default async function JobPage({
             <div>
               <div className="flex items-center gap-1">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white max-w-[400px]">
-                  {job.job_url ? (
-                    <Link
-                      target="_blank"
-                      href={job.job_url}
-                      className="hover:underline"
-                    >
-                      {job.job_name}
-                    </Link>
-                  ) : (
-                    job.job_name
-                  )}
+                  {job.job_name}
                 </h1>
                 <JobFavoriteBtn
                   isCompanyUser={isCompanyUser}
@@ -192,6 +183,25 @@ export default async function JobPage({
 
           {/* Features Section */}
           <div className="flex items-center gap-3 mt-2 flex-wrap">
+            {job.job_url ? (
+              user ? (
+                <Button variant={"outline"} asChild>
+                  <Link target="_blank" href={job.job_url}>
+                    Original Job
+                    <ExternalLink className="h-4 w-4" />
+                  </Link>
+                </Button>
+              ) : (
+                <Button variant={"outline"} asChild>
+                  <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
+                    Original Job
+                    <ExternalLink className="h-4 w-4" />
+                  </Link>
+                </Button>
+              )
+            ) : (
+              ""
+            )}
             {isCompanyUser ? (
               ""
             ) : user ? (
