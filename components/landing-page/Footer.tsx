@@ -2,8 +2,8 @@
 
 import React from "react";
 import Link from "next/link"; // For internal links
-import { BriefcaseBusiness } from "lucide-react";
 import Brand from "../Brand";
+import SocialsComponent from "../SocialsComponent";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -13,6 +13,30 @@ export default function Footer() {
     {
       name: "Remote Jobs",
       href: "/jobs?location=Remote&sortBy=created_at&sortOrder=desc",
+    },
+    {
+      name: "Y Combinator Jobs",
+      href: "/jobs?platform=ycombinator&sortBy=created_at&sortOrder=desc",
+    },
+    {
+      name: "Wellfound Jobs",
+      href: "/jobs?platform=wellfound&sortBy=created_at&sortOrder=desc",
+    },
+    {
+      name: "RemoteOK Jobs",
+      href: "/jobs?platform=remoteok&sortBy=created_at&sortOrder=desc",
+    },
+    {
+      name: "We Work Remotely Jobs",
+      href: "/jobs?platform=weworkremotely&sortBy=created_at&sortOrder=desc",
+    },
+    {
+      name: "Uplers Jobs",
+      href: "/jobs?platform=uplers&sortBy=created_at&sortOrder=desc",
+    },
+    {
+      name: "Greenhouse Jobs",
+      href: "/jobs?platform=greenhouse&sortBy=created_at&sortOrder=desc",
     },
     {
       name: "Jobs in San Francisco",
@@ -130,13 +154,7 @@ export default function Footer() {
         {/* ==================================== */}
         <div className="col-span-2 md:col-span-1">
           <h3 className="text-lg font-bold mb-3">Connect With Us</h3>
-          <div className="flex justify-center md:justify-start space-x-4 mb-4 text-muted-foreground">
-            {/* Use the correct icons when implemented */}
-            <Link href={"mailto:varun@devhub.co.in"} aria-label="Email">
-              <BriefcaseBusiness size={16} />
-            </Link>
-            {/* Add more social icons here (LinkedIn, Twitter/X, etc.) */}
-          </div>
+          <SocialsComponent isFooter={true} />
           <p className="text-sm text-muted-foreground">
             &copy; {currentYear} GetHired. All rights reserved.
           </p>

@@ -12,6 +12,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -24,6 +25,7 @@ import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "./ui/badge";
+import SocialsComponent from "./SocialsComponent";
 
 export default function ProfileDropdown({
   user,
@@ -136,6 +138,8 @@ export default function ProfileDropdown({
           <LogOut className="mr-2 h-4 w-4 text-muted-foreground" />
           Logout
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <SocialsComponent />
       </DropdownMenuContent>
     </DropdownMenu>
   );

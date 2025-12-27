@@ -82,8 +82,8 @@ export function HowWeHelp() {
             ? "Personalized Candidate Discovery"
             : "Personalized Job Discovery",
           description: isHirePage
-            ? "Stop wasting time on irrelevant job seeker profiles. Our advanced matching system learns your preferences to bring you candidates you'll actually love"
-            : "Stop wasting time on irrelevant jobs. Our advanced matching system learns your preferences and skills to bring you opportunities you'll actually love",
+            ? "Stop wasting time on irrelevant job seeker profiles. Our advanced AI learns your preferences to bring you candidates you'll actually love"
+            : "Stop wasting time on irrelevant jobs. Our advanced AI learns your preferences and skills to bring you opportunities you'll actually love",
           href: isHirePage ? "/company/profiles" : "/jobs",
           cta: `Find your Dream ${isHirePage ? "Candidate" : "Job"}`,
           background: (
@@ -139,7 +139,7 @@ export function HowWeHelp() {
           name: isHirePage ? "AI Job Composer" : "Multiplatform Support",
           description: isHirePage
             ? "Create high-converting roles instantly. Our templates mandate key data to ensure clarity and attract only the most qualified, focused talent."
-            : "Supports 10+ leading Job Boards.",
+            : "Get access to a pool of over 2000 quality listings from 6 leading Job Boards.",
           href: isHirePage ? "/company" : "/",
           cta: "Learn more",
           background: isHirePage ? (
