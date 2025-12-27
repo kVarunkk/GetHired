@@ -7,6 +7,7 @@ import { ProgressBar, ProgressBarProvider } from "react-transition-progress";
 import MetadataUpdateRefresh from "@/components/MetadataUpdateRefresh";
 import { Suspense } from "react";
 import ThemeAwareToaster from "@/components/ToasterComponent";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 export const metadata: Metadata = {
   title: {
@@ -66,6 +67,7 @@ export default function RootLayout({
           </ThemeProvider>
         </ProgressBarProvider>
       </body>
+      <GoogleAnalytics gaId="G-4704XKQWMK" />
     </html>
   );
 }
