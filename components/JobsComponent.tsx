@@ -232,15 +232,33 @@ export default function JobsComponent({
           {!isOnboardingComplete && user && !isCompanyUser && (
             <div className="flex items-center gap-2">
               <InfoTooltip content="Please complete your profile to use this feature" />
-              <Link href={"/get-started"}>
-                <Button className="flex items-center gap-2 rounded-full text-sm">
+
+              <Button
+                asChild
+                className="flex items-center gap-2 rounded-full text-sm"
+              >
+                <Link href={"/get-started"}>
                   <Search className="w-4 h-4" />
                   {current_page === "companies"
                     ? "Find Suitable Companies"
                     : "Find Suitable Jobs"}
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
+          )}
+
+          {!user && (
+            <Button
+              asChild
+              className="flex items-center gap-2 rounded-full text-sm"
+            >
+              <Link href={"/auth/sign-up?returnTo=/jobs"}>
+                <Search className="w-4 h-4" />
+                {current_page === "companies"
+                  ? "Find Suitable Companies"
+                  : "Find Suitable Jobs"}
+              </Link>
+            </Button>
           )}
 
           {searchParams.get("sortBy") !== "relevance" && (

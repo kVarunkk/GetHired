@@ -41,7 +41,7 @@ export default function FeedbackForm({ user }: { user: User }) {
   return (
     <Dialog>
       <DialogTrigger>
-        <MessageCircle className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
+        <MessageCircle className="h-4 w-4" />
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
