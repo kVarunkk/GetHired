@@ -252,7 +252,11 @@ export default function JobsComponent({
               asChild
               className="flex items-center gap-2 rounded-full text-sm"
             >
-              <Link href={"/auth/sign-up?returnTo=/jobs"}>
+              <Link
+                href={`/auth/sign-up?returnTo=/${
+                  current_page === "companies" ? "companies" : "jobs"
+                }`}
+              >
                 <Search className="w-4 h-4" />
                 {current_page === "companies"
                   ? "Find Suitable Companies"
