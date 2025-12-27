@@ -7,10 +7,10 @@ import { useProgress } from "react-transition-progress";
 import { User } from "@supabase/supabase-js";
 import BookmarkJobSearch from "./BookmarkJobSearch";
 import JobsPageDropdown from "./JobsPageDropdown";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import GlobalJobSearch from "./GlobalJobSearch";
-// import { featureData } from "@/lib/utils";
-// import DisplayPromotion from "./DisplayPromotionDialog";
+import { Button } from "./ui/button";
+import Link from "next/link";
 
 export function ClientTabs({
   user,
@@ -19,7 +19,6 @@ export function ClientTabs({
   applicationStatusFilter,
   page,
   children,
-  // aiCredits,
 }: {
   user: User | null;
   isCompanyUser: boolean;
@@ -27,7 +26,6 @@ export function ClientTabs({
   applicationStatusFilter?: string | false;
   page: "jobs" | "profiles" | "companies";
   children: React.ReactNode;
-  // aiCredits?: number;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -172,14 +170,24 @@ export function ClientTabs({
             )}
           </div>
         ) : (
-          ""
+          <div>
+            <Button
+              title="AI Search"
+              variant="link"
+              asChild
+              aria-label="Open global job search"
+              className="rounded-full text-xs bg-secondary text-muted-foreground  !no-underline hover:text-primary transition-colors"
+            >
+              <Link href={"/auth/sign-up?returnTo=/jobs"}>
+                <Search className="h-5 w-5" />
+                Search Jobs with AI...
+              </Link>
+            </Button>
+          </div>
         )}
 
         {children}
       </Tabs>
-      {/* {user && featureData && (
-        <DisplayPromotion currentUserId={user.id} featureData={featureData} />
-      )} */}
     </>
   );
 }
