@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { getAllDigestUsers, sendJobDigestEmail } from "@/lib/digest-utils";
 import { IFormData, IJob } from "@/lib/types";
@@ -107,8 +107,10 @@ export async function GET() {
       );
     };
 
+    after(processAllDigests);
+
     // Trigger the heavy background workload without 'await'
-    processAllDigests();
+    // processAllDigests();
 
     // 5. Respond immediately to the Cron scheduler
     // This avoids the 5-10 second timeout from Supabase/Vercel
