@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Resend } from "resend";
 import { render } from "@react-email/render";
@@ -104,7 +104,7 @@ export async function GET() {
       await sendEmailForStatusUpdate(report);
     };
 
-    processAllAlerts();
+    after(processAllAlerts);
 
     return NextResponse.json({
       success: true,
