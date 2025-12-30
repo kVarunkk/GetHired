@@ -96,13 +96,13 @@ export default async function ProfilesPage({
         });
 
         const aiRerankResult: {
-          reranked_profile_ids: string[];
-          filtered_out_profile_ids: string[];
+          rerankedProfiles: string[];
+          filteredOutProfiles: string[];
         } = await aiRerankRes.json();
 
-        if (aiRerankRes.ok && aiRerankResult.reranked_profile_ids) {
-          const rerankedIds = aiRerankResult.reranked_profile_ids;
-          const filteredOutIds = aiRerankResult.filtered_out_profile_ids || [];
+        if (aiRerankRes.ok && aiRerankResult.rerankedProfiles) {
+          const rerankedIds = aiRerankResult.rerankedProfiles;
+          const filteredOutIds = aiRerankResult.filteredOutProfiles || [];
 
           const profilesMap: Map<string, IFormData> = new Map(
             result.data.map((profile: IFormData) => [profile.user_id, profile])
