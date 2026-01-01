@@ -10,7 +10,6 @@ import { IJob } from "@/lib/types";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const productionUrl = "https://gethired.devhub.co.in";
 const URL = deploymentUrl();
 
 const DAYS_AGO = 7;
