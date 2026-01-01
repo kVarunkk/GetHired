@@ -256,7 +256,18 @@ export const sendEmailForRelevantJobsStatusUpdate = async (
 };
 
 export const deploymentUrl = () => {
-  return process.env.NODE_ENV === "production"
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000";
+  let url;
+  switch (process.env.VERCEL_ENV) {
+    case "production":
+      url = "https://gethired.devhub.co.in";
+      break;
+    case "preview":
+      url =
+        "https://job-application-agent-frontend-git-dev-kvarunkks-projects.vercel.app";
+      break;
+    case "development":
+      url = "http://localhost:3000";
+      break;
+  }
+  return url;
 };
