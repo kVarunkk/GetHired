@@ -268,6 +268,9 @@ export const deploymentUrl = () => {
     case "development":
       url = "http://localhost:3000";
       break;
+    default:
+      url = "http://localhost:3000";
+      break;
   }
   return url;
 };
