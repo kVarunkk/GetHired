@@ -5,14 +5,9 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/components";
 import { Resend } from "resend";
 import { updateUserAppMetadata } from "./update-user-metadata";
+import { deploymentUrl } from "@/lib/serverUtils";
 
-const productionUrl = "https://gethired.devhub.co.in";
-const URL =
-  process.env.NODE_ENV === "production"
-    ? productionUrl
-    : process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : "http://localhost:3000";
+const URL = deploymentUrl();
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 

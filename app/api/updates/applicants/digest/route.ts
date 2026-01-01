@@ -2,17 +2,11 @@ import { after, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { getAllDigestUsers, sendJobDigestEmail } from "@/lib/digest-utils";
 import { IFormData, IJob } from "@/lib/types";
-import { getCutOffDate, sendEmailForStatusUpdate } from "@/lib/serverUtils";
+import { deploymentUrl, sendEmailForStatusUpdate } from "@/lib/serverUtils";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
-const productionUrl = "https://gethired.devhub.co.in";
-const URL =
-  process.env.NODE_ENV === "production"
-    ? productionUrl
-    : process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : "http://localhost:3000";
+const URL = deploymentUrl();
 
 export async function GET() {
   const headersList = await headers();
@@ -138,10 +132,11 @@ export async function GET() {
  */
 async function processUserDigest(user: IFormData, digestDate: string) {
   try {
-    const cutoffDate = getCutOffDate(30);
+    // const cutoffDate = getCutOffDate(30);
+    const cutoffDays = "7";
 
     const jobFetchRes = await fetch(
-      `${URL}/api/jobs?sortBy=relevance&limit=100&createdAfter=${cutoffDate}&userId=${user.user_id}`,
+      `${URL}/api/jobs?sortBy=relevance&limit=100&createdAfter=${cutoffDays}&userId=${user.user_id}`,
       {
         headers: {
           "X-Internal-Secret": INTERNAL_API_SECRET || "",

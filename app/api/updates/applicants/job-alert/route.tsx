@@ -3,7 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { headers } from "next/headers";
-import { getCutOffDate, sendEmailForStatusUpdate } from "@/lib/serverUtils";
+import { deploymentUrl, sendEmailForStatusUpdate } from "@/lib/serverUtils";
 import React from "react";
 import BookmarkAlertEmail from "@/emails/BookmarkAlertEmail";
 import { IJob } from "@/lib/types";
@@ -11,12 +11,8 @@ import { IJob } from "@/lib/types";
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const productionUrl = "https://gethired.devhub.co.in";
-const APP_URL =
-  process.env.NODE_ENV === "production"
-    ? productionUrl
-    : process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : "http://localhost:3000";
+const URL = deploymentUrl();
+
 const DAYS_AGO = 7;
 
 const resend = new Resend(RESEND_API_KEY);
@@ -69,7 +65,7 @@ export async function GET() {
         jobsFound: number;
         error?: string;
       }[] = [];
-      const cutoffDate = getCutOffDate(DAYS_AGO);
+      // const cutoffDate = getCutOffDate(DAYS_AGO);
 
       const BATCH_SIZE = 5;
       for (let i = 0; i < bookmarks.length; i += BATCH_SIZE) {
@@ -84,8 +80,8 @@ export async function GET() {
 
           try {
             const separator = bookmark.url.includes("?") ? "&" : "?";
-            const fullInternalPath = `${bookmark.url}${separator}userId=${bookmark.user_id}&createdAfter=${cutoffDate}&limit=10`;
-            const internalApiUrl = `${APP_URL}/api${fullInternalPath}`;
+            const fullInternalPath = `${bookmark.url}${separator}userId=${bookmark.user_id}&createdAfter=${DAYS_AGO}&limit=10`;
+            const internalApiUrl = `${URL}/api${fullInternalPath}`;
 
             const response = await fetch(internalApiUrl, {
               headers: { "x-internal-secret": INTERNAL_API_SECRET || "" },
@@ -103,7 +99,7 @@ export async function GET() {
                   userName: userInfo.full_name || userInfo.email.split("@")[0],
                   bookmarkName: bookmark.name || "Your Saved Search",
                   jobs: newJobs,
-                  bookmarkUrl: APP_URL + bookmark.url,
+                  bookmarkUrl: URL + bookmark.url,
                 })
               );
 

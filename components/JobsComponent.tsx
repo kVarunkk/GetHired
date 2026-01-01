@@ -1,6 +1,6 @@
 "use client";
 
-import { ICompanyInfo, IFormData, IJob } from "@/lib/types";
+import { ICompanyInfo, IFormData, IJob, TAICredits } from "@/lib/types";
 import Link from "next/link";
 import {
   startTransition,
@@ -16,7 +16,7 @@ import JobItem from "./JobItem";
 import FindSuitableJobs from "./FindSuitableJobs";
 import FilterComponentSheet from "./FilterComponentSheet";
 import { Button } from "./ui/button";
-import { ArrowLeft, Search, Share2 } from "lucide-react";
+import { ArrowLeft, Loader2, Search, Share2 } from "lucide-react";
 import ProfileItem from "./ProfileItem";
 import ScrollToTopButton from "./ScrollToTopButton";
 import SortingComponent from "./SortingComponent";
@@ -24,8 +24,11 @@ import { useProgress } from "react-transition-progress";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 import CompanyItem from "./CompanyItem";
 import InfoTooltip from "./InfoTooltip";
-import { copyToClipboard } from "@/lib/utils";
+import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/lib/utils";
 import toast from "react-hot-toast";
+import useSWR, { mutate } from "swr";
+import { createClient } from "@/lib/supabase/client";
+import { revalidateCache } from "@/app/actions/revalidate";
 
 export default function JobsComponent({
   initialJobs,
@@ -53,10 +56,17 @@ export default function JobsComponent({
   const [jobs, setJobs] = useState<IJob[] | IFormData[] | ICompanyInfo[]>([]);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const { data } = useSWR(PROFILE_API_KEY, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const [isGenerated, setIsGenerated] = useState(false);
   const router = useRouter();
   const loaderRef = useRef<HTMLDivElement | null>(null);
   const searchParams = useSearchParams();
   const isSuitable = searchParams.get("sortBy") === "relevance";
+  const isSimilarSearch = isSuitable && searchParams.get("jobId");
   const startProgress = useProgress();
   useEffect(() => {
     setJobs(initialJobs);
@@ -138,35 +148,92 @@ export default function JobsComponent({
     };
   }, [isLoading, jobs, loadMoreJobs]);
 
+  useEffect(() => {
+    if (
+      data &&
+      data.profile &&
+      current_page === "jobs" &&
+      isSuitable &&
+      !isSimilarSearch
+    ) {
+      setIsGenerated(data.profile.is_relevant_jobs_generated);
+    }
+  }, [data, current_page, isSuitable, isSimilarSearch]);
+
+  useEffect(() => {
+    // If already generated, do nothing
+    if (
+      isGenerated ||
+      current_page !== "jobs" ||
+      !isSuitable ||
+      isSimilarSearch
+    )
+      return;
+
+    // Polling logic
+    const interval = setInterval(async () => {
+      if (!user) return;
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("user_info")
+        .select("is_relevant_jobs_generated")
+        .eq("user_id", user.id)
+        .single();
+
+      if (data?.is_relevant_jobs_generated) {
+        await mutate(PROFILE_API_KEY);
+        await revalidateCache("jobs-feed");
+        // setIsGenerated(true);
+        clearInterval(interval);
+        router.refresh(); // Refresh server components to fetch new jobs
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [isGenerated, user, router, current_page, isSuitable, isSimilarSearch]);
+
+  useEffect(() => {
+    (async () => {
+      if (isGenerated && isSuitable && !isSimilarSearch) {
+        const supabase = createClient();
+        await supabase.from("user_info").update({
+          ai_credits: data.profile.ai_credits - TAICredits.AI_SEARCH_OR_ASK_AI,
+        });
+        await mutate(PROFILE_API_KEY);
+      }
+    })();
+  }, [isGenerated, isSuitable, isSimilarSearch]);
+
   const navigateBack = async () => {
-    const params = new URLSearchParams(searchParams.toString());
-    const sortBy = params.get("sortBy");
-    const jobPost = params.get("job_post");
-    const jobId = params.get("jobId");
+    // const params = new URLSearchParams(searchParams.toString());
+    // const sortBy = params.get("sortBy");
+    // const jobPost = params.get("job_post");
+    // const jobId = params.get("jobId");
 
-    if (sortBy === "relevance") {
-      params.delete("sortBy");
-    }
+    // if (sortBy === "relevance") {
+    //   params.delete("sortBy");
+    // }
 
-    if (jobPost) {
-      params.delete("job_post");
-    }
+    // if (jobPost) {
+    //   params.delete("job_post");
+    // }
 
-    if (jobId) {
-      params.delete("jobId");
-    }
+    // if (jobId) {
+    //   params.delete("jobId");
+    // }
 
     startTransition(() => {
       startProgress();
-      router.push(
-        `/${
-          current_page === "profiles" && isCompanyUser
-            ? "company/profiles"
-            : current_page === "jobs"
-              ? "jobs"
-              : "companies"
-        }?${params.toString()}`
-      );
+      router.back();
+      // router.push(
+      //   `/${
+      //     current_page === "profiles" && isCompanyUser
+      //       ? "company/profiles"
+      //       : current_page === "jobs"
+      //         ? "jobs"
+      //         : "companies"
+      //   }?${params.toString()}`
+      // );
     });
   };
 
@@ -296,7 +363,19 @@ export default function JobsComponent({
         </div>
       </div>
 
-      {jobs.length > 0 ? (
+      {!isGenerated &&
+      current_page === "jobs" &&
+      isSuitable &&
+      !isSimilarSearch ? (
+        <div className="flex flex-col items-center justify-center my-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <p className="mt-4 text-muted-foreground animate-pulse text-sm text-center sm:w-3/4">
+            AI is curating your personalized job feed. This is a one time
+            process and might take some time. You will be notified via email
+            once it is ready.
+          </p>
+        </div>
+      ) : jobs.length > 0 ? (
         current_page === "profiles" && isCompanyUser ? (
           (jobs as IFormData[]).map((job) => (
             <ProfileItem

@@ -30,6 +30,7 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
+      console.log(response);
       // const errorData = await response.json();
       // console.error("FastAPI embedding error:", errorData);
       return NextResponse.json(

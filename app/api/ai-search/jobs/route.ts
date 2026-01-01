@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { IJob, TAICredits } from "@/lib/types";
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     // Step 3: Call the AI with the augmented prompt
     const vertex = await getVertexClient();
-    const model = vertex("gemini-2.0-flash-lite-001");
+    const model = vertex("gemini-2.5-flash-lite");
 
     const rerankPrompt = `
       You are an expert search re-ranker. Your task is to evaluate a set of job listings
@@ -115,20 +115,22 @@ export async function POST(request: NextRequest) {
       5.  Output a JSON array of the re-ranked job IDs. Do not include any other text.
     `;
 
-    const { object } = await generateObject({
+    const { output: object } = await generateText({
       model: model,
       prompt: rerankPrompt,
-      schema: z.object({
-        reranked_job_ids: z
-          .array(z.string())
-          .describe(
-            "The list of re-ranked job IDs from most to least relevant."
-          ),
-        filtered_out_job_ids: z
-          .array(z.string())
-          .describe(
-            "The list of job IDs that were filtered out as irrelevant."
-          ),
+      output: Output.object({
+        schema: z.object({
+          reranked_job_ids: z
+            .array(z.string())
+            .describe(
+              "The list of re-ranked job IDs from most to least relevant."
+            ),
+          filtered_out_job_ids: z
+            .array(z.string())
+            .describe(
+              "The list of job IDs that were filtered out as irrelevant."
+            ),
+        }),
       }),
     });
 

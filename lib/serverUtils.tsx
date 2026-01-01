@@ -6,6 +6,8 @@ import { createClient } from "./supabase/server";
 import { createServiceRoleClient } from "./supabase/service-role";
 import { Resend } from "resend";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
+import { render } from "@react-email/components";
+import RelevantJobsSetupUpdateEmail from "@/emails/RelevantJobsSetupUpdateEmail";
 
 export async function getVertexClient() {
   const credentialsJson = process.env.GOOGLE_CREDENTIALS_JSON;
@@ -225,4 +227,36 @@ export const sendEmailForStatusUpdate = async (emailText: string) => {
       "Some error occured while sending status update email to Varun Kumawat"
     );
   }
+};
+
+export const sendEmailForRelevantJobsStatusUpdate = async (
+  email: string,
+  name: string,
+  url: string
+) => {
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    const emailHtml = await render(
+      <RelevantJobsSetupUpdateEmail userName={name} inviteUrl={url} />
+    );
+
+    resend.emails.send({
+      from: "GetHired <varun@devhub.co.in>",
+      to: [email],
+      subject: `Important: Your AI Smart Search Job Feed is ready!`,
+      html: emailHtml,
+      // text: email,
+    });
+  } catch {
+    console.error(
+      "Some error occured while sending status update email to Varun Kumawat"
+    );
+  }
+};
+
+export const deploymentUrl = () => {
+  return process.env.NODE_ENV === "production"
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000";
 };

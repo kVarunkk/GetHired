@@ -118,6 +118,27 @@ export const buildQuery = async ({
         .from("all_jobs")
         .select(selectString, { count: "exact" })
         .eq("applications.applicant_user_id", user.id);
+    } else if (relevanceSearchType === "standard") {
+      if (!user) {
+        return {
+          data: [],
+          error: "User not authenticated to view relevant jobs.",
+          count: 0,
+          matchedJobIds: [],
+        };
+      }
+      selectString = `
+        ${allJobsSelectString},
+        user_relevant_jobs!inner(*),
+        user_favorites(*),
+        job_postings(${jobPostingsSelectString}, company_info(${companyInfoSelectString}), applications(*)),
+        applications(*)
+    `;
+      query = supabase
+        .from("all_jobs")
+        .select(selectString, { count: "exact" })
+        .eq("user_relevant_jobs.user_id", user.id);
+      // .neq("user_relevant_jobs.jobs_id", null);
     } else {
       selectString = `
        ${allJobsSelectString},
@@ -140,17 +161,18 @@ export const buildQuery = async ({
       sortBy === "relevance" &&
       createdAfter &&
       relevanceSearchType &&
+      relevanceSearchType !== "standard" &&
       (userEmbedding || jobEmbedding)
     ) {
       const { data: searchData, error: searchError } = await supabase.rpc(
-        "match_all_jobs_new_old",
+        "match_all_jobs_test",
         {
           embedding:
             relevanceSearchType === "similar_jobs"
               ? jobEmbedding
               : userEmbedding,
-          match_threshold: 0.45,
-          match_count: 200,
+          match_threshold: 0.3,
+          match_count: relevanceSearchType === "similar_jobs" ? 10 : 100,
           min_created_at: createdAfter,
         }
       );
@@ -159,12 +181,17 @@ export const buildQuery = async ({
         throw searchError;
       }
 
+      console.log(searchData.length + "jobs found from vector search");
       matchedJobIds = searchData.map((job: { id: string }) => job.id);
 
       query = query.in("id", matchedJobIds);
     }
 
     if (sortBy !== "relevance" && createdAfter) {
+      query = query.gte("created_at", createdAfter);
+    }
+
+    if (relevanceSearchType === "standard" && createdAfter) {
       query = query.gte("created_at", createdAfter);
     }
 
@@ -211,9 +238,19 @@ export const buildQuery = async ({
       query = query.order("id", { ascending: sortOrder === "asc" }); // Tiebreaker
     }
 
+    if (relevanceSearchType === "standard") {
+      query = query.order("relevance_rank", {
+        referencedTable: "user_relevant_jobs",
+        ascending: sortOrder === "asc",
+      });
+      query = query.order("id", { ascending: sortOrder === "asc" });
+    }
+
     query = query.range(start_index, end_index);
 
     const { data, error, count } = await query;
+
+    console.log(error);
 
     return {
       data,
@@ -222,6 +259,7 @@ export const buildQuery = async ({
       matchedJobIds,
     };
   } catch (e: unknown) {
+    console.log(e);
     return {
       data: [],
       error:

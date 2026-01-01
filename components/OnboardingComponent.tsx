@@ -30,6 +30,7 @@ import { fetcher, isValidUrl } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
 import useSWR from "swr";
+import { triggerRelevanceUpdate } from "@/app/actions/relevant-jobs-update";
 
 export interface StepProps {
   formData: IFormData;
@@ -89,7 +90,11 @@ export const OnboardingForm: React.FC = () => {
     data: countriesData,
     error: countriesError,
     isLoading: isLoadingLocations,
-  } = useSWR(`/api/locations?filterComponent=true`, fetcher);
+  } = useSWR(`/api/locations?filterComponent=true`, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const countries: { location: string }[] = useMemo(
     () => (countriesData && !countriesError ? countriesData.data : []),
@@ -407,6 +412,13 @@ export const OnboardingForm: React.FC = () => {
         throw new Error(
           errorResult.error || `Resume parsing failed with status ${res.status}`
         );
+      } else {
+        const data = await res.json();
+        return {
+          projects_resume: data.projects_resume,
+          experience_resume: data.experience_resume,
+          skills_resume: data.skills_resume,
+        };
       }
     } catch {
       throw new Error("Resume parsing failed");
@@ -415,7 +427,6 @@ export const OnboardingForm: React.FC = () => {
 
   const handleSubmit = async () => {
     setError(null);
-    // setSuccessMessage(null);
     setIsLoading(true);
     toast.loading(
       "Hang tight! We're setting things up for you. This might take a moment. Please do not close or refresh the page."
@@ -427,8 +438,26 @@ export const OnboardingForm: React.FC = () => {
       return;
     }
 
+    let projectsResume;
+    let experienceResume;
+    let skillsResume;
+
     try {
       // Prepare data for Supabase upsert
+
+      const supabase = createClient();
+
+      if (
+        formData.resume_path &&
+        (formData.resume_path !== initialResumePath || !isResumeParsed)
+      ) {
+        const { projects_resume, experience_resume, skills_resume } =
+          await parseResume(user.id, formData.resume_path);
+        projectsResume = projects_resume;
+        experienceResume = experience_resume;
+        skillsResume = skills_resume;
+      }
+
       const dataToSave = {
         user_id: user.id,
         email: user.email,
@@ -454,49 +483,57 @@ export const OnboardingForm: React.FC = () => {
         job_type: formData.job_type,
         filled: true,
       };
-      const supabase = createClient();
 
-      const res = await fetch("/api/update-embedding/user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: user.id,
-          desired_roles: formData.desired_roles,
-          preferred_locations: formData.preferred_locations,
-          min_salary: formData.min_salary || 0,
-          max_salary: formData.max_salary || 0,
-          experience_years: formData.experience_years || 0,
-          industry_preferences: formData.industry_preferences,
-          visa_sponsorship_required: formData.visa_sponsorship_required,
-          top_skills: formData.top_skills,
-          work_style_preferences: formData.work_style_preferences,
-          career_goals_short_term: formData.career_goals_short_term,
-          career_goals_long_term: formData.career_goals_long_term,
-          company_size_preference: formData.company_size_preference,
-          resume_path: formData.resume_path,
-          job_type: formData.job_type,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData);
-      }
-
-      if (
-        formData.resume_path &&
-        (formData.resume_path !== initialResumePath || !isResumeParsed)
-      ) {
-        await parseResume(user.id, formData.resume_path);
-      }
-
-      const { error: dbError } = await supabase
-        .from("user_info")
-        .upsert(dataToSave, { onConflict: "user_id" });
+      const { error: dbError } = await supabase.from("user_info").upsert(
+        {
+          ...dataToSave,
+          ...(projectsResume && experienceResume && skillsResume
+            ? {
+                experience_resume: experienceResume,
+                projects_resume: projectsResume,
+                skills_resume: skillsResume,
+              }
+            : {}),
+        },
+        { onConflict: "user_id" }
+      );
 
       if (dbError) {
-        setError(`Failed to save data: ${dbError.message}`);
+        throw new Error(`${dbError.message}`);
+        // setError(`Failed to save data: `);
       } else {
+        const res = await fetch("/api/update-embedding/gemini/user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: user.id,
+            desired_roles: formData.desired_roles,
+            preferred_locations: formData.preferred_locations,
+            min_salary: formData.min_salary || 0,
+            max_salary: formData.max_salary || 0,
+            experience_years: formData.experience_years || 0,
+            industry_preferences: formData.industry_preferences,
+            visa_sponsorship_required: formData.visa_sponsorship_required,
+            top_skills: formData.top_skills,
+            work_style_preferences: formData.work_style_preferences,
+            career_goals_short_term: formData.career_goals_short_term,
+            career_goals_long_term: formData.career_goals_long_term,
+            company_size_preference: formData.company_size_preference,
+            resume_path: formData.resume_path,
+            job_type: formData.job_type,
+            experience_resume: experienceResume ?? formData.experience_resume,
+            projects_resume: projectsResume ?? formData.projects_resume,
+            skills_resume: skillsResume ?? formData.skills_resume,
+          }),
+        });
+
+        if (!res.ok) {
+          // const errorData = await res.json();
+          throw new Error(
+            "Please try again or contact support(varun@devhub.co.in)."
+          );
+        }
+
         const { error: updateAppMetaError } = await updateUserAppMetadata(
           user.id,
           {
@@ -506,6 +543,8 @@ export const OnboardingForm: React.FC = () => {
         );
 
         if (updateAppMetaError) throw new Error(updateAppMetaError);
+
+        triggerRelevanceUpdate(user.id);
 
         toast.dismiss();
         toast.success("Your profile has been saved successfully!");

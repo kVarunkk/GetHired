@@ -77,7 +77,7 @@ export async function POST(
         Applicant Question: ${userQuery}`;
 
     const vertex = await getVertexClient();
-    const model = vertex("gemini-2.0-flash-lite-001");
+    const model = vertex("gemini-2.5-flash-lite");
 
     const { text } = await generateText({
       model: model,

@@ -167,11 +167,12 @@ export default function FindSuitableJobs({
         params.set("job_post", value);
       }
       setPage(() => 1);
-      toast.loading(
-        "This might take a moment. Our AI is finding the best " +
-          `${currentPage}` +
-          " out there for you."
-      );
+      // toast.loading(
+      //   "This might take a moment. Our AI is finding the best " +
+      //     `${currentPage}` +
+      //     " out there for you."
+      // );
+      // await revalidateCache("jobs-feed");
       startTransition(() => {
         startProgress();
         router.push(

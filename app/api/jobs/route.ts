@@ -3,7 +3,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { rerankJobsIfApplicable } from "@/lib/ai-rerank-jobs";
-import { IJob } from "@/lib/types";
+import { IJob, TAICredits } from "@/lib/types";
+import { getCutOffDate } from "@/lib/serverUtils";
 
 let JOBS_PER_PAGE = 20;
 
@@ -35,6 +36,9 @@ export async function GET(request: NextRequest) {
     searchParams.get("limit") || JOBS_PER_PAGE.toString()
   );
   const createdAfter = searchParams.get("createdAfter");
+  const createdAfterDate = createdAfter
+    ? getCutOffDate(Number(createdAfter))
+    : null;
   const applicantUserId = searchParams.get("userId");
   const jobId = searchParams.get("jobId");
 
@@ -72,20 +76,20 @@ export async function GET(request: NextRequest) {
         if (jobId) {
           const { data: jobData, error: jobDataError } = await supabase
             .from("all_jobs")
-            .select("embedding")
+            .select("embedding_new")
             .eq("id", jobId)
             .single();
           if (jobDataError || !jobData) {
             relevanceSearchType = null;
             return;
           }
-          jobEmbedding = jobData.embedding;
+          jobEmbedding = jobData.embedding_new;
         }
       }
 
       const { data: userData, error: userDataError } = await supabase
         .from("user_info")
-        .select("embedding, ai_credits")
+        .select("embedding_new, ai_credits")
         .eq("user_id", userId)
         .single();
 
@@ -94,7 +98,17 @@ export async function GET(request: NextRequest) {
         return;
       }
       aiCredits = userData.ai_credits;
-      userEmbedding = userData.embedding;
+      userEmbedding = userData.embedding_new;
+    }
+
+    if (
+      relevanceSearchType === "standard" &&
+      aiCredits < TAICredits.AI_SEARCH_OR_ASK_AI
+    ) {
+      return NextResponse.json(
+        { error: "Not enough AI Credits. Please Recharge" },
+        { status: 500 }
+      );
     }
 
     const { data, error, count, matchedJobIds } = await buildQuery({
@@ -114,7 +128,7 @@ export async function GET(request: NextRequest) {
       isAppliedJobsTabActive: isAppliedJobsTabActive,
       userEmbedding,
       applicationStatus,
-      createdAfter,
+      createdAfter: createdAfterDate,
       isInternalCall,
       jobEmbedding,
       relevanceSearchType,

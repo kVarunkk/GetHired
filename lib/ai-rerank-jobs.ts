@@ -37,6 +37,7 @@ export async function rerankJobsIfApplicable({
     !finalJobs ||
     finalJobs.length === 0 ||
     !relevanceSearchType ||
+    relevanceSearchType === "standard" ||
     (relevanceSearchType === "similar_jobs" && !jobId)
   ) {
     return { initialJobs: finalJobs, totalCount: finalCount };

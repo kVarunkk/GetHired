@@ -61,6 +61,10 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/applicants/favorites",
     "/api/updates/applicants/onboarding",
     "/api/updates/applicants/job-alert",
+    "/api/update-embedding/gemini/job",
+    // "/api/update-embedding/gemini/user",
+    // "/api/update-embedding/job-sync",
+    // "/api/update-embedding/user-sync",
     "/api/ai-search/jobs",
     "/api/dodo/webhook",
     "/privacy-policy",
@@ -105,7 +109,8 @@ export async function updateSession(request: NextRequest) {
     publicPaths.some((path) => pathname === path) ||
     isJobPage ||
     isBlogPage ||
-    isCompanyPage;
+    isCompanyPage ||
+    pathname.startsWith("/api/updates/applicants/relevant-jobs");
 
   const isProtectedPath = !isAuthPath && !isPublicPath;
   const isProtectedRelevanceSearch =

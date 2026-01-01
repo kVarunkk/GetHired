@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import { getVertexClient } from "@/lib/serverUtils";
 import "pdf-parse/worker";
@@ -45,12 +45,14 @@ async function generateStructuredProfile(
     `;
 
   const vertex = await getVertexClient();
-  const model = vertex("gemini-2.0-flash-lite-001");
+  const model = vertex("gemini-2.5-flash-lite");
 
-  const { object: parsedProfile } = await generateObject({
+  const { output: parsedProfile } = await generateText({
     model: model,
     prompt: prompt,
-    schema: ParsedProfileSchema,
+    output: Output.object({
+      schema: ParsedProfileSchema,
+    }),
   });
 
   return parsedProfile as ParsedProfile;
@@ -101,26 +103,29 @@ export async function POST(req: Request) {
 
     const parsedProfile = await generateStructuredProfile(rawText);
 
-    const { error: updateError } = await supabase
-      .from("user_info")
-      .update({
-        projects_resume: parsedProfile.projects,
-        experience_resume: parsedProfile.experience,
-        skills_resume: parsedProfile.skills,
-      })
-      .eq("user_id", userId);
+    // const { error: updateError } = await supabase
+    //   .from("user_info")
+    //   .update({
+    //     projects_resume: parsedProfile.projects,
+    //     experience_resume: parsedProfile.experience,
+    //     skills_resume: parsedProfile.skills,
+    //   })
+    //   .eq("user_id", userId);
 
-    if (updateError) {
-      console.error("DB update failed:", updateError);
-      return NextResponse.json(
-        { error: "Failed to save parsed profile to database." },
-        { status: 500 }
-      );
-    }
+    // if (updateError) {
+    //   console.error("DB update failed:", updateError);
+    //   return NextResponse.json(
+    //     { error: "Failed to save parsed profile to database." },
+    //     { status: 500 }
+    //   );
+    // }
 
     return NextResponse.json({
       success: true,
-      message: "Profile successfully extracted and updated.",
+      projects_resume: parsedProfile.projects,
+      experience_resume: parsedProfile.experience,
+      skills_resume: parsedProfile.skills,
+      // message: "Profile successfully extracted and updated.",
     });
   } catch (e) {
     console.error("Resume parsing process failed:", e);
