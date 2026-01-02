@@ -24,6 +24,7 @@ export async function triggerRelevanceUpdate(userId: string) {
     });
 
     if (!response.ok) {
+      console.log(response);
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
         errorData.message || `API request failed with status ${response.status}`

@@ -20,6 +20,7 @@ export async function GET(
 
   // --- 1. Security Check ---
   const cronSecret = headersList.get("X-Internal-Secret");
+  console.log(cronSecret, INTERNAL_API_SECRET);
   if (cronSecret !== INTERNAL_API_SECRET) {
     return NextResponse.json(
       { message: "Unauthorized access" },
@@ -27,9 +28,12 @@ export async function GET(
     );
   }
 
+  console.log("hola");
   const supabase = createServiceRoleClient();
 
   const { userIdParam } = await params;
+
+  console.log(userIdParam);
 
   try {
     if (userIdParam) {
@@ -242,6 +246,7 @@ async function processUserRelevance(userId: string, userEmail: string) {
 
     return { success: true, userEmail };
   } catch (error) {
+    console.log(error);
     const msg = error instanceof Error ? error.message : String(error);
     return { success: false, userEmail, error: msg };
   }
