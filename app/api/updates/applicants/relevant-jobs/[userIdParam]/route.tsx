@@ -181,6 +181,8 @@ export async function GET(
 async function processUserRelevance(userId: string, userEmail: string) {
   const supabase = createServiceRoleClient();
 
+  const headersList = await headers();
+
   try {
     const cutoffDays = "30";
     // 1. Fetch Fresh Relevant Jobs
@@ -190,7 +192,7 @@ async function processUserRelevance(userId: string, userEmail: string) {
       {
         headers: {
           "X-Internal-Secret": INTERNAL_API_SECRET || "",
-          // Cookie: headersList.get("Cookie") || "",
+          Cookie: headersList.get("Cookie") || "",
         },
       }
     );
