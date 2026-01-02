@@ -71,7 +71,7 @@ export async function GET(
       };
 
       // Trigger background task using after()
-      await singleUserTask();
+      after(singleUserTask);
 
       return NextResponse.json({
         success: true,

@@ -30,8 +30,6 @@ export async function triggerRelevanceUpdate(userId: string) {
       );
     }
 
-    console.log(response);
-
     const data = await response.json();
     return { success: true, message: data.message };
   } catch (error) {
