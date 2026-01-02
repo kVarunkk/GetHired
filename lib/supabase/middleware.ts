@@ -113,14 +113,14 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/api/updates/applicants/relevant-jobs");
 
   const isProtectedPath = !isAuthPath && !isPublicPath;
-  const isProtectedRelevanceSearch =
-    pathname === "/jobs" && searchParams.get("sortBy") === "relevance";
+  // const isProtectedRelevanceSearch =
+  //   pathname === "/jobs" && searchParams.get("sortBy") === "relevance";
 
   // --- 1. Handle Unauthenticated Users ---
   if (!user) {
     // If an unauthenticated user tries to access a protected page, redirect them to login.
 
-    if (isProtectedPath || isProtectedRelevanceSearch) {
+    if (isProtectedPath) {
       const url = request.nextUrl.clone();
 
       deleteSearchParams(url);

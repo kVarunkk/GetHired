@@ -191,7 +191,7 @@ async function processUserRelevance(userId: string, userEmail: string) {
       {
         headers: {
           "X-Internal-Secret": INTERNAL_API_SECRET || "",
-          Cookie: headersList.get("Cookie") || "",
+          // Cookie: headersList.get("Cookie") || "",
         },
       }
     );
