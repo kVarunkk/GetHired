@@ -12,7 +12,7 @@ export async function triggerRelevanceUpdate(userId: string) {
     return { success: false, error: "User ID is required" };
   }
 
-  const url = `${URL}/api/updates/applicants/relevant-jobs/${userId}`;
+  const url = `${URL}/api/updates/applicants/relevant-jobs?userId=${userId}`;
 
   const headersList = await headers();
 

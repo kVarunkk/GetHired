@@ -12,10 +12,7 @@ const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
 const URL = deploymentUrl();
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ userIdParam: string }> }
-) {
+export async function GET(request: NextRequest) {
   const headersList = await headers();
 
   // --- 1. Security Check ---
@@ -29,7 +26,9 @@ export async function GET(
 
   const supabase = createServiceRoleClient();
 
-  const { userIdParam } = await params;
+  //   const { userIdParam } = await params;
+  const searchParams = request.nextUrl.searchParams;
+  const userIdParam = searchParams.get("userId");
 
   try {
     if (userIdParam) {
