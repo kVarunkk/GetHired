@@ -53,6 +53,10 @@ export async function rerankJobsIfApplicable({
       if (relevanceSearchType === "job_digest" && INTERNAL_API_SECRET) {
         requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
         removedJobs = initialJobs.splice(40);
+        const cookie = headersList.get("Cookie");
+        if (cookie) {
+          requestHeaders["Cookie"] = cookie;
+        }
       } else {
         const cookie = headersList.get("Cookie");
         if (cookie) {
