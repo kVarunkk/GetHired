@@ -180,7 +180,6 @@ export async function GET(
  */
 async function processUserRelevance(userId: string, userEmail: string) {
   const supabase = createServiceRoleClient();
-  const headersList = await headers();
 
   try {
     const cutoffDays = "30";
