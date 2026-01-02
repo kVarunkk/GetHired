@@ -43,7 +43,10 @@ export async function POST(request: Request) {
     const supabase = await createClient();
     const { error: updateError } = await supabase
       .from("company_info")
-      .update({ embedding_new: embedding })
+      .update({
+        embedding_new: embedding,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", companyData.id);
 
     if (updateError) {

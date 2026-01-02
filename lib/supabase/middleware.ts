@@ -62,9 +62,7 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/applicants/onboarding",
     "/api/updates/applicants/job-alert",
     "/api/update-embedding/gemini/job",
-    // "/api/update-embedding/gemini/user",
-    // "/api/update-embedding/job-sync",
-    // "/api/update-embedding/user-sync",
+    "/api/updates/applicants/relevant-jobs",
     "/api/ai-search/jobs",
     "/api/dodo/webhook",
     "/privacy-policy",
@@ -109,18 +107,17 @@ export async function updateSession(request: NextRequest) {
     publicPaths.some((path) => pathname === path) ||
     isJobPage ||
     isBlogPage ||
-    isCompanyPage ||
-    pathname.startsWith("/api/updates/applicants/relevant-jobs");
+    isCompanyPage;
 
   const isProtectedPath = !isAuthPath && !isPublicPath;
-  // const isProtectedRelevanceSearch =
-  //   pathname === "/jobs" && searchParams.get("sortBy") === "relevance";
+  const isProtectedRelevanceSearch =
+    pathname === "/jobs" && searchParams.get("sortBy") === "relevance";
 
   // --- 1. Handle Unauthenticated Users ---
   if (!user) {
     // If an unauthenticated user tries to access a protected page, redirect them to login.
 
-    if (isProtectedPath) {
+    if (isProtectedPath || isProtectedRelevanceSearch) {
       const url = request.nextUrl.clone();
 
       deleteSearchParams(url);

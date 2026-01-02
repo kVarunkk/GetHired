@@ -1,8 +1,8 @@
-// import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { embed } from "ai";
 import { getVertexClient } from "@/lib/serverUtils";
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
+// import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export async function POST(request: Request) {
   try {
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       
       CAREER GOALS LONG TERM: ${userData.career_goals_long_term}
       
-      CAREER GOASL SHORT TERM: ${userData.career_goals_short_term}
+      CAREER GOALS SHORT TERM: ${userData.career_goals_short_term}
       
       DESIRED JOB TYPE: ${Array.isArray(userData.job_type) ? userData.job_type.join(", ") : userData.job_type || ""}
       
@@ -68,10 +68,13 @@ export async function POST(request: Request) {
     });
 
     // 4. Update Supabase
-    const supabase = createServiceRoleClient();
+    const supabase = await createClient();
     const { error: updateError } = await supabase
       .from("user_info")
-      .update({ embedding_new: embedding })
+      .update({
+        embedding_new: embedding,
+        updated_at: new Date().toISOString(),
+      })
       .eq("user_id", userData.user_id);
 
     if (updateError) {

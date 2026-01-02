@@ -59,7 +59,10 @@ export async function POST(request: Request) {
     const supabase = createServiceRoleClient();
     const { error: updateError } = await supabase
       .from(jobData.table ?? "all_jobs")
-      .update({ embedding_new: embedding })
+      .update({
+        embedding_new: embedding,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", jobData.id);
 
     if (updateError) {

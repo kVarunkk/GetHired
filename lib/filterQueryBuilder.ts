@@ -181,7 +181,7 @@ export const buildQuery = async ({
         throw searchError;
       }
 
-      console.log(searchData.length + "jobs found from vector search");
+      console.log(searchData.length + " jobs found from vector search");
       matchedJobIds = searchData.map((job: { id: string }) => job.id);
 
       query = query.in("id", matchedJobIds);
@@ -250,8 +250,6 @@ export const buildQuery = async ({
 
     const { data, error, count } = await query;
 
-    console.log(error);
-
     return {
       data,
       error: error?.details,
@@ -259,7 +257,6 @@ export const buildQuery = async ({
       matchedJobIds,
     };
   } catch (e: unknown) {
-    console.log(e);
     return {
       data: [],
       error:

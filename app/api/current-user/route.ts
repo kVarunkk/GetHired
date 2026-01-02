@@ -28,7 +28,8 @@ export async function GET() {
 
   if (userRole === "applicant") {
     tableName = "user_info";
-    selectString = "user_id, ai_credits, is_relevant_jobs_generated";
+    selectString =
+      "user_id, ai_credits, is_relevant_jobs_generated, is_relevant_job_update_failed";
   } else if (userRole === "company") {
     tableName = "company_info";
     selectString = "user_id, ai_credits";

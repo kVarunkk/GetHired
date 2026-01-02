@@ -29,10 +29,10 @@ import toast from "react-hot-toast";
 import useSWR, { mutate } from "swr";
 import { createClient } from "@/lib/supabase/client";
 import { revalidateCache } from "@/app/actions/revalidate";
+import { triggerRelevanceUpdate } from "@/app/actions/relevant-jobs-update";
 
 export default function JobsComponent({
   initialJobs,
-  // totalJobs,
   user,
   isCompanyUser,
   current_page,
@@ -43,7 +43,6 @@ export default function JobsComponent({
   totalCount,
 }: {
   initialJobs: IJob[] | IFormData[];
-  // totalJobs: number;
   user: User | null;
   isCompanyUser: boolean;
   current_page: "jobs" | "profiles" | "companies";
@@ -62,6 +61,7 @@ export default function JobsComponent({
     staleTime: 5 * 60 * 1000,
   });
   const [isGenerated, setIsGenerated] = useState(false);
+  const [isFailed, setIsFailed] = useState(false);
   const router = useRouter();
   const loaderRef = useRef<HTMLDivElement | null>(null);
   const searchParams = useSearchParams();
@@ -157,6 +157,7 @@ export default function JobsComponent({
       !isSimilarSearch
     ) {
       setIsGenerated(data.profile.is_relevant_jobs_generated);
+      setIsFailed(data.profile.is_relevant_job_update_failed);
     }
   }, [data, current_page, isSuitable, isSimilarSearch]);
 
@@ -166,7 +167,8 @@ export default function JobsComponent({
       isGenerated ||
       current_page !== "jobs" ||
       !isSuitable ||
-      isSimilarSearch
+      isSimilarSearch ||
+      isFailed
     )
       return;
 
@@ -187,7 +189,7 @@ export default function JobsComponent({
         clearInterval(interval);
         router.refresh(); // Refresh server components to fetch new jobs
       }
-    }, 10000); // Check every 10 seconds
+    }, 5000); // Check every 10 seconds
 
     return () => clearInterval(interval);
   }, [isGenerated, user, router, current_page, isSuitable, isSimilarSearch]);
@@ -205,36 +207,27 @@ export default function JobsComponent({
   }, [isGenerated, isSuitable, isSimilarSearch]);
 
   const navigateBack = async () => {
-    // const params = new URLSearchParams(searchParams.toString());
-    // const sortBy = params.get("sortBy");
-    // const jobPost = params.get("job_post");
-    // const jobId = params.get("jobId");
-
-    // if (sortBy === "relevance") {
-    //   params.delete("sortBy");
-    // }
-
-    // if (jobPost) {
-    //   params.delete("job_post");
-    // }
-
-    // if (jobId) {
-    //   params.delete("jobId");
-    // }
-
     startTransition(() => {
       startProgress();
-      router.back();
-      // router.push(
-      //   `/${
-      //     current_page === "profiles" && isCompanyUser
-      //       ? "company/profiles"
-      //       : current_page === "jobs"
-      //         ? "jobs"
-      //         : "companies"
-      //   }?${params.toString()}`
-      // );
+      if (isSimilarSearch) {
+        router.push("/jobs");
+      } else {
+        router.back();
+      }
     });
+  };
+
+  const generateAIFeed = async () => {
+    setIsFailed(false);
+    const supabase = createClient();
+    await supabase
+      .from("user_info")
+      .update({
+        is_relevant_job_update_failed: false,
+      })
+      .eq("user_id", data.profile.user_id);
+    mutate(PROFILE_API_KEY);
+    triggerRelevanceUpdate(data.profile.user_id);
   };
 
   return (
@@ -367,14 +360,32 @@ export default function JobsComponent({
       current_page === "jobs" &&
       isSuitable &&
       !isSimilarSearch ? (
-        <div className="flex flex-col items-center justify-center my-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <p className="mt-4 text-muted-foreground animate-pulse text-sm text-center sm:w-3/4">
-            AI is curating your personalized job feed. This is a one time
-            process and might take some time. You will be notified via email
-            once it is ready.
-          </p>
-        </div>
+        isFailed ? (
+          <div className="flex flex-col items-center justify-center my-20">
+            <p className=" text-muted-foreground text-sm text-center sm:w-3/4">
+              There was some error generating your AI Smart Search Feed. Please
+              click the button below to regenerate your feed. This is a one time
+              process and might take some time. You will be notified via email
+              once your feed is ready.
+            </p>
+            <Button
+              onClick={() => {
+                generateAIFeed();
+              }}
+            >
+              Generate AI Feed
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center my-20">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <p className="mt-4 text-muted-foreground animate-pulse text-sm text-center sm:w-3/4">
+              AI is curating your personalized job feed. This is a one time
+              process and might take some time. You will be notified via email
+              once your feed is ready.
+            </p>
+          </div>
+        )
       ) : jobs.length > 0 ? (
         current_page === "profiles" && isCompanyUser ? (
           (jobs as IFormData[]).map((job) => (

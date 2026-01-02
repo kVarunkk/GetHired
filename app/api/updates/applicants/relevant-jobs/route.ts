@@ -15,7 +15,6 @@ const URL = deploymentUrl();
 export async function GET(request: NextRequest) {
   const headersList = await headers();
 
-  // --- 1. Security Check ---
   const cronSecret = headersList.get("X-Internal-Secret");
   if (cronSecret !== INTERNAL_API_SECRET) {
     return NextResponse.json(
@@ -26,7 +25,6 @@ export async function GET(request: NextRequest) {
 
   const supabase = createServiceRoleClient();
 
-  //   const { userIdParam } = await params;
   const searchParams = request.nextUrl.searchParams;
   const userIdParam = searchParams.get("userId");
 
@@ -37,7 +35,7 @@ export async function GET(request: NextRequest) {
           `[RELEVANCE UPDATE] Processing single user: ${userIdParam}`
         );
 
-        let sendRelevantJobFeedUpdate = false;
+        let sendRelevantJobFeedUpdate = true;
 
         const { data } = await supabase
           .from("user_info")
@@ -45,7 +43,7 @@ export async function GET(request: NextRequest) {
           .eq("user_id", userIdParam);
 
         if (data && data.length > 0 && data[0].is_relevant_jobs_generated) {
-          sendRelevantJobFeedUpdate = true;
+          sendRelevantJobFeedUpdate = false;
         }
 
         const email = "(Onboarding)";
@@ -55,6 +53,12 @@ export async function GET(request: NextRequest) {
           await sendEmailForStatusUpdate(
             `[RELEVANCE UPDATE] Failed for ${userIdParam}: ${result.error}`
           );
+        } else {
+          await sendEmailForStatusUpdate(
+            `[RELEVANCE UPDATE] Success for ${userIdParam}`
+          );
+
+          //   send email update to user regarding ai job feed
           if (sendRelevantJobFeedUpdate && data && data.length > 0) {
             await sendEmailForRelevantJobsStatusUpdate(
               data[0].email,
@@ -62,14 +66,9 @@ export async function GET(request: NextRequest) {
               URL + "/jobs?sortBy=relevance"
             );
           }
-        } else {
-          await sendEmailForStatusUpdate(
-            `[RELEVANCE UPDATE] Success for ${userIdParam}`
-          );
         }
       };
 
-      // Trigger background task using after()
       after(singleUserTask);
 
       return NextResponse.json({
@@ -79,13 +78,12 @@ export async function GET(request: NextRequest) {
     }
 
     // --- 2. Fetch Active Users ---
-    // We select user_id from user_info. You might want to filter by 'last_sign_in_at'
-    // to avoid processing inactive users if your table grows large.
     const { data: users, error: userError } = await supabase
       .from("user_info")
       .select("user_id, email")
       .eq("filled", true)
       .gte("ai_credits", TAICredits.AI_SEARCH_OR_ASK_AI);
+
     if (userError || !users || users.length === 0) {
       await sendEmailForStatusUpdate(
         "RELEVANT JOBS CRON: No users found. Exiting."
@@ -104,7 +102,7 @@ export async function GET(request: NextRequest) {
 
       const results: { userEmail: string; success: boolean; error?: string }[] =
         [];
-      const BATCH_SIZE = 5; // Low concurrency to protect your /api/jobs endpoint
+      const BATCH_SIZE = 5;
 
       for (let i = 0; i < users.length; i += BATCH_SIZE) {
         const batch = users.slice(i, i + BATCH_SIZE);
@@ -130,7 +128,6 @@ export async function GET(request: NextRequest) {
           }
         });
 
-        // Optional small delay between batches to be gentle on DB resources
         await new Promise((r) => setTimeout(r, 200));
       }
 
@@ -154,7 +151,6 @@ export async function GET(request: NextRequest) {
       console.log(`[RELEVANCE CRON] Finished. Report sent.`);
     };
 
-    // Trigger background task
     after(updateRelevantJobsTask);
 
     return NextResponse.json({
@@ -174,24 +170,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * Worker function for a single user
- */
 async function processUserRelevance(userId: string, userEmail: string) {
   const supabase = createServiceRoleClient();
-
-  const headersList = await headers();
 
   try {
     const cutoffDays = "30";
     // 1. Fetch Fresh Relevant Jobs
-    // We use your existing API to get the "Smart Search" results
     const response = await fetch(
       `${URL}/api/jobs?sortBy=relevance&limit=100&createdAfter=${cutoffDays}&userId=${userId}`,
       {
         headers: {
           "X-Internal-Secret": INTERNAL_API_SECRET || "",
-          Cookie: headersList.get("Cookie") || "",
         },
       }
     );
@@ -208,17 +197,12 @@ async function processUserRelevance(userId: string, userEmail: string) {
     }
 
     // 2. Prepare Data for Insertion
-    // Map jobs to the schema: { user_id, jobs_id, rank }
     const rowsToInsert = jobs.map((job, index) => ({
       user_id: userId,
-      jobs_id: job.id, // Assuming 'jobs_id' is the column name in user_relevant_jobs
+      jobs_id: job.id,
       relevance_rank: index + 1,
-      // created_at & updated_at are handled by default/trigger or we can pass updated_at: new Date()
       updated_at: new Date().toISOString(),
     }));
-
-    // 3. Sync Database (Delete Old -> Insert New)
-    // We delete *only* if we successfully fetched new jobs to avoid wiping data on API error
 
     // Step A: Delete existing entries for this user
     const { error: deleteError } = await supabase
@@ -239,6 +223,7 @@ async function processUserRelevance(userId: string, userEmail: string) {
       .from("user_info")
       .update({
         is_relevant_jobs_generated: true,
+        updated_at: new Date().toISOString(),
       })
       .eq("user_id", userId);
 
