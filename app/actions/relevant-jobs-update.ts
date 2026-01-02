@@ -1,6 +1,7 @@
 "use server";
 
 import { deploymentUrl } from "@/lib/serverUtils";
+import { headers } from "next/headers";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
@@ -13,21 +14,23 @@ export async function triggerRelevanceUpdate(userId: string) {
 
   const url = `${URL}/api/updates/applicants/relevant-jobs/${userId}`;
 
+  const headersList = await headers();
+
   try {
     const response = await fetch(url, {
       method: "GET",
       headers: {
         "X-Internal-Secret": INTERNAL_API_SECRET || "",
         "Content-Type": "application/json",
+        Cookie: headersList.get("Cookie") || "",
       },
       cache: "no-store",
     });
 
     if (!response.ok) {
-      console.log(response);
-      const errorData = await response.json().catch(() => ({}));
+      const errorData = await response.json();
       throw new Error(
-        errorData.message || `API request failed with status ${response.status}`
+        errorData.error || `API request failed with status ${response.status}`
       );
     }
 
