@@ -180,6 +180,7 @@ export async function GET(
  */
 async function processUserRelevance(userId: string, userEmail: string) {
   const supabase = createServiceRoleClient();
+  const headersList = await headers();
 
   try {
     const cutoffDays = "30";
@@ -190,6 +191,7 @@ async function processUserRelevance(userId: string, userEmail: string) {
       {
         headers: {
           "X-Internal-Secret": INTERNAL_API_SECRET || "",
+          Cookie: headersList.get("Cookie") || "",
         },
       }
     );
