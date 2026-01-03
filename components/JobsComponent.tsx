@@ -196,15 +196,19 @@ export default function JobsComponent({
 
   useEffect(() => {
     (async () => {
-      if (isGenerated && isSuitable && !isSimilarSearch) {
+      if (isGenerated && isSuitable) {
         const supabase = createClient();
-        await supabase.from("user_info").update({
-          ai_credits: data.profile.ai_credits - TAICredits.AI_SEARCH_OR_ASK_AI,
-        });
+        await supabase
+          .from("user_info")
+          .update({
+            ai_credits:
+              data.profile.ai_credits - TAICredits.AI_SEARCH_OR_ASK_AI,
+          })
+          .eq("user_id", data.profile.user_id);
         await mutate(PROFILE_API_KEY);
       }
     })();
-  }, [isGenerated, isSuitable, isSimilarSearch]);
+  }, [isGenerated, isSuitable]);
 
   const navigateBack = async () => {
     startTransition(() => {
@@ -443,13 +447,22 @@ export default function JobsComponent({
         </p>
       )}
 
-      {jobs.length < totalCount && jobs.length !== 0 && (
-        <div
-          ref={loaderRef}
-          className="flex justify-center items-center p-4 pt-20"
-        >
-          <AppLoader size="md" />
-        </div>
+      {jobs.length < totalCount && jobs.length !== 0 ? (
+        !isGenerated &&
+        current_page === "jobs" &&
+        isSuitable &&
+        !isSimilarSearch ? (
+          ""
+        ) : (
+          <div
+            ref={loaderRef}
+            className="flex justify-center items-center p-4 pt-20"
+          >
+            <AppLoader size="md" />
+          </div>
+        )
+      ) : (
+        ""
       )}
 
       <ScrollToTopButton />
