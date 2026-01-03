@@ -171,7 +171,7 @@ export const buildQuery = async ({
             relevanceSearchType === "similar_jobs"
               ? jobEmbedding
               : userEmbedding,
-          match_threshold: 0.3,
+          match_threshold: 0.4,
           match_count: relevanceSearchType === "similar_jobs" ? 10 : 100,
           min_created_at: createdAfter,
         }
