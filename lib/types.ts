@@ -273,7 +273,7 @@ export enum TPaymentStatus {
 }
 
 export enum TAICredits {
-  AI_SEARCH_OR_ASK_AI = 2,
+  AI_SEARCH_OR_ASK_AI = 3,
   AI_SUMMARY = 1,
 }
 

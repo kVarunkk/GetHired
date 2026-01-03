@@ -8,6 +8,7 @@ import { Metadata } from "next";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import FootComponent from "@/components/FootComponent";
+import { deploymentUrl } from "@/lib/serverUtils";
 
 const reader = createReader(process.cwd(), keystaticConfig);
 type tParams = Promise<{ slug: string }>;
@@ -24,14 +25,8 @@ export async function generateMetadata({
     return {};
   }
 
-  const productionUrl = "https://gethired.devhub.co.in";
+  const baseUrl = deploymentUrl();
 
-  const baseUrl =
-    process.env.NODE_ENV === "production"
-      ? productionUrl
-      : process.env.NEXT_PUBLIC_VERCEL_URL
-        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-        : "http://localhost:3000";
   const metadataBase = new URL(baseUrl);
 
   const postImagePath = post.image;

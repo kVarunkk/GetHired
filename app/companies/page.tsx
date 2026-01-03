@@ -5,14 +5,6 @@ import { ICompanyInfo, IFormData, TAICredits } from "@/lib/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import CompaniesList from "./companiesList";
-// import { commonIndustries } from "@/lib/utils";
-
-// const uniqueIndustries = () => {
-//   const industries = commonIndustries.map((each) => ({
-//     industry: each,
-//   }));
-//   return industries;
-// };
 
 export default async function JobsPage({
   searchParams,
@@ -67,8 +59,7 @@ export default async function JobsPage({
   const url = `${protocol}://${host}`;
 
   let initialCompanies: IFormData[] = [];
-  // let uniqueLocations: { location: string }[] = [];
-  // let uniqueCompanies: { company_name: string }[] = [];
+
   let totalCount: number = 0;
   const params = new URLSearchParams(
     searchParameters as Record<string, string>
@@ -88,21 +79,6 @@ export default async function JobsPage({
     });
     const result = await res.json();
     if (!res.ok) throw new Error(result.message);
-
-    // const resFilters = await fetch(`${url}/api/companies/filters`, {
-    //   cache: "force-cache",
-    //   next: { revalidate: 3600 },
-    //   headers: {
-    //     Cookie: headersList.get("Cookie") || "",
-    //   },
-    // });
-
-    // const filterData = await resFilters.json();
-
-    // if (!resFilters.ok) throw new Error(filterData.message);
-
-    // uniqueLocations = filterData.locations;
-    // uniqueCompanies = filterData.companies;
 
     // --- AI Re-ranking Logic ---
 
@@ -175,16 +151,12 @@ export default async function JobsPage({
   } catch {
     // console.error("Failed to fetch jobs:", error);
   }
-  // const listOfUniqueIndustries = uniqueIndustries();
 
   return (
     <div>
       <div className="flex items-start px-4 lg:px-20 xl:px-40 2xl:px-80 py-5 h-full gap-5">
         <div className="hidden md:block w-1/3 px-2 sticky top-0 z-10 max-h-[calc(100vh-1.5rem)] overflow-y-auto">
           <FilterComponent
-            // uniqueLocations={uniqueLocations}
-            // uniqueCompanies={uniqueCompanies}
-            // uniqueIndustries={listOfUniqueIndustries}
             currentPage="companies"
             onboardingComplete={onboardingComplete}
           />
@@ -201,9 +173,6 @@ export default async function JobsPage({
                 <CompaniesList
                   isCompanyUser={isCompanyUser}
                   user={user}
-                  // uniqueLocations={uniqueLocations}
-                  // uniqueCompanies={uniqueCompanies}
-                  // uniqueIndustries={listOfUniqueIndustries}
                   companyId={companyId}
                   onboardingComplete={onboardingComplete}
                   initialCompanies={initialCompanies}
@@ -216,9 +185,6 @@ export default async function JobsPage({
                 <CompaniesList
                   isCompanyUser={isCompanyUser}
                   user={user}
-                  // uniqueLocations={uniqueLocations}
-                  // uniqueCompanies={uniqueCompanies}
-                  // uniqueIndustries={listOfUniqueIndustries}
                   companyId={companyId}
                   onboardingComplete={onboardingComplete}
                   initialCompanies={initialCompanies}

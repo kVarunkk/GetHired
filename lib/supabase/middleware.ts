@@ -61,6 +61,8 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/applicants/favorites",
     "/api/updates/applicants/onboarding",
     "/api/updates/applicants/job-alert",
+    "/api/update-embedding/gemini/job",
+    "/api/updates/applicants/relevant-jobs",
     "/api/ai-search/jobs",
     "/api/dodo/webhook",
     "/privacy-policy",

@@ -78,7 +78,7 @@ Terms: [Experience required, Compensation, Contract Type, Location status].
 
 Analyze the following job posting: "${job.job_name}". Text to summarize: ${jobDescription}`;
     const vertex = await getVertexClient();
-    const model = vertex("gemini-2.0-flash-lite-001");
+    const model = vertex("gemini-2.5-flash-lite");
 
     const { text: rawSummary } = await generateText({
       model: model,

@@ -6,6 +6,8 @@ import { createClient } from "./supabase/server";
 import { createServiceRoleClient } from "./supabase/service-role";
 import { Resend } from "resend";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
+import { render } from "@react-email/components";
+import RelevantJobsSetupUpdateEmail from "@/emails/RelevantJobsSetupUpdateEmail";
 
 export async function getVertexClient() {
   const credentialsJson = process.env.GOOGLE_CREDENTIALS_JSON;
@@ -213,7 +215,7 @@ export const sendEmailForStatusUpdate = async (emailText: string) => {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    resend.emails.send({
+    await resend.emails.send({
       from: "GetHired <varun@devhub.co.in>",
       to: ["varunkumawatleap2@gmail.com"],
       subject: `Important: Status Update`,
@@ -225,4 +227,50 @@ export const sendEmailForStatusUpdate = async (emailText: string) => {
       "Some error occured while sending status update email to Varun Kumawat"
     );
   }
+};
+
+export const sendEmailForRelevantJobsStatusUpdate = async (
+  email: string,
+  name: string,
+  url: string
+) => {
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    const emailHtml = await render(
+      <RelevantJobsSetupUpdateEmail userName={name} inviteUrl={url} />
+    );
+
+    resend.emails.send({
+      from: "GetHired <varun@devhub.co.in>",
+      to: [email],
+      subject: `Important: Your AI Smart Search Job Feed is ready!`,
+      html: emailHtml,
+      // text: email,
+    });
+  } catch {
+    console.error(
+      "Some error occured while sending status update email to Varun Kumawat"
+    );
+  }
+};
+
+export const deploymentUrl = () => {
+  let url;
+  switch (process.env.VERCEL_ENV) {
+    case "production":
+      url = "https://gethired.devhub.co.in";
+      break;
+    case "preview":
+      url =
+        "https://job-application-agent-frontend-git-dev-kvarunkks-projects.vercel.app";
+      break;
+    case "development":
+      url = "http://localhost:3000";
+      break;
+    default:
+      url = "http://localhost:3000";
+      break;
+  }
+  return url;
 };

@@ -247,8 +247,7 @@ export default async function PaymentIdPage({
         </div>
       </div>
     );
-  } catch (error) {
-    console.log(error);
+  } catch {
     return <Error />;
   }
 }

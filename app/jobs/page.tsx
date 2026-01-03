@@ -5,7 +5,6 @@ import { IJob, JobListingSearchParams } from "@/lib/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import { Metadata } from "next";
-import { getCutOffDate } from "@/lib/serverUtils";
 import JobsComponent from "@/components/JobsComponent";
 
 export async function generateMetadata({
@@ -175,14 +174,15 @@ export default async function JobsPage({
   try {
     params.set("tab", activeTab);
     params.set("limit", "20");
-    if (params.get("sortBy") === "relevance") {
-      const cutoffDate = getCutOffDate(30);
-      params.set("limit", "100");
-      params.set("createdAfter", cutoffDate);
+    const isRelevantSorting = params.get("sortBy") === "relevance";
+    const isSimilarSearch = isRelevantSorting && params.get("jobId");
+
+    if (isSimilarSearch) {
+      params.set("createdAfter", "30");
     }
 
     const jobFetchPromise = fetch(`${url}/api/jobs?${params.toString()}`, {
-      cache: "force-cache",
+      cache: isRelevantSorting ? "no-cache" : "force-cache",
       next: { revalidate: 3600, tags: ["jobs-feed"] },
       headers: { Cookie: headersList.get("Cookie") || "" },
     });

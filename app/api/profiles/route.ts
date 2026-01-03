@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   }
   const { data: companyData, error: companyError } = await supabase
     .from("company_info")
-    .select("id, job_postings(id, embedding)")
+    .select("id, job_postings(id, embedding_new)")
     .eq("user_id", user.id)
     .single();
   if (companyError || !companyData) {
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
   const endIndex = startIndex + PROFILES_PER_PAGE - 1;
   const jobEmbedding =
     companyData.job_postings?.find((job) => job.id === job_post_id)
-      ?.embedding || null;
+      ?.embedding_new || null;
 
   try {
     const { data, error, count, matchedProfileIds } = await buildProfileQuery({

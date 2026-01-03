@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { IJob, TAICredits } from "@/lib/types";
@@ -79,23 +79,25 @@ export async function POST(request: NextRequest) {
 
     // Step 3: Call the AI with the augmented prompt
     const vertex = await getVertexClient();
-    const model = vertex("gemini-2.0-flash-lite-001");
+    const model = vertex("gemini-2.5-flash-lite");
 
-    const { object } = await generateObject({
+    const { output: object } = await generateText({
       model: model,
       prompt: rerankPrompt,
-      schema: z.object({
-        reranked_job_ids: z
-          .array(z.string())
-          .describe(
-            "The list of re-ranked job IDs from most to least similar to the target job."
-          ),
+      output: Output.object({
+        schema: z.object({
+          reranked_job_ids: z
+            .array(z.string())
+            .describe(
+              "The list of re-ranked job IDs from most to least similar to the target job."
+            ),
 
-        filtered_out_job_ids: z
-          .array(z.string())
-          .describe(
-            "The list of job IDs that were filtered out as dissimilar."
-          ),
+          filtered_out_job_ids: z
+            .array(z.string())
+            .describe(
+              "The list of job IDs that were filtered out as dissimilar."
+            ),
+        }),
       }),
     });
 

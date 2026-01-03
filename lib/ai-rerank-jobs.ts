@@ -27,6 +27,7 @@ export async function rerankJobsIfApplicable({
 }): Promise<RerankResult> {
   let finalJobs = initialJobs;
   let finalCount = initialCount;
+  let removedJobs: IJob[] = [];
 
   const headersList = await headers();
   const host = headersList.get("host");
@@ -37,6 +38,7 @@ export async function rerankJobsIfApplicable({
     !finalJobs ||
     finalJobs.length === 0 ||
     !relevanceSearchType ||
+    relevanceSearchType === "standard" ||
     (relevanceSearchType === "similar_jobs" && !jobId)
   ) {
     return { initialJobs: finalJobs, totalCount: finalCount };
@@ -50,6 +52,11 @@ export async function rerankJobsIfApplicable({
       const requestHeaders: Record<string, string> = {};
       if (relevanceSearchType === "job_digest" && INTERNAL_API_SECRET) {
         requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
+        removedJobs = initialJobs.splice(40);
+        const cookie = headersList.get("Cookie");
+        if (cookie) {
+          requestHeaders["Cookie"] = cookie;
+        }
       } else {
         const cookie = headersList.get("Cookie");
         if (cookie) {
@@ -72,7 +79,7 @@ export async function rerankJobsIfApplicable({
             jobs: initialJobs.map((job: IJob) => ({
               id: job.id,
               job_name: job.job_name,
-              description: job.description,
+              description: job.description?.slice(0, 400),
               visa_requirement: job.visa_requirement,
               salary_range: job.salary_range,
               locations: job.locations,
@@ -104,7 +111,8 @@ export async function rerankJobsIfApplicable({
             (job: IJob | undefined): job is IJob =>
               // Ensure the job exists in our map and hasn't been explicitly filtered out
               job !== undefined && !filteredOutIdsSet.has(job.id)
-          );
+          )
+          .concat(removedJobs);
 
         finalJobs = reorderedJobs;
         finalCount = reorderedJobs.length;

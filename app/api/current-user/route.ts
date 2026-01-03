@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-// Set cache properties: Data is user-specific and changes infrequently,
-// so we mark it as dynamic to ensure the latest session data is used.
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // 1. Authenticate Request
   const supabase = await createClient();
   const {
     data: { user },
@@ -19,7 +16,6 @@ export async function GET() {
     );
   }
 
-  // 2. Determine User Role from fast JWT metadata
   const userRole = user.app_metadata?.type as
     | "applicant"
     | "company"
@@ -28,14 +24,16 @@ export async function GET() {
 
   let profileData = null;
   let tableName: string | null = null;
+  let selectString;
 
-  // 3. Select the correct table based on role
   if (userRole === "applicant") {
     tableName = "user_info";
+    selectString =
+      "user_id, ai_credits, is_relevant_jobs_generated, is_relevant_job_update_failed";
   } else if (userRole === "company") {
     tableName = "company_info";
+    selectString = "user_id, ai_credits";
   } else {
-    // User is authenticated but role is undefined (e.g., fresh sign-up)
     return NextResponse.json(
       { profile: null, role: null, message: "Profile role not set." },
       { status: 200 }
@@ -43,19 +41,13 @@ export async function GET() {
   }
 
   try {
-    // 4. Fetch the full profile from the designated table
     const { data, error } = await supabase
       .from(tableName)
-      .select("user_id, ai_credits") // Fetch all fields
+      .select(selectString)
       .eq("user_id", userId)
       .single();
 
     if (error || !data) {
-      //   console.warn(
-      //     `Error fetching profile from ${tableName} for user ${userId}:`,
-      //     error
-      //   );
-      // Return empty profile gracefully if data is missing (e.g., incomplete onboarding)
       return NextResponse.json(
         {
           profile: null,
@@ -68,14 +60,12 @@ export async function GET() {
 
     profileData = data;
   } catch {
-    // console.error("Critical error fetching profile:", e);
     return NextResponse.json(
       { error: "Server error fetching profile data." },
       { status: 500 }
     );
   }
 
-  // 5. Return the consolidated profile data
   return NextResponse.json({
     profile: profileData,
     role: userRole,

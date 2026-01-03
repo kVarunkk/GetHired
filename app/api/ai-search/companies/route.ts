@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { ICompanyInfo, TAICredits } from "@/lib/types";
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Step 3: Call the AI with the augmented prompt
     const vertex = await getVertexClient();
-    const model = vertex("gemini-2.0-flash-lite-001");
+    const model = vertex("gemini-2.5-flash-lite");
 
     const rerankPrompt = `
       You are an expert search re-ranker. Your task is to evaluate a set of companies
@@ -103,20 +103,22 @@ export async function POST(request: NextRequest) {
       5.  Output a JSON array of the re-ranked company IDs. Do not include any other text.
     `;
 
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: model,
       prompt: rerankPrompt,
-      schema: z.object({
-        reranked_company_ids: z
-          .array(z.string())
-          .describe(
-            "The list of re-ranked company IDs from most to least relevant."
-          ),
-        filtered_out_company_ids: z
-          .array(z.string())
-          .describe(
-            "The list of company IDs that were filtered out as irrelevant."
-          ),
+      output: Output.object({
+        schema: z.object({
+          reranked_company_ids: z
+            .array(z.string())
+            .describe(
+              "The list of re-ranked company IDs from most to least relevant."
+            ),
+          filtered_out_company_ids: z
+            .array(z.string())
+            .describe(
+              "The list of company IDs that were filtered out as irrelevant."
+            ),
+        }),
       }),
     });
 
@@ -128,8 +130,8 @@ export async function POST(request: NextRequest) {
       .eq("user_id", userId);
 
     return NextResponse.json({
-      rerankedcompanies: object.reranked_company_ids,
-      filteredOutcompanies: object.filtered_out_company_ids,
+      rerankedcompanies: output.reranked_company_ids,
+      filteredOutcompanies: output.filtered_out_company_ids,
     });
   } catch {
     // console.error(e);

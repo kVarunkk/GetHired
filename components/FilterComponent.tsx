@@ -19,13 +19,7 @@ import { TApplicationStatus } from "@/lib/types";
 import { useProgress } from "react-transition-progress";
 import FilterActions from "./FilterActions";
 import useSWR from "swr";
-import {
-  commonIndustries,
-  fetcher,
-  getCutOffDateClient,
-  getDaysFromDate,
-  ONE_DAY_MS,
-} from "@/lib/utils";
+import { commonIndustries, fetcher, ONE_DAY_MS } from "@/lib/utils";
 
 type FilterConfig = {
   name: keyof FiltersState;
@@ -451,12 +445,12 @@ export default function FilterComponent({
             initialState["createdAfter"]?.length
           ) {
             const paramValue = initialState[filter.name]?.[0];
-            const daysAgo = String(getDaysFromDate(paramValue ?? ""));
+            // const daysAgo = String(getDaysFromDate(paramValue ?? ""));
             const filterDisplayValue = filter.options?.find(
-              ({ label }) => label === daysAgo.trim()
+              ({ label }) => label === (paramValue ?? "").trim()
             )?.value;
 
-            if (daysAgo && paramValue && filterDisplayValue) {
+            if (paramValue && filterDisplayValue) {
               (initialState[filter.name] as string[]) = [filterDisplayValue];
             }
           }
@@ -519,13 +513,13 @@ export default function FilterComponent({
         if (Array.isArray(value) && value.length > 0) {
           if (filterConfig.name === "createdAfter") {
             const selectedValue = value[0].trim();
-            value[0] = getCutOffDateClient(
-              Number(
-                filterConfig.options?.find(
-                  ({ value }) => value === selectedValue
-                )?.label
-              )
-            );
+            // value[0] = getCutOffDateClient(
+            //   Number(
+            value[0] =
+              filterConfig.options?.find(({ value }) => value === selectedValue)
+                ?.label ?? "";
+            //   )
+            // );
           }
           params.set(key, value.join("|"));
         }

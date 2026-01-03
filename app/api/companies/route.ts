@@ -31,13 +31,13 @@ export async function GET(request: NextRequest) {
     if (sortBy === "relevance" && user) {
       const { data: userData, error } = await supabase
         .from("user_info")
-        .select("embedding")
+        .select("embedding_new")
         .eq("user_id", user.id)
         .single();
 
       if (error || !userData) {
       } else {
-        userEmbedding = userData.embedding;
+        userEmbedding = userData.embedding_new;
       }
     }
 

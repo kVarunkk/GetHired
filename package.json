@@ -9,8 +9,8 @@
     "dev:emails": "email dev"
   },
   "dependencies": {
-    "@ai-sdk/google-vertex": "^3.0.3",
-    "@ai-sdk/react": "^2.0.5",
+    "@ai-sdk/google-vertex": "^4.0.2",
+    "@ai-sdk/react": "^3.0.5",
     "@hookform/resolvers": "^5.2.1",
     "@keystatic/core": "^0.5.48",
     "@keystatic/next": "^5.0.4",
@@ -35,7 +35,7 @@
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@tanstack/react-table": "^8.21.3",
-    "ai": "^5.0.5",
+    "ai": "^6.0.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

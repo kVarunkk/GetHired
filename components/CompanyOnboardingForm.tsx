@@ -192,7 +192,7 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
       }
 
       // 3. Update embedding
-      const res = await fetch("/api/update-embedding/company", {
+      const res = await fetch("/api/update-embedding/gemini/company", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

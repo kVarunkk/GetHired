@@ -34,7 +34,11 @@ export default function MultiLocationSelector({
     data: countriesData,
     error: countriesError,
     isLoading,
-  } = useSWR(`/api/locations`, fetcher);
+  } = useSWR(`/api/locations`, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const countries: ICountry[] = useMemo(
     () => (countriesData && !countriesError ? countriesData.data : []),
