@@ -157,6 +157,9 @@ function JobDetailBadges({
     case "greenhouse":
       platform_url = "https://my.greenhouse.io";
       break;
+    case "glassdoor":
+      platform_url = "https://www.glassdoor.co.in";
+      break;
     default:
       platform_url = "";
       break;

@@ -1,18 +1,11 @@
 import * as React from "react";
 import { BaseEmailLayout } from "./BaseEmailLayout";
-import {
-  Heading,
-  Text,
-  Section,
-  Button,
-  Link,
-  Img,
-} from "@react-email/components";
+import { Heading, Text, Section, Button, Img } from "@react-email/components";
 
 interface PromotionEmailProps {
   userName: string;
   emailTitle: string;
-  mainContent: React.ReactNode;
+  mainContent: string;
   ctaLink: string;
   ctaLabel: string;
   gifPreviewImageUrl?: string; // The URL of the GIF file
@@ -31,7 +24,7 @@ export const PromotionEmail = ({
   return (
     <BaseEmailLayout previewText={previewText}>
       <Heading className="text-2xl font-bold text-gray-800 my-6 text-color">
-        Hi {userName},
+        Hi {userName}!
       </Heading>
 
       <Heading className="text-xl font-semibold text-gray-800 mb-6 text-color">
@@ -41,11 +34,10 @@ export const PromotionEmail = ({
       {/* --- GIF/Video Preview Section (The Clickable GIF) --- */}
       {gifPreviewImageUrl && (
         <Section className="my-8 text-center" style={{ lineHeight: 0 }}>
-          {/* Link wrapped around the GIF */}
           <Img
             src={gifPreviewImageUrl}
             alt="Animated Preview: Click to Watch Video"
-            width="100%" // Max width of the container
+            width="100%"
             style={{
               maxWidth: "600px",
               height: "auto",
@@ -59,9 +51,13 @@ export const PromotionEmail = ({
       {/* --- END GIF/Video Preview --- */}
 
       {/* Main Content Body */}
-      <Text className="text-base text-gray-700 mb-6 text-color">
+      {/* <Text className="text-base text-gray-700 mb-6 text-color">
         {mainContent}
-      </Text>
+      </Text> */}
+
+      {/* {mainContent} */}
+
+      <div dangerouslySetInnerHTML={{ __html: mainContent }} />
 
       {/* CTA Button */}
       <Section className="text-center my-8">
@@ -74,7 +70,7 @@ export const PromotionEmail = ({
       </Section>
 
       {/* Footer Text */}
-      <Text className="text-sm text-gray-600 text-color mt-8">
+      {/* <Text className="text-sm text-gray-600 text-color mt-8">
         If you no longer wish to receive these updates,{" "}
         <Link
           href="https://gethired.devhub.co.in/auth/login"
@@ -90,7 +86,7 @@ export const PromotionEmail = ({
           adjust
         </Link>{" "}
         your preferences.
-      </Text>
+      </Text> */}
 
       <Text className="text-base text-gray-700 text-color mt-10">
         Best regards,
