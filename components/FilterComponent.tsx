@@ -223,6 +223,7 @@ export default function FilterComponent({
 
             options: [
               { value: "greenhouse", label: "Greenhouse" },
+              { value: "glassdoor", label: "Glassdoor" },
               { value: "weworkremotely", label: "We Work Remotely" },
               { value: "remoteok", label: "Remote Ok" },
               { value: "uplers", label: "Uplers" },
