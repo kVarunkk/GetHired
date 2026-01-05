@@ -189,7 +189,7 @@ export default function JobsComponent({
         clearInterval(interval);
         router.refresh(); // Refresh server components to fetch new jobs
       }
-    }, 5000); // Check every 10 seconds
+    }, 2000); // Check every 2 seconds
 
     return () => clearInterval(interval);
   }, [isGenerated, user, router, current_page, isSuitable, isSimilarSearch]);
