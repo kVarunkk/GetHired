@@ -56,9 +56,9 @@ const platforms = [
   },
   {
     id: uuidv4(),
-    name: "wellfound",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/wellfound-1.png",
-    href: "https://wellfound.com",
+    name: "glassdoor",
+    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/glassdoor.jpeg",
+    href: "https://www.glassdoor.com",
   },
 ];
 
@@ -139,7 +139,7 @@ export function HowWeHelp() {
           name: isHirePage ? "AI Job Composer" : "Multiplatform Support",
           description: isHirePage
             ? "Create high-converting roles instantly. Our templates mandate key data to ensure clarity and attract only the most qualified, focused talent."
-            : "Get access to a pool of over 2000 quality listings from 6 leading Job Boards.",
+            : "Get access to a pool of over 2500 quality listings from 7 leading Job Boards.",
           href: isHirePage ? "/company" : "/",
           cta: "Learn more",
           background: isHirePage ? (
@@ -181,6 +181,7 @@ export function HowWeHelp() {
                         alt={each.name || `Platform logo for ${each.id}`}
                         width={400}
                         height={400}
+                        title={each.name}
                       />
                     </Link>
                   ))}
@@ -214,6 +215,7 @@ export function HowWeHelp() {
                         alt={each.name || `Platform logo for ${each.id}`}
                         width={400}
                         height={400}
+                        title={each.name}
                       />
                     </Link>
                   ))}
