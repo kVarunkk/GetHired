@@ -21,15 +21,15 @@ export const metadata: Metadata = {
     follow: true,
   },
   keywords: [
-    "job search",
-    "ai job application",
-    "personalized job recommendations",
-    "automated job applications",
-    "job matching",
-    "career advancement",
-    "job hunting",
+    "remote jobs in india",
+    "remote developer jobs",
     "tech jobs",
     "remote jobs",
+    "developer jobs",
+    "software engineer jobs",
+    "job search",
+    "ai job search",
+    "job hunting",
   ],
 };
 

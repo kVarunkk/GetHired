@@ -25,6 +25,8 @@ export async function generateMetadata({
     "employment",
     "remote",
     "tech jobs",
+    "remote jobs in india",
+    "software engineer jobs",
     "hiring",
     "job search",
   ];

@@ -112,7 +112,7 @@ export function HowWeHelp() {
             : "Effortless Application Management",
           description: isHirePage
             ? "Manage all your applications in one place"
-            : "Manage all your applications in one place. Soon, you'll be able to auto-apply to multiple jobs across various platforms with just a few clicks, saving you hours",
+            : "Manage all your applications in one place. Soon, you'll be able to auto-apply to multiple jobs with just a few clicks, saving you hours",
           href: isHirePage ? "/company" : "/jobs",
           cta: isHirePage ? "Learn more" : "Start Applying",
           background: (
