@@ -81,6 +81,7 @@ export default function AIFeatures() {
       <div className="grid sm:grid-cols-2 gap-6">
         {aiFeatures.map((each) => (
           <FeatureCard
+            key={each.title}
             url={each.video}
             title={each.title}
             desc={each.description}
