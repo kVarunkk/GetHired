@@ -162,7 +162,6 @@ const FeatureCard = ({
         <video
           ref={videoRef}
           className="w-full h-full object-cover rounded-t-xl"
-          autoPlay
           loop
           muted
           playsInline
