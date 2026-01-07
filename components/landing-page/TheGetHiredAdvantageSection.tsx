@@ -95,13 +95,12 @@ export default function TheGetHiredAdvantageSection() {
             }
           />
           <MetricCard
-            // Third Card Modification
-            value={isHirePage ? "Zero Vacancy Time" : "Exclusive Access"}
-            title={isHirePage ? "Direct Talent Access" : "Connect Directly"}
+            value={isHirePage ? "Zero Vacancy Time" : "2500+ Jobs"}
+            title={isHirePage ? "Direct Talent Access" : "Market-Wide Reach"}
             description={
               isHirePage
                 ? "Gain a competitive advantage by connecting instantly and directly with candidates who are ready to interview."
-                : "Gain a competitive edge with unique job postings straight from hiring companies."
+                : "Browse over 2,500 active roles from the most innovative startups and tech companies, updated daily for your growth."
             }
           />
         </div>

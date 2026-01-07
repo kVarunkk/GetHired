@@ -1,4 +1,5 @@
 import FootComponent from "@/components/FootComponent";
+import AIFeatures from "@/components/landing-page/AIFeatures";
 import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
 import Hero from "@/components/landing-page/Hero";
@@ -53,6 +54,7 @@ export default async function Home() {
         <div className="flex-1 flex flex-col gap-32  w-full">
           <Hero />
           <HowWeHelp />
+          <AIFeatures />
           <TheGetHiredAdvantageSection />
           <FAQSection />
           <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
