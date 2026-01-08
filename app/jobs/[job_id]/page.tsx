@@ -23,6 +23,7 @@ import Link from "next/link";
 import AskAIDialog from "@/components/AskAIDialog";
 import { Button } from "@/components/ui/button";
 import InfoTooltip from "@/components/InfoTooltip";
+import NotFound from "../NotFound";
 
 export async function generateMetadata({
   params,
@@ -97,13 +98,14 @@ export default async function JobPage({
     const { data, error } = await supabase
       .from("all_jobs")
       .select(selectString)
-      .eq("id", job_id)
-      .single();
+      .eq("id", job_id);
 
-    const job = data as IJob;
+    const job = data?.[0] as IJob;
 
-    if (error || !job) {
-      return <Error />;
+    if (error) throw error;
+
+    if (!job) {
+      return <NotFound />;
     }
 
     return (
@@ -319,7 +321,6 @@ export default async function JobPage({
       </>
     );
   } catch {
-    // console.error("Error in JobPostPage:", err);
     return <Error />;
   }
 }
