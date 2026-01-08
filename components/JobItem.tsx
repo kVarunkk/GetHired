@@ -160,6 +160,9 @@ function JobDetailBadges({
     case "glassdoor":
       platform_url = "https://www.glassdoor.co.in";
       break;
+    case "jobleads":
+      platform_url = "https://www.jobleads.com";
+      break;
     default:
       platform_url = "";
       break;
