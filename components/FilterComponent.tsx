@@ -222,8 +222,9 @@ export default function FilterComponent({
             placeholder: "Select the platform",
 
             options: [
-              { value: "greenhouse", label: "Greenhouse" },
+              { value: "jobleads", label: "JobLeads" },
               { value: "glassdoor", label: "Glassdoor" },
+              { value: "greenhouse", label: "Greenhouse" },
               { value: "weworkremotely", label: "We Work Remotely" },
               { value: "remoteok", label: "Remote Ok" },
               { value: "uplers", label: "Uplers" },
