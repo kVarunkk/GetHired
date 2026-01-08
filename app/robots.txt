@@ -1,5 +1,5 @@
 User-Agent: *
 Allow: /
-Disallow: /private/
+Disallow: /api/
 
 Sitemap: https://gethired.devhub.co.in/sitemap.xml
