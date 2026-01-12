@@ -46,25 +46,31 @@ export async function GET(request: NextRequest) {
         //   sendRelevantJobFeedUpdate = false;
         // }
 
-        const email = "(Onboarding)";
-        const result = await processUserRelevance(userIdParam, email);
-
-        if (!result.success) {
-          await sendEmailForStatusUpdate(
-            `[RELEVANCE UPDATE] Failed for ${userIdParam}: ${result.error}`
-          );
-        } else {
-          await sendEmailForStatusUpdate(
-            `[RELEVANCE UPDATE] Success for ${userIdParam}`
+        if (data && data.length > 0) {
+          const email = "(Onboarding)";
+          const result = await processUserRelevance(
+            userIdParam,
+            email,
+            data[0].full_name
           );
 
-          //   send email update to user regarding ai job feed
-          if (data && data.length > 0) {
-            await sendEmailForRelevantJobsStatusUpdate(
-              data[0].email,
-              data[0].full_name,
-              URL + "/jobs?sortBy=relevance"
+          if (!result.success) {
+            await sendEmailForStatusUpdate(
+              `[RELEVANCE UPDATE] Failed for ${userIdParam}: ${result.error}`
             );
+          } else {
+            await sendEmailForStatusUpdate(
+              `[RELEVANCE UPDATE] Success for ${userIdParam}`
+            );
+
+            //   send email update to user regarding ai job feed
+            if (data && data.length > 0) {
+              await sendEmailForRelevantJobsStatusUpdate(
+                data[0].email,
+                data[0].full_name,
+                URL + "/jobs?sortBy=relevance"
+              );
+            }
           }
         }
       };
@@ -80,7 +86,7 @@ export async function GET(request: NextRequest) {
     // --- 2. Fetch Active Users ---
     const { data: users, error: userError } = await supabase
       .from("user_info")
-      .select("user_id, email")
+      .select("user_id, email, full_name")
       .eq("filled", true)
       .gte("ai_credits", TAICredits.AI_SEARCH_OR_ASK_AI);
 
@@ -100,25 +106,34 @@ export async function GET(request: NextRequest) {
         `[RELEVANCE CRON] Starting update for ${users.length} users.`
       );
 
-      const results: { userEmail: string; success: boolean; error?: string }[] =
-        [];
+      const results: {
+        userEmail: string;
+        fullName: string;
+        success: boolean;
+        error?: string;
+      }[] = [];
       const BATCH_SIZE = 5;
 
       for (let i = 0; i < users.length; i += BATCH_SIZE) {
         const batch = users.slice(i, i + BATCH_SIZE);
 
         const promises = batch.map((user) =>
-          processUserRelevance(user.user_id, user.email || "Unknown")
+          processUserRelevance(
+            user.user_id,
+            user.email || "Unknown",
+            user.full_name || user.email.split("@")[0]
+          )
         );
 
         const batchResults = await Promise.allSettled(promises);
 
-        batchResults.forEach((res) => {
+        batchResults.forEach((res, index) => {
           if (res.status === "fulfilled") {
             results.push(res.value);
           } else {
             results.push({
-              userEmail: "Unknown",
+              userEmail: batch[index].email || "Unknown",
+              fullName: batch[index].full_name || "Unknown",
               success: false,
               error:
                 res.reason instanceof Error
@@ -134,6 +149,15 @@ export async function GET(request: NextRequest) {
       // --- 4. Final Report ---
       const successful = results.filter((r) => r.success);
       const failed = results.filter((r) => !r.success);
+
+      successful.forEach(async (res) => {
+        console.log(`[RELEVANCE CRON] Success: ${res.userEmail}`);
+        await sendEmailForRelevantJobsStatusUpdate(
+          res.userEmail,
+          res.fullName,
+          URL + "/jobs?sortBy=relevance"
+        );
+      });
 
       const report = [
         `RELEVANT JOBS UPDATE REPORT (${new Date().toLocaleString()})`,
@@ -170,7 +194,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function processUserRelevance(userId: string, userEmail: string) {
+async function processUserRelevance(
+  userId: string,
+  userEmail: string,
+  fullName: string
+) {
   const supabase = createServiceRoleClient();
 
   try {
@@ -193,7 +221,12 @@ async function processUserRelevance(userId: string, userEmail: string) {
     const jobs: IJob[] = json.data || [];
 
     if (jobs.length === 0) {
-      return { success: true, userEmail, message: "No relevant jobs found" };
+      return {
+        success: true,
+        userEmail,
+        fullName,
+        message: "No relevant jobs found",
+      };
     }
 
     // 2. Prepare Data for Insertion
@@ -227,9 +260,9 @@ async function processUserRelevance(userId: string, userEmail: string) {
       })
       .eq("user_id", userId);
 
-    return { success: true, userEmail };
+    return { success: true, userEmail, fullName };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    return { success: false, userEmail, error: msg };
+    return { success: false, userEmail, fullName, error: msg };
   }
 }
