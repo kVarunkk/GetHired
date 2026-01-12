@@ -12,7 +12,7 @@ export const RelevantJobsSetupUpdateEmail = ({
   return (
     <BaseEmailLayout previewText={""}>
       <Heading className="text-2xl font-bold text-gray-800 my-6 ">
-        Hi, {userName}. Your AI Smart Search Job Feed is ready!
+        Hi, {userName}. Your latest AI Smart Search Job Feed is ready!
       </Heading>
 
       <Text className="text-base text-gray-700 mb-6 ">
