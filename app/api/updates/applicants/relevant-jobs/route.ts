@@ -35,16 +35,16 @@ export async function GET(request: NextRequest) {
           `[RELEVANCE UPDATE] Processing single user: ${userIdParam}`
         );
 
-        let sendRelevantJobFeedUpdate = true;
+        // let sendRelevantJobFeedUpdate = true;
 
         const { data } = await supabase
           .from("user_info")
           .select("is_relevant_jobs_generated, email, full_name")
           .eq("user_id", userIdParam);
 
-        if (data && data.length > 0 && data[0].is_relevant_jobs_generated) {
-          sendRelevantJobFeedUpdate = false;
-        }
+        // if (data && data.length > 0 && data[0].is_relevant_jobs_generated) {
+        //   sendRelevantJobFeedUpdate = false;
+        // }
 
         const email = "(Onboarding)";
         const result = await processUserRelevance(userIdParam, email);
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
           );
 
           //   send email update to user regarding ai job feed
-          if (sendRelevantJobFeedUpdate && data && data.length > 0) {
+          if (data && data.length > 0) {
             await sendEmailForRelevantJobsStatusUpdate(
               data[0].email,
               data[0].full_name,
