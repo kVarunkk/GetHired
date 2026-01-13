@@ -163,6 +163,9 @@ function JobDetailBadges({
     case "jobleads":
       platform_url = "https://www.jobleads.com";
       break;
+    case "workingnomads":
+      platform_url = "https://www.workingnomads.com";
+      break;
     default:
       platform_url = "";
       break;
