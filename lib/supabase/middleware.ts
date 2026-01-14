@@ -102,12 +102,17 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/companies/") &&
     pathname.length > "/companies/".length;
 
+  const isRemoteJobsLocationPage =
+    pathname.startsWith("/remote-jobs/") &&
+    pathname.length > "/remote-jobs/".length;
+
   const isAuthPath = authPaths.some((path) => pathname.startsWith(`${path}`));
   const isPublicPath =
     publicPaths.some((path) => pathname === path) ||
     isJobPage ||
     isBlogPage ||
-    isCompanyPage;
+    isCompanyPage ||
+    isRemoteJobsLocationPage;
 
   const isProtectedPath = !isAuthPath && !isPublicPath;
   const isProtectedRelevanceSearch =
