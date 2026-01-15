@@ -67,7 +67,7 @@ export async function updateSession(request: NextRequest) {
     "/api/dodo/webhook",
     "/privacy-policy",
     "/terms-of-service",
-    // "/sitemap.xml",
+    "/sitemap.xml",
     "/blog",
     "/companies",
     "/robots.txt",
