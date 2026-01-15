@@ -2,7 +2,7 @@ import { createVertex } from "@ai-sdk/google-vertex";
 import { User } from "@supabase/supabase-js";
 import fs from "fs/promises";
 import path from "path";
-import { createClient } from "./supabase/server";
+// import { createClient } from "./supabase/server";
 import { createServiceRoleClient } from "./supabase/service-role";
 import { Resend } from "resend";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
@@ -90,7 +90,8 @@ export function simpleTimeAgo(
 
 export async function handleUserUpsert(user: User) {
   try {
-    const supabase = await createClient();
+    // const supabase = await createClient();
+    const supabase = createServiceRoleClient();
 
     const { data: userData, error: selectError } = await supabase
       .from("user_info")

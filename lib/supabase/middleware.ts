@@ -67,7 +67,7 @@ export async function updateSession(request: NextRequest) {
     "/api/dodo/webhook",
     "/privacy-policy",
     "/terms-of-service",
-    "/sitemap.xml",
+    // "/sitemap.xml",
     "/blog",
     "/companies",
     "/robots.txt",
@@ -106,13 +106,16 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/remote-jobs/") &&
     pathname.length > "/remote-jobs/".length;
 
+  const isSitemapPage = pathname.startsWith("/sitemap/");
+
   const isAuthPath = authPaths.some((path) => pathname.startsWith(`${path}`));
   const isPublicPath =
     publicPaths.some((path) => pathname === path) ||
     isJobPage ||
     isBlogPage ||
     isCompanyPage ||
-    isRemoteJobsLocationPage;
+    isRemoteJobsLocationPage ||
+    isSitemapPage;
 
   const isProtectedPath = !isAuthPath && !isPublicPath;
   const isProtectedRelevanceSearch =

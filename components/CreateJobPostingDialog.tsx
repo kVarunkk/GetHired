@@ -32,11 +32,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Pencil, PlusCircle, Trash } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import MultiLocationSelector from "./MultiLocationSelector";
 import { ICreateJobPostingFormData } from "@/lib/types";
+import { upsertJobPostingAction } from "@/app/actions/upsert-job-posting";
 
 const jobFormSchema = z
   .object({
@@ -154,167 +154,53 @@ export default function CreateJobPostingDialog({
     }
   }, [existingValues, form]);
 
-  const buildSalaryRange = (
-    currency?: string,
-    salary_min?: number,
-    salary_max?: number
-  ) => {
-    if (currency && salary_min && salary_max) {
-      return `${currency}${salary_min} - ${currency}${salary_max}`;
-    } else return null;
-  };
-
-  const buildEquityRange = (equity_min?: number, equity_max?: number) => {
-    if (equity_max && equity_min) {
-      return `${equity_min}% - ${equity_max}%`;
-    } else if (!equity_max && equity_min) {
-      return `${equity_min}% +`;
-    } else return null;
-  };
-
-  const buildExperience = (exp_min?: number, exp_max?: number) => {
-    if (exp_max && exp_min) {
-      return `${exp_min} - ${exp_max} Years`;
-    } else if (!exp_max && exp_min) {
-      return `${exp_min}+ Years`;
-    } else return null;
-  };
-
+  /**
+   * CLIENT HANDLER: onSubmit
+   * This is the function used in your form's onSubmit prop.
+   * It coordinates the Server Action call and handles UI feedback (toasts, loading, resets).
+   */
   const onSubmit = async (values: ICreateJobPostingFormData) => {
     setLoading(true);
-    const supabase = createClient();
-    const salary_range = buildSalaryRange(
-      values.salary_currency,
-      values.min_salary,
-      values.max_salary
-    );
-    const equity_range = buildEquityRange(values.min_equity, values.max_equity);
-    const experience = buildExperience(
-      values.min_experience,
-      values.max_experience
-    );
+
     try {
-      const payload: ICreateJobPostingFormData & {
-        salary_range: string | null;
-        equity_range: string | null;
-        experience: string | null;
-        company_id: string;
-      } = {
-        company_id: company_id,
-        ...values,
-        salary_range,
-        equity_range,
-        experience,
-        questions: values.questions?.filter((q) => q.trim() !== "") || [],
-      };
-      if (existingValues && existingValues.id) {
-        payload.id = existingValues.id;
-      }
-      const { data: new_job_posting, error } = await supabase
-        .from("job_postings")
-        .upsert(payload, {
-          onConflict: "id",
-        })
-        .select("*, company_info(website, name)")
-        .single();
+      // Call the Server Action with the necessary IDs and form values
+      const result = await upsertJobPostingAction({
+        values,
+        companyId: company_id,
+        existingPostingId: existingValues?.id,
+        existingJobId: existingValues?.job_id,
+      });
 
-      if (error || !new_job_posting) throw error;
-
-      if (existingValues && existingValues.job_id) {
-        const { error } = await supabase
-          .from("all_jobs")
-          .update({
-            job_name: payload.title.trim(),
-            job_type: payload.job_type,
-            salary_range: payload.salary_range,
-            salary_min: payload.min_salary,
-            salary_max: payload.max_salary,
-            experience: payload.experience,
-            experience_min: payload.min_experience,
-            experience_max: payload.max_experience,
-            equity_range: payload.equity_range,
-            equity_min: payload.min_equity,
-            equity_max: payload.max_equity,
-            visa_requirement: payload.visa_sponsorship,
-            description: payload.description.trim(),
-            locations: payload.location,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", existingValues.job_id);
-
-        if (error)
-          throw new Error(
-            "Some error occured while updating the all jobs table"
-          );
-      } else {
-        const { error: updateError } = await supabase
-          .from("job_postings")
-          .update({ status: "active" })
-          .eq("id", new_job_posting.id);
-
-        if (updateError) throw updateError;
-
-        if (!new_job_posting.job_id) {
-          // If there's no job_id, this is the first time it's being made active.
-          // Insert it into the 'all_jobs' table.
-          const { data: insertedData, error: insertError } = await supabase
-            .from("all_jobs")
-            .insert({
-              locations: new_job_posting.location,
-              job_type: new_job_posting.job_type,
-              job_name: new_job_posting.title,
-              description: new_job_posting.description,
-              visa_requirement: new_job_posting.visa_sponsorship,
-              salary_range: new_job_posting.salary_range,
-              salary_min: new_job_posting.min_salary,
-              salary_max: new_job_posting.max_salary,
-              experience_min: new_job_posting.min_experience,
-              experience_max: new_job_posting.max_experience,
-              equity_range: new_job_posting.equity_range,
-              equity_min: new_job_posting.min_equity,
-              equity_max: new_job_posting.max_equity,
-              experience: new_job_posting.experience,
-              company_url: new_job_posting.company_info?.website,
-              company_name: new_job_posting.company_info?.name,
-              platform: "gethired",
-            })
-            .select("id")
-            .single();
-
-          if (insertError) throw insertError;
-
-          // Update the job_postings table with the new job_id
-          await supabase
-            .from("job_postings")
-            .update({ job_id: insertedData.id })
-            .eq("id", new_job_posting.id);
-        }
+      if (!result.success) {
+        // If the server returns success: false, we treat it as an error
+        throw new Error(result.error || "Failed to save job posting");
       }
 
+      // Handle UI Success notification
       toast.success(
-        // <div className="flex flex-col">
-        //   <span className="font-semibold">
-        <>
-          {`Job Posting ${
-            existingValues ? "updated" : "created"
-          } Successfully!`}
-        </>,
-        // </span>
-        // </div>,
-        {
-          duration: 8000,
-        }
+        `Job Posting ${result.isUpdate ? "updated" : "created"} Successfully!`,
+        { duration: 8000 }
       );
-      form.reset();
-      setIsOpen(false);
 
-      router.refresh();
+      // Clean up form state
+      if (typeof form !== "undefined" && form.reset) {
+        form.reset();
+      }
+
+      if (typeof setIsOpen !== "undefined") {
+        setIsOpen(false);
+      }
+
+      // Refresh the current route to ensure Server Components reflect the changes
+      if (typeof router !== "undefined" && router.refresh) {
+        router.refresh();
+      }
     } catch {
-      // console.error("API call failed:", error);
+      // Handle specific error messages or generic fallback
       toast.error(
-        `Some error occured while ${
+        `An error occurred while ${
           existingValues ? "updating" : "creating"
-        } Job Posting, Please try again`
+        } the job posting. Please try again.`
       );
     } finally {
       setLoading(false);
