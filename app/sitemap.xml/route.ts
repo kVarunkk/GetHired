@@ -58,7 +58,7 @@ export async function GET() {
     // 3. Return with correct headers
     return new NextResponse(xml, {
       headers: {
-        "Content-Type": "text/xml",
+        "Content-Type": "application/xml",
         "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=59",
       },
     });
@@ -66,7 +66,7 @@ export async function GET() {
     console.error("[SITEMAP_INDEX_CRITICAL_ERROR]:", err);
     return new NextResponse(
       `<?xml version="1.0" encoding="UTF-8"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><sitemap><loc>${SITE_URL}/sitemap/0.xml</loc></sitemap></sitemapindex>`,
-      { headers: { "Content-Type": "text/xml" } }
+      { headers: { "Content-Type": "application/xml" } }
     );
   }
 }
