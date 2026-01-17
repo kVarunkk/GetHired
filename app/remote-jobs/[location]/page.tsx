@@ -6,39 +6,50 @@ import Footer from "@/components/landing-page/Footer";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
 import NavbarParent, { INavItem } from "@/components/NavbarParent";
-import { createClient } from "@/lib/supabase/server";
+// import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Metadata } from "next";
-import { v4 as uuidv4 } from "uuid";
 
-let aliasMapCache: Map<string, string> | null = null;
+export async function generateStaticParams() {
+  const supabase = createServiceRoleClient();
+  const slugs = new Set<string>();
+
+  try {
+    const { data: geoData } = await supabase
+      .from("countries_and_cities")
+      .select("country");
+
+    if (geoData) {
+      geoData.forEach((item) => {
+        if (item.country) slugs.add(item.country.toLowerCase().trim());
+      });
+    }
+
+    return Array.from(slugs)
+      .filter(Boolean)
+      .map((slug) => ({
+        location: slug,
+      }));
+  } catch (error) {
+    console.error("Static generation fetch failed:", error);
+    return [{ location: "remote" }, { location: "india" }];
+  }
+}
 
 async function getAliasMap() {
-  if (aliasMapCache) return aliasMapCache;
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("location_aliases")
-    .select("alias, canonical_name");
-
-  console.log("location aliases fetched.");
-  if (error) {
-    console.error("Error fetching location aliases:", error);
-    return new Map<string, string>();
-  }
-
   const map = new Map<string, string>();
-  data?.forEach((item) => {
-    map.set(item.alias.toLowerCase(), item.canonical_name);
-  });
 
-  aliasMapCache = map;
+  // Basic combinations for critical pSEO locations
+  map.set("bengaluru", "bangalore");
+  map.set("gurugram", "gurgaon");
+  map.set("sf", "san francisco");
+  map.set("nyc", "new york");
   return map;
 }
 
 async function getResolvedLocation(slug: string) {
   const decoded = decodeURIComponent(slug).toLowerCase();
   const aliasMap = await getAliasMap();
-
   return aliasMap.get(decoded) || decoded;
 }
 
@@ -73,25 +84,25 @@ export async function generateMetadata({
 
 const navItems: INavItem[] = [
   {
-    id: uuidv4(),
+    id: "nav-home",
     label: "Home",
     href: "/",
     type: "equals",
   },
   {
-    id: uuidv4(),
+    id: "nav-jobs",
     label: "Jobs",
     href: "/jobs",
     type: "startswith",
   },
   {
-    id: uuidv4(),
+    id: "nav-companies",
     label: "Companies",
     href: "/companies",
     type: "startswith",
   },
   {
-    id: uuidv4(),
+    id: "nav-dashboard",
     label: "Dashboard",
     href: "/dashboard",
     type: "startswith",
