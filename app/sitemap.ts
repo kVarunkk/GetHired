@@ -17,9 +17,9 @@ export async function generateSitemaps() {
   const { count: jobCount } = await supabase
     .from("all_jobs")
     .select("id", { count: "exact", head: true });
-  const { count: aliasCount } = await supabase
-    .from("location_aliases")
-    .select("id", { count: "exact", head: true });
+  // const { count: aliasCount } = await supabase
+  //   .from("location_aliases")
+  //   .select("id", { count: "exact", head: true });
   const { data: geoData } = await supabase
     .from("countries_and_cities")
     .select("cities");
@@ -31,7 +31,7 @@ export async function generateSitemaps() {
 
   const totalUrls =
     (jobCount || 0) +
-    (aliasCount || 0) +
+    // (aliasCount || 0) +
     cityCount +
     countryCount +
     staticCount;
