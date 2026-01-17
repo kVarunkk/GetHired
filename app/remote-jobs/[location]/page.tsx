@@ -23,7 +23,7 @@ export async function generateStaticParams() {
       .select("country, cities");
 
     if (geoData) {
-      geoData.forEach((item: any) => {
+      geoData.forEach((item) => {
         if (item.country) slugs.add(item.country.toLowerCase().trim());
 
         if (Array.isArray(item.cities)) {
