@@ -19,23 +19,23 @@ export async function GET() {
       .from("all_jobs")
       .select("id", { count: "exact", head: true });
 
-    const { count: aliasCount } = await supabase
-      .from("location_aliases")
-      .select("id", { count: "exact", head: true });
+    // const { count: aliasCount } = await supabase
+    //   .from("location_aliases")
+    //   .select("id", { count: "exact", head: true });
 
     const { data: geoData } = await supabase
       .from("countries_and_cities")
-      .select("country, cities");
+      .select("country");
 
-    const cityCount =
-      geoData?.reduce((acc, curr) => acc + (curr.cities?.length || 0), 0) || 0;
+    // const cityCount =
+    //   geoData?.reduce((acc, curr) => acc + (curr.cities?.length || 0), 0) || 0;
     const countryCount = geoData?.length || 0;
     const staticCount = 7;
 
     const totalUrls =
       (jobCount || 0) +
-      (aliasCount || 0) +
-      cityCount +
+      //   (aliasCount || 0) +
+      //   cityCount +
       countryCount +
       staticCount;
     const numberOfSitemaps = Math.ceil(totalUrls / LIMIT_PER_SITEMAP);
