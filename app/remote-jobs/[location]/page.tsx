@@ -9,9 +9,6 @@ import NavbarParent, { INavItem } from "@/components/NavbarParent";
 // import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Metadata } from "next";
-import { v4 as uuidv4 } from "uuid";
-
-export const dynamicParams = false;
 
 export async function generateStaticParams() {
   const supabase = createServiceRoleClient();
@@ -20,17 +17,11 @@ export async function generateStaticParams() {
   try {
     const { data: geoData } = await supabase
       .from("countries_and_cities")
-      .select("country, cities");
+      .select("country");
 
     if (geoData) {
       geoData.forEach((item) => {
         if (item.country) slugs.add(item.country.toLowerCase().trim());
-
-        if (Array.isArray(item.cities)) {
-          item.cities.forEach((city: string) => {
-            if (city) slugs.add(city.toLowerCase().trim());
-          });
-        }
       });
     }
 
@@ -93,25 +84,25 @@ export async function generateMetadata({
 
 const navItems: INavItem[] = [
   {
-    id: uuidv4(),
+    id: "nav-home",
     label: "Home",
     href: "/",
     type: "equals",
   },
   {
-    id: uuidv4(),
+    id: "nav-jobs",
     label: "Jobs",
     href: "/jobs",
     type: "startswith",
   },
   {
-    id: uuidv4(),
+    id: "nav-companies",
     label: "Companies",
     href: "/companies",
     type: "startswith",
   },
   {
-    id: uuidv4(),
+    id: "nav-dashboard",
     label: "Dashboard",
     href: "/dashboard",
     type: "startswith",

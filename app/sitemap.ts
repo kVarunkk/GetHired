@@ -22,17 +22,17 @@ export async function generateSitemaps() {
   //   .select("id", { count: "exact", head: true });
   const { data: geoData } = await supabase
     .from("countries_and_cities")
-    .select("cities");
+    .select("country");
 
-  const cityCount =
-    geoData?.reduce((acc, curr) => acc + (curr.cities?.length || 0), 0) || 0;
+  // const cityCount =
+  //   geoData?.reduce((acc, curr) => acc + (curr.cities?.length || 0), 0) || 0;
   const countryCount = geoData?.length || 0;
   const staticCount = 50;
 
   const totalUrls =
     (jobCount || 0) +
     // (aliasCount || 0) +
-    cityCount +
+    // cityCount +
     countryCount +
     staticCount;
   const numberOfSitemaps = Math.ceil(totalUrls / LIMIT_PER_SITEMAP);
@@ -103,18 +103,18 @@ export default async function sitemap({
 
   // --- STAGE 2: Location Slugs (Indices 4 to ~72,000+) ---
   // We fetch all slugs to maintain a stable order, then slice the ones needed for this 'id'
-  const { data: aliases } = await supabase
-    .from("location_aliases")
-    .select("alias");
+  // const { data: aliases } = await supabase
+  //   .from("location_aliases")
+  //   .select("alias");
   const { data: geoData } = await supabase
     .from("countries_and_cities")
-    .select("country, cities");
+    .select("country");
 
   const locationSlugsSet = new Set<string>();
-  aliases?.forEach((a) => locationSlugsSet.add(a.alias.toLowerCase()));
+  // aliases?.forEach((a) => locationSlugsSet.add(a.alias.toLowerCase()));
   geoData?.forEach((g) => {
     if (g.country) locationSlugsSet.add(g.country.toLowerCase());
-    g.cities?.forEach((c: string) => locationSlugsSet.add(c.toLowerCase()));
+    // g.cities?.forEach((c: string) => locationSlugsSet.add(c.toLowerCase()));
   });
 
   const allLocationUrls: MetadataRoute.Sitemap = Array.from(
