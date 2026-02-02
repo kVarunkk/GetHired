@@ -170,7 +170,7 @@ export function ClientTabs({
             )}
           </div>
         ) : page === "jobs" ? (
-          <div>
+          <div className="pt-6">
             <Button
               title="AI Search"
               variant="link"
@@ -185,7 +185,7 @@ export function ClientTabs({
             </Button>
           </div>
         ) : (
-          ""
+          <div className="pt-6" />
         )}
 
         {children}

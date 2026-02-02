@@ -10,7 +10,7 @@ export default function BackButton() {
       onClick={() => {
         router.back();
       }}
-      className="text-muted-foreground hover:text-primary transition-colors mt-2"
+      className="text-muted-foreground hover:text-primary transition-colors "
     >
       <ArrowLeft className="h-4 w-4" />
     </button>

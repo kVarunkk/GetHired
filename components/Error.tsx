@@ -8,7 +8,7 @@ export default function NotFound() {
   const router = useRouter();
 
   return (
-    <div className="h-full w-full flex items-center justify-center flex-col gap-10 p-4">
+    <div className="h-full w-full flex items-center justify-center flex-col gap-10 p-4 mt-10">
       <div className="flex flex-col gap-3 text-center">
         <h1 className="font-bold text-5xl">Something went wrong</h1>
         <p className="text-muted-foreground">

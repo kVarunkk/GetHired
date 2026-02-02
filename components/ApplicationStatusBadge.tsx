@@ -3,23 +3,29 @@
 import { Badge } from "./ui/badge";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { TApplicationStatus, TPaymentStatus } from "@/lib/types";
+import {
+  TApplicationStatus,
+  TPaymentStatus,
+  TResumeReviewStatus,
+} from "@/lib/types";
 
 export default function ApplicationStatusBadge({
   status,
 }: {
-  status: TApplicationStatus | TPaymentStatus;
+  status: TApplicationStatus | TPaymentStatus | TResumeReviewStatus;
 }) {
   const badgeColorClass = useMemo(() => {
     switch (status) {
       case "submitted":
       case "pending":
+      case "draft":
         return "bg-slate-500 hover:bg-slate-500/80 text-white";
       case "reviewed":
       case "cancelled":
         return "bg-amber-500 hover:bg-amber-500/80 text-white";
       case "selected":
       case "complete":
+      case "completed":
         return "bg-green-500 hover:bg-green-500/80 text-white";
       case "stand_by":
         return "bg-blue-500 hover:bg-blue-500/80 text-white";

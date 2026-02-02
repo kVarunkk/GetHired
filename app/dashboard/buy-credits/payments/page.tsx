@@ -31,7 +31,7 @@ export default async function PaymentsPage() {
     }
 
     return (
-      <div className="flex flex-col w-full gap-8 ">
+      <div className="flex flex-col w-full gap-8 p-4">
         <div>
           <BackButton />
         </div>

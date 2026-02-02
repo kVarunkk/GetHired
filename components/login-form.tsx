@@ -111,7 +111,7 @@ export function LoginForm({
       <Card className="sm:w-[400px] w-full">
         <CardHeader>
           <CardTitle className="text-2xl">
-            {isCompany && "Company"} Login
+            {isCompany && "Recruiter"} Login
           </CardTitle>
           <CardDescription>
             Enter your {isCompany && "company"} email below to login to your

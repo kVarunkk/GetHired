@@ -33,6 +33,7 @@ export default async function ApplicantPage({
       throw "User not authenticated.";
     }
 
+    // resume_url here is actually the resume path
     // Fetch the application details, including nested joins
     const { data: applicationData, error } = await supabase
       .from("applications")
@@ -88,7 +89,7 @@ export default async function ApplicantPage({
       // console.error("Exception generating signed URL:", err);
     }
     return (
-      <div className="flex flex-col w-full gap-8">
+      <div className="flex flex-col w-full gap-8 p-4">
         <div>
           <BackButton />
         </div>

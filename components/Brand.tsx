@@ -51,7 +51,7 @@ export default function Brand({ type }: BrandProps) {
     >
       <img
         src={src}
-        alt={`${type} brand logo`}
+        alt={`GetHired logo`}
         className="w-full h-full object-contain"
         loading="eager"
       />

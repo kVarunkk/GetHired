@@ -80,7 +80,7 @@ export default memo(function MultiKeywordSelectInput({
     return availableItems.filter((item) =>
       item.toLowerCase().includes(input.toLowerCase())
     );
-  }, [availableItems]);
+  }, [availableItems, input]);
 
   const handleFocus = useCallback(() => setIsFocused(true), []);
   const handleBlur = useCallback(() => setIsFocused(false), []);

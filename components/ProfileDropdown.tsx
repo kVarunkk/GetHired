@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, LogOut, User as UserIcon } from "lucide-react";
+import { LogOut, User as UserIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import {
@@ -30,9 +30,11 @@ import SocialsComponent from "./SocialsComponent";
 export default function ProfileDropdown({
   user,
   open,
+  isMenuOpen,
 }: {
   user: User | null;
   open?: boolean;
+  isMenuOpen: boolean;
 }) {
   const { theme, setTheme } = useTheme();
   const [isCompanyUser, setIsCompanyUser] = useState(false);
@@ -56,12 +58,18 @@ export default function ProfileDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button>
+        <button
+          className={cn(
+            "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
+            isMenuOpen ? "justify-start" : "justify-center"
+          )}
+        >
           <AvatarComponent
             user={user}
             open={open}
             isCompanyUser={isCompanyUser}
           />
+          {isMenuOpen ? <span className="text-sm">Profile</span> : ""}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
@@ -76,7 +84,7 @@ export default function ProfileDropdown({
             {isCompanyUser ? "Company" : "Applicant"}
           </Badge>
         </DropdownMenuLabel>
-        <DropdownMenuItem>
+        {/* <DropdownMenuItem>
           <Link
             className="w-full flex items-center cursor-default gap-4"
             href={isCompanyUser ? "/company" : "/dashboard"}
@@ -84,7 +92,7 @@ export default function ProfileDropdown({
             <LayoutDashboard className="text-muted-foreground h-4 w-4" />
             Dashboard
           </Link>
-        </DropdownMenuItem>
+        </DropdownMenuItem> */}
 
         <DropdownMenuItem>
           <Link
@@ -157,7 +165,7 @@ function AvatarComponent({
   return (
     <Avatar
       className={cn(
-        "bg-muted",
+        "bg-muted h-8 w-8",
         open && "-ml-1",
         isCompanyUser ? "rounded-sm" : ""
       )}

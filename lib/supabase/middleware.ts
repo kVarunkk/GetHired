@@ -51,6 +51,7 @@ export async function updateSession(request: NextRequest) {
     "/",
     "/jobs",
     "/hire",
+    "/ai-resume-checker",
     "/api/jobs",
     "/api/locations",
     "/api/jobs/filters",
@@ -89,6 +90,9 @@ export async function updateSession(request: NextRequest) {
 
   const isApplicantOnboardingPath =
     pathname === "/get-started" && !(searchParams.get("company") === "true");
+
+  const isResumeReviewPath = pathname.startsWith("/resume-review");
+
   const isCompanyOnboardingPath =
     pathname === "/get-started" && searchParams.get("company") === "true";
 
@@ -245,7 +249,9 @@ export async function updateSession(request: NextRequest) {
 
     // --- Restrict Access to Applicant only routes(dashboard and get-started) ---
     if (
-      (pathname.startsWith("/dashboard") || isApplicantOnboardingPath) &&
+      (pathname.startsWith("/dashboard") ||
+        isApplicantOnboardingPath ||
+        isResumeReviewPath) &&
       !isApplicant
     ) {
       const url = request.nextUrl.clone();

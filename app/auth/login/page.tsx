@@ -12,7 +12,7 @@ export async function generateMetadata({
 
   if (company && company === "true") {
     return {
-      title: "Company Login | Access Your Recruiting Dashboard",
+      title: "Recruiter Login | Access Your Recruiting Dashboard",
       description:
         "Recruiter login for GetHired. Access your hiring dashboard, manage job postings, and review candidates sourced by your AI agent.",
       keywords: [
@@ -45,7 +45,7 @@ export async function generateMetadata({
 
 export default async function Page() {
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+    <div className="flex h-full w-full items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <Suspense fallback={<AppLoader color="secondary" />}>
           <LoginForm />

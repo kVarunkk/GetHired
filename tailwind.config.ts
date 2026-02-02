@@ -33,6 +33,15 @@ export default {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
+        // NEW: Brand Indigo Accents
+        brand: {
+          DEFAULT: "hsl(var(--brand))",
+          foreground: "hsl(var(--brand-foreground))",
+        },
+        brandSoft: {
+          DEFAULT: "hsl(var(--brand-soft)/0.2)",
+          foreground: "hsl(var(--brand-soft-foreground))",
+        },
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",

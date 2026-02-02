@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Link as ModifiedLink } from "react-transition-progress/next";
+// import { Link as ModifiedLink } from "react-transition-progress/next";
 import { Badge } from "./ui/badge";
 import { IJob } from "@/lib/types";
 import { User } from "@supabase/supabase-js";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import JobFavoriteBtn from "./JobFavoriteBtn";
 import JobApplyBtn from "./JobApplyBtn";
+import ModifiedLink from "./ModifiedLink";
 
 export default function JobItem({
   job,

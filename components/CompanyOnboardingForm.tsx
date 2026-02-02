@@ -264,7 +264,7 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
   const currentLogoDisplayUrl = filePreviewUrl || existingLogoUrl;
 
   return (
-    <div className="flex flex-col gap-10 items-center justify-center mt-32 mb-32 p-4">
+    <div className="flex flex-col gap-10 items-center justify-center p-4 mb-20">
       <div className="flex flex-col gap-5 max-w-2xl w-full">
         <p className="text-6xl font-bold  ">Let&apos;s Hire, quickly.</p>
         <Link

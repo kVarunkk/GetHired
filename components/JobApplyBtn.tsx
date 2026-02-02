@@ -54,7 +54,7 @@ export default function JobApplyBtn({
     if (newStatus !== appStatus) {
       setAppStatus(newStatus);
     }
-  }, [job.applications?.[0]?.status]);
+  }, [job.applications]);
 
   const handleCloseDialog = useCallback(
     (applicationStatus?: TApplicationStatus) => {

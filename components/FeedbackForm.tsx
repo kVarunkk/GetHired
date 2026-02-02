@@ -4,7 +4,6 @@ import { MessageCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -15,8 +14,17 @@ import { Textarea } from "./ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { User } from "@supabase/supabase-js";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 
-export default function FeedbackForm({ user }: { user: User }) {
+export default function FeedbackForm({
+  user,
+  isMenuOpen,
+}: {
+  user: User;
+  isMenuOpen: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
   const submitFeedback = async (formData: FormData) => {
     const content = formData.get("feedback_input");
     if (!content) return;
@@ -39,9 +47,15 @@ export default function FeedbackForm({ user }: { user: User }) {
     toast.success("Feedback submitted succesfully!");
   };
   return (
-    <Dialog>
-      <DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger
+        className={cn(
+          "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
+          isMenuOpen ? "justify-start" : "justify-center"
+        )}
+      >
         <MessageCircle className="h-4 w-4" />
+        {isMenuOpen ? <span className=" text-sm">Feedback</span> : ""}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -50,7 +64,13 @@ export default function FeedbackForm({ user }: { user: User }) {
             We would love to hear your suggestions
           </DialogDescription>
         </DialogHeader>
-        <form action={submitFeedback} className="flex flex-col gap-4">
+        <form
+          action={(formData) => {
+            setIsOpen(false);
+            submitFeedback(formData);
+          }}
+          className="flex flex-col gap-4"
+        >
           <Textarea
             name="feedback_input"
             id="feedback"
@@ -58,9 +78,9 @@ export default function FeedbackForm({ user }: { user: User }) {
             className="bg-input"
             required
           />
-          <DialogClose asChild>
-            <Button type="submit">Submit</Button>
-          </DialogClose>
+          {/* <DialogClose asChild> */}
+          <Button type="submit">Submit</Button>
+          {/* </DialogClose> */}
         </form>
       </DialogContent>
     </Dialog>

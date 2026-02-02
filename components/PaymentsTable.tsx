@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+// import Link from "next/link";
 import { format } from "date-fns";
 import { IPayment } from "@/lib/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
 import { formatCurrency } from "@/lib/utils";
+import { Link as ModifiedLink } from "react-transition-progress/next";
 
 interface PaymentsTableProps {
   data: IPayment[];
@@ -146,12 +147,14 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <Link href={`/dashboard/buy-credits/payments/${row.original.id}`}>
+          <ModifiedLink
+            href={`/dashboard/buy-credits/payments/${row.original.id}`}
+          >
             <Button variant="ghost" size="sm">
               View Purchase
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
-          </Link>
+          </ModifiedLink>
         ),
       },
     ],

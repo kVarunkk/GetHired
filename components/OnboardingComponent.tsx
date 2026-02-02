@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { v4 as uuidv4 } from "uuid";
 import {
   Card,
   CardContent,
@@ -14,7 +13,7 @@ import { Button } from "./ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Progress } from "./ui/progress";
-import { IFormData } from "@/lib/types";
+import { IFormData, IResume } from "@/lib/types";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
@@ -30,7 +29,7 @@ import { fetcher, isValidUrl } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
 import useSWR from "swr";
-import { triggerRelevanceUpdate } from "@/app/actions/relevant-jobs-update";
+import { submitOnboardingAction } from "@/app/actions/submit-onboarding";
 
 export interface StepProps {
   formData: IFormData;
@@ -62,17 +61,16 @@ export const OnboardingForm: React.FC = () => {
     career_goals_long_term: "",
     company_size_preference: "",
     resume_file: null,
+    resume_id: null,
     // resume_url: null,
-    resume_path: null,
-    resume_name: null,
+    // resume_path: null,
+    // resume_name: null,
     default_locations: [],
     job_type: [],
     email: "",
   });
-  const [initialResumePath, setInitialResumePath] = useState<string | null>(
-    null
-  );
-  const [isResumeParsed, setIsResumeParsed] = useState(false);
+  // const [initialResumeId, setInitialResumeId] = useState<string | null>(null);
+  // const [isResumeParsed, setIsResumeParsed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [stepLoading, setStepLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -170,8 +168,9 @@ export const OnboardingForm: React.FC = () => {
         // Try to load existing user info
         const { data, error } = await supabase
           .from("user_info")
-          .select("*")
+          .select("*, resumes(id, content, is_primary)")
           .eq("user_id", user.id)
+          // .eq("resumes.is_primary", true)
           .single();
 
         if (data) {
@@ -180,20 +179,30 @@ export const OnboardingForm: React.FC = () => {
             is_promotion_active: data.is_promotion_active,
             is_job_digest_active: data.is_job_digest_active,
           }));
-          if (
-            data.experience_resume ||
-            data.skills_resume ||
-            data.projects_resume
-          ) {
-            setIsResumeParsed(true);
-          }
-          setInitialResumePath(data.resume_path || null);
+          const primaryResume = data?.resumes?.find(
+            (_: IResume) => _.is_primary
+          );
+          // console.log(data?.resumes?.find((_) => _.is_primary));
+          const noOfResumes = data?.resumes?.length;
+
+          // if (
+          //   // data.experience_resume ||
+          //   // data.skills_resume ||
+          //   // data.projects_resume
+          //   primaryResume &&
+          //   primaryResume.content
+          // ) {
+          //   setIsResumeParsed(true);
+          // }
+          // setInitialResumeId(primaryResume?.id || null);
           setFormData((prev) => ({
             ...prev,
             ...data,
             min_salary: data.min_salary || "", // Handle null/undefined from DB
             max_salary: data.max_salary || "",
             experience_years: data.experience_years || "",
+            resume_id: primaryResume ? primaryResume.id : null,
+            no_of_resumes: noOfResumes,
             // Resume file is not loaded from DB, only URL
             resume_file: null,
             default_locations:
@@ -314,8 +323,7 @@ export const OnboardingForm: React.FC = () => {
           if (
             currentStep ===
               steps.findIndex((s) => s.name === "Resume Upload") &&
-            !formData.resume_name &&
-            !formData.resume_path
+            !(formData.resume_id || formData.resume_file)
           ) {
             newErrors[field] = "Please upload your resume.";
             isValid = false;
@@ -337,54 +345,6 @@ export const OnboardingForm: React.FC = () => {
       return;
     }
 
-    // Special handling for resume upload step
-    if (steps[currentStep].name === "Resume Upload" && formData.resume_file) {
-      setIsLoading(true);
-      try {
-        if (!user) {
-          setError("User not authenticated for resume upload.");
-          setIsLoading(false);
-          return;
-        }
-
-        const file = formData.resume_file;
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${uuidv4()}.${fileExt}`; // Unique file name
-        const filePath = `resumes/${user.id}/${fileName}`; // Store in user's folder
-
-        const supabase = createClient();
-
-        const { error: uploadError } = await supabase.storage
-          .from("resumes")
-          .upload(filePath, file, {
-            cacheControl: "3600",
-            upsert: true, // Allow overwriting if file path is the same (e.g., user re-uploads)
-          });
-
-        if (uploadError) {
-          setError(`Resume upload failed: ${uploadError.message}`);
-          setIsLoading(false);
-          return;
-        }
-
-        setFormData((prev) => ({
-          ...prev,
-          resume_path: filePath,
-          resume_name: file.name,
-        }));
-      } catch (uploadException: unknown) {
-        setError(
-          `An unexpected error occurred during resume upload: ${
-            uploadException instanceof Error
-              ? uploadException.message
-              : String(uploadException)
-          }`
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
     if (currentStep < totalSteps - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
@@ -400,64 +360,21 @@ export const OnboardingForm: React.FC = () => {
     }
   };
 
-  const parseResume = async (userId: string, resumePath: string) => {
-    try {
-      const res = await fetch("/api/parse-resume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: userId, resumePath: resumePath }),
-      });
-      if (!res.ok) {
-        const errorResult = await res.json();
-        throw new Error(
-          errorResult.error || `Resume parsing failed with status ${res.status}`
-        );
-      } else {
-        const data = await res.json();
-        return {
-          projects_resume: data.projects_resume,
-          experience_resume: data.experience_resume,
-          skills_resume: data.skills_resume,
-        };
-      }
-    } catch {
-      throw new Error("Resume parsing failed");
-    }
-  };
-
   const handleSubmit = async () => {
     setError(null);
     setIsLoading(true);
-    toast.loading(
-      "Hang tight! We're setting things up for you. This might take a moment. Please do not close or refresh the page."
+    const toastId = toast.loading(
+      "Finalizing your profile and finding matches..."
     );
 
     if (!user) {
       setError("User not authenticated. Please log in.");
+      toast.error("Authentication required. Please log in.", { id: toastId });
       setIsLoading(false);
       return;
     }
 
-    let projectsResume;
-    let experienceResume;
-    let skillsResume;
-
     try {
-      // Prepare data for Supabase upsert
-
-      const supabase = createClient();
-
-      if (
-        formData.resume_path &&
-        (formData.resume_path !== initialResumePath || !isResumeParsed)
-      ) {
-        const { projects_resume, experience_resume, skills_resume } =
-          await parseResume(user.id, formData.resume_path);
-        projectsResume = projects_resume;
-        experienceResume = experience_resume;
-        skillsResume = skills_resume;
-      }
-
       const dataToSave = {
         user_id: user.id,
         email: user.email,
@@ -478,85 +395,51 @@ export const OnboardingForm: React.FC = () => {
         career_goals_short_term: formData.career_goals_short_term,
         career_goals_long_term: formData.career_goals_long_term,
         company_size_preference: formData.company_size_preference,
-        resume_name: formData.resume_name,
-        resume_path: formData.resume_path,
         job_type: formData.job_type,
         filled: true,
       };
+      const onboardingFormData = new FormData();
 
-      const { error: dbError } = await supabase.from("user_info").upsert(
-        {
-          ...dataToSave,
-          ...(projectsResume && experienceResume && skillsResume
-            ? {
-                experience_resume: experienceResume,
-                projects_resume: projectsResume,
-                skills_resume: skillsResume,
-              }
-            : {}),
-        },
-        { onConflict: "user_id" }
-      );
-
-      if (dbError) {
-        throw new Error(`${dbError.message}`);
-        // setError(`Failed to save data: `);
-      } else {
-        const res = await fetch("/api/update-embedding/gemini/user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: user.id,
-            desired_roles: formData.desired_roles,
-            preferred_locations: formData.preferred_locations,
-            min_salary: formData.min_salary || 0,
-            max_salary: formData.max_salary || 0,
-            experience_years: formData.experience_years || 0,
-            industry_preferences: formData.industry_preferences,
-            visa_sponsorship_required: formData.visa_sponsorship_required,
-            top_skills: formData.top_skills,
-            work_style_preferences: formData.work_style_preferences,
-            career_goals_short_term: formData.career_goals_short_term,
-            career_goals_long_term: formData.career_goals_long_term,
-            company_size_preference: formData.company_size_preference,
-            resume_path: formData.resume_path,
-            job_type: formData.job_type,
-            experience_resume: experienceResume ?? formData.experience_resume,
-            projects_resume: projectsResume ?? formData.projects_resume,
-            skills_resume: skillsResume ?? formData.skills_resume,
-          }),
-        });
-
-        if (!res.ok) {
-          // const errorData = await res.json();
-          throw new Error(
-            "Please try again or contact support(varun@devhub.co.in)."
-          );
-        }
-
-        const { error: updateAppMetaError } = await updateUserAppMetadata(
-          user.id,
-          {
-            type: "applicant",
-            onboarding_complete: true,
-          }
-        );
-
-        if (updateAppMetaError) throw new Error(updateAppMetaError);
-
-        triggerRelevanceUpdate(user.id);
-
-        toast.dismiss();
-        toast.success("Your profile has been saved successfully!");
-        router.push("/jobs");
+      onboardingFormData.append("profileData", JSON.stringify(dataToSave));
+      if (formData.resume_file) {
+        onboardingFormData.append("resumeFile", formData.resume_file);
+      } else if (formData.resume_id) {
+        onboardingFormData.append("resumeId", formData.resume_id);
       }
-    } catch (submitException: unknown) {
-      toast.dismiss();
+
+      const result = await submitOnboardingAction(onboardingFormData);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      // 4. Update User App Metadata (Auth layer)
+      // This tells the middleware the user is no longer in onboarding state
+      const { error: metaError } = await updateUserAppMetadata(user.id, {
+        type: "applicant",
+        onboarding_complete: true,
+      });
+
+      if (metaError) {
+        console.error("Metadata update failed:", metaError);
+        // We don't throw here because the profile is already saved
+      }
+
+      toast.success("Profile complete! Welcome to GetHired.", { id: toastId });
+
+      // 5. Immediate Navigation
+      // The background chain (Parse -> Embed -> Relevance) will continue on the server
+      router.push("/jobs");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong during submission.",
+        { id: toastId }
+      );
       setError(
         `An unexpected error occurred during submission: ${
-          submitException instanceof Error
-            ? submitException.message
-            : String(submitException)
+          error instanceof Error ? error.message : String(error)
         }`
       );
     } finally {
@@ -587,7 +470,7 @@ export const OnboardingForm: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col gap-10 items-center justify-center mt-32 mb-32  p-4">
+    <div className="flex flex-col gap-10 items-center justify-center  mb-20 p-4">
       <div className="flex flex-col gap-5 max-w-2xl w-full">
         <p className="text-6xl font-bold ">
           Let&apos;s get you Hired, quickly.

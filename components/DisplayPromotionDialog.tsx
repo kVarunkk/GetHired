@@ -37,7 +37,7 @@ export default function DisplayPromotion({
       setShowDialog(true);
     }
     setIsDataLoaded(true);
-  }, [currentUserId]);
+  }, [currentUserId, featureData.currentDialogId]);
 
   useEffect(() => {
     if (currentUserId) {

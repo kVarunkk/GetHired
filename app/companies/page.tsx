@@ -4,7 +4,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import { ICompanyInfo, IFormData, TAICredits } from "@/lib/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
-import CompaniesList from "./companiesList";
+import JobsComponent from "@/components/JobsComponent";
 
 export default async function JobsPage({
   searchParams,
@@ -153,48 +153,70 @@ export default async function JobsPage({
   }
 
   return (
-    <div>
-      <div className="flex items-start px-4 lg:px-20 xl:px-40 2xl:px-80 py-5 h-full gap-5">
-        <div className="hidden md:block w-1/3 px-2 sticky top-0 z-10 max-h-[calc(100vh-1.5rem)] overflow-y-auto">
-          <FilterComponent
-            currentPage="companies"
-            onboardingComplete={onboardingComplete}
-          />
-        </div>
-        <div className="w-full md:w-2/3 ">
-          <ClientTabs
-            user={user}
-            isCompanyUser={isCompanyUser}
-            isAISearch={isAISearch}
-            page="companies"
-          >
-            {
-              <TabsContent value="all">
-                <CompaniesList
-                  isCompanyUser={isCompanyUser}
-                  user={user}
-                  companyId={companyId}
-                  onboardingComplete={onboardingComplete}
-                  initialCompanies={initialCompanies}
-                  totalCount={totalCount}
-                />
-              </TabsContent>
-            }
-            {user && !isCompanyUser && !isAISearch && (
-              <TabsContent value="saved">
-                <CompaniesList
-                  isCompanyUser={isCompanyUser}
-                  user={user}
-                  companyId={companyId}
-                  onboardingComplete={onboardingComplete}
-                  initialCompanies={initialCompanies}
-                  totalCount={totalCount}
-                />
-              </TabsContent>
-            )}
-          </ClientTabs>
-        </div>
+    // <div>
+    <div className="flex items-start px-4  gap-5">
+      <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[calc(100vh)] overflow-y-auto">
+        <FilterComponent
+          currentPage="companies"
+          onboardingComplete={onboardingComplete}
+        />
+      </div>
+      <div className="w-full md:w-3/4 ">
+        <ClientTabs
+          user={user}
+          isCompanyUser={isCompanyUser}
+          isAISearch={isAISearch}
+          page="companies"
+        >
+          {
+            <TabsContent value="all">
+              {/* <CompaniesList
+                isCompanyUser={isCompanyUser}
+                user={user}
+                companyId={companyId}
+                onboardingComplete={onboardingComplete}
+                initialCompanies={initialCompanies}
+                totalCount={totalCount}
+              /> */}
+              <JobsComponent
+                initialJobs={initialCompanies || []}
+                user={user}
+                isCompanyUser={isCompanyUser}
+                current_page={"companies"}
+                companyId={companyId}
+                isOnboardingComplete={onboardingComplete}
+                isAllJobsTab={true}
+                isAppliedJobsTabActive={false}
+                totalCount={totalCount}
+              />
+            </TabsContent>
+          }
+          {user && !isCompanyUser && !isAISearch && (
+            <TabsContent value="saved">
+              {/* <CompaniesList
+                isCompanyUser={isCompanyUser}
+                user={user}
+                companyId={companyId}
+                onboardingComplete={onboardingComplete}
+                initialCompanies={initialCompanies}
+                totalCount={totalCount}
+              /> */}
+              <JobsComponent
+                initialJobs={initialCompanies || []}
+                user={user}
+                isCompanyUser={isCompanyUser}
+                current_page={"companies"}
+                companyId={companyId}
+                isOnboardingComplete={onboardingComplete}
+                isAllJobsTab={false}
+                isAppliedJobsTabActive={false}
+                totalCount={totalCount}
+              />
+            </TabsContent>
+          )}
+        </ClientTabs>
       </div>
     </div>
+    // </div>
   );
 }

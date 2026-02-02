@@ -42,7 +42,7 @@ export default async function PaymentIdPage({
     const plan = paymentData.price_plan;
 
     return (
-      <div className="flex flex-col w-full gap-8">
+      <div className="flex flex-col w-full gap-8 p-4">
         <div>
           <BackButton />
         </div>

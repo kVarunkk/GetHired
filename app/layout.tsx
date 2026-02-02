@@ -8,6 +8,8 @@ import MetadataUpdateRefresh from "@/components/MetadataUpdateRefresh";
 import { Suspense } from "react";
 import ThemeAwareToaster from "@/components/ToasterComponent";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import LayoutWrapper from "@/components/LayoutWrapper";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: {
@@ -39,11 +41,16 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -58,7 +65,7 @@ export default function RootLayout({
           >
             <TooltipProvider>
               <ProgressBar className="fixed h-1 rounded-r-md shadow-lg shadow-sky-500/20 bg-primary top-0" />
-              {children}
+              <LayoutWrapper initialUser={user}>{children}</LayoutWrapper>
               <ThemeAwareToaster />
               <Suspense>
                 <MetadataUpdateRefresh />

@@ -153,14 +153,14 @@ export default async function ProfilesPage({
 
   return (
     <div>
-      <div className="flex items-start  h-full gap-5">
-        <div className="hidden md:block w-1/3 px-2 sticky top-0 z-10 max-h-[calc(100vh-1.5rem)] overflow-y-auto">
+      <div className="flex items-start px-4 h-full gap-5">
+        <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[calc(100vh)] overflow-y-auto">
           <FilterComponent
             currentPage={"profiles"}
             onboardingComplete={onboarding_complete}
           />
         </div>
-        <div className="w-full md:w-2/3 ">
+        <div className="w-full md:w-3/4">
           <ClientTabs
             user={user}
             isCompanyUser={true}

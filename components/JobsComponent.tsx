@@ -21,7 +21,7 @@ import ProfileItem from "./ProfileItem";
 import ScrollToTopButton from "./ScrollToTopButton";
 import SortingComponent from "./SortingComponent";
 import { useProgress } from "react-transition-progress";
-import { Link as ModifiedLink } from "react-transition-progress/next";
+// import { Link as ModifiedLink } from "react-transition-progress/next";
 import CompanyItem from "./CompanyItem";
 import InfoTooltip from "./InfoTooltip";
 import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/lib/utils";
@@ -30,6 +30,7 @@ import useSWR, { mutate } from "swr";
 import { createClient } from "@/lib/supabase/client";
 import { revalidateCache } from "@/app/actions/revalidate";
 import { triggerRelevanceUpdate } from "@/app/actions/relevant-jobs-update";
+import ModifiedLink from "./ModifiedLink";
 
 export default function JobsComponent({
   initialJobs,
@@ -133,7 +134,7 @@ export default function JobsComponent({
           loadMoreJobs();
         }
       },
-      { threshold: 1.0 }
+      { threshold: 0.3 }
     );
 
     const currentLoader = loaderRef.current;
@@ -192,7 +193,15 @@ export default function JobsComponent({
     }, 2000); // Check every 2 seconds
 
     return () => clearInterval(interval);
-  }, [isGenerated, user, router, current_page, isSuitable, isSimilarSearch]);
+  }, [
+    isGenerated,
+    user,
+    router,
+    current_page,
+    isSuitable,
+    isSimilarSearch,
+    isFailed,
+  ]);
 
   useEffect(() => {
     (async () => {
@@ -208,7 +217,7 @@ export default function JobsComponent({
         await mutate(PROFILE_API_KEY);
       }
     })();
-  }, [isGenerated, isSuitable]);
+  }, [isGenerated, isSuitable, data.profile.ai_credits, data.profile.user_id]);
 
   const navigateBack = async () => {
     startTransition(() => {

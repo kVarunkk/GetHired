@@ -36,6 +36,22 @@
     /* Example: adjust as needed */
     --gap: 1rem;
     /* Example: adjust as needed */
+
+    /* Brand Indigo Accents (New Names to avoid collision) */
+    --brand: 243.4 75.36% 58.63%;
+    /* Indigo-600 */
+    --brand-foreground: 0 0% 98%;
+
+    /* UPDATED: brandSoft - Adjusted for better visibility on pure white */
+    --brand-soft: 238.73 83.53% 66.67%;
+    --brand-soft-foreground: 239 84% 40%;
+
+
+
+    /* Interactive Accents */
+    /* --accent: 239 84% 96.1%; */
+    /* --accent-foreground: 239 84% 60%; */
+
   }
 
   .dark {
@@ -64,6 +80,17 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+
+    /* Brand Indigo Accents (Dark) */
+    --brand: 243.4 75.36% 58.63%;
+    --brand-foreground: 0 0% 98%;
+    --brand-soft: 238.73 83.53% 66.67%;
+    --brand-soft-foreground: 239 84% 85%;
+
+
+
+    /* --accent: 239 84% 15%; */
+    /* --accent-foreground: 239 84% 60%; */
   }
 
   .theme {

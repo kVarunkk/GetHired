@@ -59,7 +59,7 @@ export default function FilterComponentSheet({
       <SheetContent side={"left"} className="h-ful w-full">
         <SheetHeader>
           <SheetTitle>
-            {isCompanyUser ? "Profile" : "Job"} Search Filters
+            <span className="capitalize">{currentPage}</span> Search Filters
           </SheetTitle>
         </SheetHeader>
         {currentPage === "profiles" && isCompanyUser ? (

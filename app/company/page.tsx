@@ -96,7 +96,7 @@ export default async function CompanyPage() {
       (applicantsData as unknown as IApplication[]) || [];
 
     return (
-      <div className="flex flex-col w-full gap-5 mt-10">
+      <div className="flex flex-col w-full gap-5 p-4">
         <div className="flex items-center justify-between flex-wrap gap-5">
           <h2 className="text-3xl font-medium text-start">
             How are you doing today, {companyInfo.name}?

@@ -138,7 +138,7 @@ export default function FilterComponent({
   // Handle the static industry list
   const uniqueIndustries = useMemo(
     () => commonIndustries.map((each) => ({ industry: each })),
-    [commonIndustries] // Assuming commonIndustries is a stable constant
+    []
   );
 
   const FILTER_CONFIG: FilterConfig[] = useMemo(() => {
@@ -448,7 +448,6 @@ export default function FilterComponent({
             initialState["createdAfter"]?.length
           ) {
             const paramValue = initialState[filter.name]?.[0];
-            // const daysAgo = String(getDaysFromDate(paramValue ?? ""));
             const filterDisplayValue = filter.options?.find(
               ({ label }) => label === (paramValue ?? "").trim()
             )?.value;
@@ -466,13 +465,12 @@ export default function FilterComponent({
     [searchParams]
   );
 
-  const [filters, setFilters] = useState<FiltersState>(
-    () => getInitialState(FILTER_CONFIG) // Use the memoized config to initialize
+  const [filters, setFilters] = useState<FiltersState>(() =>
+    getInitialState(FILTER_CONFIG)
   );
   useEffect(() => {
-    // If the currentPage or searchParams change, re-run initialization
     setFilters(getInitialState(FILTER_CONFIG));
-  }, [getInitialState]);
+  }, [getInitialState, FILTER_CONFIG]);
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -611,7 +609,7 @@ export default function FilterComponent({
 
   return (
     <form
-      className="flex flex-col h-full  items-start py-4 "
+      className="flex flex-col h-full  items-start py-6  "
       onSubmit={handleSubmit}
     >
       <div className="w-full flex-1 md:flex-none overflow-y-auto ">

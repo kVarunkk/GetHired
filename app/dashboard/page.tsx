@@ -65,12 +65,12 @@ export default async function DashboardPage() {
         : [];
 
     return (
-      <div className="flex flex-col w-full gap-5 mt-10">
+      <div className="flex flex-col w-full gap-5 mb-20 p-4">
         <div className="flex items-center justify-between flex-wrap gap-5">
-          <h2 className="text-3xl font-medium text-start capitalize">
+          <h1 className="text-3xl font-medium text-start capitalize">
             How are you doing today,{" "}
             {userInfoData.full_name ?? userInfoData.email.split("@")[0]}?
-          </h2>
+          </h1>
           <Button asChild>
             <Link href={"/jobs"}>
               Find your next Job <ArrowRight className="h-4 w-4" />

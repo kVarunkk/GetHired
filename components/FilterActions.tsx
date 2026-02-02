@@ -36,15 +36,23 @@ export default function FilterActions({
           currentPage === "profiles"
             ? "company/profiles"
             : currentPage === "jobs"
-            ? "jobs"
-            : "companies"
+              ? "jobs"
+              : "companies"
         }?${params.toString()}`
       );
     });
-  }, [sortBy, sortOrder, tab, setOpenSheet, router, currentPage]);
+  }, [
+    sortBy,
+    sortOrder,
+    tab,
+    setOpenSheet,
+    router,
+    currentPage,
+    startProgress,
+  ]);
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex flex-wrap-reverse gap-5 items-center justify-between">
       <button type="button" className="underline" onClick={clearFilters}>
         Clear Filters
       </button>
