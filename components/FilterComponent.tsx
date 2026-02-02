@@ -609,10 +609,10 @@ export default function FilterComponent({
 
   return (
     <form
-      className="flex flex-col h-full  items-start py-6  "
+      className="flex flex-col h-full md:h-screen items-start"
       onSubmit={handleSubmit}
     >
-      <div className="w-full flex-1 md:flex-none overflow-y-auto ">
+      <div className="w-full flex-1 overflow-y-auto p-4 pl-0">
         {FILTER_CONFIG.filter((each) => !each.hidden).map((config) => (
           <label
             key={config.name}
@@ -624,7 +624,7 @@ export default function FilterComponent({
           </label>
         ))}
       </div>
-      <div className="w-full !pt-4">
+      <div className="w-full  p-4 pl-0 shrink-0">
         <FilterActions
           currentPage={currentPage}
           setOpenSheet={setOpenSheet}

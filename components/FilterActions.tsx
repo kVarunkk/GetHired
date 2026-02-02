@@ -53,11 +53,11 @@ export default function FilterActions({
 
   return (
     <div className="flex flex-wrap-reverse gap-5 items-center justify-between">
-      <button type="button" className="underline" onClick={clearFilters}>
+      <button type="button" className="underline flex-1" onClick={clearFilters}>
         Clear Filters
       </button>
 
-      <Button type="submit" disabled={isApplyFiltersLoading}>
+      <Button type="submit" disabled={isApplyFiltersLoading} className="flex-1">
         Apply Filters
         {isApplyFiltersLoading && <AppLoader size="sm" color="secondary" />}
       </Button>

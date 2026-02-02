@@ -49,7 +49,7 @@ export default function DigitalTwinMirror({
                       className={cn(
                         "text-xs leading-relaxed transition-all duration-300 rounded px-1 -mx-1",
                         activeHighlightId === bullet.id
-                          ? "bg-brandSoft text-brand dark:text-primary font-medium ring-1 ring-indigo-500/50 scale-[1.02] shadow-sm"
+                          ? "bg-brandSoft text-brand dark:text-primary  ring-1 ring-indigo-500/50 scale-[1.02] shadow-sm"
                           : "text-muted-foreground"
                       )}
                     >

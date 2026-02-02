@@ -362,7 +362,7 @@ export default function JobsComponent({
           )}
 
           <FilterComponentSheet
-            isCompanyUser={isCompanyUser}
+            // isCompanyUser={isCompanyUser}
             currentPage={current_page}
             onboardingComplete={isOnboardingComplete}
           />

@@ -202,7 +202,7 @@ export default function ResumeSection({
       <div className="flex-1 relative p-4 sm:p-10 overflow-y-auto  scrollbar-hide">
         {isParsingFailed ? (
           <div className="flex flex-col gap-4 justify-center items-center">
-            <h2 className="text-muted-foreground font-semibold">
+            <h2 className="text-muted-foreground font-semibold text-center">
               Unfortunately, there was an error parsing your resume. Please try
               again.
             </h2>

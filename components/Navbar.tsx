@@ -96,7 +96,7 @@ export default function NavbarComponent({
         />
         <div
           className={cn(
-            "w-full flex items-center justify-between relative px-4 py-3 lg:px-20 xl:px-40 2xl:px-80 border-b mb-16",
+            "w-full flex items-center justify-between relative px-4 py-3 lg:px-20 xl:px-40 2xl:px-80 border-b mb-16 overflow-x-auto",
             (pathname.startsWith("/jobs") ||
               pathname.startsWith("/companies") ||
               pathname.startsWith("/profiles") ||
@@ -157,7 +157,7 @@ export default function NavbarComponent({
     return (
       <div
         className={cn(
-          "h-screen flex flex-col gap-3 p-4 border-r overflow-y-scroll sticky transition-all duration-300 ease-in-out top-0",
+          "h-screen flex flex-col gap-3 p-4 border-r overflow-y-auto overflow-x-hidden sticky transition-all duration-300 ease-in-out top-0",
           isMenuOpen ? "w-60" : "w-20"
         )}
       >
@@ -280,25 +280,25 @@ const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
           </SheetTitle>
         </SheetHeader>
 
-        {items ? (
-          <div className="flex flex-col gap-4 items-start w-full">
-            {items.map((item) => (
-              <ModifiedLink
-                key={item.id}
-                href={item.href}
-                className={cn(
-                  "hover:underline underline-offset-2 p-2 w-full",
-                  item.active && "underline underline-offset-2"
-                )}
-                onClick={() => setOpen(false)}
-              >
-                {item.label}
-              </ModifiedLink>
-            ))}
+        <div className="flex flex-col gap-4 items-start w-full">
+          {items?.map((item) => (
+            <ModifiedLink
+              key={item.id}
+              href={item.href}
+              className={cn(
+                "hover:underline underline-offset-2 p-2 w-full",
+                item.active && "underline underline-offset-2"
+              )}
+              onClick={() => setOpen(false)}
+            >
+              {item.label}
+            </ModifiedLink>
+          ))}
+          <div className="p-2">
+            <AuthButton isMenuOpen={true} variant="vertical" />
           </div>
-        ) : (
-          ""
-        )}
+        </div>
+
         <SheetFooter className="mt-4">
           <SocialsComponent />
         </SheetFooter>

@@ -13,11 +13,9 @@ import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
 export default function FilterComponentSheet({
-  isCompanyUser,
   currentPage,
   onboardingComplete,
 }: {
-  isCompanyUser: boolean;
   currentPage: "jobs" | "companies" | "profiles";
   onboardingComplete: boolean;
 }) {
@@ -56,31 +54,17 @@ export default function FilterComponentSheet({
             } Applied`
           : "Apply Filters"}
       </SheetTrigger>
-      <SheetContent side={"left"} className="h-ful w-full">
+      <SheetContent side={"left"} className="h-full w-full">
         <SheetHeader>
           <SheetTitle>
             <span className="capitalize">{currentPage}</span> Search Filters
           </SheetTitle>
         </SheetHeader>
-        {currentPage === "profiles" && isCompanyUser ? (
-          <FilterComponent
-            currentPage={currentPage}
-            setOpenSheet={setOpenSheet}
-            onboardingComplete={onboardingComplete}
-          />
-        ) : currentPage === "jobs" ? (
-          <FilterComponent
-            setOpenSheet={setOpenSheet}
-            onboardingComplete={onboardingComplete}
-            currentPage={currentPage}
-          />
-        ) : (
-          <FilterComponent
-            setOpenSheet={setOpenSheet}
-            onboardingComplete={onboardingComplete}
-            currentPage={currentPage}
-          />
-        )}
+        <FilterComponent
+          currentPage={currentPage}
+          setOpenSheet={setOpenSheet}
+          onboardingComplete={onboardingComplete}
+        />
       </SheetContent>
     </Sheet>
   );

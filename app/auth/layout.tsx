@@ -7,5 +7,5 @@ export default async function AuthLayout({
 }: {
   children: ReactNode;
 }) {
-  return <>{children}</>;
+  return <div className="mb-20">{children}</div>;
 }
