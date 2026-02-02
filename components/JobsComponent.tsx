@@ -217,7 +217,7 @@ export default function JobsComponent({
         await mutate(PROFILE_API_KEY);
       }
     })();
-  }, [isGenerated, isSuitable, data.profile.ai_credits, data.profile.user_id]);
+  }, [isGenerated, isSuitable]);
 
   const navigateBack = async () => {
     startTransition(() => {
