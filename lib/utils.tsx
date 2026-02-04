@@ -294,7 +294,7 @@ export const applicantNavbarItems: INavItem[] = [
 
 export const companyNavbarItems: INavItem[] = [
   {
-    id: "homoe",
+    id: "home",
     label: "Home",
     href: "/company",
     type: "equals",
@@ -304,21 +304,21 @@ export const companyNavbarItems: INavItem[] = [
     id: "job_posts",
     label: "Job Posts",
     href: "/company/job-posts",
-    type: "equals",
+    type: "startswith",
     icon: <Briefcase className="h-4 w-4" />,
   },
   {
     id: "applicants",
     label: "Applicants",
     href: "/company/applicants",
-    type: "equals",
+    type: "startswith",
     icon: <FileUser className="h-4 w-4" />,
   },
   {
     id: "profiles",
     label: "Profiles",
     href: "/company/profiles",
-    type: "equals",
+    type: "startswith",
     icon: <User className="h-4 w-4" />,
   },
 ];

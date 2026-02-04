@@ -17,6 +17,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import ResumePreviewDialog from "./ResumePreviewDialog";
 import { createClient } from "@/lib/supabase/client";
+import toast from "react-hot-toast";
 
 interface ResumeSourceSelectorProps {
   existingResumes: IResume[];
@@ -184,6 +185,32 @@ const UploadResumeParent = ({
   onFileChange: (file: File | null) => void;
   onSelectExisting: (id: string | null) => void;
 }) => {
+  const handleInternalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    // 1. PDF Type Validation (Mobile fix)
+    const isPdf =
+      selectedFile.type === "application/pdf" ||
+      selectedFile.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      toast.error("Only PDF files are allowed.");
+      e.target.value = ""; // Clear the input
+      return;
+    }
+
+    // 2. Size Validation (5MB = 5 * 1024 * 1024 bytes)
+    const MAX_SIZE_MB = 5;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+    if (selectedFile.size > MAX_SIZE_BYTES) {
+      toast.error(`File is too large. Maximum limit is ${MAX_SIZE_MB}MB.`);
+      e.target.value = ""; // Clear the input
+      return;
+    }
+    onSelectExisting(null);
+    onFileChange(selectedFile);
+  };
+
   return (
     <div>
       {existingResumes.length >= TLimits.RESUME ? (
@@ -248,8 +275,7 @@ const UploadResumeParent = ({
                 accept=".pdf"
                 className="absolute inset-0 opacity-0 cursor-pointer"
                 onChange={(e) => {
-                  onSelectExisting(null);
-                  onFileChange(e.target.files?.[0] || null);
+                  handleInternalFileChange(e);
                 }}
               />
               <UploadCloud
@@ -285,7 +311,7 @@ const ResumePreview = ({
     <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-between transition-all animate-in fade-in zoom-in duration-300">
       <div className="flex items-center gap-3">
         <div className="bg-white dark:bg-zinc-800 p-2 rounded-lg shadow-sm">
-          <ResumePreviewDialog displayUrl={previewUrl} isPdf={true} />
+          <ResumePreviewDialog displayUrl={previewUrl} />
         </div>
         <div className="flex flex-col">
           <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">

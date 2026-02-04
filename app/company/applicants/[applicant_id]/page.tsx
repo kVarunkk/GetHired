@@ -33,8 +33,6 @@ export default async function ApplicantPage({
       throw "User not authenticated.";
     }
 
-    // resume_url here is actually the resume path
-    // Fetch the application details, including nested joins
     const { data: applicationData, error } = await supabase
       .from("applications")
       .select(
@@ -43,7 +41,7 @@ export default async function ApplicantPage({
         applicant_user_id,
         created_at,
         status,
-        resume_url,
+        resumes(resume_path),
         answers,
         job_post_id,
         user_info(
@@ -65,31 +63,23 @@ export default async function ApplicantPage({
       .single();
 
     if (error || !applicationData) {
-      // console.error("Error fetching applicant data:", error);
       return <Error />;
     }
 
     const application = applicationData as unknown as IApplication;
 
-    // Generate a signed URL for the resume. This is a secure way to access a private file.
-    // The policy on the bucket should ensure only the company can generate this URL.
     let signedUrl: string | null = null;
-    try {
-      const { data: signedUrlData, error: signedUrlError } =
-        await supabase.storage
-          .from("applications")
-          .createSignedUrl(application.resume_url, 3600);
 
-      if (signedUrlError) {
-        // console.error("Error generating signed URL:", signedUrlError);
-      } else if (signedUrlData) {
-        signedUrl = signedUrlData.signedUrl;
-      }
-    } catch {
-      // console.error("Exception generating signed URL:", err);
+    const { data: signedUrlData } = await supabase.storage
+      .from("resumes")
+      .createSignedUrl(application?.resumes?.resume_path ?? "", 3600);
+
+    if (signedUrlData) {
+      signedUrl = signedUrlData.signedUrl;
     }
+
     return (
-      <div className="flex flex-col w-full gap-8 p-4">
+      <div className="flex flex-col w-full gap-8 p-4 mb-20">
         <div>
           <BackButton />
         </div>

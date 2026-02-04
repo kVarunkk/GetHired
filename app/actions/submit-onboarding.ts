@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import { after } from "next/server";
 import { TLimits } from "@/lib/types";
+import { triggerRelevanceUpdate } from "./relevant-jobs-update";
 
 export async function submitOnboardingAction(formData: FormData) {
   const supabase = await createClient();
@@ -123,11 +124,11 @@ export async function submitOnboardingAction(formData: FormData) {
         if (!embedRes.ok) throw new Error("Background Embedding Failed");
 
         // // STEP C: Relevant Jobs Update
-        // const relevanceUpdateRes = await triggerRelevanceUpdate(userId);
+        const relevanceUpdateRes = await triggerRelevanceUpdate(userId);
 
-        // if (relevanceUpdateRes.error) {
-        //   throw new Error("Relevance job update failed");
-        // }
+        if (relevanceUpdateRes.error) {
+          throw new Error("Relevance job update failed");
+        }
 
         console.log(
           `[ONBOARDING_CHAIN_SUCCESS]: Process complete for ${userId}`

@@ -16,13 +16,20 @@ import toast from "react-hot-toast";
 import { User } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function FeedbackForm({
   user,
   isMenuOpen,
+  isVertical = false,
 }: {
   user: User;
   isMenuOpen: boolean;
+  isVertical?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const submitFeedback = async (formData: FormData) => {
@@ -48,15 +55,35 @@ export default function FeedbackForm({
   };
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger
-        className={cn(
-          "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-          isMenuOpen ? "justify-start" : "justify-center"
-        )}
-      >
-        <MessageCircle className="h-4 w-4" />
-        {isMenuOpen ? <span className=" text-sm">Feedback</span> : ""}
-      </DialogTrigger>
+      {isVertical ? (
+        <Tooltip delayDuration={100}>
+          <TooltipTrigger asChild>
+            <DialogTrigger
+              className={cn(
+                "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
+                isMenuOpen ? "justify-start" : "justify-center"
+              )}
+            >
+              <MessageCircle className="h-4 w-4" />
+              {isMenuOpen ? <span className=" text-sm">Feedback</span> : ""}
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="right" hidden={isMenuOpen}>
+            <p>Feedback</p>
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        <DialogTrigger
+          className={cn(
+            "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
+            isMenuOpen ? "justify-start" : "justify-center"
+          )}
+        >
+          <MessageCircle className="h-4 w-4" />
+          {isMenuOpen ? <span className=" text-sm">Feedback</span> : ""}
+        </DialogTrigger>
+      )}
+
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Feedback</DialogTitle>

@@ -68,7 +68,6 @@ export default async function ProfilePage({
       .single();
 
     if (error || !applicantProfileData) {
-      // console.error("Error fetching applicant data:", error);
       return <ErrorComponent />;
     }
 
@@ -78,11 +77,6 @@ export default async function ProfilePage({
     const { data: signedUrlData } = await supabase.storage
       .from("resumes")
       .createSignedUrl(applicantProfile.resumes?.[0]?.resume_path || "", 3600);
-
-    // if (signedUrlError) {
-    //   // console.error("Error creating signed URL:", signedUrlError);
-    //   return <ErrorComponent />;
-    // }
 
     const signedUrl = signedUrlData?.signedUrl;
 

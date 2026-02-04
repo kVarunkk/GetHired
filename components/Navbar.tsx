@@ -100,7 +100,9 @@ export default function NavbarComponent({
             (pathname.startsWith("/jobs") ||
               pathname.startsWith("/companies") ||
               pathname.startsWith("/profiles") ||
-              pathname.startsWith("/resume")) &&
+              pathname.startsWith("/resume") ||
+              pathname.startsWith("/company") ||
+              pathname.startsWith("/dashboard")) &&
               "mb-0"
           )}
         >
@@ -157,16 +159,16 @@ export default function NavbarComponent({
     return (
       <div
         className={cn(
-          "h-screen flex flex-col gap-3 p-4 border-r overflow-y-auto overflow-x-hidden sticky transition-all duration-300 ease-in-out top-0",
-          isMenuOpen ? "w-60" : "w-20"
+          "h-screen flex flex-col gap-3 p-4 border-r overflow-y-auto overflow-x-hidden sticky transition-all duration-300 ease-in-out top-0 shrink-0",
+          isMenuOpen ? "w-52" : "w-20"
         )}
       >
-        <div className="flex items-center gap-1 justify-start">
-          {navbarItems ? <NavbarSheet items={navbarItems} /> : ""}
-          <Link href={"/"}>
-            <Brand type={isMenuOpen ? "long" : "short"} />
-          </Link>
-        </div>
+        {/* <div className="flex items-center gap-1 justify-"> */}
+        {/* {navbarItems ? <NavbarSheet items={navbarItems} /> : ""} */}
+        <Link href={"/"} className={cn(!isMenuOpen && "mx-auto")}>
+          <Brand type={isMenuOpen ? "long" : "short"} />
+        </Link>
+        {/* </div> */}
         {navbarItems && (
           <div
             className={cn(
@@ -221,8 +223,16 @@ export default function NavbarComponent({
           </Tooltip>
           {user && (
             <div className="flex md:flex-col items-center gap-5">
-              <FeedbackForm isMenuOpen={isMenuOpen} user={user} />
-              <ProfileDropdown isMenuOpen={isMenuOpen} user={user} />
+              <FeedbackForm
+                isMenuOpen={isMenuOpen}
+                user={user}
+                isVertical={true}
+              />
+              <ProfileDropdown
+                isMenuOpen={isMenuOpen}
+                user={user}
+                isVertical={true}
+              />
             </div>
           )}
           {user === null && (
@@ -294,9 +304,6 @@ const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
               {item.label}
             </ModifiedLink>
           ))}
-          <div className="p-2">
-            <AuthButton isMenuOpen={true} variant="vertical" />
-          </div>
         </div>
 
         <SheetFooter className="mt-4">

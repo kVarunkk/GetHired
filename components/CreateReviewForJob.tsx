@@ -54,7 +54,7 @@ export default function CreateReviewForJob({
     <Button variant={"outline"} onClick={createReview} disabled={isLoading}>
       {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
       <Sparkle className="h-4 w-4" />
-      Create CV Review
+      Tailor CV for this Job
     </Button>
   );
 }

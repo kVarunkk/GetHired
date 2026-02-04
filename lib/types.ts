@@ -213,6 +213,7 @@ export interface IApplication {
   job_postings?: IJobPosting;
   status: TApplicationStatus;
   resume_url: string;
+  resumes?: IResume;
   created_at: string;
   answers: string[];
 }

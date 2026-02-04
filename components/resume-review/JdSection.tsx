@@ -96,7 +96,7 @@ export default function JdSection({
           value={localJd}
           onChange={(e) => setLocalJd(e.target.value)}
           placeholder="Paste the Job Description (JD) here"
-          className="h-full w-full bg-input transition-all scrollbar-hide text-sm p-4 rounded-xl resize-none"
+          className="h-full w-full bg-input transition-all  text-sm p-4 rounded-xl resize-none"
         />
       </div>
     </div>

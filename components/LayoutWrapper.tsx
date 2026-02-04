@@ -47,7 +47,7 @@ export default function LayoutWrapper({
         initialUser={initialUser}
       />
 
-      <div className="flex-1 w-full   ">{children}</div>
+      <div className="flex-1 w-full min-w-0 ">{children}</div>
       <ScrollToTopButton />
     </div>
   );

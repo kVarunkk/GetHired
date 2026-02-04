@@ -117,7 +117,7 @@ export default function JobDescriptionCard({
                   {isLoading ? (
                     <>Processing...</>
                   ) : !user ? (
-                    "Sign up to Summarize with AI"
+                    "Summarize with AI"
                   ) : isAISummary ? (
                     "Show Original"
                   ) : (

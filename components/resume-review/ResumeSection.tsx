@@ -10,6 +10,7 @@ import { uploadResumeAction } from "@/app/actions/upload-resume-file";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { Button } from "../ui/button";
+import OriginalResumeWrapper from "../OriginalResumeWrapper";
 
 export default function ResumeSection({
   isParsed,
@@ -37,7 +38,6 @@ export default function ResumeSection({
   const [isUploading, setIsUploading] = useState(false);
   const [viewMode, setViewMode] = useState<"mirror" | "original">("mirror");
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
-  const [loadingUrl, setLoadingUrl] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
@@ -82,7 +82,7 @@ export default function ResumeSection({
     const getSignedUrl = async () => {
       if (!isResumeLinked || !linkedResume?.resume_path) return;
 
-      setLoadingUrl(true);
+      // setLoadingUrl(true);
       try {
         const supabase = createClient();
         const { data, error } = await supabase.storage
@@ -95,7 +95,7 @@ export default function ResumeSection({
         console.error("Error generating signed URL:", err);
         // toast.error("Could not load original PDF.");
       } finally {
-        setLoadingUrl(false);
+        // setLoadingUrl(false);
       }
     };
 
@@ -157,7 +157,7 @@ export default function ResumeSection({
         isJdPaneOpen ? "flex-[0.6]" : "flex-1"
       )}
     >
-      <div className="p-4  flex flex-wrap gap-4 items-center justify-between border-b bg-background/50 backdrop-blur-md">
+      <div className="p-4  flex flex-wrap gap-4 items-center justify-between border-b bg-background/50 ">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="text-lg font-bold">Resume</div>
 
@@ -199,7 +199,12 @@ export default function ResumeSection({
         )}
       </div>
 
-      <div className="flex-1 relative p-4 sm:p-10 overflow-y-auto  scrollbar-hide">
+      <div
+        className={cn(
+          "flex-1 relative p-4  overflow-y-auto",
+          viewMode === "original" && "pt-0"
+        )}
+      >
         {isParsingFailed ? (
           <div className="flex flex-col gap-4 justify-center items-center">
             <h2 className="text-muted-foreground font-semibold text-center">
@@ -256,43 +261,7 @@ export default function ResumeSection({
                 activeHighlightId={activeHighlightId}
               />
             ) : (
-              <div className="h-full w-full flex flex-col items-center">
-                {loadingUrl ? (
-                  <div className="flex flex-col items-center justify-center h-64 gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin " />
-                    <p className="text-muted-foreground font-bold">
-                      Requesting Document...
-                    </p>
-                  </div>
-                ) : signedUrl ? (
-                  /* NON-IFRAME PDF EMBEDDING: Using <object> tag */
-                  <div className="w-full h-full max-w-4xl bg-white shadow-2xl rounded-sm overflow-hidden border border-border animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <object
-                      data={`${signedUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-                      type="application/pdf"
-                      className="w-full h-[800px] lg:h-full"
-                    >
-                      <div className="p-10 text-center space-y-4">
-                        <p className="text-sm text-muted-foreground">
-                          This browser does not support inline PDFs.
-                        </p>
-                        <a
-                          href={signedUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-brand font-bold hover:underline"
-                        >
-                          Download to view
-                        </a>
-                      </div>
-                    </object>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground ">
-                    Failed to load preview.
-                  </p>
-                )}
-              </div>
+              <OriginalResumeWrapper url={signedUrl ?? ""} />
             )}
           </div>
         ) : (

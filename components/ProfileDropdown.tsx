@@ -26,15 +26,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "./ui/badge";
 import SocialsComponent from "./SocialsComponent";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function ProfileDropdown({
   user,
   open,
   isMenuOpen,
+  isVertical = false,
 }: {
   user: User | null;
   open?: boolean;
   isMenuOpen: boolean;
+  isVertical?: boolean;
 }) {
   const { theme, setTheme } = useTheme();
   const [isCompanyUser, setIsCompanyUser] = useState(false);
@@ -57,21 +64,47 @@ export default function ProfileDropdown({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          className={cn(
-            "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-            isMenuOpen ? "justify-start" : "justify-center"
-          )}
-        >
-          <AvatarComponent
-            user={user}
-            open={open}
-            isCompanyUser={isCompanyUser}
-          />
-          {isMenuOpen ? <span className="text-sm">Profile</span> : ""}
-        </button>
-      </DropdownMenuTrigger>
+      {isVertical ? (
+        <Tooltip delayDuration={100}>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
+                  isMenuOpen ? "justify-start" : "justify-center"
+                )}
+              >
+                <AvatarComponent
+                  user={user}
+                  open={open}
+                  isCompanyUser={isCompanyUser}
+                />
+                {isMenuOpen ? <span className="text-sm">Profile</span> : ""}
+              </button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="right" hidden={isMenuOpen}>
+            <p>Profile</p>
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        <DropdownMenuTrigger asChild>
+          <button
+            className={cn(
+              "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
+              isMenuOpen ? "justify-start" : "justify-center"
+            )}
+          >
+            <AvatarComponent
+              user={user}
+              open={open}
+              isCompanyUser={isCompanyUser}
+            />
+            {isMenuOpen ? <span className="text-sm">Profile</span> : ""}
+          </button>
+        </DropdownMenuTrigger>
+      )}
+
       <DropdownMenuContent align="start">
         <DropdownMenuLabel className="flex items-center gap-2">
           <div
@@ -84,15 +117,6 @@ export default function ProfileDropdown({
             {isCompanyUser ? "Company" : "Applicant"}
           </Badge>
         </DropdownMenuLabel>
-        {/* <DropdownMenuItem>
-          <Link
-            className="w-full flex items-center cursor-default gap-4"
-            href={isCompanyUser ? "/company" : "/dashboard"}
-          >
-            <LayoutDashboard className="text-muted-foreground h-4 w-4" />
-            Dashboard
-          </Link>
-        </DropdownMenuItem> */}
 
         <DropdownMenuItem>
           <Link

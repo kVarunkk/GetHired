@@ -62,15 +62,12 @@ export const OnboardingForm: React.FC = () => {
     company_size_preference: "",
     resume_file: null,
     resume_id: null,
-    // resume_url: null,
-    // resume_path: null,
-    // resume_name: null,
+
     default_locations: [],
     job_type: [],
     email: "",
   });
-  // const [initialResumeId, setInitialResumeId] = useState<string | null>(null);
-  // const [isResumeParsed, setIsResumeParsed] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false);
   const [stepLoading, setStepLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -165,12 +162,10 @@ export const OnboardingForm: React.FC = () => {
       } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-        // Try to load existing user info
         const { data, error } = await supabase
           .from("user_info")
           .select("*, resumes(id, content, is_primary)")
           .eq("user_id", user.id)
-          // .eq("resumes.is_primary", true)
           .single();
 
         if (data) {
@@ -182,28 +177,16 @@ export const OnboardingForm: React.FC = () => {
           const primaryResume = data?.resumes?.find(
             (_: IResume) => _.is_primary
           );
-          // console.log(data?.resumes?.find((_) => _.is_primary));
           const noOfResumes = data?.resumes?.length;
 
-          // if (
-          //   // data.experience_resume ||
-          //   // data.skills_resume ||
-          //   // data.projects_resume
-          //   primaryResume &&
-          //   primaryResume.content
-          // ) {
-          //   setIsResumeParsed(true);
-          // }
-          // setInitialResumeId(primaryResume?.id || null);
           setFormData((prev) => ({
             ...prev,
             ...data,
-            min_salary: data.min_salary || "", // Handle null/undefined from DB
+            min_salary: data.min_salary || "",
             max_salary: data.max_salary || "",
             experience_years: data.experience_years || "",
             resume_id: primaryResume ? primaryResume.id : null,
             no_of_resumes: noOfResumes,
-            // Resume file is not loaded from DB, only URL
             resume_file: null,
             default_locations:
               !isLoadingLocations && countries
@@ -211,11 +194,9 @@ export const OnboardingForm: React.FC = () => {
                 : [],
           }));
         } else if (error && error.code !== "PGRST116") {
-          // PGRST116 means "no rows found"
           setError(`Failed to load user data: ${error.message}`);
         }
       } else {
-        // Handle case where user is not logged in, e.g., redirect to login
         setError("User not logged in. Please log in to complete onboarding.");
       }
       setStepLoading(false);
@@ -319,7 +300,6 @@ export const OnboardingForm: React.FC = () => {
           }
           break;
         case "resume_file":
-          // Only validate if it's the resume upload step and no URL exists yet
           if (
             currentStep ===
               steps.findIndex((s) => s.name === "Resume Upload") &&
@@ -329,7 +309,6 @@ export const OnboardingForm: React.FC = () => {
             isValid = false;
           }
           break;
-        // visa_sponsorship_required is a boolean, no specific validation needed here unless it's a required choice
       }
     });
 
@@ -339,7 +318,6 @@ export const OnboardingForm: React.FC = () => {
 
   const handleNext = async () => {
     setError(null);
-    // setSuccessMessage(null);
 
     if (!validateStep()) {
       return;
@@ -354,7 +332,6 @@ export const OnboardingForm: React.FC = () => {
 
   const handleBack = () => {
     setError(null);
-    // setSuccessMessage(null);
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
     }
@@ -413,8 +390,6 @@ export const OnboardingForm: React.FC = () => {
         throw new Error(result.error);
       }
 
-      // 4. Update User App Metadata (Auth layer)
-      // This tells the middleware the user is no longer in onboarding state
       const { error: metaError } = await updateUserAppMetadata(user.id, {
         type: "applicant",
         onboarding_complete: true,
@@ -422,13 +397,10 @@ export const OnboardingForm: React.FC = () => {
 
       if (metaError) {
         console.error("Metadata update failed:", metaError);
-        // We don't throw here because the profile is already saved
       }
 
       toast.success("Profile complete! Welcome to GetHired.", { id: toastId });
 
-      // 5. Immediate Navigation
-      // The background chain (Parse -> Embed -> Relevance) will continue on the server
       router.push("/jobs");
     } catch (error) {
       toast.error(

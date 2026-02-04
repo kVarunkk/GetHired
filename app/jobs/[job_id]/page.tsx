@@ -184,17 +184,17 @@ export default async function JobPage({
         </div>
 
         {/* Features Section */}
-        <div className="flex items-center gap-3 mt-2 flex-wrap">
+        <div className="flex items-center gap-5 justify-between mt-2 flex-wrap">
           {job.job_url ? (
             user ? (
-              <Button variant={"outline"} asChild>
+              <Button variant={"link"} asChild>
                 <Link target="_blank" href={job.job_url}>
                   Original Job
                   <ExternalLink className="h-4 w-4" />
                 </Link>
               </Button>
             ) : (
-              <Button variant={"outline"} asChild>
+              <Button variant={"link"} asChild>
                 <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
                   Original Job
                   <ExternalLink className="h-4 w-4" />
@@ -204,79 +204,77 @@ export default async function JobPage({
           ) : (
             ""
           )}
-          {isCompanyUser ? (
-            ""
-          ) : user ? (
-            <AskAIDialog
-              jobId={job_id}
-              isOnboardingComplete={onboardingComplete}
-            />
-          ) : (
-            <Button variant={"outline"} asChild>
-              <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
-                <Sparkle className="h-4 w-4" />
-                Ask AI
-              </Link>
-            </Button>
-          )}
+          {!isCompanyUser && (
+            <div className="flex items-center flex-wrap gap-3">
+              {user ? (
+                <AskAIDialog
+                  jobId={job_id}
+                  isOnboardingComplete={onboardingComplete}
+                />
+              ) : (
+                <Button variant={"outline"} asChild>
+                  <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
+                    <Sparkle className="h-4 w-4" />
+                    Ask AI
+                  </Link>
+                </Button>
+              )}
 
-          {isCompanyUser ? (
-            ""
-          ) : user ? (
-            <div className="flex items-center">
-              <Button variant={"outline"} asChild>
-                <Link
-                  target="_blank"
-                  href={`/jobs?sortBy=relevance&jobId=${job_id}`}
-                >
-                  <Sparkle className="h-4 w-4" />
-                  Find Similar Jobs
-                </Link>
-              </Button>
-              <InfoTooltip
-                content={
-                  <p>
-                    This feature uses {TAICredits.AI_SEARCH_OR_ASK_AI} AI
-                    credits per use.{" "}
-                    <Link href={"/dashboard"} className="text-blue-500">
-                      Recharge Credits
+              {user ? (
+                <div className="flex items-center">
+                  <Button variant={"outline"} asChild>
+                    <Link
+                      target="_blank"
+                      href={`/jobs?sortBy=relevance&jobId=${job_id}`}
+                    >
+                      <Sparkle className="h-4 w-4" />
+                      Find Similar Jobs
                     </Link>
-                  </p>
-                }
-              />
+                  </Button>
+                  <InfoTooltip
+                    content={
+                      <p>
+                        This feature uses {TAICredits.AI_SEARCH_OR_ASK_AI} AI
+                        credits per use.{" "}
+                        <Link href={"/dashboard"} className="text-blue-500">
+                          Recharge Credits
+                        </Link>
+                      </p>
+                    }
+                  />
+                </div>
+              ) : (
+                <Button variant={"outline"} asChild>
+                  <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
+                    <Sparkle className="h-4 w-4" />
+                    Find Similar Jobs
+                  </Link>
+                </Button>
+              )}
+              {user ? (
+                <div className="flex items-center">
+                  <CreateReviewForJob userId={user.id} jobId={job_id} />
+                  <InfoTooltip
+                    content={
+                      <p>
+                        This feature uses {TAICredits.AI_CV_REVIEW} AI credits
+                        per use.{" "}
+                        <Link href={"/dashboard"} className="text-blue-500">
+                          Recharge Credits
+                        </Link>
+                      </p>
+                    }
+                  />
+                </div>
+              ) : (
+                <Button variant={"outline"} asChild>
+                  <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
+                    <Sparkle className="h-4 w-4" />
+                    Tailor CV for this Job
+                  </Link>
+                </Button>
+              )}
             </div>
-          ) : (
-            <Button variant={"outline"} asChild>
-              <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
-                <Sparkle className="h-4 w-4" />
-                Find Similar Jobs
-              </Link>
-            </Button>
-          )}
-          {isCompanyUser ? (
-            ""
-          ) : user ? (
-            <div className="flex items-center">
-              <CreateReviewForJob userId={user.id} jobId={job_id} />
-              <InfoTooltip
-                content={
-                  <p>
-                    This feature uses {TAICredits.AI_CV_REVIEW} AI credits per
-                    use.{" "}
-                    <Link href={"/dashboard"} className="text-blue-500">
-                      Recharge Credits
-                    </Link>
-                  </p>
-                }
-              />
-            </div>
-          ) : (
-            <Button variant={"outline"} asChild>
-              <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
-                <Sparkle className="h-4 w-4" />
-                Create CV Review
-              </Link>
-            </Button>
           )}
         </div>
 

@@ -50,23 +50,20 @@ export async function createResumeAction(formData: FormData) {
 
     if (insertError) throw insertError;
 
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Upload to Storage
+    const { error: storageError } = await supabase.storage
+      .from("resumes")
+      .upload(fileName, buffer, { contentType: "application/pdf" });
+
+    if (storageError) throw storageError;
+
     // 4. BACKGROUND PROCESSING
     // This allows us to return the result to the UI immediately while the PDF is uploaded and parsed.
     after(async () => {
       try {
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // Upload to Storage
-        const { error: storageError } = await supabase.storage
-          .from("resumes")
-          .upload(fileName, buffer, { contentType: "application/pdf" });
-
-        if (storageError) {
-          console.error("[BG_UPLOAD_ERROR]:", storageError);
-          return;
-        }
-
         // Trigger AI Parsing (Relay Race pattern)
         const baseUrl = deploymentUrl();
         await fetch(`${baseUrl}/api/parse-resume`, {

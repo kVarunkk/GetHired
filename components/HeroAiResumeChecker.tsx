@@ -34,7 +34,7 @@ export default function HeroAiResumeChecker() {
       <div className="space-y-4 max-w-3xl">
         <div className="space-y-4 max-w-3xl">
           {/* Badge: Using brandSoft for the background and brand for text/border */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brandSoft border border-brand/20 text-brand text-[10px] font-bold uppercase tracking-widest mb-2 animate-in fade-in slide-in-from-top-2 duration-700">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brandSoft border border-brand/20 text-brand dark:text-primary text-[10px] font-bold uppercase tracking-widest mb-2 animate-in fade-in slide-in-from-top-2 duration-700">
             <Sparkles size={12} />
             Coming Soon: Advanced AI Analysis
           </div>

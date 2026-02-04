@@ -244,7 +244,7 @@ export default function JobsComponent({
   };
 
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="flex flex-col gap-4 w-full pb-4">
       <div className="w-full flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-2 ">
           {isSuitable && (

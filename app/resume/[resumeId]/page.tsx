@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import InfoTooltip from "@/components/InfoTooltip";
 import { TAICredits } from "@/lib/types";
 import Link from "next/link";
+// import dynamic from "next/dynamic";
+import OriginalResumeWrapper from "@/components/OriginalResumeWrapper";
+// import OriginalResumeViewer from "@/components/OriginalResumeViewer";
 
 export default async function ResumeIdPage({
   params,
@@ -40,7 +43,7 @@ export default async function ResumeIdPage({
     }
 
     return (
-      <div className="flex flex-col w-full gap-4 p-4 mb-20">
+      <div className="flex flex-col w-full gap-4 p-4 mb-20 ">
         <div>
           <BackButton />
         </div>
@@ -66,10 +69,7 @@ export default async function ResumeIdPage({
             </div>
           )}
         </div>
-        <iframe
-          src={signedUrlData?.signedUrl}
-          className="w-full h-[80vh] border border-border rounded-md"
-        ></iframe>
+        <OriginalResumeWrapper url={signedUrlData?.signedUrl} />
       </div>
     );
   } catch {

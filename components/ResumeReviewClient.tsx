@@ -209,7 +209,7 @@ export default function ResumeReviewClient({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 ">
           {/* Polling State */}
           {!isParsed && isResumeLinked && !isParsingFailed && (
             <div className="flex flex-col items-center justify-center h-64 text-center space-y-4 animate-in fade-in duration-500">
