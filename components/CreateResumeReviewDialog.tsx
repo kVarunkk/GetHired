@@ -44,7 +44,7 @@ export default function CreateResumeReviewDialog({
           const supabase = createClient();
           const { data, error } = await supabase
             .from("resumes")
-            .select("id, name, created_at")
+            .select("id, name, created_at, is_primary")
             .eq("user_id", userId)
             .order("created_at", { ascending: false });
 

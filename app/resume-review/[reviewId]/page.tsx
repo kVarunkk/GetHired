@@ -61,7 +61,7 @@ export default async function ResumeReviewPage({
   // This allows the user to switch or link a resume if one isn't already assigned.
   const { data: userResumes } = await supabase
     .from("resumes")
-    .select("id, name, created_at")
+    .select("id, name, created_at, is_primary")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 

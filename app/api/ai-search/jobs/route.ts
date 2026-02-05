@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         {
           message: "user_id and jobs are required in the request body.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const { data } = await supabase
       .from("user_info")
       .select(
-        "desired_roles, experience_years, preferred_locations, min_salary, max_salary, top_skills, company_size_preference, career_goals_short_term, career_goals_long_term, visa_sponsorship_required, work_style_preferences, ai_credits, job_type, resumes(content, is_primary)"
+        "desired_roles, experience_years, preferred_locations, min_salary, max_salary, top_skills, company_size_preference, career_goals_short_term, career_goals_long_term, visa_sponsorship_required, work_style_preferences, ai_credits, job_type, resumes(content, is_primary)",
       )
       .eq("user_id", userId)
       .eq("resumes.is_primary", true)
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         {
           message: "User not found.",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
         Salary Range: ${job.salary_range}
         Locations: ${job.locations}
         ---
-      `
+      `,
         )
         .join("\n")}
       
@@ -131,12 +131,12 @@ export async function POST(request: NextRequest) {
           reranked_job_ids: z
             .array(z.string())
             .describe(
-              "The list of re-ranked job IDs from most to least relevant."
+              "The list of re-ranked job IDs from most to least relevant.",
             ),
           filtered_out_job_ids: z
             .array(z.string())
             .describe(
-              "The list of job IDs that were filtered out as irrelevant."
+              "The list of job IDs that were filtered out as irrelevant.",
             ),
         }),
       }),

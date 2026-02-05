@@ -144,7 +144,7 @@ export default function OriginalResumeViewer({
                   width={containerWidth > 0 ? containerWidth : undefined}
                   className="shadow-2xl border border-zinc-200 dark:border-zinc-800 rounded-sm overflow-hidden bg-white"
                   renderAnnotationLayer={false}
-                  renderTextLayer={true}
+                  renderTextLayer={false}
                 />
               ))}
             </div>

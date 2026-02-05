@@ -18,6 +18,7 @@ import { Button } from "./ui/button";
 import ResumePreviewDialog from "./ResumePreviewDialog";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { Badge } from "./ui/badge";
 
 interface ResumeSourceSelectorProps {
   existingResumes: IResume[];
@@ -25,7 +26,7 @@ interface ResumeSourceSelectorProps {
   onSelectExisting: (id: string | null) => void;
   file: File | null;
   onFileChange: (file: File | null) => void;
-  view?: "upload" | "both";
+  view?: "upload" | "select" | "both";
 }
 
 export default function ResumeSourceSelector({
@@ -89,6 +90,13 @@ export default function ResumeSourceSelector({
           existingResumes={existingResumes}
           onSelectExisting={onSelectExisting}
         />
+      ) : view === "select" ? (
+        <SelectResumeParent
+          existingResumes={existingResumes}
+          onFileChange={onFileChange}
+          onSelectExisting={onSelectExisting}
+          selectedId={selectedId}
+        />
       ) : (
         <Tabs defaultValue="upload" className="w-full">
           <TabsList className="grid w-full grid-cols-2 ">
@@ -106,46 +114,12 @@ export default function ResumeSourceSelector({
             />
           </TabsContent>
           <TabsContent value="existing" className="">
-            <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-zinc-800 pb-2">
-              {existingResumes.map((resume) => (
-                <button
-                  key={resume.id}
-                  type="button"
-                  onClick={() => {
-                    onFileChange(null);
-                    onSelectExisting(resume.id);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left",
-                    selectedId === resume.id
-                      ? "border-brand bg-brandSoft "
-                      : "border-border group text-muted-foreground hover:border-zinc-400 hover:text-primary"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <FileCheck
-                      size={18}
-                      className={
-                        selectedId === resume.id
-                          ? "text-brand"
-                          : "text-muted-foreground group-hover:text-primary"
-                      }
-                    />
-                    <div>
-                      <p className="text-sm font-bold truncate max-w-[180px]">
-                        {resume.name}
-                      </p>
-                      <p className="text-[10px] opacity-50">
-                        {new Date(resume.created_at || "").toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  {selectedId === resume.id && (
-                    <CheckCircle2 size={16} className="text-brand" />
-                  )}
-                </button>
-              ))}
-            </div>
+            <SelectResumeParent
+              existingResumes={existingResumes}
+              onFileChange={onFileChange}
+              onSelectExisting={onSelectExisting}
+              selectedId={selectedId}
+            />
           </TabsContent>
         </Tabs>
       )}
@@ -173,6 +147,70 @@ export default function ResumeSourceSelector({
     </div>
   );
 }
+
+const SelectResumeParent = ({
+  existingResumes,
+  onFileChange,
+  onSelectExisting,
+  selectedId,
+}: {
+  existingResumes: IResume[];
+  onFileChange: (file: File | null) => void;
+  onSelectExisting: (id: string | null) => void;
+  selectedId: string | null;
+}) => {
+  return (
+    <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-zinc-800 pb-2">
+      {existingResumes?.length > 0 ? (
+        existingResumes.map((resume) => (
+          <button
+            key={resume.id}
+            type="button"
+            onClick={() => {
+              onFileChange(null);
+              onSelectExisting(resume.id);
+            }}
+            className={cn(
+              "w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left",
+              selectedId === resume.id
+                ? "border-brand bg-brandSoft "
+                : "border-border group text-muted-foreground hover:border-zinc-400 hover:text-primary",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <FileCheck
+                size={18}
+                className={
+                  selectedId === resume.id
+                    ? "text-brand"
+                    : "text-muted-foreground group-hover:text-primary"
+                }
+              />
+              <div>
+                <div className="flex items-center gap-1">
+                  <p className="text-sm font-bold truncate max-w-[180px]">
+                    {resume.name}
+                  </p>
+                  {resume.is_primary && <Badge>PRIMARY</Badge>}
+                </div>
+                <p className="text-[10px] opacity-50">
+                  {new Date(resume.created_at || "").toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            {selectedId === resume.id && (
+              <CheckCircle2 size={16} className="text-brand" />
+            )}
+          </button>
+        ))
+      ) : (
+        <div className="p-6 text-center text-muted-foreground">
+          No existing resumes. Upload new.
+        </div>
+      )}
+    </div>
+  );
+};
 
 const UploadResumeParent = ({
   existingResumes,
@@ -267,7 +305,7 @@ const UploadResumeParent = ({
             <div
               className={cn(
                 "relative border-2 border-dashed rounded-xl p-8 transition-all flex flex-col items-center justify-center gap-2",
-                "border-zinc-800 hover:border-zinc-700"
+                "border-zinc-800 hover:border-zinc-700",
               )}
             >
               <input
@@ -281,7 +319,7 @@ const UploadResumeParent = ({
               <UploadCloud
                 className={cn(
                   "w-8 h-8",
-                  file ? "text-brand" : "text-muted-foreground"
+                  file ? "text-brand" : "text-muted-foreground",
                 )}
               />
               <p className="text-sm font-medium text-muted-foreground">

@@ -210,6 +210,7 @@ export default async function JobPage({
                 <AskAIDialog
                   jobId={job_id}
                   isOnboardingComplete={onboardingComplete}
+                  userId={user.id}
                 />
               ) : (
                 <Button variant={"outline"} asChild>

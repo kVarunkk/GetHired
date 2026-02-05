@@ -85,7 +85,7 @@ export default function JobsComponent({
     params.set("page", nextPage.toString());
     params.set(
       "tab",
-      isAllJobsTab ? "all" : isAppliedJobsTabActive ? "applied" : "saved"
+      isAllJobsTab ? "all" : isAppliedJobsTabActive ? "applied" : "saved",
     );
     params.set("limit", "20");
 
@@ -97,7 +97,7 @@ export default function JobsComponent({
             : current_page === "jobs"
               ? "jobs"
               : "companies"
-        }?${params.toString()}`
+        }?${params.toString()}`,
       );
       if (!res.ok) throw new Error("Some error occured");
 
@@ -134,7 +134,7 @@ export default function JobsComponent({
           loadMoreJobs();
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.3 },
     );
 
     const currentLoader = loaderRef.current;
@@ -268,7 +268,12 @@ export default function JobsComponent({
             {current_page === "jobs" && isSuitable ? (
               <InfoTooltip
                 content={
-                  "Jobs posted in the past 1 month, sorted by relevance."
+                  <p>
+                    Primary Resume is used to find jobs relevant to you.{" "}
+                    <Link href={"/resume"} className="text-blue-500">
+                      Change Primary Resume
+                    </Link>
+                  </p>
                 }
               />
             ) : (
@@ -353,7 +358,7 @@ export default function JobsComponent({
               onClick={() => {
                 copyToClipboard(
                   window.location.href,
-                  "Job Search URL copied to clipboard!"
+                  "Job Search URL copied to clipboard!",
                 );
               }}
             >
