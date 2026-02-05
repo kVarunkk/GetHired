@@ -77,7 +77,7 @@ export async function submitOnboardingAction(formData: FormData) {
         // filled: true,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "user_id" }
+      { onConflict: "user_id" },
     );
 
     if (userError) throw userError;
@@ -119,7 +119,7 @@ export async function submitOnboardingAction(formData: FormData) {
             method: "POST",
             headers: internalHeaders,
             body: JSON.stringify(profileData),
-          }
+          },
         );
         if (!embedRes.ok) throw new Error("Background Embedding Failed");
 
@@ -131,17 +131,18 @@ export async function submitOnboardingAction(formData: FormData) {
         }
 
         console.log(
-          `[ONBOARDING_CHAIN_SUCCESS]: Process complete for ${userId}`
+          `[ONBOARDING_CHAIN_SUCCESS]: Process complete for ${userId}`,
         );
-      } catch {
+      } catch (e) {
+        console.log(e);
         // console.error("[ONBOARDING_CHAIN_FAILURE]:", err instanceof Error ? err.message: "Some error occure");
         // Mark as failed so UI can show a retry button
-        if (finalResumeId) {
-          await supabase
-            .from("resumes")
-            .update({ parsing_failed: true })
-            .eq("id", finalResumeId);
-        }
+        // if (finalResumeId) {
+        //   await supabase
+        //     .from("resumes")
+        //     .update({ parsing_failed: true })
+        //     .eq("id", finalResumeId);
+        // }
       }
     });
 

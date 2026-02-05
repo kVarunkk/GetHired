@@ -286,7 +286,8 @@ export default function JobsComponent({
           {user &&
             isOnboardingComplete &&
             !isCompanyUser &&
-            !(current_page === "profiles") && (
+            !(current_page === "profiles") &&
+            !isSuitable && (
               <FindSuitableJobs
                 user={user}
                 setPage={setPage}

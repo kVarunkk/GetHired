@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const size = searchParams.get("size");
   const isFavoriteTabActive = searchParams.get("tab") === "saved";
   COMPANIES_PER_PAGE = parseInt(
-    searchParams.get("limit") || COMPANIES_PER_PAGE.toString()
+    searchParams.get("limit") || COMPANIES_PER_PAGE.toString(),
   );
 
   const startIndex = (page - 1) * COMPANIES_PER_PAGE;
@@ -53,16 +53,18 @@ export async function GET(request: NextRequest) {
         sortOrder: sortOrder as "asc" | "desc",
         isFavoriteTabActive: isFavoriteTabActive,
         userEmbedding,
-      }
+      },
     );
 
     if (error) {
+      throw error;
       // console.error("API Error fetching jobs:", error);
-      return NextResponse.json({ error: error }, { status: 500 });
+      // return NextResponse.json({ error: error }, { status: 500 });
     }
 
     return NextResponse.json({ data: data || [], count, matchedCompanyIds });
   } catch (err: unknown) {
+    console.log(err);
     return NextResponse.json(
       {
         error:
@@ -70,7 +72,7 @@ export async function GET(request: NextRequest) {
             ? err.message
             : String(err) || "An unexpected error occurred",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

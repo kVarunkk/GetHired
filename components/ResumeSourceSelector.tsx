@@ -160,10 +160,11 @@ const SelectResumeParent = ({
   selectedId: string | null;
 }) => {
   return (
-    <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-zinc-800 pb-2">
+    <div className="max-h-[200px] overflow-y-auto overflow-x-hidden space-y-2 pr-2 scrollbar-thin scrollbar-thumb-zinc-800 pb-2">
       {existingResumes?.length > 0 ? (
         existingResumes.map((resume) => (
           <button
+            title={resume.name}
             key={resume.id}
             type="button"
             onClick={() => {
@@ -177,7 +178,7 @@ const SelectResumeParent = ({
                 : "border-border group text-muted-foreground hover:border-zinc-400 hover:text-primary",
             )}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               <FileCheck
                 size={18}
                 className={
@@ -186,9 +187,9 @@ const SelectResumeParent = ({
                     : "text-muted-foreground group-hover:text-primary"
                 }
               />
-              <div>
-                <div className="flex items-center gap-1">
-                  <p className="text-sm font-bold truncate max-w-[180px]">
+              <div className="flex flex-col min-w-0 flex-1">
+                <div className="flex items-center gap-1 min-w-0">
+                  <p className="text-sm font-bold truncate w-[100px] sm:w-[150px]">
                     {resume.name}
                   </p>
                   {resume.is_primary && <Badge>PRIMARY</Badge>}
