@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
         {
           message: "Required fields are missing in the request body.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -30,14 +30,14 @@ export async function POST(request: NextRequest) {
         {
           message: "Company not found.",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (companyInfo.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI) {
       return NextResponse.json(
         { message: "Insufficient AI credits. Please top up to continue." },
-        { status: 402 }
+        { status: 402 },
       );
     }
 
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         min_equity,
         max_equity,
         questions
-      `
+      `,
       )
       .eq("id", job_post_id)
       .single();
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       // console.error("Error fetching job posting:", jobError);
       return NextResponse.json(
         { message: "Job posting not found." },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         Top Skills: ${profile.top_skills?.join(", ")}
         Work Style: ${profile.work_style_preferences?.join(", ")}
         ---
-      `
+      `,
         )
         .join("\n")}
       
@@ -134,12 +134,12 @@ export async function POST(request: NextRequest) {
           reranked_profile_ids: z
             .array(z.string())
             .describe(
-              "The list of re-ranked user profile IDs from most to least relevant."
+              "The list of re-ranked user profile IDs from most to least relevant.",
             ),
           filtered_out_profile_ids: z
             .array(z.string())
             .describe(
-              "The list of profile IDs that were filtered out as irrelevant."
+              "The list of profile IDs that were filtered out as irrelevant.",
             ),
         }),
       }),
@@ -147,16 +147,12 @@ export async function POST(request: NextRequest) {
 
     // Step 3: Increment AI search uses for the company
 
-    const { error: companyInfoUpdateError } = await supabase
+    await supabase
       .from("company_info")
       .update({
         ai_credits: companyInfo.ai_credits - TAICredits.AI_SEARCH_OR_ASK_AI,
       })
       .eq("id", companyId);
-
-    if (companyInfoUpdateError) {
-      throw companyInfoUpdateError;
-    }
 
     return NextResponse.json({
       rerankedProfiles: object.reranked_profile_ids,
@@ -168,7 +164,7 @@ export async function POST(request: NextRequest) {
       {
         message: "An error occurred",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

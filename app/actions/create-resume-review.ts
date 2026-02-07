@@ -41,8 +41,17 @@ export async function createResumeReviewAction(formData: FormData) {
           error: `You can only create ${TLimits.RESUME} resumes in free plan.`,
         };
       }
-      // Pre-calculate the path so we can insert the record before the upload completes
       const fileName = `resumes/${userId}/${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
+
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Background Storage Upload
+      const { error: storageError } = await supabase.storage
+        .from("resumes")
+        .upload(fileName, buffer, { contentType: "application/pdf" });
+
+      if (storageError) throw storageError;
 
       const { data: resumeEntry, error: resumeError } = await supabase
         .from("resumes")
@@ -62,19 +71,6 @@ export async function createResumeReviewAction(formData: FormData) {
       // This continues running even after the server action returns the result to the client.
       after(async () => {
         try {
-          const arrayBuffer = await file.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-
-          // Background Storage Upload
-          const { error: storageError } = await supabase.storage
-            .from("resumes")
-            .upload(fileName, buffer, { contentType: "application/pdf" });
-
-          if (storageError) {
-            console.error("[BACKGROUND_STORAGE_ERROR]:", storageError);
-            return;
-          }
-
           // Background AI Parse Trigger
           const baseUrl = deploymentUrl();
           const res = await fetch(`${baseUrl}/api/parse-resume`, {
@@ -95,17 +91,17 @@ export async function createResumeReviewAction(formData: FormData) {
           }
 
           console.log(
-            `[BACKGROUND_PROCESS_SUCCESS]: Resume ${finalResumeId} parsed.`
+            `[BACKGROUND_PROCESS_SUCCESS]: Resume ${finalResumeId} parsed.`,
           );
         } catch (bgError) {
           console.error("[BACKGROUND_PROCESS_FATAL]:", bgError);
-          await supabase
-            .from("resumes")
-            .update({
-              parsing_failed: true,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", finalResumeId);
+          // await supabase
+          //   .from("resumes")
+          //   .update({
+          //     parsing_failed: true,
+          //     updated_at: new Date().toISOString(),
+          //   })
+          //   .eq("id", finalResumeId);
         }
       });
     }

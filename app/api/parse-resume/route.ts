@@ -21,7 +21,7 @@ const ResumeSchema = z.object({
           "other",
         ])
         .describe(
-          "The category of this section. Use 'other' for certifications, languages, or custom headers."
+          "The category of this section. Use 'other' for certifications, languages, or custom headers.",
         ),
       items: z.array(
         z.object({
@@ -38,23 +38,23 @@ const ResumeSchema = z.object({
               id: z
                 .string()
                 .describe(
-                  "A unique UUID-style string for this specific bullet. MUST be unique across the entire document."
+                  "A unique UUID-style string for this specific bullet. MUST be unique across the entire document.",
                 ),
               text: z
                 .string()
                 .describe(
-                  "The full text of the bullet, even if it spans multiple lines in the source."
+                  "The full text of the bullet, even if it spans multiple lines in the source.",
                 ),
               lineIndices: z
                 .array(z.number())
                 .describe(
-                  "The original indices from the input lines that form this text."
+                  "The original indices from the input lines that form this text.",
                 ),
-            })
+            }),
           ),
-        })
+        }),
       ),
-    })
+    }),
   ),
 });
 type ParsedProfile = z.infer<typeof ResumeSchema>;
@@ -74,7 +74,7 @@ async function extractTextFromPdf(url: string): Promise<string[]> {
 }
 
 async function generateStructuredProfile(
-  lines: string[]
+  lines: string[],
 ): Promise<ParsedProfile> {
   try {
     const vertex = await getVertexClient();
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
   if (!userId || !resumeId) {
     return NextResponse.json(
       { error: "Missing user ID or resume path." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -127,7 +127,7 @@ export async function POST(req: Request) {
   if (!user || user.id !== userId) {
     return NextResponse.json(
       { error: "Unauthorized access or user mismatch." },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -141,7 +141,7 @@ export async function POST(req: Request) {
   if (resumeError || !resumeData) {
     return NextResponse.json(
       { error: "Resume not found for the given user." },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
       console.error("Storage signed URL generation failed:", signedUrlError);
       return NextResponse.json(
         { error: "Failed to generate signed URL for resume file." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -163,7 +163,7 @@ export async function POST(req: Request) {
     if (!lines || lines.length === 0) {
       return NextResponse.json(
         { error: "Resume file contained no readable text." },
-        { status: 422 }
+        { status: 422 },
       );
     }
 
@@ -173,6 +173,8 @@ export async function POST(req: Request) {
       .from("resumes")
       .update({
         content: parsedProfile,
+        parsing_failed: false,
+        updated_at: new Date().toISOString(),
       })
       .eq("id", resumeId);
 
@@ -183,9 +185,16 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     console.error("Resume parsing process failed:", e);
+    await supabase
+      .from("resumes")
+      .update({
+        parsing_failed: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", resumeId);
     return NextResponse.json(
       { error: "Internal server processing failure during file extraction." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

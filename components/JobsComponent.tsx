@@ -31,6 +31,7 @@ import { createClient } from "@/lib/supabase/client";
 import { revalidateCache } from "@/app/actions/revalidate";
 import { triggerRelevanceUpdate } from "@/app/actions/relevant-jobs-update";
 import ModifiedLink from "./ModifiedLink";
+import FootComponent from "./FootComponent";
 
 export default function JobsComponent({
   initialJobs,
@@ -76,7 +77,12 @@ export default function JobsComponent({
   }, [initialJobs]);
 
   const loadMoreJobs = useCallback(async () => {
-    if (isLoading || jobs.length >= totalCount) return;
+    if (
+      isLoading ||
+      jobs.length >= totalCount ||
+      (page >= 2 && !user && current_page === "jobs")
+    )
+      return;
     setIsLoading(true);
 
     const nextPage = page + 1;
@@ -124,6 +130,7 @@ export default function JobsComponent({
     isAllJobsTab,
     isAppliedJobsTabActive,
     totalCount,
+    user,
   ]);
 
   useEffect(() => {
@@ -468,6 +475,8 @@ export default function JobsComponent({
         isSuitable &&
         !isSimilarSearch ? (
           ""
+        ) : current_page === "jobs" && !user && page >= 2 ? (
+          <FootComponent />
         ) : (
           <div
             ref={loaderRef}

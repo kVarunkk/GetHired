@@ -91,11 +91,9 @@ export default function ResumeSection({
 
         if (error) throw error;
         setSignedUrl(data.signedUrl);
-      } catch (err) {
-        console.error("Error generating signed URL:", err);
-        // toast.error("Could not load original PDF.");
-      } finally {
-        // setLoadingUrl(false);
+      } catch {
+        // console.error("Error generating signed URL:", err);
+        toast.error("Could not load original PDF.");
       }
     };
 
@@ -109,16 +107,7 @@ export default function ResumeSection({
 
     setIsRetrying(true);
     const toastId = toast.loading("Restarting document synchronization...");
-    const supabase = createClient();
     try {
-      // Reset the flag in DB so the UI and parent polling knows to try again
-      const { error: resetError } = await supabase
-        .from("resumes")
-        .update({ parsing_failed: false })
-        .eq("id", linkedResume.id);
-
-      if (resetError) throw resetError;
-
       // Trigger the parse API route
       const res = await fetch("/api/parse-resume", {
         method: "POST",
@@ -132,19 +121,11 @@ export default function ResumeSection({
       await refreshResumeStatus();
 
       toast.success("Parsing restarted successfully.", { id: toastId });
-    } catch (err) {
-      console.error("Retry failed:", err);
-      toast.error(
-        "Failed to restart parsing. Please try manually re-uploading.",
-        { id: toastId }
-      );
-      await supabase
-        .from("resumes")
-        .update({
-          parsing_failed: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", linkedResume.id);
+    } catch {
+      // console.error("Retry failed:", err);
+      toast.error("Failed to restart parsing. Please try again later.", {
+        id: toastId,
+      });
     } finally {
       setIsRetrying(false);
     }
@@ -154,7 +135,7 @@ export default function ResumeSection({
     <div
       className={cn(
         "border-b border-t sm:border-t-0 overflow-hidden flex flex-col",
-        isJdPaneOpen ? "flex-[0.6]" : "flex-1"
+        isJdPaneOpen ? "flex-[0.6]" : "flex-1",
       )}
     >
       <div className="p-4  flex flex-wrap gap-4 items-center justify-between border-b bg-background/50 ">
@@ -169,7 +150,7 @@ export default function ResumeSection({
                   "flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider rounded-md transition-all",
                   viewMode === "mirror"
                     ? "bg-white dark:bg-zinc-800 text-primary shadow-sm"
-                    : "text-zinc-500 hover:text-muted-foreground"
+                    : "text-zinc-500 hover:text-muted-foreground",
                 )}
               >
                 <Eye size={12} />
@@ -181,7 +162,7 @@ export default function ResumeSection({
                   "flex items-center gap-1.5 px-2.5 py-1 text-xs  font-semibold uppercase tracking-wider rounded-md transition-all",
                   viewMode === "original"
                     ? "bg-white dark:bg-zinc-800 text-primary shadow-sm"
-                    : "text-zinc-500 hover:text-muted-foreground"
+                    : "text-zinc-500 hover:text-muted-foreground",
                 )}
               >
                 <FileText size={12} />
@@ -202,7 +183,7 @@ export default function ResumeSection({
       <div
         className={cn(
           "flex-1 relative p-4  overflow-y-auto",
-          viewMode === "original" && "pt-0"
+          viewMode === "original" && "pt-0",
         )}
       >
         {isParsingFailed ? (

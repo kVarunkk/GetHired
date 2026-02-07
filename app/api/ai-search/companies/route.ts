@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     if (!userId || !companies) {
       return NextResponse.json(
         {
-          message: "user_id and companies are required in the request body.",
+          error: "user_id and companies are required in the request body.",
         },
         { status: 400 },
       );
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     if (!userPreferences) {
       return NextResponse.json(
         {
-          message: "User not found.",
+          error: "User not found.",
         },
         { status: 404 },
       );
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     if (userPreferences.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI) {
       return NextResponse.json(
-        { message: "Insufficient AI credits. Please top up to continue." },
+        { error: "Insufficient AI credits. Please top up to continue." },
         { status: 402 },
       );
     }
@@ -133,12 +133,10 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    await supabase
-      .from("user_info")
-      .update({
-        ai_credits: userPreferences.ai_credits - TAICredits.AI_SEARCH_OR_ASK_AI,
-      })
-      .eq("user_id", userId);
+    await supabase.rpc("deduct_user_credits", {
+      p_user_id: userId,
+      p_amount: TAICredits.AI_SEARCH_OR_ASK_AI,
+    });
 
     return NextResponse.json({
       rerankedcompanies: output.reranked_company_ids,
@@ -146,8 +144,11 @@ export async function POST(request: NextRequest) {
     });
   } catch {
     // console.error(e);
-    return NextResponse.json({
-      message: "An error occurred",
-    });
+    return NextResponse.json(
+      {
+        error: "An error occurred",
+      },
+      { status: 500 },
+    );
   }
 }

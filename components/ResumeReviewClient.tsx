@@ -36,7 +36,7 @@ export default function ResumeReviewClient({
   const [jdText, setJdText] = useState(initialJd);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(
-    null
+    null,
   );
   const [isJdPaneOpen, setIsJdPaneOpen] = useState(true);
   const [isOverallOpen, setIsOverallOpen] = useState(true);
@@ -71,11 +71,11 @@ export default function ResumeReviewClient({
         try {
           const { data, error } = await supabase
             .from("resumes")
-            .select("id, name, content, resume_path")
+            .select("id, name, content, resume_path, parsing_failed")
             .eq("id", currentReview.resume_id)
             .single();
 
-          if (!error && data?.content) {
+          if (!error && (data?.content || data?.parsing_failed)) {
             setCurrentReview((prev) => ({
               ...prev,
               resumes: data,
@@ -124,7 +124,7 @@ export default function ResumeReviewClient({
         toast.error("Link action failed.");
       }
     },
-    [supabase, setCurrentReview, currentReview.id]
+    [supabase, setCurrentReview, currentReview.id],
   );
 
   /**
@@ -148,6 +148,8 @@ export default function ResumeReviewClient({
         }),
       });
 
+      if (!res.ok) throw new Error("API error");
+
       const data = await res.json();
       if (data.success) {
         setCurrentReview((prev) => ({
@@ -159,10 +161,11 @@ export default function ResumeReviewClient({
         setIsOverallOpen(true);
         toast.success("Analysis complete.");
       } else {
-        toast.error(data.error || "AI analysis failed.");
+        throw new Error("AI analysis failed");
+        // toast.error(data.error || "AI analysis failed.");
       }
     } catch {
-      toast.error("Network error during analysis.");
+      toast.error("Some error occured during analysis. Please try again.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -286,7 +289,7 @@ export default function ResumeReviewClient({
                   "px-4 transition-all duration-300 ease-in-out overflow-hidden",
                   isOverallOpen
                     ? "max-h-[800px] pb-5 opacity-100"
-                    : "max-h-0 opacity-0"
+                    : "max-h-0 opacity-0",
                 )}
               >
                 <div className="relative ">
@@ -307,12 +310,12 @@ export default function ResumeReviewClient({
                 "w-full text-start group space-y-4 p-5 rounded-2xl border transition-all ",
                 activeHighlightId === bp.bullet_id
                   ? "border-indigo-500 bg-white dark:bg-zinc-900 shadow-xl"
-                  : "bg-white/50 dark:bg-zinc-900/40 border-zinc-200 dark:border-zinc-800"
+                  : "bg-white/50 dark:bg-zinc-900/40 border-zinc-200 dark:border-zinc-800",
               )}
               onClick={() => {
                 copyToClipboard(
                   bp.suggested,
-                  "Suggestion copied successfully!"
+                  "Suggestion copied successfully!",
                 );
               }}
             >

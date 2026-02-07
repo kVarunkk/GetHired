@@ -36,6 +36,16 @@ export async function createResumeAction(formData: FormData) {
     // 2. PREPARE STORAGE PATH
     const fileName = `resumes/${userId}/${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
 
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Upload to Storage
+    const { error: storageError } = await supabase.storage
+      .from("resumes")
+      .upload(fileName, buffer, { contentType: "application/pdf" });
+
+    if (storageError) throw storageError;
+
     // 3. CREATE DATABASE RECORD (Status: Processing/Syncing)
     const { data: resumeEntry, error: insertError } = await supabase
       .from("resumes")
@@ -49,16 +59,6 @@ export async function createResumeAction(formData: FormData) {
       .single();
 
     if (insertError) throw insertError;
-
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // Upload to Storage
-    const { error: storageError } = await supabase.storage
-      .from("resumes")
-      .upload(fileName, buffer, { contentType: "application/pdf" });
-
-    if (storageError) throw storageError;
 
     // 4. BACKGROUND PROCESSING
     // This allows us to return the result to the UI immediately while the PDF is uploaded and parsed.
@@ -80,10 +80,17 @@ export async function createResumeAction(formData: FormData) {
         });
 
         console.log(
-          `[BG_SUCCESS]: Resume ${resumeEntry.id} processing initiated.`
+          `[BG_SUCCESS]: Resume ${resumeEntry.id} processing initiated.`,
         );
       } catch (err) {
         console.error("[BG_FATAL_ERROR]:", err);
+        // await supabase
+        //   .from("resumes")
+        //   .update({
+        //     parsing_failed: true,
+        //     updated_at: new Date().toISOString(),
+        //   })
+        //   .eq("id", resumeEntry.id);
       }
     });
 

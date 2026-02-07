@@ -48,6 +48,15 @@ export async function submitOnboardingAction(formData: FormData) {
     if (resumeFile && resumeFile.size > 0) {
       fileName = `resumes/${userId}/${Date.now()}-${resumeFile.name.replace(/\s+/g, "_")}`;
 
+      const arrayBuffer = await resumeFile.arrayBuffer();
+      const { error: storageError } = await supabase.storage
+        .from("resumes")
+        .upload(fileName, Buffer.from(arrayBuffer), {
+          contentType: "application/pdf",
+        });
+
+      if (storageError) throw storageError;
+
       const { data: newResume, error: resError } = await supabase
         .from("resumes")
         .insert({
@@ -82,8 +91,7 @@ export async function submitOnboardingAction(formData: FormData) {
 
     if (userError) throw userError;
 
-    // 4. SEQUENTIAL BACKGROUND CHAIN (The "Relay Race")
-    // We await each step inside 'after' to ensure dependencies are met.
+    // 4. SEQUENTIAL BACKGROUND CHAIN
     after(async () => {
       const baseUrl = deploymentUrl();
       const internalHeaders = {
@@ -94,15 +102,6 @@ export async function submitOnboardingAction(formData: FormData) {
       try {
         // STEP A: If new file, Upload & Parse first
         if (resumeFile && resumeFile.size > 0) {
-          const arrayBuffer = await resumeFile.arrayBuffer();
-          const { error: storageError } = await supabase.storage
-            .from("resumes")
-            .upload(fileName, Buffer.from(arrayBuffer), {
-              contentType: "application/pdf",
-            });
-
-          if (storageError) throw storageError;
-
           // Call Parse API and WAIT for it to finish updating the 'content' column
           const parseRes = await fetch(`${baseUrl}/api/parse-resume`, {
             method: "POST",
@@ -133,16 +132,11 @@ export async function submitOnboardingAction(formData: FormData) {
         console.log(
           `[ONBOARDING_CHAIN_SUCCESS]: Process complete for ${userId}`,
         );
-      } catch (e) {
-        console.log(e);
-        // console.error("[ONBOARDING_CHAIN_FAILURE]:", err instanceof Error ? err.message: "Some error occure");
-        // Mark as failed so UI can show a retry button
-        // if (finalResumeId) {
-        //   await supabase
-        //     .from("resumes")
-        //     .update({ parsing_failed: true })
-        //     .eq("id", finalResumeId);
-        // }
+      } catch (err) {
+        console.error(
+          "[ONBOARDING_CHAIN_FAILURE]:",
+          err instanceof Error ? err.message : "Some error occured",
+        );
       }
     });
 
@@ -151,7 +145,7 @@ export async function submitOnboardingAction(formData: FormData) {
 
     return { success: true };
   } catch (err: unknown) {
-    // console.error("[ONBOARDING_SUBMIT_ERROR]:", err);
+    console.error("[ONBOARDING_SUBMIT_ERROR]:", err);
     return {
       error: err instanceof Error ? err.message : "Failed to save profile.",
     };

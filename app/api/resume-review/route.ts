@@ -3,7 +3,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getVertexClient } from "@/lib/serverUtils";
-import { IResume } from "@/lib/types";
+import { IResume, TAICredits } from "@/lib/types";
 
 /**
  * API ROUTE: /api/resume/review
@@ -23,7 +23,20 @@ export async function POST(req: NextRequest) {
     if (!reviewId || !targetJd || !userId) {
       return NextResponse.json(
         { error: "Missing parameters" },
-        { status: 400 }
+        { status: 400 },
+      );
+    }
+
+    const { data: userInfo } = await supabase
+      .from("user_info")
+      .select("ai_credits")
+      .eq("user_id", userId)
+      .single();
+
+    if (userInfo?.ai_credits < TAICredits.AI_CV_REVIEW) {
+      return NextResponse.json(
+        { error: "Insufficient AI credits. Please top up to continue." },
+        { status: 402 },
       );
     }
 
@@ -38,7 +51,7 @@ export async function POST(req: NextRequest) {
     if (!resumeJson) {
       return NextResponse.json(
         { error: "Resume not indexed" },
-        { status: 422 }
+        { status: 422 },
       );
     }
 
@@ -48,12 +61,32 @@ export async function POST(req: NextRequest) {
 
     const { output: analysis } = await generateText({
       model: model,
-      system: `You are a recruiter. You will be provided with a Resume in JSON format and a Job Description.
-      Each bullet point in the resume has a unique 'id'. 
-      When suggesting an improvement, you MUST return the 'bullet_id' of the point you are referencing. You need to return the score out of 10.`,
+      system: `You are an expert Hiring Manager and Recruiter at a high-growth company. 
+      Your task is to re-write resume bullet points to maximize the candidate's chances of an interview for the provided role.
+      
+      EVALUATION PARAMETERS:
+      1. DOMAIN ALIGNMENT: Identify specific tools, frameworks, or methodologies in the JD (e.g., Redis/Kafka for tech, or CRM/SEO for non-tech) and ensure they are woven into the experience where honest.
+      2. THE XYZ FORMULA: Accomplished [X] as measured by [Y], by doing [Z]. Every suggestion must include a quantitative metric (%, ms, $, count, or scale) even if you have to estimate a reasonable range based on the context.
+      3. STRATEGIC DEPTH: Use high-level, impactful verbs (Architected, Orchestrated, Spearheaded, Optimized) instead of passive ones (Helped, Worked on, Built).
+      4. NO GRAMMAR-ONLY FIXES: If a bullet point is already strong, skip it. Only suggest changes that significantly increase professional "weight" and relevance.
+      
+      SCORING RULES:
+      - Return a 'score' out of 10.
+      - 1-3: Major domain mismatch or zero metrics.
+      - 4-7: Good background but lacks "scale" or "impact" stories.
+      - 8-10: Highly tailored, metric-driven, and perfectly aligned with the JD requirements.`,
       prompt: `
-        JD: ${targetJd}
-        RESUME JSON: ${JSON.stringify(resumeJson)}
+        Analyze this Resume against the provided Job Description.
+        
+        JOB DESCRIPTION:
+        ${targetJd}
+
+        RESUME DIGITAL TWIN (JSON):
+        ${JSON.stringify(resumeJson)}
+
+        INSTRUCTIONS:
+        - For every 'bullet_points' entry, you MUST provide the exact 'bullet_id' from the Resume JSON.
+        - Ensure the 'suggested' text is punchy and authoritative.
       `,
       output: Output.object({
         schema: z.object({
@@ -64,14 +97,14 @@ export async function POST(req: NextRequest) {
               bullet_id: z
                 .string()
                 .describe(
-                  "The 'id' of the bullet point from the provided Resume JSON"
+                  "The 'id' of the bullet point from the provided Resume JSON",
                 ),
               section: z.string(),
               original: z.string(),
               suggested: z.string(),
               reason: z.string(),
               priority: z.enum(["high", "medium", "low"]),
-            })
+            }),
           ),
         }),
       }),
@@ -88,11 +121,16 @@ export async function POST(req: NextRequest) {
       })
       .eq("id", reviewId);
 
+    await supabase.rpc("deduct_user_credits", {
+      p_user_id: userId,
+      p_amount: TAICredits.AI_CV_REVIEW,
+    });
+
     return NextResponse.json({ success: true, analysis });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Some error occured" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

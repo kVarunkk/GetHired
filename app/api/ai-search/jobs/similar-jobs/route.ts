@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
         {
           message: "jobId, userId and jobs are required in the request body.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const { data: targetJobData, error: jobError } = await supabase
       .from("all_jobs")
       .select(
-        "job_name, description, experience, visa_requirement, salary_range, locations"
+        "job_name, description, experience, visa_requirement, salary_range, locations",
       )
       .eq("id", jobId)
       .single();
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     if (jobError || !targetJobData) {
       return NextResponse.json(
         { message: "Target job for comparison not found." },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
                 Salary Range: ${job.salary_range}
                 Locations: ${job.locations}
                 ---
-            `
+            `,
               )
               .join("\n")}
             
@@ -89,24 +89,22 @@ export async function POST(request: NextRequest) {
           reranked_job_ids: z
             .array(z.string())
             .describe(
-              "The list of re-ranked job IDs from most to least similar to the target job."
+              "The list of re-ranked job IDs from most to least similar to the target job.",
             ),
 
           filtered_out_job_ids: z
             .array(z.string())
             .describe(
-              "The list of job IDs that were filtered out as dissimilar."
+              "The list of job IDs that were filtered out as dissimilar.",
             ),
         }),
       }),
     });
 
-    await supabase
-      .from("user_info")
-      .update({
-        ai_credits: aiCredits - TAICredits.AI_SEARCH_OR_ASK_AI,
-      })
-      .eq("user_id", userId);
+    await supabase.rpc("deduct_user_credits", {
+      p_user_id: userId,
+      p_amount: TAICredits.AI_SEARCH_OR_ASK_AI,
+    });
 
     return NextResponse.json({
       rerankedJobs: object.reranked_job_ids,

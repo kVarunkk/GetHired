@@ -95,17 +95,10 @@ export async function POST(
     });
     answer = text;
 
-    const { error: deductError } = await supabase
-      .from("user_info")
-      .update({
-        ai_credits: userProfile.ai_credits - TAICredits.AI_SEARCH_OR_ASK_AI,
-      })
-      .eq("user_id", userId);
-
-    if (deductError) {
-      //   console.error("Error deducting AI credits:", deductError);
-      throw deductError;
-    }
+    await supabase.rpc("deduct_user_credits", {
+      p_user_id: userId,
+      p_amount: TAICredits.AI_SEARCH_OR_ASK_AI,
+    });
 
     return NextResponse.json({ success: true, answer: answer });
   } catch (e) {

@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 export default function FootComponent() {
   const pathname = usePathname();
   const isHirePage = pathname.startsWith("/hire");
+  const isJobsPage = pathname.startsWith("/jobs");
   // Define content variants
   const hireContent = {
     heading: "Ready to accelerate your talent search?",
@@ -29,7 +30,21 @@ export default function FootComponent() {
     secondaryButtonHref: "/hire",
   };
 
-  const content = isHirePage ? hireContent : defaultContent;
+  const seekerGuestContent = {
+    heading: "Ready to find your actual top matches?",
+    subtext:
+      "You've explored several pages of listings. Create a free account now to unlock AI features and see exactly which roles match your unique technical stack and experience.",
+    primaryButtonText: "Create Free Account",
+    primaryButtonHref: "/auth/sign-up",
+    secondaryButtonText: "Sign In ",
+    secondaryButtonHref: "/auth/login",
+  };
+
+  const content = isHirePage
+    ? hireContent
+    : isJobsPage
+      ? seekerGuestContent
+      : defaultContent;
 
   return (
     <div className="flex flex-col items-center justify-center py-12 px-6 bg-primary-foreground rounded-xl shadow-2xl border border-primary/20">

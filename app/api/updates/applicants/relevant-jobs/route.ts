@@ -16,11 +16,7 @@ export async function GET(request: NextRequest) {
   const headersList = await headers();
 
   const cronSecret = headersList.get("X-Internal-Secret");
-  console.log("CRON SECRET: ", cronSecret);
-  console.log("INTERNAL: ", INTERNAL_API_SECRET);
-
   if (cronSecret !== INTERNAL_API_SECRET) {
-    console.log("here is the error");
     return NextResponse.json(
       { message: "Unauthorized access" },
       { status: 401 },
@@ -68,13 +64,13 @@ export async function GET(request: NextRequest) {
             );
 
             //   send email update to user regarding ai job feed
-            if (data && data.length > 0) {
-              await sendEmailForRelevantJobsStatusUpdate(
-                data[0].email,
-                data[0].full_name,
-                URL + "/jobs?sortBy=relevance",
-              );
-            }
+            // if (data && data.length > 0) {
+            await sendEmailForRelevantJobsStatusUpdate(
+              data[0].email,
+              data[0].full_name,
+              URL + "/jobs?sortBy=relevance",
+            );
+            // }
           }
         }
       };
