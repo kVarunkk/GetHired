@@ -66,6 +66,7 @@ export default function OriginalResumeViewer({
           className,
         )}
       >
+        {debugError && <div>{debugError}</div>}
         {/* Viewer Controls */}
         {showControls && (
           <div className="flex items-center flex-wrap justify-between py-3 border-b border-border sticky top-0 z-20 bg-background">
