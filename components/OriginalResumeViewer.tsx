@@ -55,9 +55,11 @@ export default function OriginalResumeViewer({
           setBlobUrl(localUrl);
           // setIsLoading(false);
         }
-      } catch (err: any) {
+      } catch (err) {
         if (isCurrent) {
-          setDebugError(`Source Error: ${err.message}`);
+          setDebugError(
+            `Source Error: ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+          );
           // setIsLoading(false);
         }
       }
