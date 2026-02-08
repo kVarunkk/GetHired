@@ -32,6 +32,44 @@ export default function OriginalResumeViewer({
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [debugError, setDebugError] = useState<string | null>(null);
 
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  // const [isLoading, setIsLoading] = useState(true);
+
+  // 1. MANUAL BLOB FETCHING (The "GitHub Solution" adapted for URLs)
+  // This downloads the entire file into memory as a Blob first.
+  useEffect(() => {
+    if (!url) return;
+    let isCurrent = true;
+
+    const fetchAsBlob = async () => {
+      // setIsLoading(true);
+      try {
+        const response = await fetch(url);
+        if (!response.ok)
+          throw new Error(`Source access failed: ${response.status}`);
+
+        const blob = await response.blob();
+        const localUrl = URL.createObjectURL(blob);
+
+        if (isCurrent) {
+          setBlobUrl(localUrl);
+          // setIsLoading(false);
+        }
+      } catch (err: any) {
+        if (isCurrent) {
+          setDebugError(`Source Error: ${err.message}`);
+          // setIsLoading(false);
+        }
+      }
+    };
+
+    fetchAsBlob();
+    return () => {
+      isCurrent = false;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [url]);
+
   // Handle Container Resizing for Responsive PDF
   useEffect(() => {
     const updateWidth = () => {
@@ -115,7 +153,7 @@ export default function OriginalResumeViewer({
         >
           <div className="flex flex-col w-fit mx-auto pb-10">
             <Document
-              file={url}
+              file={blobUrl}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={handlePdfError}
               onSourceError={handlePdfError}
