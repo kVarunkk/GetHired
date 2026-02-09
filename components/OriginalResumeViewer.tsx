@@ -61,7 +61,7 @@ export default function OriginalResumeViewer({
       try {
         try {
           new URL(url);
-        } catch (e) {
+        } catch {
           throw new Error("Invalid source URL provided to viewer.");
         }
 
@@ -78,10 +78,12 @@ export default function OriginalResumeViewer({
           setPdfBlob(blob);
           setIsLoading(false);
         }
-      } catch (err: any) {
+      } catch (err) {
         if (isCurrent) {
           console.error("PDF Load Error:", err);
-          setDebugError(err.message);
+          setDebugError(
+            err instanceof Error ? err.message : JSON.stringify(err),
+          );
           setIsLoading(false);
         }
       }
