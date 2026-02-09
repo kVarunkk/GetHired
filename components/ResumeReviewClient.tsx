@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Eye,
   Info,
   Loader2,
   Target,
@@ -16,6 +17,7 @@ import BackButton from "./BackButton";
 import ResumeSection from "./resume-review/ResumeSection";
 import JdSection from "./resume-review/JdSection";
 import { IResume, IResumeReview, TPaymentStatus } from "@/lib/types";
+import { Button } from "./ui/button";
 
 interface ReviewWorkspaceProps {
   userId: string;
@@ -313,10 +315,13 @@ export default function ResumeReviewClient({
                   : "bg-white/50 dark:bg-zinc-900/40 border-zinc-200 dark:border-zinc-800",
               )}
               onClick={() => {
-                copyToClipboard(
-                  bp.suggested,
-                  "Suggestion copied successfully!",
-                );
+                // Only trigger card-wide click on devices that can hover (laptops)
+                if (
+                  typeof window !== "undefined" &&
+                  window.matchMedia("(hover: hover)").matches
+                ) {
+                  copyToClipboard(bp.suggested, "Suggestion copied!");
+                }
               }}
             >
               <div className="flex items-center justify-between">
@@ -336,6 +341,43 @@ export default function ResumeReviewClient({
                   <Copy className="h-4 w-4 hidden group-hover:inline ml-2 transition-all" />
                 </p>
               </div>
+              {/* TOUCH SCREEN ACTION BUTTONS 
+                   Hiding logic: 
+                   - 'hidden' by default.
+                   - '[@media(hover:none)]:flex' only shows these on touchscreens (mobile/tablet).
+                */}
+              <div className="hidden [@media(hover:none)]:flex items-center gap-2 pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation(); // Prevent duplicate trigger from card click
+                    copyToClipboard(bp.suggested, "Suggestion copied!");
+                  }}
+                  className="flex-1 gap-2 text-[10px] font-bold uppercase tracking-tighter border-zinc-200 dark:border-zinc-800 rounded-lg h-9 active:bg-brandSoft"
+                >
+                  <Copy size={12} />
+                  Copy
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    setActiveHighlightId(bp.bullet_id);
+                  }}
+                  className={cn(
+                    "flex-1 gap-2 text-[10px] font-bold uppercase tracking-tighter border-zinc-200 dark:border-zinc-800 rounded-lg h-9 transition-all",
+                    activeHighlightId === bp.bullet_id
+                      ? "bg-brand border-brand text-white"
+                      : "active:bg-brandSoft",
+                  )}
+                >
+                  <Eye size={12} />
+                  {activeHighlightId === bp.bullet_id ? "Focused" : "Focus"}
+                </Button>
+              </div>
+
               <p className="text-[11px] text-muted-foreground border-t border-zinc-100 dark:border-zinc-800 pt-3 leading-relaxed flex items-center gap-2">
                 <Info className="w-3 h-3  text-muted-foreground shrink-0" />
                 {bp.reason}

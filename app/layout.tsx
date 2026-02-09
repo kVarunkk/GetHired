@@ -10,7 +10,6 @@ import ThemeAwareToaster from "@/components/ToasterComponent";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import LayoutWrapper from "@/components/LayoutWrapper";
 import { createClient } from "@/lib/supabase/server";
-import Script from "next/script";
 
 export const metadata: Metadata = {
   title: {
@@ -57,24 +56,6 @@ export default async function RootLayout({
       <body
         className={`${geistSans.className} antialiased text-sm sm:text-base`}
       >
-        <Script
-          src="https://cdn.jsdelivr.net/npm/eruda"
-          strategy="afterInteractive"
-          // onLoad={() => {
-          //   // Check for development environment or debug query parameter
-          //   const isDev = process.env.NODE_ENV === "development";
-          //   const hasDebugParam =
-          //     typeof window !== "undefined" &&
-          //     window.location.search.includes("debug=true");
-
-          //   // if (isDev || hasDebugParam) {
-          //   //   if (typeof eruda !== "undefined") {
-          //   //     eruda.init();
-          //   //   }
-          //   // }
-          // }}
-        />
-
         <ProgressBarProvider>
           <ThemeProvider
             attribute="class"
