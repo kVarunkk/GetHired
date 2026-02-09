@@ -18,7 +18,7 @@ try {
     "pdfjs-dist/build/pdf.worker.min.mjs",
     import.meta.url,
   ).toString();
-} catch (e) {
+} catch {
   // fallback to a widely-available UMD worker on CDN
   // Note: using an explicit CDN version avoids issues on some mobile browsers.
   pdfjs.GlobalWorkerOptions.workerSrc =
