@@ -5,10 +5,25 @@ import { cn } from "@/lib/utils";
 import { Loader2, ZoomIn, ZoomOut, Download } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url,
-).toString();
+// pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+//   "pdfjs-dist/build/pdf.worker.min.mjs",
+//   import.meta.url,
+// ).toString();
+
+// Fallback: if module worker isn't supported or the bundler environment
+// doesn't resolve the .mjs worker correctly on mobile, use the CDN UMD worker.
+try {
+  // prefer ESM worker from local package (suitable for modern bundlers)
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.min.mjs",
+    import.meta.url,
+  ).toString();
+} catch (e) {
+  // fallback to a widely-available UMD worker on CDN
+  // Note: using an explicit CDN version avoids issues on some mobile browsers.
+  pdfjs.GlobalWorkerOptions.workerSrc =
+    "https://unpkg.com/pdfjs-dist/build/pdf.worker.min.js";
+}
 
 interface OriginalResumeViewerProps {
   url: string;
@@ -40,27 +55,28 @@ export default function OriginalResumeViewer({
   useEffect(() => {
     if (!url) return;
     let isCurrent = true;
+    let localUrl: string | null = null;
 
     const fetchAsBlob = async () => {
-      // setIsLoading(true);
       try {
         const response = await fetch(url);
         if (!response.ok)
           throw new Error(`Source access failed: ${response.status}`);
 
         const blob = await response.blob();
-        const localUrl = URL.createObjectURL(blob);
+        localUrl = URL.createObjectURL(blob);
 
         if (isCurrent) {
-          setBlobUrl(localUrl);
-          // setIsLoading(false);
+          setBlobUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return localUrl;
+          });
         }
       } catch (err) {
         if (isCurrent) {
           setDebugError(
             `Source Error: ${err instanceof Error ? err.message : JSON.stringify(err)}`,
           );
-          // setIsLoading(false);
         }
       }
     };
@@ -68,7 +84,7 @@ export default function OriginalResumeViewer({
     fetchAsBlob();
     return () => {
       isCurrent = false;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      if (localUrl) URL.revokeObjectURL(localUrl);
     };
   }, [url]);
 
@@ -155,7 +171,7 @@ export default function OriginalResumeViewer({
         >
           <div className="flex flex-col w-fit mx-auto pb-10">
             <Document
-              file={url}
+              file={blobUrl || url}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={handlePdfError}
               onSourceError={handlePdfError}
