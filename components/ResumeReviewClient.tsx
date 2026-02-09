@@ -191,9 +191,9 @@ export default function ResumeReviewClient({
   }, [currentReview, setCurrentReview, supabase]);
 
   return (
-    <div className="flex flex-col md:flex-row md:h-[calc(100vh)] md:overflow-hidden bg-background">
+    <div className="flex flex-col sm:flex-row sm:h-[calc(100vh)] sm:overflow-hidden bg-background">
       {/* LEFT PANE: ANALYSIS & SUGGESTIONS */}
-      <aside className="md:w-[40%] border-r flex flex-col ">
+      <aside className="sm:w-[40%] border-r flex flex-col ">
         <div className="p-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-3">
             <BackButton />
@@ -214,7 +214,7 @@ export default function ResumeReviewClient({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 ">
+        <div className="h-[400px] sm:h-full sm:flex-1 overflow-y-scroll p-6 space-y-8 ">
           {/* Polling State */}
           {!isParsed && isResumeLinked && !isParsingFailed && (
             <div className="flex flex-col items-center justify-center h-64 text-center space-y-4 animate-in fade-in duration-500">
@@ -306,8 +306,22 @@ export default function ResumeReviewClient({
           {currentReview.ai_response?.bullet_points?.map((bp) => (
             <button
               key={bp.bullet_id}
-              onMouseEnter={() => setActiveHighlightId(bp.bullet_id)}
-              onMouseLeave={() => setActiveHighlightId(null)}
+              onMouseEnter={() => {
+                if (
+                  typeof window !== "undefined" &&
+                  window.matchMedia("(hover: hover)").matches
+                ) {
+                  setActiveHighlightId(bp.bullet_id);
+                }
+              }}
+              onMouseLeave={() => {
+                if (
+                  typeof window !== "undefined" &&
+                  window.matchMedia("(hover: hover)").matches
+                ) {
+                  setActiveHighlightId(null);
+                }
+              }}
               className={cn(
                 "w-full text-start group space-y-4 p-5 rounded-2xl border transition-all ",
                 activeHighlightId === bp.bullet_id

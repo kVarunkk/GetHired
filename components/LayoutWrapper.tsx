@@ -13,6 +13,8 @@ interface LayoutWrapperProps {
   initialUser: User | null;
 }
 
+const noScrollToTop = ["/resume-review/"];
+
 export default function LayoutWrapper({
   children,
   initialUser,
@@ -38,7 +40,7 @@ export default function LayoutWrapper({
     <div
       className={cn(
         "flex min-h-screen  ",
-        isDesktop && variant === "vertical" ? "flex-row" : "flex-col"
+        isDesktop && variant === "vertical" ? "flex-row" : "flex-col",
       )}
     >
       <NavbarComponent
@@ -48,7 +50,9 @@ export default function LayoutWrapper({
       />
 
       <div className="flex-1 w-full min-w-0 ">{children}</div>
-      <ScrollToTopButton />
+      {!noScrollToTop.find((_) => pathname.startsWith(_)) && (
+        <ScrollToTopButton />
+      )}
     </div>
   );
 }
