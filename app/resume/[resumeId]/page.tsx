@@ -48,8 +48,8 @@ export default async function ResumeIdPage({
           <BackButton />
         </div>
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-medium text-wrap">{data.name}</h1>
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <h1 className="text-2xl font-medium truncate">{data.name}</h1>
             {data.is_primary && <Badge>PRIMARY</Badge>}
           </div>
           {user?.id && (
