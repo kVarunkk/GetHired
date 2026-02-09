@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { ZoomIn, ZoomOut, Download } from "lucide-react";
-import { pdfjs } from "react-pdf";
+import { Loader2, ZoomIn, ZoomOut, Download } from "lucide-react";
+import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -26,78 +26,78 @@ export default function OriginalResumeViewer({
   className,
   showControls = true,
 }: OriginalResumeViewerProps) {
-  // const [numPages, setNumPages] = useState<number | null>(null);
+  const [numPages, setNumPages] = useState<number | null>(null);
   const [scale, setScale] = useState(1.0);
   const containerRef = useRef<HTMLDivElement>(null);
-  // const [containerWidth, setContainerWidth] = useState<number>(0);
-  // const [debugError, setDebugError] = useState<string | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [debugError, setDebugError] = useState<string | null>(null);
 
-  // const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   // const [isLoading, setIsLoading] = useState(true);
 
   // 1. MANUAL BLOB FETCHING (The "GitHub Solution" adapted for URLs)
   // This downloads the entire file into memory as a Blob first.
-  // useEffect(() => {
-  //   if (!url) return;
-  //   let isCurrent = true;
+  useEffect(() => {
+    if (!url) return;
+    let isCurrent = true;
 
-  //   const fetchAsBlob = async () => {
-  //     // setIsLoading(true);
-  //     try {
-  //       const response = await fetch(url);
-  //       if (!response.ok)
-  //         throw new Error(`Source access failed: ${response.status}`);
+    const fetchAsBlob = async () => {
+      // setIsLoading(true);
+      try {
+        const response = await fetch(url);
+        if (!response.ok)
+          throw new Error(`Source access failed: ${response.status}`);
 
-  //       const blob = await response.blob();
-  //       const localUrl = URL.createObjectURL(blob);
+        const blob = await response.blob();
+        const localUrl = URL.createObjectURL(blob);
 
-  //       if (isCurrent) {
-  //         setBlobUrl(localUrl);
-  //         // setIsLoading(false);
-  //       }
-  //     } catch (err) {
-  //       if (isCurrent) {
-  //         setDebugError(
-  //           `Source Error: ${err instanceof Error ? err.message : JSON.stringify(err)}`,
-  //         );
-  //         // setIsLoading(false);
-  //       }
-  //     }
-  //   };
+        if (isCurrent) {
+          setBlobUrl(localUrl);
+          // setIsLoading(false);
+        }
+      } catch (err) {
+        if (isCurrent) {
+          setDebugError(
+            `Source Error: ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+          );
+          // setIsLoading(false);
+        }
+      }
+    };
 
-  //   fetchAsBlob();
-  //   return () => {
-  //     isCurrent = false;
-  //     if (blobUrl) URL.revokeObjectURL(blobUrl);
-  //   };
-  // }, [url]);
+    fetchAsBlob();
+    return () => {
+      isCurrent = false;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [url]);
 
   // Handle Container Resizing for Responsive PDF
-  // useEffect(() => {
-  //   const updateWidth = () => {
-  //     if (containerRef.current) {
-  //       // Subtract padding to ensure the canvas fits perfectly
-  //       setContainerWidth(containerRef.current.clientWidth - 58);
-  //     }
-  //   };
-  //   updateWidth();
-  //   window.addEventListener("resize", updateWidth);
-  //   return () => window.removeEventListener("resize", updateWidth);
-  // }, []);
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        // Subtract padding to ensure the canvas fits perfectly
+        setContainerWidth(containerRef.current.clientWidth - 58);
+      }
+    };
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
 
-  // const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-  //   setNumPages(numPages);
-  // };
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+  };
 
   const handleDownload = () => {
     if (!url) return;
     window.open(url, "_blank");
   };
-  // const handlePdfError = (err: Error) => {
-  //   setDebugError(
-  //     `${err.name}: ${err.message}\n\nStack: ${err.stack?.slice(0, 300)}...`,
-  //   );
-  // };
+  const handlePdfError = (err: Error) => {
+    setDebugError(
+      `${err.name}: ${err.message}\n\nStack: ${err.stack?.slice(0, 300)}...`,
+    );
+  };
   try {
     return (
       <div
@@ -106,7 +106,7 @@ export default function OriginalResumeViewer({
           className,
         )}
       >
-        {/* {debugError && <div>{debugError}</div>} */}
+        {debugError && <div>{debugError}</div>}
         {/* Viewer Controls */}
         {showControls && (
           <div className="flex items-center flex-wrap justify-between py-3 border-b border-border sticky top-0 z-20 bg-background">
@@ -139,11 +139,11 @@ export default function OriginalResumeViewer({
                   <ZoomIn size={14} />
                 </button>
               </div>
-              {/* {numPages && (
+              {numPages && (
                 <div className="text-xs font-bold text-muted-foreground bg-secondary p-2 rounded-lg select-none">
                   {numPages} {numPages === 1 ? "Page" : "Pages"}
                 </div>
-              )} */}
+              )}
             </div>
           </div>
         )}
@@ -153,17 +153,9 @@ export default function OriginalResumeViewer({
           ref={containerRef}
           className="flex-1  overflow-auto p-6  bg-zinc-100/50 dark:bg-zinc-900/20"
         >
-          {/* <div className="flex flex-col w-fit mx-auto pb-10"> */}
-          <object
-            width="100%"
-            height={"100%"}
-            data={url}
-            type="application/pdf"
-          >
-            {" "}
-          </object>
-          {/* <Document
-              file={blobUrl}
+          <div className="flex flex-col w-fit mx-auto pb-10">
+            <Document
+              file={url}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={handlePdfError}
               onSourceError={handlePdfError}
@@ -205,8 +197,8 @@ export default function OriginalResumeViewer({
                   />
                 ))}
               </div>
-            </Document> */}
-          {/* </div> */}
+            </Document>
+          </div>
         </div>
       </div>
     );
