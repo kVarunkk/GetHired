@@ -24,7 +24,8 @@ import AskAIDialog from "@/components/AskAIDialog";
 import { Button } from "@/components/ui/button";
 import InfoTooltip from "@/components/InfoTooltip";
 import NotFound from "../NotFound";
-import CreateReviewForJob from "@/components/CreateReviewForJob";
+// import CreateReviewForJob from "@/components/CreateReviewForJob";
+import ComingSoonBtn from "@/components/waitlist/ComingSoonBtn";
 
 export async function generateMetadata({
   params,
@@ -254,7 +255,11 @@ export default async function JobPage({
               )}
               {user ? (
                 <div className="flex items-center">
-                  <CreateReviewForJob userId={user.id} jobId={job_id} />
+                  <ComingSoonBtn
+                    label="Tailor CV for this Job"
+                    variant={"outline"}
+                  />
+                  {/* <CreateReviewForJob userId={user.id} jobId={job_id} />
                   <InfoTooltip
                     content={
                       <p>
@@ -265,7 +270,7 @@ export default async function JobPage({
                         </Link>
                       </p>
                     }
-                  />
+                  /> */}
                 </div>
               ) : (
                 <Button variant={"outline"} asChild>

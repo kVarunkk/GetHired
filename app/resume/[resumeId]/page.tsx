@@ -1,13 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import BackButton from "@/components/BackButton";
-import CreateReviewForResume from "@/components/CreateReviewForResume";
+// import CreateReviewForResume from "@/components/CreateReviewForResume";
 import { Badge } from "@/components/ui/badge";
-import InfoTooltip from "@/components/InfoTooltip";
-import { TAICredits } from "@/lib/types";
-import Link from "next/link";
+// import InfoTooltip from "@/components/InfoTooltip";
+// import { TAICredits } from "@/lib/types";
+// import Link from "next/link";
 // import dynamic from "next/dynamic";
 import OriginalResumeWrapper from "@/components/OriginalResumeWrapper";
+import ComingSoonBtn from "@/components/waitlist/ComingSoonBtn";
 // import OriginalResumeViewer from "@/components/OriginalResumeViewer";
 
 export default async function ResumeIdPage({
@@ -54,8 +55,9 @@ export default async function ResumeIdPage({
           </div>
           {user?.id && (
             <div className="flex items-center gap-1">
-              <CreateReviewForResume userId={user.id} resumeId={resumeId} />
-              <InfoTooltip
+              <ComingSoonBtn label="Review this Resume" variant={"outline"} />
+              {/* <CreateReviewForResume userId={user.id} resumeId={resumeId} /> */}
+              {/* <InfoTooltip
                 content={
                   <p>
                     This feature uses {TAICredits.AI_CV_REVIEW} AI credits per
@@ -65,7 +67,7 @@ export default async function ResumeIdPage({
                     </Link>
                   </p>
                 }
-              />
+              /> */}
             </div>
           )}
         </div>

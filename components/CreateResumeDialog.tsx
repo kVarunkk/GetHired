@@ -14,8 +14,15 @@ import ResumeSourceSelector from "./ResumeSourceSelector";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { createResumeAction } from "@/app/actions/create-resume";
+import { IResume } from "@/lib/types";
 
-export default function CreateResumeDialog({ userId }: { userId: string }) {
+export default function CreateResumeDialog({
+  userId,
+  existingResumes,
+}: {
+  userId: string;
+  existingResumes: IResume[];
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -38,7 +45,7 @@ export default function CreateResumeDialog({ userId }: { userId: string }) {
           "Resume added succesfully! Our AI is now indexing the Resume...",
           {
             id: toastId,
-          }
+          },
         );
         setIsOpen(false);
         setSelectedFile(null);
@@ -79,7 +86,7 @@ export default function CreateResumeDialog({ userId }: { userId: string }) {
             </div>
           ) : (
             <ResumeSourceSelector
-              existingResumes={[]}
+              existingResumes={existingResumes}
               selectedId={null}
               onSelectExisting={() => {}}
               file={selectedFile}

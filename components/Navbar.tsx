@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 import WaitlistCTA from "./WaitlistCTA";
 import ModifiedLink from "./ModifiedLink";
+import { Badge } from "./ui/badge";
 
 export default function NavbarComponent({
   navItems,
@@ -103,7 +104,7 @@ export default function NavbarComponent({
               pathname.startsWith("/resume") ||
               pathname.startsWith("/company") ||
               pathname.startsWith("/dashboard")) &&
-              "mb-0"
+              "mb-0",
           )}
         >
           <div className="flex items-center gap-1 justify-start">
@@ -120,7 +121,7 @@ export default function NavbarComponent({
                   href={item.href}
                   className={cn(
                     "hover:underline underline-offset-2",
-                    item.active && "underline underline-offset-2"
+                    item.active && "underline underline-offset-2",
                   )}
                 >
                   {item.label}
@@ -160,7 +161,7 @@ export default function NavbarComponent({
       <div
         className={cn(
           "h-screen flex flex-col gap-3 p-4 border-r overflow-y-auto overflow-x-hidden sticky transition-all duration-300 ease-in-out top-0 shrink-0",
-          isMenuOpen ? "w-52" : "w-20"
+          isMenuOpen ? "w-52" : "w-20",
         )}
       >
         {/* <div className="flex items-center gap-1 justify-"> */}
@@ -173,27 +174,55 @@ export default function NavbarComponent({
           <div
             className={cn(
               "  gap-4 text-sm hidden md:flex md:flex-col  mb-auto",
-              isMenuOpen ? "items-start" : "items-center"
+              isMenuOpen ? "items-start" : "items-center",
             )}
           >
             {navbarItems.map((item) => (
               <Tooltip key={item.id} delayDuration={100}>
                 <TooltipTrigger asChild>
-                  <ModifiedLink
-                    key={item.id}
-                    href={item.href}
-                    className={cn(
-                      "hover:bg-secondary transition-all rounded-lg  gap-2 items-center  p-2 flex w-full",
-                      item.active && "bg-secondary",
-                      isMenuOpen ? "justify-start" : "justify-center"
-                    )}
-                  >
-                    <span className="shrink-0">{item.icon}</span>
-                    {isMenuOpen && item.label}
-                  </ModifiedLink>
+                  {item.href === "/resume-review" ? (
+                    <div
+                      className={cn(
+                        "text-brand hover:bg-secondary transition-all rounded-lg  gap-2 items-center  p-2 flex w-full",
+                        item.active && "bg-secondary",
+                        isMenuOpen ? "justify-start" : "justify-center",
+                      )}
+                    >
+                      <span className="shrink-0">{item.icon}</span>
+                      {isMenuOpen && item.label}
+                    </div>
+                  ) : (
+                    <ModifiedLink
+                      key={item.id}
+                      href={item.href}
+                      className={cn(
+                        "hover:bg-secondary transition-all rounded-lg  gap-2 items-center  p-2 flex w-full",
+                        item.active && "bg-secondary",
+                        isMenuOpen ? "justify-start" : "justify-center",
+                      )}
+                    >
+                      <span className="shrink-0">{item.icon}</span>
+                      {isMenuOpen && item.label}
+                    </ModifiedLink>
+                  )}
                 </TooltipTrigger>
-                <TooltipContent side="right" hidden={isMenuOpen}>
-                  <p>{item.label}</p>
+                <TooltipContent
+                  side="right"
+                  hidden={isMenuOpen && item.href !== "/resume-review"}
+                >
+                  {item.href === "/resume-review" ? (
+                    <p>
+                      Coming Soon.{" "}
+                      <Link
+                        className="text-blue-500"
+                        href={"/ai-resume-checker"}
+                      >
+                        Join the Waitlist.
+                      </Link>
+                    </p>
+                  ) : (
+                    <p>{item.label}</p>
+                  )}
                 </TooltipContent>
               </Tooltip>
             ))}
@@ -206,7 +235,7 @@ export default function NavbarComponent({
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className={cn(
                   "hidden md:flex p-2  items-center w-full gap-2 hover:bg-secondary transition-all rounded-lg",
-                  isMenuOpen ? "justify-start" : "justify-center"
+                  isMenuOpen ? "justify-start" : "justify-center",
                 )}
               >
                 {isMenuOpen ? (
@@ -242,7 +271,7 @@ export default function NavbarComponent({
                   <Link
                     className={cn(
                       "hover:text-primary p-2 flex items-center gap-2 transition-all rounded-lg hover:bg-secondary w-full",
-                      isMenuOpen ? "justify-start" : "justify-center"
+                      isMenuOpen ? "justify-start" : "justify-center",
                     )}
                     href={"https://discord.gg/6xvKBqW5eW"}
                     target="_blank"
@@ -291,19 +320,38 @@ const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
         </SheetHeader>
 
         <div className="flex flex-col gap-4 items-start w-full">
-          {items?.map((item) => (
-            <ModifiedLink
-              key={item.id}
-              href={item.href}
-              className={cn(
-                "hover:underline underline-offset-2 p-2 w-full",
-                item.active && "underline underline-offset-2"
-              )}
-              onClick={() => setOpen(false)}
-            >
-              {item.label}
-            </ModifiedLink>
-          ))}
+          {items?.map((item) => {
+            if (item.href === "/resume-review") {
+              return (
+                <ModifiedLink
+                  key={item.id}
+                  href={"/ai-resume-checker"}
+                  className={cn(
+                    "text-brand hover:underline underline-offset-2 p-2 w-full flex items-center justify-between",
+                    item.active && "underline underline-offset-2",
+                  )}
+                  onClick={() => setOpen(false)}
+                >
+                  {item.label}
+                  <Badge className="text-xs">Coming Soon</Badge>
+                </ModifiedLink>
+              );
+            } else {
+              return (
+                <ModifiedLink
+                  key={item.id}
+                  href={item.href}
+                  className={cn(
+                    "hover:underline underline-offset-2 p-2 w-full",
+                    item.active && "underline underline-offset-2",
+                  )}
+                  onClick={() => setOpen(false)}
+                >
+                  {item.label}
+                </ModifiedLink>
+              );
+            }
+          })}
         </div>
 
         <SheetFooter className="mt-4">
