@@ -1,24 +1,36 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { cn, getNavbarVairantByPath, getNavItemsByPath } from "../lib/utils";
 import { usePathname } from "next/navigation";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { User } from "@supabase/supabase-js";
 import NavbarComponent from "./Navbar";
 import ScrollToTopButton from "./ScrollToTopButton";
+import { createClient } from "@/lib/supabase/client";
 
 interface LayoutWrapperProps {
   children: React.ReactNode;
-  initialUser: User | null;
+  // initialUser: User | null;
 }
 
 const noScrollToTop = ["/resume-review/"];
 
 export default function LayoutWrapper({
   children,
-  initialUser,
+  // initialUser,
 }: LayoutWrapperProps) {
+  const [initialUser, setInitialUser] = useState<User | null>(null);
+  useEffect(() => {
+    (async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setInitialUser(user);
+    })();
+  }, []);
+
   const pathname = usePathname();
 
   const variant = useMemo(() => {
