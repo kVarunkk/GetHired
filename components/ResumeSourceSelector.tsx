@@ -27,6 +27,7 @@ interface ResumeSourceSelectorProps {
   file: File | null;
   onFileChange: (file: File | null) => void;
   view?: "upload" | "select" | "both";
+  showManageResumes?: boolean;
 }
 
 export default function ResumeSourceSelector({
@@ -36,6 +37,7 @@ export default function ResumeSourceSelector({
   file,
   onFileChange,
   view = "both",
+  showManageResumes = true,
 }: ResumeSourceSelectorProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeResumeName, setActiveResumeName] = useState<string | null>(null);
@@ -123,14 +125,16 @@ export default function ResumeSourceSelector({
           </TabsContent>
         </Tabs>
       )}
-      <div className="">
-        <Link
-          className="text-xs text-muted-foreground underline "
-          href="/resume"
-        >
-          Manage Resumes
-        </Link>
-      </div>
+      {showManageResumes && (
+        <div className="">
+          <Link
+            className="text-xs text-muted-foreground underline "
+            href="/resume"
+          >
+            Manage Resumes
+          </Link>
+        </div>
+      )}
       {isLoadingSignedUrl ? (
         <div className="p-4 flex items-center justify-center">
           <Loader2 className="h-4 w-4 animate-spin" />

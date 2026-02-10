@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 // import dynamic from "next/dynamic";
 import OriginalResumeWrapper from "@/components/OriginalResumeWrapper";
 import ComingSoonBtn from "@/components/waitlist/ComingSoonBtn";
+import InfoTooltip from "@/components/InfoTooltip";
 // import OriginalResumeViewer from "@/components/OriginalResumeViewer";
 
 export default async function ResumeIdPage({
@@ -52,6 +53,16 @@ export default async function ResumeIdPage({
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             <h1 className="text-2xl font-medium truncate">{data.name}</h1>
             {data.is_primary && <Badge>PRIMARY</Badge>}
+            {data.is_primary && (
+              <InfoTooltip
+                content={
+                  <p>
+                    This resume will be used for building your job digest and ai
+                    smart search job feed.
+                  </p>
+                }
+              />
+            )}
           </div>
           {user?.id && (
             <div className="flex items-center gap-1">

@@ -74,6 +74,7 @@ export const Step6ResumeUpload: React.FC<StepProps> = ({
                 resume_file: file,
               }));
             }}
+            showManageResumes={false}
           />
         )}
 

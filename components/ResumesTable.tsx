@@ -29,6 +29,7 @@ import { Badge } from "./ui/badge";
 import ResumeSetPrimary from "./ResumeSetPrimary";
 // import ModifiedLink from "./ModifiedLink";
 import { Link as ModifiedLink } from "react-transition-progress/next";
+import InfoTooltip from "./InfoTooltip";
 
 interface ResumesTableProps {
   data: IResume[];
@@ -55,7 +56,7 @@ export default function ResumesTable({ data }: ResumesTableProps) {
 
   const updateLocalItem = (updatedItem: IResume) => {
     setItems((prev) =>
-      prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
+      prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
     );
   };
 
@@ -109,6 +110,16 @@ export default function ResumesTable({ data }: ResumesTableProps) {
           <div className="flex items-center gap-1">
             <div className="text-sm font-medium">{row.original.name}</div>
             {row.original.is_primary && <Badge>PRIMARY</Badge>}
+            {row.original.is_primary && (
+              <InfoTooltip
+                content={
+                  <p>
+                    This resume will be used for building your job digest and ai
+                    smart search job feed.
+                  </p>
+                }
+              />
+            )}
           </div>
         ),
       },
@@ -149,7 +160,7 @@ export default function ResumesTable({ data }: ResumesTableProps) {
         ),
       },
     ],
-    [isProcessing, items]
+    [isProcessing, items],
   );
 
   const table = useReactTable({
@@ -220,7 +231,7 @@ export default function ResumesTable({ data }: ResumesTableProps) {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -238,7 +249,7 @@ export default function ResumesTable({ data }: ResumesTableProps) {
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

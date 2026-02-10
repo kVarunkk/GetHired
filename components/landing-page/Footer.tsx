@@ -250,7 +250,7 @@ export default function Footer() {
         </div>
 
         <div className="col-span-2 ">
-          <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+          <h3 className="text-lg font-bold mb-3 ">
             AI Resume Checker - Join Waitlist
           </h3>
           <WaitlistForm className="" type={TWaitlistType.AI_RESUME_CHECKER} />
