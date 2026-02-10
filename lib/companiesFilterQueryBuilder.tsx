@@ -32,7 +32,7 @@ export const buildCompaniesQuery = async ({
     } = await supabase.auth.getUser();
 
     const parseMultiSelectParam = (
-      param: string | null | undefined
+      param: string | null | undefined,
     ): string[] => {
       return param
         ? param
@@ -84,7 +84,7 @@ export const buildCompaniesQuery = async ({
           embedding: userEmbedding,
           match_threshold: 0.5, // You can adjust this threshold
           match_count: 100, // Fetch a larger set to then apply filters
-        }
+        },
       );
 
       if (searchError) {
@@ -93,7 +93,7 @@ export const buildCompaniesQuery = async ({
       }
 
       matchedCompanyIds = searchData.map(
-        (company: { id: string }) => company.id
+        (company: { id: string }) => company.id,
       );
 
       // We now filter the main query to only include the matched jobs
@@ -145,6 +145,7 @@ export const buildCompaniesQuery = async ({
       matchedCompanyIds,
     };
   } catch (e: unknown) {
+    console.log(e);
     return {
       data: [],
       error:

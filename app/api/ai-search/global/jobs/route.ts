@@ -37,16 +37,16 @@ export async function POST(req: Request) {
   if (!userInfo) {
     return NextResponse.json(
       {
-        message: "User not found.",
+        error: "User not found.",
       },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
   if (userInfo.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI) {
     return NextResponse.json(
-      { message: "Insufficient AI credits. Please top up to continue." },
-      { status: 402 }
+      { error: "Insufficient AI credits. Please top up to continue." },
+      { status: 402 },
     );
   }
 
@@ -64,17 +64,17 @@ export async function POST(req: Request) {
           jobType: z
             .array(z.string())
             .describe(
-              "List of job types (allowed values: 'Fulltime', 'Contract', 'Intern')."
+              "List of job types (allowed values: 'Fulltime', 'Contract', 'Intern').",
             ),
           location: z
             .array(z.string())
             .describe(
-              "List of general locations (e.g., 'Bangalore', 'Gurgaon', 'Remote')."
+              "List of general locations (e.g., 'Bangalore', 'Gurgaon', 'Remote').",
             ),
           visaRequirement: z
             .array(z.string())
             .describe(
-              "List of visa requirement terms (allowed values: 'US Citizenship/Visa Not Required', 'US Citizen/Visa Only', 'Will Sponsor')."
+              "List of visa requirement terms (allowed values: 'US Citizenship/Visa Not Required', 'US Citizen/Visa Only', 'Will Sponsor').",
             ),
           platform: z
             .array(z.string())
@@ -88,12 +88,12 @@ export async function POST(req: Request) {
           jobTitleKeywords: z
             .array(z.string())
             .describe(
-              "List of keywords for the job title. Provide multiple variations, abbreviations, or synonymous spellings to maximize recall. Examples: for 'frontend', include ['front end', 'front-end', 'frontend']; for 'backend', include ['back end', 'back-end', 'backend']; for 'SDE', include ['software engineer', 'SDE', 'software developer']."
+              "List of keywords for the job title. Provide multiple variations, abbreviations, or synonymous spellings to maximize recall. Examples: for 'frontend', include ['front end', 'front-end', 'frontend']; for 'backend', include ['back end', 'back-end', 'backend']; for 'SDE', include ['software engineer', 'SDE', 'software developer'].",
             ),
           minSalary: z
             .string()
             .describe(
-              "Minimum salary converted to the simplest integer form (e.g., '100000')."
+              "Minimum salary converted to the simplest integer form (e.g., '100000').",
             ),
           minExperience: z
             .string()
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
           sortBy: z
             .string()
             .describe(
-              "allowed values: created_at, company_name and salary_min."
+              "allowed values: created_at, company_name and salary_min.",
             ),
           sortOrder: z
             .string()
@@ -129,7 +129,7 @@ export async function POST(req: Request) {
       {
         error: (error as Error).message || "Server error during AI processing",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

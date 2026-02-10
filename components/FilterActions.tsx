@@ -36,20 +36,28 @@ export default function FilterActions({
           currentPage === "profiles"
             ? "company/profiles"
             : currentPage === "jobs"
-            ? "jobs"
-            : "companies"
+              ? "jobs"
+              : "companies"
         }?${params.toString()}`
       );
     });
-  }, [sortBy, sortOrder, tab, setOpenSheet, router, currentPage]);
+  }, [
+    sortBy,
+    sortOrder,
+    tab,
+    setOpenSheet,
+    router,
+    currentPage,
+    startProgress,
+  ]);
 
   return (
-    <div className="flex items-center justify-between">
-      <button type="button" className="underline" onClick={clearFilters}>
+    <div className="flex flex-wrap-reverse gap-5 items-center justify-between">
+      <button type="button" className="underline flex-1" onClick={clearFilters}>
         Clear Filters
       </button>
 
-      <Button type="submit" disabled={isApplyFiltersLoading}>
+      <Button type="submit" disabled={isApplyFiltersLoading} className="flex-1">
         Apply Filters
         {isApplyFiltersLoading && <AppLoader size="sm" color="secondary" />}
       </Button>

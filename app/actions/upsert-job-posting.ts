@@ -74,7 +74,7 @@ export async function upsertJobPostingAction(params: {
     const { data: new_posting, error: postingError } = await supabase
       .from("job_postings")
       .upsert(payload, { onConflict: "id" })
-      .select("*, company_info(website, name)")
+      .select("*, company_info(website, name, id)")
       .single();
 
     if (postingError || !new_posting) throw postingError;
@@ -132,7 +132,7 @@ export async function upsertJobPostingAction(params: {
             equity_min: new_posting.min_equity,
             equity_max: new_posting.max_equity,
             experience: new_posting.experience,
-            company_url: new_posting.company_info?.website,
+            company_url: "/companies/" + new_posting.company_info?.id,
             company_name: new_posting.company_info?.name,
             platform: "gethired",
           })

@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   const isAppliedJobsTabActive = searchParams.get("tab") === "applied";
   const applicationStatus = searchParams.get("applicationStatus");
   JOBS_PER_PAGE = parseInt(
-    searchParams.get("limit") || JOBS_PER_PAGE.toString()
+    searchParams.get("limit") || JOBS_PER_PAGE.toString(),
   );
   const createdAfter = searchParams.get("createdAfter");
   const createdAfterDate = createdAfter
@@ -106,8 +106,8 @@ export async function GET(request: NextRequest) {
       aiCredits < TAICredits.AI_SEARCH_OR_ASK_AI
     ) {
       return NextResponse.json(
-        { error: "Not enough AI Credits. Please Recharge" },
-        { status: 500 }
+        { message: "Insufficient AI credits. Please top up to continue." },
+        { status: 402 },
       );
     }
 
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
             ? err.message
             : String(err) || "An unexpected error occurred",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

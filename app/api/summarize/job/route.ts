@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json(
       { error: "Authentication required." },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
   if (data.ai_credits < TAICredits.AI_SUMMARY) {
     return NextResponse.json(
       { error: "Insufficient AI credits. Please top up to continue." },
-      { status: 402 }
+      { status: 402 },
     );
   }
 
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     if (fetchError || !job || !job.description) {
       return NextResponse.json(
         { error: "Job description not found." },
-        { status: 404 }
+        { status: 404 },
       );
     }
     jobDescription = job.description;
@@ -93,24 +93,20 @@ Analyze the following job posting: "${job.job_name}". Text to summarize: ${jobDe
     if (updateError) {
       return NextResponse.json(
         { error: "Failed to save summary to database." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
-    const { error: creditError } = await authenticatedSupabase
-      .from("user_info")
-      .update({ ai_credits: data.ai_credits - TAICredits.AI_SUMMARY })
-      .eq("user_id", user.id);
-
-    if (creditError) {
-      throw creditError;
-    }
+    await authenticatedSupabase.rpc("deduct_user_credits", {
+      p_user_id: user.id,
+      p_amount: TAICredits.AI_SUMMARY,
+    });
 
     return NextResponse.json({ summary: rawSummary });
   } catch {
     return NextResponse.json(
       { error: "Internal server processing failure." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

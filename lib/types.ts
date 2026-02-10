@@ -132,9 +132,11 @@ export interface IFormData {
   career_goals_long_term: string;
   company_size_preference: string;
   resume_file: File | null;
+  resume_id: string | null;
+  resumes?: IResume[];
   // resume_url: string | null;
-  resume_path: string | null;
-  resume_name: string | null;
+  // resume_path: string | null;
+  // resume_name: string | null;
   default_locations: string[];
   job_type: string[];
   company_favorites?: {
@@ -211,6 +213,7 @@ export interface IApplication {
   job_postings?: IJobPosting;
   status: TApplicationStatus;
   resume_url: string;
+  resumes?: IResume;
   created_at: string;
   answers: string[];
 }
@@ -257,6 +260,69 @@ export interface IPayment {
   payment_method: string;
 }
 
+export interface IResume {
+  id: string;
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  name?: string;
+  resume_path?: string;
+  content?: {
+    sections?: {
+      type?: string;
+      items?: {
+        bullets?: {
+          id?: string;
+          text?: string;
+          lineIndices?: string[];
+        }[];
+        heading?: string;
+        subheading?: string;
+      }[];
+    }[];
+  };
+  is_primary?: boolean;
+  parsing_failed?: boolean;
+}
+
+export interface IResumeReview {
+  id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  resume_id: string;
+  job_id: string;
+  resumes?: IResume;
+  ai_response?: {
+    overall_feedback?: string;
+    score?: string;
+    bullet_points?: {
+      bullet_id: string;
+      section: string;
+      original: string;
+      suggested: string;
+      reason: string;
+      priority: string;
+    }[];
+  };
+  target_jd: string;
+  status: TPaymentStatus;
+  name: string;
+  score: number;
+}
+
+export interface INavItem {
+  id: string;
+  label: string;
+  href: string;
+  type: "equals" | "includes" | "startswith";
+  icon?: React.ReactNode;
+}
+
+export interface INavItemWithActive extends INavItem {
+  active: boolean;
+}
+
 export enum TApplicationStatus {
   SUBMITTED = "submitted",
   REVIEWED = "reviewed",
@@ -272,9 +338,24 @@ export enum TPaymentStatus {
   CANCELLED = "cancelled",
 }
 
+export enum TResumeReviewStatus {
+  DRAFT = "draft",
+  COMPLETED = "completed",
+  FAILED = "failed",
+}
+
 export enum TAICredits {
   AI_SEARCH_OR_ASK_AI = 3,
   AI_SUMMARY = 1,
+  AI_CV_REVIEW = 5,
+}
+
+export enum TLimits {
+  RESUME = 5,
+}
+
+export enum TWaitlistType {
+  AI_RESUME_CHECKER = "ai_resume_checker",
 }
 
 export interface JobListingSearchParams {

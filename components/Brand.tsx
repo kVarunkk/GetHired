@@ -45,13 +45,13 @@ export default function Brand({ type }: BrandProps) {
     <div
       className={
         type === "long"
-          ? "relative w-[100px] sm:w-[150px] h-[30px] sm:h-[40px] md:h-[50px]"
-          : "relative w-[32px] sm:w-[40px] md:w-[50px] h-[32px] sm:h-[40px] md:h-[50px]"
+          ? "relative  sm:max-w-[150px] h-[30px] sm:h-[40px] md:h-[50px]"
+          : "relative  sm:w-[40px] md:max-w-[50px] h-[32px] sm:h-[40px] md:h-[50px]"
       }
     >
       <img
         src={src}
-        alt={`${type} brand logo`}
+        alt={`GetHired logo`}
         className="w-full h-full object-contain"
         loading="eager"
       />

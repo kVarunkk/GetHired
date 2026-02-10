@@ -1,7 +1,11 @@
 import { clsx, type ClassValue } from "clsx";
-import { Info, Sparkle } from "lucide-react";
+import { FileUser, Info, ScanSearch, Sparkle, User } from "lucide-react";
+
 import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
+import { Briefcase, Building2, Home, LayoutDashboard } from "lucide-react";
+import { INavItem } from "./types";
+// import { INavItem } from "@/components/NavbarParent";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -249,6 +253,165 @@ export function getDaysFromDate(encodedDateStr: string): number {
   const diffInMs = utcToday - utcTarget;
   return Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 }
+
+export const applicantNavbarItems: INavItem[] = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    href: "/dashboard",
+    type: "startswith",
+    icon: <LayoutDashboard className="h-4 w-4" />,
+  },
+  {
+    id: "jobs",
+    label: "Jobs",
+    href: "/jobs",
+    type: "startswith",
+    icon: <Briefcase className="h-4 w-4" />,
+  },
+  {
+    id: "reviews",
+    label: "CV Reviews",
+    href: "/resume-review",
+    type: "startswith",
+    icon: <ScanSearch className="h-4 w-4" />,
+  },
+  {
+    id: "resumes",
+    label: "Resumes",
+    href: "/resume",
+    type: "startswith",
+    icon: <FileUser className="h-4 w-4" />,
+  },
+  {
+    id: "companies",
+    label: "Companies",
+    href: "/companies",
+    type: "startswith",
+    icon: <Building2 className="h-4 w-4" />,
+  },
+];
+
+export const companyNavbarItems: INavItem[] = [
+  {
+    id: "home",
+    label: "Home",
+    href: "/company",
+    type: "equals",
+    icon: <Home className="h-4 w-4" />,
+  },
+  {
+    id: "job_posts",
+    label: "Job Posts",
+    href: "/company/job-posts",
+    type: "startswith",
+    icon: <Briefcase className="h-4 w-4" />,
+  },
+  {
+    id: "applicants",
+    label: "Applicants",
+    href: "/company/applicants",
+    type: "startswith",
+    icon: <FileUser className="h-4 w-4" />,
+  },
+  {
+    id: "profiles",
+    label: "Profiles",
+    href: "/company/profiles",
+    type: "startswith",
+    icon: <User className="h-4 w-4" />,
+  },
+];
+
+export const homePageNavItems: INavItem[] = [
+  {
+    id: "jobs",
+    label: "Jobs",
+    href: "/jobs",
+    type: "startswith",
+  },
+  {
+    id: "companies",
+    label: "Companies",
+    href: "/companies",
+    type: "startswith",
+  },
+  {
+    id: "features",
+    label: "Features",
+    href: "#howwehelp",
+    type: "includes",
+  },
+  {
+    id: "blog",
+    label: "Blog",
+    href: "/blog",
+    type: "includes",
+  },
+  {
+    id: "hire",
+    label: "Hire",
+    href: "/hire",
+    type: "includes",
+  },
+  {
+    id: "cvreview",
+    label: "CV Review",
+    href: "/ai-resume-checker",
+    type: "includes",
+  },
+];
+
+export const authPageNavItems: INavItem[] = [
+  {
+    id: "home",
+    label: "Home",
+    href: "/",
+    type: "equals",
+  },
+  ...homePageNavItems,
+];
+
+export const getNavItemsByPath = (
+  path: string,
+  isCompanyUser: boolean
+): INavItem[] => {
+  if (
+    path.startsWith("/dashboard") ||
+    path.startsWith("/jobs") ||
+    path.startsWith("/companies") ||
+    path.startsWith("/get-started") ||
+    path.startsWith("/resume-review") ||
+    path.startsWith("/resume")
+  ) {
+    if (isCompanyUser) {
+      return companyNavbarItems;
+    }
+    return applicantNavbarItems;
+  } else if (path.startsWith("/company")) {
+    return companyNavbarItems;
+  } else if (path.startsWith("/auth")) {
+    return authPageNavItems;
+  } else return homePageNavItems;
+};
+
+export const getNavbarVairantByPath = (
+  path: string
+): "horizontal" | "vertical" => {
+  if (
+    path.startsWith("/dashboard") ||
+    path.startsWith("/company") ||
+    path.startsWith("/jobs") ||
+    path.startsWith("/companies") ||
+    path.startsWith("/get-started") ||
+    path.startsWith("/resume-review") ||
+    path.startsWith("/resume")
+  ) {
+    return "vertical";
+  } else {
+    return "horizontal";
+  }
+};
 
 export const featureData = {
   title: "Applying to Jobs Just Got Easier with Ask AI!",

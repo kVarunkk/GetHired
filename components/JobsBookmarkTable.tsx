@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -23,7 +23,6 @@ import Link from "next/link";
 import { IBookmark } from "@/lib/types";
 import { ArrowUpDown, ExternalLink, XCircle } from "lucide-react";
 import AlertStatusSwitch from "./AlertStatusSwitch";
-import JobsBookmarkActions from "./JobsBookmarkActions";
 import InfoTooltip from "./InfoTooltip";
 import { Input } from "./ui/input";
 import {
@@ -33,35 +32,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import DynamicActions from "./DynamicTableActions";
 
 interface JobsBookmarkTableProps {
   data: IBookmark[];
-  updateLocalItem: (updatedItem: IBookmark) => void;
-  removeLocalItem: (id: string) => void;
 }
 
-export default function JobsBookmarkTable({
-  data,
-  updateLocalItem,
-  removeLocalItem,
-}: JobsBookmarkTableProps) {
+export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<
     import("@tanstack/react-table").ColumnFiltersState
   >([]);
   const [page, setPage] = useState(1);
+  const [items, setItems] = useState<IBookmark[]>(data);
+
   const pageSize = 10;
   const alertCount = data.filter((each) => each.is_alert_on).length;
 
   useEffect(() => {
+    setItems(data);
+  }, [data]);
+
+  useEffect(() => {
     setPage(1);
   }, [columnFilters, sorting]);
-
-  const flatData = useMemo(() => {
-    return data.map((item) => ({
-      ...item,
-    }));
-  }, [data]);
 
   const alertStatuses = useMemo(
     () => [
@@ -70,6 +64,22 @@ export default function JobsBookmarkTable({
       { title: "Disabled", value: "false" },
     ],
     []
+  );
+
+  const updateLocalItem = useCallback(
+    (updatedItem: IBookmark) => {
+      setItems((prev) =>
+        prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
+      );
+    },
+    [setItems]
+  );
+
+  const removeLocalItem = useCallback(
+    (id: string) => {
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    },
+    [setItems]
   );
 
   const columns: ColumnDef<IBookmark>[] = useMemo(
@@ -137,14 +147,30 @@ export default function JobsBookmarkTable({
       },
 
       {
-        id: "actions",
-        header: "Actions",
+        id: "actions2",
+        header: "",
         cell: ({ row }) => (
-          <JobsBookmarkActions
-            bookmark={row.original}
-            removeLocalItem={removeLocalItem}
-            updateLocalItem={updateLocalItem}
-          />
+          <div className="flex items-center gap-2">
+            <DynamicActions
+              tableName="bookmarks"
+              entityName="Bookmark"
+              item={row.original}
+              fields={[
+                {
+                  name: "name",
+                  label: "Name",
+                  required: true,
+                },
+                {
+                  name: "url",
+                  label: "URL",
+                  required: true,
+                },
+              ]}
+              updateLocalItem={updateLocalItem}
+              removeLocalItem={removeLocalItem}
+            />
+          </div>
         ),
       },
     ],
@@ -152,7 +178,7 @@ export default function JobsBookmarkTable({
   );
 
   const table = useReactTable({
-    data: flatData,
+    data: items,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),

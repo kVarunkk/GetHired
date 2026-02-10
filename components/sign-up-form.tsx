@@ -121,10 +121,10 @@ export function SignUpForm({
       <Card className="sm:w-[400px] w-full">
         <CardHeader>
           <CardTitle className="text-2xl">
-            {isCompany && "Company"} Sign up
+            {isCompany && "Recruiter"} Sign up
           </CardTitle>
           <CardDescription>
-            Create a new {isCompany && "company"} account
+            Create a new {isCompany && "recruiter"} account
           </CardDescription>
         </CardHeader>
         <CardContent>

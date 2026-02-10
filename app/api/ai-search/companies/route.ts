@@ -13,9 +13,9 @@ export async function POST(request: NextRequest) {
     if (!userId || !companies) {
       return NextResponse.json(
         {
-          message: "user_id and companies are required in the request body.",
+          error: "user_id and companies are required in the request body.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -23,39 +23,50 @@ export async function POST(request: NextRequest) {
     const { data } = await supabase
       .from("user_info")
       .select(
-        "desired_roles, experience_years, preferred_locations, min_salary, max_salary, top_skills, company_size_preference, career_goals_short_term, career_goals_long_term, visa_sponsorship_required, work_style_preferences, ai_credits"
+        "desired_roles, experience_years, preferred_locations, min_salary, max_salary, top_skills, company_size_preference, career_goals_short_term, career_goals_long_term, visa_sponsorship_required, work_style_preferences, ai_credits, job_type, resumes(content, is_primary)",
       )
       .eq("user_id", userId)
+      .eq("resumes.is_primary", true)
       .single();
     const userPreferences = data;
 
     if (!userPreferences) {
       return NextResponse.json(
         {
-          message: "User not found.",
+          error: "User not found.",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (userPreferences.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI) {
       return NextResponse.json(
-        { message: "Insufficient AI credits. Please top up to continue." },
-        { status: 402 }
+        { error: "Insufficient AI credits. Please top up to continue." },
+        { status: 402 },
       );
     }
+
+    const { experience, skills, projects } = userPreferences.resumes?.[0]
+      ?.content || {
+      experience: "",
+      skills: "",
+      projects: "",
+    };
 
     // Step 2: Construct the userQuery based on fetched preferences
     const userQuery = `
       User is a candidate with the following preferences:
       - Desired Roles: ${userPreferences.desired_roles?.join(", ")}
-      - Experience: ${userPreferences.experience_years} years
+      - Work Experience: ${experience}
+      - Skills: ${skills + userPreferences.top_skills?.join(", ")}
+      - Projects: ${projects}
+      - Years of Experience: ${userPreferences.experience_years} 
       - Preferred Locations: ${userPreferences.preferred_locations?.join(", ")}
       - Salary Range: $${userPreferences.min_salary} - $${
         userPreferences.max_salary
       }
-      - Top Skills: ${userPreferences.top_skills?.join(", ")}
       - Work Style: ${userPreferences.work_style_preferences?.join(", ")}
+      - Job Type: ${userPreferences.job_type?.join(", ")}
       - Company Size: ${userPreferences.company_size_preference}
       - Career Goals: ${userPreferences.career_goals_short_term} and ${
         userPreferences.career_goals_long_term
@@ -91,7 +102,7 @@ export async function POST(request: NextRequest) {
         Company Size: ${company.company_size}
         Industry: ${company.industry}
         ---
-      `
+      `,
         )
         .join("\n")}
       
@@ -111,23 +122,21 @@ export async function POST(request: NextRequest) {
           reranked_company_ids: z
             .array(z.string())
             .describe(
-              "The list of re-ranked company IDs from most to least relevant."
+              "The list of re-ranked company IDs from most to least relevant.",
             ),
           filtered_out_company_ids: z
             .array(z.string())
             .describe(
-              "The list of company IDs that were filtered out as irrelevant."
+              "The list of company IDs that were filtered out as irrelevant.",
             ),
         }),
       }),
     });
 
-    await supabase
-      .from("user_info")
-      .update({
-        ai_credits: userPreferences.ai_credits - TAICredits.AI_SEARCH_OR_ASK_AI,
-      })
-      .eq("user_id", userId);
+    await supabase.rpc("deduct_user_credits", {
+      p_user_id: userId,
+      p_amount: TAICredits.AI_SEARCH_OR_ASK_AI,
+    });
 
     return NextResponse.json({
       rerankedcompanies: output.reranked_company_ids,
@@ -135,8 +144,11 @@ export async function POST(request: NextRequest) {
     });
   } catch {
     // console.error(e);
-    return NextResponse.json({
-      message: "An error occurred",
-    });
+    return NextResponse.json(
+      {
+        error: "An error occurred",
+      },
+      { status: 500 },
+    );
   }
 }

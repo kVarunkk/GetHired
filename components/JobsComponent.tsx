@@ -21,7 +21,7 @@ import ProfileItem from "./ProfileItem";
 import ScrollToTopButton from "./ScrollToTopButton";
 import SortingComponent from "./SortingComponent";
 import { useProgress } from "react-transition-progress";
-import { Link as ModifiedLink } from "react-transition-progress/next";
+// import { Link as ModifiedLink } from "react-transition-progress/next";
 import CompanyItem from "./CompanyItem";
 import InfoTooltip from "./InfoTooltip";
 import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/lib/utils";
@@ -30,6 +30,8 @@ import useSWR, { mutate } from "swr";
 import { createClient } from "@/lib/supabase/client";
 import { revalidateCache } from "@/app/actions/revalidate";
 import { triggerRelevanceUpdate } from "@/app/actions/relevant-jobs-update";
+import ModifiedLink from "./ModifiedLink";
+import FootComponent from "./FootComponent";
 
 export default function JobsComponent({
   initialJobs,
@@ -75,7 +77,12 @@ export default function JobsComponent({
   }, [initialJobs]);
 
   const loadMoreJobs = useCallback(async () => {
-    if (isLoading || jobs.length >= totalCount) return;
+    if (
+      isLoading ||
+      jobs.length >= totalCount ||
+      (page >= 2 && !user && current_page === "jobs")
+    )
+      return;
     setIsLoading(true);
 
     const nextPage = page + 1;
@@ -84,7 +91,7 @@ export default function JobsComponent({
     params.set("page", nextPage.toString());
     params.set(
       "tab",
-      isAllJobsTab ? "all" : isAppliedJobsTabActive ? "applied" : "saved"
+      isAllJobsTab ? "all" : isAppliedJobsTabActive ? "applied" : "saved",
     );
     params.set("limit", "20");
 
@@ -96,7 +103,7 @@ export default function JobsComponent({
             : current_page === "jobs"
               ? "jobs"
               : "companies"
-        }?${params.toString()}`
+        }?${params.toString()}`,
       );
       if (!res.ok) throw new Error("Some error occured");
 
@@ -123,6 +130,7 @@ export default function JobsComponent({
     isAllJobsTab,
     isAppliedJobsTabActive,
     totalCount,
+    user,
   ]);
 
   useEffect(() => {
@@ -133,7 +141,7 @@ export default function JobsComponent({
           loadMoreJobs();
         }
       },
-      { threshold: 1.0 }
+      { threshold: 0.3 },
     );
 
     const currentLoader = loaderRef.current;
@@ -192,7 +200,15 @@ export default function JobsComponent({
     }, 2000); // Check every 2 seconds
 
     return () => clearInterval(interval);
-  }, [isGenerated, user, router, current_page, isSuitable, isSimilarSearch]);
+  }, [
+    isGenerated,
+    user,
+    router,
+    current_page,
+    isSuitable,
+    isSimilarSearch,
+    isFailed,
+  ]);
 
   useEffect(() => {
     (async () => {
@@ -235,7 +251,7 @@ export default function JobsComponent({
   };
 
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="flex flex-col gap-4 w-full pb-4">
       <div className="w-full flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-2 ">
           {isSuitable && (
@@ -259,7 +275,12 @@ export default function JobsComponent({
             {current_page === "jobs" && isSuitable ? (
               <InfoTooltip
                 content={
-                  "Jobs posted in the past 1 month, sorted by relevance."
+                  <p>
+                    Primary Resume is used to find jobs relevant to you.{" "}
+                    <Link href={"/resume"} className="text-blue-500">
+                      Change Primary Resume
+                    </Link>
+                  </p>
                 }
               />
             ) : (
@@ -272,7 +293,8 @@ export default function JobsComponent({
           {user &&
             isOnboardingComplete &&
             !isCompanyUser &&
-            !(current_page === "profiles") && (
+            !(current_page === "profiles") &&
+            !isSuitable && (
               <FindSuitableJobs
                 user={user}
                 setPage={setPage}
@@ -344,7 +366,7 @@ export default function JobsComponent({
               onClick={() => {
                 copyToClipboard(
                   window.location.href,
-                  "Job Search URL copied to clipboard!"
+                  "Job Search URL copied to clipboard!",
                 );
               }}
             >
@@ -353,7 +375,7 @@ export default function JobsComponent({
           )}
 
           <FilterComponentSheet
-            isCompanyUser={isCompanyUser}
+            // isCompanyUser={isCompanyUser}
             currentPage={current_page}
             onboardingComplete={isOnboardingComplete}
           />
@@ -453,6 +475,8 @@ export default function JobsComponent({
         isSuitable &&
         !isSimilarSearch ? (
           ""
+        ) : current_page === "jobs" && !user && page >= 2 ? (
+          <FootComponent />
         ) : (
           <div
             ref={loaderRef}

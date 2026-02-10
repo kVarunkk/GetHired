@@ -53,7 +53,7 @@ export default async function CompanyApplicantsPage() {
     }
 
     return (
-      <div className="flex flex-col w-full gap-8 ">
+      <div className="flex flex-col w-full gap-8 p-4 mb-20">
         <div>
           <BackButton />
         </div>

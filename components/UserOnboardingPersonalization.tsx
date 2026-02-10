@@ -11,6 +11,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 import { createClient } from "@/lib/supabase/client";
 import InfoTooltip from "./InfoTooltip";
+import Link from "next/link";
 
 interface IinitialPreferences {
   id: string;
@@ -28,17 +29,17 @@ export default function UserOnboardingPersonalization({
   disabled,
 }: UserOnboardingPersonalizationProps) {
   const [promoActive, setPromoActive] = useState(
-    initialPreferences.is_promotion_active
+    initialPreferences.is_promotion_active,
   );
   const [digestActive, setDigestActive] = useState(
-    initialPreferences.is_job_digest_active
+    initialPreferences.is_job_digest_active,
   );
 
   const [isLoading, setIsLoading] = useState(false);
 
   const handlePreferenceChange = async (
     key: "is_promotion_active" | "is_job_digest_active",
-    newValue: boolean
+    newValue: boolean,
   ) => {
     const originalValue =
       key === "is_promotion_active" ? promoActive : digestActive;
@@ -102,7 +103,16 @@ export default function UserOnboardingPersonalization({
                 Weekly Job Digest: Receive top AI-matched job recommendations
                 every week.
               </Label>
-              <InfoTooltip content="Will only work if profile is completed." />
+              <InfoTooltip
+                content={
+                  <p>
+                    Primary Resume is used to build Job Digest.{" "}
+                    <Link href={"/resume"} className="text-blue-500">
+                      Change Primary Resume
+                    </Link>
+                  </p>
+                }
+              />
             </div>
 
             {/* Checkbox 2: Promotions */}

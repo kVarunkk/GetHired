@@ -24,6 +24,8 @@ import AskAIDialog from "@/components/AskAIDialog";
 import { Button } from "@/components/ui/button";
 import InfoTooltip from "@/components/InfoTooltip";
 import NotFound from "../NotFound";
+// import CreateReviewForJob from "@/components/CreateReviewForJob";
+import ComingSoonBtn from "@/components/waitlist/ComingSoonBtn";
 
 export async function generateMetadata({
   params,
@@ -109,216 +111,240 @@ export default async function JobPage({
     }
 
     return (
-      <>
-        <div className="flex flex-col gap-4 w-full px-4 py-5 lg:px-20 xl:px-40 2xl:px-80">
+      <div className="flex flex-col gap-4 w-full p-4 mb-20">
+        <div>
+          <Link
+            href="/jobs"
+            className="text-muted-foreground hover:text-primary transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </div>
+        {/* --- Header Section --- */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-4">
           <div>
-            <Link
-              href="/jobs"
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </div>
-          {/* --- Header Section --- */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-4">
-            <div>
-              <div className="flex items-center gap-1">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white max-w-[400px]">
-                  {job.job_name}
-                </h1>
-                <JobFavoriteBtn
-                  isCompanyUser={isCompanyUser}
-                  user={user}
-                  userFavorites={job.user_favorites}
-                  job_id={job.id}
-                />
-              </div>
-              <p className="text-lg text-muted-foreground">
-                at{" "}
-                {job.company_url ? (
-                  <Link
-                    target="_blank"
-                    href={job.company_url}
-                    className="hover:underline"
-                  >
-                    {job.company_name}
-                  </Link>
-                ) : (
-                  job.company_name
-                )}
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Posted on {format(new Date(job.created_at), "PPP")}
-              </p>
-              {user && !isCompanyUser && (
-                <JobsFeedback
-                  jobId={job_id}
-                  initialVote={
-                    job.job_feedback!.length > 0
-                      ? job.job_feedback![0].vote_type
-                      : null
-                  }
-                />
-              )}
-            </div>
-            <div className="flex items-center gap-4 flex-wrap">
-              <JobApplyBtn
+            <div className="flex items-center gap-1">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white max-w-[400px]">
+                {job.job_name}
+              </h1>
+              <JobFavoriteBtn
                 isCompanyUser={isCompanyUser}
                 user={user}
-                job={job}
-                isOnboardingComplete={onboardingComplete}
+                userFavorites={job.user_favorites}
+                job_id={job.id}
               />
-
-              <JobPageDropdown
-                user={user}
+            </div>
+            <p className="text-lg text-muted-foreground">
+              at{" "}
+              {job.company_url ? (
+                <Link
+                  target="_blank"
+                  href={job.company_url}
+                  className="hover:underline"
+                >
+                  {job.company_name}
+                </Link>
+              ) : (
+                job.company_name
+              )}
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Posted on {format(new Date(job.created_at), "PPP")}
+            </p>
+            {user && !isCompanyUser && (
+              <JobsFeedback
                 jobId={job_id}
-                isCompanyUser={isCompanyUser}
-                applicationStatus={
-                  job.applications && job.applications.length > 0
-                    ? job.applications[0].status
+                initialVote={
+                  job.job_feedback!.length > 0
+                    ? job.job_feedback![0].vote_type
                     : null
                 }
-                isPlatformJob={!job.job_url}
               />
-            </div>
+            )}
           </div>
+          <div className="flex items-center gap-4 flex-wrap">
+            <JobApplyBtn
+              isCompanyUser={isCompanyUser}
+              user={user}
+              job={job}
+              isOnboardingComplete={onboardingComplete}
+            />
 
-          {/* Features Section */}
-          <div className="flex items-center gap-3 mt-2 flex-wrap">
-            {job.job_url ? (
-              user ? (
-                <Button variant={"outline"} asChild>
-                  <Link target="_blank" href={job.job_url}>
-                    Original Job
-                    <ExternalLink className="h-4 w-4" />
-                  </Link>
-                </Button>
+            <JobPageDropdown
+              user={user}
+              jobId={job_id}
+              isCompanyUser={isCompanyUser}
+              applicationStatus={
+                job.applications && job.applications.length > 0
+                  ? job.applications[0].status
+                  : null
+              }
+              isPlatformJob={!job.job_url}
+            />
+          </div>
+        </div>
+
+        {/* Features Section */}
+        <div className="flex items-center gap-5 justify-between mt-2 flex-wrap">
+          {job.job_url ? (
+            user ? (
+              <Button variant={"link"} asChild>
+                <Link target="_blank" href={job.job_url}>
+                  Original Job
+                  <ExternalLink className="h-4 w-4" />
+                </Link>
+              </Button>
+            ) : (
+              <Button variant={"link"} asChild>
+                <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
+                  Original Job
+                  <ExternalLink className="h-4 w-4" />
+                </Link>
+              </Button>
+            )
+          ) : (
+            ""
+          )}
+          {!isCompanyUser && (
+            <div className="flex items-center flex-wrap gap-3">
+              {user ? (
+                <AskAIDialog
+                  jobId={job_id}
+                  isOnboardingComplete={onboardingComplete}
+                  userId={user.id}
+                />
               ) : (
                 <Button variant={"outline"} asChild>
                   <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
-                    Original Job
-                    <ExternalLink className="h-4 w-4" />
+                    <Sparkle className="h-4 w-4" />
+                    Ask AI
                   </Link>
                 </Button>
-              )
-            ) : (
-              ""
-            )}
-            {isCompanyUser ? (
-              ""
-            ) : user ? (
-              <AskAIDialog
-                jobId={job_id}
-                isOnboardingComplete={onboardingComplete}
-              />
-            ) : (
-              <Button variant={"outline"} asChild>
-                <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
-                  <Sparkle className="h-4 w-4" />
-                  Ask AI
-                </Link>
-              </Button>
-            )}
+              )}
 
-            {isCompanyUser ? (
-              ""
-            ) : user ? (
-              <div className="flex items-center">
+              {user ? (
+                <div className="flex items-center">
+                  <Button variant={"outline"} asChild>
+                    <Link
+                      target="_blank"
+                      href={`/jobs?sortBy=relevance&jobId=${job_id}`}
+                    >
+                      <Sparkle className="h-4 w-4" />
+                      Find Similar Jobs
+                    </Link>
+                  </Button>
+                  <InfoTooltip
+                    content={
+                      <p>
+                        This feature uses {TAICredits.AI_SEARCH_OR_ASK_AI} AI
+                        credits per use.{" "}
+                        <Link href={"/dashboard"} className="text-blue-500">
+                          Recharge Credits
+                        </Link>
+                      </p>
+                    }
+                  />
+                </div>
+              ) : (
                 <Button variant={"outline"} asChild>
-                  <Link
-                    target="_blank"
-                    href={`/jobs?sortBy=relevance&jobId=${job_id}`}
-                  >
+                  <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
                     <Sparkle className="h-4 w-4" />
                     Find Similar Jobs
                   </Link>
                 </Button>
-                <InfoTooltip
-                  content={
-                    <p>
-                      This feature uses {TAICredits.AI_SEARCH_OR_ASK_AI} AI
-                      credits per use.{" "}
-                      <Link href={"/dashboard"} className="text-blue-500">
-                        Recharge Credits
-                      </Link>
-                    </p>
-                  }
-                />
-              </div>
-            ) : (
-              <Button variant={"outline"} asChild>
-                <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
-                  <Sparkle className="h-4 w-4" />
-                  Find Similar Jobs
-                </Link>
-              </Button>
-            )}
-          </div>
-
-          {/* Details Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Details Card */}
-            <JobDescriptionCard
-              job={job}
-              user={user}
-              isCompanyUser={isCompanyUser}
-            />
-
-            {/* Key Metrics/Details Sidebar */}
-            <div className="grid gap-4">
-              <Card className="shadow-sm border">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Location
-                  </CardTitle>
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2 text-2xl font-bold">
-                    {job.locations && job.locations.length > 0 ? (
-                      job.locations.map((loc) => (
-                        <Badge key={loc} variant="secondary" className="p-2">
-                          {loc}
-                        </Badge>
-                      ))
-                    ) : (
-                      <span className="text-muted-foreground text-base">
-                        Not specified
-                      </span>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-sm border">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Salary</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {job.salary_range ? job.salary_range : "Not specified"}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-sm border">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Experience
-                  </CardTitle>
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {job.experience ? job.experience : "Not specified"}
-                  </div>
-                </CardContent>
-              </Card>
+              )}
+              {user ? (
+                <div className="flex items-center">
+                  <ComingSoonBtn
+                    label="Tailor CV for this Job"
+                    variant={"outline"}
+                  />
+                  {/* <CreateReviewForJob userId={user.id} jobId={job_id} />
+                  <InfoTooltip
+                    content={
+                      <p>
+                        This feature uses {TAICredits.AI_CV_REVIEW} AI credits
+                        per use.{" "}
+                        <Link href={"/dashboard"} className="text-blue-500">
+                          Recharge Credits
+                        </Link>
+                      </p>
+                    }
+                  /> */}
+                </div>
+              ) : (
+                <Button variant={"outline"} asChild>
+                  <Link href={"/auth/sign-up?returnTo=/jobs/" + job_id}>
+                    <Sparkle className="h-4 w-4" />
+                    Tailor CV for this Job
+                  </Link>
+                </Button>
+              )}
             </div>
+          )}
+        </div>
+
+        {/* Details Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Details Card */}
+          <JobDescriptionCard
+            job={job}
+            user={user}
+            isCompanyUser={isCompanyUser}
+          />
+
+          {/* Key Metrics/Details Sidebar */}
+          <div className="grid gap-4">
+            <Card className="shadow-sm border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Location</CardTitle>
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2 text-2xl font-bold">
+                  {job.locations && job.locations.length > 0 ? (
+                    job.locations.map((loc) => (
+                      <Badge key={loc} variant="secondary" className="p-2">
+                        {loc}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground text-base">
+                      Not specified
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Salary</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {job.salary_range ? job.salary_range : "Not specified"}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Experience
+                </CardTitle>
+                <Briefcase className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {job.experience ? job.experience : "Not specified"}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
-      </>
+      </div>
     );
   } catch {
     return <Error />;

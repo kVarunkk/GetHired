@@ -58,7 +58,7 @@ export default function SelectProfile({
         try {
           setLoading(true);
 
-          const privateResumePath = applicantProfile?.resume_path;
+          const privateResumePath = applicantProfile?.resumes?.[0]?.resume_path;
           if (!privateResumePath) {
             throw new Error("User has no resume uploaded.");
           }

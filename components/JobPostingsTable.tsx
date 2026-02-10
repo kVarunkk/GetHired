@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+// import Link from "next/link";
 import { ArrowUpDown, ChevronRight, XCircle } from "lucide-react";
 import { IJobPosting } from "@/lib/types";
 import { Switch } from "./ui/switch";
@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Link as ModifiedLink } from "react-transition-progress/next";
 
 interface JobPostingsTableProps {
   data: IJobPost[];
@@ -105,12 +106,12 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
           </Button>
         ),
         cell: ({ row }) => (
-          <Link
+          <ModifiedLink
             href={`/company/job-posts/${row.original.id}`}
             className="font-medium hover:underline"
           >
             {row.original.title}
-          </Link>
+          </ModifiedLink>
         ),
         filterFn: "includesString",
       },
@@ -160,12 +161,12 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <Link href={`/company/job-posts/${row.original.id}`} passHref>
+          <ModifiedLink href={`/company/job-posts/${row.original.id}`} passHref>
             <Button variant="ghost" size="sm">
               View Job
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
-          </Link>
+          </ModifiedLink>
         ),
       },
     ],

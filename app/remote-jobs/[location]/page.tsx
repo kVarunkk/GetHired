@@ -5,7 +5,8 @@ import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
-import NavbarParent, { INavItem } from "@/components/NavbarParent";
+// import NavbarParent from "@/components/NavbarParent";
+// import { authPageNavItems } from "@/lib/serverUtils";
 // import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Metadata } from "next";
@@ -82,32 +83,7 @@ export async function generateMetadata({
   };
 }
 
-const navItems: INavItem[] = [
-  {
-    id: "nav-home",
-    label: "Home",
-    href: "/",
-    type: "equals",
-  },
-  {
-    id: "nav-jobs",
-    label: "Jobs",
-    href: "/jobs",
-    type: "startswith",
-  },
-  {
-    id: "nav-companies",
-    label: "Companies",
-    href: "/companies",
-    type: "startswith",
-  },
-  {
-    id: "nav-dashboard",
-    label: "Dashboard",
-    href: "/dashboard",
-    type: "startswith",
-  },
-];
+// const navItems = authPageNavItems;
 
 export default async function RemoteJobsLocationPage({
   params,
@@ -124,21 +100,18 @@ export default async function RemoteJobsLocationPage({
     .join(" ");
 
   return (
-    <main className="min-h-screen flex flex-col items-center">
-      <div className="flex-1 w-full flex flex-col gap-20 items-center">
-        <NavbarParent navItems={navItems} />
-        <div className="flex-1 flex flex-col gap-32  w-full">
-          <HeroRemotePage location={displayLocation} />
-          <HowWeHelp />
-          <AIFeatures />
-          <TheGetHiredAdvantageSection />
-          <FAQSection />
-          <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
-            <FootComponent />
-          </div>
-          <Footer />
-        </div>
+    <div className="flex-1 flex flex-col gap-32  w-full">
+      <HeroRemotePage location={displayLocation} />
+      <HowWeHelp />
+      <AIFeatures />
+      <TheGetHiredAdvantageSection />
+      <FAQSection />
+      <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
+        <FootComponent />
       </div>
-    </main>
+      <Footer />
+    </div>
+    //   </div>
+    // </main>
   );
 }

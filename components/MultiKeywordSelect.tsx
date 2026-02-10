@@ -412,6 +412,7 @@ function ItemsList({
       removeKeyword,
       handleResize,
       Row,
+      name,
     ]
   );
 

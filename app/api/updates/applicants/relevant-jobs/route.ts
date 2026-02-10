@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   if (cronSecret !== INTERNAL_API_SECRET) {
     return NextResponse.json(
       { message: "Unauthorized access" },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     if (userIdParam) {
       const singleUserTask = async () => {
         console.log(
-          `[RELEVANCE UPDATE] Processing single user: ${userIdParam}`
+          `[RELEVANCE UPDATE] Processing single user: ${userIdParam}`,
         );
 
         // let sendRelevantJobFeedUpdate = true;
@@ -51,26 +51,26 @@ export async function GET(request: NextRequest) {
           const result = await processUserRelevance(
             userIdParam,
             email,
-            data[0].full_name
+            data[0].full_name,
           );
 
           if (!result.success) {
             await sendEmailForStatusUpdate(
-              `[RELEVANCE UPDATE] Failed for ${userIdParam}: ${result.error}`
+              `[RELEVANCE UPDATE] Failed for ${userIdParam}: ${result.error}`,
             );
           } else {
             await sendEmailForStatusUpdate(
-              `[RELEVANCE UPDATE] Success for ${userIdParam}`
+              `[RELEVANCE UPDATE] Success for ${userIdParam}`,
             );
 
             //   send email update to user regarding ai job feed
-            if (data && data.length > 0) {
-              await sendEmailForRelevantJobsStatusUpdate(
-                data[0].email,
-                data[0].full_name,
-                URL + "/jobs?sortBy=relevance"
-              );
-            }
+            // if (data && data.length > 0) {
+            await sendEmailForRelevantJobsStatusUpdate(
+              data[0].email,
+              data[0].full_name,
+              URL + "/jobs?sortBy=relevance",
+            );
+            // }
           }
         }
       };
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
 
     if (userError || !users || users.length === 0) {
       await sendEmailForStatusUpdate(
-        "RELEVANT JOBS CRON: No users found. Exiting."
+        "RELEVANT JOBS CRON: No users found. Exiting.",
       );
       return NextResponse.json({
         success: true,
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
     // --- 3. Background Execution ---
     const updateRelevantJobsTask = async () => {
       console.log(
-        `[RELEVANCE CRON] Starting update for ${users.length} users.`
+        `[RELEVANCE CRON] Starting update for ${users.length} users.`,
       );
 
       const results: {
@@ -121,8 +121,8 @@ export async function GET(request: NextRequest) {
           processUserRelevance(
             user.user_id,
             user.email || "Unknown",
-            user.full_name || user.email.split("@")[0]
-          )
+            user.full_name || user.email.split("@")[0],
+          ),
         );
 
         const batchResults = await Promise.allSettled(promises);
@@ -155,7 +155,7 @@ export async function GET(request: NextRequest) {
         await sendEmailForRelevantJobsStatusUpdate(
           res.userEmail,
           res.fullName,
-          URL + "/jobs?sortBy=relevance"
+          URL + "/jobs?sortBy=relevance",
         );
       });
 
@@ -185,11 +185,11 @@ export async function GET(request: NextRequest) {
     console.error("Critical Failure in Relevant Jobs Cron:", error);
     const errorMsg = error instanceof Error ? error.message : String(error);
     await sendEmailForStatusUpdate(
-      `RELEVANT JOBS CRITICAL FAILURE:\n${errorMsg}`
+      `RELEVANT JOBS CRITICAL FAILURE:\n${errorMsg}`,
     );
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -197,7 +197,7 @@ export async function GET(request: NextRequest) {
 async function processUserRelevance(
   userId: string,
   userEmail: string,
-  fullName: string
+  fullName: string,
 ) {
   const supabase = createServiceRoleClient();
 
@@ -210,7 +210,7 @@ async function processUserRelevance(
         headers: {
           "X-Internal-Secret": INTERNAL_API_SECRET || "",
         },
-      }
+      },
     );
 
     if (!response.ok) {

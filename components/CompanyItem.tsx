@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Link as ModifiedLink } from "react-transition-progress/next";
+// import { Link as ModifiedLink } from "react-transition-progress/next";
 import { Badge } from "./ui/badge";
 import { ICompanyInfo } from "@/lib/types";
 import { User } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
 import JobFavoriteBtn from "./JobFavoriteBtn";
-import ProgressBtn from "./ProgressBtn";
+// import ProgressBtn from "./ProgressBtn";
 import { Button } from "./ui/button";
 import { ArrowRight } from "lucide-react";
+import ModifiedLink from "./ModifiedLink";
 
 export default function CompanyItem({
   company,
@@ -25,7 +26,11 @@ export default function CompanyItem({
   // console.log(company.user_favorites_companies);
   return (
     <>
-      <ProgressBtn href={`/companies/${company.id}`} className="text-start">
+      <ModifiedLink
+        href={`/companies/${company.id}`}
+        target="_blank"
+        className="text-start"
+      >
         <div
           className={cn(
             "flex flex-col gap-3 p-4 group  rounded-lg transition hover:bg-secondary "
@@ -35,10 +40,10 @@ export default function CompanyItem({
             <div className="flex flex-col gap-2 mb-6 sm:mb-0">
               <div className="flex flex-col ">
                 <div className="flex items-center gap-1">
-                  <ModifiedLink
-                    href={`/companies/${company.id}`}
+                  <div
+                    // href={`/companies/${company.id}`}
                     className="inline-flex items-center gap-3 hover:underline underline sm:no-underline underline-offset-2"
-                    onClick={(e) => e.stopPropagation()}
+                    // onClick={(e) => e.stopPropagation()}
                   >
                     <img
                       className="rounded-full"
@@ -49,7 +54,7 @@ export default function CompanyItem({
                     <h3 className="inline text-lg sm:text-xl font-semibold">
                       {company.name}
                     </h3>
-                  </ModifiedLink>
+                  </div>
                   <JobFavoriteBtn
                     isCompanyUser={isCompanyUser}
                     user={user}
@@ -63,19 +68,18 @@ export default function CompanyItem({
               </div>
               <CompanyDetailBadges company={company} isSuitable={isSuitable} />
             </div>
-            <Link
-              // onClick={(e) => {
-              //   e.stopPropagation();
-              // }}
-              href={"/companies/" + company.id}
+            <ModifiedLink
+              href={`/companies/${company.id}`}
+              target="_blank"
+              className="text-start"
             >
               <Button>
                 View <ArrowRight />
               </Button>
-            </Link>
+            </ModifiedLink>
           </div>
         </div>
-      </ProgressBtn>
+      </ModifiedLink>
     </>
   );
 }

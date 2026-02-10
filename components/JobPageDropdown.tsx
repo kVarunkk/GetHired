@@ -62,7 +62,7 @@ export default function JobPageDropdown({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild className="">
           <Button className="p-2" variant={"ghost"}>
             <MoreHorizontal className="h-4 w-4" />
@@ -81,7 +81,7 @@ export default function JobPageDropdown({
                     .filter(
                       (_) =>
                         _ !== TApplicationStatus.STAND_BY &&
-                        _ !== TApplicationStatus.REVIEWED
+                        _ !== TApplicationStatus.REVIEWED,
                     )
                     .map((status) => (
                       <DropdownMenuItem
@@ -103,7 +103,7 @@ export default function JobPageDropdown({
             onClick={() => {
               copyToClipboard(
                 window.location.href,
-                "Job link copied to clipboard!"
+                "Job link copied to clipboard!",
               );
             }}
           >

@@ -16,13 +16,80 @@ export async function POST(request: Request) {
       );
     }
 
+    const supabase = await createClient();
+
+    const { data: resumeData, error: resumeError } = await supabase
+      .from("resumes")
+      .select("content")
+      .eq("user_id", userData.user_id)
+      .eq("is_primary", true)
+      .maybeSingle();
+
+    if (resumeError) {
+      console.error("Error fetching primary resume:", resumeError);
+    }
+
+    // Helper to extract text from the Digital Twin JSON structure
+    const extractSectionText = (type: string) => {
+      const content = resumeData?.content;
+      if (!content || !content.sections) return "N/A";
+
+      return content.sections
+        .filter(
+          (s: {
+            type?: string;
+            items?: {
+              bullets?: {
+                id?: string;
+                text?: string;
+                lineIndices?: string[];
+              }[];
+              heading?: string;
+              subheading?: string;
+            }[];
+          }) => s.type === type
+        )
+        .flatMap(
+          (s: {
+            type?: string;
+            items?: {
+              bullets?: {
+                id?: string;
+                text?: string;
+                lineIndices?: string[];
+              }[];
+              heading?: string;
+              subheading?: string;
+            }[];
+          }) => s.items
+        )
+        .flatMap(
+          (i: {
+            bullets?: {
+              id?: string;
+              text?: string;
+              lineIndices?: string[];
+            }[];
+            heading?: string;
+            subheading?: string;
+          }) => i?.bullets?.map((b) => b.text)
+        )
+        .join(". ");
+    };
+
+    // Extract dynamic content from the parsed resume
+    const resumeExperience = extractSectionText("experience");
+    const resumeProjects = extractSectionText("projects");
+    const resumeSkills = extractSectionText("skills");
+
+    // 3. Prepare the Profile Data
     const topSkillsStr = Array.isArray(userData.top_skills)
       ? userData.top_skills.join(", ")
       : "";
 
-    // Combine them without creating unnecessary intermediate arrays
-    const combinedSkills = [topSkillsStr, userData.skills_resume]
-      .filter(Boolean) // Remove empty strings if one field is missing
+    // Combine profile skills with extracted resume skills
+    const combinedSkills = [topSkillsStr, resumeSkills]
+      .filter(Boolean)
       .join(", ");
 
     // 2. Construct the text to embed
@@ -38,9 +105,9 @@ export async function POST(request: Request) {
       
       SKILLS: ${combinedSkills}
       
-      EXPERIENCE: ${userData.experience_resume || "N/A"}
+      EXPERIENCE: ${resumeExperience || "N/A"}
       
-      PROJECTS: ${userData.projects_resume || "N/A"}
+      PROJECTS: ${resumeProjects || "N/A"}
       
       WORK STYLE: ${Array.isArray(userData.work_style_preferences) ? userData.work_style_preferences.join(", ") : ""}
       
@@ -68,7 +135,6 @@ export async function POST(request: Request) {
     });
 
     // 4. Update Supabase
-    const supabase = await createClient();
     const { error: updateError } = await supabase
       .from("user_info")
       .update({

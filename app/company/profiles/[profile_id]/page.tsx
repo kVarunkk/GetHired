@@ -46,6 +46,7 @@ export default async function ProfilePage({
       .select(
         `
         *,
+        resumes(resume_path),
         company_favorites (
           company_id
         ),
@@ -62,31 +63,25 @@ export default async function ProfilePage({
       `
       )
       .eq("user_id", profile_id)
+      .eq("resumes.is_primary", true)
       .eq("applications.job_postings.company_id", companyData.id)
       .single();
 
     if (error || !applicantProfileData) {
-      // console.error("Error fetching applicant data:", error);
       return <ErrorComponent />;
     }
 
     const applicantProfile = applicantProfileData as IFormData;
 
     // Generate a signed URL for the resume from the private bucket
-    const { data: signedUrlData, error: signedUrlError } =
-      await supabase.storage
-        .from("resumes")
-        .createSignedUrl(applicantProfile.resume_path || "", 3600);
-
-    if (signedUrlError) {
-      // console.error("Error creating signed URL:", signedUrlError);
-      return <ErrorComponent />;
-    }
+    const { data: signedUrlData } = await supabase.storage
+      .from("resumes")
+      .createSignedUrl(applicantProfile.resumes?.[0]?.resume_path || "", 3600);
 
     const signedUrl = signedUrlData?.signedUrl;
 
     return (
-      <div className="flex flex-col w-full gap-8 ">
+      <div className="flex flex-col w-full p-4 gap-8 ">
         <div className="flex items-center justify-between">
           <BackButton />
         </div>
@@ -276,8 +271,8 @@ export default async function ProfilePage({
         </div>
       </div>
     );
-  } catch {
-    // console.error("Error in ApplicantPage:", err);
+  } catch (err) {
+    console.error("Error in ApplicantPage:", err);
     return <ErrorComponent />;
   }
 }

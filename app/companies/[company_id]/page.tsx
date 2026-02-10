@@ -87,7 +87,7 @@ export default async function CompanyIdPage({
     } = await fetchCompanyData(company_id);
 
     return (
-      <div className="flex flex-col w-full gap-8 px-4 py-5 lg:px-20 xl:px-40 2xl:px-80">
+      <div className="flex flex-col w-full gap-8 p-4">
         <div className="flex items-center justify-between">
           <BackButton />
         </div>

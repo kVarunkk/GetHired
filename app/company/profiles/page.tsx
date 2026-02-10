@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { TabsContent } from "@/components/ui/tabs";
-import ProfilesList from "./ProfilesList";
 import FilterComponent from "@/components/FilterComponent";
 import { ICompanyInfo, IFormData, TAICredits } from "@/lib/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
+import JobsComponent from "@/components/JobsComponent";
 
 export default async function ProfilesPage({
   searchParams,
@@ -152,43 +152,63 @@ export default async function ProfilesPage({
   }
 
   return (
-    <div>
-      <div className="flex items-start  h-full gap-5">
-        <div className="hidden md:block w-1/3 px-2 sticky top-0 z-10 max-h-[calc(100vh-1.5rem)] overflow-y-auto">
-          <FilterComponent
-            currentPage={"profiles"}
-            onboardingComplete={onboarding_complete}
-          />
-        </div>
-        <div className="w-full md:w-2/3 ">
-          <ClientTabs
-            user={user}
-            isCompanyUser={true}
-            isAISearch={isAISearch}
-            page={"profiles"}
-          >
-            <TabsContent value="all">
-              <ProfilesList
+    <div className="flex items-start px-4 h-full gap-5">
+      <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[calc(100vh)] overflow-y-auto">
+        <FilterComponent
+          currentPage={"profiles"}
+          onboardingComplete={onboarding_complete}
+        />
+      </div>
+      <div className="w-full md:w-3/4">
+        <ClientTabs
+          user={user}
+          isCompanyUser={true}
+          isAISearch={isAISearch}
+          page={"profiles"}
+        >
+          <TabsContent value="all">
+            <JobsComponent
+              initialJobs={initialProfiles || []}
+              user={user}
+              isCompanyUser={true}
+              current_page={"profiles"}
+              companyId={companyData.id}
+              isOnboardingComplete={onboarding_complete}
+              isAllJobsTab={true}
+              isAppliedJobsTabActive={false}
+              totalCount={totalCount}
+            />
+            {/* <ProfilesList
+              user={user}
+              companyData={companyData}
+              initialProfiles={initialProfiles}
+              onboardingComplete={onboarding_complete}
+              totalCount={totalCount}
+            /> */}
+          </TabsContent>
+          {user && !isAISearch && (
+            <TabsContent value="saved">
+              <JobsComponent
+                initialJobs={initialProfiles || []}
+                user={user}
+                isCompanyUser={true}
+                current_page={"profiles"}
+                companyId={companyData.id}
+                isOnboardingComplete={onboarding_complete}
+                isAllJobsTab={false}
+                isAppliedJobsTabActive={false}
+                totalCount={totalCount}
+              />
+              {/* <ProfilesList
                 user={user}
                 companyData={companyData}
                 initialProfiles={initialProfiles}
                 onboardingComplete={onboarding_complete}
                 totalCount={totalCount}
-              />
+              /> */}
             </TabsContent>
-            {user && !isAISearch && (
-              <TabsContent value="saved">
-                <ProfilesList
-                  user={user}
-                  companyData={companyData}
-                  initialProfiles={initialProfiles}
-                  onboardingComplete={onboarding_complete}
-                  totalCount={totalCount}
-                />
-              </TabsContent>
-            )}
-          </ClientTabs>
-        </div>
+          )}
+        </ClientTabs>
       </div>
     </div>
   );
