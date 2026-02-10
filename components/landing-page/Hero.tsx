@@ -67,7 +67,7 @@ export default function Hero() {
             variant={isHirePage ? "default" : "outline"}
             className={cn(
               !isHirePage &&
-                "transition-colors duration-200 hover:bg-primary hover:text-primary-foreground border-primary text-primary"
+                "transition-colors duration-200 hover:bg-primary hover:text-primary-foreground border-primary text-primary",
             )}
           >
             Hire Talent
