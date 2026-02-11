@@ -10,89 +10,92 @@ import { InfoCircledIcon } from "@radix-ui/react-icons";
 import JobFavoriteBtn from "./JobFavoriteBtn";
 import JobApplyBtn from "./JobApplyBtn";
 import ModifiedLink from "./ModifiedLink";
+import React from "react";
 
-export default function JobItem({
-  job,
-  user,
-  isSuitable,
-  isCompanyUser,
-  isAppliedJobsTabActive,
-  isOnboardingComplete,
-}: {
-  job: IJob;
-  user: User | null;
-  isSuitable: boolean;
-  isCompanyUser: boolean;
-  isAppliedJobsTabActive: boolean;
-  isOnboardingComplete: boolean;
-}) {
-  return (
-    <>
-      <ModifiedLink
-        href={`/jobs/${job.id}`}
-        target="_blank"
-        className="text-start"
-      >
-        <div
-          className={cn(
-            "flex flex-col gap-3 p-4 group  rounded-lg transition hover:bg-secondary "
-          )}
+const JobItem = React.memo(
+  ({
+    job,
+    user,
+    isSuitable,
+    isCompanyUser,
+    isAppliedJobsTabActive,
+    isOnboardingComplete,
+  }: {
+    job: IJob;
+    user: User | null;
+    isSuitable: boolean;
+    isCompanyUser: boolean;
+    isAppliedJobsTabActive: boolean;
+    isOnboardingComplete: boolean;
+  }) => {
+    return (
+      <>
+        <ModifiedLink
+          href={`/jobs/${job.id}`}
+          target="_blank"
+          className="text-start"
         >
-          <div className="flex-col sm:flex-row sm:flex items-center justify-between gap-4">
-            <div className="flex flex-col gap-2 mb-6 sm:mb-0">
-              <div className="flex flex-col ">
-                <div className="">
-                  <Link
-                    href={`/jobs/${job.id}`}
-                    target="_blank"
-                    className="inline hover:underline underline sm:no-underline underline-offset-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <h3 className="inline text-lg sm:text-xl font-semibold">
-                      {job.job_name}
-                    </h3>
-                  </Link>
-                  <JobFavoriteBtn
-                    isCompanyUser={isCompanyUser}
-                    user={user}
-                    userFavorites={job.user_favorites}
-                    job_id={job.id}
-                  />
+          <div
+            className={cn(
+              "flex flex-col gap-3 p-4 group  rounded-lg transition hover:bg-secondary ",
+            )}
+          >
+            <div className="flex-col sm:flex-row sm:flex items-center justify-between gap-4">
+              <div className="flex flex-col gap-2 mb-6 sm:mb-0">
+                <div className="flex flex-col ">
+                  <div className="">
+                    <Link
+                      href={`/jobs/${job.id}`}
+                      target="_blank"
+                      className="inline hover:underline underline sm:no-underline underline-offset-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <h3 className="inline text-lg sm:text-xl font-semibold">
+                        {job.job_name}
+                      </h3>
+                    </Link>
+                    <JobFavoriteBtn
+                      isCompanyUser={isCompanyUser}
+                      user={user}
+                      userFavorites={job.user_favorites}
+                      job_id={job.id}
+                    />
+                  </div>
+                  {job.company_url ? (
+                    <Link
+                      href={job.company_url || ""}
+                      target="_blank"
+                      className="text-muted-foreground hover:underline w-fit underline sm:no-underline underline-offset-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {job.company_name}
+                    </Link>
+                  ) : (
+                    <p className="text-muted-foreground"> {job.company_name}</p>
+                  )}
                 </div>
-                {job.company_url ? (
-                  <Link
-                    href={job.company_url || ""}
-                    target="_blank"
-                    className="text-muted-foreground hover:underline w-fit underline sm:no-underline underline-offset-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {job.company_name}
-                  </Link>
-                ) : (
-                  <p className="text-muted-foreground"> {job.company_name}</p>
-                )}
+                <JobDetailBadges job={job} isSuitable={isSuitable} />
               </div>
-              <JobDetailBadges job={job} isSuitable={isSuitable} />
+              <JobApplyBtn
+                isCompanyUser={isCompanyUser}
+                user={user}
+                job={job}
+                isOnboardingComplete={isOnboardingComplete}
+                isAppliedJobsTabActive={isAppliedJobsTabActive}
+              />
             </div>
-            <JobApplyBtn
-              isCompanyUser={isCompanyUser}
-              user={user}
-              job={job}
-              isOnboardingComplete={isOnboardingComplete}
-              isAppliedJobsTabActive={isAppliedJobsTabActive}
-            />
+            {job.status === "inactive" && (
+              <div className="flex items-center gap-1 text-muted-foreground text-xs">
+                <InfoCircledIcon />
+                This Job Posting has been deactivated by {job.company_name}
+              </div>
+            )}
           </div>
-          {job.status === "inactive" && (
-            <div className="flex items-center gap-1 text-muted-foreground text-xs">
-              <InfoCircledIcon />
-              This Job Posting has been deactivated by {job.company_name}
-            </div>
-          )}
-        </div>
-      </ModifiedLink>
-    </>
-  );
-}
+        </ModifiedLink>
+      </>
+    );
+  },
+);
 
 function JobDetailBadges({
   job,
@@ -181,7 +184,7 @@ function JobDetailBadges({
             variant={"outline"}
             key={detail.id}
             className={cn(
-              "text-xs sm:text-sm font-medium group-hover:border-secondary-foreground"
+              "text-xs sm:text-sm font-medium group-hover:border-secondary-foreground",
             )}
           >
             {detail.value}
@@ -198,7 +201,7 @@ function JobDetailBadges({
             variant={"secondary"}
             className={cn(
               "text-xs sm:text-sm font-medium hover:!text-secondary-foreground group-hover:border-secondary-foreground hover:underline",
-              "underline underline-offset-2 sm:no-underline"
+              "underline underline-offset-2 sm:no-underline",
             )}
           >
             {job.platform}
@@ -208,7 +211,7 @@ function JobDetailBadges({
       {isSuitable && (
         <Badge
           className={cn(
-            "text-xs sm:text-sm font-medium bg-green-200 text-green-700 !border-green-200 hover:bg-green-100 group-hover:border-secondary-foreground"
+            "text-xs sm:text-sm font-medium bg-green-200 text-green-700 !border-green-200 hover:bg-green-100 group-hover:border-secondary-foreground",
           )}
         >
           Job Match
@@ -217,3 +220,5 @@ function JobDetailBadges({
     </div>
   );
 }
+
+export default JobItem;

@@ -6,6 +6,7 @@ import {
   startTransition,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -54,7 +55,9 @@ export default function JobsComponent({
   isAppliedJobsTabActive: boolean;
   totalCount: number;
 }) {
-  const [jobs, setJobs] = useState<IJob[] | IFormData[] | ICompanyInfo[]>([]);
+  const [jobs, setJobs] = useState<IJob[] | IFormData[] | ICompanyInfo[]>(
+    initialJobs,
+  );
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
@@ -71,8 +74,6 @@ export default function JobsComponent({
   const isSimilarSearch = isSuitable && searchParams.get("jobId");
   const startProgress = useProgress();
   useEffect(() => {
-    setJobs(initialJobs);
-    setPage(1);
     toast.dismiss();
   }, [initialJobs]);
 
@@ -141,7 +142,7 @@ export default function JobsComponent({
           loadMoreJobs();
         }
       },
-      { threshold: 0.3 },
+      { threshold: 0.1 },
     );
 
     const currentLoader = loaderRef.current;
@@ -154,7 +155,7 @@ export default function JobsComponent({
         observer.unobserve(currentLoader);
       }
     };
-  }, [isLoading, jobs, loadMoreJobs]);
+  }, [isLoading, loadMoreJobs]);
 
   useEffect(() => {
     if (
@@ -249,6 +250,78 @@ export default function JobsComponent({
     mutate(PROFILE_API_KEY);
     triggerRelevanceUpdate(data.profile.user_id);
   };
+
+  const renderedList = useMemo(() => {
+    if (jobs.length === 0) {
+      return (
+        <p className="text-muted-foreground mt-20 mx-auto text-center">
+          No{" "}
+          {isCompanyUser && current_page === "profiles"
+            ? "profiles"
+            : current_page === "jobs"
+              ? "jobs"
+              : "companies"}{" "}
+          found for the selected Filter. <br />
+          <ModifiedLink
+            href={
+              isCompanyUser && current_page === "profiles"
+                ? "/company/profiles"
+                : current_page === "jobs"
+                  ? "/jobs"
+                  : "/companies"
+            }
+            className="underline"
+          >
+            Clear Filters
+          </ModifiedLink>
+        </p>
+      );
+    }
+
+    if (current_page === "profiles" && isCompanyUser) {
+      return (jobs as IFormData[]).map((profile) => (
+        <ProfileItem
+          key={profile.user_id}
+          profile={profile}
+          isSuitable={isSuitable}
+          companyId={companyId}
+        />
+      ));
+    }
+
+    if (current_page === "jobs") {
+      return (jobs as IJob[]).map((job) => (
+        <JobItem
+          isCompanyUser={isCompanyUser}
+          key={job.id}
+          job={job}
+          user={user}
+          isSuitable={isSuitable}
+          isAppliedJobsTabActive={isAppliedJobsTabActive}
+          isOnboardingComplete={isOnboardingComplete}
+        />
+      ));
+    }
+
+    return (jobs as ICompanyInfo[]).map((company) => (
+      <CompanyItem
+        isCompanyUser={isCompanyUser}
+        key={company.id}
+        company={company}
+        user={user}
+        isSuitable={isSuitable}
+      />
+    ));
+  }, [
+    jobs,
+    current_page,
+    isCompanyUser,
+    isSuitable,
+    isAppliedJobsTabActive,
+    isOnboardingComplete,
+    user,
+    companyId,
+  ]);
 
   return (
     <div className="flex flex-col gap-4 w-full pb-4">
@@ -412,61 +485,8 @@ export default function JobsComponent({
             </p>
           </div>
         )
-      ) : jobs.length > 0 ? (
-        current_page === "profiles" && isCompanyUser ? (
-          (jobs as IFormData[]).map((job) => (
-            <ProfileItem
-              key={job.user_id}
-              profile={job}
-              isSuitable={isSuitable}
-              companyId={companyId}
-            />
-          ))
-        ) : current_page === "jobs" ? (
-          (jobs as IJob[]).map((job) => (
-            <JobItem
-              isCompanyUser={isCompanyUser}
-              key={job.id}
-              job={job}
-              user={user}
-              isSuitable={isSuitable}
-              isAppliedJobsTabActive={isAppliedJobsTabActive}
-              isOnboardingComplete={isOnboardingComplete}
-            />
-          ))
-        ) : (
-          (jobs as ICompanyInfo[]).map((job) => (
-            <CompanyItem
-              isCompanyUser={isCompanyUser}
-              key={job.id}
-              company={job}
-              user={user}
-              isSuitable={isSuitable}
-            />
-          ))
-        )
       ) : (
-        <p className="text-muted-foreground mt-20 mx-auto text-center">
-          No{" "}
-          {isCompanyUser && current_page === "profiles"
-            ? "profiles"
-            : current_page === "jobs"
-              ? "jobs"
-              : "companies"}{" "}
-          found for the selected Filter. <br />
-          <ModifiedLink
-            href={
-              isCompanyUser && current_page === "profiles"
-                ? "/company/profiles"
-                : current_page === "jobs"
-                  ? "/jobs"
-                  : "/companies"
-            }
-            className="underline"
-          >
-            Clear Filters
-          </ModifiedLink>
-        </p>
+        renderedList
       )}
 
       {jobs.length < totalCount && jobs.length !== 0 ? (

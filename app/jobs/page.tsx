@@ -55,7 +55,7 @@ export async function generateMetadata({
       .filter(Boolean);
     if (keywordsArray.length > 0) {
       titleParts.push(
-        keywordsArray[0].charAt(0).toUpperCase() + keywordsArray[0].slice(1)
+        keywordsArray[0].charAt(0).toUpperCase() + keywordsArray[0].slice(1),
       );
       keywords.push(...keywordsArray);
     }
@@ -170,8 +170,9 @@ export default async function JobsPage({
   let initialJobs: IJob[] = [];
   let totalCount: number = 0;
   const params = new URLSearchParams(
-    searchParameters as Record<string, string>
+    searchParameters as Record<string, string>,
   );
+  const dynamicKey = params.toString();
 
   try {
     params.set("tab", activeTab);
@@ -217,6 +218,7 @@ export default async function JobsPage({
           {!applicationStatusFilter && (
             <TabsContent value="all">
               <JobsComponent
+                key={dynamicKey}
                 initialJobs={initialJobs || []}
                 user={user}
                 isCompanyUser={isCompanyUser}
@@ -234,6 +236,7 @@ export default async function JobsPage({
             !isAISearch && (
               <TabsContent value="saved">
                 <JobsComponent
+                  key={dynamicKey}
                   initialJobs={initialJobs || []}
                   user={user}
                   isCompanyUser={isCompanyUser}
@@ -248,6 +251,7 @@ export default async function JobsPage({
           {user && !isCompanyUser && !isAISearch && (
             <TabsContent value="applied">
               <JobsComponent
+                key={dynamicKey}
                 initialJobs={initialJobs || []}
                 user={user}
                 isCompanyUser={isCompanyUser}
