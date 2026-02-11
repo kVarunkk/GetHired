@@ -164,5 +164,5 @@ function CompanyDetailBadges({
     </div>
   );
 }
-
+CompanyItem.displayName = "CompanyItem";
 export default CompanyItem;

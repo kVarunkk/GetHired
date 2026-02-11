@@ -151,5 +151,5 @@ function ProfileDetailBadges({
     </div>
   );
 }
-
+ProfileItem.displayName = "ProfileItem";
 export default ProfileItem;

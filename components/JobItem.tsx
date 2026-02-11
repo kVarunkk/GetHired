@@ -220,5 +220,5 @@ function JobDetailBadges({
     </div>
   );
 }
-
+JobItem.displayName = "JobItem";
 export default JobItem;
