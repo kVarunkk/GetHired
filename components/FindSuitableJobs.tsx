@@ -98,7 +98,7 @@ export default function FindSuitableJobs({
       const { data: userInfo, error: userInfoError } = await supabase
         .from("user_info")
         .select(
-          "desired_roles, preferred_locations, job_type, visa_sponsorship_required, min_salary, experience_years"
+          "desired_roles, preferred_locations, job_type, visa_sponsorship_required, min_salary, experience_years",
         )
         .eq("user_id", user.id)
         .single();
@@ -136,7 +136,7 @@ export default function FindSuitableJobs({
         "visaRequirement",
         userInfo.visa_sponsorship_required
           ? ["US Citizenship/Visa Not Required", "Will Sponsor"]
-          : ["US Citizenship/Visa Not Required", "US Citizen/Visa Only"]
+          : ["US Citizenship/Visa Not Required", "US Citizen/Visa Only"],
       );
 
       if (userInfo.min_salary) {
@@ -154,7 +154,7 @@ export default function FindSuitableJobs({
       toast.error(
         `An unexpected error occurred: ${
           error instanceof Error ? error.message : "Please try again."
-        }`
+        }`,
       );
     }
   };
@@ -182,7 +182,7 @@ export default function FindSuitableJobs({
               : currentPage === "jobs"
                 ? "job"
                 : "companie"
-          }s?${params.toString()}`
+          }s?${params.toString()}`,
         );
       });
     } catch {
