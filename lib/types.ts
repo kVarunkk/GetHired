@@ -152,9 +152,9 @@ export interface IFormData {
   ai_credits?: number;
   linkedin_url?: string;
   github_url?: string;
-  skills_resume?: string;
-  experience_resume?: string;
-  projects_resume?: string;
+  // skills_resume?: string;
+  // experience_resume?: string;
+  // projects_resume?: string;
   invitations?: IInvitation[];
 }
 

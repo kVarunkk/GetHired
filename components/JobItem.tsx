@@ -34,6 +34,9 @@ const JobItem = React.memo(
           href={`/jobs/${job.id}`}
           target="_blank"
           className="text-start"
+          style={{
+            contentVisibility: "auto",
+          }}
         >
           <div
             className={cn(
