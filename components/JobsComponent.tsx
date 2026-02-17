@@ -79,11 +79,12 @@ export default function JobsComponent({
 
   const loadMoreJobs = useCallback(async () => {
     if (
-      isLoading ||
       jobs.length >= totalCount ||
       (page >= 2 && !user && current_page === "jobs")
-    )
+    ) {
       return;
+    }
+
     setIsLoading(true);
 
     const nextPage = page + 1;
@@ -117,12 +118,14 @@ export default function JobsComponent({
         setJobs((prevJobs) => [...prevJobs, ...data]);
       }
     } catch {
-      // console.error("Failed to fetch more jobs:", error);
+      toast.error(
+        "Some error occured while fetching records. Please try reloading the window.",
+      );
     } finally {
       setIsLoading(false);
     }
   }, [
-    isLoading,
+    // isLoading,
     jobs.length,
     page,
     searchParams,
@@ -135,6 +138,8 @@ export default function JobsComponent({
   ]);
 
   useEffect(() => {
+    const currentLoader = loaderRef.current;
+
     const observer = new IntersectionObserver(
       (entries) => {
         const firstEntry = entries[0];
@@ -144,8 +149,6 @@ export default function JobsComponent({
       },
       { threshold: 0.1 },
     );
-
-    const currentLoader = loaderRef.current;
     if (currentLoader) {
       observer.observe(currentLoader);
     }
@@ -155,7 +158,7 @@ export default function JobsComponent({
         observer.unobserve(currentLoader);
       }
     };
-  }, [isLoading, loadMoreJobs]);
+  }, [isLoading, loadMoreJobs, isGenerated]);
 
   useEffect(() => {
     if (
