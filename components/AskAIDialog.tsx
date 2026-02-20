@@ -175,16 +175,19 @@ export default function AskAIDialog({
         ) : (
           <div className="flex flex-col gap-4">
             <div className="text-sm flex items-center font-semibold text-muted-foreground">
-              <div className="flex items-center gap-1">
-                Using
-                <span
-                  title={selectedResume?.name}
-                  className="font-bold inline-block w-[10rem] truncate"
-                >
-                  {selectedResume?.name}
-                </span>
-                .
-              </div>
+              {selectedResume ? (
+                <div className="flex items-center gap-1">
+                  Using
+                  <span
+                    title={selectedResume?.name}
+                    className="font-bold inline-block w-[10rem] truncate"
+                  >
+                    {selectedResume?.name}
+                  </span>
+                </div>
+              ) : (
+                <p>Select a Resume</p>
+              )}
               <Button
                 variant={"link"}
                 onClick={() => setView("resume")}
