@@ -64,6 +64,8 @@ export default async function JobsPage({
   const params = new URLSearchParams(
     searchParameters as Record<string, string>,
   );
+  const dynamicKey = params.toString();
+
   try {
     params.set("tab", activeTab);
     params.set("limit", "20");
@@ -157,6 +159,7 @@ export default async function JobsPage({
     <div className="flex items-start px-4  gap-5">
       <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[calc(100vh)] overflow-y-auto">
         <FilterComponent
+          key={dynamicKey}
           currentPage="companies"
           onboardingComplete={onboardingComplete}
         />
@@ -171,6 +174,7 @@ export default async function JobsPage({
           {
             <TabsContent value="all">
               <JobsComponent
+                key={dynamicKey}
                 initialJobs={initialCompanies || []}
                 user={user}
                 isCompanyUser={isCompanyUser}
@@ -186,6 +190,7 @@ export default async function JobsPage({
           {user && !isCompanyUser && !isAISearch && (
             <TabsContent value="saved">
               <JobsComponent
+                key={dynamicKey}
                 initialJobs={initialCompanies || []}
                 user={user}
                 isCompanyUser={isCompanyUser}
