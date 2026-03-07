@@ -8,7 +8,7 @@ import {
 } from "./ui/sheet";
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { IBookmark } from "@/lib/types";
+import { IBookmark } from "@/utils/types";
 import JobsBookmarkTable from "./JobsBookmarkTable";
 
 export default function JobsPageCommonSheet({ user }: { user: User | null }) {

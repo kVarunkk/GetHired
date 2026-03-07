@@ -2,7 +2,7 @@
 
 import { revalidateCache } from "@/app/actions/revalidate";
 import { createClient } from "@/lib/supabase/client";
-import { IFormData } from "@/lib/types";
+import { IFormData } from "@/utils/types";
 import { Star } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -21,7 +21,7 @@ export default function ProfileFavoriteStar({
       if (
         profile.company_favorites &&
         profile.company_favorites.filter(
-          (each) => each.company_id === companyId
+          (each) => each.company_id === companyId,
         ).length > 0
       ) {
         setIsFavorite(true);
@@ -38,7 +38,7 @@ export default function ProfileFavoriteStar({
       if (
         profile.company_favorites &&
         profile.company_favorites.filter(
-          (each) => each.company_id === companyId
+          (each) => each.company_id === companyId,
         ).length > 0
       ) {
         query = supabase

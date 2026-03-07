@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { StepProps } from "../OnboardingComponent";
 import { CardContent } from "../ui/card";
 import { Label } from "../ui/label";
@@ -30,7 +30,7 @@ export const Step5CareerGoals: React.FC<StepProps> = ({
         }
         className={cn(
           "mt-2 bg-input",
-          errors.career_goals_short_term ? "border-red-500 " : ""
+          errors.career_goals_short_term ? "border-red-500 " : "",
         )}
       />
       {errors.career_goals_short_term && (
@@ -53,7 +53,7 @@ export const Step5CareerGoals: React.FC<StepProps> = ({
         }
         className={cn(
           "mt-2 bg-input",
-          errors.career_goals_long_term ? "border-red-500 " : ""
+          errors.career_goals_long_term ? "border-red-500 " : "",
         )}
       />
       {errors.career_goals_long_term && (
@@ -77,7 +77,7 @@ export const Step5CareerGoals: React.FC<StepProps> = ({
           <SelectValue
             placeholder="Select company size"
             className={cn(
-              errors.company_size_preference ? "border-red-500 " : ""
+              errors.company_size_preference ? "border-red-500 " : "",
             )}
           />
         </SelectTrigger>

@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "../supabase/client";
-import { IJobPosting } from "../types";
+import { createClient } from "../lib/supabase/client";
+import { IJobPosting } from "../utils/types";
 import { IJobPost } from "@/components/JobPostingsTable";
 import toast from "react-hot-toast";
 
 export const useJobPostingStatus = (
   initialStatus: "active" | "inactive",
-  job: IJobPosting | IJobPost
+  job: IJobPosting | IJobPost,
 ) => {
   const [checkedState, setCheckedState] = useState(initialStatus === "active");
   const supabase = createClient();
@@ -71,13 +71,13 @@ export const useJobPostingStatus = (
         // router.refresh();
       }
       toast.success(
-        `Job Posting ${value ? "activated" : "deactivated"} succesfully`
+        `Job Posting ${value ? "activated" : "deactivated"} succesfully`,
       );
     } catch {
       // console.error("Failed to update job posting status:", error);
       setCheckedState(!value);
       toast.error(
-        "Some error occured while updating the status of Job Posting"
+        "Some error occured while updating the status of Job Posting",
       );
     }
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useOptimistic, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProgress } from "react-transition-progress";
@@ -31,18 +31,14 @@ export function ClientTabs({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const startProgress = useProgress();
-  const initialTab = searchParams.get("tab") || "all";
-  const [activeTab, setActiveTab] = useState<string>();
-
-  useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    }
-  }, [initialTab]);
+  const [activeTab, setActiveTab] = useOptimistic(
+    searchParams.get("tab") || "all",
+    (_, newTab: string) => newTab,
+  );
 
   const handleTabChange = (newTab: "all" | "saved" | "applied") => {
-    setActiveTab(newTab);
     startTransition(() => {
+      setActiveTab(newTab);
       startProgress();
       const newSearchParams = new URLSearchParams(searchParams.toString());
       if (newTab === "all") {
@@ -57,7 +53,7 @@ export function ClientTabs({
             : page === "companies"
               ? "companies"
               : "company/profiles"
-        }?${newSearchParams.toString()}`
+        }?${newSearchParams.toString()}`,
       );
     });
   };
@@ -75,7 +71,6 @@ export function ClientTabs({
                       value="all"
                       className="p-0"
                       onClick={() => handleTabChange("all")}
-                      disabled={isPending}
                     >
                       <span className="py-1 px-2">All Jobs</span>
                     </TabsTrigger>
@@ -85,7 +80,6 @@ export function ClientTabs({
                       value="saved"
                       className="p-0"
                       onClick={() => handleTabChange("saved")}
-                      disabled={isPending}
                     >
                       <span className="py-1 px-2">Saved Jobs</span>
                     </TabsTrigger>
@@ -94,7 +88,6 @@ export function ClientTabs({
                     value="applied"
                     className="p-0"
                     onClick={() => handleTabChange("applied")}
-                    disabled={isPending}
                   >
                     <span className="py-1 px-2">Applied Jobs</span>
                   </TabsTrigger>
@@ -113,7 +106,6 @@ export function ClientTabs({
                       value="all"
                       className="p-0"
                       onClick={() => handleTabChange("all")}
-                      disabled={isPending}
                     >
                       <span className="py-1 px-2">All Companies</span>
                     </TabsTrigger>
@@ -123,7 +115,6 @@ export function ClientTabs({
                       value="saved"
                       className="p-0"
                       onClick={() => handleTabChange("saved")}
-                      disabled={isPending}
                     >
                       <span className="py-1 px-2">Saved Companies</span>
                     </TabsTrigger>
@@ -142,7 +133,6 @@ export function ClientTabs({
                     value="all"
                     className="p-0"
                     onClick={() => handleTabChange("all")}
-                    disabled={isPending}
                   >
                     <span className="py-1 px-2">All Profiles</span>
                   </TabsTrigger>
@@ -150,7 +140,6 @@ export function ClientTabs({
                     value="saved"
                     className="p-0"
                     onClick={() => handleTabChange("saved")}
-                    disabled={isPending}
                   >
                     <span className="py-1 px-2">Saved Profiles</span>
                   </TabsTrigger>

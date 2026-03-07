@@ -14,10 +14,10 @@ import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { ArrowLeft, Copy, Loader2, Sparkle } from "lucide-react";
 import Link from "next/link";
-import { IResume, TAICredits } from "@/lib/types";
+import { IResume, TAICredits } from "@/utils/types";
 import InfoTooltip from "./InfoTooltip";
 import useSWR, { mutate } from "swr";
-import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/lib/utils";
+import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import ResumeSourceSelector from "./ResumeSourceSelector";
 import { createClient } from "@/lib/supabase/client";
 

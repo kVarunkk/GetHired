@@ -1,6 +1,6 @@
 import JobDigestEmail from "@/emails/JobDigestEmail";
-import { createServiceRoleClient } from "./supabase/service-role";
-import { IFormData, IJob } from "./types";
+import { createServiceRoleClient } from "../../lib/supabase/service-role";
+import { IFormData, IJob } from "../../utils/types";
 import { render } from "@react-email/components";
 import { Resend } from "resend";
 
@@ -19,7 +19,7 @@ export async function getAllDigestUsers(): Promise<IFormData[]> {
             email, 
             full_name, 
             is_job_digest_active
-        `
+        `,
     )
     .neq("email", null)
     .neq("full_name", null)
@@ -39,7 +39,7 @@ export async function sendJobDigestEmail(
   email: string,
   userName: string,
   jobs: IJob[],
-  digestDate: string
+  digestDate: string,
 ) {
   // Check if jobs array is empty before rendering
   if (jobs.length === 0) {
@@ -49,12 +49,12 @@ export async function sendJobDigestEmail(
 
   // 1. Render the React Email component to HTML and Plain Text
   const emailHtml = await render(
-    <JobDigestEmail userName={userName} jobs={jobs} />
+    <JobDigestEmail userName={userName} jobs={jobs} />,
   );
 
   const emailText = await render(
     <JobDigestEmail userName={userName} jobs={jobs} />,
-    { plainText: true }
+    { plainText: true },
   );
 
   // 2. Send the email using Resend

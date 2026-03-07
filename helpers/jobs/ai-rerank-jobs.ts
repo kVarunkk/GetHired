@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { IJob, TAICredits } from "./types";
+import { IJob, TAICredits } from "../../utils/types";
 
 interface RerankResult {
   initialJobs: IJob[];
@@ -89,7 +89,7 @@ export async function rerankJobsIfApplicable({
               ? { jobId: jobId, aiCredits }
               : {}),
           }),
-        }
+        },
       );
 
       const aiRerankResult: {
@@ -99,7 +99,7 @@ export async function rerankJobsIfApplicable({
 
       if (aiRerankRes.ok && aiRerankResult.rerankedJobs) {
         const uniqueRerankedIds = Array.from(
-          new Set(aiRerankResult.rerankedJobs as string[])
+          new Set(aiRerankResult.rerankedJobs as string[]),
         );
         const filteredOutIdsSet = new Set(aiRerankResult.filteredOutJobs || []);
 
@@ -110,7 +110,7 @@ export async function rerankJobsIfApplicable({
           .filter(
             (job: IJob | undefined): job is IJob =>
               // Ensure the job exists in our map and hasn't been explicitly filtered out
-              job !== undefined && !filteredOutIdsSet.has(job.id)
+              job !== undefined && !filteredOutIdsSet.has(job.id),
           )
           .concat(removedJobs);
 

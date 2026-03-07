@@ -6,7 +6,7 @@ import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
 import DeleteJobPosting from "@/components/DeleteJobPosting";
 import { Briefcase, DollarSign, Users, MapPin } from "lucide-react";
 import { format } from "date-fns";
-import { IApplication, IJobPosting } from "@/lib/types";
+import { IApplication, IJobPosting } from "@/utils/types";
 import BackButton from "@/components/BackButton";
 import { JobStatusSwitch } from "@/components/JobPostingsTable";
 import ApplicantsTable from "@/components/ApplicantsTable";
@@ -29,7 +29,7 @@ export default async function JobPostPage({
           *,
           applications(*, user_info(*), job_postings(*)),
           company_info(name, website)
-        `
+        `,
       )
       .eq("id", job_id)
       .single();

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { IJob, TAICredits } from "@/lib/types";
-import { getVertexClient } from "@/lib/serverUtils";
+import { IJob, TAICredits } from "@/utils/types";
+import { getVertexClient } from "@/utils/serverUtils";
 
 export async function POST(request: NextRequest) {
   try {

@@ -4,7 +4,7 @@ import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IApplication, IFormData } from "@/lib/types";
+import { IApplication, IFormData } from "@/utils/types";
 import ProfileFavoriteStar from "@/components/ProfileFavoriteStar";
 import { buildSalaryRange } from "../../applicants/[applicant_id]/page";
 import ProfileActiveApplication from "@/components/ProfileActiveApplications";
@@ -60,7 +60,7 @@ export default async function ProfilePage({
             company_id
           )
         )
-      `
+      `,
       )
       .eq("user_id", profile_id)
       .eq("resumes.is_primary", true)
@@ -222,7 +222,7 @@ export default async function ProfilePage({
                       {buildSalaryRange(
                         applicantProfile.min_salary,
                         applicantProfile.max_salary,
-                        applicantProfile.salary_currency
+                        applicantProfile.salary_currency,
                       )}
                     </p>
                   </div>

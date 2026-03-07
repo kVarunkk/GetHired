@@ -1,6 +1,6 @@
 "use client";
 
-import { copyToClipboard } from "@/lib/utils";
+import { copyToClipboard } from "@/utils/utils";
 import { Copy } from "lucide-react";
 
 export default function CopyBtn({ content }: { content: string }) {

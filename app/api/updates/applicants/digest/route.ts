@@ -1,8 +1,11 @@
 import { after, NextResponse } from "next/server";
 import { headers } from "next/headers";
-import { getAllDigestUsers, sendJobDigestEmail } from "@/lib/digest-utils";
-import { IFormData, IJob } from "@/lib/types";
-import { deploymentUrl, sendEmailForStatusUpdate } from "@/lib/serverUtils";
+import {
+  getAllDigestUsers,
+  sendJobDigestEmail,
+} from "@/helpers/jobs/digest-utils";
+import { IFormData, IJob } from "@/utils/types";
+import { deploymentUrl, sendEmailForStatusUpdate } from "@/utils/serverUtils";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
@@ -16,7 +19,7 @@ export async function GET() {
   if (cronSecret !== INTERNAL_API_SECRET) {
     return NextResponse.json(
       { message: "Unauthorized access to digest route" },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -32,7 +35,7 @@ export async function GET() {
 
     if (!users || users.length === 0) {
       await sendEmailForStatusUpdate(
-        "JOB DIGEST USER NOT FOUND. EXITING SUCCESFULLY."
+        "JOB DIGEST USER NOT FOUND. EXITING SUCCESFULLY.",
       );
       return NextResponse.json({
         success: true,
@@ -48,7 +51,7 @@ export async function GET() {
       const BATCH_SIZE = 5;
 
       console.log(
-        `[DIGEST JOB] Starting background processing for ${users.length} users.`
+        `[DIGEST JOB] Starting background processing for ${users.length} users.`,
       );
 
       // Process users in batches to stay within rate limits and prevent CPU spikes
@@ -56,7 +59,7 @@ export async function GET() {
         const batch = users.slice(i, i + BATCH_SIZE);
 
         const digestPromises = batch.map((user) =>
-          processUserDigest(user, digestDate)
+          processUserDigest(user, digestDate),
         );
 
         const batchResults = await Promise.allSettled(digestPromises);
@@ -97,7 +100,7 @@ export async function GET() {
 
       await sendEmailForStatusUpdate(report);
       console.log(
-        `[DIGEST JOB] Finished. Success: ${successfulSends.length}, Failed: ${failedSends.length}`
+        `[DIGEST JOB] Finished. Success: ${successfulSends.length}, Failed: ${failedSends.length}`,
       );
     };
 
@@ -117,12 +120,12 @@ export async function GET() {
     const errorMsg = error instanceof Error ? error.message : String(error);
 
     await sendEmailForStatusUpdate(
-      [`JOB DIGEST CRITICAL FAILURE:`, `Error: ${errorMsg}`].join("\n")
+      [`JOB DIGEST CRITICAL FAILURE:`, `Error: ${errorMsg}`].join("\n"),
     );
 
     return NextResponse.json(
       { success: false, message: "Failed to initialize digest process." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -141,12 +144,12 @@ async function processUserDigest(user: IFormData, digestDate: string) {
         headers: {
           "X-Internal-Secret": INTERNAL_API_SECRET || "",
         },
-      }
+      },
     );
 
     if (!jobFetchRes.ok) {
       throw new Error(
-        `API jobs endpoint failed with status ${jobFetchRes.status}`
+        `API jobs endpoint failed with status ${jobFetchRes.status}`,
       );
     }
 
@@ -161,7 +164,7 @@ async function processUserDigest(user: IFormData, digestDate: string) {
         user.email,
         user.full_name,
         topJobs,
-        digestDate
+        digestDate,
       );
       if (!success || error) {
         throw new Error(`Failed to send email: ${error}`);

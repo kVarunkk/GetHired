@@ -8,18 +8,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { Dispatch, SetStateAction, useTransition } from "react";
+import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { useProgress } from "react-transition-progress";
 
 export default function SortingComponent({
   isCompanyUser,
   currentPage,
-  setPage,
 }: {
   isCompanyUser: boolean;
   currentPage: "jobs" | "companies" | "profiles";
-  setPage: Dispatch<SetStateAction<number>>;
 }) {
   const startProgress = useProgress();
   const [isPending, startTransition] = useTransition();
@@ -39,8 +37,6 @@ export default function SortingComponent({
     params.set("sortBy", column);
     params.set("sortOrder", order);
 
-    setPage(() => 1);
-
     startTransition(() => {
       startProgress();
 
@@ -49,9 +45,9 @@ export default function SortingComponent({
           currentPage === "profiles" && isCompanyUser
             ? "company/profiles"
             : currentPage === "jobs"
-            ? "jobs"
-            : "companies"
-        }?${params.toString()}`
+              ? "jobs"
+              : "companies"
+        }?${params.toString()}`,
       );
     });
   };
@@ -73,8 +69,8 @@ export default function SortingComponent({
             isCompanyUser && currentPage === "profiles"
               ? "full_name"
               : currentPage === "jobs"
-              ? "company_name"
-              : "name"
+                ? "company_name"
+                : "name"
           }-asc`}
         >
           {currentPage === "profiles" ? "Profile" : "Company"} Name (A-Z)
@@ -84,8 +80,8 @@ export default function SortingComponent({
             isCompanyUser && currentPage === "profiles"
               ? "full_name"
               : currentPage === "jobs"
-              ? "company_name"
-              : "name"
+                ? "company_name"
+                : "name"
           }-desc`}
         >
           {currentPage === "profiles" ? "Profile" : "Company"} Name (Z-A)

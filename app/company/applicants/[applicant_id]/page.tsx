@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import ApplicationStatusSelect from "@/components/ApplicationStatusSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { IApplication } from "@/lib/types";
+import { IApplication } from "@/utils/types";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 
 export default async function ApplicantPage({
@@ -57,7 +57,7 @@ export default async function ApplicantPage({
           location,
           company_info(name)
         )
-      `
+      `,
       )
       .eq("id", applicant_id)
       .single();
@@ -164,7 +164,7 @@ export default async function ApplicantPage({
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {application.user_info?.preferred_locations.join(
-                            ", "
+                            ", ",
                           ) || "Not specified"}
                         </p>
                       </div>
@@ -211,7 +211,7 @@ export default async function ApplicantPage({
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {application.user_info?.work_style_preferences?.join(
-                            ", "
+                            ", ",
                           ) || "Not specified"}
                         </p>
                       </div>
@@ -229,7 +229,7 @@ export default async function ApplicantPage({
                           {buildSalaryRange(
                             application.user_info?.min_salary,
                             application.user_info?.max_salary,
-                            application.user_info?.salary_currency
+                            application.user_info?.salary_currency,
                           )}
                         </p>
                       </div>
@@ -243,7 +243,7 @@ export default async function ApplicantPage({
                                 <Badge key={index} variant="secondary">
                                   {skill}
                                 </Badge>
-                              )
+                              ),
                             )
                           ) : (
                             <span className="text-sm text-muted-foreground">
@@ -279,7 +279,7 @@ export default async function ApplicantPage({
                                 <Badge key={index} variant="secondary">
                                   {loc}
                                 </Badge>
-                              )
+                              ),
                             )
                           ) : (
                             <span className="text-sm text-muted-foreground">
@@ -341,7 +341,7 @@ export default async function ApplicantPage({
 export const buildSalaryRange = (
   min_salary?: number | "",
   max_salary?: number | "",
-  salary_currency?: string
+  salary_currency?: string,
 ) => {
   const minSalary = min_salary || 0;
   const maxSalary = max_salary || 0;

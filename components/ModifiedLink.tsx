@@ -5,7 +5,7 @@ import React, {
   forwardRef,
   startTransition,
 } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { useRouter } from "next/navigation";
 import { useProgress } from "react-transition-progress";
 
@@ -72,7 +72,7 @@ const ModifiedLink = forwardRef<HTMLAnchorElement, ModifiedLinkProps>(
         {children}
       </a>
     );
-  }
+  },
 );
 ModifiedLink.displayName = "ModifiedLink";
 

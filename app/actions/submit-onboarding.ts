@@ -1,10 +1,10 @@
 "use server";
 
-import { deploymentUrl } from "@/lib/serverUtils";
+import { deploymentUrl } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import { after } from "next/server";
-import { TLimits } from "@/lib/types";
+import { TLimits } from "@/utils/types";
 import { triggerRelevanceUpdate } from "./relevant-jobs-update";
 
 export async function submitOnboardingAction(formData: FormData) {

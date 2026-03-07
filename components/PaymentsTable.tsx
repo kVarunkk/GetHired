@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 // import Link from "next/link";
 import { format } from "date-fns";
-import { IPayment } from "@/lib/types";
+import { IPayment } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import {
   Select,
@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/utils/utils";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 
 interface PaymentsTableProps {
@@ -158,7 +158,7 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         ),
       },
     ],
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -271,7 +271,7 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -289,7 +289,7 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

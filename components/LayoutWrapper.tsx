@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { cn, getNavbarVairantByPath, getNavItemsByPath } from "../lib/utils";
+import { cn, getNavbarVairantByPath, getNavItemsByPath } from "../utils/utils";
 import { usePathname } from "next/navigation";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { User } from "@supabase/supabase-js";
 import NavbarComponent from "./Navbar";
 import ScrollToTopButton from "./ScrollToTopButton";

@@ -14,7 +14,7 @@ import ResumeSourceSelector from "./ResumeSourceSelector";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { createResumeAction } from "@/app/actions/create-resume";
-import { IResume } from "@/lib/types";
+import { IResume } from "@/utils/types";
 
 export default function CreateResumeDialog({
   userId,

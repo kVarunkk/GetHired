@@ -3,7 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { headers } from "next/headers";
-import { sendEmailForStatusUpdate } from "@/lib/serverUtils";
+import { sendEmailForStatusUpdate } from "@/utils/serverUtils";
 import FavoriteJobReminderEmail from "@/emails/FavoriteJobStatusReminderEmail";
 import React from "react";
 
@@ -34,7 +34,7 @@ export async function GET() {
 
   const serviceSupabase = createServiceRoleClient();
   const sevenDaysAgo = new Date(
-    Date.now() - DAYS_AGO * 24 * 60 * 60 * 1000
+    Date.now() - DAYS_AGO * 24 * 60 * 60 * 1000,
   ).toISOString();
 
   try {
@@ -46,14 +46,14 @@ export async function GET() {
                 id, created_at, user_id, job_id,
                 user_info ( email, full_name, user_id ),
                 all_jobs (id, job_name, company_name, job_url, locations, salary_range, job_type ) 
-            `
+            `,
       )
       .gte("created_at", sevenDaysAgo)
       .eq("user_info.is_promotion_active", true);
 
     if (fetchError) {
       throw new Error(
-        `Database fetch failed: ${fetchError.message || "Unknown DB error"}`
+        `Database fetch failed: ${fetchError.message || "Unknown DB error"}`,
       );
     }
 
@@ -68,7 +68,7 @@ export async function GET() {
 
     if (appFetchError) {
       throw new Error(
-        `Database fetch failed during application lookup: ${appFetchError.message}`
+        `Database fetch failed during application lookup: ${appFetchError.message}`,
       );
     }
 
@@ -157,7 +157,7 @@ export async function GET() {
               React.createElement(FavoriteJobReminderEmail, {
                 userName: user.fullName,
                 favoritedJobs: jobs,
-              })
+              }),
             );
 
             await resend.emails.send({
@@ -208,11 +208,11 @@ export async function GET() {
         `FAVORITED JOB APPLICATION REMINDER:`,
         "CRITICAL FAILURE:",
         `Error: ${e instanceof Error ? e.message : String(e)}`,
-      ].join("\n")
+      ].join("\n"),
     );
     return NextResponse.json(
       { error: "Internal server error during reminder process" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

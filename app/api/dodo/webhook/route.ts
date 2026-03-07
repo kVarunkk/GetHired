@@ -3,7 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { client } from "@/lib/dodo/initialize";
 import { WebhookPayload } from "dodopayments/resources/webhook-events.mjs";
 import { SendPaymentUpdateEmail } from "@/lib/dodo/utils";
-import { IPayment, TPaymentStatus } from "@/lib/types";
+import { IPayment, TPaymentStatus } from "@/utils/types";
 
 // LISTENING FOR THE FOLLOWING EVENTS:
 // 1) payment.failed
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     console.error("⚠️ Webhook signature verification failed.", err);
     return NextResponse.json(
       { error: "Webhook Error: Invalid Signature" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     if (paymentUpdateError) {
       return NextResponse.json(
         { error: "Failed to update payment record inside payment.failed" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
     if (paymentUpdateError) {
       return NextResponse.json(
         { error: "Failed to update payment record inside payment.cancelled" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
             "Failed to update payment record inside payment.failed. " +
             paymentUpdateError.message,
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -218,7 +218,7 @@ export async function POST(req: NextRequest) {
     if (!user_id || !payment_id || !credit_amount) {
       console.error(
         "Webhook Error: Missing required fulfillment data in session metadata.",
-        { user_id, payment_id, credit_amount }
+        { user_id, payment_id, credit_amount },
       );
       return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
     }
@@ -315,7 +315,7 @@ export async function POST(req: NextRequest) {
         {
           error: `Fulfillment Error: ${err instanceof Error ? err.message : String(err)}`,
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }

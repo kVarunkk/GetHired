@@ -3,7 +3,7 @@ import { CardContent } from "../ui/card";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 
-import { cn, commonJobTitles } from "@/lib/utils";
+import { cn, commonJobTitles } from "@/utils/utils";
 import MultiKeywordSelectInput from "../MultiKeywordSelectInput";
 import MultiKeywordSelect from "../MultiKeywordSelect";
 export const Step1JobRole = ({ formData, setFormData, errors }: StepProps) => {
@@ -21,7 +21,7 @@ export const Step1JobRole = ({ formData, setFormData, errors }: StepProps) => {
           }
           className={cn(
             "mt-2 bg-input",
-            errors.full_name ? "border-red-500" : ""
+            errors.full_name ? "border-red-500" : "",
           )}
         />
 
@@ -42,7 +42,7 @@ export const Step1JobRole = ({ formData, setFormData, errors }: StepProps) => {
           }
           className={cn(
             "mt-2 bg-input",
-            errors.linkedin_url ? "border-red-500" : ""
+            errors.linkedin_url ? "border-red-500" : "",
           )}
         />
 
@@ -63,7 +63,7 @@ export const Step1JobRole = ({ formData, setFormData, errors }: StepProps) => {
           }
           className={cn(
             "mt-2 bg-input",
-            errors.github_url ? "border-red-500" : ""
+            errors.github_url ? "border-red-500" : "",
           )}
         />
 

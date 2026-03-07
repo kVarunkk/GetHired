@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import BackButton from "@/components/BackButton";
 import ApplicantsTable from "@/components/ApplicantsTable";
-import { IApplication } from "@/lib/types";
+import { IApplication } from "@/utils/types";
 
 export default async function CompanyApplicantsPage() {
   try {
@@ -42,7 +42,7 @@ export default async function CompanyApplicantsPage() {
         user_info(
           full_name
         )
-      `
+      `,
       )
       .eq("job_postings.company_id", companyInfo.id)
       .order("created_at", { ascending: false });

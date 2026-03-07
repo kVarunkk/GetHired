@@ -10,9 +10,9 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { IResume, TLimits } from "@/lib/types";
+import { IResume, TLimits } from "@/utils/types";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import ResumePreviewDialog from "./ResumePreviewDialog";

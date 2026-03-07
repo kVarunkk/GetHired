@@ -12,7 +12,7 @@ import {
   CommandItem,
   CommandList,
 } from "./ui/command";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   Drawer,
   DrawerContent,
@@ -22,7 +22,7 @@ import {
 } from "./ui/drawer";
 import { CSSProperties, ReactElement, useMemo, useState } from "react";
 import { Button } from "./ui/button";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 
 type Props = {
   items: string[];
@@ -45,7 +45,7 @@ export default function VirtualizedSelect({
 
   const filteredAvailableItems = useMemo(() => {
     return items.filter((item) =>
-      item.toLowerCase().includes(searchTerm.toLowerCase())
+      item.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [items, searchTerm]);
 
@@ -84,7 +84,7 @@ export default function VirtualizedSelect({
               aria-expanded={open}
               className={cn(
                 "w-full justify-between bg-input",
-                !selectedItem && "text-muted-foreground"
+                !selectedItem && "text-muted-foreground",
               )}
               disabled={isLoading}
             >
@@ -110,7 +110,7 @@ export default function VirtualizedSelect({
               aria-expanded={open}
               className={cn(
                 "w-full justify-between bg-input",
-                !selectedItem && "text-muted-foreground"
+                !selectedItem && "text-muted-foreground",
               )}
               disabled={isLoading}
             >

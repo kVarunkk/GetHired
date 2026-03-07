@@ -9,7 +9,7 @@ import {
   Row,
   Column,
 } from "@react-email/components";
-import { IJob } from "@/lib/types";
+import { IJob } from "@/utils/types";
 
 interface JobDigestEmailProps {
   userName: string;

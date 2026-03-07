@@ -4,7 +4,7 @@ import { Bookmark } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
 import { usePathname } from "next/navigation";
 import toast from "react-hot-toast";
@@ -21,7 +21,6 @@ export default function BookmarkJobSearch({ user }: { user: User }) {
       : pathname;
 
   useEffect(() => {
-    const supabase = createClient();
     if (!user || !pathname) return;
 
     const checkBookmark = async () => {
@@ -29,6 +28,7 @@ export default function BookmarkJobSearch({ user }: { user: User }) {
 
       setLoading(true);
       try {
+        const supabase = createClient();
         const { data } = await supabase
           .from("bookmarks")
           .select("id")

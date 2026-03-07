@@ -3,9 +3,9 @@
 import Link from "next/link";
 // import { Link as ModifiedLink } from "react-transition-progress/next";
 import { Badge } from "./ui/badge";
-import { ICompanyInfo } from "@/lib/types";
+import { ICompanyInfo } from "@/utils/types";
 import { User } from "@supabase/supabase-js";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import JobFavoriteBtn from "./JobFavoriteBtn";
 // import ProgressBtn from "./ProgressBtn";
 import { Button } from "./ui/button";

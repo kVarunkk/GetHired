@@ -1,6 +1,6 @@
-import { createClient } from "./supabase/server";
+import { createClient } from "../../lib/supabase/server";
 
-const userInfoSelectString = `user_id, desired_roles, preferred_locations, min_salary, max_salary, experience_years, industry_preferences, visa_sponsorship_required, top_skills, work_style_preferences, career_goals_short_term, career_goals_long_term, company_size_preference, created_at, updated_at, job_type, ai_credits, filled, full_name, email, salary_currency`;
+const userInfoSelectString = `user_id, desired_roles, preferred_locations, min_salary, max_salary, experience_years, industry_preferences, visa_sponsorship_required, top_skills, work_style_preferences, career_goals_short_term, career_goals_long_term, company_size_preference, created_at, updated_at, job_type, ai_credits, filled, full_name, email, salary_currency, is_public`;
 
 export async function buildProfileQuery({
   searchQuery,
@@ -93,7 +93,8 @@ export async function buildProfileQuery({
         .from("user_info")
         .select(selectString, { count: "exact" })
         .eq("company_favorites.company_id", companyId)
-        .eq("filled", true);
+        .eq("filled", true)
+        .eq("is_public", true);
     } else {
       query = supabase
         .from("user_info")
@@ -103,7 +104,8 @@ export async function buildProfileQuery({
         `,
           { count: "exact" },
         )
-        .eq("filled", true);
+        .eq("filled", true)
+        .eq("is_public", true);
     }
 
     let matchedProfileIds: string[] = [];

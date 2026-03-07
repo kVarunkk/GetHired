@@ -35,7 +35,7 @@ import { Loader2, Pencil, PlusCircle, Trash } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import MultiLocationSelector from "./MultiLocationSelector";
-import { ICreateJobPostingFormData } from "@/lib/types";
+import { ICreateJobPostingFormData } from "@/utils/types";
 import { upsertJobPostingAction } from "@/app/actions/upsert-job-posting";
 
 const jobFormSchema = z
@@ -87,7 +87,7 @@ const jobFormSchema = z
     {
       message: "Max salary must be greater than or equal to min salary.",
       path: ["max_salary"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -100,7 +100,7 @@ const jobFormSchema = z
       message:
         "Max experience must be greater than or equal to min experience.",
       path: ["max_experience"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -112,7 +112,7 @@ const jobFormSchema = z
     {
       message: "Max equity must be greater than or equal to min equity.",
       path: ["max_equity"],
-    }
+    },
   );
 
 export default function CreateJobPostingDialog({
@@ -179,7 +179,7 @@ export default function CreateJobPostingDialog({
       // Handle UI Success notification
       toast.success(
         `Job Posting ${result.isUpdate ? "updated" : "created"} Successfully!`,
-        { duration: 8000 }
+        { duration: 8000 },
       );
 
       // Clean up form state
@@ -200,7 +200,7 @@ export default function CreateJobPostingDialog({
       toast.error(
         `An error occurred while ${
           existingValues ? "updating" : "creating"
-        } the job posting. Please try again.`
+        } the job posting. Please try again.`,
       );
     } finally {
       setLoading(false);
@@ -423,7 +423,7 @@ export default function CreateJobPostingDialog({
                               field.onChange(
                                 e.target.value
                                   ? parseFloat(e.target.value)
-                                  : undefined
+                                  : undefined,
                               )
                             }
                           />
@@ -448,7 +448,7 @@ export default function CreateJobPostingDialog({
                               field.onChange(
                                 e.target.value
                                   ? parseFloat(e.target.value)
-                                  : undefined
+                                  : undefined,
                               )
                             }
                           />
@@ -475,7 +475,7 @@ export default function CreateJobPostingDialog({
                               field.onChange(
                                 e.target.value
                                   ? parseInt(e.target.value)
-                                  : undefined
+                                  : undefined,
                               )
                             }
                           />
@@ -500,7 +500,7 @@ export default function CreateJobPostingDialog({
                               field.onChange(
                                 e.target.value
                                   ? parseInt(e.target.value)
-                                  : undefined
+                                  : undefined,
                               )
                             }
                           />
@@ -528,7 +528,7 @@ export default function CreateJobPostingDialog({
                               field.onChange(
                                 e.target.value
                                   ? parseFloat(e.target.value)
-                                  : undefined
+                                  : undefined,
                               )
                             }
                           />
@@ -554,7 +554,7 @@ export default function CreateJobPostingDialog({
                               field.onChange(
                                 e.target.value
                                   ? parseFloat(e.target.value)
-                                  : undefined
+                                  : undefined,
                               )
                             }
                           />
@@ -596,7 +596,7 @@ export default function CreateJobPostingDialog({
                           size="sm"
                           onClick={() => {
                             const newQuestions = currentQuestions.filter(
-                              (_, i) => i !== index
+                              (_, i) => i !== index,
                             );
                             form.setValue("questions", newQuestions);
                           }}

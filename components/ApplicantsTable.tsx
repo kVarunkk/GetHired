@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { format } from "date-fns";
-import { IApplication } from "@/lib/types";
+import { IApplication } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import {
   Select,
@@ -54,7 +54,7 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
       .map((item) => item.job_postings?.title)
       .filter(
         (title): title is string =>
-          typeof title === "string" && title.length > 0
+          typeof title === "string" && title.length > 0,
       );
     return ["All Titles", ...new Set(titles)];
   }, [data]);
@@ -170,7 +170,7 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
         ),
       },
     ],
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -297,7 +297,7 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -315,7 +315,7 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

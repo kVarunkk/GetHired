@@ -11,7 +11,7 @@ import {
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Pencil, Trash } from "lucide-react";
-import { IBookmark } from "@/lib/types";
+import { IBookmark } from "@/utils/types";
 import { createClient } from "@/lib/supabase/client";
 import { FormEvent, useState } from "react";
 import toast from "react-hot-toast";

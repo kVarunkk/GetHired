@@ -13,7 +13,7 @@ import { Button } from "./ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Progress } from "./ui/progress";
-import { IFormData, IResume } from "@/lib/types";
+import { IFormData, IResume } from "@/utils/types";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
@@ -25,7 +25,7 @@ import { Step4VisaWorkStyle } from "./onboarding-steps/Step4";
 import { Step5CareerGoals } from "./onboarding-steps/Step5";
 import { Step6ResumeUpload } from "./onboarding-steps/Step6";
 import { Step7ReviewSubmit } from "./onboarding-steps/Step7";
-import { fetcher, isValidUrl } from "@/lib/utils";
+import { fetcher, isValidUrl } from "@/utils/utils";
 import { Loader2 } from "lucide-react";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
 import useSWR from "swr";
@@ -62,7 +62,6 @@ export const OnboardingForm: React.FC = () => {
     company_size_preference: "",
     resume_file: null,
     resume_id: null,
-
     default_locations: [],
     job_type: [],
     email: "",
@@ -75,11 +74,11 @@ export const OnboardingForm: React.FC = () => {
     Partial<Record<keyof IFormData, string>>
   >({});
   const [user, setUser] = useState<User | null>(null);
-  const [initialPreferencesState, setInitialPreferencesState] = useState<{
-    id: string;
-    is_promotion_active: boolean;
-    is_job_digest_active: boolean;
-  } | null>(null);
+  // const [initialPreferencesState, setInitialPreferencesState] = useState<{
+  //   id: string;
+  //   is_promotion_active: boolean;
+  //   is_job_digest_active: boolean;
+  // } | null>(null);
 
   const {
     data: countriesData,
@@ -93,7 +92,7 @@ export const OnboardingForm: React.FC = () => {
 
   const countries: { location: string }[] = useMemo(
     () => (countriesData && !countriesError ? countriesData.data : []),
-    [countriesData, countriesError]
+    [countriesData, countriesError],
   );
 
   const router = useRouter();
@@ -169,13 +168,13 @@ export const OnboardingForm: React.FC = () => {
           .single();
 
         if (data) {
-          setInitialPreferencesState(() => ({
-            id: data.user_id,
-            is_promotion_active: data.is_promotion_active,
-            is_job_digest_active: data.is_job_digest_active,
-          }));
+          // setInitialPreferencesState(() => ({
+          //   id: data.user_id,
+          //   is_promotion_active: data.is_promotion_active,
+          //   is_job_digest_active: data.is_job_digest_active,
+          // }));
           const primaryResume = data?.resumes?.find(
-            (_: IResume) => _.is_primary
+            (_: IResume) => _.is_primary,
           );
           const noOfResumes = data?.resumes?.length;
 
@@ -341,7 +340,7 @@ export const OnboardingForm: React.FC = () => {
     setError(null);
     setIsLoading(true);
     const toastId = toast.loading(
-      "Finalizing your profile and finding matches..."
+      "Finalizing your profile and finding matches...",
     );
 
     if (!user) {
@@ -407,17 +406,39 @@ export const OnboardingForm: React.FC = () => {
         error instanceof Error
           ? error.message
           : "Something went wrong during submission.",
-        { id: toastId }
+        { id: toastId },
       );
       setError(
         `An unexpected error occurred during submission: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
     } finally {
       setIsLoading(false);
     }
   };
+
+  const preferences = useMemo(() => {
+    const hasRequiredData =
+      !!formData.user_id &&
+      formData.is_promotion_active !== undefined &&
+      formData.is_job_digest_active !== undefined &&
+      formData.is_public !== undefined;
+
+    if (!hasRequiredData) return null;
+
+    return {
+      id: formData.user_id as string,
+      is_promotion_active: formData.is_promotion_active as boolean,
+      is_job_digest_active: formData.is_job_digest_active as boolean,
+      is_public: formData.is_public as boolean,
+    };
+  }, [
+    formData.user_id,
+    formData.is_promotion_active,
+    formData.is_job_digest_active,
+    formData.is_public,
+  ]);
 
   const CurrentStepComponent = steps[currentStep].component;
 
@@ -447,14 +468,12 @@ export const OnboardingForm: React.FC = () => {
         <p className="text-6xl font-bold ">
           Let&apos;s get you Hired, quickly.
         </p>
-        {initialPreferencesState ? (
+        {preferences ? (
           <UserOnboardingPersonalization
-            initialPreferences={initialPreferencesState}
+            initialPreferences={preferences}
             disabled={isLoading}
           />
-        ) : (
-          ""
-        )}
+        ) : null}
       </div>
 
       {stepLoading ? (

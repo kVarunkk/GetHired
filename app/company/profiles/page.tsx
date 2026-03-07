@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { TabsContent } from "@/components/ui/tabs";
 import FilterComponent from "@/components/FilterComponent";
-import { ICompanyInfo, IFormData, TAICredits } from "@/lib/types";
+import { ICompanyInfo, IFormData, TAICredits } from "@/utils/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import JobsComponent from "@/components/JobsComponent";
@@ -43,7 +43,7 @@ export default async function ProfilesPage({
   let initialProfiles: IFormData[] = [];
   let totalCount: number = 0;
   const params = new URLSearchParams(
-    searchParameters as Record<string, string>
+    searchParameters as Record<string, string>,
   );
 
   try {
@@ -105,7 +105,7 @@ export default async function ProfilesPage({
           const filteredOutIds = aiRerankResult.filteredOutProfiles || [];
 
           const profilesMap: Map<string, IFormData> = new Map(
-            result.data.map((profile: IFormData) => [profile.user_id, profile])
+            result.data.map((profile: IFormData) => [profile.user_id, profile]),
           );
 
           const reorderedProfiles = rerankedIds
@@ -114,7 +114,7 @@ export default async function ProfilesPage({
               (profile): profile is IFormData =>
                 profile !== undefined &&
                 typeof profile.user_id === "string" &&
-                !filteredOutIds.includes(profile.user_id)
+                !filteredOutIds.includes(profile.user_id),
             );
           initialProfiles = reorderedProfiles || [];
           totalCount = reorderedProfiles.length || 0;
@@ -133,13 +133,13 @@ export default async function ProfilesPage({
       companyData.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI
     ) {
       const profilesMap: Map<string, IFormData> = new Map(
-        result.data.map((profile: IFormData) => [profile.user_id, profile])
+        result.data.map((profile: IFormData) => [profile.user_id, profile]),
       );
       const reorderedProfiles = result.matchedProfileIds
         .map((user_id: string) => profilesMap.get(user_id))
         .filter(
           (profile: IFormData) =>
-            profile !== undefined && typeof profile.user_id === "string"
+            profile !== undefined && typeof profile.user_id === "string",
         );
       initialProfiles = reorderedProfiles || [];
       totalCount = reorderedProfiles.length || 0;

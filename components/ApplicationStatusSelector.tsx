@@ -10,8 +10,8 @@ import {
 } from "./ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { IApplication, TApplicationStatus } from "@/lib/types";
+import { cn } from "@/utils/utils";
+import { IApplication, TApplicationStatus } from "@/utils/types";
 import { sendStatusUpdateEmail } from "@/app/actions/send-email";
 
 // Define the available application statuses
@@ -46,7 +46,7 @@ export default function ApplicationStatusSelect({
             application.user_info.email,
             newStatus,
             application.job_postings?.title,
-            application.job_postings?.company_info?.name
+            application.job_postings?.company_info?.name,
           );
         }
 
@@ -59,7 +59,7 @@ export default function ApplicationStatusSelect({
         setIsUpdating(false);
       }
     },
-    [application.id, supabase]
+    [application.id, supabase],
   );
 
   return (
@@ -73,7 +73,7 @@ export default function ApplicationStatusSelect({
         <SelectTrigger
           className={cn(
             "w-[180px] capitalize bg-input",
-            isUpdating && "opacity-50"
+            isUpdating && "opacity-50",
           )}
         >
           <SelectValue placeholder="Update Status" />

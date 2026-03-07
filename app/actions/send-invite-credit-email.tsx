@@ -1,7 +1,7 @@
 "use server";
 
 import InviteUserEmail from "@/emails/InviteUserEmail";
-import { deploymentUrl } from "@/lib/serverUtils";
+import { deploymentUrl } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/components";
@@ -14,7 +14,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendInviteEmail(
   invitedEmail: string,
-  referrerUserId: string
+  referrerUserId: string,
 ) {
   try {
     const supabase = await createClient();
@@ -52,7 +52,7 @@ export async function sendInviteEmail(
 
     if (error || !data || !data.properties || !data.user) {
       throw new Error(
-        error ? error.message : "Error occured while creating Invite link."
+        error ? error.message : "Error occured while creating Invite link.",
       );
     } else {
       const { error: invitedUserError } = await serviceRoleSupabase
@@ -74,14 +74,14 @@ export async function sendInviteEmail(
       const inviteUrl = `${URL}/auth/confirm?token_hash=${data.properties.hashed_token}&type=signup&next=${finalRedirectUrl}`;
 
       const emailHtml = await render(
-        <InviteUserEmail userName={userName} inviteUrl={inviteUrl} />
+        <InviteUserEmail userName={userName} inviteUrl={inviteUrl} />,
       );
 
       const emailText = await render(
         <InviteUserEmail userName={userName} inviteUrl={inviteUrl} />,
         {
           plainText: true,
-        }
+        },
       );
 
       const { error } = await resend.emails.send({

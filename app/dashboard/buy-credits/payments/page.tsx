@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import BackButton from "@/components/BackButton";
-import { IPayment } from "@/lib/types";
+import { IPayment } from "@/utils/types";
 import PaymentsTable from "@/components/PaymentsTable";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -21,7 +21,7 @@ export default async function PaymentsPage() {
     const { data: payments, error: paymentsError } = await supabase
       .from("payments")
       .select(
-        "id, created_at, status, total_amount, currency, credit_amount, price_plan(name)"
+        "id, created_at, status, total_amount, currency, credit_amount, price_plan(name)",
       )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });

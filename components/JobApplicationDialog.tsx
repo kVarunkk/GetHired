@@ -19,7 +19,7 @@ import {
   CardTitle,
 } from "./ui/card";
 import { useEffect, useState } from "react";
-import { IJob, TApplicationStatus } from "@/lib/types";
+import { IJob, TApplicationStatus } from "@/utils/types";
 import { User } from "@supabase/supabase-js";
 import PropagationStopper from "./StopPropagation";
 import InfoTooltip from "./InfoTooltip";
@@ -45,7 +45,7 @@ export default function JobApplicationDialog({
     } else {
       if (jobPost.job_postings && jobPost.job_postings.length > 0) {
         const applicationForUser = jobPost.job_postings[0]?.applications?.find(
-          (each) => each.applicant_user_id === user?.id
+          (each) => each.applicant_user_id === user?.id,
         );
         setApplicationStatus(applicationForUser?.status ?? null);
       }
@@ -188,7 +188,7 @@ export default function JobApplicationDialog({
                 onSuccess={() => {
                   setIsDialogOpen(false);
                   setApplicationStatus(
-                    "submitted" as TApplicationStatus.SUBMITTED
+                    "submitted" as TApplicationStatus.SUBMITTED,
                   );
                 }}
               />

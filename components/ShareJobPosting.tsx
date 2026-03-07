@@ -2,7 +2,7 @@
 
 import { Share2 } from "lucide-react";
 import { Button } from "./ui/button";
-import { copyToClipboard } from "@/lib/utils";
+import { copyToClipboard } from "@/utils/utils";
 
 export default function ShareJobPosting({ job_id }: { job_id: string | null }) {
   return (
@@ -14,7 +14,7 @@ export default function ShareJobPosting({ job_id }: { job_id: string | null }) {
       onClick={() => {
         copyToClipboard(
           window.location.origin + "/jobs/" + job_id,
-          "Job link copied to clipboard!"
+          "Job link copied to clipboard!",
         );
       }}
     >

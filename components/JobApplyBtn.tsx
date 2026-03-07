@@ -12,7 +12,7 @@ import {
   MoreHorizontal,
   Sparkle,
 } from "lucide-react";
-import { IJob, TApplicationStatus } from "@/lib/types";
+import { IJob, TApplicationStatus } from "@/utils/types";
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -62,7 +62,7 @@ export default function JobApplyBtn({
       if (applicationStatus) setAppStatus(applicationStatus);
       setShowReturnDialog(false);
     },
-    []
+    [],
   );
 
   return (
@@ -191,12 +191,12 @@ function JobStatusDialog({
           </p>
         ) : (
           <p>Succesfully applied to the job</p>
-        )
+        ),
       );
     } catch {
       // console.error(e);
       toast.error(
-        "Some error occured while updating the application status. Please try again."
+        "Some error occured while updating the application status. Please try again.",
       );
     } finally {
       setLoading(false);

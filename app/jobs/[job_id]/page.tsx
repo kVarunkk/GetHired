@@ -1,6 +1,6 @@
 import Error from "@/components/Error";
 import { createClient } from "@/lib/supabase/server";
-import { IJob, TAICredits } from "@/lib/types";
+import { IJob, TAICredits } from "@/utils/types";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,7 +15,7 @@ import JobDescriptionCard from "@/components/JobDetailsCard";
 import { Badge } from "@/components/ui/badge";
 import JobFavoriteBtn from "@/components/JobFavoriteBtn";
 import JobApplyBtn from "@/components/JobApplyBtn";
-import { allJobsSelectString } from "@/lib/filterQueryBuilder";
+import { allJobsSelectString } from "@/helpers/jobs/filterQueryBuilder";
 import { Metadata } from "next";
 import JobPageDropdown from "@/components/JobPageDropdown";
 import JobsFeedback from "@/components/JobFeedback";
@@ -24,8 +24,7 @@ import AskAIDialog from "@/components/AskAIDialog";
 import { Button } from "@/components/ui/button";
 import InfoTooltip from "@/components/InfoTooltip";
 import NotFound from "../NotFound";
-// import CreateReviewForJob from "@/components/CreateReviewForJob";
-import ComingSoonBtn from "@/components/waitlist/ComingSoonBtn";
+import CreateReviewForJob from "@/components/CreateReviewForJob";
 
 export async function generateMetadata({
   params,
@@ -255,11 +254,7 @@ export default async function JobPage({
               )}
               {user ? (
                 <div className="flex items-center">
-                  <ComingSoonBtn
-                    label="Tailor CV for this Job"
-                    variant={"outline"}
-                  />
-                  {/* <CreateReviewForJob userId={user.id} jobId={job_id} />
+                  <CreateReviewForJob userId={user.id} jobId={job_id} />
                   <InfoTooltip
                     content={
                       <p>
@@ -270,7 +265,7 @@ export default async function JobPage({
                         </Link>
                       </p>
                     }
-                  /> */}
+                  />
                 </div>
               ) : (
                 <Button variant={"outline"} asChild>

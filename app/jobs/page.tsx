@@ -1,7 +1,7 @@
 import FilterComponent from "@/components/FilterComponent";
 import { createClient } from "@/lib/supabase/server";
 import { TabsContent } from "@/components/ui/tabs";
-import { IJob, JobListingSearchParams } from "@/lib/types";
+import { IJob, JobListingSearchParams } from "@/utils/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import { Metadata } from "next";

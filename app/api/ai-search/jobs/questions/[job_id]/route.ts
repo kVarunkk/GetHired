@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateText } from "ai";
-import { getVertexClient } from "@/lib/serverUtils";
-import { TAICredits } from "@/lib/types";
+import { getVertexClient } from "@/utils/serverUtils";
+import { TAICredits } from "@/utils/types";
 
 export async function POST(
   request: NextRequest,

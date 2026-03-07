@@ -1,7 +1,7 @@
 "use client";
 
 import DeleteJobPosting from "@/components/DeleteJobPosting";
-import { IJobPosting } from "@/lib/types";
+import { IJobPosting } from "@/utils/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import CreateJobPostingDialog from "./CreateJobPostingDialog";

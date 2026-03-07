@@ -1,8 +1,8 @@
 import * as React from "react";
 import { BaseEmailLayout } from "./BaseEmailLayout";
 import { Heading, Text, Section, Button, Hr } from "@react-email/components";
-import { formatCurrency } from "@/lib/utils";
-import { IPayment } from "@/lib/types";
+import { formatCurrency } from "@/utils/utils";
+import { IPayment } from "@/utils/types";
 
 interface PaymentUpdateEmailProps {
   userName: string;
@@ -24,11 +24,11 @@ export const PaymentUpdateEmail = ({
   const renderOrderSummary = (
     details: IPayment,
     color: string,
-    successMessage: string
+    successMessage: string,
   ) => {
     const formattedAmount = formatCurrency(
       details.total_amount,
-      details.currency
+      details.currency,
     );
 
     return (
@@ -155,7 +155,7 @@ export const PaymentUpdateEmail = ({
             {renderOrderSummary(
               paymentDetails,
               headingColor,
-              `your purchase has been successfully processed, and ${paymentDetails.credit_amount} AI credits have been added to your account instantly!`
+              `your purchase has been successfully processed, and ${paymentDetails.credit_amount} AI credits have been added to your account instantly!`,
             )}
             <Text className="text-base text-gray-700 mt-6">
               You can now use these credits for our premium AI features,
@@ -186,7 +186,7 @@ export const PaymentUpdateEmail = ({
             {renderOrderSummary(
               paymentDetails,
               headingColor,
-              `we are currently processing your purchase of ${paymentDetails.credit_amount} AI credits.`
+              `we are currently processing your purchase of ${paymentDetails.credit_amount} AI credits.`,
             )}
             <Text className="text-base text-gray-700 mt-6">
               You will receive a second email confirmation as soon as the funds
@@ -219,7 +219,7 @@ export const PaymentUpdateEmail = ({
             {renderOrderSummary(
               paymentDetails,
               headingColor,
-              `unfortunately, your recent payment attempt for ${paymentDetails.credit_amount} AI credits was unsuccessful.`
+              `unfortunately, your recent payment attempt for ${paymentDetails.credit_amount} AI credits was unsuccessful.`,
             )}
             <Text className="text-base text-gray-700 mt-6">
               Please review your card details, check with your bank, or try

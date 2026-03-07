@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import VirtualizedSelect from "./VirtualizedSelect";
-import { ICountry } from "@/lib/types";
+import { ICountry } from "@/utils/types";
 import useSWR from "swr";
-import { fetcher } from "@/lib/utils";
+import { fetcher } from "@/utils/utils";
 
 interface LocationSelectorProps {
   value: string;
@@ -28,7 +28,7 @@ export function LocationSelector({ value, onChange }: LocationSelectorProps) {
 
   const countries: ICountry[] = useMemo(
     () => (countriesData && !countriesError ? countriesData.data : []),
-    [countriesData, countriesError]
+    [countriesData, countriesError],
   );
 
   useEffect(() => {

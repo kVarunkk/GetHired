@@ -29,7 +29,7 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LocationSelector } from "./LocationSelector";
-import { commonIndustries } from "@/lib/utils";
+import { commonIndustries } from "@/utils/utils";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
 
 const formSchema = z.object({
@@ -104,7 +104,7 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
       const { data: existingValues } = await supabase
         .from("company_info")
         .select(
-          "id, name, description, website, industry, headquarters, company_size, tag_line, logo_url"
+          "id, name, description, website, industry, headquarters, company_size, tag_line, logo_url",
         )
         .eq("user_id", user.id)
         .single();
@@ -220,7 +220,7 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
           logo_url: finalLogoUrl, // Use the final URL status (new URL or null)
           filled: true,
         },
-        { onConflict: "user_id" }
+        { onConflict: "user_id" },
       );
 
       if (error) throw error;
@@ -230,7 +230,7 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
         {
           type: "company",
           onboarding_complete: true,
-        }
+        },
       );
 
       if (updateAppMetaError) throw new Error(updateAppMetaError);
@@ -244,7 +244,7 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
     } catch {
       // console.error("API call failed:", error);
       toast.error(
-        "An error occurred while saving information. Please try again."
+        "An error occurred while saving information. Please try again.",
       );
     } finally {
       setLoading(false);

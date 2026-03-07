@@ -15,7 +15,7 @@ import {
 import { Button } from "./ui/button";
 import { Loader2, Pencil, Trash } from "lucide-react";
 import { Input } from "./ui/input";
-import { IBookmark, IResume, IResumeReview } from "@/lib/types";
+import { IBookmark, IResume, IResumeReview } from "@/utils/types";
 
 interface FormField {
   name: string;

@@ -1,4 +1,4 @@
-import { buildProfileQuery } from "@/lib/profilesFilterQueryBuilder";
+import { buildProfileQuery } from "@/helpers/profiles/profilesFilterQueryBuilder";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 let PROFILES_PER_PAGE = 20;
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   if (companyError || !companyData) {
     return NextResponse.json(
       { error: "Unauthorized: Not a company user" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
   const job_post_id = searchParams.get("job_post");
 
   PROFILES_PER_PAGE = parseInt(
-    searchParams.get("limit") || PROFILES_PER_PAGE.toString()
+    searchParams.get("limit") || PROFILES_PER_PAGE.toString(),
   );
 
   const startIndex = (page - 1) * PROFILES_PER_PAGE;
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
             ? err.message
             : String(err) || "An unexpected error occurred",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

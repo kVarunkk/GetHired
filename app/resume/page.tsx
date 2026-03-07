@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
-import { IResume } from "@/lib/types";
+import { IResume } from "@/utils/types";
 import ResumesTable from "@/components/ResumesTable";
 import CreateResumeDialog from "@/components/CreateResumeDialog";
 

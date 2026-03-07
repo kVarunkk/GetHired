@@ -1,4 +1,4 @@
-import { createClient } from "./supabase/server";
+import { createClient } from "../../lib/supabase/server";
 export const companiesSelectString = `id, created_at, updated_at, name, industry, description, website, headquarters, company_size, logo_url, tag_line`;
 
 export const buildCompaniesQuery = async ({

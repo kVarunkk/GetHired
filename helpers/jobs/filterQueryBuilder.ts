@@ -1,5 +1,5 @@
-import { createClient } from "./supabase/server";
-import { createServiceRoleClient } from "./supabase/service-role";
+import { createClient } from "../../lib/supabase/server";
+import { createServiceRoleClient } from "../../lib/supabase/service-role";
 export const allJobsSelectString = `id, created_at, updated_at, job_name, job_type, platform, locations, salary_range, visa_requirement, salary_min, salary_max, company_name, company_url, experience, experience_min, experience_max, equity_range, equity_min, equity_max, job_url, status, ai_summary`;
 const jobPostingsSelectString = `id, created_at, updated_at, company_id, title, job_type, salary_range, status, location, min_salary, max_salary, min_experience, max_experience, visa_sponsorship, min_equity, max_equity, experience, equity_range, salary_currency, questions, job_id`;
 const companyInfoSelectString = `id, name, website, logo_url, description, industry, company_size, headquarters`;
@@ -174,7 +174,7 @@ export const buildQuery = async ({
           match_threshold: 0.4,
           match_count: relevanceSearchType === "similar_jobs" ? 10 : 100,
           min_created_at: createdAfter,
-        }
+        },
       );
 
       if (searchError) {
@@ -205,7 +205,7 @@ export const buildQuery = async ({
 
     if (locationsArray.length > 0) {
       const lowercasedLocations = locationsArray.map((loc) =>
-        loc.toLowerCase().trim()
+        loc.toLowerCase().trim(),
       );
       query = query.overlaps("normalized_locations", lowercasedLocations);
       // query = query.overlaps("normalized_locations", locationsArray);

@@ -1,7 +1,7 @@
 import FilterComponent from "@/components/FilterComponent";
 import { createClient } from "@/lib/supabase/server";
 import { TabsContent } from "@/components/ui/tabs";
-import { ICompanyInfo, IFormData, TAICredits } from "@/lib/types";
+import { ICompanyInfo, TAICredits } from "@/utils/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import JobsComponent from "@/components/JobsComponent";
@@ -58,11 +58,11 @@ export default async function JobsPage({
   const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
   const url = `${protocol}://${host}`;
 
-  let initialCompanies: IFormData[] = [];
+  let initialCompanies: ICompanyInfo[] = [];
 
   let totalCount: number = 0;
   const params = new URLSearchParams(
-    searchParameters as Record<string, string>
+    searchParameters as Record<string, string>,
   );
   try {
     params.set("tab", activeTab);
@@ -115,13 +115,13 @@ export default async function JobsPage({
           const rerankedIds = aiRerankResult.rerankedCompanies;
           const filteredOutIds = aiRerankResult.filteredOutJobs || [];
           const companyMap = new Map(
-            result.data.map((company: ICompanyInfo) => [company.id, company])
+            result.data.map((company: ICompanyInfo) => [company.id, company]),
           );
           const reorderedCompanies = rerankedIds
             .map((id: string) => companyMap.get(id))
             .filter(
               (company: ICompanyInfo) =>
-                company !== undefined && !filteredOutIds.includes(company.id)
+                company !== undefined && !filteredOutIds.includes(company.id),
             );
           initialCompanies = reorderedCompanies || [];
           totalCount = reorderedCompanies.length || 0;
@@ -137,7 +137,7 @@ export default async function JobsPage({
       ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI
     ) {
       const companiesMap = new Map(
-        result.data.map((company: ICompanyInfo) => [company.id, company])
+        result.data.map((company: ICompanyInfo) => [company.id, company]),
       );
       const reorderedCompanies = result.matchedCompanyIds
         .map((id: string) => companiesMap.get(id))
@@ -170,14 +170,6 @@ export default async function JobsPage({
         >
           {
             <TabsContent value="all">
-              {/* <CompaniesList
-                isCompanyUser={isCompanyUser}
-                user={user}
-                companyId={companyId}
-                onboardingComplete={onboardingComplete}
-                initialCompanies={initialCompanies}
-                totalCount={totalCount}
-              /> */}
               <JobsComponent
                 initialJobs={initialCompanies || []}
                 user={user}
@@ -193,14 +185,6 @@ export default async function JobsPage({
           }
           {user && !isCompanyUser && !isAISearch && (
             <TabsContent value="saved">
-              {/* <CompaniesList
-                isCompanyUser={isCompanyUser}
-                user={user}
-                companyId={companyId}
-                onboardingComplete={onboardingComplete}
-                initialCompanies={initialCompanies}
-                totalCount={totalCount}
-              /> */}
               <JobsComponent
                 initialJobs={initialCompanies || []}
                 user={user}

@@ -5,7 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/components";
 import { Resend } from "resend";
 import { updateUserAppMetadata } from "./update-user-metadata";
-import { deploymentUrl } from "@/lib/serverUtils";
+import { deploymentUrl } from "@/utils/serverUtils";
 
 const URL = deploymentUrl();
 
@@ -14,7 +14,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function sendSignupEmail(
   email: string,
   password: string,
-  isCompany: boolean
+  isCompany: boolean,
 ) {
   try {
     const serviceRoleSupabase = createServiceRoleClient();
@@ -29,7 +29,7 @@ export async function sendSignupEmail(
 
     if (error || !data || !data.properties || !data.user) {
       throw new Error(
-        error ? error.message : "Error occured while creating Signup link."
+        error ? error.message : "Error occured while creating Signup link.",
       );
     } else {
       const { error: updateAppMetaError } = await updateUserAppMetadata(
@@ -37,7 +37,7 @@ export async function sendSignupEmail(
         {
           type: isCompany ? "company" : "applicant",
           onboarding_complete: false,
-        }
+        },
       );
 
       if (updateAppMetaError) throw new Error(updateAppMetaError);
@@ -63,14 +63,14 @@ export async function sendSignupEmail(
       const signupUrl = `${URL}/auth/confirm?token_hash=${data.properties.hashed_token}&type=signup&next=${finalRedirectUrl}`;
 
       const emailHtml = await render(
-        <AuthConfirmationEmail signupUrl={signupUrl} />
+        <AuthConfirmationEmail signupUrl={signupUrl} />,
       );
 
       const emailText = await render(
         <AuthConfirmationEmail signupUrl={signupUrl} />,
         {
           plainText: true,
-        }
+        },
       );
 
       const { error } = await resend.emails.send({

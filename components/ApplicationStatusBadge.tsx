@@ -2,12 +2,12 @@
 
 import { Badge } from "./ui/badge";
 import { useMemo } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import {
   TApplicationStatus,
   TPaymentStatus,
   TResumeReviewStatus,
-} from "@/lib/types";
+} from "@/utils/types";
 
 export default function ApplicationStatusBadge({
   status,

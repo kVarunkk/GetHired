@@ -3,9 +3,9 @@
 import Link from "next/link";
 // import { Link as ModifiedLink } from "react-transition-progress/next";
 import { Badge } from "./ui/badge";
-import { IJob } from "@/lib/types";
+import { IJob } from "@/utils/types";
 import { User } from "@supabase/supabase-js";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import JobFavoriteBtn from "./JobFavoriteBtn";
 import JobApplyBtn from "./JobApplyBtn";
@@ -52,6 +52,7 @@ const JobItem = React.memo(
                       target="_blank"
                       className="inline hover:underline underline sm:no-underline underline-offset-2"
                       onClick={(e) => e.stopPropagation()}
+                      prefetch={false}
                     >
                       <h3 className="inline text-lg sm:text-xl font-semibold">
                         {job.job_name}
@@ -70,6 +71,7 @@ const JobItem = React.memo(
                       target="_blank"
                       className="text-muted-foreground hover:underline w-fit underline sm:no-underline underline-offset-2"
                       onClick={(e) => e.stopPropagation()}
+                      prefetch={false}
                     >
                       {job.company_name}
                     </Link>
@@ -199,6 +201,7 @@ function JobDetailBadges({
           href={platform_url || ""}
           target="_blank"
           rel="noopener noreferrer"
+          prefetch={false}
         >
           <Badge
             variant={"secondary"}

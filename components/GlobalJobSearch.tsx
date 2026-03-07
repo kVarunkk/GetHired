@@ -21,10 +21,10 @@ import {
 } from "@/components/ui/accordion"; // Assuming this path
 import { useProgress } from "react-transition-progress";
 import { Textarea } from "./ui/textarea";
-import { TAICredits } from "@/lib/types";
+import { TAICredits } from "@/utils/types";
 import InfoTooltip from "./InfoTooltip";
 import useSWR, { mutate } from "swr";
-import { fetcher, PROFILE_API_KEY } from "@/lib/utils";
+import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import Link from "next/link";
 // import { User } from "@supabase/supabase-js";
 
@@ -74,7 +74,7 @@ export default function GlobalJobSearch() {
 
       return params;
     },
-    []
+    [],
   );
 
   const handleSubmit = async (formData: FormData) => {
@@ -102,7 +102,7 @@ export default function GlobalJobSearch() {
         const errorResult = await response.json();
         throw new Error(
           errorResult.error ||
-            `AI parsing failed with status ${response.status}`
+            `AI parsing failed with status ${response.status}`,
         );
       }
 
@@ -119,7 +119,7 @@ export default function GlobalJobSearch() {
       setIsOpen(false);
     } catch (error) {
       toast.error(
-        `Search failed: ${(error as Error).message}. Please try again.`
+        `Search failed: ${(error as Error).message}. Please try again.`,
       );
     } finally {
       setIsLoading(false);

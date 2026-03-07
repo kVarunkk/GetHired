@@ -1,10 +1,10 @@
-import { buildQuery } from "@/lib/filterQueryBuilder";
+import { buildQuery } from "@/helpers/jobs/filterQueryBuilder";
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { rerankJobsIfApplicable } from "@/lib/ai-rerank-jobs";
-import { IJob, TAICredits } from "@/lib/types";
-import { getCutOffDate } from "@/lib/serverUtils";
+import { rerankJobsIfApplicable } from "@/helpers/jobs/ai-rerank-jobs";
+import { IJob, TAICredits } from "@/utils/types";
+import { getCutOffDate } from "@/utils/serverUtils";
 
 let JOBS_PER_PAGE = 20;
 

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { ICountry } from "@/lib/types";
+import { ICountry } from "@/utils/types";
 import { NextRequest, NextResponse } from "next/server";
 
 const manipulateLocations = (data: { country: string; cities: string[] }[]) => {
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
             ? err.message
             : String(err) || "An unexpected error occurred",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

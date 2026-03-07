@@ -166,8 +166,8 @@ export function getTimeLeftHours(): number {
       now.getUTCDate() + 1,
       0, // 00 hours
       5, // 05 minutes
-      0
-    )
+      0,
+    ),
   );
 
   const diffMs = nextReset.getTime() - now.getTime();
@@ -240,13 +240,13 @@ export function getDaysFromDate(encodedDateStr: string): number {
   const utcTarget = Date.UTC(
     targetDate.getUTCFullYear(),
     targetDate.getUTCMonth(),
-    targetDate.getUTCDate()
+    targetDate.getUTCDate(),
   );
 
   const utcToday = Date.UTC(
     today.getUTCFullYear(),
     today.getUTCMonth(),
-    today.getUTCDate()
+    today.getUTCDate(),
   );
 
   // 4. Calculate difference in milliseconds and convert to days
@@ -374,7 +374,7 @@ export const authPageNavItems: INavItem[] = [
 
 export const getNavItemsByPath = (
   path: string,
-  isCompanyUser: boolean
+  isCompanyUser: boolean,
 ): INavItem[] => {
   if (
     path.startsWith("/dashboard") ||
@@ -396,7 +396,7 @@ export const getNavItemsByPath = (
 };
 
 export const getNavbarVairantByPath = (
-  path: string
+  path: string,
 ): "horizontal" | "vertical" => {
   if (
     path.startsWith("/dashboard") ||

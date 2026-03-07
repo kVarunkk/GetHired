@@ -3,10 +3,10 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { headers } from "next/headers";
-import { deploymentUrl, sendEmailForStatusUpdate } from "@/lib/serverUtils";
+import { deploymentUrl, sendEmailForStatusUpdate } from "@/utils/serverUtils";
 import React from "react";
 import BookmarkAlertEmail from "@/emails/BookmarkAlertEmail";
-import { IJob } from "@/lib/types";
+import { IJob } from "@/utils/types";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -39,13 +39,13 @@ export async function GET() {
                 name,
                 is_alert_on,
                 user_info ( email, full_name )
-            `
+            `,
       )
       .eq("is_alert_on", true);
 
     if (fetchError) {
       throw new Error(
-        `Database fetch failed: ${fetchError.message || "Unknown DB error"}`
+        `Database fetch failed: ${fetchError.message || "Unknown DB error"}`,
       );
     }
 
@@ -99,7 +99,7 @@ export async function GET() {
                   bookmarkName: bookmark.name || "Your Saved Search",
                   jobs: newJobs,
                   bookmarkUrl: URL + bookmark.url,
-                })
+                }),
               );
 
               await resend.emails.send({
@@ -140,7 +140,7 @@ export async function GET() {
 
       // --- Admin Report (Runs after all background tasks finish) ---
       const successfulAlerts = results.filter(
-        (r) => r.success && r.jobsFound > 0
+        (r) => r.success && r.jobsFound > 0,
       ).length;
       const failedAlerts = results.filter((r) => !r.success);
 
@@ -167,7 +167,7 @@ export async function GET() {
     console.error("Critical processing error:", e);
     const errorMsg = e instanceof Error ? e.message : String(e);
     await sendEmailForStatusUpdate(
-      `CRITICAL FAILURE IN JOB ALERTS:\n${errorMsg}`
+      `CRITICAL FAILURE IN JOB ALERTS:\n${errorMsg}`,
     );
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   }

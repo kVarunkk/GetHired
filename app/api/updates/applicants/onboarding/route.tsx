@@ -3,7 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { headers } from "next/headers";
-import { sendEmailForStatusUpdate } from "@/lib/serverUtils";
+import { sendEmailForStatusUpdate } from "@/utils/serverUtils";
 import OnboardingReminderEmail from "@/emails/OnboardingReminderEmail";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
@@ -62,7 +62,7 @@ export async function GET() {
             const userName = user.email.split("@")[0];
 
             const emailHtml = await render(
-              <OnboardingReminderEmail userName={userName} />
+              <OnboardingReminderEmail userName={userName} />,
             );
 
             await resend.emails.send({
@@ -117,11 +117,11 @@ export async function GET() {
         `ONBOARDING REMINDER REPORT (${new Date().toISOString()})`,
         "CRITICAL FAILURE:",
         `Error: ${e instanceof Error ? e.message : String(e)}`,
-      ].join("\n")
+      ].join("\n"),
     );
     return NextResponse.json(
       { error: "Internal server error during reminder process" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

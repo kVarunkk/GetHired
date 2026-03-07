@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 // import Link from "next/link";
 import { format } from "date-fns";
-import { IResume } from "@/lib/types";
+import { IResume } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import DynamicActions from "./DynamicTableActions";
 import { Input } from "./ui/input";

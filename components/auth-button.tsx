@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { LogIn, UserLock } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { cn } from "@/utils/utils";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   Tooltip,
   TooltipContent,
@@ -23,7 +23,7 @@ export function AuthButton({
     <div
       className={cn(
         "flex  gap-4 w-full",
-        variant === "horizontal" || !isDesktop ? " gap-2" : "flex-col"
+        variant === "horizontal" || !isDesktop ? " gap-2" : "flex-col",
       )}
     >
       {variant === "vertical" ? (

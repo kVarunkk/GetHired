@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { StepProps } from "../OnboardingComponent";
 import { CardContent } from "../ui/card";
 

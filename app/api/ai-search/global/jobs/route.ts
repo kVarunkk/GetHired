@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { getVertexClient } from "@/lib/serverUtils";
+import { getVertexClient } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
-import { TAICredits } from "@/lib/types";
+import { TAICredits } from "@/utils/types";
 
 export async function POST(req: Request) {
   const { userQuery } = await req.json();

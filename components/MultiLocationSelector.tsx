@@ -9,8 +9,8 @@ import {
   SelectValue,
 } from "./ui/select";
 import { X, Check } from "lucide-react";
-import { cn, fetcher } from "@/lib/utils";
-import { ICountry } from "@/lib/types";
+import { cn, fetcher } from "@/utils/utils";
+import { ICountry } from "@/utils/types";
 import VirtualizedSelect from "./VirtualizedSelect";
 import useSWR from "swr";
 
@@ -42,7 +42,7 @@ export default function MultiLocationSelector({
 
   const countries: ICountry[] = useMemo(
     () => (countriesData && !countriesError ? countriesData.data : []),
-    [countriesData, countriesError]
+    [countriesData, countriesError],
   );
 
   // Load cities when country changes
@@ -60,7 +60,7 @@ export default function MultiLocationSelector({
       setSelectedCountry(country);
       setSelectedCity(""); // reset city
     },
-    [setSelectedCountry, setSelectedCity]
+    [setSelectedCountry, setSelectedCity],
   );
 
   const handleCityChange = useCallback((city: string) => {
@@ -99,7 +99,7 @@ export default function MultiLocationSelector({
     (locationToRemove: string) => {
       onChange(value.filter((loc) => loc !== locationToRemove));
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   const isSelectionValid = useMemo(() => {

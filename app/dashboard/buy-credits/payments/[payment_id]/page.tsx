@@ -1,11 +1,11 @@
 import BackButton from "@/components/BackButton";
 import Error from "@/components/Error";
 import { createClient } from "@/lib/supabase/server";
-import { IPayment } from "@/lib/types";
+import { IPayment } from "@/utils/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/utils/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Headset, Info } from "lucide-react";
@@ -146,7 +146,7 @@ export default async function PaymentIdPage({
                         <p className="text-sm text-muted-foreground">
                           {paymentData.fulfillment_date
                             ? new Date(
-                                paymentData.fulfillment_date
+                                paymentData.fulfillment_date,
                               ).toLocaleString()
                             : "N/A"}
                         </p>
@@ -215,7 +215,7 @@ export default async function PaymentIdPage({
                   <span className="text-2xl font-bold text-primary">
                     {formatCurrency(
                       paymentData.total_amount,
-                      paymentData.currency
+                      paymentData.currency,
                     )}
                   </span>
                 </div>

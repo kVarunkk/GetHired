@@ -1,7 +1,7 @@
 import BackButton from "@/components/BackButton";
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
-import { ICompanyInfo } from "@/lib/types";
+import { ICompanyInfo } from "@/utils/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";

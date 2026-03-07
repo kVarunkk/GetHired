@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { Input } from "./ui/input";
 import { v4 as uuidv4 } from "uuid";
 import { Check, X } from "lucide-react";
-import { IFormData } from "@/lib/types";
-import { FiltersState } from "./FilterComponent";
+import { FiltersState, IFormData } from "@/utils/types";
 
 interface MultiKeywordInputProps {
   updateFormValues: (
@@ -13,7 +12,7 @@ interface MultiKeywordInputProps {
     keywords: {
       id: string;
       content: string;
-    }[]
+    }[],
   ) => void;
   type: keyof IFormData | keyof FiltersState;
   placeholder?: string;

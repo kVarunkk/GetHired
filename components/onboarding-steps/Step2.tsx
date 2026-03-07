@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import MultiKeywordSelect from "../MultiKeywordSelect";
 import { StepProps } from "../OnboardingComponent";
 import { CardContent } from "../ui/card";
@@ -80,7 +80,7 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
           }
           className={cn(
             "mt-2 bg-input",
-            errors.min_salary ? "border-red-500 " : ""
+            errors.min_salary ? "border-red-500 " : "",
           )}
         />
       </div>
@@ -125,7 +125,7 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
           }
           className={cn(
             "mt-2 bg-input",
-            errors.max_salary ? "border-red-500 " : ""
+            errors.max_salary ? "border-red-500 " : "",
           )}
         />
       </div>

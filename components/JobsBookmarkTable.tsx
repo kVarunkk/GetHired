@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { IBookmark } from "@/lib/types";
+import { IBookmark } from "@/utils/types";
 import { ArrowUpDown, ExternalLink, XCircle } from "lucide-react";
 import AlertStatusSwitch from "./AlertStatusSwitch";
 import InfoTooltip from "./InfoTooltip";
@@ -63,23 +63,23 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
       { title: "Active", value: "true" },
       { title: "Disabled", value: "false" },
     ],
-    []
+    [],
   );
 
   const updateLocalItem = useCallback(
     (updatedItem: IBookmark) => {
       setItems((prev) =>
-        prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
+        prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
       );
     },
-    [setItems]
+    [setItems],
   );
 
   const removeLocalItem = useCallback(
     (id: string) => {
       setItems((prev) => prev.filter((item) => item.id !== id));
     },
-    [setItems]
+    [setItems],
   );
 
   const columns: ColumnDef<IBookmark>[] = useMemo(
@@ -174,7 +174,7 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
         ),
       },
     ],
-    [removeLocalItem, updateLocalItem, alertCount]
+    [removeLocalItem, updateLocalItem, alertCount],
   );
 
   const table = useReactTable({
@@ -275,7 +275,7 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -297,7 +297,7 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

@@ -1,12 +1,12 @@
 import ErrorComponent from "@/components/Error";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TApplicationStatus } from "@/lib/types";
+import { TApplicationStatus } from "@/utils/types";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import InfoTooltip from "@/components/InfoTooltip";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
-import { simpleTimeAgo } from "@/lib/serverUtils";
+import { simpleTimeAgo } from "@/utils/serverUtils";
 import { ArrowRight } from "lucide-react";
 import RechargeCredits from "@/components/RechargeCredits";
 import DashboardDropdown from "@/components/DashboardDropdown";
@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     const { data: userInfoData, error: userInfoError } = await supabase
       .from("user_info")
       .select(
-        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id)"
+        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id)",
       )
       .eq("user_id", user.id)
       .single();
@@ -41,7 +41,7 @@ export default async function DashboardPage() {
       supabase
         .from("applications")
         .select(
-          "status, created_at, all_jobs!inner(id, job_name, company_name, platform, locations)"
+          "status, created_at, all_jobs!inner(id, job_name, company_name, platform, locations)",
         )
         .eq("applicant_user_id", user.id)
         .order("created_at", { ascending: false })

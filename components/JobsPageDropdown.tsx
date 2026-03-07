@@ -10,7 +10,7 @@ import { Button } from "./ui/button";
 import { Bookmark, MoreHorizontal, Share2 } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import JobsPageCommonSheet from "./JobsPageCommonSheet";
-import { copyToClipboard } from "@/lib/utils";
+import { copyToClipboard } from "@/utils/utils";
 import { useState } from "react";
 
 export default function JobsPageDropdown({ user }: { user: User | null }) {
@@ -38,7 +38,7 @@ export default function JobsPageDropdown({ user }: { user: User | null }) {
             onClick={() => {
               copyToClipboard(
                 window.location.href,
-                "Job Search URL copied to clipboard!"
+                "Job Search URL copied to clipboard!",
               );
             }}
           >

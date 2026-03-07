@@ -3,7 +3,7 @@ import { User } from "@supabase/supabase-js";
 import fs from "fs/promises";
 import path from "path";
 // import { createClient } from "./supabase/server";
-import { createServiceRoleClient } from "./supabase/service-role";
+import { createServiceRoleClient } from "../lib/supabase/service-role";
 import { Resend } from "resend";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
 import { render } from "@react-email/components";
@@ -46,7 +46,7 @@ export function getCutOffDate(daysAgo: number): string {
  */
 export function simpleTimeAgo(
   dateString: string,
-  variant: "variant1" | "variant2"
+  variant: "variant1" | "variant2",
 ): string {
   const date = new Date(dateString);
   const now = new Date();
@@ -58,12 +58,12 @@ export function simpleTimeAgo(
   const startOfToday = new Date(
     now.getFullYear(),
     now.getMonth(),
-    now.getDate()
+    now.getDate(),
   );
   const startOfDate = new Date(
     date.getFullYear(),
     date.getMonth(),
-    date.getDate()
+    date.getDate(),
   );
 
   // Calculate difference in milliseconds
@@ -101,7 +101,7 @@ export async function handleUserUpsert(user: User) {
 
     if (selectError) {
       throw new Error(
-        `DB select failed during upsert check: ${selectError.message}`
+        `DB select failed during upsert check: ${selectError.message}`,
       );
     }
 
@@ -113,7 +113,7 @@ export async function handleUserUpsert(user: User) {
         {
           type: "applicant",
           onboarding_complete: false,
-        }
+        },
       );
 
       if (updateAppMetaError) {
@@ -134,7 +134,7 @@ export async function handleUserUpsert(user: User) {
       if (insertError) {
         console.error(
           "CRITICAL DB ERROR: Failed to insert new user_info row:",
-          insertError
+          insertError,
         );
         // Critical failure, throw immediately
         throw new Error(`DB insert failed: ${insertError.message}`);
@@ -151,7 +151,7 @@ export async function handleUserUpsert(user: User) {
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
     console.error(
-      `Fatal error during user upsert for ${user.id}: ${errorMessage}`
+      `Fatal error during user upsert for ${user.id}: ${errorMessage}`,
     );
     return {
       metadataUpdated: false,
@@ -165,7 +165,7 @@ const REFERRAL_CREDITS = 10;
 
 export async function grantReferralCredits(
   referralCode: string,
-  invited_email: string
+  invited_email: string,
 ) {
   const supabase = createServiceRoleClient();
   const { data: referrerData, error: refError } = await supabase
@@ -177,7 +177,7 @@ export async function grantReferralCredits(
 
   if (refError || !referrerData) {
     console.warn(
-      `Referral failed: Code ${referralCode} not found or user not active.`
+      `Referral failed: Code ${referralCode} not found or user not active.`,
     );
     return;
   }
@@ -206,7 +206,7 @@ export async function grantReferralCredits(
       console.error("Error granting credits to referrer");
     } else {
       console.log(
-        `Successfully granted ${REFERRAL_CREDITS} credits to ${referrerId} for referral and updated invitation status.`
+        `Successfully granted ${REFERRAL_CREDITS} credits to ${referrerId} for referral and updated invitation status.`,
       );
     }
   }
@@ -225,7 +225,7 @@ export const sendEmailForStatusUpdate = async (emailText: string) => {
     });
   } catch {
     console.error(
-      "Some error occured while sending status update email to Varun Kumawat"
+      "Some error occured while sending status update email to Varun Kumawat",
     );
   }
 };
@@ -233,13 +233,13 @@ export const sendEmailForStatusUpdate = async (emailText: string) => {
 export const sendEmailForRelevantJobsStatusUpdate = async (
   email: string,
   name: string,
-  url: string
+  url: string,
 ) => {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const emailHtml = await render(
-      <RelevantJobsSetupUpdateEmail userName={name} inviteUrl={url} />
+      <RelevantJobsSetupUpdateEmail userName={name} inviteUrl={url} />,
     );
 
     resend.emails.send({
@@ -251,7 +251,7 @@ export const sendEmailForRelevantJobsStatusUpdate = async (
     });
   } catch {
     console.error(
-      "Some error occured while sending status update email to Varun Kumawat"
+      "Some error occured while sending status update email to Varun Kumawat",
     );
   }
 };

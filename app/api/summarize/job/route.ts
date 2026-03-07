@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { generateText } from "ai";
 import { createClient } from "@/lib/supabase/server";
-import { getVertexClient } from "@/lib/serverUtils";
+import { getVertexClient } from "@/utils/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { TAICredits } from "@/lib/types";
+import { TAICredits } from "@/utils/types";
 
 const MAX_SUMMARY_LENGTH = 500;
 

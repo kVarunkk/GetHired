@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { getVertexClient } from "@/lib/serverUtils";
+import { getVertexClient } from "@/utils/serverUtils";
 import "pdf-parse/worker";
 import { CanvasFactory } from "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";

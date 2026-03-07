@@ -13,15 +13,15 @@ import {
 } from "@/components/ui/sheet";
 import { ChevronLeft, ChevronRight, Menu } from "lucide-react";
 import Brand from "./Brand";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import FeedbackForm from "./FeedbackForm";
 import SocialsComponent from "./SocialsComponent";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { usePathname } from "next/navigation";
-import { INavItem, INavItemWithActive } from "@/lib/types";
+import { INavItem, INavItemWithActive } from "@/utils/types";
 import {
   Tooltip,
   TooltipContent,
@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/tooltip";
 import WaitlistCTA from "./WaitlistCTA";
 import ModifiedLink from "./ModifiedLink";
-import { Badge } from "./ui/badge";
 
 export default function NavbarComponent({
   navItems,
@@ -92,7 +91,7 @@ export default function NavbarComponent({
     return (
       <div className="flex flex-col ">
         <WaitlistCTA
-          content={<p>Join the Waitlist for the new AI Resume Checker</p>}
+          content={<p>Review your resume with our new AI Resume Checker</p>}
           redirectTo="/ai-resume-checker"
         />
         <div
@@ -164,12 +163,9 @@ export default function NavbarComponent({
           isMenuOpen ? "w-52" : "w-20",
         )}
       >
-        {/* <div className="flex items-center gap-1 justify-"> */}
-        {/* {navbarItems ? <NavbarSheet items={navbarItems} /> : ""} */}
         <Link href={"/"} className={cn(!isMenuOpen && "mx-auto")}>
           <Brand type={isMenuOpen ? "long" : "short"} />
         </Link>
-        {/* </div> */}
         {navbarItems && (
           <div
             className={cn(
@@ -180,18 +176,7 @@ export default function NavbarComponent({
             {navbarItems.map((item) => (
               <Tooltip key={item.id} delayDuration={100}>
                 <TooltipTrigger asChild>
-                  {item.href === "/resume-review" ? (
-                    <div
-                      className={cn(
-                        "text-brand hover:bg-secondary transition-all rounded-lg  gap-2 items-center  p-2 flex w-full",
-                        item.active && "bg-secondary",
-                        isMenuOpen ? "justify-start" : "justify-center",
-                      )}
-                    >
-                      <span className="shrink-0">{item.icon}</span>
-                      {isMenuOpen && item.label}
-                    </div>
-                  ) : (
+                  {
                     <ModifiedLink
                       key={item.id}
                       href={item.href}
@@ -204,25 +189,10 @@ export default function NavbarComponent({
                       <span className="shrink-0">{item.icon}</span>
                       {isMenuOpen && item.label}
                     </ModifiedLink>
-                  )}
+                  }
                 </TooltipTrigger>
-                <TooltipContent
-                  side="right"
-                  hidden={isMenuOpen && item.href !== "/resume-review"}
-                >
-                  {item.href === "/resume-review" ? (
-                    <p>
-                      Coming Soon.{" "}
-                      <Link
-                        className="text-blue-500"
-                        href={"/ai-resume-checker"}
-                      >
-                        Join the Waitlist.
-                      </Link>
-                    </p>
-                  ) : (
-                    <p>{item.label}</p>
-                  )}
+                <TooltipContent side="right" hidden={isMenuOpen}>
+                  {<p>{item.label}</p>}
                 </TooltipContent>
               </Tooltip>
             ))}
@@ -276,7 +246,6 @@ export default function NavbarComponent({
                     href={"https://discord.gg/6xvKBqW5eW"}
                     target="_blank"
                     aria-label="Join Community"
-                    // title="Join Community"
                   >
                     <DiscordLogoIcon className="h-4 w-4" />
                     {isMenuOpen ? (
@@ -321,36 +290,19 @@ const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
 
         <div className="flex flex-col gap-4 items-start w-full">
           {items?.map((item) => {
-            if (item.href === "/resume-review") {
-              return (
-                <ModifiedLink
-                  key={item.id}
-                  href={"/ai-resume-checker"}
-                  className={cn(
-                    "text-brand hover:underline underline-offset-2 p-2 w-full flex items-center justify-between",
-                    item.active && "underline underline-offset-2",
-                  )}
-                  onClick={() => setOpen(false)}
-                >
-                  {item.label}
-                  <Badge className="text-xs">Coming Soon</Badge>
-                </ModifiedLink>
-              );
-            } else {
-              return (
-                <ModifiedLink
-                  key={item.id}
-                  href={item.href}
-                  className={cn(
-                    "hover:underline underline-offset-2 p-2 w-full",
-                    item.active && "underline underline-offset-2",
-                  )}
-                  onClick={() => setOpen(false)}
-                >
-                  {item.label}
-                </ModifiedLink>
-              );
-            }
+            return (
+              <ModifiedLink
+                key={item.id}
+                href={item.href}
+                className={cn(
+                  "hover:underline underline-offset-2 p-2 w-full",
+                  item.active && "underline underline-offset-2",
+                )}
+                onClick={() => setOpen(false)}
+              >
+                {item.label}
+              </ModifiedLink>
+            );
           })}
         </div>
 

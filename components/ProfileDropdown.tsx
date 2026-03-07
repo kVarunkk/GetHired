@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
@@ -71,7 +71,7 @@ export default function ProfileDropdown({
               <button
                 className={cn(
                   "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-                  isMenuOpen ? "justify-start" : "justify-center"
+                  isMenuOpen ? "justify-start" : "justify-center",
                 )}
               >
                 <AvatarComponent
@@ -92,7 +92,7 @@ export default function ProfileDropdown({
           <button
             className={cn(
               "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-              isMenuOpen ? "justify-start" : "justify-center"
+              isMenuOpen ? "justify-start" : "justify-center",
             )}
           >
             <AvatarComponent
@@ -191,7 +191,7 @@ function AvatarComponent({
       className={cn(
         "bg-muted h-8 w-8",
         open && "-ml-1",
-        isCompanyUser ? "rounded-sm" : ""
+        isCompanyUser ? "rounded-sm" : "",
       )}
     >
       <AvatarImage

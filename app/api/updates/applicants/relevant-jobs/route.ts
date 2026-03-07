@@ -5,8 +5,8 @@ import {
   deploymentUrl,
   sendEmailForRelevantJobsStatusUpdate,
   sendEmailForStatusUpdate,
-} from "@/lib/serverUtils";
-import { IJob, TAICredits } from "@/lib/types";
+} from "@/utils/serverUtils";
+import { IJob, TAICredits } from "@/utils/types";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 

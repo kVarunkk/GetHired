@@ -1,6 +1,6 @@
 import PaymentUpdateEmail from "@/emails/PaymentUpdateEmail";
 import { render } from "@react-email/components";
-import { IPayment } from "../types";
+import { IPayment } from "../../utils/types";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -15,14 +15,14 @@ export async function SendPaymentUpdateEmail({
   paymentDetails: IPayment;
 }) {
   const emailHtml = await render(
-    <PaymentUpdateEmail userName={userName} paymentDetails={paymentDetails} />
+    <PaymentUpdateEmail userName={userName} paymentDetails={paymentDetails} />,
   );
 
   const emailText = await render(
     <PaymentUpdateEmail userName={userName} paymentDetails={paymentDetails} />,
     {
       plainText: true,
-    }
+    },
   );
 
   const { error } = await resend.emails.send({

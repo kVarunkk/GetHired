@@ -4,8 +4,9 @@ import React from "react";
 import Link from "next/link"; // For internal links
 import Brand from "../Brand";
 import SocialsComponent from "../SocialsComponent";
-import WaitlistForm from "../WaitlistForm";
-import { TWaitlistType } from "@/lib/types";
+import { Button } from "../ui/button";
+// import WaitlistForm from "../WaitlistForm";
+// import { TWaitlistType } from "@/lib/types";
 
 const popularSearches = [
   {
@@ -250,10 +251,12 @@ export default function Footer() {
         </div>
 
         <div className="col-span-2 ">
-          <h3 className="text-lg font-bold mb-3 ">
-            AI Resume Checker - Join Waitlist
-          </h3>
-          <WaitlistForm className="" type={TWaitlistType.AI_RESUME_CHECKER} />
+          <h3 className="text-lg font-bold mb-3 ">AI Resume Checker</h3>
+          <Link href={"/resume-review"}>
+            <Button className="w-full sm:w-auto bg-brand hover:bg-brand/70 text-brand-foreground font-bold h-11 px-8 rounded-xl shadow-lg shadow-brand/20 transition-all active:scale-95 disabled:opacity-70">
+              Review My Resume
+            </Button>
+          </Link>{" "}
         </div>
       </div>
     </footer>

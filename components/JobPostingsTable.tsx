@@ -21,9 +21,9 @@ import {
 import { Button } from "@/components/ui/button";
 // import Link from "next/link";
 import { ArrowUpDown, ChevronRight, XCircle } from "lucide-react";
-import { IJobPosting } from "@/lib/types";
+import { IJobPosting } from "@/utils/types";
 import { Switch } from "./ui/switch";
-import { useJobPostingStatus } from "@/lib/hooks/useJobPostingStatus";
+import { useJobPostingStatus } from "@/hooks/useJobPostingStatus";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -50,7 +50,7 @@ export interface IJobPost
 export const JobStatusSwitch = ({ job }: { job: IJobPosting | IJobPost }) => {
   const { checkedState, handleUpdateStatus } = useJobPostingStatus(
     job.status,
-    job
+    job,
   );
 
   return (
@@ -170,7 +170,7 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
         ),
       },
     ],
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -288,7 +288,7 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -306,7 +306,7 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

@@ -11,7 +11,7 @@ import React, {
 } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { X, Check, ChevronsUpDown, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { VariableSizeList } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { Button } from "./ui/button";
@@ -24,7 +24,7 @@ import {
   CommandItem,
   CommandList,
 } from "./ui/command";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   Drawer,
   DrawerContent,
@@ -80,7 +80,7 @@ export default function MultiKeywordSelect({
 
   const filteredAvailableItems = useMemo(() => {
     return availableItems.filter((item) =>
-      item.toLowerCase().includes(searchTerm.toLowerCase())
+      item.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [availableItems, searchTerm]);
 
@@ -100,17 +100,17 @@ export default function MultiKeywordSelect({
       }
       setSearchTerm("");
     },
-    [name, onChange, initialKeywords, isSingleSelect]
+    [name, onChange, initialKeywords, isSingleSelect],
   );
 
   const removeKeyword = useCallback(
     (contentToRemove: string) => {
       onChange(
         name,
-        initialKeywords.filter((content) => content !== contentToRemove)
+        initialKeywords.filter((content) => content !== contentToRemove),
       );
     },
-    [name, onChange, initialKeywords]
+    [name, onChange, initialKeywords],
   );
 
   return (
@@ -139,7 +139,7 @@ export default function MultiKeywordSelect({
                 aria-expanded={open}
                 className={cn(
                   "w-full justify-between bg-input text-muted-foreground",
-                  !showKeywords && "rounded-l-none shadow-none"
+                  !showKeywords && "rounded-l-none shadow-none",
                 )}
               >
                 <span className="truncate">{placeholder}</span>
@@ -185,7 +185,7 @@ export default function MultiKeywordSelect({
                 aria-expanded={open}
                 className={cn(
                   "w-full justify-between bg-input text-muted-foreground",
-                  !showKeywords && "rounded-l-none shadow-none"
+                  !showKeywords && "rounded-l-none shadow-none",
                 )}
               >
                 <span className="truncate">{placeholder}</span>
@@ -321,7 +321,7 @@ const Row = React.memo(
             <Check
               className={cn(
                 "mr-2 h-4 w-4",
-                checked ? "opacity-100" : "opacity-0"
+                checked ? "opacity-100" : "opacity-0",
               )}
             />
             {itemData}
@@ -329,7 +329,7 @@ const Row = React.memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 function ItemsList({
@@ -387,7 +387,7 @@ function ItemsList({
         }
       }
     },
-    [rowHeights]
+    [rowHeights],
   );
 
   const RowWithDynamicHeight = useCallback(
@@ -413,14 +413,14 @@ function ItemsList({
       handleResize,
       Row,
       name,
-    ]
+    ],
   );
 
   const getItemSize = useCallback(
     (index: number) => {
       return rowHeights[index] || 40;
     },
-    [rowHeights]
+    [rowHeights],
   );
 
   return (
@@ -491,7 +491,7 @@ function ItemsList({
                       "mr-2 h-4 w-4",
                       initialKeywords.includes(item)
                         ? "opacity-100"
-                        : "opacity-0"
+                        : "opacity-0",
                     )}
                   />
                   {item}

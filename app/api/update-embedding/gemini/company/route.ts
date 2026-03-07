@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { embed } from "ai";
-import { getVertexClient } from "@/lib/serverUtils";
+import { getVertexClient } from "@/utils/serverUtils";
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     if (!companyData || !companyData.id) {
       return NextResponse.json(
         { error: "User data or user_id is missing." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       console.error("Supabase update error:", updateError);
       return NextResponse.json(
         { error: "Failed to update user embedding in Supabase." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     console.error("Error in embedding route:", error);
     return NextResponse.json(
       { error: "Internal server error." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

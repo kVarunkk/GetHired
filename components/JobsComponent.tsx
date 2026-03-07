@@ -1,15 +1,8 @@
 "use client";
 
-import { ICompanyInfo, IFormData, IJob, TAICredits } from "@/lib/types";
+import { ICompanyInfo, IFormData, IJob } from "@/utils/types";
 import Link from "next/link";
-import {
-  startTransition,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { startTransition, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppLoader from "./AppLoader";
 import { User } from "@supabase/supabase-js";
@@ -22,17 +15,16 @@ import ProfileItem from "./ProfileItem";
 import ScrollToTopButton from "./ScrollToTopButton";
 import SortingComponent from "./SortingComponent";
 import { useProgress } from "react-transition-progress";
-// import { Link as ModifiedLink } from "react-transition-progress/next";
 import CompanyItem from "./CompanyItem";
 import InfoTooltip from "./InfoTooltip";
-import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import useSWR, { mutate } from "swr";
 import { createClient } from "@/lib/supabase/client";
-import { revalidateCache } from "@/app/actions/revalidate";
 import { triggerRelevanceUpdate } from "@/app/actions/relevant-jobs-update";
 import ModifiedLink from "./ModifiedLink";
 import FootComponent from "./FootComponent";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useRelevantJobPoller } from "@/hooks/useRelevantJobPoller";
 
 export default function JobsComponent({
   initialJobs,
@@ -45,7 +37,7 @@ export default function JobsComponent({
   isAppliedJobsTabActive,
   totalCount,
 }: {
-  initialJobs: IJob[] | IFormData[];
+  initialJobs: IJob[] | IFormData[] | ICompanyInfo[];
   user: User | null;
   isCompanyUser: boolean;
   current_page: "jobs" | "profiles" | "companies";
@@ -55,49 +47,37 @@ export default function JobsComponent({
   isAppliedJobsTabActive: boolean;
   totalCount: number;
 }) {
-  const [jobs, setJobs] = useState<IJob[] | IFormData[] | ICompanyInfo[]>(
-    initialJobs,
-  );
-  const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     staleTime: 5 * 60 * 1000,
   });
-  const [isGenerated, setIsGenerated] = useState(false);
-  const [isFailed, setIsFailed] = useState(false);
+
   const router = useRouter();
-  const loaderRef = useRef<HTMLDivElement | null>(null);
   const searchParams = useSearchParams();
-  const isSuitable = searchParams.get("sortBy") === "relevance";
-  const isSimilarSearch = isSuitable && searchParams.get("jobId");
   const startProgress = useProgress();
-  useEffect(() => {
-    toast.dismiss();
-  }, [initialJobs]);
 
-  const loadMoreJobs = useCallback(async () => {
-    if (
-      jobs.length >= totalCount ||
-      (page >= 2 && !user && current_page === "jobs")
-    ) {
-      return;
-    }
+  const isSuitable = searchParams.get("sortBy") === "relevance";
+  const isSimilarSearch = !!(isSuitable && searchParams.get("jobId"));
+  const isGenerated = data?.profile?.is_relevant_jobs_generated ?? false;
+  const isFailed = data?.profile?.is_relevant_job_update_failed ?? false;
 
-    setIsLoading(true);
+  const {
+    items: jobs,
+    page,
+    loaderRef,
+  } = useInfiniteScroll<IJob | ICompanyInfo | IFormData>({
+    initialItems: initialJobs,
+    totalCount,
+    fetchPage: async (page) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("page", page.toString());
+      params.set(
+        "tab",
+        isAllJobsTab ? "all" : isAppliedJobsTabActive ? "applied" : "saved",
+      );
+      params.set("limit", "20");
 
-    const nextPage = page + 1;
-
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("page", nextPage.toString());
-    params.set(
-      "tab",
-      isAllJobsTab ? "all" : isAppliedJobsTabActive ? "applied" : "saved",
-    );
-    params.set("limit", "20");
-
-    try {
       const res = await fetch(
         `/api/${
           current_page === "profiles" && isCompanyUser
@@ -107,128 +87,27 @@ export default function JobsComponent({
               : "companies"
         }?${params.toString()}`,
       );
-      if (!res.ok) throw new Error("Some error occured");
+      if (!res.ok) throw new Error("fetch failed");
+      const json = await res.json();
+      return json.data as IJob[];
+    },
+    resetDeps: [
+      searchParams.toString(),
+      current_page,
+      isAllJobsTab,
+      isAppliedJobsTabActive,
+      isCompanyUser,
+    ],
+  });
 
-      const result = await res.json();
-
-      const { data } = result;
-
-      if (data.length > 0) {
-        setPage(nextPage);
-        setJobs((prevJobs) => [...prevJobs, ...data]);
-      }
-    } catch {
-      toast.error(
-        "Some error occured while fetching records. Please try reloading the window.",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [
-    // isLoading,
-    jobs.length,
-    page,
-    searchParams,
-    isCompanyUser,
-    current_page,
-    isAllJobsTab,
-    isAppliedJobsTabActive,
-    totalCount,
-    user,
-  ]);
-
-  useEffect(() => {
-    const currentLoader = loaderRef.current;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const firstEntry = entries[0];
-        if (firstEntry.isIntersecting && !isLoading) {
-          loadMoreJobs();
-        }
-      },
-      { threshold: 0.1 },
-    );
-    if (currentLoader) {
-      observer.observe(currentLoader);
-    }
-
-    return () => {
-      if (currentLoader) {
-        observer.unobserve(currentLoader);
-      }
-    };
-  }, [isLoading, loadMoreJobs, isGenerated]);
-
-  useEffect(() => {
-    if (
-      data &&
-      data.profile &&
-      current_page === "jobs" &&
-      isSuitable &&
-      !isSimilarSearch
-    ) {
-      setIsGenerated(data.profile.is_relevant_jobs_generated);
-      setIsFailed(data.profile.is_relevant_job_update_failed);
-    }
-  }, [data, current_page, isSuitable, isSimilarSearch]);
-
-  useEffect(() => {
-    // If already generated, do nothing
-    if (
-      isGenerated ||
-      current_page !== "jobs" ||
-      !isSuitable ||
-      isSimilarSearch ||
-      isFailed
-    )
-      return;
-
-    // Polling logic
-    const interval = setInterval(async () => {
-      if (!user) return;
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("user_info")
-        .select("is_relevant_jobs_generated")
-        .eq("user_id", user.id)
-        .single();
-
-      if (data?.is_relevant_jobs_generated) {
-        await mutate(PROFILE_API_KEY);
-        await revalidateCache("jobs-feed");
-        // setIsGenerated(true);
-        clearInterval(interval);
-        router.refresh(); // Refresh server components to fetch new jobs
-      }
-    }, 2000); // Check every 2 seconds
-
-    return () => clearInterval(interval);
-  }, [
+  useRelevantJobPoller({
+    userId: user?.id ?? null,
     isGenerated,
-    user,
-    router,
-    current_page,
     isSuitable,
     isSimilarSearch,
+    currentPage: current_page,
     isFailed,
-  ]);
-
-  useEffect(() => {
-    (async () => {
-      if (isGenerated && isSuitable) {
-        const supabase = createClient();
-        await supabase
-          .from("user_info")
-          .update({
-            ai_credits:
-              data.profile.ai_credits - TAICredits.AI_SEARCH_OR_ASK_AI,
-          })
-          .eq("user_id", data.profile.user_id);
-        await mutate(PROFILE_API_KEY);
-      }
-    })();
-  }, [isGenerated, isSuitable]);
+  });
 
   const navigateBack = async () => {
     startTransition(() => {
@@ -242,7 +121,6 @@ export default function JobsComponent({
   };
 
   const generateAIFeed = async () => {
-    setIsFailed(false);
     const supabase = createClient();
     await supabase
       .from("user_info")
@@ -373,7 +251,7 @@ export default function JobsComponent({
             !isSuitable && (
               <FindSuitableJobs
                 user={user}
-                setPage={setPage}
+                // setPage={setPage}
                 currentPage={current_page}
                 companyId={companyId}
               />
@@ -385,7 +263,7 @@ export default function JobsComponent({
             isAllJobsTab && (
               <FindSuitableJobs
                 user={user}
-                setPage={setPage}
+                // setPage={setPage}
                 currentPage={current_page}
                 companyId={companyId}
               />
@@ -431,7 +309,7 @@ export default function JobsComponent({
             <SortingComponent
               isCompanyUser={isCompanyUser}
               currentPage={current_page}
-              setPage={setPage}
+              // setPage={setPage}
             />
           )}
 
@@ -463,7 +341,7 @@ export default function JobsComponent({
       isSuitable &&
       !isSimilarSearch ? (
         isFailed ? (
-          <div className="flex flex-col items-center justify-center my-20">
+          <div className="flex flex-col items-center justify-center my-20 gap-5">
             <p className=" text-muted-foreground text-sm text-center sm:w-3/4">
               There was some error generating your AI Smart Search Feed. Please
               click the button below to regenerate your feed. This is a one time

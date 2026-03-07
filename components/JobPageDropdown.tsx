@@ -14,10 +14,10 @@ import { Check, File, MoreHorizontal, Share2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useState } from "react";
 import { User } from "@supabase/supabase-js";
-import { TApplicationStatus } from "@/lib/types";
+import { TApplicationStatus } from "@/utils/types";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { copyToClipboard } from "@/lib/utils";
+import { copyToClipboard } from "@/utils/utils";
 
 const applicationStatuses = Object.values(TApplicationStatus);
 

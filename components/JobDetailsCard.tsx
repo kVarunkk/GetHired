@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { ArrowDown, Loader2, Sparkle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { IJob, IJobPosting, TAICredits } from "@/lib/types";
+import { cn } from "@/utils/utils";
+import { IJob, IJobPosting, TAICredits } from "@/utils/types";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import { User } from "@supabase/supabase-js";
@@ -27,7 +27,7 @@ export default function JobDescriptionCard({
   const [isAISummary, setIsAISummary] = useState(false);
 
   const [aiSummary, setAiSummary] = useState(
-    page === "all-jobs" ? (job as IJob).ai_summary : null
+    page === "all-jobs" ? (job as IJob).ai_summary : null,
   );
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -49,7 +49,7 @@ export default function JobDescriptionCard({
         const errorResult = await response.json();
         throw new Error(
           errorResult.error ||
-            `AI Summary failed with status ${response.status}`
+            `AI Summary failed with status ${response.status}`,
         );
       }
 
@@ -143,7 +143,7 @@ export default function JobDescriptionCard({
         <CardContent
           className={cn(
             "max-h-[400px] overflow-hidden group relative transition-all duration-300",
-            isExpanded && "max-h-[1000px] overflow-y-auto"
+            isExpanded && "max-h-[1000px] overflow-y-auto",
           )}
         >
           <div
@@ -164,7 +164,7 @@ export default function JobDescriptionCard({
           <div
             className={cn(
               "absolute inset-x-0 bottom-0 flex items-center justify-center pt-8 bg-gradient-to-t from-background via-background/90 to-transparent transition-all duration-300 !rounded-b-xl",
-              isExpanded ? "opacity-0 invisible" : "opacity-100 visible"
+              isExpanded ? "opacity-0 invisible" : "opacity-100 visible",
             )}
           >
             <button

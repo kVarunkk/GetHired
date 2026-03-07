@@ -134,9 +134,7 @@ export interface IFormData {
   resume_file: File | null;
   resume_id: string | null;
   resumes?: IResume[];
-  // resume_url: string | null;
-  // resume_path: string | null;
-  // resume_name: string | null;
+  is_public?: boolean;
   default_locations: string[];
   job_type: string[];
   company_favorites?: {
@@ -152,9 +150,6 @@ export interface IFormData {
   ai_credits?: number;
   linkedin_url?: string;
   github_url?: string;
-  // skills_resume?: string;
-  // experience_resume?: string;
-  // projects_resume?: string;
   invitations?: IInvitation[];
 }
 
@@ -364,4 +359,36 @@ export interface JobListingSearchParams {
   jobType?: string;
   minSalary?: string;
   // Add any other filter parameters here
+}
+
+export type FiltersState = {
+  jobType: string[];
+  location: string[];
+  visaRequirement: string[];
+  minSalary: string;
+  minExperience: string;
+  platform: string[];
+  companyName: string[];
+  jobTitleKeywords: string[];
+  jobRole: string[];
+  industryPreference: string[];
+  workStylePreference: string[];
+  skills: string[];
+  maxSalary?: string;
+  applicationStatus: TApplicationStatus;
+  industry?: string[];
+  name?: string[];
+  size?: string[];
+  createdAfter: string[];
+};
+
+export interface FilterConfig {
+  name: keyof FiltersState;
+  label: string;
+  type: "text" | "number" | "multi-select" | "multi-select-input";
+  placeholder?: string;
+  options?: { value: string; label: string }[];
+  isVirtualized?: boolean;
+  hidden?: boolean;
+  isSingleSelect?: boolean;
 }

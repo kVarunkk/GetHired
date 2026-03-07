@@ -1,6 +1,6 @@
 "use client";
 
-import { IApplication } from "@/lib/types";
+import { IApplication } from "@/utils/types";
 // import { Link as ModifiedLink } from "react-transition-progress/next";
 import { format } from "date-fns";
 import { Button } from "./ui/button";

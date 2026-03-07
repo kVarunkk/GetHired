@@ -5,7 +5,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
 import { Button } from "@/components/ui/button";
-import { IApplication, IJobPosting } from "@/lib/types";
+import { IApplication, IJobPosting } from "@/utils/types";
 import CompanyJobPostingCard from "@/components/CompanyJobPostingCard";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 
@@ -57,7 +57,7 @@ export default async function CompanyPage() {
           job_id,
           applications(id),
           company_info(name, website)
-        `
+        `,
         )
         .eq("company_id", companyInfo.id)
         .order("created_at", { ascending: false })
@@ -71,7 +71,7 @@ export default async function CompanyPage() {
           created_at,
           user_info(*),
           job_postings(id, title)
-        `
+        `,
         )
         .eq("job_postings.company_id", companyInfo.id)
         .order("created_at", { ascending: false })

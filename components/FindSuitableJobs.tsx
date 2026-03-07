@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useState,
-  useTransition,
-} from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import {
   Select,
   SelectContent,
@@ -34,18 +27,16 @@ import Link from "next/link";
 import { useProgress } from "react-transition-progress";
 import { Button } from "./ui/button";
 import InfoTooltip from "./InfoTooltip";
-import { TAICredits } from "@/lib/types";
+import { TAICredits } from "@/utils/types";
 import useSWR from "swr";
-import { fetcher, PROFILE_API_KEY } from "@/lib/utils";
+import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
 
 export default function FindSuitableJobs({
   user,
-  setPage,
   currentPage,
   companyId,
 }: {
   user: User | null;
-  setPage: Dispatch<SetStateAction<number>>;
   currentPage: "jobs" | "profiles" | "companies";
   companyId?: string;
 }) {
@@ -75,7 +66,6 @@ export default function FindSuitableJobs({
       .eq("company_id", companyId);
 
     if (error) {
-      // console.error("Error fetching job postings:", error);
       return [];
     }
 
@@ -94,7 +84,6 @@ export default function FindSuitableJobs({
   const handleFindSuitableJobs = async () => {
     try {
       if (!user) throw new Error("User not found");
-      // 2. Fetch user_info
       const { data: userInfo, error: userInfoError } = await supabase
         .from("user_info")
         .select(
@@ -114,7 +103,6 @@ export default function FindSuitableJobs({
         return;
       }
 
-      // 3. Construct URLSearchParams based on user_info
       const params = new URLSearchParams();
 
       const currentSortBy = searchParams.get("sortBy");
@@ -166,13 +154,6 @@ export default function FindSuitableJobs({
       if (value) {
         params.set("job_post", value);
       }
-      setPage(() => 1);
-      // toast.loading(
-      //   "This might take a moment. Our AI is finding the best " +
-      //     `${currentPage}` +
-      //     " out there for you."
-      // );
-      // await revalidateCache("jobs-feed");
       startTransition(() => {
         startProgress();
         router.push(
@@ -328,7 +309,6 @@ export default function FindSuitableJobs({
               AI Smart Search
             </div>
           </SelectItem>
-          {/* You could add more options here if needed, e.g., "Reset to default" */}
         </SelectContent>
       </Select>
 

@@ -18,11 +18,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { IJob, IResume } from "@/lib/types";
+import { IJob, IResume } from "@/utils/types";
 import { createClient } from "@/lib/supabase/client";
 import ResumeSourceSelector from "./ResumeSourceSelector";
 import { createResumeAction } from "@/app/actions/create-resume";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 
 const createFormSchema = (questions: string[]) => {
   const schemaFields = questions.reduce<Record<string, z.ZodTypeAny>>(
@@ -30,7 +30,7 @@ const createFormSchema = (questions: string[]) => {
       acc[`question_${index}`] = z.string().min(1, "Answer cannot be empty.");
       return acc;
     },
-    {}
+    {},
   );
   return z.object(schemaFields);
 };
@@ -57,7 +57,7 @@ export default function JobApplicationForm({
 
   const questions = useMemo(
     () => jobPost.job_postings?.[0]?.questions || [],
-    [jobPost]
+    [jobPost],
   );
   const formSchema = useMemo(() => createFormSchema(questions), [questions]);
   const form = useForm<z.infer<typeof formSchema>>({
@@ -159,7 +159,7 @@ export default function JobApplicationForm({
       onSuccess();
     } catch {
       toast.error(
-        "Some error occured while submitting application. Please try again later."
+        "Some error occured while submitting application. Please try again later.",
       );
     } finally {
       setLoading(false);
@@ -176,7 +176,7 @@ export default function JobApplicationForm({
               "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border transition-colors",
               step === 1
                 ? "bg-brand border-brand"
-                : "bg-emerald-500 border-emerald-500 "
+                : "bg-emerald-500 border-emerald-500 ",
             )}
           >
             {step === 2 ? <CheckCircle2 size={12} /> : "1"}
@@ -184,7 +184,7 @@ export default function JobApplicationForm({
           <span
             className={cn(
               "text-[10px] font-black uppercase tracking-widest",
-              step === 1 ? "text-brand" : "text-muted-foreground"
+              step === 1 ? "text-brand" : "text-muted-foreground",
             )}
           >
             Resume
@@ -197,7 +197,7 @@ export default function JobApplicationForm({
               "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border transition-colors",
               step === 2
                 ? "bg-brand border-brand"
-                : "border-border text-muted-foreground"
+                : "border-border text-muted-foreground",
             )}
           >
             2
@@ -205,7 +205,7 @@ export default function JobApplicationForm({
           <span
             className={cn(
               "text-[10px] font-black uppercase tracking-widest",
-              step === 2 ? "text-brand" : "text-muted-foreground"
+              step === 2 ? "text-brand" : "text-muted-foreground",
             )}
           >
             Questions

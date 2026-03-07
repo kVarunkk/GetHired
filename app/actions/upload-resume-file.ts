@@ -1,8 +1,8 @@
 "use server";
 
-import { deploymentUrl } from "@/lib/serverUtils";
+import { deploymentUrl } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
-import { TLimits } from "@/lib/types";
+import { TLimits } from "@/utils/types";
 import { after } from "next/server";
 
 /**

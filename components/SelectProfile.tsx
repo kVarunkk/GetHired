@@ -1,6 +1,6 @@
 "use client";
 
-import { IFormData } from "@/lib/types";
+import { IFormData } from "@/utils/types";
 import MultiKeywordSelect, { GenericFormData } from "./MultiKeywordSelect";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -36,18 +36,18 @@ export default function SelectProfile({
       heading: "Your Job Posts",
       description: `Create applications for ${applicantProfile.full_name} by selecting the relevant job posts.`,
     }),
-    [applicantProfile.full_name]
+    [applicantProfile.full_name],
   );
 
   const handleMultiKeywordSelectChange = useCallback(
     async (name: keyof GenericFormData, keywords: string[]) => {
       const newlySelectedJobTitle = keywords.find(
-        (keyword) => !selectedProfiles.includes(keyword)
+        (keyword) => !selectedProfiles.includes(keyword),
       );
 
       if (newlySelectedJobTitle && jobPostings) {
         const selectedJob = jobPostings?.find(
-          (job) => job.title.trim() === newlySelectedJobTitle
+          (job) => job.title.trim() === newlySelectedJobTitle,
         );
 
         if (!selectedJob) {
@@ -124,7 +124,7 @@ export default function SelectProfile({
               <span className="font-medium">{applicantProfile.full_name}</span>{" "}
               for the role of{" "}
               <span className="font-medium">{newlySelectedJobTitle}</span>
-            </p>
+            </p>,
           );
         } catch {
           // console.error("Error creating application:", error);
@@ -143,7 +143,7 @@ export default function SelectProfile({
       applicantProfile,
       router,
       companyId,
-    ]
+    ],
   );
 
   const availableJobTitles = jobPostings?.map((job) => job.title) || [];

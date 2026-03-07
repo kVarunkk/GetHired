@@ -4,8 +4,10 @@ import { Sparkles } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import WaitlistForm from "./WaitlistForm";
-import { TWaitlistType } from "@/lib/types";
+import { Button } from "./ui/button";
+import Link from "next/link";
+// import WaitlistForm from "./WaitlistForm";
+// import { TWaitlistType } from "@/lib/types";
 
 const JOB_SEEKER_DARK = "/hero/dark-ai-resume-checker.png";
 const JOB_SEEKER_LIGHT = "/hero/light-ai-resume-checker.png";
@@ -36,7 +38,7 @@ export default function HeroAiResumeChecker() {
           {/* Badge: Using brandSoft for the background and brand for text/border */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brandSoft border border-brand/20 text-brand dark:text-primary text-[10px] font-bold uppercase tracking-widest mb-2 animate-in fade-in slide-in-from-top-2 duration-700">
             <Sparkles size={12} />
-            Coming Soon: Advanced AI Analysis
+            Advanced AI Analysis
           </div>
 
           <h1 className="text-5xl sm:text-7xl font-black tracking-tight leading-[1.1]">
@@ -50,9 +52,12 @@ export default function HeroAiResumeChecker() {
         </div>
       </div>
 
-      {/* REUSABLE WAITLIST COMPONENT */}
-      <div className="w-full flex flex-col items-center">
-        <WaitlistForm type={TWaitlistType.AI_RESUME_CHECKER} />
+      <div>
+        <Link href={"/resume-review"}>
+          <Button className="w-full sm:w-auto bg-brand hover:bg-brand/70 text-brand-foreground font-bold h-11 px-8 rounded-xl shadow-lg shadow-brand/20 transition-all active:scale-95 disabled:opacity-70">
+            Review My Resume
+          </Button>
+        </Link>
       </div>
 
       {mounted && (

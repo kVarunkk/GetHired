@@ -5,7 +5,7 @@ import { CardContent } from "../ui/card";
 import { Label } from "../ui/label";
 import { Loader2 } from "lucide-react";
 import ResumeSourceSelector from "../ResumeSourceSelector";
-import { IResume } from "@/lib/types";
+import { IResume } from "@/utils/types";
 
 export const Step6ResumeUpload: React.FC<StepProps> = ({
   formData,

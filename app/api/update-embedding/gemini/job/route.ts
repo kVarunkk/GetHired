@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { embed } from "ai";
-import { getVertexClient } from "@/lib/serverUtils";
+import { getVertexClient } from "@/utils/serverUtils";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   if (cronSecret !== INTERNAL_API_SECRET) {
     return NextResponse.json(
       { message: "Unauthorized access to job embedding route" },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     if (!jobData || !jobData.id) {
       return NextResponse.json(
         { error: "User data or user_id is missing." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       console.error("Supabase update error:", updateError);
       return NextResponse.json(
         { error: "Failed to update user embedding in Supabase." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     console.error("Error in embedding route:", error);
     return NextResponse.json(
       { error: "Internal server error." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
