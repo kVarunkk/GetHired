@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-// import { Link as ModifiedLink } from "react-transition-progress/next";
 import { Badge } from "./ui/badge";
 import { IJob } from "@/utils/types";
 import { User } from "@supabase/supabase-js";

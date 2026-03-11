@@ -4,32 +4,12 @@ import { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import JobApplicationDialog from "./JobApplicationDialog";
-import {
-  ArrowRight,
-  ExternalLink,
-  Info,
-  Loader2,
-  MoreHorizontal,
-  Sparkle,
-} from "lucide-react";
+import { ArrowRight, MoreHorizontal } from "lucide-react";
 import { IJob, TApplicationStatus } from "@/utils/types";
-import { useCallback, useEffect, useState } from "react";
-import toast from "react-hot-toast";
-import { createClient } from "@/lib/supabase/client";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useCallback, useState } from "react";
 import PropagationStopper from "./StopPropagation";
-import { revalidateCache } from "@/app/actions/revalidate";
 import InfoTooltip from "./InfoTooltip";
-// import { useRouter } from "next/navigation";
+import JobStatusDialog from "@/helpers/jobs/JobStatusDialog";
 
 export default function JobApplyBtn({
   isCompanyUser,
@@ -50,13 +30,6 @@ export default function JobApplyBtn({
   };
   const [appStatus, setAppStatus] = useState(job.applications?.[0]?.status);
 
-  useEffect(() => {
-    const newStatus = job.applications?.[0]?.status;
-    if (newStatus !== appStatus) {
-      setAppStatus(newStatus);
-    }
-  }, [job.applications]);
-
   const handleCloseDialog = useCallback(
     (applicationStatus?: TApplicationStatus) => {
       if (applicationStatus) setAppStatus(applicationStatus);
@@ -67,9 +40,7 @@ export default function JobApplyBtn({
 
   return (
     <>
-      {isCompanyUser ? (
-        ""
-      ) : user ? (
+      {isCompanyUser ? null : user ? (
         job.job_url ? (
           appStatus ? (
             <PropagationStopper>
@@ -121,7 +92,6 @@ export default function JobApplyBtn({
           )
         ) : isOnboardingComplete ? (
           <JobApplicationDialog
-            // dialogStateCallback={dialogStateCallback}
             jobPost={job}
             user={user}
             isAppliedJobsTabActive={isAppliedJobsTabActive}
@@ -152,128 +122,5 @@ export default function JobApplyBtn({
         />
       )}
     </>
-  );
-}
-
-function JobStatusDialog({
-  job,
-  showDialog,
-  onClose,
-  userId,
-}: {
-  job: IJob;
-  showDialog: boolean;
-  onClose: (applicationStatus?: TApplicationStatus) => void;
-  userId?: string;
-}) {
-  // const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const updateJobApplicationStatus = async () => {
-    try {
-      setLoading(true);
-      const supabase = createClient();
-      const { error } = await supabase.from("applications").insert({
-        applicant_user_id: userId,
-        status: "submitted",
-        all_jobs_id: job.id,
-      });
-      if (error) throw error;
-
-      await revalidateCache("jobs-feed");
-
-      onClose(TApplicationStatus.SUBMITTED);
-      toast.success(
-        job.job_name && job.company_name ? (
-          <p>
-            Succesfully applied to{" "}
-            <span className="font-medium">{job.job_name}</span> at{" "}
-            <span className="font-medium">{job.company_name} </span>
-          </p>
-        ) : (
-          <p>Succesfully applied to the job</p>
-        ),
-      );
-    } catch {
-      // console.error(e);
-      toast.error(
-        "Some error occured while updating the application status. Please try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    // <PropagationStopper className="absolute inset-0">
-    <AlertDialog open={showDialog}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            Did you apply for the role of {job.job_name} at {job.company_name}?
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            This helps us track your application status.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="flex items-center gap-3 rounded-md bg-secondary p-3 border border-border">
-          <Info className="h-4 w-4 shrink-0" />
-          <p className="text-sm">
-            Use the{" "}
-            <span className="font-bold inline-flex  gap-1">
-              <Sparkle className="h-4 w-4" /> Ask AI
-            </span>{" "}
-            feature on the{" "}
-            <Link
-              className="text-blue-500 hover:underline underline-offset-4 inline-flex items-center"
-              href={"/jobs/" + job.id}
-              target="_blank"
-            >
-              job page <ExternalLink size={12} />
-            </Link>{" "}
-            to get assistance with your application once you close this dialog.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 rounded-md bg-secondary p-3 border border-border">
-          <Info className="h-4 w-4 shrink-0" />
-          <p className="text-sm">
-            View and download suitable resume for application{" "}
-            <Link
-              className="text-blue-500 hover:underline underline-offset-4 inline-flex items-center"
-              href={"/resume"}
-              target="_blank"
-            >
-              here <ExternalLink size={12} />
-            </Link>
-          </p>
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel asChild>
-            <Button
-              variant={"secondary"}
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              disabled={loading}
-            >
-              No
-            </Button>
-          </AlertDialogCancel>
-          <AlertDialogAction asChild>
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                updateJobApplicationStatus();
-              }}
-              disabled={loading}
-            >
-              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Yes
-            </Button>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-    // </PropagationStopper>
   );
 }

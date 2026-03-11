@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   Select,
   SelectContent,
@@ -21,7 +21,6 @@ import { User } from "@supabase/supabase-js";
 import toast from "react-hot-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { IJobPost } from "./JobPostingsTable";
 import { SelectGroup } from "@radix-ui/react-select";
 import Link from "next/link";
 import { useProgress } from "react-transition-progress";
@@ -30,6 +29,17 @@ import InfoTooltip from "./InfoTooltip";
 import { TAICredits } from "@/utils/types";
 import useSWR from "swr";
 import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
+
+const fetchCompanyJobs = async (companyId: string) => {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("job_postings")
+    .select("id, title")
+    .eq("company_id", companyId);
+
+  if (error) throw error;
+  return data || [];
+};
 
 export default function FindSuitableJobs({
   user,
@@ -41,7 +51,6 @@ export default function FindSuitableJobs({
   companyId?: string;
 }) {
   const [suitableJobsSelectValue, setSuitableJobsSelectValue] = useState("");
-  const [jobPostings, setJobPostings] = useState<IJobPost[]>([]);
   const router = useRouter();
   const supabase = createClient();
   const searchParams = useSearchParams();
@@ -52,34 +61,16 @@ export default function FindSuitableJobs({
     revalidateOnReconnect: false,
     staleTime: 5 * 60 * 1000,
   });
-
-  const findCompanyUsersJobPostings = useCallback(async (): Promise<
-    IJobPost[]
-  > => {
-    if (!companyId || !supabase) {
-      return [];
-    }
-
-    const { data, error } = await supabase
-      .from("job_postings")
-      .select("id, title")
-      .eq("company_id", companyId);
-
-    if (error) {
-      return [];
-    }
-
-    return data as IJobPost[];
-  }, [companyId, supabase]);
-
-  useEffect(() => {
-    (async () => {
-      const job_postings = await findCompanyUsersJobPostings();
-      if (job_postings.length > 0) {
-        setJobPostings(job_postings);
-      }
-    })();
-  }, [findCompanyUsersJobPostings]);
+  const shouldFetch = currentPage === "profiles" && !!companyId;
+  const { data: jobPostings } = useSWR(
+    shouldFetch ? `company-jobs-${companyId}` : null,
+    () => fetchCompanyJobs(companyId!),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      staleTime: 10 * 60 * 1000,
+    },
+  );
 
   const handleFindSuitableJobs = async () => {
     try {
@@ -210,7 +201,7 @@ export default function FindSuitableJobs({
                 </Link>
               </SelectLabel>
               <SelectSeparator />
-              {jobPostings.map((each) => (
+              {jobPostings?.map((each) => (
                 <SelectItem key={each.id} value={each.id}>
                   {each.title}
                 </SelectItem>

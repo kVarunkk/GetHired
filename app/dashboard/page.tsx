@@ -76,7 +76,6 @@ export default async function DashboardPage() {
               Find your next Job <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
-          {/* <CreateJobPostingDialog company_id={companyInfo.id} /> */}
         </div>
         {/* --- Metrics Section --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

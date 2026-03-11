@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -19,7 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-// import Link from "next/link";
 import { format } from "date-fns";
 import { IPayment } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
@@ -45,10 +44,6 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
   >([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
-
-  useEffect(() => {
-    setPage(1);
-  }, [columnFilters, sorting]);
 
   const flatData = useMemo(() => {
     return data.map((item) => ({
@@ -167,15 +162,23 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onSortingChange: (updater) => {
+      setSorting((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
+    onColumnFiltersChange: (updater) => {
+      setColumnFilters((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
     state: {
       sorting,
       columnFilters,
     },
   });
-
-  // const getRowModelRows = table.getRowModel().rows;
 
   const paginatedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -187,8 +190,6 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
 
   const clearFilters = () => {
     setColumnFilters([]);
-    // table.getColumn("applicantName")?.setFilterValue("");
-    // table.getColumn("jobTitle")?.setFilterValue(undefined);
     table.getColumn("status")?.setFilterValue(undefined);
   };
 

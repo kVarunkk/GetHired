@@ -18,7 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 import { IJob, TApplicationStatus } from "@/utils/types";
 import { User } from "@supabase/supabase-js";
 import PropagationStopper from "./StopPropagation";
@@ -36,21 +36,19 @@ export default function JobApplicationDialog({
   isAppliedJobsTabActive: boolean;
 }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [applicationStatus, setApplicationStatus] =
+  const [overrideStatus, setOverrideStatus] =
     useState<TApplicationStatus | null>(null);
 
-  useEffect(() => {
+  const applicationStatus = useMemo((): TApplicationStatus | null => {
+    if (overrideStatus) return overrideStatus;
     if (isAppliedJobsTabActive) {
-      setApplicationStatus(jobPost?.applications?.[0]?.status ?? null);
-    } else {
-      if (jobPost.job_postings && jobPost.job_postings.length > 0) {
-        const applicationForUser = jobPost.job_postings[0]?.applications?.find(
-          (each) => each.applicant_user_id === user?.id,
-        );
-        setApplicationStatus(applicationForUser?.status ?? null);
-      }
+      return jobPost?.applications?.[0]?.status ?? null;
     }
-  }, [jobPost, user?.id, isAppliedJobsTabActive]);
+    const app = jobPost.job_postings?.[0]?.applications?.find(
+      (each) => each.applicant_user_id === user?.id,
+    );
+    return app?.status ?? null;
+  }, [overrideStatus, jobPost, user?.id, isAppliedJobsTabActive]);
 
   return (
     <Dialog
@@ -59,9 +57,9 @@ export default function JobApplicationDialog({
         setIsDialogOpen(open);
       }}
     >
-      {applicationStatus ? (
-        <PropagationStopper>
-          <div className="flex items-center gap-2">
+      <PropagationStopper>
+        <div className="flex items-center gap-2">
+          {applicationStatus && (
             <InfoTooltip
               content={
                 <p>
@@ -70,6 +68,8 @@ export default function JobApplicationDialog({
                 </p>
               }
             />
+          )}
+          {applicationStatus ? (
             <Button
               onClick={(e) => e.stopPropagation()}
               className="capitalize"
@@ -77,29 +77,26 @@ export default function JobApplicationDialog({
                 applicationStatus !== null || jobPost.status === "inactive"
               }
             >
-              {applicationStatus ?? "Easy Apply"}{" "}
-              {!applicationStatus && <ArrowRight className=" h-4 w-4" />}
+              {applicationStatus}
             </Button>
-          </div>
-        </PropagationStopper>
-      ) : (
-        <PropagationStopper>
-          <DialogTrigger asChild>
-            <Button
-              className="capitalize"
-              disabled={
-                applicationStatus !== null || jobPost.status === "inactive"
-              }
-            >
-              {applicationStatus ?? "Easy Apply"}{" "}
-              {!applicationStatus && <ArrowRight className=" h-4 w-4" />}
-            </Button>
-          </DialogTrigger>
-        </PropagationStopper>
-      )}
+          ) : (
+            <DialogTrigger asChild>
+              <Button
+                onClick={(e) => e.stopPropagation()}
+                className="capitalize"
+                disabled={
+                  applicationStatus !== null || jobPost.status === "inactive"
+                }
+              >
+                Easy Apply <ArrowRight className=" h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+          )}
+        </div>
+      </PropagationStopper>
       <DialogContent className="max-w-4xl h-screen sm:h-[85vh] flex flex-col p-0 overflow-hidden">
         <div className="flex flex-col md:flex-row h-full">
-          {/* Left Panel: Company Info */}
+          {/* left pane */}
           <div className="flex-[0.4] sm:flex-[0.6] overflow-y-auto p-6 bg-secondary">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold">
@@ -107,7 +104,6 @@ export default function JobApplicationDialog({
               </DialogTitle>
               <DialogDescription>at {jobPost.company_name}</DialogDescription>
             </DialogHeader>
-            {/* <Separator className="my-4" /> */}
             <div className="space-y-4 mt-5">
               <Card className="shadow-none border">
                 <CardHeader>
@@ -146,9 +142,6 @@ export default function JobApplicationDialog({
                       {jobPost.description || "No description provided."}
                     </p>
                   </div>
-                  {/* <p className="text-sm  whitespace-pre-wrap">
-                    {jobPost.description || "No description provided."}
-                  </p> */}
                   {jobPost.salary_range && (
                     <div>
                       <p className="font-semibold text-sm">Salary Range</p>
@@ -175,11 +168,9 @@ export default function JobApplicationDialog({
                   )}
                 </CardContent>
               </Card>
-              {/* You can add more company details here */}
             </div>
           </div>
-
-          {/* Right Panel: Application Form */}
+          {/* right pane */}
           <div className="flex-1  overflow-y-auto p-6">
             {user && (
               <JobApplicationForm
@@ -187,7 +178,7 @@ export default function JobApplicationDialog({
                 user={user}
                 onSuccess={() => {
                   setIsDialogOpen(false);
-                  setApplicationStatus(
+                  setOverrideStatus(
                     "submitted" as TApplicationStatus.SUBMITTED,
                   );
                 }}
@@ -197,6 +188,5 @@ export default function JobApplicationDialog({
         </div>
       </DialogContent>
     </Dialog>
-    // </PropagationStopper>
   );
 }

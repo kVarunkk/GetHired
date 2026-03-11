@@ -64,6 +64,7 @@ export async function upsertJobPostingAction(params: {
       equity_range,
       experience,
       questions: values.questions?.filter((q: string) => q.trim() !== "") || [],
+      updated_at: new Date().toISOString(),
     };
 
     if (existingPostingId) {

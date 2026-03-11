@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -38,6 +38,12 @@ interface JobsBookmarkTableProps {
   data: IBookmark[];
 }
 
+const alertStatuses = [
+  { title: "All", value: "all" },
+  { title: "Active", value: "true" },
+  { title: "Disabled", value: "false" },
+];
+
 export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<
@@ -45,26 +51,12 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
   >([]);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<IBookmark[]>(data);
-
   const pageSize = 10;
   const alertCount = data.filter((each) => each.is_alert_on).length;
 
-  useEffect(() => {
+  if (data !== items) {
     setItems(data);
-  }, [data]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [columnFilters, sorting]);
-
-  const alertStatuses = useMemo(
-    () => [
-      { title: "All", value: "all" },
-      { title: "Active", value: "true" },
-      { title: "Disabled", value: "false" },
-    ],
-    [],
-  );
+  }
 
   const updateLocalItem = useCallback(
     (updatedItem: IBookmark) => {
@@ -183,8 +175,18 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onSortingChange: (updater) => {
+      setSorting((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
+    onColumnFiltersChange: (updater) => {
+      setColumnFilters((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
     state: {
       sorting,
       columnFilters,
@@ -202,7 +204,6 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
   const clearFilters = () => {
     setColumnFilters([]);
     table.getColumn("name")?.setFilterValue("");
-    // table.getColumn("jobTitle")?.setFilterValue(undefined);
     table.getColumn("is_alert_on")?.setFilterValue(undefined);
   };
 

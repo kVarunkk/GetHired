@@ -20,7 +20,8 @@ export default function CompanyJobPostingCard({ job }: { job: IJobPosting }) {
           </Link>
           <div className="items-center gap-1 flex sm:hidden sm:group-hover:flex">
             <CreateJobPostingDialog
-              company_id={job.company_id}
+              key={`${job.id}-${job.updated_at ?? 0}`}
+              companyId={job.company_id}
               existingValues={{
                 id: job.id,
                 title: job.title,

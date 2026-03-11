@@ -81,7 +81,8 @@ export default async function JobPostPage({
           <div className="flex flex-wrap items-center gap-2">
             <JobStatusSwitch job={job} />
             <CreateJobPostingDialog
-              company_id={job.company_id}
+              key={existingValues?.id || "new"}
+              companyId={job.company_id}
               existingValues={existingValues}
             />
             <DeleteJobPosting job_posting_id={job.id} is_job_posting_page />

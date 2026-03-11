@@ -17,9 +17,7 @@ export default async function ProfilesPage({
     data: { user },
   } = await supabase.auth.getUser();
   const searchParameters = await searchParams;
-  const isAISearch = searchParameters
-    ? searchParameters["sortBy"] === "relevance"
-    : false;
+  const isAISearch = searchParameters?.sortBy === "relevance";
 
   const { data: companyDataData }: { data: ICompanyInfo | null } =
     await supabase
@@ -147,9 +145,7 @@ export default async function ProfilesPage({
       initialProfiles = result.data || [];
       totalCount = result.count || 0;
     }
-  } catch {
-    // console.error("Failed to fetch profiles:", error);
-  }
+  } catch {}
 
   return (
     <div className="flex items-start px-4 h-full gap-5">
@@ -180,13 +176,6 @@ export default async function ProfilesPage({
               isAppliedJobsTabActive={false}
               totalCount={totalCount}
             />
-            {/* <ProfilesList
-              user={user}
-              companyData={companyData}
-              initialProfiles={initialProfiles}
-              onboardingComplete={onboarding_complete}
-              totalCount={totalCount}
-            /> */}
           </TabsContent>
           {user && !isAISearch && (
             <TabsContent value="saved">
@@ -202,13 +191,6 @@ export default async function ProfilesPage({
                 isAppliedJobsTabActive={false}
                 totalCount={totalCount}
               />
-              {/* <ProfilesList
-                user={user}
-                companyData={companyData}
-                initialProfiles={initialProfiles}
-                onboardingComplete={onboarding_complete}
-                totalCount={totalCount}
-              /> */}
             </TabsContent>
           )}
         </ClientTabs>

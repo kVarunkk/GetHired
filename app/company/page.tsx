@@ -55,6 +55,7 @@ export default async function CompanyPage() {
           questions,
           status,
           job_id,
+          updated_at,
           applications(id),
           company_info(name, website)
         `,
@@ -98,7 +99,7 @@ export default async function CompanyPage() {
           <h2 className="text-3xl font-medium text-start">
             How are you doing today, {companyInfo.name}?
           </h2>
-          <CreateJobPostingDialog company_id={companyInfo.id} />
+          <CreateJobPostingDialog companyId={companyInfo.id} />
         </div>
 
         {/* --- Metrics Section --- */}

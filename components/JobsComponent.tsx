@@ -56,7 +56,6 @@ export default function JobsComponent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const startProgress = useProgress();
-
   const isSuitable = searchParams.get("sortBy") === "relevance";
   const isSimilarSearch = !!(isSuitable && searchParams.get("jobId"));
   const isGenerated = data?.profile?.is_relevant_jobs_generated ?? false;
@@ -251,7 +250,6 @@ export default function JobsComponent({
             !isSuitable && (
               <FindSuitableJobs
                 user={user}
-                // setPage={setPage}
                 currentPage={current_page}
                 companyId={companyId}
               />
@@ -263,7 +261,6 @@ export default function JobsComponent({
             isAllJobsTab && (
               <FindSuitableJobs
                 user={user}
-                // setPage={setPage}
                 currentPage={current_page}
                 companyId={companyId}
               />
@@ -309,7 +306,6 @@ export default function JobsComponent({
             <SortingComponent
               isCompanyUser={isCompanyUser}
               currentPage={current_page}
-              // setPage={setPage}
             />
           )}
 
@@ -329,7 +325,6 @@ export default function JobsComponent({
           )}
 
           <FilterComponentSheet
-            // isCompanyUser={isCompanyUser}
             currentPage={current_page}
             onboardingComplete={isOnboardingComplete}
           />

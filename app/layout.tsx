@@ -9,6 +9,7 @@ import { Suspense } from "react";
 import ThemeAwareToaster from "@/components/ToasterComponent";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import LayoutWrapper from "@/components/LayoutWrapper";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: {
@@ -45,6 +46,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -59,7 +65,7 @@ export default async function RootLayout({
           >
             <TooltipProvider>
               <ProgressBar className="fixed h-1 rounded-r-md shadow-lg shadow-sky-500/20 bg-primary top-0" />
-              <LayoutWrapper>{children}</LayoutWrapper>
+              <LayoutWrapper user={user}>{children}</LayoutWrapper>
               <ThemeAwareToaster />
               <Suspense>
                 <MetadataUpdateRefresh />

@@ -22,7 +22,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useRouter } from "next/navigation";
 import { Laptop, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "./ui/badge";
 import SocialsComponent from "./SocialsComponent";
@@ -44,23 +43,15 @@ export default function ProfileDropdown({
   isVertical?: boolean;
 }) {
   const { theme, setTheme } = useTheme();
-  const [isCompanyUser, setIsCompanyUser] = useState(false);
-
+  const isCompanyUser = user?.app_metadata?.type === "company";
   const router = useRouter();
+
   const logout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.replace("/auth/login");
     router.refresh();
   };
-
-  useEffect(() => {
-    (async () => {
-      if (user && user.app_metadata.type) {
-        setIsCompanyUser(user.app_metadata.type === "company");
-      }
-    })();
-  }, [user]);
 
   return (
     <DropdownMenu>

@@ -23,10 +23,6 @@ export default function InputFilter({
   const [localValue, setLocalValue] = useState(value);
 
   useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  useEffect(() => {
     const timeoutId = setTimeout(() => {
       onChange(name, localValue);
     }, 400);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -19,7 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-// import Link from "next/link";
 import { format } from "date-fns";
 import { IResumeReview } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
@@ -33,12 +32,13 @@ import {
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
 import DynamicActions from "./DynamicTableActions";
 import { Input } from "./ui/input";
-// import { formatCurrency } from "@/lib/utils";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 
 interface ResumeReviewsTableProps {
   data: IResumeReview[];
 }
+
+const reviewStatuses = ["All Statuses", "completed", "failed", "draft"];
 
 export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -50,13 +50,9 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
 
   const pageSize = 10;
 
-  useEffect(() => {
-    setPage(1);
-  }, [columnFilters, sorting]);
-
-  useEffect(() => {
+  if (data !== items) {
     setItems(data);
-  }, [data]);
+  }
 
   const updateLocalItem = (updatedItem: IResumeReview) => {
     setItems((prev) =>
@@ -67,11 +63,6 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
   const removeLocalItem = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
-
-  const reviewStatuses = useMemo(() => {
-    const statuses = ["All Statuses", "completed", "failed", "draft"];
-    return [...new Set(statuses)];
-  }, []);
 
   const columns: ColumnDef<IResumeReview>[] = useMemo(
     () => [
@@ -153,8 +144,18 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onSortingChange: (updater) => {
+      setSorting((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
+    onColumnFiltersChange: (updater) => {
+      setColumnFilters((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
     state: {
       sorting,
       columnFilters,

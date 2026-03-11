@@ -49,7 +49,6 @@ export default function JobApplicationForm({
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
 
-  // Resume Selection State
   const [existingResumes, setExistingResumes] = useState<IResume[]>([]);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [newFile, setNewFile] = useState<File | null>(null);
@@ -79,7 +78,6 @@ export default function JobApplicationForm({
 
         setExistingResumes(data || []);
 
-        // Auto-select primary resume
         const primary = data?.find((r) => r.is_primary);
         if (primary) {
           setSelectedResumeId(primary.id);
@@ -94,7 +92,6 @@ export default function JobApplicationForm({
     fetchResumes();
   }, [user.id]);
 
-  // 2. Final Submission Logic
   const onSubmit = async (values: Record<string, string>) => {
     setLoading(true);
     const supabase = createClient();
@@ -102,48 +99,19 @@ export default function JobApplicationForm({
     try {
       let finalResumeId = "";
 
-      // CASE A: User uploaded a NEW file during the application
       if (newFile) {
-        // const tempPath = `applications/temp/${user.id}/${Date.now()}-${newFile.name}`;
-        // const { data: uploadData, error: uploadError } = await supabase.storage
-        //   .from("resumes")
-        //   .upload(tempPath, newFile);
-
-        // if (uploadError) throw new Error("Failed to upload new resume.");
-        // finalResumePath = uploadData.path;
         const formData = new FormData();
         formData.append("userId", user.id);
         formData.append("file", newFile);
         const result = await createResumeAction(formData);
         if (result.error) throw new Error(result.error);
         finalResumeId = result.resumeId;
-      }
-      // CASE B: User selected an EXISTING resume
-      else if (selectedResumeId) {
-        // const selected = existingResumes.find((r) => r.id === selectedResumeId);
-        // if (!selected) throw new Error("Resume selection invalid.");
+      } else if (selectedResumeId) {
         finalResumeId = selectedResumeId;
       } else {
         throw new Error("Please select or upload a resume.");
       }
 
-      // --- APPLICATION BUCKET COPY LOGIC ---
-      //   const { data: signedUrlData } = await supabase.storage
-      //     .from("resumes")
-      //     .createSignedUrl(finalResumePath, 60);
-
-      //   if (!signedUrlData?.signedUrl)
-      //     throw new Error("Could not access resume for submission.");
-
-      //   const resumeRes = await fetch(signedUrlData.signedUrl);
-      //   const resumeBlob = await resumeRes.blob();
-
-      //   const companyPath = `companies/${jobPost.job_postings![0].company_id}/resumes/${user.id}/${uuidv4()}.pdf`;
-      //   const { data: companyUpload } = await supabase.storage
-      //     .from("applications")
-      //     .upload(companyPath, resumeBlob);
-
-      // --- SAVE APPLICATION RECORD ---
       const { error } = await supabase.from("applications").insert({
         job_post_id: jobPost.job_postings![0].id,
         all_jobs_id: jobPost.id,

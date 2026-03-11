@@ -59,11 +59,8 @@ export default function OriginalResumeViewer({
       setDebugError(null);
 
       try {
-        try {
-          new URL(url);
-        } catch {
+        if (!URL.canParse(url))
           throw new Error("Invalid source URL provided to viewer.");
-        }
 
         const response = await fetch(url);
         if (!response.ok) {
@@ -97,15 +94,15 @@ export default function OriginalResumeViewer({
 
   // Handle Container Resizing for Responsive PDF
   useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        // Subtract padding to ensure the canvas fits perfectly
-        setContainerWidth(containerRef.current.clientWidth - 58);
-      }
-    };
-    updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      setContainerWidth(entry.contentRect.width - 58);
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
   }, []);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {

@@ -74,12 +74,6 @@ export const OnboardingForm: React.FC = () => {
     Partial<Record<keyof IFormData, string>>
   >({});
   const [user, setUser] = useState<User | null>(null);
-  // const [initialPreferencesState, setInitialPreferencesState] = useState<{
-  //   id: string;
-  //   is_promotion_active: boolean;
-  //   is_job_digest_active: boolean;
-  // } | null>(null);
-
   const {
     data: countriesData,
     error: countriesError,
@@ -87,7 +81,7 @@ export const OnboardingForm: React.FC = () => {
   } = useSWR(`/api/locations?filterComponent=true`, fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
   });
 
   const countries: { location: string }[] = useMemo(
@@ -150,7 +144,6 @@ export const OnboardingForm: React.FC = () => {
   const totalSteps = steps.length;
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
-  // Fetch current user on component mount and try to load existing data
   useEffect(() => {
     const fetchUserAndData = async () => {
       setStepLoading(true);
@@ -168,11 +161,6 @@ export const OnboardingForm: React.FC = () => {
           .single();
 
         if (data) {
-          // setInitialPreferencesState(() => ({
-          //   id: data.user_id,
-          //   is_promotion_active: data.is_promotion_active,
-          //   is_job_digest_active: data.is_job_digest_active,
-          // }));
           const primaryResume = data?.resumes?.find(
             (_: IResume) => _.is_primary,
           );

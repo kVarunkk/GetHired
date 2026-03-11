@@ -27,10 +27,6 @@ export default function JdSection({
 }: JdSectionProps) {
   const [localJd, setLocalJd] = useState(jdText);
 
-  //   useEffect(() => {
-  //     setLocalJd(jdText);
-  //   }, [jdText]);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       if (localJd !== jdText) {

@@ -12,14 +12,8 @@ export default async function JobsPage({
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
   const searchParameters = await searchParams;
-
-  const isAISearch = searchParameters
-    ? searchParameters["sortBy"] === "relevance"
-    : false;
-  const activeTab =
-    searchParameters && searchParameters["tab"]
-      ? searchParameters["tab"]
-      : "all";
+  const isAISearch = searchParameters?.sortBy === "relevance";
+  const activeTab = searchParameters?.tab || "all";
   const supabase = await createClient();
   const {
     data: { user },
@@ -150,9 +144,7 @@ export default async function JobsPage({
       initialCompanies = result.data || [];
       totalCount = result.count || 0;
     }
-  } catch {
-    // console.error("Failed to fetch jobs:", error);
-  }
+  } catch {}
 
   return (
     // <div>

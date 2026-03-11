@@ -73,7 +73,6 @@ export default async function ProfilePage({
 
     const applicantProfile = applicantProfileData as IFormData;
 
-    // Generate a signed URL for the resume from the private bucket
     const { data: signedUrlData } = await supabase.storage
       .from("resumes")
       .createSignedUrl(applicantProfile.resumes?.[0]?.resume_path || "", 3600);
@@ -127,11 +126,8 @@ export default async function ProfilePage({
           </div>
           <div className="flex items-center gap-5">
             <SelectProfile
-              // userApplications={applicantProfile.applications}
               jobPostings={companyData.job_postings}
               companyId={companyData.id}
-              // applicantUserId={applicantProfile.user_id}
-              // resumeUrl={applicantProfile.resume_url}
               applicantProfile={applicantProfile}
             />
           </div>

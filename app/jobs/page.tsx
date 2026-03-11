@@ -117,16 +117,10 @@ export default async function JobsPage({
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
   const searchParameters = await searchParams;
-  const applicationStatusFilter = searchParameters
-    ? searchParameters["applicationStatus"]
-    : false;
-  const isAISearch = searchParameters
-    ? searchParameters["sortBy"] === "relevance"
-    : false;
-  const activeTab =
-    searchParameters && searchParameters["tab"]
-      ? searchParameters["tab"]
-      : "all";
+  const applicationStatusFilter = searchParameters?.applicationStatus ?? false;
+  const isAISearch = searchParameters?.sortBy === "relevance";
+  const activeTab = searchParameters?.tab || "all";
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -199,7 +193,6 @@ export default async function JobsPage({
   } catch {}
 
   return (
-    // <div>
     <div className="flex items-start px-4  gap-5">
       <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[100vh] overflow-y-auto">
         <FilterComponent
@@ -267,6 +260,5 @@ export default async function JobsPage({
         </ClientTabs>
       </div>
     </div>
-    // </div>
   );
 }

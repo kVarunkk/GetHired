@@ -1,48 +1,27 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { cn, getNavbarVairantByPath, getNavItemsByPath } from "../utils/utils";
 import { usePathname } from "next/navigation";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { User } from "@supabase/supabase-js";
 import NavbarComponent from "./Navbar";
 import ScrollToTopButton from "./ScrollToTopButton";
-import { createClient } from "@/lib/supabase/client";
 
 interface LayoutWrapperProps {
+  user: User | null;
   children: React.ReactNode;
-  // initialUser: User | null;
 }
 
 const noScrollToTop = ["/resume-review/"];
 
-export default function LayoutWrapper({
-  children,
-  // initialUser,
-}: LayoutWrapperProps) {
-  const [initialUser, setInitialUser] = useState<User | null>(null);
-  useEffect(() => {
-    (async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setInitialUser(user);
-    })();
-  }, []);
-
+export default function LayoutWrapper({ user, children }: LayoutWrapperProps) {
   const pathname = usePathname();
-
   const variant = useMemo(() => {
     return getNavbarVairantByPath(pathname || "/");
   }, [pathname]);
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const isCompanyUser = useMemo(() => {
-    if (initialUser) {
-      return initialUser.app_metadata.type === "company";
-    }
-    return false;
-  }, [initialUser]);
+  const isCompanyUser = user?.app_metadata?.type === "company";
 
   const navItems = useMemo(() => {
     return getNavItemsByPath(pathname || "/", isCompanyUser);
@@ -58,7 +37,7 @@ export default function LayoutWrapper({
       <NavbarComponent
         navItems={navItems}
         variant={variant}
-        initialUser={initialUser}
+        initialUser={user}
       />
 
       <div className="flex-1 w-full min-w-0 ">{children}</div>

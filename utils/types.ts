@@ -392,3 +392,18 @@ export interface FilterConfig {
   hidden?: boolean;
   isSingleSelect?: boolean;
 }
+
+export interface BaseFavorite {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+}
+
+export interface IUserFavorites extends BaseFavorite {
+  job_id: string;
+}
+
+export interface IUserFavoritesCompanyInfo extends BaseFavorite {
+  company_id: string;
+}

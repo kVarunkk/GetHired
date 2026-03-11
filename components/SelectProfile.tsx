@@ -2,7 +2,7 @@
 
 import { IFormData } from "@/utils/types";
 import MultiKeywordSelect, { GenericFormData } from "./MultiKeywordSelect";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -18,18 +18,14 @@ export default function SelectProfile({
   companyId: string;
 }) {
   const router = useRouter();
-  const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
+  const appliedJobTitles = applicantProfile?.applications
+    ?.map((app) => app.job_postings?.title)
+    .filter((title): title is string => typeof title === "string");
+  const [selectedProfiles, setSelectedProfiles] = useState<string[]>(
+    appliedJobTitles || [],
+  );
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (applicantProfile && applicantProfile.applications) {
-      const appliedJobTitles = applicantProfile.applications
-        .map((app) => app.job_postings?.title)
-        .filter((title): title is string => typeof title === "string");
-      setSelectedProfiles(appliedJobTitles);
-    }
-  }, [applicantProfile]);
 
   const headerProp = useMemo(
     () => ({

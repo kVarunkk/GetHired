@@ -52,7 +52,6 @@ const formSchema = z.object({
       message: "Tagline is too long(max. 70 characters).",
     })
     .optional(),
-  // logo_file is not validated here; logic handles its optionality
   logo_file: z.any().optional(),
 });
 
@@ -64,11 +63,8 @@ const LOGO_FOLDER = "company_logos";
 
 export default function CompanyOnboardingForm({ user }: { user: User | null }) {
   const [loading, setLoading] = useState(false);
-  // Tracks the *existing* logo URL from the database
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null);
-  // Tracks the *new* file selected by the user for upload
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  // Tracks if the user clicked delete on an *existing* logo
   const [deletePending, setDeletePending] = useState(false);
   const [companyId, setCompanyId] = useState();
 
@@ -88,7 +84,6 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
     },
   });
 
-  // Preview URL for the newly selected file
   const filePreviewUrl = useMemo(() => {
     if (logoFile) {
       return URL.createObjectURL(logoFile);
@@ -159,17 +154,14 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
     if (storageError) throw storageError;
   };
 
-  // --- Client-Side Delete (Defers action until submit) ---
   const handleDelete = () => {
-    setLogoFile(null); // Clear new file selection
+    setLogoFile(null);
     if (existingLogoUrl) {
-      setExistingLogoUrl(null); // Clear displayed existing logo
-      setDeletePending(true); // Mark existing logo for deletion on submit
+      setExistingLogoUrl(null);
+      setDeletePending(true);
     }
-    // toast.success("Logo marked for deletion on save.");
   };
 
-  // --- Form Submission ---
   const onSubmit = async (values: FormValues) => {
     if (!user) {
       toast.error("User not authenticated.");
@@ -180,18 +172,15 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
     let finalLogoUrl = existingLogoUrl;
 
     try {
-      // 1. Check for Pending Deletion (if delete button was clicked on existing logo)
       if (deletePending && existingLogoUrl) {
         await handleDeleteStorage();
         finalLogoUrl = null;
       }
 
-      // 2. Handle New File Upload
       if (logoFile) {
         finalLogoUrl = await handleUploadStorage(logoFile);
       }
 
-      // 3. Update embedding
       const res = await fetch("/api/update-embedding/gemini/company", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -212,12 +201,11 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
         throw new Error(errorData);
       }
 
-      // 4. Save company info (with the final logo URL status)
       const { error } = await supabase.from("company_info").upsert(
         {
           user_id: user.id,
           ...values,
-          logo_url: finalLogoUrl, // Use the final URL status (new URL or null)
+          logo_url: finalLogoUrl,
           filled: true,
         },
         { onConflict: "user_id" },
@@ -242,7 +230,6 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
       toast.success("Information Saved Successfully!");
       router.push("/company");
     } catch {
-      // console.error("API call failed:", error);
       toast.error(
         "An error occurred while saving information. Please try again.",
       );
@@ -260,7 +247,6 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
     "1000+",
   ];
 
-  // Determine which URL to show in the preview
   const currentLogoDisplayUrl = filePreviewUrl || existingLogoUrl;
 
   return (
@@ -281,7 +267,6 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
           onSubmit={form.handleSubmit(onSubmit)}
           className="w-full space-y-6 max-w-2xl"
         >
-          {/* Company Name */}
           <FormField
             control={form.control}
             name="name"
@@ -302,11 +287,9 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
             )}
           />
 
-          {/* Logo Upload Field */}
           <FormItem>
             <FormLabel>Company Logo</FormLabel>
             <div className="flex items-center space-x-4">
-              {/* Logo Preview */}
               {currentLogoDisplayUrl && (
                 <div className="relative h-20 w-20 flex-shrink-0 rounded-lg border p-1">
                   <img
@@ -314,7 +297,6 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
                     alt="Company Logo Preview"
                     width={80}
                     height={80}
-                    // objectFit="contain"
                     className="rounded-lg"
                   />
                   <Button
@@ -330,7 +312,6 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
                 </div>
               )}
 
-              {/* File Input - Hidden if a file is already selected/exists and not marked for delete */}
               <div className="flex-grow">
                 <Input
                   type="file"
@@ -339,13 +320,11 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
                     const file = e.target.files?.[0] || null;
                     if (file) {
                       setLogoFile(file);
-                      setDeletePending(false); // Cancel any pending delete
+                      setDeletePending(false);
                     }
                   }}
                   className="bg-input h-10 p-2"
                   disabled={loading}
-                  // Hide the input if we already have a logo and no new file is selected
-                  // This is a common pattern to ensure the user clicks delete before re-uploading
                   style={{
                     display:
                       currentLogoDisplayUrl && !logoFile ? "none" : "block",
@@ -365,7 +344,6 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
             <FormMessage />
           </FormItem>
 
-          {/* Tagline */}
           <FormField
             control={form.control}
             name="tag_line"
@@ -384,7 +362,6 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
             )}
           />
 
-          {/* Description (Required) */}
           <FormField
             control={form.control}
             name="description"
@@ -405,7 +382,6 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
             )}
           />
 
-          {/* Website and Industry Grid (Required) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
@@ -456,7 +432,6 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
             />
           </div>
 
-          {/* Headquarters and Size Grid (Required) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
@@ -505,7 +480,6 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
             />
           </div>
 
-          {/* Submit Button */}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? (
               <>

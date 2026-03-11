@@ -6,15 +6,13 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import Link from "next/link";
-// import WaitlistForm from "./WaitlistForm";
-// import { TWaitlistType } from "@/lib/types";
 
 const JOB_SEEKER_DARK = "/hero/dark-ai-resume-checker.png";
 const JOB_SEEKER_LIGHT = "/hero/light-ai-resume-checker.png";
 
 const maskStyle = {
   maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
-  WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)", // For older browsers
+  WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
 };
 
 export default function HeroAiResumeChecker() {
@@ -35,7 +33,6 @@ export default function HeroAiResumeChecker() {
     <div className="flex flex-col gap-5 w-full items-center text-center px-4 py-3 lg:px-20 xl:px-40 2xl:px-80">
       <div className="space-y-4 max-w-3xl">
         <div className="space-y-4 max-w-3xl">
-          {/* Badge: Using brandSoft for the background and brand for text/border */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brandSoft border border-brand/20 text-brand dark:text-primary text-[10px] font-bold uppercase tracking-widest mb-2 animate-in fade-in slide-in-from-top-2 duration-700">
             <Sparkles size={12} />
             Advanced AI Analysis
@@ -63,12 +60,12 @@ export default function HeroAiResumeChecker() {
       {mounted && (
         <Image
           className="rounded-xl border border-border drop-shadow-xl mt-8"
-          src={getImagePath()} // Using the new local path function
+          src={getImagePath()}
           style={maskStyle}
           height={2000}
           width={2000}
           alt="Snapshot of the GetHired's CV Reviewer"
-          priority // Set priority to load this critical image fast
+          priority
         />
       )}
     </div>

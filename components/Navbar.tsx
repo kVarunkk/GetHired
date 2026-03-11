@@ -43,32 +43,23 @@ export default function NavbarComponent({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [isMounted, setIsMounted] = useState(false);
-  const [navbarItems, setNavbarItems] = useState<INavItemWithActive[]>([]);
   const pathname = usePathname();
+  const navbarItems = navItems.map((each) => {
+    let isActive = false;
 
-  useEffect(() => {
-    if (navItems.length > 0 && pathname) {
-      setNavbarItems(() => {
-        return navItems.map((each) => {
-          let isActive = false;
-
-          if (each.type === "equals") {
-            isActive = pathname === each.href;
-          } else if (each.type === "startswith") {
-            isActive =
-              pathname === each.href || pathname.startsWith(each.href + "/");
-          } else {
-            isActive = pathname.includes(each.href);
-          }
-
-          return {
-            ...each,
-            active: isActive,
-          };
-        });
-      });
+    if (each.type === "equals") {
+      isActive = pathname === each.href;
+    } else if (each.type === "startswith") {
+      isActive = pathname === each.href || pathname.startsWith(each.href + "/");
+    } else {
+      isActive = pathname.includes(each.href);
     }
-  }, [navItems, pathname]);
+
+    return {
+      ...each,
+      active: isActive,
+    };
+  });
 
   useEffect(() => {
     setIsMounted(true);
@@ -85,7 +76,7 @@ export default function NavbarComponent({
     };
   }, []);
 
-  if (!isMounted) return "";
+  if (!isMounted) return null;
 
   if (variant === "horizontal" || !isDesktop) {
     return (
@@ -181,7 +172,7 @@ export default function NavbarComponent({
                       key={item.id}
                       href={item.href}
                       className={cn(
-                        "hover:bg-secondary transition-all rounded-lg  gap-2 items-center  p-2 flex w-full",
+                        "hover:bg-secondary transition-all rounded-lg  gap-2 items-center  p-2 flex w-full truncate",
                         item.active && "bg-secondary",
                         isMenuOpen ? "justify-start" : "justify-center",
                       )}
@@ -204,7 +195,7 @@ export default function NavbarComponent({
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className={cn(
-                  "hidden md:flex p-2  items-center w-full gap-2 hover:bg-secondary transition-all rounded-lg",
+                  "hidden md:flex p-2  items-center w-full gap-2 hover:bg-secondary transition-all rounded-lg truncate",
                   isMenuOpen ? "justify-start" : "justify-center",
                 )}
               >
@@ -240,7 +231,7 @@ export default function NavbarComponent({
                 <TooltipTrigger asChild>
                   <Link
                     className={cn(
-                      "hover:text-primary p-2 flex items-center gap-2 transition-all rounded-lg hover:bg-secondary w-full",
+                      "hover:text-primary p-2 flex items-center gap-2 transition-all rounded-lg hover:bg-secondary w-full truncate",
                       isMenuOpen ? "justify-start" : "justify-center",
                     )}
                     href={"https://discord.gg/6xvKBqW5eW"}
