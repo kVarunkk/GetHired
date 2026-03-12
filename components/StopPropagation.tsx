@@ -1,7 +1,7 @@
 "use client";
 
 const preventDefaultPropagtion = (
-  e: React.MouseEvent<HTMLElement, MouseEvent>
+  e: React.MouseEvent<HTMLElement, MouseEvent>,
 ) => {
   e.nativeEvent.stopImmediatePropagation();
   e.nativeEvent.preventDefault();
@@ -19,6 +19,12 @@ export default function PropagationStopper({
   return (
     <div
       {...props}
+      onPointerDown={(e) => {
+        preventDefaultPropagtion(e);
+      }}
+      onMouseDown={(e) => {
+        preventDefaultPropagtion(e);
+      }}
       onClick={(e) => {
         preventDefaultPropagtion(e);
         if (onClick) onClick(e);

@@ -132,7 +132,7 @@ export default function FilterComponent({
         }
       } else {
         if (value && value !== "") {
-          params.set(key, value as string);
+          params.set(key, value.toString());
         }
       }
     }
@@ -161,7 +161,7 @@ export default function FilterComponent({
   };
 
   const inputFilterOnChange = useCallback(
-    (name: string, value: string | string[] | undefined) =>
+    (name: string, value: string | string[] | number | undefined) =>
       handleChange({
         target: { name, value },
       } as ChangeEvent<HTMLInputElement>),

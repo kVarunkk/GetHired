@@ -37,6 +37,22 @@ interface PaymentsTableProps {
   data: IPayment[];
 }
 
+const paymentStatuses = [
+  "All Statuses",
+  "complete",
+  "failed",
+  "pending",
+  "cancelled",
+];
+
+const pricePlans = [
+  "All Plans",
+  "Trial Pack",
+  "Standard Bundle",
+  "Pro Bundle",
+  "Power User",
+];
+
 export default function PaymentsTable({ data }: PaymentsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<
@@ -53,28 +69,6 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
       credits: item.credit_amount,
     }));
   }, [data]);
-
-  const paymentStatuses = useMemo(() => {
-    const statuses = [
-      "All Statuses",
-      "complete",
-      "failed",
-      "pending",
-      "cancelled",
-    ];
-    return [...new Set(statuses)];
-  }, []);
-
-  const pricePlans = useMemo(() => {
-    const plans = [
-      "All Plans",
-      "Trial Pack",
-      "Standard Bundle",
-      "Pro Bundle",
-      "Power User",
-    ];
-    return [...new Set(plans)];
-  }, []);
 
   const columns: ColumnDef<
     IPayment & { amount: string; plan: string; credits: number }

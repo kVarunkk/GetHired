@@ -44,10 +44,6 @@ export default function ResumesTable({ data }: ResumesTableProps) {
 
   const pageSize = 10;
 
-  if (data !== items) {
-    setItems(data);
-  }
-
   const updateLocalItem = (updatedItem: IResume) => {
     setItems((prev) =>
       prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),

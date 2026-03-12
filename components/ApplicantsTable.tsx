@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -37,6 +37,15 @@ interface ApplicantsTableProps {
   data: IApplication[];
 }
 
+const applicationStatuses = [
+  "All Statuses",
+  "submitted",
+  "reviewed",
+  "selected",
+  "stand_by",
+  "rejected",
+];
+
 export default function ApplicantsTable({ data }: ApplicantsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<
@@ -44,10 +53,6 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
   >([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
-
-  useEffect(() => {
-    setPage(1);
-  }, [columnFilters, sorting]);
 
   const jobTitles = useMemo(() => {
     const titles = data
@@ -66,18 +71,6 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
       jobTitle: item.job_postings?.title || "",
     }));
   }, [data]);
-
-  const applicationStatuses = useMemo(() => {
-    const statuses = [
-      "All Statuses",
-      "submitted",
-      "reviewed",
-      "selected",
-      "stand_by",
-      "rejected",
-    ];
-    return [...new Set(statuses)];
-  }, []);
 
   const columns: ColumnDef<
     IApplication & { applicantName: string; jobTitle: string }
@@ -179,8 +172,18 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onSortingChange: (updater) => {
+      setSorting((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
+    onColumnFiltersChange: (updater) => {
+      setColumnFilters((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
     state: {
       sorting,
       columnFilters,

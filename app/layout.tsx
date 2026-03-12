@@ -64,7 +64,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <TooltipProvider>
-              <ProgressBar className="fixed h-1 rounded-r-md shadow-lg shadow-sky-500/20 bg-primary top-0" />
+              <ProgressBar className="fixed h-1 rounded-r-md shadow-lg shadow-sky-500/20 bg-primary top-0 z-[100]" />
               <LayoutWrapper user={user}>{children}</LayoutWrapper>
               <ThemeAwareToaster />
               <Suspense>

@@ -6,6 +6,10 @@ import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import { Metadata } from "next";
 import JobsComponent from "@/components/JobsComponent";
+import {
+  jobFilterSchema,
+  serializeFiltersToURL,
+} from "@/helpers/jobs/filterSchema";
 
 export async function generateMetadata({
   searchParams,
@@ -163,21 +167,21 @@ export default async function JobsPage({
 
   let initialJobs: IJob[] = [];
   let totalCount: number = 0;
-  const params = new URLSearchParams(
-    searchParameters as Record<string, string>,
-  );
-  const dynamicKey = params.toString();
+
+  const validated = jobFilterSchema.safeParse(searchParameters);
+  const cleanParams = validated.success ? validated.data : {};
+  const dynamicKey = serializeFiltersToURL(cleanParams);
+  const params = new URLSearchParams(dynamicKey);
+  params.set("tab", activeTab);
+  params.set("limit", "20");
+  const isRelevantSorting = params.get("sortBy") === "relevance";
+  const isSimilarSearch = isRelevantSorting && params.get("jobId");
+
+  if (isSimilarSearch) {
+    params.set("createdAfter", "30");
+  }
 
   try {
-    params.set("tab", activeTab);
-    params.set("limit", "20");
-    const isRelevantSorting = params.get("sortBy") === "relevance";
-    const isSimilarSearch = isRelevantSorting && params.get("jobId");
-
-    if (isSimilarSearch) {
-      params.set("createdAfter", "30");
-    }
-
     const jobFetchPromise = fetch(`${url}/api/jobs?${params.toString()}`, {
       cache: isRelevantSorting ? "no-cache" : "force-cache",
       next: { revalidate: 3600, tags: ["jobs-feed"] },

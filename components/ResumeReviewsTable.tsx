@@ -50,10 +50,6 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
 
   const pageSize = 10;
 
-  if (data !== items) {
-    setItems(data);
-  }
-
   const updateLocalItem = (updatedItem: IResumeReview) => {
     setItems((prev) =>
       prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),

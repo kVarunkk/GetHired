@@ -54,10 +54,6 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
   const pageSize = 10;
   const alertCount = data.filter((each) => each.is_alert_on).length;
 
-  if (data !== items) {
-    setItems(data);
-  }
-
   const updateLocalItem = useCallback(
     (updatedItem: IBookmark) => {
       setItems((prev) =>
