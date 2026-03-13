@@ -96,7 +96,6 @@ export default memo(function MultiKeywordSelectInput({
           )}
         >
           <Input
-            id={String(name)}
             name={String(name)}
             placeholder={placeholder ?? "Type to add or select from dropdown"}
             value={input}

@@ -75,7 +75,7 @@ export const jobFilterSchema = z.object({
     ),
 
   sortBy: z
-    .enum(["created_at", "company_name", "salary_min"])
+    .enum(["created_at", "company_name", "salary_min", "relevance"])
     .optional()
     .describe("List of fields to sort by."),
 
@@ -85,6 +85,8 @@ export const jobFilterSchema = z.object({
     .enum(["saved", "applied", "all"])
     .optional()
     .describe("Tab to filter by."),
+
+  jobId: z.string().optional().describe("Job ID for similar job search."),
 });
 
 export type TJobFilters = z.infer<typeof jobFilterSchema>;

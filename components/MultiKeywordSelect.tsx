@@ -117,7 +117,7 @@ export default function MultiKeywordSelect({
     <div className={cn("flex flex-col gap-2 ", className)}>
       {isDesktop ? (
         <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger id={name as string} asChild>
+          <PopoverTrigger asChild>
             {name === "profile" ? (
               <Button
                 role="combobox"
@@ -165,7 +165,7 @@ export default function MultiKeywordSelect({
         </Popover>
       ) : (
         <Drawer open={open} onOpenChange={setOpen}>
-          <DrawerTrigger id={name as string} asChild>
+          <DrawerTrigger asChild>
             {name === "profile" ? (
               <Button
                 role="combobox"
