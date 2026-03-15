@@ -63,7 +63,6 @@ export default function JobApplicationForm({
     resolver: zodResolver(formSchema),
   });
 
-  // 1. Fetch User Resumes & Pre-select Primary
   useEffect(() => {
     const fetchResumes = async () => {
       const supabase = createClient();
@@ -101,7 +100,6 @@ export default function JobApplicationForm({
 
       if (newFile) {
         const formData = new FormData();
-        formData.append("userId", user.id);
         formData.append("file", newFile);
         const result = await createResumeAction(formData);
         if (result.error) throw new Error(result.error);

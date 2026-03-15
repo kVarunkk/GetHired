@@ -25,6 +25,8 @@ export default async function ResumeReviewPage() {
       throw reviewsError;
     }
 
+    const tableKey = `${reviews?.length || 0}-${reviews?.[0]?.id || "empty"}`;
+
     return (
       <div className="flex flex-col w-full gap-8 p-4 mb-20">
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -32,6 +34,7 @@ export default async function ResumeReviewPage() {
           <CreateResumeReviewDialog userId={user.id} />
         </div>
         <ResumeReviewsTable
+          key={tableKey}
           data={(reviews as unknown as IResumeReview[]) || []}
         />
       </div>

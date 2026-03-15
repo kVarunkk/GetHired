@@ -9,13 +9,10 @@ import ResumeReviewClient from "@/components/ResumeReviewClient";
  */
 export default async function ResumeReviewPage({
   params,
-  //   searchParams,
 }: {
   params: Promise<{ reviewId: string }>;
-  //   searchParams: Promise<{ job_id?: string }>;
 }) {
   const { reviewId } = await params;
-  //   const { job_id } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -24,7 +21,6 @@ export default async function ResumeReviewPage({
 
   if (!user) return <ErrorComponent />;
 
-  // 1. Fetch the existing review record with its linked resume (if any)
   const { data: review, error: reviewError } = await supabase
     .from("resume_reviews")
     .select(
@@ -45,7 +41,6 @@ export default async function ResumeReviewPage({
   if (reviewError || !review) return <ErrorComponent />;
 
   // 2. Hydrate Job Description
-  // Priority: 1. Existing saved JD in review, 2. JD from job_id in URL
   let initialJd = review.target_jd || "";
   if (review.job_id && !initialJd) {
     const { data: jobData } = await supabase
@@ -58,7 +53,6 @@ export default async function ResumeReviewPage({
   }
 
   // 3. Fetch user's library of resumes
-  // This allows the user to switch or link a resume if one isn't already assigned.
   const { data: userResumes } = await supabase
     .from("resumes")
     .select("id, name, created_at, is_primary")
@@ -67,7 +61,6 @@ export default async function ResumeReviewPage({
 
   return (
     <ResumeReviewClient
-      userId={user.id}
       review={review}
       initialJd={initialJd}
       existingResumes={userResumes || []}

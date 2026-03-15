@@ -20,7 +20,6 @@ export default function ResumeSection({
   activeHighlightId,
   handleLinkResume,
   isResumeLinked,
-  userId,
   isParsingFailed,
   refreshResumeStatus,
 }: {
@@ -31,7 +30,6 @@ export default function ResumeSection({
   activeHighlightId: string | null;
   handleLinkResume: (resumeId: string | null) => Promise<void>;
   isResumeLinked: boolean;
-  userId: string;
   isParsingFailed: boolean;
   refreshResumeStatus: () => Promise<void>;
 }) {
@@ -51,17 +49,13 @@ export default function ResumeSection({
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
-      formData.append("userId", userId);
 
-      // Trigger the background upload and parse action
       const result = await uploadResumeAction(formData);
 
       if (result.success && result.resumeId) {
         toast.success("Resume uploaded. Initializing sync...", { id: toastId });
-        // Link the newly created resume to this specific review record
         await handleLinkResume(result.resumeId);
         setSelectedFile(null);
-        // setPreviewUrl(null);
       } else {
         toast.error(result.error || "Upload failed", { id: toastId });
       }
@@ -82,17 +76,15 @@ export default function ResumeSection({
     const getSignedUrl = async () => {
       if (!isResumeLinked || !linkedResume?.resume_path) return;
 
-      // setLoadingUrl(true);
       try {
         const supabase = createClient();
         const { data, error } = await supabase.storage
           .from("resumes")
-          .createSignedUrl(linkedResume.resume_path, 3600); // 1 hour validity
+          .createSignedUrl(linkedResume.resume_path, 3600);
 
         if (error) throw error;
         setSignedUrl(data.signedUrl);
       } catch {
-        // console.error("Error generating signed URL:", err);
         toast.error("Could not load original PDF.");
       }
     };
@@ -108,21 +100,18 @@ export default function ResumeSection({
     setIsRetrying(true);
     const toastId = toast.loading("Restarting document synchronization...");
     try {
-      // Trigger the parse API route
       const res = await fetch("/api/parse-resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, resumeId: linkedResume.id }),
+        body: JSON.stringify({ resumeId: linkedResume.id }),
       });
 
       if (!res.ok) throw new Error("API failed to initialize synchronization.");
 
-      // Refresh parent state to flip parsing_failed to false and restart the polling useEffect
       await refreshResumeStatus();
 
       toast.success("Parsing restarted successfully.", { id: toastId });
     } catch {
-      // console.error("Retry failed:", err);
       toast.error("Failed to restart parsing. Please try again later.", {
         id: toastId,
       });

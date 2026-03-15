@@ -51,9 +51,7 @@ export default function CreateResumeReviewDialog({
           if (!error) {
             setExistingResumes((data || []) as IResume[]);
           }
-        } catch {
-          // console.error("Asset fetch failed", err);
-        }
+        } catch {}
       };
       fetchResumes();
     }
@@ -69,7 +67,6 @@ export default function CreateResumeReviewDialog({
 
     setIsLoading(true);
     const formData = new FormData(e.currentTarget);
-    formData.append("userId", userId);
 
     if (selectedResumeId) formData.append("existingResumeId", selectedResumeId);
     if (file) formData.append("file", file);
@@ -83,6 +80,7 @@ export default function CreateResumeReviewDialog({
       } else if (result.success && result.reviewId) {
         toast.success("Workspace initialized!");
         setIsOpen(false);
+        router.refresh();
         router.push(`/resume-review/${result.reviewId}`);
       }
     } catch {

@@ -28,7 +28,6 @@ export default function CreateReviewForJob({
 
     try {
       const formData = new FormData();
-      formData.append("userId", userId);
       formData.append("jobId", jobId);
 
       const result = await createResumeReviewAction(formData);

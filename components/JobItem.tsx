@@ -42,8 +42,8 @@ const JobItem = React.memo(
               "flex flex-col gap-3 p-4 group  rounded-lg transition hover:bg-secondary ",
             )}
           >
-            <div className="flex-col sm:flex-row sm:flex items-center justify-between gap-4">
-              <div className="flex flex-col gap-2 mb-6 sm:mb-0">
+            <div className=" flex-col sm:flex-row sm:flex items-center justify-between gap-4">
+              <div className="flex-1 flex flex-col gap-2 mb-6 sm:mb-0">
                 <div className="flex flex-col ">
                   <div className="">
                     <Link

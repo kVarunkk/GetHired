@@ -20,14 +20,12 @@ import { IResume, IResumeReview, TPaymentStatus } from "@/utils/types";
 import { Button } from "./ui/button";
 
 interface ReviewWorkspaceProps {
-  userId: string;
   review: IResumeReview;
   initialJd: string;
   existingResumes: IResume[];
 }
 
 export default function ResumeReviewClient({
-  userId,
   review,
   initialJd,
   existingResumes,
@@ -62,11 +60,6 @@ export default function ResumeReviewClient({
   const isParsed = !!linkedResume?.content;
   const isParsingFailed = !!linkedResume?.parsing_failed;
 
-  /**
-   * 1. POLLING LOGIC
-   * If a resume is linked but not yet parsed (content is null),
-   * we poll the DB until the 'content' field is populated by the background worker.
-   */
   useEffect(() => {
     if (isResumeLinked && !isParsed && !isParsingFailed) {
       const interval = setInterval(async () => {
@@ -100,11 +93,6 @@ export default function ResumeReviewClient({
     isResumeLinked,
   ]);
 
-  /**
-   * 2. LINK RESUME ACTION
-   * Handles the case where a user selects a resume from the library
-   * if the review was initialized without one.
-   */
   const handleLinkResume = useCallback(
     async (resumeId: string | null) => {
       if (!resumeId) return;
@@ -129,11 +117,6 @@ export default function ResumeReviewClient({
     [supabase, setCurrentReview, currentReview.id],
   );
 
-  /**
-   * 3. AI ANALYSIS TRIGGER
-   * Calls the backend to perform the semantic comparison between the
-   * digital twin and the provided job description.
-   */
   const runAnalysis = async () => {
     if (!jdText.trim())
       return toast.error("Please paste a job description first.");
@@ -146,7 +129,6 @@ export default function ResumeReviewClient({
         body: JSON.stringify({
           reviewId: currentReview.id,
           targetJd: jdText,
-          userId: userId,
         }),
       });
 
@@ -164,7 +146,6 @@ export default function ResumeReviewClient({
         toast.success("Analysis complete.");
       } else {
         throw new Error("AI analysis failed");
-        // toast.error(data.error || "AI analysis failed.");
       }
     } catch {
       toast.error("Some error occured during analysis. Please try again.");
@@ -185,7 +166,7 @@ export default function ResumeReviewClient({
     if (!error && data) {
       setCurrentReview((prev) => ({
         ...prev,
-        resumes: data, // This updates parsing_failed to false, triggering the useEffect
+        resumes: data,
       }));
     }
   }, [currentReview, setCurrentReview, supabase]);
@@ -412,7 +393,6 @@ export default function ResumeReviewClient({
           activeHighlightId={activeHighlightId}
           handleLinkResume={handleLinkResume}
           isResumeLinked={isResumeLinked}
-          userId={userId}
           isParsingFailed={isParsingFailed}
           refreshResumeStatus={refreshResumeStatus}
         />

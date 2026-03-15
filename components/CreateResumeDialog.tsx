@@ -15,45 +15,39 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { createResumeAction } from "@/app/actions/create-resume";
 import { IResume } from "@/utils/types";
+import { useRouter } from "next/navigation";
 
 export default function CreateResumeDialog({
-  userId,
   existingResumes,
 }: {
-  userId: string;
   existingResumes: IResume[];
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const router = useRouter();
 
   const handleStartProcessing = async () => {
     if (!selectedFile) return;
 
     setIsUploading(true);
-    const toastId = toast.loading("Uploading and initiating AI parse...");
-
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
-      formData.append("userId", userId);
 
       const result = await createResumeAction(formData);
 
-      if (result.success) {
-        toast.success(
-          "Resume added succesfully! Our AI is now indexing the Resume...",
-          {
-            id: toastId,
-          },
-        );
+      if (result.success && result.resumeId) {
+        toast.success("Resume added succesfully!");
         setIsOpen(false);
         setSelectedFile(null);
+        router.refresh();
+        router.push(`/resume/${result.resumeId}`);
       } else {
-        toast.error(result.error || "Failed to add resume", { id: toastId });
+        throw new Error(result.error);
       }
     } catch {
-      toast.error("An unexpected error occurred.", { id: toastId });
+      toast.error("An unexpected error occurred.");
     } finally {
       setIsUploading(false);
     }

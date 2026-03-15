@@ -346,7 +346,7 @@ export enum TAICredits {
 }
 
 export enum TLimits {
-  RESUME = 5,
+  RESUME = 8,
 }
 
 export enum TWaitlistType {

@@ -10,7 +10,6 @@ import { TAICredits, TLimits } from "@/utils/types";
 export async function createResumeReviewAction(formData: FormData) {
   const supabase = await createClient();
   const headersList = await headers();
-  const userId = formData.get("userId") as string;
   const reviewName =
     (formData.get("name") as string) ||
     `Review ${new Date().toLocaleDateString()}`;
@@ -18,7 +17,15 @@ export async function createResumeReviewAction(formData: FormData) {
   const file = formData.get("file") as File;
   const jobId = formData.get("jobId") as string;
 
-  if (!userId) return { error: "User authentication required." };
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: "Authentication required." };
+  }
+
+  const userId = user.id;
 
   try {
     const { data: profile } = await supabase
@@ -49,7 +56,9 @@ export async function createResumeReviewAction(formData: FormData) {
       // Background Storage Upload
       const { error: storageError } = await supabase.storage
         .from("resumes")
-        .upload(fileName, buffer, { contentType: "application/pdf" });
+        .upload(fileName, buffer, {
+          contentType: "application/pdf",
+        });
 
       if (storageError) throw storageError;
 
@@ -68,7 +77,6 @@ export async function createResumeReviewAction(formData: FormData) {
       finalResumeId = resumeEntry.id;
 
       // 3. ASYNC: Background Processing
-      // This continues running even after the server action returns the result to the client.
       after(async () => {
         try {
           // Background AI Parse Trigger
@@ -80,9 +88,7 @@ export async function createResumeReviewAction(formData: FormData) {
               Cookie: headersList.get("Cookie") || "",
             },
             body: JSON.stringify({
-              userId,
               resumeId: finalResumeId,
-              // resumePath: fileName
             }),
           });
 
@@ -95,13 +101,6 @@ export async function createResumeReviewAction(formData: FormData) {
           );
         } catch (bgError) {
           console.error("[BACKGROUND_PROCESS_FATAL]:", bgError);
-          // await supabase
-          //   .from("resumes")
-          //   .update({
-          //     parsing_failed: true,
-          //     updated_at: new Date().toISOString(),
-          //   })
-          //   .eq("id", finalResumeId);
         }
       });
     }

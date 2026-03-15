@@ -11,7 +11,16 @@ export async function createResumeAction(formData: FormData) {
   const supabase = await createClient();
   const headersList = await headers();
 
-  const userId = formData.get("userId") as string;
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: "Authentication required." };
+  }
+
+  const userId = user.id;
   const file = formData.get("file") as File;
 
   if (!userId || !file) {
@@ -39,10 +48,11 @@ export async function createResumeAction(formData: FormData) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload to Storage
     const { error: storageError } = await supabase.storage
       .from("resumes")
-      .upload(fileName, buffer, { contentType: "application/pdf" });
+      .upload(fileName, buffer, {
+        contentType: "application/pdf",
+      });
 
     if (storageError) throw storageError;
 
@@ -61,7 +71,6 @@ export async function createResumeAction(formData: FormData) {
     if (insertError) throw insertError;
 
     // 4. BACKGROUND PROCESSING
-    // This allows us to return the result to the UI immediately while the PDF is uploaded and parsed.
     after(async () => {
       try {
         // Trigger AI Parsing (Relay Race pattern)
@@ -73,9 +82,7 @@ export async function createResumeAction(formData: FormData) {
             Cookie: headersList.get("Cookie") || "",
           },
           body: JSON.stringify({
-            userId,
             resumeId: resumeEntry.id,
-            // resumePath: fileName
           }),
         });
 
@@ -84,20 +91,12 @@ export async function createResumeAction(formData: FormData) {
         );
       } catch (err) {
         console.error("[BG_FATAL_ERROR]:", err);
-        // await supabase
-        //   .from("resumes")
-        //   .update({
-        //     parsing_failed: true,
-        //     updated_at: new Date().toISOString(),
-        //   })
-        //   .eq("id", resumeEntry.id);
       }
     });
 
     revalidatePath("/resume");
     return { success: true, resumeId: resumeEntry.id };
   } catch (err: unknown) {
-    // console.error("[CREATE_RESUME_ACTION_ERROR]:", err);
     return {
       error:
         err instanceof Error ? err.message : "An unexpected error occurred.",

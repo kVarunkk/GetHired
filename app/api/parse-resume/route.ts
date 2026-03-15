@@ -6,50 +6,31 @@ import { getVertexClient } from "@/utils/serverUtils";
 import "pdf-parse/worker";
 import { CanvasFactory } from "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
+import { wrapInSandbox } from "@/helpers/ai/security";
+import { v4 as uuidv4 } from "uuid";
 
 const ResumeSchema = z.object({
   sections: z.array(
     z.object({
-      type: z
-        .enum([
-          "experience",
-          "projects",
-          "skills",
-          "education",
-          "summary",
-          "achievements",
-          "other",
-        ])
-        .describe(
-          "The category of this section. Use 'other' for certifications, languages, or custom headers.",
-        ),
+      type: z.enum([
+        "experience",
+        "projects",
+        "skills",
+        "education",
+        "summary",
+        "achievements",
+        "other",
+      ]),
       items: z.array(
         z.object({
-          heading: z
-            .string()
-            .optional()
-            .describe("The name of the company, school, or project."),
-          subheading: z
-            .string()
-            .optional()
-            .describe("The role title, degree, or date range."),
+          heading: z.string().optional(),
+          subheading: z.string().optional(),
           bullets: z.array(
             z.object({
-              id: z
-                .string()
-                .describe(
-                  "A unique UUID-style string for this specific bullet. MUST be unique across the entire document.",
-                ),
-              text: z
-                .string()
-                .describe(
-                  "The full text of the bullet, even if it spans multiple lines in the source.",
-                ),
+              text: z.string().min(1),
               lineIndices: z
                 .array(z.number())
-                .describe(
-                  "The original indices from the input lines that form this text.",
-                ),
+                .describe("Original indices used for this text."),
             }),
           ),
         }),
@@ -57,7 +38,6 @@ const ResumeSchema = z.object({
     }),
   ),
 });
-type ParsedProfile = z.infer<typeof ResumeSchema>;
 
 async function extractTextFromPdf(url: string): Promise<string[]> {
   try {
@@ -73,36 +53,50 @@ async function extractTextFromPdf(url: string): Promise<string[]> {
   }
 }
 
-async function generateStructuredProfile(
-  lines: string[],
-): Promise<ParsedProfile> {
+async function generateStructuredProfile(lines: string[]) {
   try {
     const vertex = await getVertexClient();
-    const model = vertex("gemini-2.5-flash-lite");
+    // using flash here instead of flash-lite
+    const model = vertex("gemini-2.5-flash");
 
-    const { output: parsedResume } = await generateText({
-      model: model,
-      system: `You are a precision Document Reconstruction Engine. 
-      
-      CORE MISSION: Reconstruct complete, grammatical bullet points from fragmented PDF lines. 
+    const systemPrompt = `
+      You are a precision Document Reconstruction Engine. 
+      Your mission: Map fragmented PDF lines into a structured "Digital Twin" JSON.
 
       STRICT RULES:
-      1. MERGING: Most bullet points in PDFs wrap across 2-3 lines. You MUST stitch these fragments back into a single, cohesive string.
-      2. SENTENCE INTEGRITY: If a line does not end in a period or a complete thought, it almost certainly continues on the next line. Do NOT create separate objects for fragments like "reduced errors in".
-      3. LINE MAPPING: In the 'lineIndices' array, list every index involved in that specific reconstructed bullet point.
-      4. ID UNIQUENESS: Generate a random UUID for the 'id'. Never reuse IDs across bullets.`,
-      prompt: `
-        The following lines are extracted from a PDF. Reconstruct them into a structured "Digital Twin" JSON.
-        
-        INPUT DATA:
-        ${lines.map((l, i) => `[${i}] ${l}`).join("\n")}
-      `,
+      1. MERGING: PDFs often split sentences across lines. Stitch these fragments into single cohesive strings.
+      2. INDEX MAPPING: You MUST provide the [index] for every line used in 'lineIndices'. Do not guess.
+      3. INTEGRITY: Do not summarize. Preserve the original phrasing exactly.
+      4. EXCLUSION: Ignore page numbers, headers/footers, and contact info if they don't fit the schema.
+      5. FORMAT: Output ONLY the JSON object.
+    `.trim();
+
+    const inputData = wrapInSandbox(
+      "source_lines",
+      lines.map((l, i) => `[${i}] ${l}`).join("\n"),
+    );
+
+    const { output: rawProfile } = await generateText({
+      model: model,
+      system: systemPrompt,
+      prompt: `Reconstruct this document:\n${inputData}`,
       output: Output.object({
         schema: ResumeSchema,
       }),
     });
 
-    return parsedResume as ParsedProfile;
+    const processedSections = rawProfile.sections.map((section) => ({
+      ...section,
+      items: section.items.map((item) => ({
+        ...item,
+        bullets: item.bullets.map((bullet) => ({
+          ...bullet,
+          id: uuidv4(),
+        })),
+      })),
+    }));
+
+    return { sections: processedSections };
   } catch (err) {
     console.error("[RESUME_STRUCTURE_ERROR]:", err);
     throw new Error("AI engine failed to generate a valid document structure.");
@@ -110,24 +104,26 @@ async function generateStructuredProfile(
 }
 
 export async function POST(req: Request) {
-  const { userId, resumeId } = await req.json();
+  const { resumeId } = await req.json();
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json(
+      { error: "Unauthorized access or user mismatch." },
+      { status: 401 },
+    );
+  }
+  const userId = user.id;
 
   if (!userId || !resumeId) {
     return NextResponse.json(
       { error: "Missing user ID or resume path." },
       { status: 400 },
-    );
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user || user.id !== userId) {
-    return NextResponse.json(
-      { error: "Unauthorized access or user mismatch." },
-      { status: 401 },
     );
   }
 

@@ -30,8 +30,7 @@ export const UploadResumeParent = ({
       return;
     }
 
-    // 2. Size Validation (5MB = 5 * 1024 * 1024 bytes)
-    const MAX_SIZE_MB = 5;
+    const MAX_SIZE_MB = 2;
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
     if (selectedFile.size > MAX_SIZE_BYTES) {
       toast.error(`File is too large. Maximum limit is ${MAX_SIZE_MB}MB.`);
@@ -77,9 +76,8 @@ export const UploadResumeParent = ({
                     <FileText className="w-5 h-5 text-brand" />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-bold truncate max-w-[180px]">
-                      {file?.name}
-                    </span>
+                    {/* block is required for truncate to work on a span */}
+                    <span className="text-sm font-bold ">{file?.name}</span>
                     <span className="text-[10px] text-muted-foreground uppercase font-medium">
                       {(file?.size / 1024 / 1024).toFixed(2)} MB • Ready
                     </span>
@@ -97,7 +95,7 @@ export const UploadResumeParent = ({
           ) : (
             <div
               className={cn(
-                "relative border-2 border-dashed rounded-xl p-8 transition-all flex flex-col items-center justify-center gap-2",
+                "relative border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center gap-2",
                 "border-zinc-800 hover:border-zinc-700",
               )}
             >

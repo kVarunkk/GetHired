@@ -84,7 +84,9 @@ export default function SelectProfile({
           const { data: uploadData, error: uploadError } =
             await supabase.storage
               .from(privateResumeBucket)
-              .upload(privateResumePathForCompany, resumeBlob);
+              .upload(privateResumePathForCompany, resumeBlob, {
+                contentType: "application/pdf",
+              });
 
           if (uploadError) {
             throw new Error("Failed to upload resume to private bucket.");

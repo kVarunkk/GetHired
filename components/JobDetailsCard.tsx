@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, Loader2, Sparkle } from "lucide-react";
+import { ArrowDown, Copy, Loader2, Sparkle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/utils/utils";
+import { cn, copyToClipboard } from "@/utils/utils";
 import { IJob, IJobPosting, TAICredits } from "@/utils/types";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
@@ -89,10 +89,9 @@ export default function JobDescriptionCard({
     }
   };
 
-  // Determine the content to display
   let displayedContent = job.description;
   if (isAISummary) {
-    displayedContent = aiSummary || job.description; // Fallback to description if summary is null/empty
+    displayedContent = aiSummary || job.description;
   }
 
   return (
@@ -102,6 +101,15 @@ export default function JobDescriptionCard({
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-xl font-semibold">
               Job Description
+              <Button
+                size={"icon"}
+                variant={"ghost"}
+                onClick={() =>
+                  copyToClipboard(displayedContent, "Copied to Clipboard")
+                }
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
             </CardTitle>
             {page === "all-jobs" && !isCompanyUser && (
               <div className="flex items-center">

@@ -28,7 +28,6 @@ export default function CreateReviewForResume({
 
     try {
       const formData = new FormData();
-      formData.append("userId", userId);
       formData.append("existingResumeId", resumeId);
 
       const result = await createResumeReviewAction(formData);

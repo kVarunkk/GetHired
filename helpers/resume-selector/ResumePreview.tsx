@@ -19,7 +19,7 @@ export const ResumePreview = ({
           <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">
             Selected Resume Preview
           </span>
-          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 truncate max-w-[150px]">
+          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 ">
             {file?.name || activeResumeName}
           </span>
         </div>

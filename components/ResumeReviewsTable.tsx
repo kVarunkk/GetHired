@@ -33,10 +33,15 @@ import ApplicationStatusBadge from "./ApplicationStatusBadge";
 import DynamicActions from "./DynamicTableActions";
 import { Input } from "./ui/input";
 import { Link as ModifiedLink } from "react-transition-progress/next";
+import { useRouter } from "next/navigation";
 
 interface ResumeReviewsTableProps {
   data: IResumeReview[];
 }
+
+type TResumeReviewTableData = IResumeReview & {
+  resume: string;
+};
 
 const reviewStatuses = ["All Statuses", "completed", "failed", "draft"];
 
@@ -47,6 +52,7 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
   >([]);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<IResumeReview[]>(data);
+  const router = useRouter();
 
   const pageSize = 10;
 
@@ -54,13 +60,22 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
     setItems((prev) =>
       prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
     );
+    router.refresh();
   };
 
   const removeLocalItem = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
+    router.refresh();
   };
 
-  const columns: ColumnDef<IResumeReview>[] = useMemo(
+  const flattenedData = useMemo(() => {
+    return items.map((item) => ({
+      ...item,
+      resume: item?.resumes?.name,
+    }));
+  }, [items]);
+
+  const columns: ColumnDef<IResumeReview & { resume: string }>[] = useMemo(
     () => [
       {
         accessorKey: "created_at",
@@ -94,6 +109,14 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
           <ApplicationStatusBadge status={row.original.status} />
         ),
         filterFn: "equals",
+      },
+
+      {
+        accessorKey: "resume",
+        header: "Resume",
+        cell: ({ row }) => (
+          <div className="text-sm font-medium">{row.original.resume}</div>
+        ),
       },
 
       {
@@ -134,8 +157,8 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
     [],
   );
 
-  const table = useReactTable({
-    data: items,
+  const table = useReactTable<TResumeReviewTableData>({
+    data: flattenedData as unknown as TResumeReviewTableData[],
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),

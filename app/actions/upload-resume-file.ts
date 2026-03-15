@@ -15,11 +15,27 @@ import { after } from "next/server";
 export async function uploadResumeAction(formData: FormData) {
   const supabase = await createClient();
 
-  const userId = formData.get("userId") as string;
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: "Authentication required." };
+  }
+
+  const userId = user.id;
   const file = formData.get("file") as File;
 
-  if (!userId || !file) {
+  if (!userId || !file || file.size === 0) {
     return { error: "Missing required upload data." };
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    return { error: "File too large. Maximum allowed size is 2MB." };
+  }
+
+  if (file.type !== "application/pdf") {
+    return { error: "Invalid file format. Only PDFs are accepted." };
   }
 
   // 1. LIMIT CHECK: Prevent more than 5 resumes
@@ -40,7 +56,8 @@ export async function uploadResumeAction(formData: FormData) {
 
   try {
     // 1. Prepare Metadata
-    const fileName = `resumes/${userId}/${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const fileName = `resumes/${userId}/${Date.now()}-${sanitizedName}`;
 
     // 2. Create DB entry immediately to get an ID
     const { data: resumeEntry, error: resumeError } = await supabase
@@ -65,7 +82,9 @@ export async function uploadResumeAction(formData: FormData) {
         // Upload to storage
         const { error: storageError } = await supabase.storage
           .from("resumes")
-          .upload(fileName, buffer, { contentType: "application/pdf" });
+          .upload(fileName, buffer, {
+            contentType: "application/pdf",
+          });
 
         if (storageError) {
           console.error("[BG_UPLOAD_ERROR]:", storageError);
@@ -78,9 +97,7 @@ export async function uploadResumeAction(formData: FormData) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userId,
             resumeId: resumeEntry.id,
-            // resumePath: fileName,
           }),
         });
       } catch (err) {

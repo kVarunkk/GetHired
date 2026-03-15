@@ -39,7 +39,6 @@ export async function submitOnboardingAction(formData: FormData) {
     let fileName = "";
 
     // 2. PRIMARY RESUME LOGIC (DATABASE ONLY)
-    // We clear old primary flags before setting the new one
     await supabase
       .from("resumes")
       .update({ is_primary: false })
@@ -82,8 +81,6 @@ export async function submitOnboardingAction(formData: FormData) {
     const { error: userError } = await supabase.from("user_info").upsert(
       {
         ...profileData,
-        // user_id: userId,
-        // filled: true,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id" },
@@ -106,7 +103,7 @@ export async function submitOnboardingAction(formData: FormData) {
           const parseRes = await fetch(`${baseUrl}/api/parse-resume`, {
             method: "POST",
             headers: internalHeaders,
-            body: JSON.stringify({ userId, resumeId: finalResumeId }),
+            body: JSON.stringify({ resumeId: finalResumeId }),
           });
           if (!parseRes.ok) throw new Error("Background Parse Failed");
         }
@@ -139,9 +136,6 @@ export async function submitOnboardingAction(formData: FormData) {
         );
       }
     });
-
-    // revalidatePath("/dashboard");
-    // revalidatePath("/jobs");
 
     return { success: true };
   } catch (err: unknown) {

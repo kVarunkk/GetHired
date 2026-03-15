@@ -28,6 +28,7 @@ import { Badge } from "./ui/badge";
 import ResumeSetPrimary from "./ResumeSetPrimary";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 import InfoTooltip from "./InfoTooltip";
+import { useRouter } from "next/navigation";
 
 interface ResumesTableProps {
   data: IResume[];
@@ -41,6 +42,7 @@ export default function ResumesTable({ data }: ResumesTableProps) {
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<IResume[]>(data);
   const [isProcessing, setIsProcessing] = useState(false);
+  const router = useRouter();
 
   const pageSize = 10;
 
@@ -48,10 +50,12 @@ export default function ResumesTable({ data }: ResumesTableProps) {
     setItems((prev) =>
       prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
     );
+    router.refresh();
   };
 
   const removeLocalItem = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
+    router.refresh();
   };
 
   const columns: ColumnDef<IResume>[] = useMemo(
