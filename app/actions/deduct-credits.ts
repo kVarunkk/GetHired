@@ -12,7 +12,7 @@ export async function deductCreditsForUser(userId: string) {
   if (!userId) return { error: "User ID is required." };
 
   const supabase = await createClient();
-  const cost = TAICredits.AI_SEARCH_OR_ASK_AI;
+  const cost = TAICredits.AI_SEARCH_ASK_AI_RESUME;
 
   try {
     /**

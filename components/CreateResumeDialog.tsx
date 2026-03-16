@@ -14,8 +14,12 @@ import ResumeSourceSelector from "./ResumeSourceSelector";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { createResumeAction } from "@/app/actions/create-resume";
-import { IResume } from "@/utils/types";
+import { IResume, TAICredits } from "@/utils/types";
 import { useRouter } from "next/navigation";
+import useSWR from "swr";
+import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
+import InfoTooltip from "./InfoTooltip";
+import Link from "next/link";
 
 export default function CreateResumeDialog({
   existingResumes,
@@ -26,6 +30,13 @@ export default function CreateResumeDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const router = useRouter();
+
+  const { data } = useSWR(PROFILE_API_KEY, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const creditsState = data && data.profile ? data.profile.ai_credits : 0;
 
   const handleStartProcessing = async () => {
     if (!selectedFile) return;
@@ -46,8 +57,12 @@ export default function CreateResumeDialog({
       } else {
         throw new Error(result.error);
       }
-    } catch {
-      toast.error("An unexpected error occurred.");
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred. Please try again later.",
+      );
     } finally {
       setIsUploading(false);
     }
@@ -64,7 +79,20 @@ export default function CreateResumeDialog({
 
       <DialogContent className="sm:max-w-[440px] ">
         <DialogHeader>
-          <DialogTitle>Add New Resume</DialogTitle>
+          <DialogTitle>
+            Add New Resume{" "}
+            <InfoTooltip
+              content={
+                <p>
+                  This feature uses {TAICredits.AI_SEARCH_ASK_AI_RESUME} AI
+                  Credits. {creditsState} AI Credits available.{" "}
+                  <Link href={"/dashboard"} className="text-blue-500">
+                    Recharge Credits
+                  </Link>
+                </p>
+              }
+            />
+          </DialogTitle>
           <DialogDescription>
             Upload a PDF version of your resume. Our AI will index it for
             further analysis.

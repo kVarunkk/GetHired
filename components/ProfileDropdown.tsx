@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "@/utils/utils";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
@@ -16,9 +15,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useRouter } from "next/navigation";
 import { Laptop, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -30,6 +27,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import React from "react";
+import MenuTrigger from "@/helpers/profile-dropdown/MenuTrigger";
 
 export default function ProfileDropdown({
   user,
@@ -58,42 +57,24 @@ export default function ProfileDropdown({
       {isVertical ? (
         <Tooltip delayDuration={100}>
           <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <button
-                className={cn(
-                  "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-                  isMenuOpen ? "justify-start" : "justify-center",
-                )}
-              >
-                <AvatarComponent
-                  user={user}
-                  open={open}
-                  isCompanyUser={isCompanyUser}
-                />
-                {isMenuOpen ? <span className="text-sm">Profile</span> : ""}
-              </button>
-            </DropdownMenuTrigger>
+            <MenuTrigger
+              user={user}
+              open={open}
+              isMenuOpen={isMenuOpen}
+              isCompanyUser={isCompanyUser}
+            />
           </TooltipTrigger>
           <TooltipContent side="right" hidden={isMenuOpen}>
             <p>Profile</p>
           </TooltipContent>
         </Tooltip>
       ) : (
-        <DropdownMenuTrigger asChild>
-          <button
-            className={cn(
-              "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-              isMenuOpen ? "justify-start" : "justify-center",
-            )}
-          >
-            <AvatarComponent
-              user={user}
-              open={open}
-              isCompanyUser={isCompanyUser}
-            />
-            {isMenuOpen ? <span className="text-sm">Profile</span> : ""}
-          </button>
-        </DropdownMenuTrigger>
+        <MenuTrigger
+          user={user}
+          open={open}
+          isMenuOpen={isMenuOpen}
+          isCompanyUser={isCompanyUser}
+        />
       )}
 
       <DropdownMenuContent align="start">
@@ -109,7 +90,7 @@ export default function ProfileDropdown({
           </Badge>
         </DropdownMenuLabel>
 
-        <DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link
             href={`/get-started${isCompanyUser ? "?company=true" : ""}`}
             className="w-full flex items-center cursor-default gap-4"
@@ -165,32 +146,5 @@ export default function ProfileDropdown({
         <SocialsComponent />
       </DropdownMenuContent>
     </DropdownMenu>
-  );
-}
-
-function AvatarComponent({
-  user,
-  open,
-  isCompanyUser,
-}: {
-  user: User | null;
-  open?: boolean;
-  isCompanyUser: boolean;
-}) {
-  return (
-    <Avatar
-      className={cn(
-        "bg-muted h-8 w-8",
-        open && "-ml-1",
-        isCompanyUser ? "rounded-sm" : "",
-      )}
-    >
-      <AvatarImage
-        src={user?.user_metadata.avatar_url || "/default-avatar.png"}
-      />
-      <AvatarFallback className="text-xs uppercase">
-        {user?.email?.slice(0, 2)}
-      </AvatarFallback>
-    </Avatar>
   );
 }

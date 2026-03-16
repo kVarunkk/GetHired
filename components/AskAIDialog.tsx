@@ -50,7 +50,7 @@ export default function AskAIDialog({
       setError("Please select a resume.");
       return;
     }
-    if (creditsState < TAICredits.AI_SEARCH_OR_ASK_AI) {
+    if (creditsState < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
       setError("Insufficient AI credits. Please top up to continue.");
       return;
     }
@@ -140,7 +140,7 @@ export default function AskAIDialog({
             <InfoTooltip
               content={
                 "This feature uses " +
-                TAICredits.AI_SEARCH_OR_ASK_AI +
+                TAICredits.AI_SEARCH_ASK_AI_RESUME +
                 " AI credits per use."
               }
             />
@@ -211,7 +211,8 @@ export default function AskAIDialog({
                   placeholder="e.g., Why do you think you are a good fit for this role?"
                   name="searchQuery"
                   disabled={
-                    isLoading || creditsState < TAICredits.AI_SEARCH_OR_ASK_AI
+                    isLoading ||
+                    creditsState < TAICredits.AI_SEARCH_ASK_AI_RESUME
                   }
                   className="bg-input text-sm"
                   ref={searchInputRef}
@@ -232,7 +233,8 @@ export default function AskAIDialog({
                 )}
                 <Button
                   disabled={
-                    isLoading || creditsState < TAICredits.AI_SEARCH_OR_ASK_AI
+                    isLoading ||
+                    creditsState < TAICredits.AI_SEARCH_ASK_AI_RESUME
                   }
                 >
                   {isLoading && (
@@ -246,7 +248,7 @@ export default function AskAIDialog({
                 type="button"
                 onClick={() => handleSubmit()}
                 disabled={
-                  isLoading || creditsState < TAICredits.AI_SEARCH_OR_ASK_AI
+                  isLoading || creditsState < TAICredits.AI_SEARCH_ASK_AI_RESUME
                 }
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

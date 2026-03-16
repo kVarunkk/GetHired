@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
       .from("user_info")
       .select("user_id, email, full_name")
       .eq("filled", true)
-      .gte("ai_credits", TAICredits.AI_SEARCH_OR_ASK_AI);
+      .gte("ai_credits", TAICredits.AI_SEARCH_ASK_AI_RESUME);
 
     if (userError || !users || users.length === 0) {
       await sendEmailForStatusUpdate(

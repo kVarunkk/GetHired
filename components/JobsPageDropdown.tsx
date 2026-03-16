@@ -19,7 +19,7 @@ export default function JobsPageDropdown({ user }: { user: User | null }) {
   return (
     <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
       <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild className="">
+        <DropdownMenuTrigger asChild>
           <Button variant={"ghost"}>
             <MoreHorizontal className="h-4 w-4" />
           </Button>

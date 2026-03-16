@@ -444,9 +444,7 @@ function ItemsList({
             header && header.heading ? (
               <div className="flex flex-col gap-2">
                 <div className="font-semibold">{header.heading}</div>
-                {header.description && (
-                  <div className="">{header.description}</div>
-                )}
+                {header.description && <div>{header.description}</div>}
               </div>
             ) : (
               ""

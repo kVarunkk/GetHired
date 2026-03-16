@@ -14,7 +14,7 @@ export default function DashboardDropdown() {
   const router = useRouter();
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild className="">
+      <DropdownMenuTrigger asChild>
         <Button className="p-2" variant={"ghost"}>
           <MoreHorizontal className="h-4 w-4" />
         </Button>

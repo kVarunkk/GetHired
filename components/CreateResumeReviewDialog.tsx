@@ -121,7 +121,7 @@ export default function CreateResumeReviewDialog({
 
             <div className="grid gap-6 ">
               <div className="grid gap-2">
-                <Label className="">Review Label (Optional)</Label>
+                <Label>Review Label (Optional)</Label>
                 <Input
                   name="name"
                   placeholder="e.g., Lead Developer @ Stripe"

@@ -606,7 +606,7 @@ export default function CreateJobPostingDialog({
             )}
           </form>
 
-          <DialogFooter className="">
+          <DialogFooter>
             {step === 2 && (
               <Button
                 type="button"

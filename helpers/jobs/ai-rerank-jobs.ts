@@ -45,7 +45,7 @@ export async function rerankJobsIfApplicable({
   }
 
   // --- 1. Check AI Credits ---
-  const requiredCredits = TAICredits.AI_SEARCH_OR_ASK_AI;
+  const requiredCredits = TAICredits.AI_SEARCH_ASK_AI_RESUME;
 
   if (aiCredits >= requiredCredits || relevanceSearchType === "job_digest") {
     try {

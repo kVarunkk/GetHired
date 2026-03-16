@@ -120,7 +120,7 @@ const FeatureCard = ({
           }
         });
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
     observer.observe(video);
@@ -216,7 +216,7 @@ const FeatureCard = ({
       </div>
       <div className="p-4 flex flex-col gap-3">
         <div className="text-lg font-bold">{title}</div>
-        <p className=""> {desc}</p>
+        <p> {desc}</p>
       </div>
     </div>
   );

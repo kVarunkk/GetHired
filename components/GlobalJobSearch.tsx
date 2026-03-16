@@ -162,7 +162,7 @@ export default function GlobalJobSearch() {
             <InfoTooltip
               content={
                 "This feature uses " +
-                TAICredits.AI_SEARCH_OR_ASK_AI +
+                TAICredits.AI_SEARCH_ASK_AI_RESUME +
                 " AI credits per search."
               }
             />

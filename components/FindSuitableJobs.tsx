@@ -214,7 +214,7 @@ export default function FindSuitableJobs({
           content={
             <p>
               <Sparkle className="h-3 w-3 inline-block mr-1" />
-              {`AI Smart Search uses ${TAICredits.AI_SEARCH_OR_ASK_AI} AI credits per use. ${
+              {`AI Smart Search uses ${TAICredits.AI_SEARCH_ASK_AI_RESUME} AI credits per use. ${
                 data && data.profile
                   ? `${data.profile.ai_credits} AI Credits available.`
                   : ""
@@ -245,7 +245,7 @@ export default function FindSuitableJobs({
           content={
             <p>
               <Sparkle className="h-3 w-3 inline-block mr-1" />
-              {`AI Smart Search uses ${TAICredits.AI_SEARCH_OR_ASK_AI} AI credits per use. ${
+              {`AI Smart Search uses ${TAICredits.AI_SEARCH_ASK_AI_RESUME} AI credits per use. ${
                 data && data.profile
                   ? `${data.profile.ai_credits} AI Credits available.`
                   : ""
@@ -307,7 +307,7 @@ export default function FindSuitableJobs({
         content={
           <p>
             <Sparkle className="h-3 w-3 inline-block mr-1" />
-            {`AI Smart Search uses ${TAICredits.AI_SEARCH_OR_ASK_AI} AI credits per use. ${
+            {`AI Smart Search uses ${TAICredits.AI_SEARCH_ASK_AI_RESUME} AI credits per use. ${
               data && data.profile
                 ? `${data.profile.ai_credits} AI Credits available.`
                 : ""

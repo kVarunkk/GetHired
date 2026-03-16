@@ -83,7 +83,7 @@ export default async function JobsPage({
       user &&
       result.data &&
       result.data.length > 0 &&
-      ai_credits >= TAICredits.AI_SEARCH_OR_ASK_AI
+      ai_credits >= TAICredits.AI_SEARCH_ASK_AI_RESUME
     ) {
       try {
         const aiRerankRes = await fetch(`${url}/api/ai-search/companies`, {
@@ -130,7 +130,7 @@ export default async function JobsPage({
       user &&
       result.data &&
       result.data.length > 0 &&
-      ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI
+      ai_credits < TAICredits.AI_SEARCH_ASK_AI_RESUME
     ) {
       const companiesMap = new Map(
         result.data.map((company: ICompanyInfo) => [company.id, company]),

@@ -4,8 +4,8 @@ import { deploymentUrl } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import { after } from "next/server";
-import { TLimits } from "@/utils/types";
 import { triggerRelevanceUpdate } from "./relevant-jobs-update";
+import { TAICredits } from "@/utils/types";
 
 export async function submitOnboardingAction(formData: FormData) {
   const supabase = await createClient();
@@ -18,23 +18,26 @@ export async function submitOnboardingAction(formData: FormData) {
 
   if (!userId) return { error: "User ID is required." };
 
+  const { data: profile } = await supabase
+    .from("user_info")
+    .select("ai_credits")
+    .eq("user_id", userId)
+    .single();
+
+  if (!profile) {
+    return {
+      error:
+        "User profile not found. Please complete your profile to upload a resume.",
+    };
+  }
+
+  if ((profile.ai_credits || 0) < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
+    return {
+      error: `Insufficient AI credits for resume upload. Please top up to continue.`,
+    };
+  }
+
   try {
-    // 1. LIMIT CHECK: Prevent more than 5 resumes
-    const { count, error: countError } = await supabase
-      .from("resumes")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId);
-
-    if (countError) throw countError;
-
-    // If uploading a NEW file, check if we're already at the limit
-    if (resumeFile && resumeFile.size > 0 && (count || 0) >= TLimits.RESUME) {
-      return {
-        error:
-          "Resume limit reached. Please remove an existing resume to upload a new one.",
-      };
-    }
-
     let finalResumeId = resumeId;
     let fileName = "";
 

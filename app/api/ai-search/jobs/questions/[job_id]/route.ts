@@ -65,7 +65,7 @@ export async function POST(
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
-    if (userProfile?.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI) {
+    if (userProfile?.ai_credits < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
       return NextResponse.json(
         { error: "Insufficient AI credits. Please top up to continue." },
         { status: 402 },
@@ -131,7 +131,7 @@ Generate the response now. Do not include any introductory text like "Here is yo
 
     await supabase.rpc("deduct_user_credits", {
       p_user_id: userId,
-      p_amount: TAICredits.AI_SEARCH_OR_ASK_AI,
+      p_amount: TAICredits.AI_SEARCH_ASK_AI_RESUME,
     });
 
     return NextResponse.json({ success: true, answer: answer });

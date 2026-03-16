@@ -41,7 +41,7 @@ export default function ResumeSourceSelector({
         setPreviewUrl(URL.createObjectURL(file));
       } else if (selectedId) {
         setIsLoadingSignedUrl(true);
-        setPreviewUrl(null); // Instant cleanup
+        setPreviewUrl(null);
         setActiveResumeName(null);
 
         try {
@@ -79,7 +79,6 @@ export default function ResumeSourceSelector({
         <UploadResumeParent
           file={file}
           onFileChange={onFileChange}
-          existingResumes={existingResumes}
           onSelectExisting={onSelectExisting}
         />
       ) : view === "select" ? (
@@ -97,15 +96,14 @@ export default function ResumeSourceSelector({
               Select Existing ({existingResumes.length})
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="upload" className="">
+          <TabsContent value="upload">
             <UploadResumeParent
               file={file}
               onFileChange={onFileChange}
-              existingResumes={existingResumes}
               onSelectExisting={onSelectExisting}
             />
           </TabsContent>
-          <TabsContent value="existing" className="">
+          <TabsContent value="existing">
             <SelectResumeParent
               existingResumes={existingResumes}
               onFileChange={onFileChange}
@@ -116,7 +114,7 @@ export default function ResumeSourceSelector({
         </Tabs>
       )}
       {showManageResumes && (
-        <div className="">
+        <div>
           <Link
             className="text-xs text-muted-foreground underline "
             href="/resume"

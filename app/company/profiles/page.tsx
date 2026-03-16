@@ -68,7 +68,7 @@ export default async function ProfilesPage({
       onboarding_complete &&
       result.data &&
       result.data.length > 0 &&
-      companyData.ai_credits >= TAICredits.AI_SEARCH_OR_ASK_AI
+      companyData.ai_credits >= TAICredits.AI_SEARCH_ASK_AI_RESUME
     ) {
       try {
         const aiRerankRes = await fetch(`${url}/api/ai-search/profiles`, {
@@ -128,7 +128,7 @@ export default async function ProfilesPage({
       result.matchedProfileIds &&
       result.data &&
       result.data.length > 0 &&
-      companyData.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI
+      companyData.ai_credits < TAICredits.AI_SEARCH_ASK_AI_RESUME
     ) {
       const profilesMap: Map<string, IFormData> = new Map(
         result.data.map((profile: IFormData) => [profile.user_id, profile]),

@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
 
     if (
       relevanceSearchType === "standard" &&
-      aiCredits < TAICredits.AI_SEARCH_OR_ASK_AI
+      aiCredits < TAICredits.AI_SEARCH_ASK_AI_RESUME
     ) {
       return NextResponse.json(
         { message: "Insufficient AI credits. Please top up to continue." },

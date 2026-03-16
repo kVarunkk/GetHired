@@ -2,10 +2,10 @@
 
 import { deploymentUrl } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
-import { TLimits } from "@/utils/types";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { after } from "next/server";
+import { TAICredits } from "@/utils/types";
 
 export async function createResumeAction(formData: FormData) {
   const supabase = await createClient();
@@ -21,6 +21,26 @@ export async function createResumeAction(formData: FormData) {
   }
 
   const userId = user.id;
+
+  const { data: profile } = await supabase
+    .from("user_info")
+    .select("ai_credits")
+    .eq("user_id", userId)
+    .single();
+
+  if (!profile) {
+    return {
+      error:
+        "User profile not found. Please complete your profile to upload a resume.",
+    };
+  }
+
+  if ((profile.ai_credits || 0) < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
+    return {
+      error: `Insufficient AI credits for resume upload. Please top up to continue.`,
+    };
+  }
+
   const file = formData.get("file") as File;
 
   if (!userId || !file) {
@@ -28,20 +48,6 @@ export async function createResumeAction(formData: FormData) {
   }
 
   try {
-    // 1. LIMIT CHECK: Ensure user doesn't have more than 5 resumes
-    const { count, error: countError } = await supabase
-      .from("resumes")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId);
-
-    if (countError) throw countError;
-    if (count !== null && count >= TLimits.RESUME) {
-      return {
-        error:
-          "Resume limit reached. You can only store up to 5 resumes in your library.",
-      };
-    }
-
     // 2. PREPARE STORAGE PATH
     const fileName = `resumes/${userId}/${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
 
@@ -99,7 +105,9 @@ export async function createResumeAction(formData: FormData) {
   } catch (err: unknown) {
     return {
       error:
-        err instanceof Error ? err.message : "An unexpected error occurred.",
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred. Please try again later.",
     };
   }
 }

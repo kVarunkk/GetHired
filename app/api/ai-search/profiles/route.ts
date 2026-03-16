@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (companyInfo.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI) {
+    if (companyInfo.ai_credits < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
       return NextResponse.json(
         { message: "Insufficient AI credits. Please top up to continue." },
         { status: 402 },
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("company_info")
       .update({
-        ai_credits: companyInfo.ai_credits - TAICredits.AI_SEARCH_OR_ASK_AI,
+        ai_credits: companyInfo.ai_credits - TAICredits.AI_SEARCH_ASK_AI_RESUME,
       })
       .eq("id", companyId);
 

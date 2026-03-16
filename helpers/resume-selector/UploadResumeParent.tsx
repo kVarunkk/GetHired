@@ -1,32 +1,37 @@
 import { Button } from "@/components/ui/button";
-import { IResume, TLimits } from "@/utils/types";
-import { cn } from "@/utils/utils";
+import { TAICredits } from "@/utils/types";
+import { cn, fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import { AlertTriangle, FileText, UploadCloud, X } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import useSWR from "swr";
 
 export const UploadResumeParent = ({
-  existingResumes,
   file,
   onFileChange,
   onSelectExisting,
 }: {
-  existingResumes: IResume[];
   file: File | null;
   onFileChange: (file: File | null) => void;
   onSelectExisting: (id: string | null) => void;
 }) => {
+  const { data } = useSWR(PROFILE_API_KEY, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const creditsState = data && data.profile ? data.profile.ai_credits : 0;
+
   const handleInternalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    // 1. PDF Type Validation (Mobile fix)
     const isPdf =
       selectedFile.type === "application/pdf" ||
       selectedFile.name.toLowerCase().endsWith(".pdf");
     if (!isPdf) {
       toast.error("Only PDF files are allowed.");
-      e.target.value = ""; // Clear the input
+      e.target.value = "";
       return;
     }
 
@@ -34,7 +39,7 @@ export const UploadResumeParent = ({
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
     if (selectedFile.size > MAX_SIZE_BYTES) {
       toast.error(`File is too large. Maximum limit is ${MAX_SIZE_MB}MB.`);
-      e.target.value = ""; // Clear the input
+      e.target.value = "";
       return;
     }
     onSelectExisting(null);
@@ -43,26 +48,26 @@ export const UploadResumeParent = ({
 
   return (
     <div>
-      {existingResumes.length >= TLimits.RESUME ? (
+      {creditsState < TAICredits.AI_SEARCH_ASK_AI_RESUME ? (
         <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/50 rounded-2xl p-6 text-center space-y-4">
           <div className="mx-auto w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
             <AlertTriangle className="text-amber-600 w-6 h-6" />
           </div>
           <div className="space-y-1">
             <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
-              Library Full
+              AI Credits Required
             </p>
             <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-              You have reached the {TLimits.RESUME} resume limit. Please remove
-              an existing asset from your dashboard to upload a new one.
+              You have used all your AI credits for resume uploads. Please
+              recharge to upload new resumes.
             </p>
           </div>
           <Button type="button" variant={"outline"} asChild>
             <Link
-              href={"/resume"}
+              href={"/dashboard"}
               className="w-full text-xs font-bold uppercase tracking-widest border-amber-200 dark:border-amber-800"
             >
-              Manage Resumes
+              Recharge AI Credits
             </Link>
           </Button>
         </div>
@@ -76,7 +81,6 @@ export const UploadResumeParent = ({
                     <FileText className="w-5 h-5 text-brand" />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    {/* block is required for truncate to work on a span */}
                     <span className="text-sm font-bold ">{file?.name}</span>
                     <span className="text-[10px] text-muted-foreground uppercase font-medium">
                       {(file?.size / 1024 / 1024).toFixed(2)} MB • Ready

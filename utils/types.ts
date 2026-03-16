@@ -340,14 +340,14 @@ export enum TResumeReviewStatus {
 }
 
 export enum TAICredits {
-  AI_SEARCH_OR_ASK_AI = 3,
+  AI_SEARCH_ASK_AI_RESUME = 3,
   AI_SUMMARY = 1,
   AI_CV_REVIEW = 5,
 }
 
-export enum TLimits {
-  RESUME = 8,
-}
+// export enum TLimits {
+//   RESUME = 8,
+// }
 
 export enum TWaitlistType {
   AI_RESUME_CHECKER = "ai_resume_checker",

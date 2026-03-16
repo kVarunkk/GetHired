@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { TAICredits, TLimits } from "@/utils/types";
+import { TAICredits } from "@/utils/types";
 
 export async function createResumeReviewAction(formData: FormData) {
   const supabase = await createClient();
@@ -34,7 +34,14 @@ export async function createResumeReviewAction(formData: FormData) {
       .eq("user_id", userId)
       .single();
 
-    if (!profile || (profile.ai_credits || 0) < 5) {
+    if (!profile) {
+      return {
+        error:
+          "User profile not found. Please complete your profile to create a CV review.",
+      };
+    }
+
+    if ((profile.ai_credits || 0) < TAICredits.AI_CV_REVIEW) {
       return {
         error: `Insufficient AI credits (${TAICredits.AI_CV_REVIEW} required).`,
       };
@@ -43,9 +50,9 @@ export async function createResumeReviewAction(formData: FormData) {
     let finalResumeId = existingResumeId;
 
     if (!finalResumeId && file && file.size > 0) {
-      if (profile.resumes.length >= TLimits.RESUME) {
+      if (profile.ai_credits < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
         return {
-          error: `You can only create ${TLimits.RESUME} resumes in free plan.`,
+          error: `Insufficient AI credits for resume upload. Please top up to continue.`,
         };
       }
       const fileName = `resumes/${userId}/${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
