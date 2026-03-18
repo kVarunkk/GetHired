@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { IJob, TAICredits } from "@/utils/types";
+import { IJob, TAICredits, TResumeContent } from "@/utils/types";
 import { getVertexClient } from "@/utils/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
@@ -47,19 +47,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { experience, skills, projects } = userPreferences.resumes?.[0]
-      ?.content || {
+    const { experience, skills, projects } = (userPreferences.resumes?.[0]
+      ?.content as TResumeContent) || {
       experience: "",
       skills: "",
       projects: "",
     };
-
-    // if (userPreferences.ai_credits < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
-    //   return NextResponse.json(
-    //     { message: "Insufficient AI credits. Please top up to continue." },
-    //     { status: 402 }
-    //   );
-    // }
 
     // Step 2: Construct the userQuery based on fetched preferences
     const userQuery = `

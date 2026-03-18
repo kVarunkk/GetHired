@@ -1,4 +1,5 @@
 import { BillingAddress, Customer } from "dodopayments/resources/index.mjs";
+import { Database } from "./types/database.types";
 
 export interface IJobResult {
   score?: number;
@@ -407,3 +408,27 @@ export interface IUserFavorites extends BaseFavorite {
 export interface IUserFavoritesCompanyInfo extends BaseFavorite {
   company_id: string;
 }
+
+type AllJobsRow = Database["public"]["Tables"]["all_jobs"]["Row"];
+type UserRelevantJobsRow =
+  Database["public"]["Tables"]["user_relevant_jobs"]["Row"];
+type UserFavoritesRow = Database["public"]["Tables"]["user_favorites"]["Row"];
+type ApplicationsRow = Database["public"]["Tables"]["applications"]["Row"];
+type JobPostingsRow = Database["public"]["Tables"]["job_postings"]["Row"];
+type CompanyInfoRow = Database["public"]["Tables"]["company_info"]["Row"];
+
+export type AllJobWithRelations = AllJobsRow & {
+  user_relevant_jobs: UserRelevantJobsRow[];
+  user_favorites: UserFavoritesRow[];
+  applications: ApplicationsRow[];
+  job_postings: (JobPostingsRow & {
+    company_info: CompanyInfoRow | null;
+    applications: ApplicationsRow[];
+  })[];
+};
+
+export type TResumeContent = {
+  experience: string;
+  skills: string;
+  projects: string;
+};

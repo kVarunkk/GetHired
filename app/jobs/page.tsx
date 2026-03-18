@@ -165,15 +165,11 @@ export default async function JobsPage({
   const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
   const url = `${protocol}://${host}`;
 
-  let initialJobs: IJob[] = [];
-  let totalCount: number = 0;
-
   const validated = jobFilterSchema.safeParse(searchParameters);
   const cleanParams = validated.success ? validated.data : {};
   const dynamicKey = serializeFiltersToURL(cleanParams);
   const params = new URLSearchParams(dynamicKey);
   params.set("tab", activeTab);
-  params.set("limit", "20");
   const isRelevantSorting = params.get("sortBy") === "relevance";
   const isSimilarSearch = isRelevantSorting && params.get("jobId");
 
@@ -181,20 +177,31 @@ export default async function JobsPage({
     params.set("createdAfter", "30");
   }
 
+  let initialJobs: IJob[] = [];
+  let totalCount: number = 0;
+  let initialCursor: string | null = null;
+  let error: string | null = null;
+
   try {
     const jobFetchPromise = fetch(`${url}/api/jobs?${params.toString()}`, {
       cache: isRelevantSorting ? "no-cache" : "force-cache",
       next: { revalidate: 3600, tags: ["jobs-feed"] },
       headers: { Cookie: headersList.get("Cookie") || "" },
     });
-
     const [jobsResponse] = await Promise.all([jobFetchPromise]);
-    if (!jobsResponse.ok) throw new Error("Failed to fetch jobs");
+
     const result = await jobsResponse.json();
+
+    if (!jobsResponse.ok) {
+      throw new Error(result.error || "Failed to fetch jobs");
+    }
 
     initialJobs = result.data;
     totalCount = result.totalCount;
-  } catch {}
+    initialCursor = result.nextCursor || null;
+  } catch (e) {
+    error = e instanceof Error ? e.message : String(e);
+  }
 
   return (
     <div className="flex items-start px-4  gap-5">
@@ -225,6 +232,8 @@ export default async function JobsPage({
                 isAppliedJobsTabActive={false}
                 totalCount={totalCount}
                 current_page="jobs"
+                initialCursor={initialCursor}
+                error={error}
               />
             </TabsContent>
           )}
@@ -243,6 +252,8 @@ export default async function JobsPage({
                   isAppliedJobsTabActive={false}
                   totalCount={totalCount}
                   current_page="jobs"
+                  initialCursor={initialCursor}
+                  error={error}
                 />
               </TabsContent>
             )}
@@ -258,6 +269,8 @@ export default async function JobsPage({
                 isAppliedJobsTabActive={true}
                 totalCount={totalCount}
                 current_page="jobs"
+                initialCursor={initialCursor}
+                error={error}
               />
             </TabsContent>
           )}

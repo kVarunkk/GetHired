@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
           const result = await processUserRelevance(
             userIdParam,
             email,
-            data[0].full_name,
+            data[0].full_name || "",
           );
 
           if (!result.success) {
@@ -66,8 +66,8 @@ export async function GET(request: NextRequest) {
             //   send email update to user regarding ai job feed
             // if (data && data.length > 0) {
             await sendEmailForRelevantJobsStatusUpdate(
-              data[0].email,
-              data[0].full_name,
+              data[0].email!,
+              data[0].full_name || "",
               URL + "/jobs?sortBy=relevance",
             );
             // }
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
           processUserRelevance(
             user.user_id,
             user.email || "Unknown",
-            user.full_name || user.email.split("@")[0],
+            user.full_name || user.email!.split("@")[0],
           ),
         );
 

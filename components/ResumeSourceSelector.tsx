@@ -53,7 +53,8 @@ export default function ResumeSourceSelector({
             .eq("id", selectedId)
             .single();
 
-          if (fetchError || !resumeData) throw new Error("Resume not found");
+          if (fetchError || !resumeData || !resumeData.resume_path)
+            throw new Error("Resume not found");
 
           const { data, error: signedError } = await supabase.storage
             .from("resumes")

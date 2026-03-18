@@ -54,10 +54,7 @@ export default function SortingComponent({
 
   return (
     <Select value={selectValue} onValueChange={(value) => handleSorting(value)}>
-      <SelectTrigger
-        disabled={isPending}
-        className="max-w-[120px] lg:max-w-full bg-input"
-      >
+      <SelectTrigger className="max-w-[120px] lg:max-w-full bg-input">
         {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
         <SelectValue placeholder="Sort By" />
       </SelectTrigger>

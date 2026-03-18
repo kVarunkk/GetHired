@@ -6,16 +6,22 @@ import {
   MutableRefObject,
 } from "react";
 
+interface FetchPageResult<T> {
+  data: T[];
+  nextCursor: string | null;
+}
 export interface UseInfiniteScrollOptions<T> {
   /** initial data already rendered by the server */
   initialItems: T[];
   /** total number of items available server‑side */
-  totalCount: number;
+  // totalCount: number;
+  initialCursor: string | null;
   /**
    * function that fetches the given page.
    * should return an array of items or throw on error.
    */
-  fetchPage: (page: number) => Promise<T[]>;
+  // fetchPage: (page: number) => Promise<T[]>;
+  fetchPage: (cursor: string | null) => Promise<FetchPageResult<T>>;
   /**
    * any values that, when changed, should reset the list.
    * e.g. the current filter/search parameters.
@@ -25,44 +31,54 @@ export interface UseInfiniteScrollOptions<T> {
 
 export function useInfiniteScroll<T>({
   initialItems,
-  totalCount,
+  initialCursor,
   fetchPage,
   resetDeps = [],
 }: UseInfiniteScrollOptions<T>) {
   const [items, setItems] = useState<T[]>(initialItems);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(!!initialCursor);
 
-  const pageRef = useRef(1);
+  // We use a ref for the cursor to ensure loadMore always uses the latest pointer
+  // without triggering extra re-renders.
+  const cursorRef = useRef<string | null>(initialCursor);
   const loaderRef = useRef<HTMLDivElement | null>(null);
 
   const loadMore = useCallback(async () => {
-    if (isLoading) return;
-    if (items.length >= totalCount) return;
+    // Guards: don't fetch if already loading or if there's no more data
+    if (isLoading || !hasMore || !cursorRef.current) return;
 
-    const next = pageRef.current + 1;
     setIsLoading(true);
     try {
-      const newItems = await fetchPage(next);
-      if (newItems && newItems.length) {
-        pageRef.current = next;
-        setItems((prev) => [...prev, ...newItems]);
+      const result = await fetchPage(cursorRef.current);
+
+      if (result.data && result.data.length > 0) {
+        setItems((prev) => [...prev, ...result.data]);
       }
+
+      // Update the cursor for the next batch
+      cursorRef.current = result.nextCursor;
+
+      // If the API returns a null cursor, we've reached the end of the list
+      setHasMore(!!result.nextCursor);
     } catch (err) {
-      // you can expose an onError callback if you like
-      console.error("infinite scroll load failed", err);
+      console.error("[INFINITE_SCROLL_ERROR]:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [fetchPage, isLoading, items.length, totalCount]);
+  }, [fetchPage, isLoading, hasMore]);
 
-  // wire up intersection observer once
+  // 1. Intersection Observer Logic
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) loadMore();
+        if (entry.isIntersecting) {
+          loadMore();
+        }
       },
-      { threshold: 0.1 },
+      { threshold: 0.1, rootMargin: "100px" }, // Added rootMargin to start loading earlier
     );
+
     const el = loaderRef.current;
     if (el) observer.observe(el);
 
@@ -72,21 +88,23 @@ export function useInfiniteScroll<T>({
     };
   }, [loadMore]);
 
-  // reset state when dependencies change (search params, etc.)
+  // 2. Reset Logic (Syncing with search filters or tab changes)
   useEffect(() => {
     setItems(initialItems);
-    pageRef.current = 1;
-  }, [initialItems, ...resetDeps]);
+    cursorRef.current = initialCursor;
+    setHasMore(!!initialCursor);
+  }, [initialItems, initialCursor, ...resetDeps]);
 
   return {
     items,
     isLoading,
+    hasMore,
     loaderRef: loaderRef as MutableRefObject<HTMLDivElement>,
     loadMore,
-    page: pageRef.current,
     reset: () => {
       setItems(initialItems);
-      pageRef.current = 1;
+      cursorRef.current = initialCursor;
+      setHasMore(!!initialCursor);
     },
   };
 }

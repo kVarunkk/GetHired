@@ -16,6 +16,7 @@ export async function rerankJobsIfApplicable({
   aiCredits = 0,
   matchedJobIds,
   relevanceSearchType,
+  cursor,
 }: {
   initialJobs: IJob[];
   initialCount: number;
@@ -24,6 +25,7 @@ export async function rerankJobsIfApplicable({
   aiCredits?: number;
   matchedJobIds: string[];
   relevanceSearchType: "standard" | "job_digest" | "similar_jobs" | null;
+  cursor: string | null;
 }): Promise<RerankResult> {
   let finalJobs = initialJobs;
   let finalCount = initialCount;
@@ -35,6 +37,7 @@ export async function rerankJobsIfApplicable({
   const url = `${protocol}://${host}`;
 
   if (
+    cursor ||
     !finalJobs ||
     finalJobs.length === 0 ||
     !relevanceSearchType ||
@@ -44,7 +47,6 @@ export async function rerankJobsIfApplicable({
     return { initialJobs: finalJobs, totalCount: finalCount };
   }
 
-  // --- 1. Check AI Credits ---
   const requiredCredits = TAICredits.AI_SEARCH_ASK_AI_RESUME;
 
   if (aiCredits >= requiredCredits || relevanceSearchType === "job_digest") {
@@ -53,17 +55,13 @@ export async function rerankJobsIfApplicable({
       if (relevanceSearchType === "job_digest" && INTERNAL_API_SECRET) {
         requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
         removedJobs = initialJobs.splice(40);
-        const cookie = headersList.get("Cookie");
-        if (cookie) {
-          requestHeaders["Cookie"] = cookie;
-        }
-      } else {
-        const cookie = headersList.get("Cookie");
-        if (cookie) {
-          requestHeaders["Cookie"] = cookie;
-        }
       }
-      // console.log("AI RERANK FETCH CALL");
+
+      const cookie = headersList.get("Cookie");
+      if (cookie) {
+        requestHeaders["Cookie"] = cookie;
+      }
+
       const aiRerankRes = await fetch(
         `${url}/api/ai-search/jobs${
           relevanceSearchType === "similar_jobs" ? "/similar-jobs" : ""
@@ -109,15 +107,12 @@ export async function rerankJobsIfApplicable({
           .map((id: string) => jobMap.get(id))
           .filter(
             (job: IJob | undefined): job is IJob =>
-              // Ensure the job exists in our map and hasn't been explicitly filtered out
               job !== undefined && !filteredOutIdsSet.has(job.id),
           )
           .concat(removedJobs);
 
         finalJobs = reorderedJobs;
         finalCount = reorderedJobs.length;
-
-        // console.log("AI RERANK FETCH SUCCESS", finalJobs.length);
       }
     } catch (e) {
       console.error("Error during AI Rerank fetch:", e);
@@ -125,7 +120,7 @@ export async function rerankJobsIfApplicable({
   } else if (
     // --- 2. Handle Insufficient Credits Case ---
     aiCredits < requiredCredits &&
-    matchedJobIds // Assuming the initial search response includes pre-matched IDs
+    matchedJobIds // Assuming the initial search response includes pre-matched IDs from vector search
   ) {
     const jobMap = new Map(initialJobs.map((job: IJob) => [job.id, job]));
 
@@ -136,6 +131,5 @@ export async function rerankJobsIfApplicable({
     finalCount = finalJobs.length || 0;
   }
 
-  // --- 3. Return Final Result ---
   return { initialJobs: finalJobs, totalCount: finalCount };
 }

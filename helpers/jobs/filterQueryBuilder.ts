@@ -1,5 +1,7 @@
 import { createClient } from "../../lib/supabase/server";
 import { createServiceRoleClient } from "../../lib/supabase/service-role";
+import { AllJobWithRelations, TApplicationStatus } from "@/utils/types";
+import { PostgrestError } from "@supabase/supabase-js";
 export const allJobsSelectString = `id, created_at, updated_at, job_name, job_type, platform, locations, salary_range, visa_requirement, salary_min, salary_max, company_name, company_url, experience, experience_min, experience_max, equity_range, equity_min, equity_max, job_url, status, ai_summary`;
 const jobPostingsSelectString = `id, created_at, updated_at, company_id, title, job_type, salary_range, status, location, min_salary, max_salary, min_experience, max_experience, visa_sponsorship, min_equity, max_equity, experience, equity_range, salary_currency, questions, job_id`;
 const companyInfoSelectString = `id, name, website, logo_url, description, industry, company_size, headquarters`;
@@ -21,8 +23,8 @@ export const buildQuery = async ({
   minExperience,
   platform,
   companyName,
-  start_index,
-  end_index,
+  cursor,
+  limit,
   jobTitleKeywords,
   isFavoriteTabActive,
   isAppliedJobsTabActive,
@@ -36,25 +38,25 @@ export const buildQuery = async ({
   relevanceSearchType,
   userId,
 }: {
-  jobType?: string | null;
-  visaRequirement?: string | null;
-  location?: string | null;
-  minSalary?: string | null;
-  minExperience?: string | null;
-  platform?: string | null;
-  companyName?: string | null;
-  start_index: number;
-  end_index: number;
-  sortBy?: string;
-  sortOrder?: "asc" | "desc";
-  jobTitleKeywords?: string | null;
+  jobType: string | null;
+  visaRequirement: string | null;
+  location: string | null;
+  minSalary: string | null;
+  minExperience: string | null;
+  platform: string | null;
+  companyName: string | null;
+  cursor: string | null;
+  limit: number | null;
+  sortBy: string;
+  sortOrder: string;
+  jobTitleKeywords: string | null;
   isFavoriteTabActive: boolean;
-  isAppliedJobsTabActive?: boolean;
-  userEmbedding?: string | null;
-  applicationStatus?: string | null;
-  createdAfter?: string | null;
-  isInternalCall?: boolean;
-  jobEmbedding?: string | null;
+  isAppliedJobsTabActive: boolean;
+  userEmbedding: string | null;
+  applicationStatus: string | null;
+  createdAfter: string | null;
+  isInternalCall: boolean;
+  jobEmbedding: string | null;
   relevanceSearchType: "standard" | "job_digest" | "similar_jobs" | null;
   userId: string | null;
 }) => {
@@ -76,7 +78,11 @@ export const buildQuery = async ({
     const platformsArray = parseMultiSelectParam(platform);
     const companyNamesArray = parseMultiSelectParam(companyName);
     const jobTitleKeywordsArray = parseMultiSelectParam(jobTitleKeywords);
-    const applicationStatusArray = parseMultiSelectParam(applicationStatus);
+    const applicationStatusArray = parseMultiSelectParam(
+      applicationStatus,
+    ).filter((s): s is TApplicationStatus =>
+      Object.values(TApplicationStatus).includes(s as TApplicationStatus),
+    );
 
     let query;
     let selectString;
@@ -98,7 +104,7 @@ export const buildQuery = async ({
     `;
       query = supabase
         .from("all_jobs")
-        .select(selectString, { count: "exact" })
+        .select(selectString)
         .eq("user_favorites.user_id", user.id);
     } else if (isAppliedJobsTabActive) {
       if (!user) {
@@ -116,7 +122,7 @@ export const buildQuery = async ({
     `;
       query = supabase
         .from("all_jobs")
-        .select(selectString, { count: "exact" })
+        .select(selectString)
         .eq("applications.applicant_user_id", user.id);
     } else if (relevanceSearchType === "standard") {
       if (!user) {
@@ -136,9 +142,8 @@ export const buildQuery = async ({
     `;
       query = supabase
         .from("all_jobs")
-        .select(selectString, { count: "exact" })
+        .select(selectString)
         .eq("user_relevant_jobs.user_id", user.id);
-      // .neq("user_relevant_jobs.jobs_id", null);
     } else {
       selectString = `
        ${allJobsSelectString},
@@ -147,8 +152,22 @@ export const buildQuery = async ({
     `;
       query = supabase
         .from("all_jobs")
-        .select(selectString, { count: "exact" })
+        .select(selectString)
         .eq("status", "active");
+    }
+
+    if (cursor && sortBy !== "relevance") {
+      const decoded = Buffer.from(cursor, "base64").toString("ascii");
+
+      const parts = decoded.split("_");
+      const lastId = parts.pop();
+      const lastValue = parts.join("_");
+      const operator = sortOrder === "desc" ? "lt" : "gt";
+      const tieOperator = "lt";
+
+      query = query.or(
+        `${sortBy}.${operator}.${lastValue},and(${sortBy}.eq.${lastValue},id.${tieOperator}.${lastId})`,
+      );
     }
 
     query = query.not("job_name", "is", null);
@@ -156,21 +175,19 @@ export const buildQuery = async ({
 
     let matchedJobIds: string[] = [];
 
-    // --- VECTOR SEARCH FOR AI SMART SEARCH ---
+    // --- VECTOR SEARCH ---
     if (
-      sortBy === "relevance" &&
       createdAfter &&
-      relevanceSearchType &&
-      relevanceSearchType !== "standard" &&
-      (userEmbedding || jobEmbedding)
+      ((relevanceSearchType === "job_digest" && userEmbedding) ||
+        (relevanceSearchType === "similar_jobs" && jobEmbedding))
     ) {
       const { data: searchData, error: searchError } = await supabase.rpc(
         "match_all_jobs_test",
         {
           embedding:
             relevanceSearchType === "similar_jobs"
-              ? jobEmbedding
-              : userEmbedding,
+              ? jobEmbedding!
+              : userEmbedding!,
           match_threshold: 0.4,
           match_count: relevanceSearchType === "similar_jobs" ? 10 : 100,
           min_created_at: createdAfter,
@@ -208,7 +225,6 @@ export const buildQuery = async ({
         loc.toLowerCase().trim(),
       );
       query = query.overlaps("normalized_locations", lowercasedLocations);
-      // query = query.overlaps("normalized_locations", locationsArray);
     }
 
     if (platformsArray.length > 0) {
@@ -242,22 +258,49 @@ export const buildQuery = async ({
       query = query.order("id", { ascending: sortOrder === "asc" }); // Tiebreaker
     }
 
-    if (relevanceSearchType === "standard") {
-      query = query.order("relevance_rank", {
-        referencedTable: "user_relevant_jobs",
-        ascending: sortOrder === "asc",
-      });
-      query = query.order("id", { ascending: sortOrder === "asc" });
+    if (limit && relevanceSearchType !== "standard") {
+      query = query.limit(limit);
     }
 
-    query = query.range(start_index, end_index);
+    const { data, error } = (await query) as unknown as {
+      data: AllJobWithRelations[] | null;
+      error: PostgrestError | null;
+    };
 
-    const { data, error, count } = await query;
+    if (relevanceSearchType === "standard" && data) {
+      data.sort((a, b) => {
+        const rankA = a.user_relevant_jobs?.[0]?.relevance_rank ?? 999;
+        const rankB = b.user_relevant_jobs?.[0]?.relevance_rank ?? 999;
+        return rankA - rankB;
+      });
+    }
+
+    let totalCount = 0;
+    if (!cursor) {
+      const { count } = await supabase
+        .from("all_jobs")
+        .select("id", { count: "exact", head: true });
+
+      totalCount = count || 0;
+    }
+
+    let nextCursor = null;
+    if (data && data.length === limit) {
+      const lastItem = data[data.length - 1];
+      const cursorValue = lastItem[sortBy as keyof typeof lastItem];
+
+      if (cursorValue !== undefined && lastItem.id) {
+        nextCursor = Buffer.from(`${cursorValue}_${lastItem.id}`).toString(
+          "base64",
+        );
+      }
+    }
 
     return {
       data,
       error: error?.details,
-      count: count || 0,
+      nextCursor,
+      count: totalCount,
       matchedJobIds,
     };
   } catch (e: unknown) {

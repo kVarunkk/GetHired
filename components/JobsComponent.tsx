@@ -36,6 +36,8 @@ export default function JobsComponent({
   isAllJobsTab,
   isAppliedJobsTabActive,
   totalCount,
+  initialCursor,
+  error,
 }: {
   initialJobs: IJob[] | IFormData[] | ICompanyInfo[];
   user: User | null;
@@ -46,6 +48,8 @@ export default function JobsComponent({
   isAllJobsTab: boolean;
   isAppliedJobsTabActive: boolean;
   totalCount: number;
+  initialCursor: string | null;
+  error: string | null;
 }) {
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
     revalidateOnFocus: false,
@@ -61,21 +65,60 @@ export default function JobsComponent({
   const isGenerated = data?.profile?.is_relevant_jobs_generated ?? false;
   const isFailed = data?.profile?.is_relevant_job_update_failed ?? false;
 
+  // const {
+  //   items: jobs,
+  //   cursor,
+  //   loaderRef,
+  // } = useInfiniteScroll<IJob | ICompanyInfo | IFormData>({
+  //   initialItems: initialJobs,
+  //   totalCount,
+  //   fetchPage: async (cursor) => {
+  //     const params = new URLSearchParams(searchParams.toString());
+  //     params.set("page", page.toString());
+  //     params.set(
+  //       "tab",
+  //       isAllJobsTab ? "all" : isAppliedJobsTabActive ? "applied" : "saved",
+  //     );
+  //     params.set("limit", "20");
+
+  //     const res = await fetch(
+  //       `/api/${
+  //         current_page === "profiles" && isCompanyUser
+  //           ? "profiles"
+  //           : current_page === "jobs"
+  //             ? "jobs"
+  //             : "companies"
+  //       }?${params.toString()}`,
+  //     );
+  //     if (!res.ok) throw new Error("fetch failed");
+  //     const json = await res.json();
+  //     return json.data as IJob[];
+  //   },
+  //   resetDeps: [
+  //     searchParams.toString(),
+  //     current_page,
+  //     isAllJobsTab,
+  //     isAppliedJobsTabActive,
+  //     isCompanyUser,
+  //   ],
+  // });
+
   const {
     items: jobs,
-    page,
+    hasMore,
     loaderRef,
   } = useInfiniteScroll<IJob | ICompanyInfo | IFormData>({
     initialItems: initialJobs,
-    totalCount,
-    fetchPage: async (page) => {
+    initialCursor: initialCursor,
+    fetchPage: async (cursor) => {
       const params = new URLSearchParams(searchParams.toString());
-      params.set("page", page.toString());
+
+      if (cursor) params.set("cursor", cursor);
+
       params.set(
         "tab",
         isAllJobsTab ? "all" : isAppliedJobsTabActive ? "applied" : "saved",
       );
-      params.set("limit", "20");
 
       const res = await fetch(
         `/api/${
@@ -86,9 +129,14 @@ export default function JobsComponent({
               : "companies"
         }?${params.toString()}`,
       );
+
       if (!res.ok) throw new Error("fetch failed");
       const json = await res.json();
-      return json.data as IJob[];
+
+      return {
+        data: json.data as IJob[],
+        nextCursor: json.nextCursor,
+      };
     },
     resetDeps: [
       searchParams.toString(),
@@ -331,13 +379,25 @@ export default function JobsComponent({
         </div>
       </div>
 
-      {!isGenerated &&
-      current_page === "jobs" &&
-      isSuitable &&
-      !isSimilarSearch ? (
+      {error ? (
+        <div className="flex flex-col items-center justify-center my-20 gap-5">
+          <p className=" text-muted-foreground text-sm text-center sm:w-1/2">
+            {error}
+          </p>
+          {/* <Button
+            onClick={() => {
+              mutate(PROFILE_API_KEY);
+            }}
+          >   Retry
+          </Button> */}
+        </div>
+      ) : !isGenerated &&
+        current_page === "jobs" &&
+        isSuitable &&
+        !isSimilarSearch ? (
         isFailed ? (
           <div className="flex flex-col items-center justify-center my-20 gap-5">
-            <p className=" text-muted-foreground text-sm text-center sm:w-3/4">
+            <p className=" text-muted-foreground text-sm text-center sm:w-1/2">
               There was some error generating your AI Smart Search Feed. Please
               click the button below to regenerate your feed. This is a one time
               process and might take some time. You will be notified via email
@@ -364,7 +424,7 @@ export default function JobsComponent({
       ) : (
         renderedList
       )}
-
+      {/* 
       {jobs.length < totalCount && jobs.length !== 0 ? (
         !isGenerated &&
         current_page === "jobs" &&
@@ -383,6 +443,36 @@ export default function JobsComponent({
         )
       ) : (
         ""
+      )} */}
+
+      {hasMore && jobs.length !== 0 && !error && (
+        <>
+          {/* Case A: AI relevance feed is still generating.
+      We don't show the loader because the background polling 
+      in JobsComponent handles the transition.
+    */}
+          {!isGenerated &&
+          current_page === "jobs" &&
+          isSuitable &&
+          !isSimilarSearch ? null /* Case B: Guest Wall.
+      If not logged in and they've seen ~2 batches (40 items), 
+      we show the FootComponent instead of the loaderRef. 
+      Because loaderRef is not rendered, infinite scroll stops here.
+    */ : current_page === "jobs" && !user && jobs.length >= 40 ? (
+            <FootComponent />
+          ) : (
+            /* Case C: Standard Loader.
+        Rendering the 'loaderRef' div triggers the Intersection Observer 
+        to call fetchPage(nextCursor).
+      */
+            <div
+              ref={loaderRef}
+              className="flex justify-center items-center p-4 pt-20"
+            >
+              <AppLoader size="md" />
+            </div>
+          )}
+        </>
       )}
 
       <ScrollToTopButton />
