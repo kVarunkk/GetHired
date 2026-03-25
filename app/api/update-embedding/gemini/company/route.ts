@@ -39,12 +39,19 @@ export async function POST(request: Request) {
       },
     });
 
+    if (!embedding) {
+      return NextResponse.json(
+        { error: "Failed to generate embedding." },
+        { status: 500 },
+      );
+    }
+
     // 4. Update Supabase
     const supabase = await createClient();
     const { error: updateError } = await supabase
       .from("company_info")
       .update({
-        embedding_new: embedding,
+        embedding_new: embedding as unknown as string,
         updated_at: new Date().toISOString(),
       })
       .eq("id", companyData.id);

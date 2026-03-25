@@ -5,11 +5,12 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import JobApplicationDialog from "./JobApplicationDialog";
 import { ArrowRight, MoreHorizontal } from "lucide-react";
-import { IJob, TApplicationStatus } from "@/utils/types";
+import { AllJobWithRelations, TApplicationStatus } from "@/utils/types";
 import { useCallback, useState } from "react";
 import PropagationStopper from "./StopPropagation";
 import InfoTooltip from "./InfoTooltip";
 import JobStatusDialog from "@/helpers/jobs/JobStatusDialog";
+import { TJobIdPageData } from "@/utils/types/jobs.types";
 
 export default function JobApplyBtn({
   isCompanyUser,
@@ -20,7 +21,7 @@ export default function JobApplyBtn({
 }: {
   isCompanyUser: boolean;
   user: User | null;
-  job: IJob;
+  job: AllJobWithRelations | TJobIdPageData;
   isOnboardingComplete: boolean;
   isAppliedJobsTabActive?: boolean;
 }) {

@@ -2,11 +2,12 @@ import * as React from "react";
 import { BaseEmailLayout } from "./BaseEmailLayout";
 import { Heading, Text, Section, Button, Hr } from "@react-email/components";
 import { formatCurrency } from "@/utils/utils";
-import { IPayment } from "@/utils/types";
+import { TWebhookPaymentDetails } from "@/utils/types/payments.types";
+// import { IPayment } from "@/utils/types";
 
 interface PaymentUpdateEmailProps {
   userName: string;
-  paymentDetails: IPayment;
+  paymentDetails: TWebhookPaymentDetails;
 }
 
 export const PaymentUpdateEmail = ({
@@ -22,7 +23,7 @@ export const PaymentUpdateEmail = ({
   const baseLink = "https://gethired.devhub.co.in";
 
   const renderOrderSummary = (
-    details: IPayment,
+    details: TWebhookPaymentDetails,
     color: string,
     successMessage: string,
   ) => {

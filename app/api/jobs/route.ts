@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { rerankJobsIfApplicable } from "@/helpers/jobs/ai-rerank-jobs";
-import { IJob, TAICredits } from "@/utils/types";
+import { TAICredits } from "@/utils/types";
 import { getCutOffDate } from "@/utils/serverUtils";
 
 export async function GET(request: NextRequest) {
@@ -113,8 +113,8 @@ export async function GET(request: NextRequest) {
       companyName,
       cursor,
       limit,
-      sortBy: sortBy,
-      sortOrder: sortOrder,
+      sortBy,
+      sortOrder,
       jobTitleKeywords,
       isFavoriteTabActive: isFavoriteTabActive,
       isAppliedJobsTabActive: isAppliedJobsTabActive,
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { initialJobs, totalCount } = await rerankJobsIfApplicable({
-      initialJobs: data as unknown as IJob[],
+      initialJobs: data,
       initialCount: count,
       userId,
       jobId,

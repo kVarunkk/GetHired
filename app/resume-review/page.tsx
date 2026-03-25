@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
-import { IResumeReview } from "@/utils/types";
 import ResumeReviewsTable from "@/components/ResumeReviewsTable";
 import CreateResumeReviewDialog from "@/components/CreateResumeReviewDialog";
 
@@ -33,10 +32,7 @@ export default async function ResumeReviewPage() {
           <h1 className="text-3xl font-medium ">All CV Reviews</h1>
           <CreateResumeReviewDialog userId={user.id} />
         </div>
-        <ResumeReviewsTable
-          key={tableKey}
-          data={(reviews as unknown as IResumeReview[]) || []}
-        />
+        <ResumeReviewsTable key={tableKey} data={reviews || []} />
       </div>
     );
   } catch {

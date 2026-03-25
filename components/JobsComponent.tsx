@@ -1,6 +1,10 @@
 "use client";
 
-import { ICompanyInfo, IFormData, IJob } from "@/utils/types";
+import {
+  AllJobWithRelations,
+  AllProfileWithRelations,
+  TCompanyInfo,
+} from "@/utils/types";
 import Link from "next/link";
 import { startTransition, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -39,7 +43,10 @@ export default function JobsComponent({
   initialCursor,
   error,
 }: {
-  initialJobs: IJob[] | IFormData[] | ICompanyInfo[];
+  initialJobs:
+    | AllJobWithRelations[]
+    | AllProfileWithRelations[]
+    | TCompanyInfo[];
   user: User | null;
   isCompanyUser: boolean;
   current_page: "jobs" | "profiles" | "companies";
@@ -65,49 +72,13 @@ export default function JobsComponent({
   const isGenerated = data?.profile?.is_relevant_jobs_generated ?? false;
   const isFailed = data?.profile?.is_relevant_job_update_failed ?? false;
 
-  // const {
-  //   items: jobs,
-  //   cursor,
-  //   loaderRef,
-  // } = useInfiniteScroll<IJob | ICompanyInfo | IFormData>({
-  //   initialItems: initialJobs,
-  //   totalCount,
-  //   fetchPage: async (cursor) => {
-  //     const params = new URLSearchParams(searchParams.toString());
-  //     params.set("page", page.toString());
-  //     params.set(
-  //       "tab",
-  //       isAllJobsTab ? "all" : isAppliedJobsTabActive ? "applied" : "saved",
-  //     );
-  //     params.set("limit", "20");
-
-  //     const res = await fetch(
-  //       `/api/${
-  //         current_page === "profiles" && isCompanyUser
-  //           ? "profiles"
-  //           : current_page === "jobs"
-  //             ? "jobs"
-  //             : "companies"
-  //       }?${params.toString()}`,
-  //     );
-  //     if (!res.ok) throw new Error("fetch failed");
-  //     const json = await res.json();
-  //     return json.data as IJob[];
-  //   },
-  //   resetDeps: [
-  //     searchParams.toString(),
-  //     current_page,
-  //     isAllJobsTab,
-  //     isAppliedJobsTabActive,
-  //     isCompanyUser,
-  //   ],
-  // });
-
   const {
     items: jobs,
     hasMore,
     loaderRef,
-  } = useInfiniteScroll<IJob | ICompanyInfo | IFormData>({
+  } = useInfiniteScroll<
+    AllJobWithRelations | TCompanyInfo | AllProfileWithRelations
+  >({
     initialItems: initialJobs,
     initialCursor: initialCursor,
     fetchPage: async (cursor) => {
@@ -134,7 +105,7 @@ export default function JobsComponent({
       const json = await res.json();
 
       return {
-        data: json.data as IJob[],
+        data: json.data,
         nextCursor: json.nextCursor,
       };
     },
@@ -207,39 +178,48 @@ export default function JobsComponent({
     }
 
     if (current_page === "profiles" && isCompanyUser) {
-      return (jobs as IFormData[]).map((profile) => (
-        <ProfileItem
-          key={profile.user_id}
-          profile={profile}
-          isSuitable={isSuitable}
-          companyId={companyId}
-        />
-      ));
+      return jobs
+        .filter(
+          (job): job is AllProfileWithRelations =>
+            "user_id" in job && !("website" in job),
+        )
+        .map((profile) => (
+          <ProfileItem
+            key={profile.user_id}
+            profile={profile}
+            isSuitable={isSuitable}
+            companyId={companyId}
+          />
+        ));
     }
 
     if (current_page === "jobs") {
-      return (jobs as IJob[]).map((job) => (
-        <JobItem
-          isCompanyUser={isCompanyUser}
-          key={job.id}
-          job={job}
-          user={user}
-          isSuitable={isSuitable}
-          isAppliedJobsTabActive={isAppliedJobsTabActive}
-          isOnboardingComplete={isOnboardingComplete}
-        />
-      ));
+      return jobs
+        .filter((job): job is AllJobWithRelations => "job_name" in job)
+        .map((job) => (
+          <JobItem
+            isCompanyUser={isCompanyUser}
+            key={job.id}
+            job={job}
+            user={user}
+            isSuitable={isSuitable}
+            isAppliedJobsTabActive={isAppliedJobsTabActive}
+            isOnboardingComplete={isOnboardingComplete}
+          />
+        ));
     }
 
-    return (jobs as ICompanyInfo[]).map((company) => (
-      <CompanyItem
-        isCompanyUser={isCompanyUser}
-        key={company.id}
-        company={company}
-        user={user}
-        isSuitable={isSuitable}
-      />
-    ));
+    return jobs
+      .filter((job): job is TCompanyInfo => "company_size" in job)
+      .map((company) => (
+        <CompanyItem
+          isCompanyUser={isCompanyUser}
+          key={company.id}
+          company={company}
+          user={user}
+          isSuitable={isSuitable}
+        />
+      ));
   }, [
     jobs,
     current_page,
@@ -384,12 +364,6 @@ export default function JobsComponent({
           <p className=" text-muted-foreground text-sm text-center sm:w-1/2">
             {error}
           </p>
-          {/* <Button
-            onClick={() => {
-              mutate(PROFILE_API_KEY);
-            }}
-          >   Retry
-          </Button> */}
         </div>
       ) : !isGenerated &&
         current_page === "jobs" &&

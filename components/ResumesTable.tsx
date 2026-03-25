@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { IResume } from "@/utils/types";
+// import { IResume } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import DynamicActions from "./DynamicTableActions";
 import { Input } from "./ui/input";
@@ -29,9 +29,10 @@ import ResumeSetPrimary from "./ResumeSetPrimary";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 import InfoTooltip from "./InfoTooltip";
 import { useRouter } from "next/navigation";
+import { TResumeReviewResume } from "@/utils/types/review.types";
 
 interface ResumesTableProps {
-  data: IResume[];
+  data: TResumeReviewResume[];
 }
 
 export default function ResumesTable({ data }: ResumesTableProps) {
@@ -40,13 +41,13 @@ export default function ResumesTable({ data }: ResumesTableProps) {
     import("@tanstack/react-table").ColumnFiltersState
   >([]);
   const [page, setPage] = useState(1);
-  const [items, setItems] = useState<IResume[]>(data);
+  const [items, setItems] = useState<TResumeReviewResume[]>(data);
   const [isProcessing, setIsProcessing] = useState(false);
   const router = useRouter();
 
   const pageSize = 10;
 
-  const updateLocalItem = (updatedItem: IResume) => {
+  const updateLocalItem = (updatedItem: TResumeReviewResume) => {
     setItems((prev) =>
       prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
     );
@@ -58,7 +59,7 @@ export default function ResumesTable({ data }: ResumesTableProps) {
     router.refresh();
   };
 
-  const columns: ColumnDef<IResume>[] = useMemo(
+  const columns: ColumnDef<TResumeReviewResume>[] = useMemo(
     () => [
       {
         accessorKey: "is_primary",

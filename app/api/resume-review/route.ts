@@ -3,7 +3,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getVertexClient } from "@/utils/serverUtils";
-import { IResume, TAICredits } from "@/utils/types";
+import { TAICredits } from "@/utils/types";
 import {
   validateAndSanitizeSearchQuery,
   wrapInSandbox,
@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { reviewId, targetJd } = await req.json();
+    const { reviewId, targetJd }: { reviewId: string; targetJd: string } =
+      await req.json();
 
     const userId = user.id;
 
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
       .eq("user_id", userId)
       .single();
 
-    if (userInfo?.ai_credits < TAICredits.AI_CV_REVIEW) {
+    if (userInfo?.ai_credits ?? 0 < TAICredits.AI_CV_REVIEW) {
       return NextResponse.json(
         { error: "Insufficient AI credits. Please top up to continue." },
         { status: 402 },
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
       .eq("id", reviewId)
       .single();
 
-    const resumeJson = (reviewData?.resumes as unknown as IResume)?.content;
+    const resumeJson = reviewData?.resumes?.content;
     if (!resumeJson) {
       return NextResponse.json(
         { error: "Resume not indexed" },

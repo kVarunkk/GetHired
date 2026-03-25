@@ -1,7 +1,6 @@
 import BackButton from "@/components/BackButton";
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
-import { ICompanyInfo } from "@/utils/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -17,11 +16,17 @@ async function fetchCompanyData(company_id: string) {
   } = await supabase.auth.getUser();
   let isCompanyUser = false;
 
-  const { data: companyData } = await supabase
-    .from("company_info")
-    .select("id")
-    .eq("user_id", user?.id)
-    .single();
+  if (user && user.id) {
+    const { data: companyData } = await supabase
+      .from("company_info")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (companyData) {
+      isCompanyUser = true;
+    }
+  }
 
   const { data, error } = await supabase
     .from("company_info")
@@ -31,11 +36,8 @@ async function fetchCompanyData(company_id: string) {
 
   if (error) throw error;
 
-  if (companyData) {
-    isCompanyUser = true;
-  }
   return {
-    data: data as ICompanyInfo,
+    data,
     user,
     isCompanyUser,
   };
@@ -49,7 +51,7 @@ export async function generateMetadata({
   try {
     const { company_id } = await params;
     const { data: companyData } = await fetchCompanyData(company_id);
-    const companyName = companyData.name;
+    const companyName = companyData.name ?? "";
     const companyDescription =
       companyData.description ||
       `Learn about ${companyName} and see their active job openings on GetHired.`;
@@ -96,7 +98,7 @@ export default async function CompanyIdPage({
           <div className="flex items-center gap-3">
             <img
               className="rounded-lg"
-              src={companyData.logo_url}
+              src={companyData.logo_url ?? undefined}
               alt="Company Logo"
               width={60}
             />
@@ -121,7 +123,9 @@ export default async function CompanyIdPage({
             <Link
               target="_blank"
               rel="noopener noreferrer"
-              href={`/jobs?companyName=${encodeURIComponent(companyData.name)}`}
+              href={`/jobs?companyName=${encodeURIComponent(
+                companyData.name ?? "",
+              )}`}
             >
               <Button>
                 See Active Jobs <ArrowRight />
@@ -138,7 +142,7 @@ export default async function CompanyIdPage({
                   <div>
                     <p className="font-semibold text-sm">Website</p>
                     <Link
-                      href={companyData.website}
+                      href={companyData.website ?? ""}
                       className="text-sm  text-blue-600"
                     >
                       {companyData.website || "Not specified"}

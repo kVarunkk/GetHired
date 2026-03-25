@@ -6,7 +6,7 @@ import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
 import DeleteJobPosting from "@/components/DeleteJobPosting";
 import { Briefcase, DollarSign, Users, MapPin } from "lucide-react";
 import { format } from "date-fns";
-import { IApplication, IJobPosting } from "@/utils/types";
+// import { IApplication,  } from "@/utils/types";
 import BackButton from "@/components/BackButton";
 import { JobStatusSwitch } from "@/components/JobPostingsTable";
 import ApplicantsTable from "@/components/ApplicantsTable";
@@ -22,7 +22,7 @@ export default async function JobPostPage({
   try {
     const { job_id } = await params;
     const supabase = await createClient();
-    const { data, error } = await supabase
+    const { data: job, error } = await supabase
       .from("job_postings")
       .select(
         `
@@ -34,10 +34,7 @@ export default async function JobPostPage({
       .eq("id", job_id)
       .single();
 
-    const job = data as IJobPosting;
-
     if (error || !job) {
-      // console.error("Error fetching job posting:", error);
       return <Error />;
     }
 
@@ -45,10 +42,10 @@ export default async function JobPostPage({
     const existingValues = {
       id: job.id,
       title: job.title,
-      description: job.description,
+      description: job.description ?? "",
       location: job.location ?? [],
-      job_type: job.job_type ?? undefined,
-      salary_currency: job.salary_currency,
+      job_type: job.job_type,
+      salary_currency: job.salary_currency ?? "$",
       min_salary: job.min_salary ?? 0,
       max_salary: job.max_salary ?? 0,
       min_experience: job.min_experience ?? 0,
@@ -167,11 +164,7 @@ export default async function JobPostPage({
           <h2 className="text-2xl font-medium mb-4">
             Applicants ({job.applications?.length})
           </h2>
-          {
-            <ApplicantsTable
-              data={(job.applications as unknown as IApplication[]) || []}
-            />
-          }
+          {<ApplicantsTable data={job.applications || []} />}
         </div>
       </div>
     );

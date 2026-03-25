@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ExternalLink, Info, Loader2, Sparkle } from "lucide-react";
-import { IJob, TApplicationStatus } from "@/utils/types";
+import { AllJobWithRelations, TApplicationStatus } from "@/utils/types";
 import { useState } from "react";
 import { revalidateCache } from "@/app/actions/revalidate";
 import { createClient } from "@/lib/supabase/client";
@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { TJobIdPageData } from "@/utils/types/jobs.types";
 
 export default function JobStatusDialog({
   job,
@@ -25,7 +26,7 @@ export default function JobStatusDialog({
   onClose,
   userId,
 }: {
-  job: IJob;
+  job: AllJobWithRelations | TJobIdPageData;
   showDialog: boolean;
   onClose: (applicationStatus?: TApplicationStatus) => void;
   userId?: string;

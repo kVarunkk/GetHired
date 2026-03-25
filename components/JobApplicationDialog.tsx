@@ -19,19 +19,20 @@ import {
   CardTitle,
 } from "./ui/card";
 import { useState, useMemo } from "react";
-import { IJob, TApplicationStatus } from "@/utils/types";
+import { AllJobWithRelations, TApplicationStatus } from "@/utils/types";
 import { User } from "@supabase/supabase-js";
 import PropagationStopper from "./StopPropagation";
 import InfoTooltip from "./InfoTooltip";
 import JobApplicationForm from "./JobApplicationForm";
 import Link from "next/link";
+import { TJobIdPageData } from "@/utils/types/jobs.types";
 
 export default function JobApplicationDialog({
   jobPost,
   user,
   isAppliedJobsTabActive,
 }: {
-  jobPost: IJob;
+  jobPost: AllJobWithRelations | TJobIdPageData;
   user: User | null;
   isAppliedJobsTabActive: boolean;
 }) {
@@ -39,7 +40,7 @@ export default function JobApplicationDialog({
   const [overrideStatus, setOverrideStatus] =
     useState<TApplicationStatus | null>(null);
 
-  const applicationStatus = useMemo((): TApplicationStatus | null => {
+  const applicationStatus = useMemo(() => {
     if (overrideStatus) return overrideStatus;
     if (isAppliedJobsTabActive) {
       return jobPost?.applications?.[0]?.status ?? null;

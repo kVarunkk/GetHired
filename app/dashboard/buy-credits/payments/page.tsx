@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import BackButton from "@/components/BackButton";
-import { IPayment } from "@/utils/types";
+// import { IPayment } from "@/utils/types";
 import PaymentsTable from "@/components/PaymentsTable";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -43,7 +43,7 @@ export default async function PaymentsPage() {
             </Link>
           </Button>
         </div>
-        <PaymentsTable data={(payments as unknown as IPayment[]) || []} />
+        <PaymentsTable data={payments || []} />
       </div>
     );
   } catch {

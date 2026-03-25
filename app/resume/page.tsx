@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
-import { IResume } from "@/utils/types";
 import ResumesTable from "@/components/ResumesTable";
 import CreateResumeDialog from "@/components/CreateResumeDialog";
 
@@ -31,15 +30,9 @@ export default async function ResumePage() {
       <div className="flex flex-col w-full gap-8 p-4 mb-20">
         <div className="flex items-center justify-between flex-wrap gap-4 w-full">
           <h1 className="text-3xl font-medium ">All Resumes</h1>
-          <CreateResumeDialog
-            key={tableKey}
-            existingResumes={resumes as unknown as IResume[]}
-          />
+          <CreateResumeDialog key={tableKey} existingResumes={resumes} />
         </div>
-        <ResumesTable
-          key={tableKey}
-          data={(resumes as unknown as IResume[]) || []}
-        />
+        <ResumesTable key={tableKey} data={resumes || []} />
       </div>
     );
   } catch {

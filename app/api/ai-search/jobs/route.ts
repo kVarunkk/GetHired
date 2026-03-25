@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { IJob, TAICredits, TResumeContent } from "@/utils/types";
+import { AllJobWithRelations, TAICredits, TResumeContent } from "@/utils/types";
 import { getVertexClient } from "@/utils/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
@@ -16,7 +16,13 @@ export async function POST(request: NextRequest) {
       ? createServiceRoleClient() // No session needed, bypasses RLS
       : await createClient();
 
-    const { userId, jobs } = await request.json();
+    const {
+      userId,
+      jobs,
+    }: {
+      userId: string;
+      jobs: AllJobWithRelations[];
+    } = await request.json();
 
     if (!userId || !jobs) {
       return NextResponse.json(
@@ -94,7 +100,7 @@ export async function POST(request: NextRequest) {
       **Job Listings to Evaluate:**
       ${jobs
         .map(
-          (job: IJob) => `
+          (job) => `
         ---
         ID: ${job.id}
         Title: ${job.job_name}

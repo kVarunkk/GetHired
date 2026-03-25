@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { IResumeReview } from "@/utils/types";
+// import { IResumeReview } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import {
   Select,
@@ -34,12 +34,14 @@ import DynamicActions from "./DynamicTableActions";
 import { Input } from "./ui/input";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 import { useRouter } from "next/navigation";
+import { TResumeReviewTable } from "@/utils/types/review.types";
+import { TResumeReviewStatus } from "@/utils/types";
 
 interface ResumeReviewsTableProps {
-  data: IResumeReview[];
+  data: TResumeReviewTable[];
 }
 
-type TResumeReviewTableData = IResumeReview & {
+export type TResumeReviewTableData = TResumeReviewTable & {
   resume: string;
 };
 
@@ -51,12 +53,12 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
     import("@tanstack/react-table").ColumnFiltersState
   >([]);
   const [page, setPage] = useState(1);
-  const [items, setItems] = useState<IResumeReview[]>(data);
+  const [items, setItems] = useState(data);
   const router = useRouter();
 
   const pageSize = 10;
 
-  const updateLocalItem = (updatedItem: IResumeReview) => {
+  const updateLocalItem = (updatedItem: TResumeReviewTable) => {
     setItems((prev) =>
       prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
     );
@@ -75,7 +77,7 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
     }));
   }, [items]);
 
-  const columns: ColumnDef<IResumeReview & { resume: string }>[] = useMemo(
+  const columns: ColumnDef<TResumeReviewTable & { resume: string }>[] = useMemo(
     () => [
       {
         accessorKey: "created_at",
@@ -106,7 +108,9 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => (
-          <ApplicationStatusBadge status={row.original.status} />
+          <ApplicationStatusBadge
+            status={row.original.status as TResumeReviewStatus}
+          />
         ),
         filterFn: "equals",
       },

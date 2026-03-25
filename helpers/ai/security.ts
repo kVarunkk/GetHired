@@ -3,7 +3,7 @@
  * A single entry-point for processing untrusted search queries.
  */
 export function validateAndSanitizeSearchQuery(
-  input: any,
+  input: unknown,
   maxLength: number = 100,
 ): { success: boolean; data?: string; error?: string; status?: number } {
   // 1. Basic type check

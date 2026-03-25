@@ -74,14 +74,14 @@ export async function GET() {
         user_id: string;
       };
 
-      if (userInfo && userInfo.email) {
+      if (userInfo && userInfo.email && userId) {
         userDetailMap.set(userId, {
           email: userInfo.email,
           fullName: userInfo.full_name ?? userInfo.email.split("@")[0],
         });
       }
 
-      if (job) {
+      if (job && userId) {
         if (!usersToRemind.has(userId)) {
           usersToRemind.set(userId, []);
         }

@@ -2,13 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { ICompanyInfo, TAICredits } from "@/utils/types";
+import { TAICredits, TResumeContent } from "@/utils/types";
 import { getVertexClient } from "@/utils/serverUtils";
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { userId, companies } = await request.json();
+    const {
+      userId,
+      companies,
+    }: {
+      userId: string;
+      companies: {
+        id: string;
+        name: string;
+        description: string;
+        headquarters: string;
+        company_size: string;
+        industry: string;
+      }[];
+    } = await request.json();
 
     if (!userId || !companies) {
       return NextResponse.json(
@@ -46,8 +59,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { experience, skills, projects } = userPreferences.resumes?.[0]
-      ?.content || {
+    const { experience, skills, projects } = (userPreferences.resumes?.[0]
+      ?.content as TResumeContent) || {
       experience: "",
       skills: "",
       projects: "",
@@ -93,7 +106,7 @@ export async function POST(request: NextRequest) {
       **Companies to Evaluate:**
       ${companies
         .map(
-          (company: ICompanyInfo) => `
+          (company) => `
         ---
         ID: ${company.id}
         Title: ${company.name}

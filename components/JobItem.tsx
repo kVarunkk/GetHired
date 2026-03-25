@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Badge } from "./ui/badge";
-import { IJob } from "@/utils/types";
 import { User } from "@supabase/supabase-js";
 import { cn } from "@/utils/utils";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
@@ -10,6 +9,7 @@ import JobFavoriteBtn from "./JobFavoriteBtn";
 import JobApplyBtn from "./JobApplyBtn";
 import ModifiedLink from "./ModifiedLink";
 import React from "react";
+import { AllJobWithRelations } from "@/utils/types";
 
 const JobItem = React.memo(
   ({
@@ -20,7 +20,7 @@ const JobItem = React.memo(
     isAppliedJobsTabActive,
     isOnboardingComplete,
   }: {
-    job: IJob;
+    job: AllJobWithRelations;
     user: User | null;
     isSuitable: boolean;
     isCompanyUser: boolean;
@@ -105,7 +105,7 @@ function JobDetailBadges({
   job,
   isSuitable,
 }: {
-  job: IJob;
+  job: AllJobWithRelations;
   isSuitable: boolean;
 }) {
   const jobDetails = [

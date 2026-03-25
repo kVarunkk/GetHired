@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { IResume } from "@/utils/types";
+import { TResumeReviewResume } from "@/utils/types/review.types";
 import { cn } from "@/utils/utils";
 import { CheckCircle2, FileCheck } from "lucide-react";
 
@@ -9,7 +9,9 @@ export const SelectResumeParent = ({
   onSelectExisting,
   selectedId,
 }: {
-  existingResumes: IResume[];
+  existingResumes: (TResumeReviewResume & {
+    resume_path?: string | null;
+  })[];
   onFileChange: (file: File | null) => void;
   onSelectExisting: (id: string | null) => void;
   selectedId: string | null;
@@ -19,7 +21,7 @@ export const SelectResumeParent = ({
       {existingResumes?.length > 0 ? (
         existingResumes.map((resume) => (
           <button
-            title={resume.name}
+            title={resume.name || ""}
             key={resume.id}
             type="button"
             onClick={() => {

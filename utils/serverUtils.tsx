@@ -45,9 +45,10 @@ export function getCutOffDate(daysAgo: number): string {
  * @returns A string like "Today", "1 day ago", or "5 days ago".
  */
 export function simpleTimeAgo(
-  dateString: string,
   variant: "variant1" | "variant2",
+  dateString?: string | null,
 ): string {
+  if (!dateString) return variant === "variant2" ? "0" : "Unknown";
   const date = new Date(dateString);
   const now = new Date();
 

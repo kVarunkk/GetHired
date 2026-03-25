@@ -4,13 +4,17 @@ import { cn } from "@/utils/utils";
 import { Eye, File, FileText, Loader2, RefreshCcw } from "lucide-react";
 import ResumeSourceSelector from "../ResumeSourceSelector";
 import DigitalTwinMirror from "./DigitalTwinMirror";
-import { IResume } from "@/utils/types";
 import { useEffect, useState } from "react";
 import { uploadResumeAction } from "@/app/actions/upload-resume-file";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { Button } from "../ui/button";
 import OriginalResumeWrapper from "../OriginalResumeWrapper";
+import {
+  TResumeReviewResume,
+  TResumeReviewServer,
+} from "@/utils/types/review.types";
+import { TResumeRowContent } from "@/utils/types";
 
 export default function ResumeSection({
   isParsed,
@@ -25,8 +29,8 @@ export default function ResumeSection({
 }: {
   isParsed: boolean;
   isJdPaneOpen: boolean;
-  existingResumes: IResume[];
-  linkedResume?: IResume;
+  existingResumes: TResumeReviewResume[];
+  linkedResume: TResumeReviewServer["resumes"] | null;
   activeHighlightId: string | null;
   handleLinkResume: (resumeId: string | null) => Promise<void>;
   isResumeLinked: boolean;
@@ -227,7 +231,7 @@ export default function ResumeSection({
           <div className="h-full">
             {viewMode === "mirror" ? (
               <DigitalTwinMirror
-                content={linkedResume?.content}
+                content={linkedResume?.content as TResumeRowContent}
                 activeHighlightId={activeHighlightId}
               />
             ) : (

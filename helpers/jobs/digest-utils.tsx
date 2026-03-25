@@ -1,12 +1,13 @@
 import JobDigestEmail from "@/emails/JobDigestEmail";
 import { createServiceRoleClient } from "../../lib/supabase/service-role";
-import { IFormData, IJob } from "../../utils/types";
+// import { IFormData, IJob } from "../../utils/types";
 import { render } from "@react-email/components";
 import { Resend } from "resend";
+import { AllJobWithRelations } from "@/utils/types";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export async function getAllDigestUsers(): Promise<IFormData[]> {
+export async function getAllDigestUsers() {
   // Use the client with elevated privileges
   const supabase = createServiceRoleClient();
 
@@ -32,13 +33,13 @@ export async function getAllDigestUsers(): Promise<IFormData[]> {
   }
 
   // Map the data to your expected interface
-  return data as unknown as IFormData[];
+  return data;
 }
 
 export async function sendJobDigestEmail(
   email: string,
   userName: string,
-  jobs: IJob[],
+  jobs: AllJobWithRelations[],
   digestDate: string,
 ) {
   // Check if jobs array is empty before rendering

@@ -6,7 +6,7 @@ import {
   sendEmailForRelevantJobsStatusUpdate,
   sendEmailForStatusUpdate,
 } from "@/utils/serverUtils";
-import { IJob, TAICredits } from "@/utils/types";
+import { AllJobWithRelations, TAICredits } from "@/utils/types";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
@@ -218,7 +218,7 @@ async function processUserRelevance(
     }
 
     const json = await response.json();
-    const jobs: IJob[] = json.data || [];
+    const jobs: AllJobWithRelations[] = json.data || [];
 
     if (jobs.length === 0) {
       return {

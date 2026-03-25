@@ -1,17 +1,24 @@
 import { createClient } from "../../lib/supabase/server";
 import { createServiceRoleClient } from "../../lib/supabase/service-role";
-import { AllJobWithRelations, TApplicationStatus } from "@/utils/types";
+import {
+  AllJobWithRelations,
+  JobsBuildQueryResult,
+  TApplicationStatus,
+  TJobTypeEnum,
+} from "@/utils/types";
 import { PostgrestError } from "@supabase/supabase-js";
 export const allJobsSelectString = `id, created_at, updated_at, job_name, job_type, platform, locations, salary_range, visa_requirement, salary_min, salary_max, company_name, company_url, experience, experience_min, experience_max, equity_range, equity_min, equity_max, job_url, status, ai_summary`;
 const jobPostingsSelectString = `id, created_at, updated_at, company_id, title, job_type, salary_range, status, location, min_salary, max_salary, min_experience, max_experience, visa_sponsorship, min_equity, max_equity, experience, equity_range, salary_currency, questions, job_id`;
 const companyInfoSelectString = `id, name, website, logo_url, description, industry, company_size, headquarters`;
 
-const parseMultiSelectParam = (param: string | null | undefined): string[] => {
+const parseMultiSelectParam = <T extends string>(
+  param: string | null | undefined,
+): T[] => {
   return param
-    ? param
+    ? (param
         .split("|")
         .map((s) => s.trim())
-        .filter(Boolean)
+        .filter(Boolean) as T[])
     : [];
 };
 
@@ -59,7 +66,7 @@ export const buildQuery = async ({
   jobEmbedding: string | null;
   relevanceSearchType: "standard" | "job_digest" | "similar_jobs" | null;
   userId: string | null;
-}) => {
+}): Promise<JobsBuildQueryResult> => {
   try {
     const supabase = isInternalCall
       ? createServiceRoleClient()
@@ -72,7 +79,7 @@ export const buildQuery = async ({
         ? await supabase.auth.admin.getUserById(userId)
         : await supabase.auth.getUser();
 
-    const jobTypesArray = parseMultiSelectParam(jobType);
+    const jobTypesArray = parseMultiSelectParam<TJobTypeEnum>(jobType);
     const visaRequirementsArray = parseMultiSelectParam(visaRequirement);
     const locationsArray = parseMultiSelectParam(location);
     const platformsArray = parseMultiSelectParam(platform);
@@ -93,6 +100,7 @@ export const buildQuery = async ({
           data: [],
           error: "User not authenticated to view favorite jobs.",
           count: 0,
+          nextCursor: null,
           matchedJobIds: [],
         };
       }
@@ -112,6 +120,7 @@ export const buildQuery = async ({
           data: [],
           error: "User not authenticated to view applied jobs.",
           count: 0,
+          nextCursor: null,
           matchedJobIds: [],
         };
       }
@@ -130,6 +139,7 @@ export const buildQuery = async ({
           data: [],
           error: "User not authenticated to view relevant jobs.",
           count: 0,
+          nextCursor: null,
           matchedJobIds: [],
         };
       }
@@ -164,10 +174,17 @@ export const buildQuery = async ({
       const lastValue = parts.join("_");
       const operator = sortOrder === "desc" ? "lt" : "gt";
       const tieOperator = "lt";
-
-      query = query.or(
-        `${sortBy}.${operator}.${lastValue},and(${sortBy}.eq.${lastValue},id.${tieOperator}.${lastId})`,
-      );
+      if (lastValue === "null" || lastValue === null) {
+        // Last item had null salary - everything with null salary after this id
+        // and all non-null salaries (they come before nulls)
+        query = query.or(
+          `${sortBy}.not.is.null,and(${sortBy}.is.null,id.lt.${lastId})`,
+        );
+      } else {
+        query = query.or(
+          `${sortBy}.${operator}.${lastValue},and(${sortBy}.eq.${lastValue},id.${tieOperator}.${lastId})`,
+        );
+      }
     }
 
     query = query.not("job_name", "is", null);
@@ -254,7 +271,10 @@ export const buildQuery = async ({
     }
 
     if (sortBy && sortBy !== "relevance") {
-      query = query.order(sortBy, { ascending: sortOrder === "asc" });
+      query = query.order(sortBy, {
+        ascending: sortOrder === "asc",
+        nullsFirst: false,
+      });
       query = query.order("id", { ascending: sortOrder === "asc" }); // Tiebreaker
     }
 
@@ -287,9 +307,9 @@ export const buildQuery = async ({
     let nextCursor = null;
     if (data && data.length === limit) {
       const lastItem = data[data.length - 1];
-      const cursorValue = lastItem[sortBy as keyof typeof lastItem];
+      const cursorValue = lastItem[sortBy as keyof typeof lastItem] ?? "null";
 
-      if (cursorValue !== undefined && lastItem.id) {
+      if (lastItem.id) {
         nextCursor = Buffer.from(`${cursorValue}_${lastItem.id}`).toString(
           "base64",
         );
@@ -297,7 +317,7 @@ export const buildQuery = async ({
     }
 
     return {
-      data,
+      data: data || [],
       error: error?.details,
       nextCursor,
       count: totalCount,
@@ -310,6 +330,7 @@ export const buildQuery = async ({
         e instanceof Error
           ? e.message
           : "Some error occurred while fetching Jobs",
+      nextCursor: null,
       count: 0,
       matchedJobIds: [],
     };

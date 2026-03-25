@@ -8,21 +8,22 @@ import {
 } from "./ui/sheet";
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { IBookmark } from "@/utils/types";
 import JobsBookmarkTable from "./JobsBookmarkTable";
+import { BookmarkRow } from "@/utils/types";
 
 export default function JobsPageCommonSheet({ user }: { user: User | null }) {
-  const [items, setItems] = useState<IBookmark[]>([]);
+  const [items, setItems] = useState<BookmarkRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchBookmarks = useCallback(async () => {
     try {
       setLoading(true);
       const supabase = createClient();
+      if (!user?.id) return;
       const { data, error } = await supabase
         .from("bookmarks")
         .select("*")
-        .eq("user_id", user?.id);
+        .eq("user_id", user.id);
       if (error) throw error;
       if (data) {
         setItems(data);
@@ -34,7 +35,7 @@ export default function JobsPageCommonSheet({ user }: { user: User | null }) {
   }, [user]);
 
   useEffect(() => {
-    if (user) fetchBookmarks();
+    if (user && user.id) fetchBookmarks();
   }, [fetchBookmarks, user]);
 
   return (

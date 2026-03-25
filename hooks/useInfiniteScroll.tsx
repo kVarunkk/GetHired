@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  MutableRefObject,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface FetchPageResult<T> {
   data: T[];
@@ -99,7 +93,7 @@ export function useInfiniteScroll<T>({
     items,
     isLoading,
     hasMore,
-    loaderRef: loaderRef as MutableRefObject<HTMLDivElement>,
+    loaderRef: loaderRef,
     loadMore,
     reset: () => {
       setItems(initialItems);

@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import BackButton from "@/components/BackButton";
 import ApplicantsTable from "@/components/ApplicantsTable";
-import { IApplication } from "@/utils/types";
 
 export default async function CompanyApplicantsPage() {
   try {
@@ -48,7 +47,6 @@ export default async function CompanyApplicantsPage() {
       .order("created_at", { ascending: false });
 
     if (applicantsError) {
-      // console.error("Error fetching applicants:", applicantsError);
       throw applicantsError;
     }
 
@@ -60,13 +58,10 @@ export default async function CompanyApplicantsPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-medium ">Job Applicants</h1>
         </div>
-        <ApplicantsTable
-          data={(applicants as unknown as IApplication[]) || []}
-        />
+        <ApplicantsTable data={applicants || []} />
       </div>
     );
   } catch {
-    // console.error("Error in CompanyApplicantsPage:", err);
     return <ErrorComponent />;
   }
 }

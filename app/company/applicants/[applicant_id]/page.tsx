@@ -14,8 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import ApplicationStatusSelect from "@/components/ApplicationStatusSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { IApplication } from "@/utils/types";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
+import { TApplicationStatus } from "@/utils/types";
 
 export default async function ApplicantPage({
   params,
@@ -33,7 +33,7 @@ export default async function ApplicantPage({
       throw "User not authenticated.";
     }
 
-    const { data: applicationData, error } = await supabase
+    const { data: application, error } = await supabase
       .from("applications")
       .select(
         `
@@ -62,11 +62,9 @@ export default async function ApplicantPage({
       .eq("id", applicant_id)
       .single();
 
-    if (error || !applicationData) {
+    if (error || !application) {
       return <Error />;
     }
-
-    const application = applicationData as unknown as IApplication;
 
     let signedUrl: string | null = null;
 
@@ -105,7 +103,9 @@ export default async function ApplicantPage({
                 <p className="text-sm text-muted-foreground">
                   Applied on {format(new Date(application.created_at), "PPP")}
                 </p>
-                <ApplicationStatusBadge status={application.status} />
+                <ApplicationStatusBadge
+                  status={application.status as TApplicationStatus}
+                />
 
                 {/* </div> */}
               </CardHeader>
@@ -154,7 +154,7 @@ export default async function ApplicantPage({
                       <div>
                         <p className="font-semibold text-sm">Desired Roles</p>
                         <p className="text-sm text-muted-foreground">
-                          {application.user_info?.desired_roles.join(", ") ||
+                          {application.user_info?.desired_roles?.join(", ") ||
                             "Not specified"}
                         </p>
                       </div>
@@ -163,7 +163,7 @@ export default async function ApplicantPage({
                           Preferred Locations
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {application.user_info?.preferred_locations.join(
+                          {application.user_info?.preferred_locations?.join(
                             ", ",
                           ) || "Not specified"}
                         </p>
@@ -227,8 +227,8 @@ export default async function ApplicantPage({
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {buildSalaryRange(
-                            application.user_info?.min_salary,
-                            application.user_info?.max_salary,
+                            application.user_info?.min_salary ?? undefined,
+                            application.user_info?.max_salary ?? undefined,
                             application.user_info?.salary_currency,
                           )}
                         </p>

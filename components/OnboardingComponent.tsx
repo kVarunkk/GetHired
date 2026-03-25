@@ -13,7 +13,7 @@ import { Button } from "./ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Progress } from "./ui/progress";
-import { IFormData, IResume } from "@/utils/types";
+// import { IFormData, IResume } from "@/utils/types";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
@@ -30,6 +30,36 @@ import { Loader2 } from "lucide-react";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
 import useSWR from "swr";
 import { submitOnboardingAction } from "@/app/actions/submit-onboarding";
+
+type IFormData = {
+  // user_id: string;
+  email: string | null;
+  full_name: string;
+  linkedin_url: string;
+  github_url: string;
+  desired_roles: string[];
+  preferred_locations: string[];
+  salary_currency: string;
+  min_salary: number | "";
+  max_salary: number | "";
+  experience_years: number | "";
+  industry_preferences: string[];
+  visa_sponsorship_required: boolean;
+  top_skills: string[];
+  work_style_preferences: string[];
+  career_goals_short_term: string;
+  career_goals_long_term: string;
+  company_size_preference: string;
+  resume_file: File | null;
+  resume_id: string | null;
+  no_of_resumes?: number;
+  default_locations?: string[];
+  job_type: string[];
+  user_id?: string;
+  is_promotion_active?: boolean;
+  is_job_digest_active?: boolean;
+  is_public?: boolean;
+};
 
 export interface StepProps {
   formData: IFormData;
@@ -161,18 +191,29 @@ export const OnboardingForm: React.FC = () => {
           .single();
 
         if (data) {
-          const primaryResume = data?.resumes?.find(
-            (_: IResume) => _.is_primary,
-          );
+          const primaryResume = data?.resumes?.find((_) => _.is_primary);
           const noOfResumes = data?.resumes?.length;
 
           setFormData((prev) => ({
             ...prev,
-            ...data,
+            // ...data,
+            // user_id: user.id,
+            // email: user.email,
+            full_name: data.full_name || "",
+            linkedin_url: data.linkedin_url || "",
+            github_url: data.github_url || "",
+            desired_roles: data.desired_roles || [],
+            preferred_locations: data.preferred_locations || [],
+            salary_currency: data.salary_currency || "$",
+            job_type: data.job_type || [],
             min_salary: data.min_salary || "",
             max_salary: data.max_salary || "",
             experience_years: data.experience_years || "",
             resume_id: primaryResume ? primaryResume.id : null,
+            user_id: user.id,
+            is_promotion_active: data.is_promotion_active || false,
+            is_job_digest_active: data.is_job_digest_active || false,
+            is_public: data.is_public || false,
             no_of_resumes: noOfResumes,
             resume_file: null,
             default_locations:

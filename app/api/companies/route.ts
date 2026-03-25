@@ -58,8 +58,6 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       throw error;
-      // console.error("API Error fetching jobs:", error);
-      // return NextResponse.json({ error: error }, { status: 500 });
     }
 
     return NextResponse.json({ data: data || [], count, matchedCompanyIds });

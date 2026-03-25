@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { IFormData, TAICredits } from "@/utils/types";
+import { TAICredits } from "@/utils/types";
 import { getVertexClient } from "@/utils/serverUtils";
+import { AiSearchProfileBody } from "@/utils/types/api.types";
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { userId, job_post_id, profiles, companyId } = await request.json();
+    const { userId, job_post_id, profiles, companyId }: AiSearchProfileBody =
+      await request.json();
 
     if (!userId || !profiles || !job_post_id || !companyId) {
       return NextResponse.json(
@@ -104,7 +106,7 @@ export async function POST(request: NextRequest) {
       **User Profiles to Evaluate:**
       ${profiles
         .map(
-          (profile: IFormData) => `
+          (profile) => `
         ---
         ID: ${profile.user_id}
         Name: ${profile.full_name}

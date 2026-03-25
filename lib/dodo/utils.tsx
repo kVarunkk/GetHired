@@ -1,6 +1,6 @@
 import PaymentUpdateEmail from "@/emails/PaymentUpdateEmail";
+import { TWebhookPaymentDetails } from "@/utils/types/payments.types";
 import { render } from "@react-email/components";
-import { IPayment } from "../../utils/types";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -12,7 +12,7 @@ export async function SendPaymentUpdateEmail({
 }: {
   userName: string;
   email: string;
-  paymentDetails: IPayment;
+  paymentDetails: TWebhookPaymentDetails;
 }) {
   const emailHtml = await render(
     <PaymentUpdateEmail userName={userName} paymentDetails={paymentDetails} />,

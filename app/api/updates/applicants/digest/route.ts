@@ -4,7 +4,7 @@ import {
   getAllDigestUsers,
   sendJobDigestEmail,
 } from "@/helpers/jobs/digest-utils";
-import { IFormData, IJob } from "@/utils/types";
+import { AllJobWithRelations } from "@/utils/types";
 import { deploymentUrl, sendEmailForStatusUpdate } from "@/utils/serverUtils";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
@@ -133,7 +133,15 @@ export async function GET() {
 /**
  * Core logic to fetch, rerank, and send jobs for a single user.
  */
-async function processUserDigest(user: IFormData, digestDate: string) {
+async function processUserDigest(
+  user: {
+    user_id: string;
+    email: string | null;
+    full_name: string | null;
+    is_job_digest_active: boolean;
+  },
+  digestDate: string,
+) {
   try {
     // const cutoffDate = getCutOffDate(30);
     const cutoffDays = "7";
@@ -154,7 +162,7 @@ async function processUserDigest(user: IFormData, digestDate: string) {
     }
 
     const result = await jobFetchRes.json();
-    const finalJobs: IJob[] = result.data || [];
+    const finalJobs: AllJobWithRelations[] = result.data || [];
 
     // --- 4. Send Email (Top 10 Jobs) ---
     const topJobs = finalJobs.slice(0, 10);
@@ -175,7 +183,7 @@ async function processUserDigest(user: IFormData, digestDate: string) {
       console.log(`Skipped digest for ${user?.email}: no suitable jobs found.`);
       return {
         success: false,
-        userEmail: user.email,
+        userEmail: user.email ?? "Unknown",
         error: "No suitable jobs found",
       };
     }
@@ -183,7 +191,7 @@ async function processUserDigest(user: IFormData, digestDate: string) {
     console.error(`Error processing digest for user ${user?.email}:`, e);
     return {
       success: false,
-      userEmail: user.email,
+      userEmail: user.email ?? "Unknown",
       error: e instanceof Error ? e.message : String(e),
     };
   }

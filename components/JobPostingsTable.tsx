@@ -19,9 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-// import Link from "next/link";
 import { ArrowUpDown, ChevronRight, XCircle } from "lucide-react";
-import { IJobPosting } from "@/utils/types";
 import { Switch } from "./ui/switch";
 import { useJobPostingStatus } from "@/hooks/useJobPostingStatus";
 import { Input } from "@/components/ui/input";
@@ -33,21 +31,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Link as ModifiedLink } from "react-transition-progress/next";
+import { IJobPost } from "@/utils/types";
+import { TCompanyIdPageData } from "@/utils/types/jobs.types";
 
 interface JobPostingsTableProps {
   data: IJobPost[];
 }
 
-export interface IJobPost
-  extends Omit<IJobPosting, "applications" | "company_info"> {
-  applications?: { count: number }[];
-  company_info?: {
-    name: string;
-    website: string;
-  };
-}
-
-export const JobStatusSwitch = ({ job }: { job: IJobPosting | IJobPost }) => {
+export const JobStatusSwitch = ({
+  job,
+}: {
+  job: IJobPost | TCompanyIdPageData;
+}) => {
   const { checkedState, handleUpdateStatus } = useJobPostingStatus(
     job.status,
     job,

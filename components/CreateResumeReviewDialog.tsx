@@ -18,7 +18,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { IResume, TAICredits } from "@/utils/types";
+import { TAICredits } from "@/utils/types";
 import InfoTooltip from "./InfoTooltip";
 import { createResumeReviewAction } from "@/app/actions/create-resume-review";
 
@@ -31,7 +31,14 @@ export default function CreateResumeReviewDialog({
 }: CreateResumeReviewDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [existingResumes, setExistingResumes] = useState<IResume[]>([]);
+  const [existingResumes, setExistingResumes] = useState<
+    {
+      id: string;
+      name: string | null;
+      created_at: string;
+      is_primary: boolean;
+    }[]
+  >([]);
   const [file, setFile] = useState<File | null>(null);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
 
@@ -49,7 +56,7 @@ export default function CreateResumeReviewDialog({
             .order("created_at", { ascending: false });
 
           if (!error) {
-            setExistingResumes((data || []) as IResume[]);
+            setExistingResumes(data || []);
           }
         } catch {}
       };

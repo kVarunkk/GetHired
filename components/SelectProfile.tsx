@@ -1,20 +1,25 @@
 "use client";
 
-import { IFormData } from "@/utils/types";
+// import { IFormData } from "@/utils/types";
 import MultiKeywordSelect, { GenericFormData } from "./MultiKeywordSelect";
 import { useCallback, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
+import { TApplicantProfile } from "@/utils/types/user.types";
 
 export default function SelectProfile({
   jobPostings,
   applicantProfile,
   companyId,
 }: {
-  jobPostings?: { id: string; title: string; job_id: string }[];
-  applicantProfile: IFormData;
+  jobPostings?: {
+    id: string;
+    title: string;
+    job_id: string | null;
+  }[];
+  applicantProfile: TApplicantProfile;
   companyId: string;
 }) {
   const router = useRouter();

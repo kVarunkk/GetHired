@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
-import { IJob, TAICredits } from "../../utils/types";
+import { AllJobWithRelations, TAICredits } from "../../utils/types";
 
 interface RerankResult {
-  initialJobs: IJob[];
+  initialJobs: AllJobWithRelations[];
   totalCount: number;
 }
 
@@ -18,7 +18,7 @@ export async function rerankJobsIfApplicable({
   relevanceSearchType,
   cursor,
 }: {
-  initialJobs: IJob[];
+  initialJobs: AllJobWithRelations[];
   initialCount: number;
   userId?: string;
   jobId: string | null;
@@ -29,7 +29,7 @@ export async function rerankJobsIfApplicable({
 }): Promise<RerankResult> {
   let finalJobs = initialJobs;
   let finalCount = initialCount;
-  let removedJobs: IJob[] = [];
+  let removedJobs: AllJobWithRelations[] = [];
 
   const headersList = await headers();
   const host = headersList.get("host");
@@ -74,7 +74,7 @@ export async function rerankJobsIfApplicable({
           },
           body: JSON.stringify({
             userId: userId,
-            jobs: initialJobs.map((job: IJob) => ({
+            jobs: initialJobs.map((job) => ({
               id: job.id,
               job_name: job.job_name,
               description: job.description?.slice(0, 400),
@@ -101,13 +101,13 @@ export async function rerankJobsIfApplicable({
         );
         const filteredOutIdsSet = new Set(aiRerankResult.filteredOutJobs || []);
 
-        const jobMap = new Map(initialJobs.map((job: IJob) => [job.id, job]));
+        const jobMap = new Map(initialJobs.map((job) => [job.id, job]));
 
         const reorderedJobs = uniqueRerankedIds
           .map((id: string) => jobMap.get(id))
           .filter(
-            (job: IJob | undefined): job is IJob =>
-              job !== undefined && !filteredOutIdsSet.has(job.id),
+            (job): job is AllJobWithRelations =>
+              !!job && !filteredOutIdsSet.has(job.id),
           )
           .concat(removedJobs);
 
@@ -122,11 +122,11 @@ export async function rerankJobsIfApplicable({
     aiCredits < requiredCredits &&
     matchedJobIds // Assuming the initial search response includes pre-matched IDs from vector search
   ) {
-    const jobMap = new Map(initialJobs.map((job: IJob) => [job.id, job]));
+    const jobMap = new Map(initialJobs.map((job) => [job.id, job]));
 
     finalJobs = matchedJobIds
       .map((id: string) => jobMap.get(id))
-      .filter((job: IJob | undefined): job is IJob => job !== undefined);
+      .filter((job) => job !== undefined);
 
     finalCount = finalJobs.length || 0;
   }

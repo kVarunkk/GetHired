@@ -15,7 +15,10 @@ import {
 import { Button } from "./ui/button";
 import { Loader2, Pencil, Trash } from "lucide-react";
 import { Input } from "./ui/input";
-import { IBookmark, IResume, IResumeReview } from "@/utils/types";
+import { BookmarkRow } from "@/utils/types";
+import { TResumeReviewTableData } from "./ResumeReviewsTable";
+import { TResumeReviewResume } from "@/utils/types/review.types";
+import { Database } from "@/utils/types/database.types";
 
 interface FormField {
   name: string;
@@ -25,10 +28,11 @@ interface FormField {
   required?: boolean;
 }
 
-type Item = IResume | IResumeReview | IBookmark;
+type Item = TResumeReviewResume | TResumeReviewTableData | BookmarkRow;
+type TableName = keyof Database["public"]["Tables"];
 
 interface DynamicActionsProps<T extends Item> {
-  tableName: string;
+  tableName: TableName;
   item: T;
   fields: FormField[];
   updateLocalItem: (updatedItem: T) => void;
@@ -81,7 +85,7 @@ export default function DynamicActions<T extends Item>({
 
       if (error) throw error;
 
-      updateLocalItem(data);
+      updateLocalItem(data as unknown as T);
       toast.success(`${entityName} updated successfully`);
       setOpenDialog(false);
     } catch (err) {

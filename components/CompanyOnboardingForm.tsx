@@ -66,7 +66,7 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [deletePending, setDeletePending] = useState(false);
-  const [companyId, setCompanyId] = useState();
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   const router = useRouter();
 

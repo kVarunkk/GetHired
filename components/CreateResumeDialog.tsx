@@ -14,17 +14,18 @@ import ResumeSourceSelector from "./ResumeSourceSelector";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { createResumeAction } from "@/app/actions/create-resume";
-import { IResume, TAICredits } from "@/utils/types";
+import { TAICredits } from "@/utils/types";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import InfoTooltip from "./InfoTooltip";
 import Link from "next/link";
+import { TResumeReviewResume } from "@/utils/types/review.types";
 
 export default function CreateResumeDialog({
   existingResumes,
 }: {
-  existingResumes: IResume[];
+  existingResumes: TResumeReviewResume[];
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);

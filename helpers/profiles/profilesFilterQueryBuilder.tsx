@@ -1,6 +1,20 @@
+import {
+  AllProfileWithRelations,
+  ProfilesBuildQueryResult,
+} from "@/utils/types";
 import { createClient } from "../../lib/supabase/server";
+import { PostgrestError } from "@supabase/supabase-js";
 
 const userInfoSelectString = `user_id, desired_roles, preferred_locations, min_salary, max_salary, experience_years, industry_preferences, visa_sponsorship_required, top_skills, work_style_preferences, career_goals_short_term, career_goals_long_term, company_size_preference, created_at, updated_at, job_type, ai_credits, filled, full_name, email, salary_currency, is_public`;
+
+const parseMultiSelectParam = (param: string | null | undefined): string[] => {
+  return param
+    ? param
+        .split("|")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+};
 
 export async function buildProfileQuery({
   searchQuery,
@@ -15,50 +29,37 @@ export async function buildProfileQuery({
   workStyle,
   companySize,
   industry,
-  // visaRequired,
-  sortKey,
+  sortBy,
   sortOrder,
-  start_index,
-  end_index,
   isFavoriteTabActive = false,
   jobEmbedding,
+  cursor,
+  limit,
 }: {
-  searchQuery?: string | null;
-  jobRoles?: string | null;
-  jobTypes?: string | null;
-  locations?: string | null;
-  minExperience?: string | null;
-  maxExperience?: string | null;
-  minSalary?: string | null;
-  maxSalary?: string | null;
-  skills?: string | null;
-  workStyle?: string | null;
-  companySize?: string | null;
-  industry?: string | null;
-  // visaRequired?: boolean;
-  sortKey?: string;
-  sortOrder?: "asc" | "desc";
-  start_index: number;
-  end_index: number;
-  isFavoriteTabActive?: boolean;
-  jobEmbedding?: string | null;
-}) {
+  searchQuery: string | null;
+  jobRoles: string | null;
+  jobTypes: string | null;
+  locations: string | null;
+  minExperience: string | null;
+  maxExperience: string | null;
+  minSalary: string | null;
+  maxSalary: string | null;
+  skills: string | null;
+  workStyle: string | null;
+  companySize: string | null;
+  industry: string | null;
+  sortBy: string;
+  sortOrder: string;
+  isFavoriteTabActive: boolean;
+  jobEmbedding: string | null;
+  cursor: string | null;
+  limit: number | null;
+}): Promise<ProfilesBuildQueryResult> {
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-
-    const parseMultiSelectParam = (
-      param: string | null | undefined,
-    ): string[] => {
-      return param
-        ? param
-            .split("|")
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : [];
-    };
 
     let query;
     let selectString;
@@ -69,6 +70,8 @@ export async function buildProfileQuery({
           data: [],
           error: "User not authenticated to view favorite profiles.",
           count: 0,
+          matchedProfileIds: [],
+          nextCursor: null,
         };
       }
       // Assuming you have fetched the companyId of the logged-in user
@@ -83,6 +86,8 @@ export async function buildProfileQuery({
           data: [],
           error: "Company profile not found.",
           count: 0,
+          matchedProfileIds: [],
+          nextCursor: null,
         };
       }
 
@@ -91,7 +96,10 @@ export async function buildProfileQuery({
       selectString = `${userInfoSelectString}, company_favorites!inner(company_id)`;
       query = supabase
         .from("user_info")
-        .select(selectString, { count: "exact" })
+        .select(
+          selectString,
+          // { count: "exact" }
+        )
         .eq("company_favorites.company_id", companyId)
         .eq("filled", true)
         .eq("is_public", true);
@@ -102,16 +110,37 @@ export async function buildProfileQuery({
           `
           ${userInfoSelectString}, company_favorites(*)
         `,
-          { count: "exact" },
+          // { count: "exact" },
         )
         .eq("filled", true)
         .eq("is_public", true);
     }
 
+    if (cursor && sortBy !== "relevance") {
+      const decoded = Buffer.from(cursor, "base64").toString("ascii");
+
+      const parts = decoded.split("_");
+      const lastId = parts.pop();
+      const lastValue = parts.join("_");
+      const operator = sortOrder === "desc" ? "lt" : "gt";
+      const tieOperator = "lt";
+      if (lastValue === "null" || lastValue === null) {
+        // Last item had null salary - everything with null salary after this id
+        // and all non-null salaries (they come before nulls)
+        query = query.or(
+          `${sortBy}.not.is.null,and(${sortBy}.is.null,user_id.lt.${lastId})`,
+        );
+      } else {
+        query = query.or(
+          `${sortBy}.${operator}.${lastValue},and(${sortBy}.eq.${lastValue},user_id.${tieOperator}.${lastId})`,
+        );
+      }
+    }
+
     let matchedProfileIds: string[] = [];
 
     // --- NEW: VECTOR SEARCH LOGIC ---
-    if (sortKey === "relevance" && jobEmbedding) {
+    if (sortBy === "relevance" && jobEmbedding) {
       // Re-build the query to include the similarity score and order by it
       const { data: searchData, error: searchError } = await supabase.rpc(
         "match_user_profiles",
@@ -150,7 +179,6 @@ export async function buildProfileQuery({
     }
     const locationsArray = parseMultiSelectParam(locations);
     if (locationsArray.length > 0) {
-      // console.log("Filtering locations:", locations);
       query = query.overlaps("preferred_locations", locationsArray);
     }
     if (minExperience) {
@@ -182,20 +210,51 @@ export async function buildProfileQuery({
     }
 
     // Apply sorting
-    if (sortKey && sortKey !== "relevance") {
-      query = query.order(sortKey, { ascending: sortOrder === "asc" });
+    if (sortBy && sortBy !== "relevance") {
+      query = query.order(sortBy, {
+        ascending: sortOrder === "asc",
+        nullsFirst: false,
+      });
       query = query.order("user_id", { ascending: sortOrder === "asc" }); // Tiebreaker
     }
 
-    // Apply pagination
-    query = query.range(start_index, end_index);
+    if (limit && sortBy !== "relevance") {
+      query = query.limit(limit);
+    }
 
-    const { data, error, count } = await query;
+    const { data, error } = (await query) as unknown as {
+      data: AllProfileWithRelations[] | null;
+      error: PostgrestError | null;
+    };
+
+    let totalCount = 0;
+    if (!cursor) {
+      const { count } = await supabase
+        .from("user_info")
+        .select("user_id", { count: "exact", head: true })
+        .eq("filled", true)
+        .eq("is_public", true);
+
+      totalCount = count || 0;
+    }
+
+    let nextCursor = null;
+    if (data && data.length === limit) {
+      const lastItem = data[data.length - 1];
+      const cursorValue = lastItem[sortBy as keyof typeof lastItem] ?? "null";
+
+      if (lastItem.user_id) {
+        nextCursor = Buffer.from(`${cursorValue}_${lastItem.user_id}`).toString(
+          "base64",
+        );
+      }
+    }
 
     return {
-      data,
+      data: data || [],
       error: error?.details,
-      count,
+      nextCursor,
+      count: totalCount,
       matchedProfileIds,
     };
   } catch (e: unknown) {
@@ -206,6 +265,8 @@ export async function buildProfileQuery({
           ? e.message
           : "Some error occurred while fetching Jobs",
       count: 0,
+      nextCursor: null,
+      matchedProfileIds: [],
     };
   }
 }

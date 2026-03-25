@@ -3,15 +3,17 @@
 import React, { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { IResume } from "@/utils/types";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { UploadResumeParent } from "@/helpers/resume-selector/UploadResumeParent";
 import { SelectResumeParent } from "@/helpers/resume-selector/SelectResumeParent";
 import { ResumePreview } from "@/helpers/resume-selector/ResumePreview";
+import { TResumeReviewResume } from "@/utils/types/review.types";
 
 interface ResumeSourceSelectorProps {
-  existingResumes: IResume[];
+  existingResumes: (TResumeReviewResume & {
+    resume_path?: string | null;
+  })[];
   selectedId: string | null;
   onSelectExisting: (id: string | null) => void;
   file: File | null;

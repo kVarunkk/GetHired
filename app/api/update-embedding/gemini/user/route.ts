@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { embed } from "ai";
 import { getVertexClient } from "@/utils/serverUtils";
+import { TResumeRowContent } from "@/utils/types";
+// import { IResume } from "@/utils/types";
 // import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export async function POST(request: Request) {
@@ -30,50 +32,65 @@ export async function POST(request: Request) {
     }
 
     // Helper to extract text from the Digital Twin JSON structure
+    // const extractSectionText = (type: string) => {
+    //   const content= resumeData?.content as unknown as TResumeRowContent | undefined;
+    //   if (!content || !content.sections) return "N/A";
+
+    //   return content.sections
+    //     .filter(
+    //       (s: {
+    //         type?: string;
+    //         items?: {
+    //           bullets?: {
+    //             id?: string;
+    //             text?: string;
+    //             lineIndices?: string[];
+    //           }[];
+    //           heading?: string;
+    //           subheading?: string;
+    //         }[];
+    //       }) => s.type === type,
+    //     )
+    //     .flatMap(
+    //       (s: {
+    //         type?: string;
+    //         items?: {
+    //           bullets?: {
+    //             id?: string;
+    //             text?: string;
+    //             lineIndices?: string[];
+    //           }[];
+    //           heading?: string;
+    //           subheading?: string;
+    //         }[];
+    //       }) => s.items,
+    //     )
+    //     .flatMap(
+    //       (i: {
+    //         bullets?: {
+    //           id?: string;
+    //           text?: string;
+    //           lineIndices?: string[];
+    //         }[];
+    //         heading?: string;
+    //         subheading?: string;
+    //       }) => i?.bullets?.map((b) => b.text),
+    //     )
+    //     .join(". ");
+    // };
+
     const extractSectionText = (type: string) => {
-      const content = resumeData?.content;
+      const content = resumeData?.content as unknown as
+        | TResumeRowContent
+        | undefined;
       if (!content || !content.sections) return "N/A";
 
       return content.sections
-        .filter(
-          (s: {
-            type?: string;
-            items?: {
-              bullets?: {
-                id?: string;
-                text?: string;
-                lineIndices?: string[];
-              }[];
-              heading?: string;
-              subheading?: string;
-            }[];
-          }) => s.type === type,
-        )
-        .flatMap(
-          (s: {
-            type?: string;
-            items?: {
-              bullets?: {
-                id?: string;
-                text?: string;
-                lineIndices?: string[];
-              }[];
-              heading?: string;
-              subheading?: string;
-            }[];
-          }) => s.items,
-        )
-        .flatMap(
-          (i: {
-            bullets?: {
-              id?: string;
-              text?: string;
-              lineIndices?: string[];
-            }[];
-            heading?: string;
-            subheading?: string;
-          }) => i?.bullets?.map((b) => b.text),
-        )
+        .filter((s) => s.type === type)
+        .flatMap((s) => s.items ?? [])
+        .flatMap((i) => i.bullets ?? [])
+        .map((b) => b.text)
+        .filter((text): text is string => !!text)
         .join(". ");
     };
 
@@ -134,11 +151,18 @@ export async function POST(request: Request) {
       },
     });
 
+    if (!embedding) {
+      return NextResponse.json(
+        { error: "Failed to generate embedding." },
+        { status: 500 },
+      );
+    }
+
     // 4. Update Supabase
     const { error: updateError } = await supabase
       .from("user_info")
       .update({
-        embedding_new: embedding,
+        embedding_new: embedding as unknown as string,
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", userData.user_id);

@@ -1,8 +1,9 @@
 "use client";
 
 import { Switch } from "./ui/switch";
-import { IBookmark } from "@/utils/types";
 import { createClient } from "@/lib/supabase/client";
+import { BookmarkRow } from "@/utils/types";
+// import { TBookmark } from "@/utils/types";
 import toast from "react-hot-toast";
 
 const MAX_ALERTS = 5;
@@ -12,14 +13,14 @@ export default function AlertStatusSwitch({
   updateLocalItem,
   alertCount,
 }: {
-  bookmark: IBookmark;
-  updateLocalItem: (updatedItem: IBookmark) => void;
+  bookmark: BookmarkRow;
+  updateLocalItem: (updatedItem: BookmarkRow) => void;
   alertCount: number;
 }) {
   const checked = bookmark.is_alert_on;
 
   const handleUpdateStatus = async () => {
-    if (!bookmark || bookmark.url.includes("sortBy=relevance")) return;
+    if (!bookmark || bookmark.url?.includes("sortBy=relevance")) return;
 
     if (!checked && alertCount >= MAX_ALERTS) {
       return toast.error(

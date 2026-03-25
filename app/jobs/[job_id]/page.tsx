@@ -1,6 +1,6 @@
 import Error from "@/components/Error";
 import { createClient } from "@/lib/supabase/server";
-import { IJob, TAICredits } from "@/utils/types";
+import { TAICredits, TApplicationStatus } from "@/utils/types";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -54,8 +54,8 @@ export async function generateMetadata({
       title: `${data?.job_name} at ${data?.company_name}`,
       description: `Apply for the ${data?.job_name} position at ${data?.company_name}.`,
       keywords: [
-        data?.job_name,
-        data?.company_name,
+        data?.job_name || "",
+        data?.company_name || "",
         data?.locations.join(", "),
         "job",
         "career",
@@ -101,7 +101,7 @@ export default async function JobPage({
       .select(selectString)
       .eq("id", job_id);
 
-    const job = data?.[0] as IJob;
+    const job = data?.[0];
 
     if (error) throw error;
 
@@ -154,8 +154,8 @@ export default async function JobPage({
               <JobsFeedback
                 jobId={job_id}
                 initialVote={
-                  job.job_feedback!.length > 0
-                    ? job.job_feedback![0].vote_type
+                  job.job_feedback.length > 0
+                    ? job.job_feedback[0].vote_type
                     : null
                 }
               />
@@ -175,7 +175,7 @@ export default async function JobPage({
               isCompanyUser={isCompanyUser}
               applicationStatus={
                 job.applications && job.applications.length > 0
-                  ? job.applications[0].status
+                  ? (job.applications[0].status as TApplicationStatus)
                   : null
               }
               isPlatformJob={!job.job_url}
@@ -286,6 +286,7 @@ export default async function JobPage({
             job={job}
             user={user}
             isCompanyUser={isCompanyUser}
+            page="all-jobs"
           />
 
           {/* Key Metrics/Details Sidebar */}

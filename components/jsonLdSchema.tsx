@@ -1,9 +1,11 @@
 "use client";
 
-import { IJob } from "@/utils/types";
+import { AllJobWithRelations } from "@/utils/types";
+
+// import { IJob } from "@/utils/types";
 
 interface JobSchemaProps {
-  job: IJob;
+  job: AllJobWithRelations;
 }
 
 export default function JobSchema({ job }: JobSchemaProps) {

@@ -1,4 +1,6 @@
+import { TCompanyInfo } from "@/utils/types";
 import { createClient } from "../../lib/supabase/server";
+import { PostgrestError } from "@supabase/supabase-js";
 export const companiesSelectString = `id, created_at, updated_at, name, industry, description, website, headquarters, company_size, logo_url, tag_line`;
 
 export const buildCompaniesQuery = async ({
@@ -136,10 +138,14 @@ export const buildCompaniesQuery = async ({
     // Apply pagination
     query = query.range(start_index, end_index);
 
-    const { data, error, count } = await query;
+    const { data, error, count } = (await query) as unknown as {
+      data: TCompanyInfo[] | null;
+      error: PostgrestError | null;
+      count: number | null;
+    };
 
     return {
-      data,
+      data: data || [],
       error: error?.details,
       count,
       matchedCompanyIds,

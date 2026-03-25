@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { createClient } from "../lib/supabase/client";
-import { IJobPosting } from "../utils/types";
-import { IJobPost } from "@/components/JobPostingsTable";
 import toast from "react-hot-toast";
+import { IJobPost } from "@/utils/types";
+import { TCompanyIdPageData } from "@/utils/types/jobs.types";
 
 export const useJobPostingStatus = (
   initialStatus: "active" | "inactive",
-  job: IJobPosting | IJobPost,
+  job: IJobPost | TCompanyIdPageData,
 ) => {
   const [checkedState, setCheckedState] = useState(initialStatus === "active");
   const supabase = createClient();

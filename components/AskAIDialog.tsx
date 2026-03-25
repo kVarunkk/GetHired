@@ -14,12 +14,13 @@ import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { ArrowLeft, Copy, Loader2, Sparkle } from "lucide-react";
 import Link from "next/link";
-import { IResume, TAICredits } from "@/utils/types";
+import { TAICredits } from "@/utils/types";
 import InfoTooltip from "./InfoTooltip";
 import useSWR, { mutate } from "swr";
 import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import ResumeSourceSelector from "./ResumeSourceSelector";
 import { createClient } from "@/lib/supabase/client";
+import { TResumeReviewResume } from "@/utils/types/review.types";
 
 export default function AskAIDialog({
   jobId,
@@ -35,8 +36,11 @@ export default function AskAIDialog({
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
   const [answer, setAnswer] = useState<string | null>(null);
   const [view, setView] = useState<"form" | "resume">("form");
-  const [existingResumes, setExistingResumes] = useState<IResume[]>([]);
-  const [selectedResume, setSelectedResume] = useState<IResume | null>(null);
+  const [existingResumes, setExistingResumes] = useState<TResumeReviewResume[]>(
+    [],
+  );
+  const [selectedResume, setSelectedResume] =
+    useState<TResumeReviewResume | null>(null);
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
@@ -113,7 +117,7 @@ export default function AskAIDialog({
           .order("created_at", { ascending: false });
 
         if (!error) {
-          setExistingResumes((data || []) as IResume[]);
+          setExistingResumes(data || []);
           setSelectedResume(data?.find((_) => _.is_primary) || null);
         }
       };
@@ -179,7 +183,7 @@ export default function AskAIDialog({
                 <div className="flex items-center gap-1">
                   Using
                   <span
-                    title={selectedResume?.name}
+                    title={selectedResume?.name ?? "Selected Resume"}
                     className="font-bold inline-block w-[10rem] truncate"
                   >
                     {selectedResume?.name}

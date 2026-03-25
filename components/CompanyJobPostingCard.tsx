@@ -1,13 +1,18 @@
 "use client";
 
 import DeleteJobPosting from "@/components/DeleteJobPosting";
-import { IJobPosting } from "@/utils/types";
+// import { IJobPosting } from "@/utils/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import CreateJobPostingDialog from "./CreateJobPostingDialog";
 import { JobStatusSwitch } from "./JobPostingsTable";
+import { TCompanyIdPageData } from "@/utils/types/jobs.types";
 
-export default function CompanyJobPostingCard({ job }: { job: IJobPosting }) {
+export default function CompanyJobPostingCard({
+  job,
+}: {
+  job: TCompanyIdPageData;
+}) {
   return (
     <Card className="p-4 shadow-none group">
       <CardHeader className="p-0 mb-2">
@@ -25,10 +30,10 @@ export default function CompanyJobPostingCard({ job }: { job: IJobPosting }) {
               existingValues={{
                 id: job.id,
                 title: job.title,
-                description: job.description,
+                description: job.description ?? "",
                 location: job.location ?? [],
                 job_type: job.job_type ?? undefined,
-                salary_currency: job.salary_currency,
+                salary_currency: job.salary_currency ?? "$",
                 min_salary: job.min_salary ?? 0,
                 max_salary: job.max_salary ?? 0,
                 min_experience: job.min_experience ?? 0,

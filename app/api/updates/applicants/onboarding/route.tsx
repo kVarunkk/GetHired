@@ -59,6 +59,14 @@ export async function GET() {
 
         const sendPromises = batch.map(async (user) => {
           try {
+            if (!user.email) {
+              results.push({
+                email: "No email",
+                success: false,
+                error: "User has no email address",
+              });
+              return;
+            }
             const userName = user.email.split("@")[0];
 
             const emailHtml = await render(
@@ -78,7 +86,7 @@ export async function GET() {
             });
           } catch (err) {
             results.push({
-              email: user.email,
+              email: user.email ?? "No email",
               success: false,
               error: err instanceof Error ? err.message : String(err),
             });

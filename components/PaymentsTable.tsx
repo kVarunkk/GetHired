@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { IPayment } from "@/utils/types";
+// import { IPayment } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import {
   Select,
@@ -32,9 +32,11 @@ import {
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
 import { formatCurrency } from "@/utils/utils";
 import { Link as ModifiedLink } from "react-transition-progress/next";
+import { TPaymentsTableRecord } from "@/utils/types/payments.types";
+import { TPaymentStatus } from "@/utils/types";
 
 interface PaymentsTableProps {
-  data: IPayment[];
+  data: TPaymentsTableRecord[];
 }
 
 const paymentStatuses = [
@@ -64,14 +66,18 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
   const flatData = useMemo(() => {
     return data.map((item) => ({
       ...item,
-      amount: `${(item.total_amount / 100).toFixed(2)} ${item.currency?.toUpperCase() ?? ""}`,
+      amount: `${(item.total_amount ?? 0 / 100).toFixed(2)} ${item.currency?.toUpperCase() ?? ""}`,
       plan: item.price_plan ? item.price_plan.name : "N/A",
       credits: item.credit_amount,
     }));
   }, [data]);
 
   const columns: ColumnDef<
-    IPayment & { amount: string; plan: string; credits: number }
+    TPaymentsTableRecord & {
+      amount: string;
+      plan: string | null;
+      credits: number | null;
+    }
   >[] = useMemo(
     () => [
       {
@@ -96,7 +102,9 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => (
-          <ApplicationStatusBadge status={row.original.status} />
+          <ApplicationStatusBadge
+            status={row.original.status as TPaymentStatus}
+          />
         ),
         filterFn: "equals",
       },
@@ -105,7 +113,10 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         header: "Amount Paid",
         cell: ({ row }) => (
           <div className="text-sm font-medium">
-            {formatCurrency(row.original.total_amount, row.original.currency)}
+            {formatCurrency(
+              row.original.total_amount ?? 0,
+              row.original.currency ?? "",
+            )}
           </div>
         ),
       },

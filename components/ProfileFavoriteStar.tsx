@@ -2,7 +2,8 @@
 
 import { revalidateCache } from "@/app/actions/revalidate";
 import { createClient } from "@/lib/supabase/client";
-import { IFormData } from "@/utils/types";
+import { AllProfileWithRelations } from "@/utils/types";
+import { TApplicantProfile } from "@/utils/types/user.types";
 import { Star } from "lucide-react";
 import { useState } from "react";
 
@@ -10,7 +11,7 @@ export default function ProfileFavoriteStar({
   profile,
   companyId,
 }: {
-  profile: IFormData;
+  profile: TApplicantProfile | AllProfileWithRelations;
   companyId?: string;
 }) {
   const supabase = createClient();

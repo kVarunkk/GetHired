@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { format } from "date-fns";
-import { IApplication } from "@/utils/types";
+// import { IApplication } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import {
   Select,
@@ -32,9 +32,11 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
+import { TApplicationServer } from "@/utils/types/application.types";
+import { TApplicationStatus } from "@/utils/types";
 
 interface ApplicantsTableProps {
-  data: IApplication[];
+  data: TApplicationServer[];
 }
 
 const applicationStatuses = [
@@ -73,7 +75,7 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
   }, [data]);
 
   const columns: ColumnDef<
-    IApplication & { applicantName: string; jobTitle: string }
+    TApplicationServer & { applicantName: string; jobTitle: string }
   >[] = useMemo(
     () => [
       {
@@ -129,7 +131,9 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
           </Button>
         ),
         cell: ({ row }) => (
-          <ApplicationStatusBadge status={row.original.status} />
+          <ApplicationStatusBadge
+            status={row.original.status as TApplicationStatus}
+          />
         ),
         filterFn: "equals",
       },

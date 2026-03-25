@@ -5,10 +5,11 @@ import { cn } from "@/utils/utils";
 import { Dot, ArrowRight } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
-import { IFormData } from "@/utils/types";
+// import { IFormData } from "@/utils/types";
 import { Badge } from "./ui/badge";
 import ProfileFavoriteStar from "./ProfileFavoriteStar";
 import ProgressBtn from "./ProgressBtn";
+import { AllProfileWithRelations } from "@/utils/types";
 
 const ProfileItem = React.memo(
   ({
@@ -16,7 +17,7 @@ const ProfileItem = React.memo(
     isSuitable,
     companyId,
   }: {
-    profile: IFormData;
+    profile: AllProfileWithRelations;
     isSuitable: boolean;
     companyId?: string;
   }) => {
@@ -65,7 +66,7 @@ function ProfileDetailBadges({
   profile,
   isSuitable,
 }: {
-  profile: IFormData;
+  profile: AllProfileWithRelations;
   isSuitable: boolean;
 }) {
   const jobDetails = useMemo(() => {
@@ -98,12 +99,12 @@ function ProfileDetailBadges({
       },
       {
         id: "skills",
-        value: profile.top_skills.join(", "),
+        value: profile.top_skills?.join(", "),
         label: "Skills",
       },
       {
         id: "locations",
-        value: profile.preferred_locations.join(", "),
+        value: profile.preferred_locations?.join(", "),
         label: "Locations",
       },
       {

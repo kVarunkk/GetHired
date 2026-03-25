@@ -1,13 +1,13 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { TJobFeedbackVoteEnum } from "@/utils/types";
 
-type VoteType = "upvote" | "downvote";
 type FeedbackStatus = "inserted" | "updated" | "deleted" | "error";
 
 export async function submitJobFeedback(
   jobId: string,
-  voteType: VoteType | null
+  voteType: TJobFeedbackVoteEnum | null,
 ): Promise<{ success: boolean; status: FeedbackStatus; error?: string }> {
   const supabase = await createClient();
   const {
@@ -44,7 +44,7 @@ export async function submitJobFeedback(
       {
         onConflict: "user_id, job_id",
         ignoreDuplicates: false,
-      }
+      },
     );
 
     if (upsertError) {

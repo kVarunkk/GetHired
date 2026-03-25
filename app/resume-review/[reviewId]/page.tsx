@@ -49,7 +49,7 @@ export default async function ResumeReviewPage({
       .eq("id", review.job_id)
       .single();
 
-    if (jobData) initialJd = jobData.description;
+    if (jobData) initialJd = jobData.description ?? "";
   }
 
   // 3. Fetch user's library of resumes

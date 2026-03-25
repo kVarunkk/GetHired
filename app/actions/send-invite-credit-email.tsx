@@ -70,7 +70,8 @@ export async function sendInviteEmail(
       }
 
       const userName =
-        referrerData.full_name ?? referrerData.email.split("@")[0];
+        referrerData.full_name ||
+        (referrerData.email ? referrerData.email.split("@")[0] : "");
       const inviteUrl = `${URL}/auth/confirm?token_hash=${data.properties.hashed_token}&type=signup&next=${finalRedirectUrl}`;
 
       const emailHtml = await render(

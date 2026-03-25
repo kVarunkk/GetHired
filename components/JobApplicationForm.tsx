@@ -18,11 +18,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { IJob, IResume } from "@/utils/types";
+import { AllJobWithRelations } from "@/utils/types";
 import { createClient } from "@/lib/supabase/client";
 import ResumeSourceSelector from "./ResumeSourceSelector";
 import { createResumeAction } from "@/app/actions/create-resume";
 import { cn } from "@/utils/utils";
+import { TJobIdPageData } from "@/utils/types/jobs.types";
 
 const createFormSchema = (questions: string[]) => {
   const schemaFields = questions.reduce<Record<string, z.ZodTypeAny>>(
@@ -36,7 +37,7 @@ const createFormSchema = (questions: string[]) => {
 };
 
 interface JobApplicationFormProps {
-  jobPost: IJob;
+  jobPost: AllJobWithRelations | TJobIdPageData;
   user: User;
   onSuccess: () => void;
 }
@@ -49,7 +50,15 @@ export default function JobApplicationForm({
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
 
-  const [existingResumes, setExistingResumes] = useState<IResume[]>([]);
+  const [existingResumes, setExistingResumes] = useState<
+    {
+      id: string;
+      name: string | null;
+      created_at: string;
+      is_primary: boolean;
+      resume_path: string | null;
+    }[]
+  >([]);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [newFile, setNewFile] = useState<File | null>(null);
   const [isFetchingResumes, setIsFetchingResumes] = useState(true);
@@ -96,7 +105,7 @@ export default function JobApplicationForm({
     const supabase = createClient();
 
     try {
-      let finalResumeId = "";
+      let finalResumeId = null;
 
       if (newFile) {
         const formData = new FormData();
@@ -108,6 +117,10 @@ export default function JobApplicationForm({
         finalResumeId = selectedResumeId;
       } else {
         throw new Error("Please select or upload a resume.");
+      }
+
+      if (!finalResumeId) {
+        throw new Error("Resume processing failed. Please try again.");
       }
 
       const { error } = await supabase.from("applications").insert({

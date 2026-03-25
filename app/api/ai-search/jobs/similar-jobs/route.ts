@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { IJob, TAICredits } from "@/utils/types";
+import { AIRerankRequestBody, TAICredits } from "@/utils/types";
 import { getVertexClient } from "@/utils/serverUtils";
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    const { userId, jobId, jobs, aiCredits } = await request.json();
+    const { userId, jobId, jobs, aiCredits }: AIRerankRequestBody =
+      await request.json();
 
     if (!jobId || !userId || !jobs || !aiCredits) {
       return NextResponse.json(
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
             **Candidate Job Listings to Evaluate:**
             ${jobs
               .map(
-                (job: IJob) => `
+                (job) => `
                 ---
                 ID: ${job.id}
                 Title: ${job.job_name}

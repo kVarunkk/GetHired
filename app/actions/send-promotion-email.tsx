@@ -45,8 +45,8 @@ export async function sendPromotionEmails(promoDetails: {
 
   // 2. Prepare Email Sending Promises
   const emailPromises = users.map(async (user) => {
-    // NOTE: Replace 'name' with a fallback if your user_info table doesn't have a 'name' field
-    const userName = user.full_name || user.email.split("@")[0];
+    const userName =
+      user.full_name || (user.email ? user.email.split("@")[0] : "");
 
     const emailHtml = await render(
       <PromotionEmail
@@ -56,11 +56,14 @@ export async function sendPromotionEmails(promoDetails: {
         gifPreviewImageUrl={promoDetails.imageLink}
         ctaLink={promoDetails.ctaLink}
         ctaLabel={promoDetails.ctaLabel}
-      />
+      />,
     );
 
     // FIX: Standardize the return structure for both success and failure
     try {
+      if (!user.email) {
+        throw new Error("User email is missing.");
+      }
       await resend.emails.send({
         from: "GetHired <varun@devhub.co.in>", // Use a dedicated sender
         to: [user.email],

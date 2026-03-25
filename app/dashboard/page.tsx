@@ -33,8 +33,14 @@ export default async function DashboardPage() {
 
     if (userInfoError) throw error;
     const pendingCompleteInvitationDialogEmails = userInfoData.invitations
-      .filter((each) => each.status === "complete" && !each.isDialogShown)
-      .map((each) => each.invited_email);
+      .filter(
+        (each) =>
+          each.status === "complete" &&
+          !each.isDialogShown &&
+          each.invited_email,
+      )
+      .map((each) => each.invited_email)
+      .filter((email): email is string => email !== null);
 
     const [metricsRes, appliedJobsRes] = await Promise.all([
       supabase.rpc("get_applicant_weekly_metrics", { p_user_id: user.id }),
@@ -69,7 +75,7 @@ export default async function DashboardPage() {
         <div className="flex items-center justify-between flex-wrap gap-5">
           <h1 className="text-3xl font-medium text-start capitalize">
             How are you doing today,{" "}
-            {userInfoData.full_name ?? userInfoData.email.split("@")[0]}?
+            {userInfoData.full_name ?? userInfoData.email?.split("@")[0]}?
           </h1>
           <Button asChild>
             <Link href={"/jobs"}>
@@ -159,7 +165,7 @@ export default async function DashboardPage() {
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <p>{job.company_name}</p>
                         <p>
-                          Applied {simpleTimeAgo(job.created_at, "variant1")}
+                          Applied {simpleTimeAgo("variant1", job.created_at)}
                         </p>
                       </div>
                     </div>
@@ -208,7 +214,7 @@ export default async function DashboardPage() {
                 <div className=" flex items-center gap-3 ">
                   {userInfoData.filled ? (
                     <span className="text-4xl font-extrabold">
-                      {simpleTimeAgo(userInfoData.updated_at, "variant2") || 0}
+                      {simpleTimeAgo("variant2", userInfoData.updated_at) || 0}
                     </span>
                   ) : (
                     ""

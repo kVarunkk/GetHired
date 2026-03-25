@@ -16,13 +16,17 @@ import {
 import BackButton from "./BackButton";
 import ResumeSection from "./resume-review/ResumeSection";
 import JdSection from "./resume-review/JdSection";
-import { IResume, IResumeReview, TPaymentStatus } from "@/utils/types";
+import { TPaymentStatus } from "@/utils/types";
 import { Button } from "./ui/button";
+import {
+  TResumeReviewResume,
+  TResumeReviewServer,
+} from "@/utils/types/review.types";
 
 interface ReviewWorkspaceProps {
-  review: IResumeReview;
+  review: TResumeReviewServer;
   initialJd: string;
-  existingResumes: IResume[];
+  existingResumes: TResumeReviewResume[];
 }
 
 export default function ResumeReviewClient({
@@ -67,7 +71,7 @@ export default function ResumeReviewClient({
           const { data, error } = await supabase
             .from("resumes")
             .select("id, name, content, resume_path, parsing_failed")
-            .eq("id", currentReview.resume_id)
+            .eq("id", currentReview.resume_id!)
             .single();
 
           if (!error && (data?.content || data?.parsing_failed)) {
@@ -85,13 +89,7 @@ export default function ResumeReviewClient({
 
       return () => clearInterval(interval);
     }
-  }, [
-    currentReview.resume_id,
-    isParsed,
-    isParsingFailed,
-    supabase,
-    isResumeLinked,
-  ]);
+  }, [isParsed, isParsingFailed, supabase, isResumeLinked]);
 
   const handleLinkResume = useCallback(
     async (resumeId: string | null) => {

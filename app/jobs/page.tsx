@@ -1,7 +1,7 @@
 import FilterComponent from "@/components/FilterComponent";
 import { createClient } from "@/lib/supabase/server";
 import { TabsContent } from "@/components/ui/tabs";
-import { IJob, JobListingSearchParams } from "@/utils/types";
+import { AllJobWithRelations, JobListingSearchParams } from "@/utils/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import { Metadata } from "next";
@@ -177,8 +177,8 @@ export default async function JobsPage({
     params.set("createdAfter", "30");
   }
 
-  let initialJobs: IJob[] = [];
-  let totalCount: number = 0;
+  let initialJobs: AllJobWithRelations[] = [];
+  let count: number = 0;
   let initialCursor: string | null = null;
   let error: string | null = null;
 
@@ -190,15 +190,25 @@ export default async function JobsPage({
     });
     const [jobsResponse] = await Promise.all([jobFetchPromise]);
 
-    const result = await jobsResponse.json();
+    const {
+      data,
+      totalCount,
+      nextCursor,
+      error,
+    }: {
+      data?: AllJobWithRelations[];
+      totalCount?: number;
+      nextCursor?: string;
+      error?: string;
+    } = await jobsResponse.json();
 
     if (!jobsResponse.ok) {
-      throw new Error(result.error || "Failed to fetch jobs");
+      throw new Error(error || "Failed to fetch jobs");
     }
 
-    initialJobs = result.data;
-    totalCount = result.totalCount;
-    initialCursor = result.nextCursor || null;
+    initialJobs = data || [];
+    count = totalCount || 0;
+    initialCursor = nextCursor || null;
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
@@ -230,7 +240,7 @@ export default async function JobsPage({
                 isOnboardingComplete={onboardingComplete}
                 isAllJobsTab={true}
                 isAppliedJobsTabActive={false}
-                totalCount={totalCount}
+                totalCount={count}
                 current_page="jobs"
                 initialCursor={initialCursor}
                 error={error}
@@ -250,7 +260,7 @@ export default async function JobsPage({
                   isOnboardingComplete={onboardingComplete}
                   isAllJobsTab={false}
                   isAppliedJobsTabActive={false}
-                  totalCount={totalCount}
+                  totalCount={count}
                   current_page="jobs"
                   initialCursor={initialCursor}
                   error={error}
@@ -267,7 +277,7 @@ export default async function JobsPage({
                 isOnboardingComplete={onboardingComplete}
                 isAllJobsTab={false}
                 isAppliedJobsTabActive={true}
-                totalCount={totalCount}
+                totalCount={count}
                 current_page="jobs"
                 initialCursor={initialCursor}
                 error={error}

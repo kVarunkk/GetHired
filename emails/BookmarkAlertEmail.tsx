@@ -9,11 +9,12 @@ import {
   Row,
   Column,
 } from "@react-email/components";
-import { IJob } from "@/utils/types";
+import { AllJobWithRelations } from "@/utils/types";
+// import { IJob } from "@/utils/types";
 
 interface JobDigestEmailProps {
   userName: string;
-  jobs: IJob[];
+  jobs: AllJobWithRelations[];
   bookmarkName: string;
   bookmarkUrl: string;
 }

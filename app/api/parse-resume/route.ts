@@ -134,7 +134,7 @@ export async function POST(req: Request) {
     .eq("user_id", userId)
     .single();
 
-  if (resumeError || !resumeData) {
+  if (resumeError || !resumeData || !resumeData.resume_path) {
     return NextResponse.json(
       { error: "Resume not found for the given user." },
       { status: 404 },

@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { deploymentUrl, sendEmailForStatusUpdate } from "@/utils/serverUtils";
 import React from "react";
 import BookmarkAlertEmail from "@/emails/BookmarkAlertEmail";
-import { IJob } from "@/utils/types";
+import { AllJobWithRelations } from "@/utils/types";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -75,7 +75,7 @@ export async function GET() {
             full_name?: string;
             email: string;
           };
-          if (!userInfo?.email) return;
+          if (!userInfo?.email || !bookmark.url) return;
 
           try {
             const separator = bookmark.url.includes("?") ? "&" : "?";
@@ -90,7 +90,7 @@ export async function GET() {
               throw new Error(`Internal API returned ${response.status}`);
 
             const result = await response.json();
-            const newJobs: IJob[] = result.data || [];
+            const newJobs: AllJobWithRelations[] = result.data || [];
 
             if (Array.isArray(newJobs) && newJobs.length > 0) {
               const emailHtml = await render(
