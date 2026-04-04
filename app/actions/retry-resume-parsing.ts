@@ -49,7 +49,9 @@ export async function retryResumeParsingAction(resumeId: string) {
         });
 
         if (!res.ok)
-          throw new Error(`API Parse failed with status: ${res.status}`);
+          throw new Error(
+            `API Parse failed with status: ${res.status}. Error: ${await res.text()}`,
+          );
       } catch (err) {
         console.error("[RETRY_BG_ERROR]:", err);
         await updateResumeParsingStatus(true, resumeId);
