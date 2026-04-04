@@ -4,7 +4,7 @@ import { deploymentUrl } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
 import { after } from "next/server";
 import { TAICredits } from "@/utils/types";
-import { headers } from "next/headers";
+// import { headers } from "next/headers";
 import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
 import { revalidatePath } from "next/cache";
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
