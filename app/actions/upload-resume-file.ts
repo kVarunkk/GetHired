@@ -18,7 +18,7 @@ const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
  */
 export async function uploadResumeAction(formData: FormData) {
   const supabase = await createClient();
-  const headersList = await headers();
+  // const headersList = await headers();
 
   const {
     data: { user },
