@@ -1,21 +1,18 @@
 "use server";
 
-import { deploymentUrl } from "@/utils/serverUtils";
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { TAICredits } from "@/utils/types";
+import { uploadResumeAction } from "./upload-resume-file";
 
 export async function createResumeReviewAction(formData: FormData) {
   const supabase = await createClient();
-  const headersList = await headers();
   const reviewName =
     (formData.get("name") as string) ||
     `Review ${new Date().toLocaleDateString()}`;
-  const existingResumeId = formData.get("existingResumeId") as string;
-  const file = formData.get("file") as File;
-  const jobId = formData.get("jobId") as string;
+  const existingResumeId = formData.get("existingResumeId") as string | null;
+  const file = formData.get("file") as File | null;
+  const jobId = formData.get("jobId") as string | null;
 
   const {
     data: { user },
@@ -30,7 +27,7 @@ export async function createResumeReviewAction(formData: FormData) {
   try {
     const { data: profile } = await supabase
       .from("user_info")
-      .select("ai_credits, resumes(id)")
+      .select("ai_credits")
       .eq("user_id", userId)
       .single();
 
@@ -50,66 +47,11 @@ export async function createResumeReviewAction(formData: FormData) {
     let finalResumeId = existingResumeId;
 
     if (!finalResumeId && file && file.size > 0) {
-      if (profile.ai_credits < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
-        return {
-          error: `Insufficient AI credits for resume upload. Please top up to continue.`,
-        };
+      const result = await uploadResumeAction(formData);
+      if (result.success && result.resumeId) {
+        finalResumeId = result.resumeId;
       }
-      const fileName = `resumes/${userId}/${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
-
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      // Background Storage Upload
-      const { error: storageError } = await supabase.storage
-        .from("resumes")
-        .upload(fileName, buffer, {
-          contentType: "application/pdf",
-        });
-
-      if (storageError) throw storageError;
-
-      const { data: resumeEntry, error: resumeError } = await supabase
-        .from("resumes")
-        .insert({
-          user_id: userId,
-          name: file.name,
-          resume_path: fileName,
-          content: null, // Digital twin will be populated by the async parser
-        })
-        .select("id")
-        .single();
-
-      if (resumeError) throw resumeError;
-      finalResumeId = resumeEntry.id;
-
-      // 3. ASYNC: Background Processing
-      after(async () => {
-        try {
-          // Background AI Parse Trigger
-          const baseUrl = deploymentUrl();
-          const res = await fetch(`${baseUrl}/api/parse-resume`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Cookie: headersList.get("Cookie") || "",
-            },
-            body: JSON.stringify({
-              resumeId: finalResumeId,
-            }),
-          });
-
-          if (!res.ok) {
-            throw new Error("Some error occured while parsing resume");
-          }
-
-          console.log(
-            `[BACKGROUND_PROCESS_SUCCESS]: Resume ${finalResumeId} parsed.`,
-          );
-        } catch (bgError) {
-          console.error("[BACKGROUND_PROCESS_FATAL]:", bgError);
-        }
-      });
+      if (result.error) throw result.error;
     }
 
     const { data: reviewEntry, error: reviewError } = await supabase

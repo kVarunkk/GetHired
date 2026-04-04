@@ -8,6 +8,7 @@ import { CanvasFactory } from "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { v4 as uuidv4 } from "uuid";
+import { sendResumeParsingStatusEmail } from "@/app/actions/send-resume-status-email";
 
 const ResumeSchema = z.object({
   sections: z.array(
@@ -129,7 +130,7 @@ export async function POST(req: Request) {
 
   const { data: resumeData, error: resumeError } = await supabase
     .from("resumes")
-    .select("resume_path, name")
+    .select("resume_path, name, user_info(email)")
     .eq("id", resumeId)
     .eq("user_id", userId)
     .single();
@@ -142,25 +143,21 @@ export async function POST(req: Request) {
   }
 
   try {
+    // throw new Error("Testing error");
     const { data: signedUrlData, error: signedUrlError } =
       await supabase.storage
         .from("resumes")
         .createSignedUrl(resumeData.resume_path, 120);
+
     if (signedUrlError || !signedUrlData?.signedUrl) {
       console.error("Storage signed URL generation failed:", signedUrlError);
-      return NextResponse.json(
-        { error: "Failed to generate signed URL for resume file." },
-        { status: 500 },
-      );
+      throw new Error("Failed to generate signed URL for resume file.");
     }
 
     const lines = await extractTextFromPdf(signedUrlData?.signedUrl);
 
     if (!lines || lines.length === 0) {
-      return NextResponse.json(
-        { error: "Resume file contained no readable text." },
-        { status: 422 },
-      );
+      throw new Error("Resume file contained no readable text.");
     }
 
     const parsedProfile = await generateStructuredProfile(lines);
@@ -176,18 +173,24 @@ export async function POST(req: Request) {
 
     if (dbError) throw dbError;
 
+    await sendResumeParsingStatusEmail(
+      resumeData.user_info?.email ?? null,
+      "success",
+      resumeData.name,
+      resumeId,
+    );
+
     return NextResponse.json({
       success: true,
     });
   } catch (e) {
     console.error("Resume parsing process failed:", e);
-    await supabase
-      .from("resumes")
-      .update({
-        parsing_failed: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", resumeId);
+    await sendResumeParsingStatusEmail(
+      resumeData.user_info?.email ?? null,
+      "failure",
+      resumeData.name,
+      resumeId,
+    );
     return NextResponse.json(
       { error: "Internal server processing failure during file extraction." },
       { status: 500 },

@@ -8,6 +8,7 @@ import {
   validateAndSanitizeSearchQuery,
   wrapInSandbox,
 } from "@/helpers/ai/security";
+import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 
 export async function POST(req: Request) {
   const { userQuery: rawQuery } = await req.json();
@@ -79,10 +80,16 @@ export async function POST(req: Request) {
       system: systemPrompt,
     });
 
-    await supabase.rpc("deduct_user_credits", {
-      p_user_id: user?.id,
-      p_amount: TAICredits.AI_SEARCH_ASK_AI_RESUME,
-    });
+    // await supabase.rpc("deduct_user_credits", {
+    //   p_user_id: user?.id,
+    //   p_amount: TAICredits.AI_SEARCH_ASK_AI_RESUME,
+    // });
+
+    await deductUserCreditsHelper(
+      supabase,
+      user.id,
+      TAICredits.AI_SEARCH_ASK_AI_RESUME,
+    );
 
     return NextResponse.json({ filters });
   } catch (error) {

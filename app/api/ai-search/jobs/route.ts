@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AllJobWithRelations, TAICredits, TResumeContent } from "@/utils/types";
 import { getVertexClient } from "@/utils/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 
 export async function POST(request: NextRequest) {
   try {
@@ -142,10 +143,16 @@ export async function POST(request: NextRequest) {
     });
 
     if (!isInternalCall) {
-      await supabase.rpc("deduct_user_credits", {
-        p_user_id: userId,
-        p_amount: TAICredits.AI_SEARCH_ASK_AI_RESUME,
-      });
+      // await supabase.rpc("deduct_user_credits", {
+      //   p_user_id: userId,
+      //   p_amount: TAICredits.AI_SEARCH_ASK_AI_RESUME,
+      // });
+
+      await deductUserCreditsHelper(
+        supabase,
+        userId,
+        TAICredits.AI_SEARCH_ASK_AI_RESUME,
+      );
     }
 
     return NextResponse.json({

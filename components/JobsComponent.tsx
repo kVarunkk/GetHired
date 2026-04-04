@@ -42,6 +42,7 @@ export default function JobsComponent({
   totalCount,
   initialCursor,
   error,
+  dynamicKey,
 }: {
   initialJobs:
     | AllJobWithRelations[]
@@ -57,6 +58,7 @@ export default function JobsComponent({
   totalCount: number;
   initialCursor: string | null;
   error: string | null;
+  dynamicKey: string;
 }) {
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
     revalidateOnFocus: false,
@@ -353,6 +355,7 @@ export default function JobsComponent({
           )}
 
           <FilterComponentSheet
+            dynamicKey={dynamicKey}
             currentPage={current_page}
             onboardingComplete={isOnboardingComplete}
           />

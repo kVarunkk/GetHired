@@ -2,10 +2,11 @@
 
 import { createResumeReviewAction } from "@/app/actions/create-resume-review";
 import { Button } from "./ui/button";
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { Loader2, Sparkle } from "lucide-react";
+import { useProgress } from "react-transition-progress";
 
 export default function CreateReviewForResume({
   userId,
@@ -16,6 +17,7 @@ export default function CreateReviewForResume({
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const startProgress = useProgress();
 
   const createReview = async () => {
     if (!userId || !resumeId) {
@@ -38,7 +40,10 @@ export default function CreateReviewForResume({
       } else if (result.success && result.reviewId) {
         toast.success("Workspace ready!", { id: toastId });
 
-        router.push(`/resume-review/${result.reviewId}`);
+        startTransition(() => {
+          startProgress();
+          router.push(`/resume-review/${result.reviewId}`);
+        });
       }
     } catch (err) {
       console.error("[CREATE_REVIEW_CLIENT_ERROR]:", err);

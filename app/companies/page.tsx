@@ -148,14 +148,12 @@ export default async function JobsPage({
     }
   } catch {}
 
-  console.log(initialCompanies);
-
   return (
     // <div>
     <div className="flex items-start px-4  gap-5">
       <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[calc(100vh)] overflow-y-auto">
         <FilterComponent
-          key={dynamicKey}
+          dynamicKey={dynamicKey}
           currentPage="companies"
           onboardingComplete={onboardingComplete}
         />
@@ -170,7 +168,7 @@ export default async function JobsPage({
           {
             <TabsContent value="all">
               <JobsComponent
-                key={dynamicKey}
+                dynamicKey={dynamicKey}
                 initialJobs={initialCompanies || []}
                 user={user}
                 isCompanyUser={isCompanyUser}
@@ -188,7 +186,7 @@ export default async function JobsPage({
           {user && !isCompanyUser && !isAISearch && (
             <TabsContent value="saved">
               <JobsComponent
-                key={dynamicKey}
+                dynamicKey={dynamicKey}
                 initialJobs={initialCompanies || []}
                 user={user}
                 isCompanyUser={isCompanyUser}

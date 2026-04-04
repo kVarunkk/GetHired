@@ -25,10 +25,12 @@ export default function FilterComponent({
   setOpenSheet,
   currentPage,
   onboardingComplete,
+  dynamicKey,
 }: {
   setOpenSheet?: Dispatch<SetStateAction<boolean>>;
   currentPage: "jobs" | "profiles" | "companies";
   onboardingComplete: boolean;
+  dynamicKey: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -81,6 +83,17 @@ export default function FilterComponent({
   }, [FILTER_CONFIG, searchParams]);
 
   const [filters, setFilters] = useState<FiltersState>(currentUrlFilters);
+
+  const [prevKey, setPrevKey] = useState(dynamicKey);
+
+  /** * THE PATTERN: Reset state during rendering.
+   * If the URL has changed (dynamicKey), update local state
+   * to match the URL immediately.
+   */
+  if (dynamicKey !== prevKey) {
+    setPrevKey(dynamicKey);
+    setFilters(currentUrlFilters);
+  }
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {

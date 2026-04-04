@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -21,6 +21,7 @@ import { Button } from "./ui/button";
 import { TAICredits } from "@/utils/types";
 import InfoTooltip from "./InfoTooltip";
 import { createResumeReviewAction } from "@/app/actions/create-resume-review";
+import { useProgress } from "react-transition-progress";
 
 interface CreateResumeReviewDialogProps {
   userId: string;
@@ -41,6 +42,8 @@ export default function CreateResumeReviewDialog({
   >([]);
   const [file, setFile] = useState<File | null>(null);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+
+  const startProgress = useProgress();
 
   const router = useRouter();
 
@@ -87,8 +90,10 @@ export default function CreateResumeReviewDialog({
       } else if (result.success && result.reviewId) {
         toast.success("Workspace initialized!");
         setIsOpen(false);
-        router.refresh();
-        router.push(`/resume-review/${result.reviewId}`);
+        startTransition(() => {
+          startProgress();
+          router.push(`/resume-review/${result.reviewId}`);
+        });
       }
     } catch {
       toast.error("Initialization failed. Please try again.");

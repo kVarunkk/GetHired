@@ -4,6 +4,7 @@ import { generateText } from "ai";
 import { getVertexClient } from "@/utils/serverUtils";
 import { TAICredits } from "@/utils/types";
 import { validateAndSanitizeSearchQuery } from "@/helpers/ai/security";
+import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 
 export async function POST(
   request: NextRequest,
@@ -129,10 +130,16 @@ Generate the response now. Do not include any introductory text like "Here is yo
     });
     answer = text;
 
-    await supabase.rpc("deduct_user_credits", {
-      p_user_id: userId,
-      p_amount: TAICredits.AI_SEARCH_ASK_AI_RESUME,
-    });
+    // await supabase.rpc("deduct_user_credits", {
+    //   p_user_id: userId,
+    //   p_amount: TAICredits.AI_SEARCH_ASK_AI_RESUME,
+    // });
+
+    await deductUserCreditsHelper(
+      supabase,
+      userId,
+      TAICredits.AI_SEARCH_ASK_AI_RESUME,
+    );
 
     return NextResponse.json({ success: true, answer: answer });
   } catch (e) {

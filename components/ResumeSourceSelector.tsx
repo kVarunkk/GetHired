@@ -85,12 +85,14 @@ export default function ResumeSourceSelector({
           onSelectExisting={onSelectExisting}
         />
       ) : view === "select" ? (
-        <SelectResumeParent
-          existingResumes={existingResumes}
-          onFileChange={onFileChange}
-          onSelectExisting={onSelectExisting}
-          selectedId={selectedId}
-        />
+        <div className="max-h-[300px] overflow-y-auto">
+          <SelectResumeParent
+            existingResumes={existingResumes}
+            onFileChange={onFileChange}
+            onSelectExisting={onSelectExisting}
+            selectedId={selectedId}
+          />
+        </div>
       ) : (
         <Tabs defaultValue="upload" className="w-full">
           <TabsList className="grid w-full grid-cols-2 ">
@@ -107,12 +109,14 @@ export default function ResumeSourceSelector({
             />
           </TabsContent>
           <TabsContent value="existing">
-            <SelectResumeParent
-              existingResumes={existingResumes}
-              onFileChange={onFileChange}
-              onSelectExisting={onSelectExisting}
-              selectedId={selectedId}
-            />
+            <div className="max-h-[300px] overflow-y-auto">
+              <SelectResumeParent
+                existingResumes={existingResumes}
+                onFileChange={onFileChange}
+                onSelectExisting={onSelectExisting}
+                selectedId={selectedId}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       )}
@@ -131,11 +135,20 @@ export default function ResumeSourceSelector({
           <Loader2 className="h-4 w-4 animate-spin" />
         </div>
       ) : previewUrl ? (
-        <ResumePreview
-          previewUrl={previewUrl}
-          file={file}
-          activeResumeName={activeResumeName}
-        />
+        <div
+          ref={(el) => {
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
+          }}
+          className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+        >
+          <ResumePreview
+            previewUrl={previewUrl}
+            file={file}
+            activeResumeName={activeResumeName}
+          />
+        </div>
       ) : (
         ""
       )}

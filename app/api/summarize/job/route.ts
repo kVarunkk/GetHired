@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getVertexClient } from "@/utils/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { TAICredits } from "@/utils/types";
+import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 
 const MAX_SUMMARY_LENGTH = 500;
 
@@ -107,10 +108,16 @@ Generate the snapshot now. Output ONLY the four lines of text.
       );
     }
 
-    await authenticatedSupabase.rpc("deduct_user_credits", {
-      p_user_id: user.id,
-      p_amount: TAICredits.AI_SUMMARY,
-    });
+    // await authenticatedSupabase.rpc("deduct_user_credits", {
+    //   p_user_id: user.id,
+    //   p_amount: TAICredits.AI_SUMMARY,
+    // });
+
+    await deductUserCreditsHelper(
+      authenticatedSupabase,
+      user.id,
+      TAICredits.AI_SUMMARY,
+    );
 
     return NextResponse.json({ summary: rawSummary });
   } catch {

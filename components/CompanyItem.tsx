@@ -140,6 +140,7 @@ function CompanyDetailBadges({
           href={company.website}
           target="_blank"
           rel="noopener noreferrer"
+          prefetch={false}
         >
           <Badge
             variant={"secondary"}

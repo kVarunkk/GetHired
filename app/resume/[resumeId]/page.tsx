@@ -7,6 +7,7 @@ import InfoTooltip from "@/components/InfoTooltip";
 import Link from "next/link";
 import { TAICredits } from "@/utils/types";
 import CreateReviewForResume from "@/components/CreateReviewForResume";
+import { RetryResumeParsing } from "@/components/RetryResumeParsing";
 
 export default async function ResumeIdPage({
   params,
@@ -30,6 +31,8 @@ export default async function ResumeIdPage({
     if (!data || error) {
       throw new Error("Resume not found");
     }
+
+    const isParsingFailed = data.parsing_failed === true;
 
     const { data: signedUrlData, error: signedUrlError } =
       await supabase.storage
@@ -61,19 +64,22 @@ export default async function ResumeIdPage({
             )}
           </div>
           {user?.id && (
-            <div className="flex items-center gap-1">
-              <CreateReviewForResume userId={user.id} resumeId={resumeId} />
-              <InfoTooltip
-                content={
-                  <p>
-                    This feature uses {TAICredits.AI_CV_REVIEW} AI credits per
-                    use.{" "}
-                    <Link href={"/dashboard"} className="text-blue-500">
-                      Recharge Credits
-                    </Link>
-                  </p>
-                }
-              />
+            <div className="flex items-center gap-4">
+              {isParsingFailed && <RetryResumeParsing resumeId={resumeId} />}
+              <div className="flex items-center gap-1">
+                <CreateReviewForResume userId={user.id} resumeId={resumeId} />
+                <InfoTooltip
+                  content={
+                    <p>
+                      This feature uses {TAICredits.AI_CV_REVIEW} AI credits per
+                      use.{" "}
+                      <Link href={"/dashboard"} className="text-blue-500">
+                        Recharge Credits
+                      </Link>
+                    </p>
+                  }
+                />
+              </div>
             </div>
           )}
         </div>

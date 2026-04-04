@@ -4,7 +4,13 @@ import { cn } from "@/utils/utils";
 import { Eye, File, FileText, Loader2, RefreshCcw } from "lucide-react";
 import ResumeSourceSelector from "../ResumeSourceSelector";
 import DigitalTwinMirror from "./DigitalTwinMirror";
-import { useEffect, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  startTransition,
+  useEffect,
+  useState,
+} from "react";
 import { uploadResumeAction } from "@/app/actions/upload-resume-file";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
@@ -15,6 +21,8 @@ import {
   TResumeReviewServer,
 } from "@/utils/types/review.types";
 import { TResumeRowContent } from "@/utils/types";
+import { useRouter } from "next/navigation";
+import { retryResumeParsingAction } from "@/app/actions/retry-resume-parsing";
 
 export default function ResumeSection({
   isParsed,
@@ -22,27 +30,51 @@ export default function ResumeSection({
   existingResumes,
   linkedResume,
   activeHighlightId,
-  handleLinkResume,
   isResumeLinked,
   isParsingFailed,
-  refreshResumeStatus,
+  reviewId,
+  setCurrentReview,
 }: {
   isParsed: boolean;
   isJdPaneOpen: boolean;
   existingResumes: TResumeReviewResume[];
   linkedResume: TResumeReviewServer["resumes"] | null;
   activeHighlightId: string | null;
-  handleLinkResume: (resumeId: string | null) => Promise<void>;
   isResumeLinked: boolean;
   isParsingFailed: boolean;
-  refreshResumeStatus: () => Promise<void>;
+  reviewId: string;
+  setCurrentReview: Dispatch<SetStateAction<TResumeReviewServer>>;
 }) {
+  const supabase = createClient();
+
   const [isUploading, setIsUploading] = useState(false);
   const [viewMode, setViewMode] = useState<"mirror" | "original">("mirror");
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleLinkResume = async (resumeId: string | null) => {
+    if (!resumeId) return;
+
+    try {
+      const { error } = await supabase
+        .from("resume_reviews")
+        .update({ resume_id: resumeId, updated_at: new Date().toISOString() })
+        .eq("id", reviewId);
+
+      if (error) {
+        toast.error("Failed to link resume asset.");
+      } else {
+        // Update local state to trigger the polling effect
+        setCurrentReview((prev) => ({ ...prev, resume_id: resumeId }));
+        toast.success("Resume linked successfully.");
+      }
+    } catch {
+      toast.error("Link action failed.");
+    }
+  };
 
   const handleStartProcessing = async () => {
     if (!selectedFile) return;
@@ -72,16 +104,11 @@ export default function ResumeSection({
     }
   };
 
-  /**
-   * Fetch a signed URL for the original PDF when the view mode is set to "original"
-   * or when a new resume is linked.
-   */
   useEffect(() => {
     const getSignedUrl = async () => {
-      if (!isResumeLinked || !linkedResume?.resume_path) return;
+      if (!isResumeLinked || !linkedResume?.resume_path || !supabase) return;
 
       try {
-        const supabase = createClient();
         const { data, error } = await supabase.storage
           .from("resumes")
           .createSignedUrl(linkedResume.resume_path, 3600);
@@ -96,29 +123,49 @@ export default function ResumeSection({
     if (isResumeLinked) {
       getSignedUrl();
     }
-  }, [isResumeLinked, linkedResume?.resume_path]);
+  }, [isResumeLinked, linkedResume?.resume_path, supabase]);
 
   const handleRetryParsing = async () => {
     if (!linkedResume?.id) return;
 
     setIsRetrying(true);
     const toastId = toast.loading("Restarting document synchronization...");
+
     try {
-      const res = await fetch("/api/parse-resume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeId: linkedResume.id }),
+      //  OPTIMISTIC UPDATE:
+
+      setCurrentReview((prev) => {
+        if (!prev.resumes) return prev;
+        return {
+          ...prev,
+          resumes: {
+            ...prev.resumes,
+            parsing_failed: false,
+            content: null,
+          },
+        };
       });
 
-      if (!res.ok) throw new Error("API failed to initialize synchronization.");
+      const result = await retryResumeParsingAction(linkedResume.id);
 
-      await refreshResumeStatus();
+      if (result.error) {
+        throw new Error(result.error);
+      }
 
-      toast.success("Parsing restarted successfully.", { id: toastId });
-    } catch {
-      toast.error("Failed to restart parsing. Please try again later.", {
-        id: toastId,
+      toast.success("Sync restarted! AI is re-indexing...", { id: toastId });
+
+      startTransition(() => {
+        router.refresh();
       });
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to restart sync. Please try again.",
+        {
+          id: toastId,
+        },
+      );
     } finally {
       setIsRetrying(false);
     }
@@ -180,8 +227,8 @@ export default function ResumeSection({
         )}
       >
         {isParsingFailed ? (
-          <div className="flex flex-col gap-4 justify-center items-center">
-            <h2 className="text-muted-foreground font-semibold text-center">
+          <div className="flex flex-col gap-4 mt-10 justify-center items-center">
+            <h2 className="text-muted-foreground  text-center">
               Unfortunately, there was an error parsing your resume. Please try
               again.
             </h2>

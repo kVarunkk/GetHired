@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { mutate } from "swr";
 import { revalidateCache } from "@/app/actions/revalidate";
-import { deductCreditsForUser } from "@/app/actions/deduct-credits";
+import { deductCreditsForUserRelevantJobSearch } from "@/app/actions/deduct-credits-user-relevant-job";
 import { PROFILE_API_KEY } from "@/utils/utils";
 
 interface PollerOptions {
@@ -53,7 +53,7 @@ export function useRelevantJobPoller({
         .single();
 
       if (data?.is_relevant_jobs_generated) {
-        await deductCreditsForUser(userId);
+        await deductCreditsForUserRelevantJobSearch();
         await mutate(PROFILE_API_KEY);
         await revalidateCache("jobs-feed");
         router.refresh();

@@ -4,6 +4,9 @@ import { deploymentUrl } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
 import { after } from "next/server";
 import { TAICredits } from "@/utils/types";
+import { headers } from "next/headers";
+import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
+import { revalidatePath } from "next/cache";
 
 /**
  * SERVER ACTION: uploadResumeAction
@@ -14,6 +17,7 @@ import { TAICredits } from "@/utils/types";
  */
 export async function uploadResumeAction(formData: FormData) {
   const supabase = await createClient();
+  const headersList = await headers();
 
   const {
     data: { user },
@@ -63,7 +67,19 @@ export async function uploadResumeAction(formData: FormData) {
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const fileName = `resumes/${userId}/${Date.now()}-${sanitizedName}`;
 
-    // 2. Create DB entry immediately to get an ID
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // 2. Upload to storage
+    const { error: storageError } = await supabase.storage
+      .from("resumes")
+      .upload(fileName, buffer, {
+        contentType: "application/pdf",
+      });
+
+    if (storageError) throw storageError;
+
+    // 3. Create DB entry immediately to get an ID
     const { data: resumeEntry, error: resumeError } = await supabase
       .from("resumes")
       .insert({
@@ -77,38 +93,36 @@ export async function uploadResumeAction(formData: FormData) {
 
     if (resumeError) throw resumeError;
 
-    // 3. Background Task: Upload & Trigger Parse
     after(async () => {
       try {
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+        const baseUrl = deploymentUrl();
+        const res = await fetch(`${baseUrl}/api/parse-resume`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Cookie: headersList.get("Cookie") || "",
+          },
+          body: JSON.stringify({ resumeId: resumeEntry.id }),
+        });
 
-        // Upload to storage
-        const { error: storageError } = await supabase.storage
-          .from("resumes")
-          .upload(fileName, buffer, {
-            contentType: "application/pdf",
-          });
-
-        if (storageError) {
-          console.error("[BG_UPLOAD_ERROR]:", storageError);
-          return;
+        if (!res.ok) {
+          // API failed before reaching parsing logic - mark as failed
+          throw new Error(
+            `[BG_ERROR]: parse-resume API returned ${res.status}`,
+          );
+          // await updateResumeParsingStatus(true, resumeEntry.id);
         }
 
-        // Trigger the parse API
-        const baseUrl = deploymentUrl();
-        await fetch(`${baseUrl}/api/parse-resume`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            resumeId: resumeEntry.id,
-          }),
-        });
+        console.log(
+          `[BG_SUCCESS]: Resume ${resumeEntry.id} processing initiated.`,
+        );
       } catch (err) {
-        console.error("[BG_PROCESS_FAILED]:", err);
+        // Network failure - fetch itself threw
+        console.error("[BG_FATAL_ERROR]:", err);
+        await updateResumeParsingStatus(true, resumeEntry.id);
       }
     });
-
+    revalidatePath("/resume");
     // Return the ID instantly
     return { success: true, resumeId: resumeEntry.id };
   } catch (err: unknown) {

@@ -196,9 +196,6 @@ export const OnboardingForm: React.FC = () => {
 
           setFormData((prev) => ({
             ...prev,
-            // ...data,
-            // user_id: user.id,
-            // email: user.email,
             full_name: data.full_name || "",
             linkedin_url: data.linkedin_url || "",
             github_url: data.github_url || "",
@@ -211,6 +208,13 @@ export const OnboardingForm: React.FC = () => {
             experience_years: data.experience_years || "",
             resume_id: primaryResume ? primaryResume.id : null,
             user_id: user.id,
+            top_skills: data.top_skills || [],
+            industry_preferences: data.industry_preferences || [],
+            work_style_preferences: data.work_style_preferences || [],
+            visa_sponsorship_required: data.visa_sponsorship_required ?? false,
+            career_goals_short_term: data.career_goals_long_term || "",
+            career_goals_long_term: data.career_goals_long_term || "",
+            company_size_preference: data.company_size_preference || "",
             is_promotion_active: data.is_promotion_active || false,
             is_job_digest_active: data.is_job_digest_active || false,
             is_public: data.is_public || false,

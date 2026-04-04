@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { after } from "next/server";
 import { triggerRelevanceUpdate } from "./relevant-jobs-update";
 import { TAICredits } from "@/utils/types";
+import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
 
 export async function submitOnboardingAction(formData: FormData) {
   const supabase = await createClient();
@@ -91,7 +92,7 @@ export async function submitOnboardingAction(formData: FormData) {
 
     if (userError) throw userError;
 
-    // 4. SEQUENTIAL BACKGROUND CHAIN
+    // 4. SEQUENTIAL[IMP] BACKGROUND CHAIN
     after(async () => {
       const baseUrl = deploymentUrl();
       const internalHeaders = {
@@ -101,14 +102,23 @@ export async function submitOnboardingAction(formData: FormData) {
 
       try {
         // STEP A: If new file, Upload & Parse first
-        if (resumeFile && resumeFile.size > 0) {
+        if (resumeFile && resumeFile.size > 0 && finalResumeId) {
           // Call Parse API and WAIT for it to finish updating the 'content' column
-          const parseRes = await fetch(`${baseUrl}/api/parse-resume`, {
-            method: "POST",
-            headers: internalHeaders,
-            body: JSON.stringify({ resumeId: finalResumeId }),
-          });
-          if (!parseRes.ok) throw new Error("Background Parse Failed");
+          try {
+            const parseRes = await fetch(`${baseUrl}/api/parse-resume`, {
+              method: "POST",
+              headers: internalHeaders,
+              body: JSON.stringify({ resumeId: finalResumeId }),
+            });
+            if (!parseRes.ok) {
+              // await updateResumeParsingStatus(true, finalResumeId);
+
+              throw new Error("Background Parse Failed");
+            }
+          } catch {
+            await updateResumeParsingStatus(true, finalResumeId);
+            throw new Error("Background Parse Failed");
+          }
         }
 
         // STEP B: Update Embedding (Reads the 'content' column we just filled)

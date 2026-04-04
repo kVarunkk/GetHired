@@ -31,7 +31,8 @@ export default async function ResumeReviewPage({
         name,
         content,
         resume_path,
-        parsing_failed
+        parsing_failed,
+        updated_at
       )
     `,
     )
@@ -59,8 +60,11 @@ export default async function ResumeReviewPage({
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  const remountKey = `${review.id}-${review.updated_at}-${review.resumes?.updated_at || "none"}`;
+
   return (
     <ResumeReviewClient
+      key={remountKey}
       review={review}
       initialJd={initialJd}
       existingResumes={userResumes || []}

@@ -15,9 +15,11 @@ import { v4 as uuidv4 } from "uuid";
 export default function FilterComponentSheet({
   currentPage,
   onboardingComplete,
+  dynamicKey,
 }: {
   currentPage: "jobs" | "companies" | "profiles";
   onboardingComplete: boolean;
+  dynamicKey: string;
 }) {
   const [openSheet, setOpenSheet] = useState(false);
   const searchParams = useSearchParams();
@@ -61,6 +63,7 @@ export default function FilterComponentSheet({
           </SheetTitle>
         </SheetHeader>
         <FilterComponent
+          dynamicKey={dynamicKey}
           currentPage={currentPage}
           setOpenSheet={setOpenSheet}
           onboardingComplete={onboardingComplete}

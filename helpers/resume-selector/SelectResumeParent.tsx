@@ -17,7 +17,7 @@ export const SelectResumeParent = ({
   selectedId: string | null;
 }) => {
   return (
-    <div className="max-h-[200px] overflow-y-auto overflow-x-hidden space-y-2 pr-2 scrollbar-thin scrollbar-thumb-zinc-800 pb-2">
+    <div className="  overflow-x-hidden space-y-2 pr-2  pb-2">
       {existingResumes?.length > 0 ? (
         existingResumes.map((resume) => (
           <button

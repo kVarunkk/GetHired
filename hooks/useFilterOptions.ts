@@ -15,10 +15,6 @@ export interface FilterOptions {
   error: any;
 }
 
-/**
- * Fetches filter metadata for a given page and normalizes the arrays.
- * Also pulls location list for the component.
- */
 export function useFilterOptions(
   currentPage: "jobs" | "profiles" | "companies",
 ): FilterOptions {
@@ -30,6 +26,8 @@ export function useFilterOptions(
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     staleTime: ONE_DAY_MS,
+    // prevents fetch on re mount
+    revalidateIfStale: false,
   });
 
   const {
@@ -40,52 +38,10 @@ export function useFilterOptions(
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     staleTime: ONE_DAY_MS,
+    revalidateIfStale: false,
   });
 
-  const uniqueCompanies = useMemo(
-    () => (filterData?.companies && !filterError ? filterData.companies : []),
-    [filterData, filterError],
-  );
-
-  const uniqueLocations = useMemo(
-    () => (filterData?.locations && !filterError ? filterData.locations : []),
-    [filterData, filterError],
-  );
-
-  const uniqueJobRoles = useMemo(
-    () =>
-      filterData?.uniqueJobRoles && !filterError
-        ? filterData.uniqueJobRoles
-        : [],
-    [filterData, filterError],
-  );
-
-  const uniqueIndustryPreferences = useMemo(
-    () =>
-      filterData?.uniqueIndustryPreferences && !filterError
-        ? filterData.uniqueIndustryPreferences
-        : [],
-    [filterData, filterError],
-  );
-
-  const uniqueSkills = useMemo(
-    () =>
-      filterData?.uniqueSkills && !filterError ? filterData.uniqueSkills : [],
-    [filterData, filterError],
-  );
-
-  const uniqueWorkStylePreferences = useMemo(
-    () =>
-      filterData?.uniqueWorkStylePreferences && !filterError
-        ? filterData.uniqueWorkStylePreferences
-        : [],
-    [filterData, filterError],
-  );
-
-  const countries = useMemo(
-    () => (countriesData && !countriesError ? countriesData.data : []),
-    [countriesData, countriesError],
-  );
+  const countries = useMemo(() => countriesData?.data || [], [countriesData]);
 
   const uniqueIndustries = useMemo(
     () => commonIndustries.map((each) => ({ industry: each })),
@@ -93,12 +49,12 @@ export function useFilterOptions(
   );
 
   return {
-    uniqueCompanies,
-    uniqueLocations,
-    uniqueJobRoles,
-    uniqueIndustryPreferences,
-    uniqueSkills,
-    uniqueWorkStylePreferences,
+    uniqueCompanies: filterData?.companies || [],
+    uniqueLocations: filterData?.uniqueLocations || [],
+    uniqueJobRoles: filterData?.uniqueJobRoles || [],
+    uniqueIndustryPreferences: filterData?.uniqueIndustryPreferences || [],
+    uniqueSkills: filterData?.uniqueSkills || [],
+    uniqueWorkStylePreferences: filterData?.uniqueWorkStylePreferences || [],
     countries,
     uniqueIndustries,
     loading: filterLoading || countriesLoading,

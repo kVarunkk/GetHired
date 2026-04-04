@@ -48,7 +48,10 @@ const ProfileItem = React.memo(
             </div>
 
             <div className="flex items-center gap-2">
-              <Link href={`/company/profiles/${profile.user_id}`}>
+              <Link
+                href={`/company/profiles/${profile.user_id}`}
+                prefetch={false}
+              >
                 <Button>
                   View Profile
                   <ArrowRight className="ml-2 h-4 w-4" />

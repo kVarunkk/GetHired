@@ -174,7 +174,7 @@ export default async function ProfilesPage({
     <div className="flex items-start px-4 h-full gap-5">
       <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[calc(100vh)] overflow-y-auto">
         <FilterComponent
-          key={dynamicKey}
+          dynamicKey={dynamicKey}
           currentPage={"profiles"}
           onboardingComplete={onboarding_complete}
         />
@@ -188,7 +188,7 @@ export default async function ProfilesPage({
         >
           <TabsContent value="all">
             <JobsComponent
-              key={dynamicKey}
+              dynamicKey={dynamicKey}
               initialJobs={initialProfiles || []}
               user={user}
               isCompanyUser={true}
@@ -205,7 +205,7 @@ export default async function ProfilesPage({
           {user && !isAISearch && (
             <TabsContent value="saved">
               <JobsComponent
-                key={dynamicKey}
+                dynamicKey={dynamicKey}
                 initialJobs={initialProfiles || []}
                 user={user}
                 isCompanyUser={true}

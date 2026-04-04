@@ -6,7 +6,7 @@ export default function Loading() {
   return (
     <div className="h-screen w-full flex items-center justify-center text-muted-foreground text-center">
       <div className="flex flex-col gap-4 items-center">
-        <div>Loading 3000+ Jobs...</div>
+        <div>Loading Thousands of Opportunities...</div>
         <Suspense>
           <LoadingClientHelper />
         </Suspense>
