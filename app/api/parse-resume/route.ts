@@ -120,13 +120,19 @@ export async function POST(req: Request) {
     );
   }
   const userId = user.id;
-  console.log("user: ", user);
-  console.log("authError: ", authError);
-  console.log(userId, resumeId);
 
   if (!userId || !resumeId) {
     return NextResponse.json(
-      { error: "Missing user ID or resume path." },
+      {
+        error:
+          "Missing user ID or resume path." +
+          "user, userid, resumeid: " +
+          JSON.stringify(user) +
+          "------------------" +
+          userId +
+          "--------------------" +
+          resumeId,
+      },
       { status: 400 },
     );
   }
