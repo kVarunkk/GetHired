@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+// import { createClient } from "@/lib/supabase/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { getVertexClient } from "@/utils/serverUtils";
@@ -9,6 +9,8 @@ import { PDFParse } from "pdf-parse";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { v4 as uuidv4 } from "uuid";
 import { sendResumeParsingStatusEmail } from "@/app/actions/send-resume-status-email";
+import { headers } from "next/headers";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 const ResumeSchema = z.object({
   sections: z.array(
@@ -103,23 +105,34 @@ async function generateStructuredProfile(lines: string[]) {
     throw new Error("AI engine failed to generate a valid document structure.");
   }
 }
+const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
 export async function POST(req: Request) {
-  const { resumeId } = await req.json();
+  const { resumeId, userId } = await req.json();
+  const headersList = await headers();
 
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) {
+  const cronSecret = headersList.get("X-Internal-Secret");
+  if (cronSecret !== INTERNAL_API_SECRET) {
     return NextResponse.json(
-      { error: "Unauthorized access or user mismatch." },
+      { error: "Unauthorized access to digest route" },
       { status: 401 },
     );
   }
-  const userId = user.id;
+
+  // const supabase = await createClient();
+  const supabase = createServiceRoleClient();
+
+  // const {
+  //   data: { user },
+  //   error: authError,
+  // } = await supabase.auth.getUser();
+  // if (authError || !user) {
+  //   return NextResponse.json(
+  //     { error: "Unauthorized access or user mismatch." },
+  //     { status: 401 },
+  //   );
+  // }
+  // const userId = user.id;
 
   if (!userId || !resumeId) {
     return NextResponse.json(
@@ -127,7 +140,7 @@ export async function POST(req: Request) {
         error:
           "Missing user ID or resume path." +
           "user, userid, resumeid: " +
-          JSON.stringify(user) +
+          // JSON.stringify(user) +
           "------------------" +
           userId +
           "--------------------" +

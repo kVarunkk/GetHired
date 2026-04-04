@@ -4,7 +4,8 @@ import { after } from "next/server";
 import { createClient } from "../../lib/supabase/server";
 import { deploymentUrl } from "@/utils/serverUtils";
 import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
-import { headers } from "next/headers";
+// import { headers } from "next/headers";
+const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
 /**
  * retryResumeParsingAction
@@ -13,7 +14,7 @@ import { headers } from "next/headers";
  */
 export async function retryResumeParsingAction(resumeId: string) {
   const supabase = await createClient();
-  const headersList = await headers();
+  //   const headersList = await headers();
 
   // 1. Auth Guard
   const {
@@ -43,15 +44,18 @@ export async function retryResumeParsingAction(resumeId: string) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Cookie: headersList.get("Cookie") || "",
+            "X-Internal-Secret": INTERNAL_API_SECRET || "",
+            // Cookie: headersList.get("Cookie") || "",
           },
-          body: JSON.stringify({ resumeId }),
+          body: JSON.stringify({ resumeId, userId: user.id }),
         });
 
-        if (!res.ok)
+        if (!res.ok) {
+          console.log((await res.json()).error);
           throw new Error(
             `API Parse failed with status: ${res.status}. Error: ${await res.text()}`,
           );
+        }
       } catch (err) {
         console.error("[RETRY_BG_ERROR]:", err);
         await updateResumeParsingStatus(true, resumeId);

@@ -7,6 +7,7 @@ import { TAICredits } from "@/utils/types";
 import { headers } from "next/headers";
 import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
 import { revalidatePath } from "next/cache";
+const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
 /**
  * SERVER ACTION: uploadResumeAction
@@ -100,13 +101,15 @@ export async function uploadResumeAction(formData: FormData) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Cookie: headersList.get("Cookie") || "",
+            "X-Internal-Secret": INTERNAL_API_SECRET || "",
+
+            // Cookie: headersList.get("Cookie") || "",
           },
-          body: JSON.stringify({ resumeId: resumeEntry.id }),
+          body: JSON.stringify({ resumeId: resumeEntry.id, userId }),
         });
 
         if (!res.ok) {
-          // API failed before reaching parsing logic - mark as failed
+          console.log((await res.json()).error);
           throw new Error(
             `[BG_ERROR]: parse-resume API returned ${res.status}`,
           );
