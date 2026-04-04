@@ -120,6 +120,9 @@ export async function POST(req: Request) {
     );
   }
   const userId = user.id;
+  console.log("user: ", user);
+  console.log("authError: ", authError);
+  console.log(userId, resumeId);
 
   if (!userId || !resumeId) {
     return NextResponse.json(
