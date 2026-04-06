@@ -264,10 +264,11 @@ export const buildQuery = async ({
     }
 
     if (minSalary) {
-      query = query.gte("salary_min", parseInt(minSalary as string));
+      query = query.gte("salary_min", parseInt(minSalary));
     }
     if (minExperience) {
-      query = query.lte("experience_min", parseInt(minExperience as string));
+      console.log("Filtering for min experience:", minExperience);
+      query = query.gte("experience_min", parseInt(minExperience));
     }
 
     if (sortBy && sortBy !== "relevance") {
