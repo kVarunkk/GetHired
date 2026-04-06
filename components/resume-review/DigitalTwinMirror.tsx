@@ -25,7 +25,7 @@ export default function DigitalTwinMirror({
   if (!content?.sections) return null;
 
   return (
-    <div className="w-full max-w-3xl mx-auto bg-white dark:bg-zinc-900 shadow-2xl md:min-h-[1056px] p-6 md:p-12 text-zinc-800 dark:text-zinc-200 font-sans border border-zinc-200 dark:border-zinc-800 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="w-full max-w-3xl mx-auto bg-white dark:bg-zinc-900 shadow-2xl md:min-h-[1056px] p-6 md:p-12 text-zinc-800 dark:text-zinc-200 font-sans border border-zinc-200 dark:border-zinc-800 ">
       <div className="space-y-8">
         {content.sections.map((section, sIdx: number) => (
           <div key={sIdx} className="space-y-4">

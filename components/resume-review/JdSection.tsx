@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, startTransition, useRef } from "react";
-import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Save } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "../../utils/utils";
 import { Textarea } from "../ui/textarea";
@@ -16,7 +16,6 @@ interface JdSectionProps {
   isAnalyzing: boolean;
   initialJd: string;
   reviewId: string;
-
   runAnalysis: (jd: string) => Promise<void>;
 }
 
@@ -27,7 +26,6 @@ export default function JdSection({
   isAnalyzing,
   initialJd,
   reviewId,
-
   runAnalysis,
 }: JdSectionProps) {
   const [localJd, setLocalJd] = useState(initialJd);
@@ -36,28 +34,18 @@ export default function JdSection({
 
   const lastSavedJd = useRef(initialJd);
 
-  const handleBlur = async () => {
+  const saveJd = async () => {
     if (localJd.trim() === lastSavedJd.current.trim() || isSaving) return;
-
     setIsSaving(true);
     const supabase = createClient();
-
     try {
       const { error } = await supabase
         .from("resume_reviews")
-        .update({
-          target_jd: localJd,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ target_jd: localJd, updated_at: new Date().toISOString() })
         .eq("id", reviewId);
-
       if (error) throw error;
-
       lastSavedJd.current = localJd;
-
-      startTransition(() => {
-        router.refresh();
-      });
+      startTransition(() => router.refresh());
     } catch (err) {
       console.error("Auto-save failed:", err);
       toast.error("Progress not saved.");
@@ -69,6 +57,7 @@ export default function JdSection({
   const handleRunAnalysis = async () => {
     if (!localJd.trim())
       return toast.error("Please paste a Job Description first.");
+    await saveJd();
     await runAnalysis(localJd);
   };
 
@@ -94,10 +83,21 @@ export default function JdSection({
                 <ChevronUp className="w-4 h-4 text-muted-foreground" />
               )}
             </button>
-            {isSaving && (
-              <span className="flex items-center gap-1.5 text-xs animate-pulse">
-                <Loader2 size={10} className="animate-spin" /> Saving...
-              </span>
+
+            {localJd.trim() !== lastSavedJd.current.trim() && (
+              <button
+                type="button"
+                onClick={saveJd}
+                disabled={isSaving}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {isSaving ? (
+                  <Loader2 size={10} className="animate-spin" />
+                ) : (
+                  <Save size={10} />
+                )}
+                {isSaving ? "Saving..." : "Save"}
+              </button>
             )}
           </div>
           <p className="text-xs text-muted-foreground ">
@@ -130,7 +130,6 @@ export default function JdSection({
       >
         <Textarea
           value={localJd}
-          onBlur={handleBlur}
           onChange={(e) => setLocalJd(e.target.value)}
           placeholder="Paste the Job Description (JD) here"
           className="h-full w-full bg-input transition-all  text-sm p-4 rounded-xl resize-none"

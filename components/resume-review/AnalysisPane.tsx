@@ -80,6 +80,10 @@ export default function AnalysisPane({
           <p className="text-xs font-bold text-muted-foreground max-w-[240px] leading-relaxed">
             Analyzing your Resume
           </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            This might take up to a minute. You will be notified via email once
+            the analysis is complete.
+          </p>
         </div>
       )}
 

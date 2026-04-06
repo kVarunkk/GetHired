@@ -93,6 +93,8 @@ export async function POST(req: NextRequest) {
       .from("resume_reviews")
       .update({
         status: "processing",
+        ai_response: null,
+        score: null,
         updated_at: new Date().toISOString(),
         analysis_failed: false,
       })

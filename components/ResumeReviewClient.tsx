@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import BackButton from "./BackButton";
 import ResumeSection from "./resume-review/ResumeSection";
@@ -28,7 +28,6 @@ export default function ResumeReviewClient({
   const supabase = createClient();
 
   const [currentReview, setCurrentReview] = useState(review);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(
     null,
   );
@@ -55,8 +54,17 @@ export default function ResumeReviewClient({
   const isResumeLinked = !!currentReview?.resume_id;
   const isParsed = !!linkedResume?.content;
   const isParsingFailed = !!linkedResume?.parsing_failed;
+  const isAnalyzing = currentReview.status === "processing";
 
-  const pollAnalysisStatus = useCallback(async () => {
+  useEffect(() => {
+    if (
+      currentReview.status !== "processing" ||
+      currentReview.ai_response ||
+      currentReview.analysis_failed
+    ) {
+      return;
+    }
+
     let timerId: NodeJS.Timeout;
 
     const checkStatus = async () => {
@@ -70,34 +78,44 @@ export default function ResumeReviewClient({
 
         if (!error && data) {
           if (data.ai_response && data.analysis_failed === false) {
-            // Success
-            // setCurrentReview((prev) => ({ ...prev, ...data }));
-            setIsAnalyzing(false);
-            toast.success("Resume analysis complete.");
+            toast.success("Analysis complete!");
             router.refresh();
             return;
           }
+
           if (data.analysis_failed === true) {
-            // Failed
-            // setCurrentReview((prev) => ({ ...prev, ...data }));
-            setIsAnalyzing(false);
-            toast.error("Analysis failed. Please try again.");
+            toast.error("Analysis failed.");
             router.refresh();
             return;
           }
         }
+
         timerId = setTimeout(checkStatus, 3000);
       } catch {
         timerId = setTimeout(checkStatus, 5000);
       }
     };
 
-    timerId = setTimeout(checkStatus, 2000);
+    timerId = setTimeout(checkStatus, 1000);
     return () => clearTimeout(timerId);
-  }, [currentReview.id, supabase, router]);
+  }, [
+    currentReview.id,
+    currentReview.status,
+    currentReview.ai_response,
+    currentReview.analysis_failed,
+    supabase,
+    router,
+  ]);
 
   const runAnalysis = async (jd: string) => {
-    setIsAnalyzing(true);
+    setCurrentReview((prev) => ({
+      ...prev,
+      status: "processing",
+      analysis_failed: false,
+      ai_response: null,
+      score: null,
+    }));
+
     try {
       const res = await fetch("/api/resume-review", {
         method: "POST",
@@ -113,11 +131,17 @@ export default function ResumeReviewClient({
         throw error;
       }
 
-      pollAnalysisStatus();
-    } catch {
+      // Refresh the server-side props to stay in sync
+      router.refresh();
+    } catch (err) {
+      // Revert status on failure
+      setCurrentReview((prev) => ({
+        ...prev,
+        status: "failed",
+        analysis_failed: true,
+      }));
       await markAnalysisAsFailedAction(review.id);
       toast.error("Something went wrong. Please try again.");
-      setIsAnalyzing(false);
     }
   };
 
