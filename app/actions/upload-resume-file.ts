@@ -4,10 +4,9 @@ import { deploymentUrl } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
 import { after } from "next/server";
 import { TAICredits } from "@/utils/types";
-// import { headers } from "next/headers";
+import { headers } from "next/headers";
 import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
 import { revalidatePath } from "next/cache";
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
 /**
  * SERVER ACTION: uploadResumeAction
@@ -18,7 +17,7 @@ const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
  */
 export async function uploadResumeAction(formData: FormData) {
   const supabase = await createClient();
-  // const headersList = await headers();
+  const headersList = await headers();
 
   const {
     data: { user },
@@ -101,11 +100,9 @@ export async function uploadResumeAction(formData: FormData) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Internal-Secret": INTERNAL_API_SECRET || "",
-
-            // Cookie: headersList.get("Cookie") || "",
+            Cookie: headersList.get("Cookie") || "",
           },
-          body: JSON.stringify({ resumeId: resumeEntry.id, userId }),
+          body: JSON.stringify({ resumeId: resumeEntry.id }),
         });
 
         if (!res.ok) {
@@ -113,7 +110,6 @@ export async function uploadResumeAction(formData: FormData) {
           throw new Error(
             `[BG_ERROR]: parse-resume API returned ${res.status}`,
           );
-          // await updateResumeParsingStatus(true, resumeEntry.id);
         }
 
         console.log(

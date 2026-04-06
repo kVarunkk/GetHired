@@ -52,7 +52,6 @@ export async function updateSession(request: NextRequest) {
     "/jobs",
     "/hire",
     "/ai-resume-checker",
-    "/api/parse-resume",
     "/api/jobs",
     "/api/locations",
     "/api/jobs/filters",

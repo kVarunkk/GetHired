@@ -257,22 +257,35 @@ export const sendEmailForRelevantJobsStatusUpdate = async (
   }
 };
 
+// export const deploymentUrl = () => {
+//   let url;
+//   switch (process.env.VERCEL_ENV) {
+//     case "production":
+//       url = "https://gethired.devhub.co.in";
+//       break;
+//     case "preview":
+//       url =
+//         "https://job-application-agent-frontend-git-dev-kvarunkks-projects.vercel.app";
+//       break;
+//     case "development":
+//       url = "http://localhost:3000";
+//       break;
+//     default:
+//       url = "http://localhost:3000";
+//       break;
+//   }
+//   return url;
+// };
+
 export const deploymentUrl = () => {
-  let url;
   switch (process.env.VERCEL_ENV) {
     case "production":
-      url = "https://gethired.devhub.co.in";
-      break;
+      return "https://gethired.devhub.co.in";
     case "preview":
-      url =
-        "https://job-application-agent-frontend-git-dev-kvarunkks-projects.vercel.app";
-      break;
-    case "development":
-      url = "http://localhost:3000";
-      break;
+      // VERCEL_URL is always the current deployment's unique URL
+      // e.g. "job-application-agent-abc123.vercel.app"
+      return `https://${process.env.VERCEL_URL}`;
     default:
-      url = "http://localhost:3000";
-      break;
+      return "http://localhost:3000";
   }
-  return url;
 };

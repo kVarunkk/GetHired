@@ -4,8 +4,7 @@ import { after } from "next/server";
 import { createClient } from "../../lib/supabase/server";
 import { deploymentUrl } from "@/utils/serverUtils";
 import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
-// import { headers } from "next/headers";
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
+import { headers } from "next/headers";
 
 /**
  * retryResumeParsingAction
@@ -14,7 +13,7 @@ const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
  */
 export async function retryResumeParsingAction(resumeId: string) {
   const supabase = await createClient();
-  //   const headersList = await headers();
+  const headersList = await headers();
 
   // 1. Auth Guard
   const {
@@ -44,10 +43,9 @@ export async function retryResumeParsingAction(resumeId: string) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Internal-Secret": INTERNAL_API_SECRET || "",
-            // Cookie: headersList.get("Cookie") || "",
+            Cookie: headersList.get("Cookie") || "",
           },
-          body: JSON.stringify({ resumeId, userId: user.id }),
+          body: JSON.stringify({ resumeId }),
         });
 
         if (!res.ok) {
