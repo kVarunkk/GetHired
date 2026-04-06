@@ -133,7 +133,7 @@ export default function ResumeReviewClient({
 
       // Refresh the server-side props to stay in sync
       router.refresh();
-    } catch (err) {
+    } catch {
       // Revert status on failure
       setCurrentReview((prev) => ({
         ...prev,
