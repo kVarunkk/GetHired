@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ExternalLink, Info, Loader2, Sparkle } from "lucide-react";
 import { AllJobWithRelations, TApplicationStatus } from "@/utils/types";
 import { useState } from "react";
-import { revalidateCache } from "@/app/actions/revalidate";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import {
@@ -42,8 +41,6 @@ export default function JobStatusDialog({
         all_jobs_id: job.id,
       });
       if (error) throw error;
-
-      await revalidateCache("jobs-feed");
 
       onClose(TApplicationStatus.SUBMITTED);
       toast.success(
