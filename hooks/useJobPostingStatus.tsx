@@ -38,7 +38,7 @@ export const useJobPostingStatus = (
             salary_range: job.salary_range,
             salary_min: job.min_salary,
             salary_max: job.max_salary,
-            experience_min: job.min_experience,
+            experience_min: job.min_experience ?? undefined,
             experience_max: job.max_experience,
             equity_range: job.equity_range,
             equity_min: job.min_equity,

@@ -28,7 +28,7 @@ const resumeReviewTableQuery = supabase
 
 const resumeReviewResumesQuery = supabase
   .from("resumes")
-  .select("id, name, created_at, is_primary")
+  .select("id, name, created_at, is_primary, parsing_failed")
   .eq("user_id", "")
   .single();
 

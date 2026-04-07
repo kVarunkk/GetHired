@@ -8,6 +8,7 @@ import Link from "next/link";
 import { TAICredits } from "@/utils/types";
 import CreateReviewForResume from "@/components/CreateReviewForResume";
 import { RetryResumeParsing } from "@/components/RetryResumeParsing";
+import ResumeStatusBadge from "@/components/ResumeStatusBadge";
 
 export default async function ResumeIdPage({
   params,
@@ -62,6 +63,10 @@ export default async function ResumeIdPage({
                 }
               />
             )}
+            <ResumeStatusBadge
+              isParsed={!!data.content}
+              isParsingFailed={isParsingFailed}
+            />
           </div>
           {user?.id && (
             <div className="flex items-center gap-4">

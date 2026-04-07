@@ -30,6 +30,7 @@ import { Link as ModifiedLink } from "react-transition-progress/next";
 import InfoTooltip from "./InfoTooltip";
 import { useRouter } from "next/navigation";
 import { TResumeReviewResume } from "@/utils/types/review.types";
+import ResumeStatusBadge from "./ResumeStatusBadge";
 
 interface ResumesTableProps {
   data: TResumeReviewResume[];
@@ -113,6 +114,9 @@ export default function ResumesTable({ data }: ResumesTableProps) {
                   </p>
                 }
               />
+            )}
+            {row.original.parsing_failed && (
+              <ResumeStatusBadge isParsed={false} isParsingFailed={true} />
             )}
           </div>
         ),

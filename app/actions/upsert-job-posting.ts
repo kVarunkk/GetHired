@@ -127,7 +127,7 @@ export async function upsertJobPostingAction(params: {
             salary_range: new_posting.salary_range,
             salary_min: new_posting.min_salary,
             salary_max: new_posting.max_salary,
-            experience_min: new_posting.min_experience,
+            experience_min: new_posting.min_experience ?? undefined,
             experience_max: new_posting.max_experience,
             equity_range: new_posting.equity_range,
             equity_min: new_posting.min_equity,
