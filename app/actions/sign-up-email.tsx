@@ -42,22 +42,44 @@ export async function sendSignupEmail(
 
       if (updateAppMetaError) throw new Error(updateAppMetaError);
 
-      const dataToAdd = isCompany
-        ? {
+      // const dataToAdd = isCompany
+      //   ? {
+      //       user_id: data.user?.id,
+      //     }
+      //   : {
+      //       user_id: data.user?.id,
+      //       email: email,
+      //       is_job_digest_active: true,
+      //       is_promotion_active: true,
+      //     };
+      // const { error: signupUserError } = await serviceRoleSupabase
+      //   .from(isCompany ? "company_info" : "user_info")
+      //   .insert(dataToAdd);
+
+      // if (signupUserError) {
+      //   throw new Error("Error creating record for new user.");
+      // }
+
+      // Do this - separate inserts with proper types
+      if (isCompany) {
+        const { error: signupUserError } = await serviceRoleSupabase
+          .from("company_info")
+          .insert({ user_id: data.user?.id });
+
+        if (signupUserError)
+          throw new Error("Error creating record for new user.");
+      } else {
+        const { error: signupUserError } = await serviceRoleSupabase
+          .from("user_info")
+          .insert({
             user_id: data.user?.id,
-          }
-        : {
-            user_id: data.user?.id,
-            email: email,
+            email,
             is_job_digest_active: true,
             is_promotion_active: true,
-          };
-      const { error: signupUserError } = await serviceRoleSupabase
-        .from(isCompany ? "company_info" : "user_info")
-        .insert(dataToAdd);
+          });
 
-      if (signupUserError) {
-        throw new Error("Error creating record for new user.");
+        if (signupUserError)
+          throw new Error("Error creating record for new user.");
       }
 
       const signupUrl = `${URL}/auth/confirm?token_hash=${data.properties.hashed_token}&type=signup&next=${finalRedirectUrl}`;
