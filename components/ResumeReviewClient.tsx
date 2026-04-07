@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import BackButton from "./BackButton";
 import ResumeSection from "./resume-review/ResumeSection";
@@ -132,7 +132,9 @@ export default function ResumeReviewClient({
       }
 
       // Refresh the server-side props to stay in sync
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     } catch {
       // Revert status on failure
       setCurrentReview((prev) => ({

@@ -57,6 +57,9 @@ export default function JdSection({
   const handleRunAnalysis = async () => {
     if (!localJd.trim())
       return toast.error("Please paste a Job Description first.");
+    if (window) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
     await saveJd();
     await runAnalysis(localJd);
   };

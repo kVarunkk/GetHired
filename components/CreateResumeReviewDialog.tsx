@@ -38,6 +38,7 @@ export default function CreateResumeReviewDialog({
       name: string | null;
       created_at: string;
       is_primary: boolean;
+      parsing_failed: boolean;
     }[]
   >([]);
   const [file, setFile] = useState<File | null>(null);
@@ -54,7 +55,7 @@ export default function CreateResumeReviewDialog({
           const supabase = createClient();
           const { data, error } = await supabase
             .from("resumes")
-            .select("id, name, created_at, is_primary")
+            .select("id, name, created_at, is_primary, parsing_failed")
             .eq("user_id", userId)
             .order("created_at", { ascending: false });
 

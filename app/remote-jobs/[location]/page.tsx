@@ -5,9 +5,6 @@ import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
-// import NavbarParent from "@/components/NavbarParent";
-// import { authPageNavItems } from "@/lib/serverUtils";
-// import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Metadata } from "next";
 

@@ -42,9 +42,6 @@ export async function rerankProfilesIfApplicable({
     finalJobs.length === 0 ||
     !isRelevantSearch ||
     !jobId
-    // !relevanceSearchType ||
-    // relevanceSearchType === "standard" ||
-    // (relevanceSearchType === "similar_jobs" && !jobId)
   ) {
     return { initialProfiles: finalJobs, totalCount: finalCount };
   }
@@ -54,10 +51,6 @@ export async function rerankProfilesIfApplicable({
   if (aiCredits >= requiredCredits) {
     try {
       const requestHeaders: Record<string, string> = {};
-      // if (relevanceSearchType === "job_digest" && INTERNAL_API_SECRET) {
-      //   requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
-      //   removedJobs = initialProfiles.splice(40);
-      // }
 
       const cookie = headersList.get("Cookie");
       if (cookie) {

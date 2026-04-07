@@ -31,7 +31,7 @@ export const Step6ResumeUpload: React.FC<StepProps> = ({
 
         const { data, error } = await supabase
           .from("resumes")
-          .select("id, name, created_at, is_primary")
+          .select("id, name, created_at, is_primary, parsing_failed")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 

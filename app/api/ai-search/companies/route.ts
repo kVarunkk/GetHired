@@ -147,11 +147,6 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    // await supabase.rpc("deduct_user_credits", {
-    //   p_user_id: userId,
-    //   p_amount: TAICredits.AI_SEARCH_ASK_AI_RESUME,
-    // });
-
     await deductUserCreditsHelper(
       supabase,
       userId,
@@ -163,7 +158,6 @@ export async function POST(request: NextRequest) {
       filteredOutcompanies: output.filtered_out_company_ids,
     });
   } catch {
-    // console.error(e);
     return NextResponse.json(
       {
         error: "An error occurred",

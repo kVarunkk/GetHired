@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import { embed } from "ai";
 import { getVertexClient } from "@/utils/serverUtils";
 import { TResumeRowContent } from "@/utils/types";
-// import { IResume } from "@/utils/types";
-// import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export async function POST(request: Request) {
   try {
@@ -30,54 +28,6 @@ export async function POST(request: Request) {
     if (resumeError) {
       console.error("Error fetching primary resume:", resumeError);
     }
-
-    // Helper to extract text from the Digital Twin JSON structure
-    // const extractSectionText = (type: string) => {
-    //   const content= resumeData?.content as unknown as TResumeRowContent | undefined;
-    //   if (!content || !content.sections) return "N/A";
-
-    //   return content.sections
-    //     .filter(
-    //       (s: {
-    //         type?: string;
-    //         items?: {
-    //           bullets?: {
-    //             id?: string;
-    //             text?: string;
-    //             lineIndices?: string[];
-    //           }[];
-    //           heading?: string;
-    //           subheading?: string;
-    //         }[];
-    //       }) => s.type === type,
-    //     )
-    //     .flatMap(
-    //       (s: {
-    //         type?: string;
-    //         items?: {
-    //           bullets?: {
-    //             id?: string;
-    //             text?: string;
-    //             lineIndices?: string[];
-    //           }[];
-    //           heading?: string;
-    //           subheading?: string;
-    //         }[];
-    //       }) => s.items,
-    //     )
-    //     .flatMap(
-    //       (i: {
-    //         bullets?: {
-    //           id?: string;
-    //           text?: string;
-    //           lineIndices?: string[];
-    //         }[];
-    //         heading?: string;
-    //         subheading?: string;
-    //       }) => i?.bullets?.map((b) => b.text),
-    //     )
-    //     .join(". ");
-    // };
 
     const extractSectionText = (type: string) => {
       const content = resumeData?.content as unknown as

@@ -16,7 +16,7 @@ export default async function ResumePage() {
 
     const { data: resumes, error: resumesError } = await supabase
       .from("resumes")
-      .select("id, created_at, name, is_primary")
+      .select("id, created_at, name, is_primary, parsing_failed")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 

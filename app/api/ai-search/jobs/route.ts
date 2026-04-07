@@ -143,11 +143,6 @@ export async function POST(request: NextRequest) {
     });
 
     if (!isInternalCall) {
-      // await supabase.rpc("deduct_user_credits", {
-      //   p_user_id: userId,
-      //   p_amount: TAICredits.AI_SEARCH_ASK_AI_RESUME,
-      // });
-
       await deductUserCreditsHelper(
         supabase,
         userId,

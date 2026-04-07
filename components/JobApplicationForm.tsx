@@ -21,7 +21,6 @@ import {
 import { AllJobWithRelations } from "@/utils/types";
 import { createClient } from "@/lib/supabase/client";
 import ResumeSourceSelector from "./ResumeSourceSelector";
-// import { createResumeAction } from "@/app/actions/create-resume";
 import { cn } from "@/utils/utils";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { uploadResumeAction } from "@/app/actions/upload-resume-file";
@@ -58,6 +57,7 @@ export default function JobApplicationForm({
       created_at: string;
       is_primary: boolean;
       resume_path: string | null;
+      parsing_failed: boolean;
     }[]
   >([]);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
@@ -79,7 +79,9 @@ export default function JobApplicationForm({
       try {
         const { data, error } = await supabase
           .from("resumes")
-          .select("id, name, created_at, is_primary, resume_path")
+          .select(
+            "id, name, created_at, is_primary, resume_path, parsing_failed",
+          )
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
