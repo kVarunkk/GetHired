@@ -56,7 +56,7 @@ export default async function ResumeReviewPage({
   // 3. Fetch user's library of resumes
   const { data: userResumes } = await supabase
     .from("resumes")
-    .select("id, name, created_at, is_primary")
+    .select("id, name, created_at, is_primary, parsing_failed")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 

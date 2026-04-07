@@ -40,10 +40,12 @@ export default function AnalysisPane({
         <div className="flex flex-col items-center justify-center h-64 text-center space-y-4 animate-in fade-in duration-500">
           <div className="flex flex-col items-center justify-center py-20 space-y-4 animate-in fade-in duration-300">
             <Loader2 className="w-8 h-8 animate-spin" />
-
-            <p className="text-xs font-bold text-muted-foreground max-w-[240px] leading-relaxed">
-              We are currently indexing your resume line-by-line for
-              high-precision feedback.
+            <p className="font-bold text-zinc-800 dark:text-zinc-200">
+              Indexing your Resume
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              This might take a moment. You will be notified via email once the
+              indexing is complete.
             </p>
           </div>
         </div>
@@ -81,8 +83,8 @@ export default function AnalysisPane({
             Analyzing your Resume
           </p>
           <p className="text-xs text-muted-foreground leading-relaxed text-center">
-            This might take up to a minute. You will be notified via email once
-            the analysis is complete.
+            This might take a moment. You will be notified via email once the
+            analysis is complete.
           </p>
         </div>
       )}
