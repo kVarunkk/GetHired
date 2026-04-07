@@ -127,6 +127,32 @@ export default async function DashboardPage() {
               </p>
             </CardContent>
           </Card>
+
+          <Card className="flex flex-col items-center p-6 text-center shadow-none hover:bg-secondary transition-colors">
+            <CardHeader className="p-0"></CardHeader>
+            <CardContent className="p-0 space-y-2">
+              <CardTitle className="text-4xl font-extrabold">
+                {metrics.resumes_created_weekly || 0}
+              </CardTitle>
+              <p className="text-muted-foreground font-semibold flex items-center gap-1">
+                Resumes Created
+                <InfoTooltip content="Number of resumes you have created in the past week." />
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col items-center p-6 text-center shadow-none hover:bg-secondary transition-colors">
+            <CardHeader className="p-0"></CardHeader>
+            <CardContent className="p-0 space-y-2">
+              <CardTitle className="text-4xl font-extrabold">
+                {metrics.resume_reviews_created_weekly || 0}
+              </CardTitle>
+              <p className="text-muted-foreground font-semibold flex items-center gap-1">
+                Resumes Analyzed
+                <InfoTooltip content="Number of resumes you have analyzed in the past week." />
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* --- Active Job Posts Section --- */}
