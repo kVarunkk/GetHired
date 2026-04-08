@@ -33,9 +33,9 @@ export default function JobFavoriteBtn({
   const supabase = createClient();
   const isCompanyMode = !!company_id && !job_id;
   const targetId = isCompanyMode ? company_id : job_id;
-  const tableName = isCompanyMode
-    ? "user_favorites_companies"
-    : "user_favorites";
+  // const tableName = isCompanyMode
+  //   ? "user_favorites_companies"
+  //   : "user_favorites";
   const targetIdKey = isCompanyMode ? "company_id" : "job_id";
   const revalidateTag = isCompanyMode ? `companies-feed` : `jobs-feed`;
 
@@ -63,29 +63,66 @@ export default function JobFavoriteBtn({
     (state, newState: boolean) => newState,
   );
 
+  // const handleFavorite = async () => {
+  //   if (!user || !targetId) return;
+
+  //   startTransition(async () => {
+  //     const nextState = !optimisticFavorite;
+  //     toggleOptimistic(nextState);
+
+  //     try {
+  //       if (optimisticFavorite) {
+  //         await supabase
+  //           .from(tableName)
+  //           .delete()
+  //           .eq("user_id", user.id)
+  //           .eq(targetIdKey, targetId);
+  //       } else {
+  //         await supabase
+  //           .from(tableName)
+  //           .insert([{ user_id: user.id, [targetIdKey]: targetId }]);
+  //       }
+  //       await revalidateCache(revalidateTag);
+  //     } catch {}
+  //   });
+  // };
+
   const handleFavorite = async () => {
     if (!user || !targetId) return;
-
     startTransition(async () => {
       const nextState = !optimisticFavorite;
       toggleOptimistic(nextState);
-
       try {
         if (optimisticFavorite) {
-          await supabase
-            .from(tableName)
-            .delete()
-            .eq("user_id", user.id)
-            .eq(targetIdKey, targetId);
+          if (isCompanyMode) {
+            await supabase
+              .from("user_favorites_companies")
+              .delete()
+              .eq("user_id", user.id)
+              .eq("company_id", targetId);
+          } else {
+            await supabase
+              .from("user_favorites")
+              .delete()
+              .eq("user_id", user.id)
+              .eq("job_id", targetId);
+          }
         } else {
-          await supabase
-            .from(tableName)
-            .insert([{ user_id: user.id, [targetIdKey]: targetId }]);
+          if (isCompanyMode) {
+            await supabase
+              .from("user_favorites_companies")
+              .insert([{ user_id: user.id, company_id: targetId }]);
+          } else {
+            await supabase
+              .from("user_favorites")
+              .insert([{ user_id: user.id, job_id: targetId }]);
+          }
         }
         await revalidateCache(revalidateTag);
       } catch {}
     });
   };
+
   return (
     <PropagationStopper className="!ml-3 inline-block align-middle">
       {isCompanyUser ? null : user ? (
