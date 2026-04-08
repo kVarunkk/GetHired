@@ -201,10 +201,13 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
         throw new Error(errorData);
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { logo_file, ...dbValues } = values;
+
       const { error } = await supabase.from("company_info").upsert(
         {
           user_id: user.id,
-          ...values,
+          ...dbValues,
           logo_url: finalLogoUrl,
           filled: true,
         },
