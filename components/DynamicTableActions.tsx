@@ -78,7 +78,9 @@ export default function DynamicActions<T extends Item>({
 
       const { data, error } = await supabase
         .from(tableName)
-        .update(updates)
+        .update(
+          updates as Database["public"]["Tables"][typeof tableName]["Update"],
+        )
         .eq(String(idKey), itemId)
         .select("*")
         .single();
