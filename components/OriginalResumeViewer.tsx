@@ -11,7 +11,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/Page/TextLayer.css";
+// import "react-pdf/dist/Page/TextLayer.css";
 
 if (typeof window !== "undefined" && pdfjs) {
   try {

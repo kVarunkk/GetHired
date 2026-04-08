@@ -12,6 +12,7 @@ import { Label } from "./ui/label";
 import { createClient } from "@/lib/supabase/client";
 import InfoTooltip from "./InfoTooltip";
 import Link from "next/link";
+import { Database } from "@/utils/types/database.types";
 
 interface IinitialPreferences {
   id: string;
@@ -51,7 +52,9 @@ export default function UserOnboardingPersonalization({
       const supabase = createClient();
       const { error } = await supabase
         .from("user_info")
-        .update({ [key]: newValue })
+        .update({
+          [key]: newValue,
+        } as Database["public"]["Tables"]["user_info"]["Update"])
         .eq("user_id", initialPreferences.id);
 
       if (error) throw new Error("Update failed");
