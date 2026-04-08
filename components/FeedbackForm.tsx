@@ -38,12 +38,11 @@ export default function FeedbackForm({
 
     const supabase = createClient();
 
-    const key =
-      user.app_metadata.type === "company" ? "company_user_id" : "user_id";
+    const isCompany = user.app_metadata.type === "company";
 
     const { error } = await supabase.from("feedbacks").insert({
       content: content as string,
-      [key]: user.id,
+      ...(isCompany ? { company_user_id: user.id } : { user_id: user.id }),
     });
 
     if (error) {
