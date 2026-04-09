@@ -9,6 +9,8 @@ import { wrapInSandbox } from "@/helpers/ai/security";
 import { v4 as uuidv4 } from "uuid";
 import { sendResumeParsingStatusEmail } from "@/app/actions/send-resume-status-email";
 import { createClient } from "@/lib/supabase/server";
+import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
+import { TAICredits } from "@/utils/types";
 
 const ResumeSchema = z.object({
   sections: z.array(
@@ -187,6 +189,12 @@ export async function POST(req: Request) {
       "success",
       resumeData.name,
       resumeId,
+    );
+
+    await deductUserCreditsHelper(
+      supabase,
+      userId,
+      TAICredits.AI_SEARCH_ASK_AI_RESUME,
     );
 
     return NextResponse.json({
