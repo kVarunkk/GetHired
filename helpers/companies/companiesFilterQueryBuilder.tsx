@@ -63,7 +63,8 @@ export const buildCompaniesQuery = async ({
       query = supabase
         .from("company_info")
         .select(selectString, { count: "exact" })
-        .eq("user_favorites_companies.user_id", user.id);
+        .eq("user_favorites_companies.user_id", user.id)
+        .eq("filled", true);
     } else {
       // Explicitly select columns and exclude 'embedding'
       selectString = `
@@ -72,7 +73,8 @@ export const buildCompaniesQuery = async ({
     `;
       query = supabase
         .from("company_info")
-        .select(selectString, { count: "exact" });
+        .select(selectString, { count: "exact" })
+        .eq("filled", true);
     }
 
     let matchedCompanyIds: string[] = [];
@@ -83,7 +85,7 @@ export const buildCompaniesQuery = async ({
       const { data: searchData, error: searchError } = await supabase.rpc(
         "match_all_companies",
         {
-          embedding: userEmbedding,
+          query_embedding: userEmbedding,
           match_threshold: 0.5, // You can adjust this threshold
           match_count: 100, // Fetch a larger set to then apply filters
         },
@@ -143,6 +145,8 @@ export const buildCompaniesQuery = async ({
       error: PostgrestError | null;
       count: number | null;
     };
+
+    console.log(error);
 
     return {
       data: data || [],
