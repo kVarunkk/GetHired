@@ -34,7 +34,7 @@ export default async function CompanyJobPostsPage() {
           *,
           applications(count),
           company_info(name, website)
-        `
+        `,
       )
       .eq("company_id", companyInfo.id)
       .order("created_at", { ascending: false });
@@ -51,7 +51,7 @@ export default async function CompanyJobPostsPage() {
         </div>
         <div className="flex flex-wrap items-center gap-4 justify-between">
           <h1 className="text-3xl font-medium">Your Job Postings</h1>
-          <CreateJobPostingDialog company_id={companyInfo.id} />
+          <CreateJobPostingDialog companyId={companyInfo.id} />
         </div>
         <JobPostingsTable data={jobPosts || []} />
       </div>

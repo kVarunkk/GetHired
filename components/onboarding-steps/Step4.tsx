@@ -1,4 +1,4 @@
-import { cn, commonIndustries, commonWorkStyles } from "@/lib/utils";
+import { cn, commonIndustries, commonWorkStyles } from "@/utils/utils";
 import MultiKeywordSelectInput from "../MultiKeywordSelectInput";
 import { StepProps } from "../OnboardingComponent";
 import { CardContent } from "../ui/card";

@@ -1,9 +1,11 @@
 "use client";
 
-import { IJob } from "@/lib/types";
+import { AllJobWithRelations } from "@/utils/types";
+
+// import { IJob } from "@/utils/types";
 
 interface JobSchemaProps {
-  job: IJob;
+  job: AllJobWithRelations;
 }
 
 export default function JobSchema({ job }: JobSchemaProps) {
@@ -12,7 +14,7 @@ export default function JobSchema({ job }: JobSchemaProps) {
   // 1. Determine job location type (Remote vs. On-Site)
   // Check if any location in the array contains 'remote' (case-insensitive)
   const isRemote = job.locations?.some((loc) =>
-    loc.toLowerCase().includes("remote")
+    loc.toLowerCase().includes("remote"),
   );
 
   // Determine if the job is fully remote or has mixed locations.
@@ -72,7 +74,7 @@ export default function JobSchema({ job }: JobSchemaProps) {
     description: jobDescription,
     datePosted: jobCreatedAt,
     validThrough: new Date(
-      new Date(jobCreatedAt).setDate(new Date(jobCreatedAt).getDate() + 30)
+      new Date(jobCreatedAt).setDate(new Date(jobCreatedAt).getDate() + 30),
     ).toISOString(), // Expires 30 days after posting
 
     employmentType: job.job_type || "FULL_TIME",

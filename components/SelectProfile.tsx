@@ -1,53 +1,54 @@
 "use client";
 
-import { IFormData } from "@/lib/types";
+// import { IFormData } from "@/utils/types";
 import MultiKeywordSelect, { GenericFormData } from "./MultiKeywordSelect";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
+import { TApplicantProfile } from "@/utils/types/user.types";
 
 export default function SelectProfile({
   jobPostings,
   applicantProfile,
   companyId,
 }: {
-  jobPostings?: { id: string; title: string; job_id: string }[];
-  applicantProfile: IFormData;
+  jobPostings?: {
+    id: string;
+    title: string;
+    job_id: string | null;
+  }[];
+  applicantProfile: TApplicantProfile;
   companyId: string;
 }) {
   const router = useRouter();
-  const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
+  const appliedJobTitles = applicantProfile?.applications
+    ?.map((app) => app.job_postings?.title)
+    .filter((title): title is string => typeof title === "string");
+  const [selectedProfiles, setSelectedProfiles] = useState<string[]>(
+    appliedJobTitles || [],
+  );
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (applicantProfile && applicantProfile.applications) {
-      const appliedJobTitles = applicantProfile.applications
-        .map((app) => app.job_postings?.title)
-        .filter((title): title is string => typeof title === "string");
-      setSelectedProfiles(appliedJobTitles);
-    }
-  }, [applicantProfile]);
 
   const headerProp = useMemo(
     () => ({
       heading: "Your Job Posts",
       description: `Create applications for ${applicantProfile.full_name} by selecting the relevant job posts.`,
     }),
-    [applicantProfile.full_name]
+    [applicantProfile.full_name],
   );
 
   const handleMultiKeywordSelectChange = useCallback(
     async (name: keyof GenericFormData, keywords: string[]) => {
       const newlySelectedJobTitle = keywords.find(
-        (keyword) => !selectedProfiles.includes(keyword)
+        (keyword) => !selectedProfiles.includes(keyword),
       );
 
       if (newlySelectedJobTitle && jobPostings) {
         const selectedJob = jobPostings?.find(
-          (job) => job.title.trim() === newlySelectedJobTitle
+          (job) => job.title.trim() === newlySelectedJobTitle,
         );
 
         if (!selectedJob) {
@@ -88,7 +89,9 @@ export default function SelectProfile({
           const { data: uploadData, error: uploadError } =
             await supabase.storage
               .from(privateResumeBucket)
-              .upload(privateResumePathForCompany, resumeBlob);
+              .upload(privateResumePathForCompany, resumeBlob, {
+                contentType: "application/pdf",
+              });
 
           if (uploadError) {
             throw new Error("Failed to upload resume to private bucket.");
@@ -124,7 +127,7 @@ export default function SelectProfile({
               <span className="font-medium">{applicantProfile.full_name}</span>{" "}
               for the role of{" "}
               <span className="font-medium">{newlySelectedJobTitle}</span>
-            </p>
+            </p>,
           );
         } catch {
           // console.error("Error creating application:", error);
@@ -143,7 +146,7 @@ export default function SelectProfile({
       applicantProfile,
       router,
       companyId,
-    ]
+    ],
   );
 
   const availableJobTitles = jobPostings?.map((job) => job.title) || [];

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import {
   Loader2,
   ZoomIn,
@@ -11,7 +11,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/Page/TextLayer.css";
+// import "react-pdf/dist/Page/TextLayer.css";
 
 if (typeof window !== "undefined" && pdfjs) {
   try {
@@ -59,11 +59,8 @@ export default function OriginalResumeViewer({
       setDebugError(null);
 
       try {
-        try {
-          new URL(url);
-        } catch {
+        if (!URL.canParse(url))
           throw new Error("Invalid source URL provided to viewer.");
-        }
 
         const response = await fetch(url);
         if (!response.ok) {

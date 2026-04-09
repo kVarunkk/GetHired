@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 
 const maskStyle = {
   maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",

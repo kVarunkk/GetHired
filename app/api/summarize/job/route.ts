@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { generateText } from "ai";
 import { createClient } from "@/lib/supabase/server";
-import { getVertexClient } from "@/lib/serverUtils";
+import { getVertexClient } from "@/utils/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { TAICredits } from "@/lib/types";
+import { TAICredits } from "@/utils/types";
+import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 
 const MAX_SUMMARY_LENGTH = 500;
 
@@ -60,23 +61,33 @@ export async function POST(req: Request) {
     }
     jobDescription = job.description;
 
-    const summaryPrompt = `You are a professional Career Advisor writing a snapshot summary for a job seeker. 
-Your goal is to quickly convey the critical information in a highly readable, dense, single-paragraph format optimized for plain text display. 
-The summary must be under ${MAX_SUMMARY_LENGTH} characters.
+    const summaryPrompt = `
+You are an Expert Technical Recruiter. Your task is to extract the "Signal" from a Job Description and create a high-density, professional snapshot for a developer.
 
-### Formatting Instructions:
-1.  **Avoid numbered lists (1., 2., 3.).**
-2.  **Start each section on a new line**
-3.  **Use commas to separate skills/requirements.**
-4.  **Start each section with a clear title.**
+### FORMATTING RULES:
+1. **CRITICAL:** Total length must be under ${MAX_SUMMARY_LENGTH} characters.
+2. **NO INTRO:** Start immediately with "Core Role:". 
+3. **NO LISTS:** Use commas for items. Use exactly one new line between sections.
+4. **NO FLUFF:** Avoid generic phrases like "Exciting opportunity" or "Join our team."
+5. **MISSING DATA:** If a specific data point (like Salary) is missing, write "Not specified" or "N/A".
 
-### Summary Structure:
-Core Role: [Title/Level/Environment]
-Focus: [2-3 Main Outcomes]
-Skills: [3-4 Required Technologies/Tools]
-Terms: [Experience required, Compensation, Contract Type, Location status].
+### SNAPSHOT STRUCTURE:
+Core Role: [Seniority] [Title] in [Industry/Environment]
+Focus: [Primary mission or top 2 outcomes of the role]
+Skills: [Top 4 required technologies or tools, comma-separated]
+Terms: [Exp Years], [Salary/Equity], [Work Type: Remote/Onsite/Hybrid], [Employment: Full-time/Contract]
 
-Analyze the following job posting: "${job.job_name}". Text to summarize: ${jobDescription}`;
+### DATA:
+<job_title>${job.job_name}</job_title>
+
+<job_description>
+${jobDescription}
+</job_description>
+
+### FINAL INSTRUCTION:
+Generate the snapshot now. Output ONLY the four lines of text.
+`.trim();
+
     const vertex = await getVertexClient();
     const model = vertex("gemini-2.5-flash-lite");
 
@@ -97,10 +108,16 @@ Analyze the following job posting: "${job.job_name}". Text to summarize: ${jobDe
       );
     }
 
-    await authenticatedSupabase.rpc("deduct_user_credits", {
-      p_user_id: user.id,
-      p_amount: TAICredits.AI_SUMMARY,
-    });
+    // await authenticatedSupabase.rpc("deduct_user_credits", {
+    //   p_user_id: user.id,
+    //   p_amount: TAICredits.AI_SUMMARY,
+    // });
+
+    await deductUserCreditsHelper(
+      authenticatedSupabase,
+      user.id,
+      TAICredits.AI_SUMMARY,
+    );
 
     return NextResponse.json({ summary: rawSummary });
   } catch {

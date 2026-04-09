@@ -10,9 +10,10 @@ import {
 } from "./ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { IApplication, TApplicationStatus } from "@/lib/types";
+import { cn } from "@/utils/utils";
+import { TApplicationStatus } from "@/utils/types";
 import { sendStatusUpdateEmail } from "@/app/actions/send-email";
+import { TApplication1 } from "@/utils/types/jobs.types";
 
 // Define the available application statuses
 const applicationStatuses = Object.values(TApplicationStatus);
@@ -20,7 +21,7 @@ const applicationStatuses = Object.values(TApplicationStatus);
 export default function ApplicationStatusSelect({
   application,
 }: {
-  application: IApplication;
+  application: TApplication1;
 }) {
   const [currentStatus, setCurrentStatus] = useState(application.status);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -40,26 +41,24 @@ export default function ApplicationStatusSelect({
         if (
           application.user_info &&
           application.job_postings &&
-          application.job_postings.company_info
+          application.job_postings.company_info?.name &&
+          application.user_info.email
         ) {
           sendStatusUpdateEmail(
             application.user_info.email,
             newStatus,
             application.job_postings?.title,
-            application.job_postings?.company_info?.name
+            application.job_postings.company_info.name,
           );
         }
 
         setCurrentStatus(newStatus);
-        // toast.success("Application status updated successfully!");
       } catch {
-        // console.error("Failed to update application status:", error);
-        // toast.error("Failed to update status. Please try again.");
       } finally {
         setIsUpdating(false);
       }
     },
-    [application.id, supabase]
+    [application.id, supabase],
   );
 
   return (
@@ -73,7 +72,7 @@ export default function ApplicationStatusSelect({
         <SelectTrigger
           className={cn(
             "w-[180px] capitalize bg-input",
-            isUpdating && "opacity-50"
+            isUpdating && "opacity-50",
           )}
         >
           <SelectValue placeholder="Update Status" />

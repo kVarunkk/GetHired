@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { buildCompaniesQuery } from "@/lib/companiesFilterQueryBuilder";
+import { buildCompaniesQuery } from "@/helpers/companies/companiesFilterQueryBuilder";
 
 let COMPANIES_PER_PAGE = 20;
 
@@ -58,8 +58,6 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       throw error;
-      // console.error("API Error fetching jobs:", error);
-      // return NextResponse.json({ error: error }, { status: 500 });
     }
 
     return NextResponse.json({ data: data || [], count, matchedCompanyIds });

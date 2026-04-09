@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { hasEnvVars } from "../utils";
+import { hasEnvVars } from "../../utils/utils";
 import { UserAppMetadata } from "@supabase/supabase-js";
 
 export async function updateSession(request: NextRequest) {
@@ -131,14 +131,16 @@ export async function updateSession(request: NextRequest) {
 
     if (isProtectedPath || isProtectedRelevanceSearch) {
       const url = request.nextUrl.clone();
-
       deleteSearchParams(url);
 
+      const redirectUrl = new URL("/auth/login", url.origin);
+
       if (url.pathname.startsWith("/company")) {
-        url.pathname = "/auth/login";
-        url.searchParams.set("company", "true");
-      } else url.pathname = "/auth/login";
-      return NextResponse.redirect(url);
+        redirectUrl.searchParams.set("company", "true");
+      } else {
+        redirectUrl.searchParams.set("returnTo", url.pathname + url.search);
+      }
+      return NextResponse.redirect(redirectUrl);
     }
     return supabaseResponse;
   }
@@ -216,7 +218,7 @@ export async function updateSession(request: NextRequest) {
       isCompany &&
       !isCompanyOnboarded &&
       !isCompanyOnboardingPath &&
-      !publicPaths
+      !isPublicPath
     ) {
       const url = request.nextUrl.clone();
       url.pathname = "/get-started";

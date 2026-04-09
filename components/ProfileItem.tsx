@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import React, { useMemo } from "react";
+import { cn } from "@/utils/utils";
 import { Dot, ArrowRight } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
-import { IFormData } from "@/lib/types";
+// import { IFormData } from "@/utils/types";
 import { Badge } from "./ui/badge";
 import ProfileFavoriteStar from "./ProfileFavoriteStar";
 import ProgressBtn from "./ProgressBtn";
+import { AllProfileWithRelations } from "@/utils/types";
 
 const ProfileItem = React.memo(
   ({
@@ -16,7 +17,7 @@ const ProfileItem = React.memo(
     isSuitable,
     companyId,
   }: {
-    profile: IFormData;
+    profile: AllProfileWithRelations;
     isSuitable: boolean;
     companyId?: string;
   }) => {
@@ -47,7 +48,10 @@ const ProfileItem = React.memo(
             </div>
 
             <div className="flex items-center gap-2">
-              <Link href={`/company/profiles/${profile.user_id}`}>
+              <Link
+                href={`/company/profiles/${profile.user_id}`}
+                prefetch={false}
+              >
                 <Button>
                   View Profile
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -65,18 +69,10 @@ function ProfileDetailBadges({
   profile,
   isSuitable,
 }: {
-  profile: IFormData;
+  profile: AllProfileWithRelations;
   isSuitable: boolean;
 }) {
-  const [jobDetails, setJobDetails] = useState<
-    {
-      id: string;
-      value: string;
-      label: string;
-    }[]
-  >([]);
-
-  useEffect(() => {
+  const jobDetails = useMemo(() => {
     const buildSalaryRange = () => {
       const minSalary = profile?.min_salary || 0;
       const maxSalary = profile?.max_salary || 0;
@@ -91,36 +87,35 @@ function ProfileDetailBadges({
       }
       return `${minSalary} - ${maxSalary} ${profile?.salary_currency || ""}`;
     };
-
-    if (profile) {
-      setJobDetails(() => [
-        {
-          id: "experience",
-          value: `${profile.experience_years} Years`,
-          label: "Experience Years",
-        },
-        {
-          id: "salary_range",
-          value: buildSalaryRange(),
-          label: "Salary Range",
-        },
-        {
-          id: "skills",
-          value: profile.top_skills.join(", "),
-          label: "Skills",
-        },
-        {
-          id: "locations",
-          value: profile.preferred_locations.join(", "),
-          label: "Locations",
-        },
-        {
-          id: "job_type",
-          value: profile.job_type.join(", "),
-          label: "Job Type",
-        },
-      ]);
-    }
+    return [
+      {
+        id: "experience",
+        value: profile.experience_years
+          ? `${profile.experience_years} Years`
+          : "",
+        label: "Experience Years",
+      },
+      {
+        id: "salary_range",
+        value: buildSalaryRange(),
+        label: "Salary Range",
+      },
+      {
+        id: "skills",
+        value: profile.top_skills?.join(", "),
+        label: "Skills",
+      },
+      {
+        id: "locations",
+        value: profile.preferred_locations?.join(", "),
+        label: "Locations",
+      },
+      {
+        id: "job_type",
+        value: profile.job_type.join(", "),
+        label: "Job Type",
+      },
+    ];
   }, [profile]);
 
   return (

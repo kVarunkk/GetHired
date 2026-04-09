@@ -1,12 +1,12 @@
 import ErrorComponent from "@/components/Error";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TApplicationStatus } from "@/lib/types";
+import { TApplicationStatus } from "@/utils/types";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import InfoTooltip from "@/components/InfoTooltip";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
-import { simpleTimeAgo } from "@/lib/serverUtils";
+import { simpleTimeAgo } from "@/utils/serverUtils";
 import { ArrowRight } from "lucide-react";
 import RechargeCredits from "@/components/RechargeCredits";
 import DashboardDropdown from "@/components/DashboardDropdown";
@@ -26,22 +26,28 @@ export default async function DashboardPage() {
     const { data: userInfoData, error: userInfoError } = await supabase
       .from("user_info")
       .select(
-        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id)"
+        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id)",
       )
       .eq("user_id", user.id)
       .single();
 
     if (userInfoError) throw error;
     const pendingCompleteInvitationDialogEmails = userInfoData.invitations
-      .filter((each) => each.status === "complete" && !each.isDialogShown)
-      .map((each) => each.invited_email);
+      .filter(
+        (each) =>
+          each.status === "complete" &&
+          !each.isDialogShown &&
+          each.invited_email,
+      )
+      .map((each) => each.invited_email)
+      .filter((email): email is string => email !== null);
 
     const [metricsRes, appliedJobsRes] = await Promise.all([
       supabase.rpc("get_applicant_weekly_metrics", { p_user_id: user.id }),
       supabase
         .from("applications")
         .select(
-          "status, created_at, all_jobs!inner(id, job_name, company_name, platform, locations)"
+          "status, created_at, all_jobs!inner(id, job_name, company_name, platform, locations)",
         )
         .eq("applicant_user_id", user.id)
         .order("created_at", { ascending: false })
@@ -69,14 +75,13 @@ export default async function DashboardPage() {
         <div className="flex items-center justify-between flex-wrap gap-5">
           <h1 className="text-3xl font-medium text-start capitalize">
             How are you doing today,{" "}
-            {userInfoData.full_name ?? userInfoData.email.split("@")[0]}?
+            {userInfoData.full_name ?? userInfoData.email?.split("@")[0]}?
           </h1>
           <Button asChild>
             <Link href={"/jobs"}>
               Find your next Job <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
-          {/* <CreateJobPostingDialog company_id={companyInfo.id} /> */}
         </div>
         {/* --- Metrics Section --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -122,6 +127,32 @@ export default async function DashboardPage() {
               </p>
             </CardContent>
           </Card>
+
+          <Card className="flex flex-col items-center p-6 text-center shadow-none hover:bg-secondary transition-colors">
+            <CardHeader className="p-0"></CardHeader>
+            <CardContent className="p-0 space-y-2">
+              <CardTitle className="text-4xl font-extrabold">
+                {metrics.resumes_created_weekly || 0}
+              </CardTitle>
+              <p className="text-muted-foreground font-semibold flex items-center gap-1">
+                Resumes Created
+                <InfoTooltip content="Number of resumes you have created in the past week." />
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col items-center p-6 text-center shadow-none hover:bg-secondary transition-colors">
+            <CardHeader className="p-0"></CardHeader>
+            <CardContent className="p-0 space-y-2">
+              <CardTitle className="text-4xl font-extrabold">
+                {metrics.resume_reviews_created_weekly || 0}
+              </CardTitle>
+              <p className="text-muted-foreground font-semibold flex items-center gap-1">
+                Resumes Analyzed
+                <InfoTooltip content="Number of resumes you have analyzed in the past week." />
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* --- Active Job Posts Section --- */}
@@ -160,7 +191,7 @@ export default async function DashboardPage() {
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <p>{job.company_name}</p>
                         <p>
-                          Applied {simpleTimeAgo(job.created_at, "variant1")}
+                          Applied {simpleTimeAgo("variant1", job.created_at)}
                         </p>
                       </div>
                     </div>
@@ -209,7 +240,7 @@ export default async function DashboardPage() {
                 <div className=" flex items-center gap-3 ">
                   {userInfoData.filled ? (
                     <span className="text-4xl font-extrabold">
-                      {simpleTimeAgo(userInfoData.updated_at, "variant2") || 0}
+                      {simpleTimeAgo("variant2", userInfoData.updated_at) || 0}
                     </span>
                   ) : (
                     ""

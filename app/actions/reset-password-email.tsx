@@ -1,7 +1,7 @@
 "use server";
 
 import ResetPasswordEmail from "@/emails/ResetPasswordEmail";
-import { deploymentUrl } from "@/lib/serverUtils";
+import { deploymentUrl } from "@/utils/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/components";
 import { Resend } from "resend";
@@ -25,20 +25,20 @@ export async function sendResetPasswordEmail(email: string) {
       throw new Error(
         error
           ? error.message
-          : "Error occured while creating Password reset link."
+          : "Error occured while creating Password reset link.",
       );
     } else {
       const inviteUrl = `${URL}/auth/confirm?token_hash=${data.properties.hashed_token}&type=recovery&next=${finalRedirectUrl}`;
 
       const emailHtml = await render(
-        <ResetPasswordEmail email={email} inviteUrl={inviteUrl} />
+        <ResetPasswordEmail email={email} inviteUrl={inviteUrl} />,
       );
 
       const emailText = await render(
         <ResetPasswordEmail email={email} inviteUrl={inviteUrl} />,
         {
           plainText: true,
-        }
+        },
       );
 
       const { error } = await resend.emails.send({

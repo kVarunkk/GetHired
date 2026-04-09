@@ -3,15 +3,16 @@
 import Link from "next/link";
 // import { Link as ModifiedLink } from "react-transition-progress/next";
 import { Badge } from "./ui/badge";
-import { ICompanyInfo } from "@/lib/types";
+// import { ICompanyInfo } from "@/utils/types";
 import { User } from "@supabase/supabase-js";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import JobFavoriteBtn from "./JobFavoriteBtn";
 // import ProgressBtn from "./ProgressBtn";
 import { Button } from "./ui/button";
 import { ArrowRight } from "lucide-react";
 import ModifiedLink from "./ModifiedLink";
 import React from "react";
+import { TCompanyInfo } from "@/utils/types";
 
 const CompanyItem = React.memo(
   ({
@@ -20,7 +21,7 @@ const CompanyItem = React.memo(
     isSuitable,
     isCompanyUser,
   }: {
-    company: ICompanyInfo;
+    company: TCompanyInfo;
     user: User | null;
     isSuitable: boolean;
     isCompanyUser: boolean;
@@ -49,7 +50,7 @@ const CompanyItem = React.memo(
                     >
                       <img
                         className="rounded-full"
-                        src={company.logo_url}
+                        src={company.logo_url ?? ""}
                         alt="Company Logo"
                         width={40}
                       />
@@ -96,7 +97,7 @@ function CompanyDetailBadges({
   company,
   isSuitable,
 }: {
-  company: ICompanyInfo;
+  company: TCompanyInfo;
   isSuitable: boolean;
 }) {
   const companyDetails = [
@@ -139,6 +140,7 @@ function CompanyDetailBadges({
           href={company.website}
           target="_blank"
           rel="noopener noreferrer"
+          prefetch={false}
         >
           <Badge
             variant={"secondary"}

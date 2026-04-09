@@ -12,7 +12,7 @@ export default function NotFound() {
       </div>
       <div className="flex items-center gap-4">
         <Button asChild variant={"secondary"}>
-          <Link href={"/"}>Back Home</Link>
+          <Link href={"/"}>Home</Link>
         </Button>
         <Button asChild>
           <Link href={"/jobs"}>Browse Jobs</Link>

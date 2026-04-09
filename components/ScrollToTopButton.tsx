@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowUp } from "lucide-react";
-import { cn } from "@/lib/utils"; // Or use your own classnames utility
+import { cn } from "@/utils/utils"; // Or use your own classnames utility
 
 export default function ScrollToTopButton({
   showAfter = 300, // px to scroll before showing button
@@ -35,7 +35,7 @@ export default function ScrollToTopButton({
         visible
           ? "opacity-100 pointer-events-auto"
           : "opacity-0 pointer-events-none",
-        className
+        className,
       )}
     >
       <ArrowUp className="h-5 w-5" />

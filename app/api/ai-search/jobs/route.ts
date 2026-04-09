@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { IJob, TAICredits } from "@/lib/types";
-import { getVertexClient } from "@/lib/serverUtils";
+import { AllJobWithRelations, TAICredits, TResumeContent } from "@/utils/types";
+import { getVertexClient } from "@/utils/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +17,13 @@ export async function POST(request: NextRequest) {
       ? createServiceRoleClient() // No session needed, bypasses RLS
       : await createClient();
 
-    const { userId, jobs } = await request.json();
+    const {
+      userId,
+      jobs,
+    }: {
+      userId: string;
+      jobs: AllJobWithRelations[];
+    } = await request.json();
 
     if (!userId || !jobs) {
       return NextResponse.json(
@@ -47,19 +54,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { experience, skills, projects } = userPreferences.resumes?.[0]
-      ?.content || {
+    const { experience, skills, projects } = (userPreferences.resumes?.[0]
+      ?.content as TResumeContent) || {
       experience: "",
       skills: "",
       projects: "",
     };
-
-    // if (userPreferences.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI) {
-    //   return NextResponse.json(
-    //     { message: "Insufficient AI credits. Please top up to continue." },
-    //     { status: 402 }
-    //   );
-    // }
 
     // Step 2: Construct the userQuery based on fetched preferences
     const userQuery = `
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       **Job Listings to Evaluate:**
       ${jobs
         .map(
-          (job: IJob) => `
+          (job) => `
         ---
         ID: ${job.id}
         Title: ${job.job_name}
@@ -143,10 +143,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (!isInternalCall) {
-      await supabase.rpc("deduct_user_credits", {
-        p_user_id: userId,
-        p_amount: TAICredits.AI_SEARCH_OR_ASK_AI,
-      });
+      await deductUserCreditsHelper(
+        supabase,
+        userId,
+        TAICredits.AI_SEARCH_ASK_AI_RESUME,
+      );
     }
 
     return NextResponse.json({

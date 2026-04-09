@@ -1,11 +1,15 @@
 import FilterComponent from "@/components/FilterComponent";
 import { createClient } from "@/lib/supabase/server";
 import { TabsContent } from "@/components/ui/tabs";
-import { IJob, JobListingSearchParams } from "@/lib/types";
+import { AllJobWithRelations, JobListingSearchParams } from "@/utils/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import { Metadata } from "next";
 import JobsComponent from "@/components/JobsComponent";
+import {
+  jobFilterSchema,
+  serializeFiltersToURL,
+} from "@/helpers/jobs/filterSchema";
 
 export async function generateMetadata({
   searchParams,
@@ -117,16 +121,10 @@ export default async function JobsPage({
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
   const searchParameters = await searchParams;
-  const applicationStatusFilter = searchParameters
-    ? searchParameters["applicationStatus"]
-    : false;
-  const isAISearch = searchParameters
-    ? searchParameters["sortBy"] === "relevance"
-    : false;
-  const activeTab =
-    searchParameters && searchParameters["tab"]
-      ? searchParameters["tab"]
-      : "all";
+  const applicationStatusFilter = searchParameters?.applicationStatus ?? false;
+  const isAISearch = searchParameters?.sortBy === "relevance";
+  const activeTab = searchParameters?.tab || "all";
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -167,42 +165,59 @@ export default async function JobsPage({
   const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
   const url = `${protocol}://${host}`;
 
-  let initialJobs: IJob[] = [];
-  let totalCount: number = 0;
-  const params = new URLSearchParams(
-    searchParameters as Record<string, string>,
-  );
-  const dynamicKey = params.toString();
+  const validated = jobFilterSchema.safeParse(searchParameters);
+  const cleanParams = validated.success ? validated.data : {};
+  const dynamicKey = serializeFiltersToURL(cleanParams);
+  const params = new URLSearchParams(dynamicKey);
+  params.set("tab", activeTab);
+  const isRelevantSorting = params.get("sortBy") === "relevance";
+  const isSimilarSearch = isRelevantSorting && params.get("jobId");
+
+  if (isSimilarSearch) {
+    params.set("createdAfter", "30");
+  }
+
+  let initialJobs: AllJobWithRelations[] = [];
+  let count: number = 0;
+  let initialCursor: string | null = null;
+  let error: string | null = null;
 
   try {
-    params.set("tab", activeTab);
-    params.set("limit", "20");
-    const isRelevantSorting = params.get("sortBy") === "relevance";
-    const isSimilarSearch = isRelevantSorting && params.get("jobId");
-
-    if (isSimilarSearch) {
-      params.set("createdAfter", "30");
-    }
-
     const jobFetchPromise = fetch(`${url}/api/jobs?${params.toString()}`, {
       cache: isRelevantSorting ? "no-cache" : "force-cache",
       next: { revalidate: 3600, tags: ["jobs-feed"] },
       headers: { Cookie: headersList.get("Cookie") || "" },
     });
-
     const [jobsResponse] = await Promise.all([jobFetchPromise]);
-    if (!jobsResponse.ok) throw new Error("Failed to fetch jobs");
-    const result = await jobsResponse.json();
 
-    initialJobs = result.data;
-    totalCount = result.totalCount;
-  } catch {}
+    const {
+      data,
+      totalCount,
+      nextCursor,
+      error,
+    }: {
+      data?: AllJobWithRelations[];
+      totalCount?: number;
+      nextCursor?: string;
+      error?: string;
+    } = await jobsResponse.json();
+
+    if (!jobsResponse.ok) {
+      throw new Error(error || "Failed to fetch jobs");
+    }
+
+    initialJobs = data || [];
+    count = totalCount || 0;
+    initialCursor = nextCursor || null;
+  } catch (e) {
+    error = e instanceof Error ? e.message : String(e);
+  }
 
   return (
-    // <div>
     <div className="flex items-start px-4  gap-5">
       <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[100vh] overflow-y-auto">
         <FilterComponent
+          dynamicKey={dynamicKey}
           onboardingComplete={onboardingComplete}
           currentPage="jobs"
         />
@@ -218,15 +233,18 @@ export default async function JobsPage({
           {!applicationStatusFilter && (
             <TabsContent value="all">
               <JobsComponent
-                key={dynamicKey}
+                // key={dynamicKey}
+                dynamicKey={dynamicKey}
                 initialJobs={initialJobs || []}
                 user={user}
                 isCompanyUser={isCompanyUser}
                 isOnboardingComplete={onboardingComplete}
                 isAllJobsTab={true}
                 isAppliedJobsTabActive={false}
-                totalCount={totalCount}
+                totalCount={count}
                 current_page="jobs"
+                initialCursor={initialCursor}
+                error={error}
               />
             </TabsContent>
           )}
@@ -236,36 +254,41 @@ export default async function JobsPage({
             !isAISearch && (
               <TabsContent value="saved">
                 <JobsComponent
-                  key={dynamicKey}
+                  // key={dynamicKey}
+                  dynamicKey={dynamicKey}
                   initialJobs={initialJobs || []}
                   user={user}
                   isCompanyUser={isCompanyUser}
                   isOnboardingComplete={onboardingComplete}
                   isAllJobsTab={false}
                   isAppliedJobsTabActive={false}
-                  totalCount={totalCount}
+                  totalCount={count}
                   current_page="jobs"
+                  initialCursor={initialCursor}
+                  error={error}
                 />
               </TabsContent>
             )}
           {user && !isCompanyUser && !isAISearch && (
             <TabsContent value="applied">
               <JobsComponent
-                key={dynamicKey}
+                // key={dynamicKey}
+                dynamicKey={dynamicKey}
                 initialJobs={initialJobs || []}
                 user={user}
                 isCompanyUser={isCompanyUser}
                 isOnboardingComplete={onboardingComplete}
                 isAllJobsTab={false}
                 isAppliedJobsTabActive={true}
-                totalCount={totalCount}
+                totalCount={count}
                 current_page="jobs"
+                initialCursor={initialCursor}
+                error={error}
               />
             </TabsContent>
           )}
         </ClientTabs>
       </div>
     </div>
-    // </div>
   );
 }

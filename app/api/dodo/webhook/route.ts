@@ -3,7 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { client } from "@/lib/dodo/initialize";
 import { WebhookPayload } from "dodopayments/resources/webhook-events.mjs";
 import { SendPaymentUpdateEmail } from "@/lib/dodo/utils";
-import { IPayment, TPaymentStatus } from "@/lib/types";
+import { JsonCompatible, TPaymentStatus } from "@/utils/types";
 
 // LISTENING FOR THE FOLLOWING EVENTS:
 // 1) payment.failed
@@ -26,8 +26,8 @@ export async function POST(req: NextRequest) {
   const body = JSON.parse(reqText);
   const eventType = body.type;
   const webhookPayload = body.data as WebhookPayload.Payment;
-  let userName;
-  let email;
+  let userName = "";
+  let email = "";
 
   try {
     client.webhooks.unwrap(reqText, {
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     console.error("⚠️ Webhook signature verification failed.", err);
     return NextResponse.json(
       { error: "Webhook Error: Invalid Signature" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (data && !error) {
-    userName = data.full_name ?? data.email.split("@")[0];
-    email = data.email;
+    userName = data.full_name || (data.email ? data.email.split("@")[0] : "");
+    email = data.email || "";
   }
 
   // FAILED
@@ -68,16 +68,20 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString(),
         currency: webhookPayload.currency,
         total_amount: webhookPayload.total_amount,
-        billing: webhookPayload.billing,
-        customer: webhookPayload.customer,
+        billing: webhookPayload.billing as JsonCompatible<
+          typeof webhookPayload.billing
+        >,
+        customer: webhookPayload.customer as JsonCompatible<
+          typeof webhookPayload.customer
+        >,
       })
       .eq("user_id", webhookPayload.metadata?.user_id)
-      .eq("session_id", webhookPayload.checkout_session_id);
+      .eq("session_id", webhookPayload.checkout_session_id!);
 
     if (paymentUpdateError) {
       return NextResponse.json(
         { error: "Failed to update payment record inside payment.failed" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -91,7 +95,7 @@ export async function POST(req: NextRequest) {
         credit_amount: Number(webhookPayload.metadata.credit_amount),
         payment_method: webhookPayload.payment_method ?? "",
         payment_id: webhookPayload.payment_id,
-      } as unknown as IPayment,
+      },
     });
 
     if (!error && success) {
@@ -122,16 +126,20 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString(),
         currency: webhookPayload.currency,
         total_amount: webhookPayload.total_amount,
-        billing: webhookPayload.billing,
-        customer: webhookPayload.customer,
+        billing: webhookPayload.billing as JsonCompatible<
+          typeof webhookPayload.billing
+        >,
+        customer: webhookPayload.customer as JsonCompatible<
+          typeof webhookPayload.customer
+        >,
       })
       .eq("user_id", webhookPayload.metadata?.user_id)
-      .eq("session_id", webhookPayload.checkout_session_id);
+      .eq("session_id", webhookPayload.checkout_session_id!);
 
     if (paymentUpdateError) {
       return NextResponse.json(
         { error: "Failed to update payment record inside payment.cancelled" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -140,7 +148,12 @@ export async function POST(req: NextRequest) {
       email,
       paymentDetails: {
         status: "cancelled" as TPaymentStatus,
-      } as unknown as IPayment,
+        total_amount: webhookPayload.total_amount,
+        currency: webhookPayload.currency,
+        credit_amount: Number(webhookPayload.metadata.credit_amount),
+        payment_method: webhookPayload.payment_method ?? "",
+        payment_id: webhookPayload.payment_id,
+      },
     });
 
     if (!error && success) {
@@ -171,11 +184,15 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString(),
         currency: webhookPayload.currency,
         total_amount: webhookPayload.total_amount,
-        billing: webhookPayload.billing,
-        customer: webhookPayload.customer,
+        billing: webhookPayload.billing as JsonCompatible<
+          typeof webhookPayload.billing
+        >,
+        customer: webhookPayload.customer as JsonCompatible<
+          typeof webhookPayload.customer
+        >,
       })
       .eq("user_id", webhookPayload.metadata?.user_id)
-      .eq("session_id", webhookPayload.checkout_session_id);
+      .eq("session_id", webhookPayload.checkout_session_id!);
 
     if (paymentUpdateError) {
       return NextResponse.json(
@@ -184,7 +201,7 @@ export async function POST(req: NextRequest) {
             "Failed to update payment record inside payment.failed. " +
             paymentUpdateError.message,
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -198,7 +215,7 @@ export async function POST(req: NextRequest) {
         credit_amount: Number(webhookPayload.metadata.credit_amount),
         payment_method: webhookPayload.payment_method ?? "",
         payment_id: webhookPayload.payment_id,
-      } as unknown as IPayment,
+      },
     });
 
     return NextResponse.json({
@@ -218,7 +235,7 @@ export async function POST(req: NextRequest) {
     if (!user_id || !payment_id || !credit_amount) {
       console.error(
         "Webhook Error: Missing required fulfillment data in session metadata.",
-        { user_id, payment_id, credit_amount }
+        { user_id, payment_id, credit_amount },
       );
       return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
     }
@@ -231,7 +248,7 @@ export async function POST(req: NextRequest) {
         .from("payments")
         .select("credits_fulfilled")
         .eq("user_id", user_id)
-        .eq("session_id", webhookPayload.checkout_session_id)
+        .eq("session_id", webhookPayload.checkout_session_id!)
         .single();
 
       if (payment?.credits_fulfilled) {
@@ -273,11 +290,15 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
           currency: webhookPayload.currency,
           total_amount: webhookPayload.total_amount,
-          billing: webhookPayload.billing,
-          customer: webhookPayload.customer,
+          billing: webhookPayload.billing as JsonCompatible<
+            typeof webhookPayload.billing
+          >,
+          customer: webhookPayload.customer as JsonCompatible<
+            typeof webhookPayload.customer
+          >,
         })
         .eq("user_id", user_id)
-        .eq("session_id", webhookPayload.checkout_session_id);
+        .eq("session_id", webhookPayload.checkout_session_id!);
 
       if (updateError)
         throw new Error(`Payment record update failed: ${updateError.message}`);
@@ -292,7 +313,7 @@ export async function POST(req: NextRequest) {
           credit_amount: Number(webhookPayload.metadata.credit_amount),
           payment_method: webhookPayload.payment_method ?? "",
           payment_id: webhookPayload.payment_id,
-        } as unknown as IPayment,
+        },
       });
 
       if (!error && success) {
@@ -315,7 +336,7 @@ export async function POST(req: NextRequest) {
         {
           error: `Fulfillment Error: ${err instanceof Error ? err.message : String(err)}`,
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }

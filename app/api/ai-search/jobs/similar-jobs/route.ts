@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { IJob, TAICredits } from "@/lib/types";
-import { getVertexClient } from "@/lib/serverUtils";
+import { AIRerankRequestBody, TAICredits } from "@/utils/types";
+import { getVertexClient } from "@/utils/serverUtils";
+import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    const { userId, jobId, jobs, aiCredits } = await request.json();
+    const { userId, jobId, jobs, aiCredits }: AIRerankRequestBody =
+      await request.json();
 
     if (!jobId || !userId || !jobs || !aiCredits) {
       return NextResponse.json(
@@ -56,7 +58,7 @@ export async function POST(request: NextRequest) {
             **Candidate Job Listings to Evaluate:**
             ${jobs
               .map(
-                (job: IJob) => `
+                (job) => `
                 ---
                 ID: ${job.id}
                 Title: ${job.job_name}
@@ -101,10 +103,16 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    await supabase.rpc("deduct_user_credits", {
-      p_user_id: userId,
-      p_amount: TAICredits.AI_SEARCH_OR_ASK_AI,
-    });
+    // await supabase.rpc("deduct_user_credits", {
+    //   p_user_id: userId,
+    //   p_amount: TAICredits.AI_SEARCH_ASK_AI_RESUME,
+    // });
+
+    await deductUserCreditsHelper(
+      supabase,
+      userId,
+      TAICredits.AI_SEARCH_ASK_AI_RESUME,
+    );
 
     return NextResponse.json({
       rerankedJobs: object.reranked_job_ids,

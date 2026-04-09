@@ -1,11 +1,12 @@
 "use server";
 
-import { deploymentUrl } from "@/lib/serverUtils";
+import { deploymentUrl } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import { after } from "next/server";
-import { TLimits } from "@/lib/types";
 import { triggerRelevanceUpdate } from "./relevant-jobs-update";
+import { TAICredits } from "@/utils/types";
+import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
 
 export async function submitOnboardingAction(formData: FormData) {
   const supabase = await createClient();
@@ -18,28 +19,30 @@ export async function submitOnboardingAction(formData: FormData) {
 
   if (!userId) return { error: "User ID is required." };
 
+  const { data: profile } = await supabase
+    .from("user_info")
+    .select("ai_credits")
+    .eq("user_id", userId)
+    .single();
+
+  if (!profile) {
+    return {
+      error:
+        "User profile not found. Please complete your profile to upload a resume.",
+    };
+  }
+
+  if ((profile.ai_credits || 0) < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
+    return {
+      error: `Insufficient AI credits for resume upload. Please top up to continue.`,
+    };
+  }
+
   try {
-    // 1. LIMIT CHECK: Prevent more than 5 resumes
-    const { count, error: countError } = await supabase
-      .from("resumes")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId);
-
-    if (countError) throw countError;
-
-    // If uploading a NEW file, check if we're already at the limit
-    if (resumeFile && resumeFile.size > 0 && (count || 0) >= TLimits.RESUME) {
-      return {
-        error:
-          "Resume limit reached. Please remove an existing resume to upload a new one.",
-      };
-    }
-
     let finalResumeId = resumeId;
     let fileName = "";
 
     // 2. PRIMARY RESUME LOGIC (DATABASE ONLY)
-    // We clear old primary flags before setting the new one
     await supabase
       .from("resumes")
       .update({ is_primary: false })
@@ -82,8 +85,6 @@ export async function submitOnboardingAction(formData: FormData) {
     const { error: userError } = await supabase.from("user_info").upsert(
       {
         ...profileData,
-        // user_id: userId,
-        // filled: true,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id" },
@@ -91,7 +92,7 @@ export async function submitOnboardingAction(formData: FormData) {
 
     if (userError) throw userError;
 
-    // 4. SEQUENTIAL BACKGROUND CHAIN
+    // 4. SEQUENTIAL[IMP] BACKGROUND CHAIN
     after(async () => {
       const baseUrl = deploymentUrl();
       const internalHeaders = {
@@ -101,14 +102,23 @@ export async function submitOnboardingAction(formData: FormData) {
 
       try {
         // STEP A: If new file, Upload & Parse first
-        if (resumeFile && resumeFile.size > 0) {
+        if (resumeFile && resumeFile.size > 0 && finalResumeId) {
           // Call Parse API and WAIT for it to finish updating the 'content' column
-          const parseRes = await fetch(`${baseUrl}/api/parse-resume`, {
-            method: "POST",
-            headers: internalHeaders,
-            body: JSON.stringify({ userId, resumeId: finalResumeId }),
-          });
-          if (!parseRes.ok) throw new Error("Background Parse Failed");
+          try {
+            const parseRes = await fetch(`${baseUrl}/api/parse-resume`, {
+              method: "POST",
+              headers: internalHeaders,
+              body: JSON.stringify({ resumeId: finalResumeId }),
+            });
+            if (!parseRes.ok) {
+              // await updateResumeParsingStatus(true, finalResumeId);
+
+              throw new Error("Background Parse Failed");
+            }
+          } catch {
+            await updateResumeParsingStatus(true, finalResumeId);
+            throw new Error("Background Parse Failed");
+          }
         }
 
         // STEP B: Update Embedding (Reads the 'content' column we just filled)
@@ -139,9 +149,6 @@ export async function submitOnboardingAction(formData: FormData) {
         );
       }
     });
-
-    // revalidatePath("/dashboard");
-    // revalidatePath("/jobs");
 
     return { success: true };
   } catch (err: unknown) {

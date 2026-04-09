@@ -1,16 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import BackButton from "@/components/BackButton";
-// import CreateReviewForResume from "@/components/CreateReviewForResume";
 import { Badge } from "@/components/ui/badge";
-// import InfoTooltip from "@/components/InfoTooltip";
-// import { TAICredits } from "@/lib/types";
-// import Link from "next/link";
-// import dynamic from "next/dynamic";
 import OriginalResumeWrapper from "@/components/OriginalResumeWrapper";
-import ComingSoonBtn from "@/components/waitlist/ComingSoonBtn";
 import InfoTooltip from "@/components/InfoTooltip";
-// import OriginalResumeViewer from "@/components/OriginalResumeViewer";
+import Link from "next/link";
+import { TAICredits } from "@/utils/types";
+import CreateReviewForResume from "@/components/CreateReviewForResume";
+import { RetryResumeParsing } from "@/components/RetryResumeParsing";
+import ResumeStatusBadge from "@/components/ResumeStatusBadge";
 
 export default async function ResumeIdPage({
   params,
@@ -34,6 +32,8 @@ export default async function ResumeIdPage({
     if (!data || error) {
       throw new Error("Resume not found");
     }
+
+    const isParsingFailed = data.parsing_failed === true;
 
     const { data: signedUrlData, error: signedUrlError } =
       await supabase.storage
@@ -63,22 +63,28 @@ export default async function ResumeIdPage({
                 }
               />
             )}
+            <ResumeStatusBadge
+              isParsed={!!data.content}
+              isParsingFailed={isParsingFailed}
+            />
           </div>
           {user?.id && (
-            <div className="flex items-center gap-1">
-              <ComingSoonBtn label="Review this Resume" variant={"outline"} />
-              {/* <CreateReviewForResume userId={user.id} resumeId={resumeId} /> */}
-              {/* <InfoTooltip
-                content={
-                  <p>
-                    This feature uses {TAICredits.AI_CV_REVIEW} AI credits per
-                    use.{" "}
-                    <Link href={"/dashboard"} className="text-blue-500">
-                      Recharge Credits
-                    </Link>
-                  </p>
-                }
-              /> */}
+            <div className="flex items-center gap-4">
+              {isParsingFailed && <RetryResumeParsing resumeId={resumeId} />}
+              <div className="flex items-center gap-1">
+                <CreateReviewForResume userId={user.id} resumeId={resumeId} />
+                <InfoTooltip
+                  content={
+                    <p>
+                      This feature uses {TAICredits.AI_CV_REVIEW} AI credits per
+                      use.{" "}
+                      <Link href={"/dashboard"} className="text-blue-500">
+                        Recharge Credits
+                      </Link>
+                    </p>
+                  }
+                />
+              </div>
             </div>
           )}
         </div>

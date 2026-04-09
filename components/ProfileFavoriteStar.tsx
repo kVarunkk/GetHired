@@ -2,32 +2,24 @@
 
 import { revalidateCache } from "@/app/actions/revalidate";
 import { createClient } from "@/lib/supabase/client";
-import { IFormData } from "@/lib/types";
+import { AllProfileWithRelations } from "@/utils/types";
+import { TApplicantProfile } from "@/utils/types/user.types";
 import { Star } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function ProfileFavoriteStar({
   profile,
   companyId,
 }: {
-  profile: IFormData;
+  profile: TApplicantProfile | AllProfileWithRelations;
   companyId?: string;
 }) {
   const supabase = createClient();
-  const [isFavorite, setIsFavorite] = useState(false);
-
-  useEffect(() => {
-    if (profile && companyId) {
-      if (
-        profile.company_favorites &&
-        profile.company_favorites.filter(
-          (each) => each.company_id === companyId
-        ).length > 0
-      ) {
-        setIsFavorite(true);
-      }
-    }
-  }, [profile, companyId]);
+  const [isFavorite, setIsFavorite] = useState(
+    profile.company_favorites &&
+      profile.company_favorites.filter((each) => each.company_id === companyId)
+        .length > 0,
+  );
 
   const handleFavorite = async () => {
     try {
@@ -38,7 +30,7 @@ export default function ProfileFavoriteStar({
       if (
         profile.company_favorites &&
         profile.company_favorites.filter(
-          (each) => each.company_id === companyId
+          (each) => each.company_id === companyId,
         ).length > 0
       ) {
         query = supabase
@@ -58,9 +50,7 @@ export default function ProfileFavoriteStar({
 
       if (error) throw new Error(error.details);
       await revalidateCache("profiles-feed");
-    } catch {
-      // console.error(e);
-    }
+    } catch {}
   };
 
   return (

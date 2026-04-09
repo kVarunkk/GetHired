@@ -1,7 +1,7 @@
 "use server";
 
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { ICreateJobPostingFormData } from "@/lib/types";
+import { ICreateJobPostingFormData } from "@/utils/types";
 // import { createClient } from "../../lib/supabase/server";
 // import { revalidatePath } from "next/cache";
 
@@ -13,7 +13,7 @@ import { ICreateJobPostingFormData } from "@/lib/types";
 const buildSalaryRange = (
   currency?: string,
   salary_min?: number,
-  salary_max?: number
+  salary_max?: number,
 ) => {
   if (currency && salary_min && salary_max) {
     return `${currency}${salary_min} - ${currency}${salary_max}`;
@@ -48,12 +48,12 @@ export async function upsertJobPostingAction(params: {
   const salary_range = buildSalaryRange(
     values.salary_currency,
     values.min_salary,
-    values.max_salary
+    values.max_salary,
   );
   const equity_range = buildEquityRange(values.min_equity, values.max_equity);
   const experience = buildExperience(
     values.min_experience,
-    values.max_experience
+    values.max_experience,
   );
 
   try {
@@ -64,6 +64,7 @@ export async function upsertJobPostingAction(params: {
       equity_range,
       experience,
       questions: values.questions?.filter((q: string) => q.trim() !== "") || [],
+      updated_at: new Date().toISOString(),
     };
 
     if (existingPostingId) {
@@ -126,7 +127,7 @@ export async function upsertJobPostingAction(params: {
             salary_range: new_posting.salary_range,
             salary_min: new_posting.min_salary,
             salary_max: new_posting.max_salary,
-            experience_min: new_posting.min_experience,
+            experience_min: new_posting.min_experience ?? undefined,
             experience_max: new_posting.max_experience,
             equity_range: new_posting.equity_range,
             equity_min: new_posting.min_equity,

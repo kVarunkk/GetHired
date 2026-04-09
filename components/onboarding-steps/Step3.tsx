@@ -1,4 +1,4 @@
-import { cn, commonSkills } from "@/lib/utils";
+import { cn, commonSkills } from "@/utils/utils";
 import { StepProps } from "../OnboardingComponent";
 import { CardContent } from "../ui/card";
 import { Input } from "../ui/input";
@@ -27,7 +27,7 @@ export const Step3SkillsExperience: React.FC<StepProps> = ({
         }
         className={cn(
           "mt-2 bg-input",
-          errors.experience_years ? "border-red-500 " : ""
+          errors.experience_years ? "border-red-500 " : "",
         )}
       />
       {errors.experience_years && (

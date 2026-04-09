@@ -14,7 +14,7 @@ import { Textarea } from "./ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { User } from "@supabase/supabase-js";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { useState } from "react";
 import {
   Tooltip,
@@ -38,12 +38,11 @@ export default function FeedbackForm({
 
     const supabase = createClient();
 
-    const key =
-      user.app_metadata.type === "company" ? "company_user_id" : "user_id";
+    const isCompany = user.app_metadata.type === "company";
 
     const { error } = await supabase.from("feedbacks").insert({
-      content: content,
-      [key]: user.id,
+      content: content as string,
+      ...(isCompany ? { company_user_id: user.id } : { user_id: user.id }),
     });
 
     if (error) {
@@ -61,7 +60,7 @@ export default function FeedbackForm({
             <DialogTrigger
               className={cn(
                 "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-                isMenuOpen ? "justify-start" : "justify-center"
+                isMenuOpen ? "justify-start" : "justify-center",
               )}
             >
               <MessageCircle className="h-4 w-4" />
@@ -76,7 +75,7 @@ export default function FeedbackForm({
         <DialogTrigger
           className={cn(
             "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-            isMenuOpen ? "justify-start" : "justify-center"
+            isMenuOpen ? "justify-start" : "justify-center",
           )}
         >
           <MessageCircle className="h-4 w-4" />

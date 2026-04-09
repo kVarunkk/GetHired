@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { ChevronRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import React from "react";
@@ -25,7 +25,7 @@ export default function WaitlistCTA({
         // Text Colors
         "text-brand-soft-foreground",
         // "shadow-sm hover:shadow-md ",
-        className
+        className,
       )}
     >
       <div className="flex items-center gap-2">

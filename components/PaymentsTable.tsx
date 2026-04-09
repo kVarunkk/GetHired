@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -19,9 +19,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-// import Link from "next/link";
 import { format } from "date-fns";
-import { IPayment } from "@/lib/types";
+// import { IPayment } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import {
   Select,
@@ -31,12 +30,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/utils/utils";
 import { Link as ModifiedLink } from "react-transition-progress/next";
+import { TPaymentsTableRecord } from "@/utils/types/payments.types";
+import { TPaymentStatus } from "@/utils/types";
 
 interface PaymentsTableProps {
-  data: IPayment[];
+  data: TPaymentsTableRecord[];
 }
+
+const paymentStatuses = [
+  "All Statuses",
+  "complete",
+  "failed",
+  "pending",
+  "cancelled",
+];
+
+const pricePlans = [
+  "All Plans",
+  "Trial Pack",
+  "Standard Bundle",
+  "Pro Bundle",
+  "Power User",
+];
 
 export default function PaymentsTable({ data }: PaymentsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -46,43 +63,21 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  useEffect(() => {
-    setPage(1);
-  }, [columnFilters, sorting]);
-
   const flatData = useMemo(() => {
     return data.map((item) => ({
       ...item,
-      amount: `${(item.total_amount / 100).toFixed(2)} ${item.currency?.toUpperCase() ?? ""}`,
+      amount: `${(item.total_amount ?? 0 / 100).toFixed(2)} ${item.currency?.toUpperCase() ?? ""}`,
       plan: item.price_plan ? item.price_plan.name : "N/A",
       credits: item.credit_amount,
     }));
   }, [data]);
 
-  const paymentStatuses = useMemo(() => {
-    const statuses = [
-      "All Statuses",
-      "complete",
-      "failed",
-      "pending",
-      "cancelled",
-    ];
-    return [...new Set(statuses)];
-  }, []);
-
-  const pricePlans = useMemo(() => {
-    const plans = [
-      "All Plans",
-      "Trial Pack",
-      "Standard Bundle",
-      "Pro Bundle",
-      "Power User",
-    ];
-    return [...new Set(plans)];
-  }, []);
-
   const columns: ColumnDef<
-    IPayment & { amount: string; plan: string; credits: number }
+    TPaymentsTableRecord & {
+      amount: string;
+      plan: string | null;
+      credits: number | null;
+    }
   >[] = useMemo(
     () => [
       {
@@ -107,7 +102,9 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => (
-          <ApplicationStatusBadge status={row.original.status} />
+          <ApplicationStatusBadge
+            status={row.original.status as TPaymentStatus}
+          />
         ),
         filterFn: "equals",
       },
@@ -116,7 +113,10 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         header: "Amount Paid",
         cell: ({ row }) => (
           <div className="text-sm font-medium">
-            {formatCurrency(row.original.total_amount, row.original.currency)}
+            {formatCurrency(
+              row.original.total_amount ?? 0,
+              row.original.currency ?? "",
+            )}
           </div>
         ),
       },
@@ -158,7 +158,7 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         ),
       },
     ],
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -167,15 +167,23 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onSortingChange: (updater) => {
+      setSorting((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
+    onColumnFiltersChange: (updater) => {
+      setColumnFilters((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
     state: {
       sorting,
       columnFilters,
     },
   });
-
-  // const getRowModelRows = table.getRowModel().rows;
 
   const paginatedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -187,8 +195,6 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
 
   const clearFilters = () => {
     setColumnFilters([]);
-    // table.getColumn("applicantName")?.setFilterValue("");
-    // table.getColumn("jobTitle")?.setFilterValue(undefined);
     table.getColumn("status")?.setFilterValue(undefined);
   };
 
@@ -271,7 +277,7 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -289,7 +295,7 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

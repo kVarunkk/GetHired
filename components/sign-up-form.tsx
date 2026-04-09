@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -51,7 +51,7 @@ const signUpSchema = (isCompany: boolean) =>
           },
           {
             message: "Company email cannot be a generic public domain.",
-          }
+          },
         ),
       password: z
         .string()
@@ -95,7 +95,7 @@ export function SignUpForm({
       const result = await sendSignupEmail(
         values.email,
         values.password,
-        isCompany
+        isCompany,
       );
 
       if (!result.success) throw new Error(result.error);

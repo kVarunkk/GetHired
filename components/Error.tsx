@@ -17,7 +17,7 @@ export default function NotFound() {
       </div>
       <div className="flex items-center gap-4 ">
         <Button asChild variant={"secondary"}>
-          <Link href={"/"}>Back Home</Link>
+          <Link href={"/"}>Home</Link>
         </Button>
         <Button onClick={() => router.back()} variant="outline">
           Go Back

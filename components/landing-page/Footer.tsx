@@ -1,11 +1,10 @@
 "use client";
 
 import React from "react";
-import Link from "next/link"; // For internal links
+import Link from "next/link";
 import Brand from "../Brand";
 import SocialsComponent from "../SocialsComponent";
-import WaitlistForm from "../WaitlistForm";
-import { TWaitlistType } from "@/lib/types";
+import { Button } from "../ui/button";
 
 const popularSearches = [
   {
@@ -120,8 +119,6 @@ const remoteJobs = [
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
-  // Array of popular location/type searches (Replace href with actual filtered routes)
-
   return (
     <footer className="px-4 py-20 lg:px-20 xl:px-40 2xl:px-80 mt-auto">
       <div className="container mx-auto max-w-6xl grid grid-cols-2 md:grid-cols-4 gap-8 text-center md:text-left">
@@ -131,8 +128,6 @@ export default function Footer() {
         <div className="flex flex-col items-center md:items-start gap-5 col-span-2 md:col-span-1">
           <Link href={"/"} className="w-fit">
             <Brand type="long" />
-            {/* <span className="text-xl font-bold">GetHired</span>{" "} */}
-            {/* Placeholder for Brand Component */}
           </Link>
           <p className="text-sm text-muted-foreground">
             Your smartest path to the perfect job.
@@ -222,6 +217,7 @@ export default function Footer() {
                 <Link
                   href={item.href}
                   className="hover:underline hover:opacity-100 transition-opacity"
+                  prefetch={false}
                 >
                   {item.name}
                 </Link>
@@ -241,6 +237,7 @@ export default function Footer() {
                 <Link
                   href={item.href}
                   className="hover:underline hover:opacity-100 transition-opacity"
+                  prefetch={false}
                 >
                   {item.name}
                 </Link>
@@ -250,10 +247,12 @@ export default function Footer() {
         </div>
 
         <div className="col-span-2 ">
-          <h3 className="text-lg font-bold mb-3 ">
-            AI Resume Checker - Join Waitlist
-          </h3>
-          <WaitlistForm className="" type={TWaitlistType.AI_RESUME_CHECKER} />
+          <h3 className="text-lg font-bold mb-3 ">AI Resume Checker</h3>
+          <Link href={"/resume-review"}>
+            <Button className="w-full sm:w-auto bg-brand hover:bg-brand/70 text-brand-foreground font-bold h-11 px-8 rounded-xl shadow-lg shadow-brand/20 transition-all active:scale-95 disabled:opacity-70">
+              Review My Resume
+            </Button>
+          </Link>{" "}
         </div>
       </div>
     </footer>

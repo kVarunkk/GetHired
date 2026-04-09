@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import {
   Card,
   CardContent,
@@ -50,7 +50,7 @@ export default function TheGetHiredAdvantageSection() {
         strokeDasharray={"4 2"}
         className={cn(
           "[mask-image:linear-gradient(to_bottom_right,white,transparent,transparent)] ",
-          "-z-8" //   "-z-10"
+          "-z-8", //   "-z-10"
         )}
       />
       {/* Using bg-muted for a subtle contrast */}
@@ -112,7 +112,7 @@ export default function TheGetHiredAdvantageSection() {
         // y={-1}
         strokeDasharray={"4 2"}
         className={cn(
-          "[mask-image:linear-gradient(to_top_left,white,transparent,transparent)] " //   "-z-10"
+          "[mask-image:linear-gradient(to_top_left,white,transparent,transparent)] ", //   "-z-10"
         )}
       />
     </section>

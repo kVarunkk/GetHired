@@ -18,11 +18,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { IJob, IResume } from "@/lib/types";
+import { AllJobWithRelations } from "@/utils/types";
 import { createClient } from "@/lib/supabase/client";
 import ResumeSourceSelector from "./ResumeSourceSelector";
-import { createResumeAction } from "@/app/actions/create-resume";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
+import { TJobIdPageData } from "@/utils/types/jobs.types";
+import { uploadResumeAction } from "@/app/actions/upload-resume-file";
 
 const createFormSchema = (questions: string[]) => {
   const schemaFields = questions.reduce<Record<string, z.ZodTypeAny>>(
@@ -30,13 +31,13 @@ const createFormSchema = (questions: string[]) => {
       acc[`question_${index}`] = z.string().min(1, "Answer cannot be empty.");
       return acc;
     },
-    {}
+    {},
   );
   return z.object(schemaFields);
 };
 
 interface JobApplicationFormProps {
-  jobPost: IJob;
+  jobPost: AllJobWithRelations | TJobIdPageData;
   user: User;
   onSuccess: () => void;
 }
@@ -49,29 +50,38 @@ export default function JobApplicationForm({
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
 
-  // Resume Selection State
-  const [existingResumes, setExistingResumes] = useState<IResume[]>([]);
+  const [existingResumes, setExistingResumes] = useState<
+    {
+      id: string;
+      name: string | null;
+      created_at: string;
+      is_primary: boolean;
+      resume_path: string | null;
+      parsing_failed: boolean;
+    }[]
+  >([]);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [newFile, setNewFile] = useState<File | null>(null);
   const [isFetchingResumes, setIsFetchingResumes] = useState(true);
 
   const questions = useMemo(
     () => jobPost.job_postings?.[0]?.questions || [],
-    [jobPost]
+    [jobPost],
   );
   const formSchema = useMemo(() => createFormSchema(questions), [questions]);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
   });
 
-  // 1. Fetch User Resumes & Pre-select Primary
   useEffect(() => {
     const fetchResumes = async () => {
       const supabase = createClient();
       try {
         const { data, error } = await supabase
           .from("resumes")
-          .select("id, name, created_at, is_primary, resume_path")
+          .select(
+            "id, name, created_at, is_primary, resume_path, parsing_failed",
+          )
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
@@ -79,7 +89,6 @@ export default function JobApplicationForm({
 
         setExistingResumes(data || []);
 
-        // Auto-select primary resume
         const primary = data?.find((r) => r.is_primary);
         if (primary) {
           setSelectedResumeId(primary.id);
@@ -94,56 +103,29 @@ export default function JobApplicationForm({
     fetchResumes();
   }, [user.id]);
 
-  // 2. Final Submission Logic
   const onSubmit = async (values: Record<string, string>) => {
     setLoading(true);
     const supabase = createClient();
 
     try {
-      let finalResumeId = "";
+      let finalResumeId = null;
 
-      // CASE A: User uploaded a NEW file during the application
       if (newFile) {
-        // const tempPath = `applications/temp/${user.id}/${Date.now()}-${newFile.name}`;
-        // const { data: uploadData, error: uploadError } = await supabase.storage
-        //   .from("resumes")
-        //   .upload(tempPath, newFile);
-
-        // if (uploadError) throw new Error("Failed to upload new resume.");
-        // finalResumePath = uploadData.path;
         const formData = new FormData();
-        formData.append("userId", user.id);
         formData.append("file", newFile);
-        const result = await createResumeAction(formData);
+        const result = await uploadResumeAction(formData);
         if (result.error) throw new Error(result.error);
         finalResumeId = result.resumeId;
-      }
-      // CASE B: User selected an EXISTING resume
-      else if (selectedResumeId) {
-        // const selected = existingResumes.find((r) => r.id === selectedResumeId);
-        // if (!selected) throw new Error("Resume selection invalid.");
+      } else if (selectedResumeId) {
         finalResumeId = selectedResumeId;
       } else {
         throw new Error("Please select or upload a resume.");
       }
 
-      // --- APPLICATION BUCKET COPY LOGIC ---
-      //   const { data: signedUrlData } = await supabase.storage
-      //     .from("resumes")
-      //     .createSignedUrl(finalResumePath, 60);
+      if (!finalResumeId) {
+        throw new Error("Resume processing failed. Please try again.");
+      }
 
-      //   if (!signedUrlData?.signedUrl)
-      //     throw new Error("Could not access resume for submission.");
-
-      //   const resumeRes = await fetch(signedUrlData.signedUrl);
-      //   const resumeBlob = await resumeRes.blob();
-
-      //   const companyPath = `companies/${jobPost.job_postings![0].company_id}/resumes/${user.id}/${uuidv4()}.pdf`;
-      //   const { data: companyUpload } = await supabase.storage
-      //     .from("applications")
-      //     .upload(companyPath, resumeBlob);
-
-      // --- SAVE APPLICATION RECORD ---
       const { error } = await supabase.from("applications").insert({
         job_post_id: jobPost.job_postings![0].id,
         all_jobs_id: jobPost.id,
@@ -159,7 +141,7 @@ export default function JobApplicationForm({
       onSuccess();
     } catch {
       toast.error(
-        "Some error occured while submitting application. Please try again later."
+        "Some error occured while submitting application. Please try again later.",
       );
     } finally {
       setLoading(false);
@@ -176,7 +158,7 @@ export default function JobApplicationForm({
               "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border transition-colors",
               step === 1
                 ? "bg-brand border-brand"
-                : "bg-emerald-500 border-emerald-500 "
+                : "bg-emerald-500 border-emerald-500 ",
             )}
           >
             {step === 2 ? <CheckCircle2 size={12} /> : "1"}
@@ -184,7 +166,7 @@ export default function JobApplicationForm({
           <span
             className={cn(
               "text-[10px] font-black uppercase tracking-widest",
-              step === 1 ? "text-brand" : "text-muted-foreground"
+              step === 1 ? "text-brand" : "text-muted-foreground",
             )}
           >
             Resume
@@ -197,7 +179,7 @@ export default function JobApplicationForm({
               "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border transition-colors",
               step === 2
                 ? "bg-brand border-brand"
-                : "border-border text-muted-foreground"
+                : "border-border text-muted-foreground",
             )}
           >
             2
@@ -205,7 +187,7 @@ export default function JobApplicationForm({
           <span
             className={cn(
               "text-[10px] font-black uppercase tracking-widest",
-              step === 2 ? "text-brand" : "text-muted-foreground"
+              step === 2 ? "text-brand" : "text-muted-foreground",
             )}
           >
             Questions

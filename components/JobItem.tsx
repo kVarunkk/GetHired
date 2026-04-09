@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
-// import { Link as ModifiedLink } from "react-transition-progress/next";
 import { Badge } from "./ui/badge";
-import { IJob } from "@/lib/types";
 import { User } from "@supabase/supabase-js";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import JobFavoriteBtn from "./JobFavoriteBtn";
 import JobApplyBtn from "./JobApplyBtn";
 import ModifiedLink from "./ModifiedLink";
 import React from "react";
+import { AllJobWithRelations } from "@/utils/types";
 
 const JobItem = React.memo(
   ({
@@ -21,7 +20,7 @@ const JobItem = React.memo(
     isAppliedJobsTabActive,
     isOnboardingComplete,
   }: {
-    job: IJob;
+    job: AllJobWithRelations;
     user: User | null;
     isSuitable: boolean;
     isCompanyUser: boolean;
@@ -43,15 +42,16 @@ const JobItem = React.memo(
               "flex flex-col gap-3 p-4 group  rounded-lg transition hover:bg-secondary ",
             )}
           >
-            <div className="flex-col sm:flex-row sm:flex items-center justify-between gap-4">
-              <div className="flex flex-col gap-2 mb-6 sm:mb-0">
+            <div className=" flex-col sm:flex-row sm:flex items-center justify-between gap-4">
+              <div className="flex-1 flex flex-col gap-2 mb-6 sm:mb-0">
                 <div className="flex flex-col ">
-                  <div className="">
+                  <div>
                     <Link
                       href={`/jobs/${job.id}`}
                       target="_blank"
                       className="inline hover:underline underline sm:no-underline underline-offset-2"
                       onClick={(e) => e.stopPropagation()}
+                      prefetch={false}
                     >
                       <h3 className="inline text-lg sm:text-xl font-semibold">
                         {job.job_name}
@@ -70,6 +70,7 @@ const JobItem = React.memo(
                       target="_blank"
                       className="text-muted-foreground hover:underline w-fit underline sm:no-underline underline-offset-2"
                       onClick={(e) => e.stopPropagation()}
+                      prefetch={false}
                     >
                       {job.company_name}
                     </Link>
@@ -104,7 +105,7 @@ function JobDetailBadges({
   job,
   isSuitable,
 }: {
-  job: IJob;
+  job: AllJobWithRelations;
   isSuitable: boolean;
 }) {
   const jobDetails = [
@@ -199,6 +200,7 @@ function JobDetailBadges({
           href={platform_url || ""}
           target="_blank"
           rel="noopener noreferrer"
+          prefetch={false}
         >
           <Badge
             variant={"secondary"}

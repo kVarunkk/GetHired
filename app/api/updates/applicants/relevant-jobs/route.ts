@@ -5,8 +5,8 @@ import {
   deploymentUrl,
   sendEmailForRelevantJobsStatusUpdate,
   sendEmailForStatusUpdate,
-} from "@/lib/serverUtils";
-import { IJob, TAICredits } from "@/lib/types";
+} from "@/utils/serverUtils";
+import { AllJobWithRelations, TAICredits } from "@/utils/types";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
           const result = await processUserRelevance(
             userIdParam,
             email,
-            data[0].full_name,
+            data[0].full_name || "",
           );
 
           if (!result.success) {
@@ -66,8 +66,8 @@ export async function GET(request: NextRequest) {
             //   send email update to user regarding ai job feed
             // if (data && data.length > 0) {
             await sendEmailForRelevantJobsStatusUpdate(
-              data[0].email,
-              data[0].full_name,
+              data[0].email!,
+              data[0].full_name || "",
               URL + "/jobs?sortBy=relevance",
             );
             // }
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
       .from("user_info")
       .select("user_id, email, full_name")
       .eq("filled", true)
-      .gte("ai_credits", TAICredits.AI_SEARCH_OR_ASK_AI);
+      .gte("ai_credits", TAICredits.AI_SEARCH_ASK_AI_RESUME);
 
     if (userError || !users || users.length === 0) {
       await sendEmailForStatusUpdate(
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
           processUserRelevance(
             user.user_id,
             user.email || "Unknown",
-            user.full_name || user.email.split("@")[0],
+            user.full_name || user.email!.split("@")[0],
           ),
         );
 
@@ -218,7 +218,7 @@ async function processUserRelevance(
     }
 
     const json = await response.json();
-    const jobs: IJob[] = json.data || [];
+    const jobs: AllJobWithRelations[] = json.data || [];
 
     if (jobs.length === 0) {
       return {

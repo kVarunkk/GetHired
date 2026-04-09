@@ -14,12 +14,13 @@ import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { ArrowLeft, Copy, Loader2, Sparkle } from "lucide-react";
 import Link from "next/link";
-import { IResume, TAICredits } from "@/lib/types";
+import { TAICredits } from "@/utils/types";
 import InfoTooltip from "./InfoTooltip";
 import useSWR, { mutate } from "swr";
-import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/lib/utils";
+import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import ResumeSourceSelector from "./ResumeSourceSelector";
 import { createClient } from "@/lib/supabase/client";
+import { TResumeReviewResume } from "@/utils/types/review.types";
 
 export default function AskAIDialog({
   jobId,
@@ -35,8 +36,11 @@ export default function AskAIDialog({
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
   const [answer, setAnswer] = useState<string | null>(null);
   const [view, setView] = useState<"form" | "resume">("form");
-  const [existingResumes, setExistingResumes] = useState<IResume[]>([]);
-  const [selectedResume, setSelectedResume] = useState<IResume | null>(null);
+  const [existingResumes, setExistingResumes] = useState<TResumeReviewResume[]>(
+    [],
+  );
+  const [selectedResume, setSelectedResume] =
+    useState<TResumeReviewResume | null>(null);
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
@@ -50,7 +54,7 @@ export default function AskAIDialog({
       setError("Please select a resume.");
       return;
     }
-    if (creditsState < TAICredits.AI_SEARCH_OR_ASK_AI) {
+    if (creditsState < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
       setError("Insufficient AI credits. Please top up to continue.");
       return;
     }
@@ -108,12 +112,12 @@ export default function AskAIDialog({
         const supabase = createClient();
         const { data, error } = await supabase
           .from("resumes")
-          .select("id, name, created_at, is_primary")
+          .select("id, name, created_at, is_primary, parsing_failed")
           .eq("user_id", userId)
           .order("created_at", { ascending: false });
 
         if (!error) {
-          setExistingResumes((data || []) as IResume[]);
+          setExistingResumes(data || []);
           setSelectedResume(data?.find((_) => _.is_primary) || null);
         }
       };
@@ -140,7 +144,7 @@ export default function AskAIDialog({
             <InfoTooltip
               content={
                 "This feature uses " +
-                TAICredits.AI_SEARCH_OR_ASK_AI +
+                TAICredits.AI_SEARCH_ASK_AI_RESUME +
                 " AI credits per use."
               }
             />
@@ -179,7 +183,7 @@ export default function AskAIDialog({
                 <div className="flex items-center gap-1">
                   Using
                   <span
-                    title={selectedResume?.name}
+                    title={selectedResume?.name ?? "Selected Resume"}
                     className="font-bold inline-block w-[10rem] truncate"
                   >
                     {selectedResume?.name}
@@ -211,7 +215,8 @@ export default function AskAIDialog({
                   placeholder="e.g., Why do you think you are a good fit for this role?"
                   name="searchQuery"
                   disabled={
-                    isLoading || creditsState < TAICredits.AI_SEARCH_OR_ASK_AI
+                    isLoading ||
+                    creditsState < TAICredits.AI_SEARCH_ASK_AI_RESUME
                   }
                   className="bg-input text-sm"
                   ref={searchInputRef}
@@ -232,7 +237,8 @@ export default function AskAIDialog({
                 )}
                 <Button
                   disabled={
-                    isLoading || creditsState < TAICredits.AI_SEARCH_OR_ASK_AI
+                    isLoading ||
+                    creditsState < TAICredits.AI_SEARCH_ASK_AI_RESUME
                   }
                 >
                   {isLoading && (
@@ -246,7 +252,7 @@ export default function AskAIDialog({
                 type="button"
                 onClick={() => handleSubmit()}
                 disabled={
-                  isLoading || creditsState < TAICredits.AI_SEARCH_OR_ASK_AI
+                  isLoading || creditsState < TAICredits.AI_SEARCH_ASK_AI_RESUME
                 }
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

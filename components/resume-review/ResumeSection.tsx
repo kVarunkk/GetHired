@@ -1,0 +1,298 @@
+"use client";
+
+import { cn } from "@/utils/utils";
+import { Eye, File, FileText, Loader2, RefreshCcw } from "lucide-react";
+import ResumeSourceSelector from "../ResumeSourceSelector";
+import DigitalTwinMirror from "./DigitalTwinMirror";
+import {
+  Dispatch,
+  SetStateAction,
+  startTransition,
+  useEffect,
+  useState,
+} from "react";
+import { uploadResumeAction } from "@/app/actions/upload-resume-file";
+import { createClient } from "@/lib/supabase/client";
+import toast from "react-hot-toast";
+import { Button } from "../ui/button";
+import OriginalResumeWrapper from "../OriginalResumeWrapper";
+import {
+  TResumeReviewResume,
+  TResumeReviewServer,
+} from "@/utils/types/review.types";
+import { TResumeRowContent } from "@/utils/types";
+import { useRouter } from "next/navigation";
+import { retryResumeParsingAction } from "@/app/actions/retry-resume-parsing";
+
+export default function ResumeSection({
+  isParsed,
+  isJdPaneOpen,
+  existingResumes,
+  linkedResume,
+  activeHighlightId,
+  isResumeLinked,
+  isParsingFailed,
+  reviewId,
+  setCurrentReview,
+}: {
+  isParsed: boolean;
+  isJdPaneOpen: boolean;
+  existingResumes: TResumeReviewResume[];
+  linkedResume: TResumeReviewServer["resumes"] | null;
+  activeHighlightId: string | null;
+  isResumeLinked: boolean;
+  isParsingFailed: boolean;
+  reviewId: string;
+  setCurrentReview: Dispatch<SetStateAction<TResumeReviewServer>>;
+}) {
+  const supabase = createClient();
+
+  const [isUploading, setIsUploading] = useState(false);
+  const [viewMode, setViewMode] = useState<"mirror" | "original">("mirror");
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleLinkResume = async (resumeId: string | null) => {
+    if (!resumeId) return;
+
+    try {
+      const { error } = await supabase
+        .from("resume_reviews")
+        .update({ resume_id: resumeId, updated_at: new Date().toISOString() })
+        .eq("id", reviewId);
+
+      if (error) {
+        toast.error("Failed to link resume asset.");
+      } else {
+        // Update local state to trigger the polling effect
+        setCurrentReview((prev) => ({ ...prev, resume_id: resumeId }));
+        toast.success("Resume linked successfully.");
+      }
+    } catch {
+      toast.error("Link action failed.");
+    }
+  };
+
+  const handleStartProcessing = async () => {
+    if (!selectedFile) return;
+
+    setIsUploading(true);
+    const toastId = toast.loading("Adding new Resume...");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const result = await uploadResumeAction(formData);
+
+      if (result.success && result.resumeId) {
+        toast.success("Resume uploaded. Initializing sync...", { id: toastId });
+        await handleLinkResume(result.resumeId);
+        setSelectedFile(null);
+      } else {
+        toast.error(result.error || "Upload failed", { id: toastId });
+      }
+    } catch {
+      toast.error("An unexpected error occurred during upload.", {
+        id: toastId,
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  useEffect(() => {
+    const getSignedUrl = async () => {
+      if (!isResumeLinked || !linkedResume?.resume_path || !supabase) return;
+
+      try {
+        const { data, error } = await supabase.storage
+          .from("resumes")
+          .createSignedUrl(linkedResume.resume_path, 3600);
+
+        if (error) throw error;
+        setSignedUrl(data.signedUrl);
+      } catch {
+        toast.error("Could not load original PDF.");
+      }
+    };
+
+    if (isResumeLinked) {
+      getSignedUrl();
+    }
+  }, [isResumeLinked, linkedResume?.resume_path, supabase]);
+
+  const handleRetryParsing = async () => {
+    if (!linkedResume?.id) return;
+
+    setIsRetrying(true);
+    const toastId = toast.loading("Restarting document synchronization...");
+
+    try {
+      //  OPTIMISTIC UPDATE:
+
+      setCurrentReview((prev) => {
+        if (!prev.resumes) return prev;
+        return {
+          ...prev,
+          resumes: {
+            ...prev.resumes,
+            parsing_failed: false,
+            content: null,
+          },
+        };
+      });
+
+      const result = await retryResumeParsingAction(linkedResume.id);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      toast.success("Sync restarted! AI is re-indexing...", { id: toastId });
+
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to restart sync. Please try again.",
+        {
+          id: toastId,
+        },
+      );
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "border-b border-t sm:border-t-0 overflow-hidden flex flex-col",
+        isJdPaneOpen ? "flex-[0.6]" : "flex-1",
+      )}
+    >
+      <div className="p-4  flex flex-wrap gap-4 items-center justify-between border-b bg-background/50 ">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="text-lg font-bold">Resume</div>
+
+          {isResumeLinked && isParsed && (
+            <div className="flex items-center p-0.5 bg-zinc-100 dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800">
+              <button
+                onClick={() => setViewMode("mirror")}
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider rounded-md transition-all",
+                  viewMode === "mirror"
+                    ? "bg-white dark:bg-zinc-800 text-primary shadow-sm"
+                    : "text-zinc-500 hover:text-muted-foreground",
+                )}
+              >
+                <Eye size={12} />
+                Mirror
+              </button>
+              <button
+                onClick={() => setViewMode("original")}
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1 text-xs  font-semibold uppercase tracking-wider rounded-md transition-all",
+                  viewMode === "original"
+                    ? "bg-white dark:bg-zinc-800 text-primary shadow-sm"
+                    : "text-zinc-500 hover:text-muted-foreground",
+                )}
+              >
+                <FileText size={12} />
+                Original
+              </button>
+            </div>
+          )}
+        </div>
+
+        {linkedResume && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <File className="w-4 h-4 " />
+            {linkedResume?.name}
+          </div>
+        )}
+      </div>
+
+      <div
+        className={cn(
+          "flex-1 relative p-4  overflow-y-auto",
+          viewMode === "original" && "pt-0",
+        )}
+      >
+        {isParsingFailed ? (
+          <div className="flex flex-col gap-4 mt-10 justify-center items-center">
+            <h2 className="text-muted-foreground  text-center">
+              Unfortunately, there was an error parsing your resume. Please try
+              again.
+            </h2>
+            <Button onClick={handleRetryParsing} disabled={isRetrying}>
+              {isRetrying ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCcw className="w-4 h-4" />
+              )}
+              Retry Parsing
+            </Button>
+          </div>
+        ) : !isResumeLinked ? (
+          <div className="max-w-md mx-auto py-10">
+            {isUploading ? (
+              <div className="flex flex-col items-center justify-center py-20 space-y-4 animate-in fade-in duration-300">
+                <Loader2 className="w-8 h-8 animate-spin" />
+                <p className="text-sm font-bold text-muted-foreground ">
+                  Processing Upload
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-6">
+                <ResumeSourceSelector
+                  existingResumes={existingResumes}
+                  selectedId={selectedResumeId}
+                  onSelectExisting={setSelectedResumeId}
+                  file={selectedFile}
+                  onFileChange={setSelectedFile}
+                />
+                <Button
+                  onClick={() => {
+                    if (selectedResumeId) {
+                      handleLinkResume(selectedResumeId);
+                    } else {
+                      handleStartProcessing();
+                    }
+                  }}
+                  disabled={!(selectedFile || selectedResumeId) || isUploading}
+                >
+                  Add Resume
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : isParsed ? (
+          <div className="h-full">
+            {viewMode === "mirror" ? (
+              <DigitalTwinMirror
+                content={linkedResume?.content as TResumeRowContent}
+                activeHighlightId={activeHighlightId}
+              />
+            ) : (
+              <OriginalResumeWrapper url={signedUrl ?? ""} />
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sm text-muted-foreground  animate-pulse">
+              Awaiting document synchronization...
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

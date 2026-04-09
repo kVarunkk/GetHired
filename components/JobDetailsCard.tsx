@@ -1,33 +1,49 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, Loader2, Sparkle } from "lucide-react";
+import { ArrowDown, Copy, Loader2, Sparkle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { IJob, IJobPosting, TAICredits } from "@/lib/types";
+import { cn, copyToClipboard } from "@/utils/utils";
+import { JobPostingsRow, TAICredits } from "@/utils/types";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import InfoTooltip from "./InfoTooltip";
 import Link from "next/link";
+import { TJobIdPageData } from "@/utils/types/jobs.types";
+
+type JobDescriptionCardProps =
+  | {
+      job: TJobIdPageData;
+      page: "all-jobs";
+      user?: User | null;
+      isCompanyUser?: boolean;
+    }
+  | {
+      job: JobPostingsRow;
+      page: "job-posts";
+      user?: User | null;
+      isCompanyUser?: boolean;
+    };
+
+const isAllJobsJob = (
+  job: TJobIdPageData | JobPostingsRow,
+): job is TJobIdPageData => {
+  return "ai_summary" in job;
+};
 
 export default function JobDescriptionCard({
   job,
   user,
-  page = "all-jobs",
+  page,
   isCompanyUser = false,
-}: {
-  job: IJob | IJobPosting;
-  user?: User | null;
-  page?: "job-posts" | "all-jobs";
-  isCompanyUser?: boolean;
-}) {
+}: JobDescriptionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAISummary, setIsAISummary] = useState(false);
 
   const [aiSummary, setAiSummary] = useState(
-    page === "all-jobs" ? (job as IJob).ai_summary : null
+    page === "all-jobs" ? job.ai_summary : null,
   );
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -49,7 +65,7 @@ export default function JobDescriptionCard({
         const errorResult = await response.json();
         throw new Error(
           errorResult.error ||
-            `AI Summary failed with status ${response.status}`
+            `AI Summary failed with status ${response.status}`,
         );
       }
 
@@ -71,28 +87,28 @@ export default function JobDescriptionCard({
     if (!user) {
       router.push("/auth/sign-up?returnTo=/jobs/" + job.id);
       return;
+    }
+    if (!isAllJobsJob(job)) return;
+
+    if (isAISummary) {
+      setIsAISummary(false);
     } else {
-      if (isAISummary) {
-        setIsAISummary(false);
+      if (aiSummary) {
+        setIsAISummary(true);
+      } else if (job.ai_summary) {
+        setAiSummary(job.ai_summary);
+        setIsAISummary(true);
       } else {
-        if (aiSummary) {
-          setIsAISummary(true);
-        } else if ((job as IJob).ai_summary) {
-          setAiSummary((job as IJob).ai_summary);
-          setIsAISummary(true);
-        } else {
-          setIsAISummary(true);
-          setIsExpanded(true);
-          fetchAISummary(job.id);
-        }
+        setIsAISummary(true);
+        setIsExpanded(true);
+        fetchAISummary(job.id);
       }
     }
   };
 
-  // Determine the content to display
   let displayedContent = job.description;
   if (isAISummary) {
-    displayedContent = aiSummary || job.description; // Fallback to description if summary is null/empty
+    displayedContent = aiSummary || job.description;
   }
 
   return (
@@ -102,6 +118,15 @@ export default function JobDescriptionCard({
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-xl font-semibold">
               Job Description
+              <Button
+                size={"icon"}
+                variant={"ghost"}
+                onClick={() =>
+                  copyToClipboard(displayedContent || "", "Copied to Clipboard")
+                }
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
             </CardTitle>
             {page === "all-jobs" && !isCompanyUser && (
               <div className="flex items-center">
@@ -143,7 +168,7 @@ export default function JobDescriptionCard({
         <CardContent
           className={cn(
             "max-h-[400px] overflow-hidden group relative transition-all duration-300",
-            isExpanded && "max-h-[1000px] overflow-y-auto"
+            isExpanded && "max-h-[1000px] overflow-y-auto",
           )}
         >
           <div
@@ -164,7 +189,7 @@ export default function JobDescriptionCard({
           <div
             className={cn(
               "absolute inset-x-0 bottom-0 flex items-center justify-center pt-8 bg-gradient-to-t from-background via-background/90 to-transparent transition-all duration-300 !rounded-b-xl",
-              isExpanded ? "opacity-0 invisible" : "opacity-100 visible"
+              isExpanded ? "opacity-0 invisible" : "opacity-100 visible",
             )}
           >
             <button

@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import React from "react";
 
 export interface OrbitingCirclesProps
@@ -61,7 +61,7 @@ export function OrbitingCircles({
               `absolute flex size-[var(--icon-size)] transform-gpu animate-orbit items-center justify-center rounded-full`,
               paused && "pause",
               { "[animation-direction:reverse]": reverse },
-              className
+              className,
             )}
             {...props}
           >

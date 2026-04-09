@@ -1,19 +1,29 @@
 import { createClient } from "@/lib/supabase/server";
-import { ICountry } from "@/lib/types";
+import { ICountry } from "@/utils/types";
 import { NextRequest, NextResponse } from "next/server";
 
-const manipulateLocations = (data: { country: string; cities: string[] }[]) => {
+const manipulateLocations = (
+  data: {
+    country: string | null;
+    cities: string[] | null;
+    iso: string | null;
+  }[],
+) => {
   const locationSet = new Set<string>();
 
   locationSet.add("Remote");
 
   if (Array.isArray(data)) {
     data.forEach((countryData) => {
-      locationSet.add(countryData.country);
+      if (countryData.country) {
+        locationSet.add(countryData.country);
+      }
 
-      countryData.cities.forEach((city: string) => {
-        locationSet.add(city);
-      });
+      if (Array.isArray(countryData.cities)) {
+        countryData.cities.forEach((city: string) => {
+          locationSet.add(city);
+        });
+      }
     });
   }
 
@@ -55,7 +65,7 @@ export async function GET(request: NextRequest) {
             ? err.message
             : String(err) || "An unexpected error occurred",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

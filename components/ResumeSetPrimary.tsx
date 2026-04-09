@@ -1,7 +1,8 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { IResume } from "@/lib/types";
+import { TResumeReviewResume } from "@/utils/types/review.types";
+// import { IResume } from "@/utils/types";
 import { Star } from "lucide-react";
 import { Dispatch, SetStateAction } from "react";
 import toast from "react-hot-toast";
@@ -18,8 +19,8 @@ export default function ResumeSetPrimary({
   isProcessing: boolean;
   setIsProcessing: Dispatch<SetStateAction<boolean>>;
   isPrimary: boolean;
-  setItems: Dispatch<SetStateAction<IResume[]>>;
-  items: IResume[];
+  setItems: Dispatch<SetStateAction<TResumeReviewResume[]>>;
+  items: TResumeReviewResume[];
   resumeId: string;
   // updateLocalItem: (updatedItem: IResume) => void
 }) {
@@ -41,7 +42,7 @@ export default function ResumeSetPrimary({
         prev.map((item) => ({
           ...item,
           is_primary: item.id === resumeId,
-        }))
+        })),
       );
 
       // Step 2: Database Update

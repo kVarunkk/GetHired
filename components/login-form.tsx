@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,7 +51,7 @@ const loginSchema = (isCompany: boolean) =>
         },
         {
           message: "Company email cannot be a generic public domain.",
-        }
+        },
       ),
     password: z
       .string()

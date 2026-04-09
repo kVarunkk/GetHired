@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -19,20 +19,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-// import Link from "next/link";
 import { format } from "date-fns";
-import { IResume } from "@/lib/types";
+// import { IResume } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import DynamicActions from "./DynamicTableActions";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import ResumeSetPrimary from "./ResumeSetPrimary";
-// import ModifiedLink from "./ModifiedLink";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 import InfoTooltip from "./InfoTooltip";
+import { useRouter } from "next/navigation";
+import { TResumeReviewResume } from "@/utils/types/review.types";
+import ResumeStatusBadge from "./ResumeStatusBadge";
 
 interface ResumesTableProps {
-  data: IResume[];
+  data: TResumeReviewResume[];
 }
 
 export default function ResumesTable({ data }: ResumesTableProps) {
@@ -41,37 +42,31 @@ export default function ResumesTable({ data }: ResumesTableProps) {
     import("@tanstack/react-table").ColumnFiltersState
   >([]);
   const [page, setPage] = useState(1);
-  const [items, setItems] = useState<IResume[]>(data);
+  const [items, setItems] = useState<TResumeReviewResume[]>(data);
   const [isProcessing, setIsProcessing] = useState(false);
+  const router = useRouter();
 
   const pageSize = 10;
 
-  useEffect(() => {
-    setPage(1);
-  }, [columnFilters, sorting]);
-
-  useEffect(() => {
-    setItems(data);
-  }, [data]);
-
-  const updateLocalItem = (updatedItem: IResume) => {
+  const updateLocalItem = (updatedItem: TResumeReviewResume) => {
     setItems((prev) =>
       prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
     );
+    router.refresh();
   };
 
   const removeLocalItem = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
+    router.refresh();
   };
 
-  const columns: ColumnDef<IResume>[] = useMemo(
+  const columns: ColumnDef<TResumeReviewResume>[] = useMemo(
     () => [
       {
         accessorKey: "is_primary",
         header: "Primary",
         cell: ({ row }) => {
           const isPrimary = !!row.original.is_primary;
-          //   const isProcessing = processingId === row.original.id;
 
           return (
             <ResumeSetPrimary
@@ -120,6 +115,9 @@ export default function ResumesTable({ data }: ResumesTableProps) {
                 }
               />
             )}
+            {row.original.parsing_failed && (
+              <ResumeStatusBadge isParsed={false} isParsingFailed={true} />
+            )}
           </div>
         ),
       },
@@ -128,7 +126,6 @@ export default function ResumesTable({ data }: ResumesTableProps) {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          // using the package link as i need prefetching
           <ModifiedLink href={`/resume/${row.original.id}`}>
             <Button variant="ghost" size="sm">
               View Resume
@@ -169,8 +166,18 @@ export default function ResumesTable({ data }: ResumesTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onSortingChange: (updater) => {
+      setSorting((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
+    onColumnFiltersChange: (updater) => {
+      setColumnFilters((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
     state: {
       sorting,
       columnFilters,

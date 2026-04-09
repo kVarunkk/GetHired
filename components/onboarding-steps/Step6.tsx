@@ -5,14 +5,16 @@ import { CardContent } from "../ui/card";
 import { Label } from "../ui/label";
 import { Loader2 } from "lucide-react";
 import ResumeSourceSelector from "../ResumeSourceSelector";
-import { IResume } from "@/lib/types";
+import { TResumeReviewResume } from "@/utils/types/review.types";
 
 export const Step6ResumeUpload: React.FC<StepProps> = ({
   formData,
   setFormData,
   errors,
 }) => {
-  const [existingResumes, setExistingResumes] = useState<IResume[]>([]);
+  const [existingResumes, setExistingResumes] = useState<TResumeReviewResume[]>(
+    [],
+  );
   const [fetchingResumes, setFetchingResumes] = useState(true);
 
   useEffect(() => {
@@ -29,12 +31,12 @@ export const Step6ResumeUpload: React.FC<StepProps> = ({
 
         const { data, error } = await supabase
           .from("resumes")
-          .select("id, name, created_at, is_primary")
+          .select("id, name, created_at, is_primary, parsing_failed")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
         if (!error) {
-          setExistingResumes((data || []) as IResume[]);
+          setExistingResumes(data || []);
         }
       } catch (err) {
         console.error("Error fetching resumes:", err);

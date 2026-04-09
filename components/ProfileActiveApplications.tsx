@@ -1,17 +1,19 @@
 "use client";
 
-import { IApplication } from "@/lib/types";
+// import { IApplication } from "@/utils/types";
 // import { Link as ModifiedLink } from "react-transition-progress/next";
 import { format } from "date-fns";
 import { Button } from "./ui/button";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
 import { ArrowRight } from "lucide-react";
 import ModifiedLink from "./ModifiedLink";
+import { TApplicantProfile } from "@/utils/types/user.types";
+import { TApplicationStatus } from "@/utils/types";
 
 export default function ProfileActiveApplication({
   app,
 }: {
-  app: IApplication;
+  app: TApplicantProfile["applications"][number];
 }) {
   return (
     <div className=" w-full  rounded-lg flex sm:items-center justify-between flex-col sm:flex-row gap-8 hover:bg-secondary transition py-2 px-3">
@@ -29,7 +31,7 @@ export default function ProfileActiveApplication({
           Applied on {format(new Date(app.created_at), "PPP")}
         </div>
 
-        <ApplicationStatusBadge status={app.status} />
+        <ApplicationStatusBadge status={app.status as TApplicationStatus} />
       </div>
       <ModifiedLink href={`/company/applicants/${app.id}`}>
         <Button>

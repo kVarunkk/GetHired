@@ -5,9 +5,10 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
 import { Button } from "@/components/ui/button";
-import { IApplication, IJobPosting } from "@/lib/types";
+// import { IApplication, IJobPosting } from "@/utils/types";
 import CompanyJobPostingCard from "@/components/CompanyJobPostingCard";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
+import { TApplicationStatus } from "@/utils/types";
 
 export default async function CompanyPage() {
   try {
@@ -45,6 +46,9 @@ export default async function CompanyPage() {
           location,
           job_type,
           salary_currency,
+          salary_range,
+          equity_range,
+          experience,
           min_salary,
           max_salary,
           min_experience,
@@ -55,9 +59,10 @@ export default async function CompanyPage() {
           questions,
           status,
           job_id,
+          updated_at,
           applications(id),
           company_info(name, website)
-        `
+        `,
         )
         .eq("company_id", companyInfo.id)
         .order("created_at", { ascending: false })
@@ -71,7 +76,7 @@ export default async function CompanyPage() {
           created_at,
           user_info(*),
           job_postings(id, title)
-        `
+        `,
         )
         .eq("job_postings.company_id", companyInfo.id)
         .order("created_at", { ascending: false })
@@ -87,10 +92,8 @@ export default async function CompanyPage() {
     }
 
     const metrics = metricsData?.[0] || {};
-    const jobPosts: IJobPosting[] =
-      (jobsData as unknown as IJobPosting[]) || [];
-    const recentApplicants =
-      (applicantsData as unknown as IApplication[]) || [];
+    const jobPosts = jobsData || [];
+    const recentApplicants = applicantsData || [];
 
     return (
       <div className="flex flex-col w-full gap-5 p-4 mb-20">
@@ -98,7 +101,7 @@ export default async function CompanyPage() {
           <h2 className="text-3xl font-medium text-start">
             How are you doing today, {companyInfo.name}?
           </h2>
-          <CreateJobPostingDialog company_id={companyInfo.id} />
+          <CreateJobPostingDialog companyId={companyInfo.id} />
         </div>
 
         {/* --- Metrics Section --- */}
@@ -182,7 +185,9 @@ export default async function CompanyPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0 flex flex-col gap-2">
-                    <ApplicationStatusBadge status={applicant.status} />
+                    <ApplicationStatusBadge
+                      status={applicant.status as TApplicationStatus}
+                    />
                     <div className="flex items-center justify-between w-full">
                       <div className="text-muted-foreground text-sm">
                         Applied for{" "}

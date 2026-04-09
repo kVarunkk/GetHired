@@ -11,20 +11,20 @@ import {
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Pencil, Trash } from "lucide-react";
-import { IBookmark } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { FormEvent, useState } from "react";
 import toast from "react-hot-toast";
 import { Input } from "./ui/input";
 import AppLoader from "./AppLoader";
+import { BookmarkRow } from "@/utils/types";
 
 export default function JobsBookmarkActions({
   bookmark,
   updateLocalItem,
   removeLocalItem,
 }: {
-  bookmark: IBookmark;
-  updateLocalItem: (updatedItem: IBookmark) => void;
+  bookmark: BookmarkRow;
+  updateLocalItem: (updatedItem: BookmarkRow) => void;
   removeLocalItem: (id: string) => void;
 }) {
   const [formLoading, setFormLoading] = useState(false);
@@ -62,12 +62,14 @@ export default function JobsBookmarkActions({
     try {
       setDeleteLoading(true);
       const supabase = createClient();
-      const { error } = await supabase
-        .from("bookmarks")
-        .delete()
-        .eq("id", bookmark.id)
-        .eq("user_id", bookmark.user_id);
-      if (error) throw error;
+      if (bookmark.user_id) {
+        const { error } = await supabase
+          .from("bookmarks")
+          .delete()
+          .eq("id", bookmark.id)
+          .eq("user_id", bookmark.user_id);
+        if (error) throw error;
+      }
       // callbackFunc();
       removeLocalItem(bookmark.id);
       setOpenDialog(false);
@@ -141,7 +143,7 @@ export default function JobsBookmarkActions({
                 <Input
                   id="url"
                   name="url"
-                  defaultValue={bookmark.url}
+                  defaultValue={bookmark.url ?? undefined}
                   className="bg-input text-sm"
                   required
                 />

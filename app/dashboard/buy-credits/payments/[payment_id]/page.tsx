@@ -1,16 +1,17 @@
 import BackButton from "@/components/BackButton";
 import Error from "@/components/Error";
 import { createClient } from "@/lib/supabase/server";
-import { IPayment } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/utils/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Headset, Info } from "lucide-react";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceBtn";
 import CopyBtn from "@/components/CopyBtn";
+import { TPaymentStatus } from "@/utils/types";
+import { TPaymentIdRecord } from "@/utils/types/payments.types";
 
 export default async function PaymentIdPage({
   params,
@@ -38,7 +39,8 @@ export default async function PaymentIdPage({
       throw paymentsError;
     }
 
-    const paymentData = payment as unknown as IPayment;
+    const paymentData = payment as unknown as TPaymentIdRecord;
+
     const plan = paymentData.price_plan;
 
     return (
@@ -110,7 +112,9 @@ export default async function PaymentIdPage({
                           Payment Status
                         </p>
                         <div className="text-sm text-muted-foreground">
-                          <ApplicationStatusBadge status={paymentData.status} />
+                          <ApplicationStatusBadge
+                            status={paymentData.status as TPaymentStatus}
+                          />
                         </div>
                       </div>
                       {paymentData.failure_reason ? (
@@ -146,7 +150,7 @@ export default async function PaymentIdPage({
                         <p className="text-sm text-muted-foreground">
                           {paymentData.fulfillment_date
                             ? new Date(
-                                paymentData.fulfillment_date
+                                paymentData.fulfillment_date,
                               ).toLocaleString()
                             : "N/A"}
                         </p>
@@ -213,10 +217,12 @@ export default async function PaymentIdPage({
                     </div>
                   </div>
                   <span className="text-2xl font-bold text-primary">
-                    {formatCurrency(
-                      paymentData.total_amount,
-                      paymentData.currency
-                    )}
+                    {paymentData.total_amount &&
+                      paymentData.currency &&
+                      formatCurrency(
+                        paymentData.total_amount,
+                        paymentData.currency,
+                      )}
                   </span>
                 </div>
 
@@ -236,10 +242,10 @@ export default async function PaymentIdPage({
                       ""
                     )}
                   </div>
-                  <span className="font-medium">Payment Method:</span>
+                  {/* <span className="font-medium">Payment Method:</span>
                   <span className="text-right">
                     {paymentData.payment_method || "Card/UPI"}
-                  </span>
+                  </span> */}
                 </div>
               </CardContent>
             </Card>

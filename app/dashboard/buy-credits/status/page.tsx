@@ -10,7 +10,7 @@ import Link from "next/link";
 import { DollarSign, XCircle, CheckCircle, Headset, Clock } from "lucide-react";
 import { client } from "@/lib/dodo/initialize";
 import { Payment } from "dodopayments/resources/payments.mjs";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/utils/utils";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceBtn";
 
 export default async function CreditsStatusPage({
@@ -127,7 +127,7 @@ export default async function CreditsStatusPage({
                   <span className="font-bold text-lg">
                     {formatCurrency(
                       paymentDetails.total_amount,
-                      paymentDetails.currency
+                      paymentDetails.currency,
                     )}
                   </span>
                 </div>

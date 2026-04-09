@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { format } from "date-fns";
-import { IApplication } from "@/lib/types";
+// import { IApplication } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import {
   Select,
@@ -32,10 +32,21 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
+import { TApplicationServer } from "@/utils/types/application.types";
+import { TApplicationStatus } from "@/utils/types";
 
 interface ApplicantsTableProps {
-  data: IApplication[];
+  data: TApplicationServer[];
 }
+
+const applicationStatuses = [
+  "All Statuses",
+  "submitted",
+  "reviewed",
+  "selected",
+  "stand_by",
+  "rejected",
+];
 
 export default function ApplicantsTable({ data }: ApplicantsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -45,16 +56,12 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  useEffect(() => {
-    setPage(1);
-  }, [columnFilters, sorting]);
-
   const jobTitles = useMemo(() => {
     const titles = data
       .map((item) => item.job_postings?.title)
       .filter(
         (title): title is string =>
-          typeof title === "string" && title.length > 0
+          typeof title === "string" && title.length > 0,
       );
     return ["All Titles", ...new Set(titles)];
   }, [data]);
@@ -67,20 +74,8 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
     }));
   }, [data]);
 
-  const applicationStatuses = useMemo(() => {
-    const statuses = [
-      "All Statuses",
-      "submitted",
-      "reviewed",
-      "selected",
-      "stand_by",
-      "rejected",
-    ];
-    return [...new Set(statuses)];
-  }, []);
-
   const columns: ColumnDef<
-    IApplication & { applicantName: string; jobTitle: string }
+    TApplicationServer & { applicantName: string; jobTitle: string }
   >[] = useMemo(
     () => [
       {
@@ -136,7 +131,9 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
           </Button>
         ),
         cell: ({ row }) => (
-          <ApplicationStatusBadge status={row.original.status} />
+          <ApplicationStatusBadge
+            status={row.original.status as TApplicationStatus}
+          />
         ),
         filterFn: "equals",
       },
@@ -170,7 +167,7 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
         ),
       },
     ],
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -179,8 +176,18 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onSortingChange: (updater) => {
+      setSorting((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
+    onColumnFiltersChange: (updater) => {
+      setColumnFilters((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
     state: {
       sorting,
       columnFilters,
@@ -297,7 +304,7 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -315,7 +322,7 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

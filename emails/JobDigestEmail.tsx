@@ -9,11 +9,11 @@ import {
   Row,
   Column,
 } from "@react-email/components";
-import { IJob } from "@/lib/types";
+import { AllJobWithRelations } from "@/utils/types";
 
 interface JobDigestEmailProps {
   userName: string;
-  jobs: IJob[];
+  jobs: AllJobWithRelations[];
   //   digestDate: string;
 }
 

@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 
 const platforms = [
   {
@@ -255,7 +255,7 @@ export function HowWeHelp() {
               height={400}
               className={cn(
                 "absolute -right-0 opacity-30  sm:h-auto sm:w-auto",
-                !isHirePage && "-top-60 h-[450px] w-[400px]"
+                !isHirePage && "-top-60 h-[450px] w-[400px]",
               )}
             />
           ),

@@ -12,11 +12,13 @@ import { Label } from "./ui/label";
 import { createClient } from "@/lib/supabase/client";
 import InfoTooltip from "./InfoTooltip";
 import Link from "next/link";
+import { Database } from "@/utils/types/database.types";
 
 interface IinitialPreferences {
   id: string;
   is_promotion_active: boolean;
   is_job_digest_active: boolean;
+  is_public: boolean;
 }
 
 interface UserOnboardingPersonalizationProps {
@@ -28,49 +30,37 @@ export default function UserOnboardingPersonalization({
   initialPreferences,
   disabled,
 }: UserOnboardingPersonalizationProps) {
-  const [promoActive, setPromoActive] = useState(
-    initialPreferences.is_promotion_active,
-  );
-  const [digestActive, setDigestActive] = useState(
-    initialPreferences.is_job_digest_active,
-  );
+  const [prefs, setPrefs] = useState({
+    is_promotion_active: initialPreferences.is_promotion_active,
+    is_job_digest_active: initialPreferences.is_job_digest_active,
+    is_public: initialPreferences.is_public,
+  });
 
   const [isLoading, setIsLoading] = useState(false);
 
   const handlePreferenceChange = async (
-    key: "is_promotion_active" | "is_job_digest_active",
+    key: keyof typeof prefs,
     newValue: boolean,
   ) => {
-    const originalValue =
-      key === "is_promotion_active" ? promoActive : digestActive;
+    const originalValue = prefs[key];
 
-    if (key === "is_promotion_active") {
-      setPromoActive(newValue);
-    } else {
-      setDigestActive(newValue);
-    }
-
+    // Optimistic Update
+    setPrefs((prev) => ({ ...prev, [key]: newValue }));
     setIsLoading(true);
 
     try {
       const supabase = createClient();
-
-      const updates = { [key]: newValue };
-
       const { error } = await supabase
         .from("user_info")
-        .update(updates)
+        .update({
+          [key]: newValue,
+        } as Database["public"]["Tables"]["user_info"]["Update"])
         .eq("user_id", initialPreferences.id);
 
-      if (error) {
-        throw new Error(error.message);
-      }
+      if (error) throw new Error("Update failed");
     } catch {
-      if (key === "is_promotion_active") {
-        setPromoActive(originalValue);
-      } else {
-        setDigestActive(originalValue);
-      }
+      // Rollback on failure
+      setPrefs((prev) => ({ ...prev, [key]: originalValue }));
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +70,7 @@ export default function UserOnboardingPersonalization({
     <Accordion type="single" collapsible className="w-full">
       <AccordionItem value="item-1" className="border-0">
         <AccordionTrigger className="text-sm font-medium">
-          Email Preferences
+          Preferences
         </AccordionTrigger>
         <AccordionContent>
           <div className="flex flex-col space-y-4">
@@ -93,7 +83,7 @@ export default function UserOnboardingPersonalization({
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="job_digest"
-                checked={digestActive}
+                checked={prefs.is_job_digest_active}
                 disabled={isLoading || disabled}
                 onCheckedChange={(checked: boolean) =>
                   handlePreferenceChange("is_job_digest_active", checked)
@@ -119,7 +109,7 @@ export default function UserOnboardingPersonalization({
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="promotions"
-                checked={promoActive}
+                checked={prefs.is_promotion_active}
                 disabled={isLoading || disabled}
                 onCheckedChange={(checked: boolean) =>
                   handlePreferenceChange("is_promotion_active", checked)
@@ -128,6 +118,24 @@ export default function UserOnboardingPersonalization({
               <Label htmlFor="promotions" className="text-sm cursor-pointer">
                 Promotional Emails: Receive occasional news, feature updates,
                 and special offers.
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="profile_visibility"
+                checked={prefs.is_public}
+                disabled={isLoading}
+                onCheckedChange={(checked: boolean) =>
+                  handlePreferenceChange("is_public", checked)
+                }
+              />
+              <Label
+                htmlFor="profile_visibility"
+                className="text-sm cursor-pointer"
+              >
+                Public Profile: Allow technical recruiters to find your profile
+                on their candidate feed.
               </Label>
             </div>
 

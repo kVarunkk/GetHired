@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { IBookmark } from "@/lib/types";
+// import { IBookmark } from "@/utils/types";
 import { ArrowUpDown, ExternalLink, XCircle } from "lucide-react";
 import AlertStatusSwitch from "./AlertStatusSwitch";
 import InfoTooltip from "./InfoTooltip";
@@ -33,10 +33,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import DynamicActions from "./DynamicTableActions";
+import { BookmarkRow } from "@/utils/types";
 
 interface JobsBookmarkTableProps {
-  data: IBookmark[];
+  data: BookmarkRow[];
 }
+
+const alertStatuses = [
+  { title: "All", value: "all" },
+  { title: "Active", value: "true" },
+  { title: "Disabled", value: "false" },
+];
 
 export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -44,45 +51,27 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
     import("@tanstack/react-table").ColumnFiltersState
   >([]);
   const [page, setPage] = useState(1);
-  const [items, setItems] = useState<IBookmark[]>(data);
-
+  const [items, setItems] = useState<BookmarkRow[]>(data);
   const pageSize = 10;
   const alertCount = data.filter((each) => each.is_alert_on).length;
 
-  useEffect(() => {
-    setItems(data);
-  }, [data]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [columnFilters, sorting]);
-
-  const alertStatuses = useMemo(
-    () => [
-      { title: "All", value: "all" },
-      { title: "Active", value: "true" },
-      { title: "Disabled", value: "false" },
-    ],
-    []
-  );
-
   const updateLocalItem = useCallback(
-    (updatedItem: IBookmark) => {
+    (updatedItem: BookmarkRow) => {
       setItems((prev) =>
-        prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
+        prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
       );
     },
-    [setItems]
+    [setItems],
   );
 
   const removeLocalItem = useCallback(
     (id: string) => {
       setItems((prev) => prev.filter((item) => item.id !== id));
     },
-    [setItems]
+    [setItems],
   );
 
-  const columns: ColumnDef<IBookmark>[] = useMemo(
+  const columns: ColumnDef<BookmarkRow>[] = useMemo(
     () => [
       {
         accessorKey: "is_alert_on",
@@ -119,7 +108,7 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
         ),
         cell: ({ row }) => (
           <Link
-            href={row.original.url}
+            href={row.original.url ?? ""}
             target="_blank"
             className="font-medium hover:underline flex items-center"
             title={row.original.name}
@@ -136,7 +125,7 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
         header: "URL",
         cell: ({ row }) => (
           <div className="flex items-center ">
-            <div className="text-sm  truncate" title={row.original.url}>
+            <div className="text-sm  truncate" title={row.original.url ?? ""}>
               {row.original.url}
             </div>
             <InfoTooltip content={row.original.url} />
@@ -174,7 +163,7 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
         ),
       },
     ],
-    [removeLocalItem, updateLocalItem, alertCount]
+    [removeLocalItem, updateLocalItem, alertCount],
   );
 
   const table = useReactTable({
@@ -183,8 +172,18 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onSortingChange: (updater) => {
+      setSorting((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
+    onColumnFiltersChange: (updater) => {
+      setColumnFilters((old) =>
+        updater instanceof Function ? updater(old) : updater,
+      );
+      setPage(1);
+    },
     state: {
       sorting,
       columnFilters,
@@ -202,7 +201,6 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
   const clearFilters = () => {
     setColumnFilters([]);
     table.getColumn("name")?.setFilterValue("");
-    // table.getColumn("jobTitle")?.setFilterValue(undefined);
     table.getColumn("is_alert_on")?.setFilterValue(undefined);
   };
 
@@ -275,7 +273,7 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -297,7 +295,7 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

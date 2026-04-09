@@ -4,9 +4,9 @@ import { Bookmark } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { v4 as uuidv4 } from "uuid";
 
@@ -14,21 +14,18 @@ export default function BookmarkJobSearch({ user }: { user: User }) {
   const [bookmarked, setBookmarked] = useState(false);
   const [loading, setLoading] = useState(false);
   const pathname = usePathname();
-
-  const fullUrl =
-    typeof window !== "undefined"
-      ? window.location.pathname + window.location.search
-      : pathname;
+  const searchParams = useSearchParams();
+  const fullUrl = `${pathname}?${searchParams.toString()}`;
 
   useEffect(() => {
-    const supabase = createClient();
-    if (!user || !pathname) return;
+    if (!user) return;
 
     const checkBookmark = async () => {
       if (!user?.id || !fullUrl) return;
 
       setLoading(true);
       try {
+        const supabase = createClient();
         const { data } = await supabase
           .from("bookmarks")
           .select("id")
@@ -45,7 +42,7 @@ export default function BookmarkJobSearch({ user }: { user: User }) {
     };
 
     checkBookmark();
-  }, [user, fullUrl, pathname]);
+  }, [user, fullUrl]);
 
   const handleBookmark = async () => {
     try {

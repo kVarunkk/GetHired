@@ -4,7 +4,7 @@ import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IApplication, IFormData } from "@/lib/types";
+// import { IFormData } from "@/utils/types";
 import ProfileFavoriteStar from "@/components/ProfileFavoriteStar";
 import { buildSalaryRange } from "../../applicants/[applicant_id]/page";
 import ProfileActiveApplication from "@/components/ProfileActiveApplications";
@@ -41,7 +41,7 @@ export default async function ProfilePage({
     }
 
     // Fetch the applicant's profile details
-    const { data: applicantProfileData, error } = await supabase
+    const { data: applicantProfile, error } = await supabase
       .from("user_info")
       .select(
         `
@@ -60,20 +60,19 @@ export default async function ProfilePage({
             company_id
           )
         )
-      `
+      `,
       )
       .eq("user_id", profile_id)
       .eq("resumes.is_primary", true)
       .eq("applications.job_postings.company_id", companyData.id)
       .single();
 
-    if (error || !applicantProfileData) {
+    if (error || !applicantProfile) {
       return <ErrorComponent />;
     }
 
-    const applicantProfile = applicantProfileData as IFormData;
+    // const applicantProfile = applicantProfileData as IFormData;
 
-    // Generate a signed URL for the resume from the private bucket
     const { data: signedUrlData } = await supabase.storage
       .from("resumes")
       .createSignedUrl(applicantProfile.resumes?.[0]?.resume_path || "", 3600);
@@ -127,11 +126,8 @@ export default async function ProfilePage({
           </div>
           <div className="flex items-center gap-5">
             <SelectProfile
-              // userApplications={applicantProfile.applications}
               jobPostings={companyData.job_postings}
               companyId={companyData.id}
-              // applicantUserId={applicantProfile.user_id}
-              // resumeUrl={applicantProfile.resume_url}
               applicantProfile={applicantProfile}
             />
           </div>
@@ -155,14 +151,14 @@ export default async function ProfilePage({
                   <div>
                     <p className="font-semibold text-sm">Desired Roles</p>
                     <p className="text-sm text-muted-foreground">
-                      {applicantProfile.desired_roles.join(", ") ||
+                      {applicantProfile.desired_roles?.join(", ") ||
                         "Not specified"}
                     </p>
                   </div>
                   <div>
                     <p className="font-semibold text-sm">Preferred Locations</p>
                     <p className="text-sm text-muted-foreground">
-                      {applicantProfile.preferred_locations.join(", ") ||
+                      {applicantProfile.preferred_locations?.join(", ") ||
                         "Not specified"}
                     </p>
                   </div>
@@ -220,9 +216,9 @@ export default async function ProfilePage({
                     <p className="font-semibold text-sm">Salary Expectation</p>
                     <p className="text-sm text-muted-foreground">
                       {buildSalaryRange(
-                        applicantProfile.min_salary,
-                        applicantProfile.max_salary,
-                        applicantProfile.salary_currency
+                        applicantProfile.min_salary ?? undefined,
+                        applicantProfile.max_salary ?? undefined,
+                        applicantProfile.salary_currency,
                       )}
                     </p>
                   </div>
@@ -257,7 +253,7 @@ export default async function ProfilePage({
               <CardContent className="space-y-6">
                 {applicantProfile.applications &&
                 applicantProfile.applications.length > 0 ? (
-                  applicantProfile.applications.map((app: IApplication) => (
+                  applicantProfile.applications.map((app) => (
                     <ProfileActiveApplication key={app.id} app={app} />
                   ))
                 ) : (

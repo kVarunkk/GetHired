@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, memo } from "react";
 import { Input } from "./ui/input";
 import { v4 as uuidv4 } from "uuid";
 import { Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import MultiKeywordSelect from "./MultiKeywordSelect";
 
 interface GenericFormData {
@@ -48,7 +48,7 @@ export default memo(function MultiKeywordSelectInput({
       }
       onChange(name, [...initialKeywords, trimmed]);
     },
-    [name, onChange, initialKeywords]
+    [name, onChange, initialKeywords],
   );
 
   const handleInputAdd = useCallback(() => {
@@ -63,22 +63,22 @@ export default memo(function MultiKeywordSelectInput({
         handleInputAdd();
       }
     },
-    [input, handleInputAdd]
+    [input, handleInputAdd],
   );
 
   const removeKeyword = useCallback(
     (contentToRemove: string) => {
       onChange(
         name,
-        initialKeywords.filter((content) => content !== contentToRemove)
+        initialKeywords.filter((content) => content !== contentToRemove),
       );
     },
-    [name, onChange, initialKeywords]
+    [name, onChange, initialKeywords],
   );
 
   const filteredAvailableItems = useMemo(() => {
     return availableItems.filter((item) =>
-      item.toLowerCase().includes(input.toLowerCase())
+      item.toLowerCase().includes(input.toLowerCase()),
     );
   }, [availableItems, input]);
 
@@ -92,11 +92,10 @@ export default memo(function MultiKeywordSelectInput({
           id={`${name}-container`}
           className={cn(
             "flex items-center w-full rounded-md",
-            isFocused ? "ring-1 ring-primary" : ""
+            isFocused ? "ring-1 ring-primary" : "",
           )}
         >
           <Input
-            id={String(name)}
             name={String(name)}
             placeholder={placeholder ?? "Type to add or select from dropdown"}
             value={input}

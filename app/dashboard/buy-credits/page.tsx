@@ -19,7 +19,7 @@ export default async function BuyCreditsPage() {
   const { data: plans, error } = await supabase
     .from("price_plan")
     .select(
-      "id, product_id, credit_amount, amount, currency, name, description"
+      "id, product_id, credit_amount, amount, currency, name, description",
     )
     .order("credit_amount", { ascending: true });
 
@@ -71,12 +71,14 @@ export default async function BuyCreditsPage() {
               </p>
             </CardContent>
             <CardFooter className="p-0 mt-6">
-              <CreditPurchaseButton
-                productId={plan.product_id} // Pass the currency-specific Price ID
-                creditAmount={plan.credit_amount}
-                displayPrice={`${plan.currency} ${plan.amount}`}
-                planId={plan.id}
-              />
+              {plan.product_id && plan.credit_amount && (
+                <CreditPurchaseButton
+                  productId={plan.product_id}
+                  creditAmount={plan.credit_amount}
+                  displayPrice={`${plan.currency} ${plan.amount}`}
+                  planId={plan.id}
+                />
+              )}
             </CardFooter>
           </Card>
         ))}

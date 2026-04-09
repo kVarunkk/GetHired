@@ -2,13 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { ICompanyInfo, TAICredits } from "@/lib/types";
-import { getVertexClient } from "@/lib/serverUtils";
+import { TAICredits, TResumeContent } from "@/utils/types";
+import { getVertexClient } from "@/utils/serverUtils";
+import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { userId, companies } = await request.json();
+    const {
+      userId,
+      companies,
+    }: {
+      userId: string;
+      companies: {
+        id: string;
+        name: string;
+        description: string;
+        headquarters: string;
+        company_size: string;
+        industry: string;
+      }[];
+    } = await request.json();
 
     if (!userId || !companies) {
       return NextResponse.json(
@@ -39,15 +53,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (userPreferences.ai_credits < TAICredits.AI_SEARCH_OR_ASK_AI) {
+    if (userPreferences.ai_credits < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
       return NextResponse.json(
         { error: "Insufficient AI credits. Please top up to continue." },
         { status: 402 },
       );
     }
 
-    const { experience, skills, projects } = userPreferences.resumes?.[0]
-      ?.content || {
+    const { experience, skills, projects } = (userPreferences.resumes?.[0]
+      ?.content as TResumeContent) || {
       experience: "",
       skills: "",
       projects: "",
@@ -93,7 +107,7 @@ export async function POST(request: NextRequest) {
       **Companies to Evaluate:**
       ${companies
         .map(
-          (company: ICompanyInfo) => `
+          (company) => `
         ---
         ID: ${company.id}
         Title: ${company.name}
@@ -133,17 +147,17 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    await supabase.rpc("deduct_user_credits", {
-      p_user_id: userId,
-      p_amount: TAICredits.AI_SEARCH_OR_ASK_AI,
-    });
+    await deductUserCreditsHelper(
+      supabase,
+      userId,
+      TAICredits.AI_SEARCH_ASK_AI_RESUME,
+    );
 
     return NextResponse.json({
       rerankedcompanies: output.reranked_company_ids,
       filteredOutcompanies: output.filtered_out_company_ids,
     });
   } catch {
-    // console.error(e);
     return NextResponse.json(
       {
         error: "An error occurred",

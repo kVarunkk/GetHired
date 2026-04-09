@@ -5,10 +5,7 @@ import Footer from "@/components/landing-page/Footer";
 import Hero from "@/components/landing-page/Hero";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
-// import NavbarParent from "@/components/NavbarParent";
-// import { homePageNavItems } from "@/lib/serverUtils";
 import { Metadata } from "next";
-// import { v4 as uuidv4 } from "uuid";
 
 export const metadata: Metadata = {
   title: "GetHired - Your smartest path to the perfect candidate",
@@ -26,11 +23,9 @@ export const metadata: Metadata = {
 };
 
 export default async function HirePage() {
-  // const navItems = homePageNavItems;
   return (
     <main className="min-h-screen flex flex-col items-center">
       <div className="flex-1 w-full flex flex-col gap-20 items-center">
-        {/* <NavbarParent navItems={navItems} variant="horizontal" /> */}
         <div className="flex-1 flex flex-col gap-32  w-full">
           <Hero />
           <HowWeHelp />

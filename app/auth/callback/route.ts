@@ -1,4 +1,4 @@
-import { handleUserUpsert } from "@/lib/serverUtils";
+import { handleUserUpsert } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${finalRedirectPath}`);
       } else if (forwardedHost) {
         return NextResponse.redirect(
-          `https://${forwardedHost}${finalRedirectPath}`
+          `https://${forwardedHost}${finalRedirectPath}`,
         );
       } else {
         return NextResponse.redirect(`${origin}${finalRedirectPath}`);

@@ -19,11 +19,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-// import Link from "next/link";
 import { ArrowUpDown, ChevronRight, XCircle } from "lucide-react";
-import { IJobPosting } from "@/lib/types";
 import { Switch } from "./ui/switch";
-import { useJobPostingStatus } from "@/lib/hooks/useJobPostingStatus";
+import { useJobPostingStatus } from "@/hooks/useJobPostingStatus";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -33,24 +31,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Link as ModifiedLink } from "react-transition-progress/next";
+import { IJobPost } from "@/utils/types";
+import { TCompanyIdPageData } from "@/utils/types/jobs.types";
 
 interface JobPostingsTableProps {
   data: IJobPost[];
 }
 
-export interface IJobPost
-  extends Omit<IJobPosting, "applications" | "company_info"> {
-  applications?: { count: number }[];
-  company_info?: {
-    name: string;
-    website: string;
-  };
-}
-
-export const JobStatusSwitch = ({ job }: { job: IJobPosting | IJobPost }) => {
+export const JobStatusSwitch = ({
+  job,
+}: {
+  job: IJobPost | TCompanyIdPageData;
+}) => {
   const { checkedState, handleUpdateStatus } = useJobPostingStatus(
     job.status,
-    job
+    job,
   );
 
   return (
@@ -170,7 +165,7 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
         ),
       },
     ],
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -288,7 +283,7 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -306,7 +301,7 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

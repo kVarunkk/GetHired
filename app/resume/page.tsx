@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
-import { IResume } from "@/lib/types";
 import ResumesTable from "@/components/ResumesTable";
 import CreateResumeDialog from "@/components/CreateResumeDialog";
 
@@ -17,7 +16,7 @@ export default async function ResumePage() {
 
     const { data: resumes, error: resumesError } = await supabase
       .from("resumes")
-      .select("id, created_at, name, is_primary")
+      .select("id, created_at, name, is_primary, parsing_failed")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -25,16 +24,15 @@ export default async function ResumePage() {
       throw resumesError;
     }
 
+    const tableKey = `${resumes?.length || 0}-${resumes?.[0]?.id || "empty"}`;
+
     return (
       <div className="flex flex-col w-full gap-8 p-4 mb-20">
         <div className="flex items-center justify-between flex-wrap gap-4 w-full">
           <h1 className="text-3xl font-medium ">All Resumes</h1>
-          <CreateResumeDialog
-            userId={user.id}
-            existingResumes={(resumes as unknown as IResume[]) ?? []}
-          />
+          <CreateResumeDialog key={tableKey} existingResumes={resumes} />
         </div>
-        <ResumesTable data={(resumes as unknown as IResume[]) || []} />
+        <ResumesTable key={tableKey} data={resumes || []} />
       </div>
     );
   } catch {

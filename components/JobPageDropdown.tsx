@@ -14,10 +14,10 @@ import { Check, File, MoreHorizontal, Share2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useState } from "react";
 import { User } from "@supabase/supabase-js";
-import { TApplicationStatus } from "@/lib/types";
+import { TApplicationStatus } from "@/utils/types";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { copyToClipboard } from "@/lib/utils";
+import { copyToClipboard } from "@/utils/utils";
 
 const applicationStatuses = Object.values(TApplicationStatus);
 
@@ -63,7 +63,7 @@ export default function JobPageDropdown({
   return (
     <>
       <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild className="">
+        <DropdownMenuTrigger asChild>
           <Button className="p-2" variant={"ghost"}>
             <MoreHorizontal className="h-4 w-4" />
           </Button>

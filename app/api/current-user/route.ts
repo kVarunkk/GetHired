@@ -12,7 +12,7 @@ export async function GET() {
   if (!user) {
     return NextResponse.json(
       { error: "Authentication required." },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -23,7 +23,7 @@ export async function GET() {
   const userId = user.id;
 
   let profileData = null;
-  let tableName: string | null = null;
+  let tableName: "user_info" | "company_info" | null = null;
   let selectString;
 
   if (userRole === "applicant") {
@@ -36,7 +36,7 @@ export async function GET() {
   } else {
     return NextResponse.json(
       { profile: null, role: null, message: "Profile role not set." },
-      { status: 200 }
+      { status: 200 },
     );
   }
 
@@ -54,7 +54,7 @@ export async function GET() {
           role: userRole,
           message: "Profile data missing in DB.",
         },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -62,7 +62,7 @@ export async function GET() {
   } catch {
     return NextResponse.json(
       { error: "Server error fetching profile data." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 

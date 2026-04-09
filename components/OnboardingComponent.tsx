@@ -13,7 +13,7 @@ import { Button } from "./ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Progress } from "./ui/progress";
-import { IFormData, IResume } from "@/lib/types";
+// import { IFormData, IResume } from "@/utils/types";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
@@ -25,11 +25,41 @@ import { Step4VisaWorkStyle } from "./onboarding-steps/Step4";
 import { Step5CareerGoals } from "./onboarding-steps/Step5";
 import { Step6ResumeUpload } from "./onboarding-steps/Step6";
 import { Step7ReviewSubmit } from "./onboarding-steps/Step7";
-import { fetcher, isValidUrl } from "@/lib/utils";
+import { fetcher, isValidUrl } from "@/utils/utils";
 import { Loader2 } from "lucide-react";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
 import useSWR from "swr";
 import { submitOnboardingAction } from "@/app/actions/submit-onboarding";
+
+type IFormData = {
+  // user_id: string;
+  email: string | null;
+  full_name: string;
+  linkedin_url: string;
+  github_url: string;
+  desired_roles: string[];
+  preferred_locations: string[];
+  salary_currency: string;
+  min_salary: number | "";
+  max_salary: number | "";
+  experience_years: number | "";
+  industry_preferences: string[];
+  visa_sponsorship_required: boolean;
+  top_skills: string[];
+  work_style_preferences: string[];
+  career_goals_short_term: string;
+  career_goals_long_term: string;
+  company_size_preference: string;
+  resume_file: File | null;
+  resume_id: string | null;
+  no_of_resumes?: number;
+  default_locations?: string[];
+  job_type: string[];
+  user_id?: string;
+  is_promotion_active?: boolean;
+  is_job_digest_active?: boolean;
+  is_public?: boolean;
+};
 
 export interface StepProps {
   formData: IFormData;
@@ -62,7 +92,6 @@ export const OnboardingForm: React.FC = () => {
     company_size_preference: "",
     resume_file: null,
     resume_id: null,
-
     default_locations: [],
     job_type: [],
     email: "",
@@ -75,12 +104,6 @@ export const OnboardingForm: React.FC = () => {
     Partial<Record<keyof IFormData, string>>
   >({});
   const [user, setUser] = useState<User | null>(null);
-  const [initialPreferencesState, setInitialPreferencesState] = useState<{
-    id: string;
-    is_promotion_active: boolean;
-    is_job_digest_active: boolean;
-  } | null>(null);
-
   const {
     data: countriesData,
     error: countriesError,
@@ -88,12 +111,12 @@ export const OnboardingForm: React.FC = () => {
   } = useSWR(`/api/locations?filterComponent=true`, fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
   });
 
   const countries: { location: string }[] = useMemo(
     () => (countriesData && !countriesError ? countriesData.data : []),
-    [countriesData, countriesError]
+    [countriesData, countriesError],
   );
 
   const router = useRouter();
@@ -151,7 +174,6 @@ export const OnboardingForm: React.FC = () => {
   const totalSteps = steps.length;
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
-  // Fetch current user on component mount and try to load existing data
   useEffect(() => {
     const fetchUserAndData = async () => {
       setStepLoading(true);
@@ -169,23 +191,33 @@ export const OnboardingForm: React.FC = () => {
           .single();
 
         if (data) {
-          setInitialPreferencesState(() => ({
-            id: data.user_id,
-            is_promotion_active: data.is_promotion_active,
-            is_job_digest_active: data.is_job_digest_active,
-          }));
-          const primaryResume = data?.resumes?.find(
-            (_: IResume) => _.is_primary
-          );
+          const primaryResume = data?.resumes?.find((_) => _.is_primary);
           const noOfResumes = data?.resumes?.length;
 
           setFormData((prev) => ({
             ...prev,
-            ...data,
+            full_name: data.full_name || "",
+            linkedin_url: data.linkedin_url || "",
+            github_url: data.github_url || "",
+            desired_roles: data.desired_roles || [],
+            preferred_locations: data.preferred_locations || [],
+            salary_currency: data.salary_currency || "$",
+            job_type: data.job_type || [],
             min_salary: data.min_salary || "",
             max_salary: data.max_salary || "",
             experience_years: data.experience_years || "",
             resume_id: primaryResume ? primaryResume.id : null,
+            user_id: user.id,
+            top_skills: data.top_skills || [],
+            industry_preferences: data.industry_preferences || [],
+            work_style_preferences: data.work_style_preferences || [],
+            visa_sponsorship_required: data.visa_sponsorship_required ?? false,
+            career_goals_short_term: data.career_goals_long_term || "",
+            career_goals_long_term: data.career_goals_long_term || "",
+            company_size_preference: data.company_size_preference || "",
+            is_promotion_active: data.is_promotion_active || false,
+            is_job_digest_active: data.is_job_digest_active || false,
+            is_public: data.is_public || false,
             no_of_resumes: noOfResumes,
             resume_file: null,
             default_locations:
@@ -341,7 +373,7 @@ export const OnboardingForm: React.FC = () => {
     setError(null);
     setIsLoading(true);
     const toastId = toast.loading(
-      "Finalizing your profile and finding matches..."
+      "Finalizing your profile and finding matches...",
     );
 
     if (!user) {
@@ -407,17 +439,39 @@ export const OnboardingForm: React.FC = () => {
         error instanceof Error
           ? error.message
           : "Something went wrong during submission.",
-        { id: toastId }
+        { id: toastId },
       );
       setError(
         `An unexpected error occurred during submission: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
     } finally {
       setIsLoading(false);
     }
   };
+
+  const preferences = useMemo(() => {
+    const hasRequiredData =
+      !!formData.user_id &&
+      formData.is_promotion_active !== undefined &&
+      formData.is_job_digest_active !== undefined &&
+      formData.is_public !== undefined;
+
+    if (!hasRequiredData) return null;
+
+    return {
+      id: formData.user_id as string,
+      is_promotion_active: formData.is_promotion_active as boolean,
+      is_job_digest_active: formData.is_job_digest_active as boolean,
+      is_public: formData.is_public as boolean,
+    };
+  }, [
+    formData.user_id,
+    formData.is_promotion_active,
+    formData.is_job_digest_active,
+    formData.is_public,
+  ]);
 
   const CurrentStepComponent = steps[currentStep].component;
 
@@ -447,14 +501,12 @@ export const OnboardingForm: React.FC = () => {
         <p className="text-6xl font-bold ">
           Let&apos;s get you Hired, quickly.
         </p>
-        {initialPreferencesState ? (
+        {preferences ? (
           <UserOnboardingPersonalization
-            initialPreferences={initialPreferencesState}
+            initialPreferences={preferences}
             disabled={isLoading}
           />
-        ) : (
-          ""
-        )}
+        ) : null}
       </div>
 
       {stepLoading ? (

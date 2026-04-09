@@ -4,7 +4,7 @@ import { Resend } from "resend";
 import { render } from "@react-email/render";
 import ApplicationStatusReminderEmail from "@/emails/ApplicationStatusReminderEmail";
 import { headers } from "next/headers";
-import { sendEmailForStatusUpdate } from "@/lib/serverUtils";
+import { sendEmailForStatusUpdate } from "@/utils/serverUtils";
 import React from "react";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -33,7 +33,7 @@ export async function GET() {
 
   const serviceSupabase = createServiceRoleClient();
   const sevenDaysAgo = new Date(
-    Date.now() - DAYS_AGO * 24 * 60 * 60 * 1000
+    Date.now() - DAYS_AGO * 24 * 60 * 60 * 1000,
   ).toISOString();
 
   try {
@@ -46,7 +46,7 @@ export async function GET() {
                 applicant_user_id,
                 user_info ( email, full_name, user_id ), 
                 all_jobs (id, job_name, company_name, locations, job_type, salary_range, job_url ) 
-            `
+            `,
       )
       .gte("created_at", sevenDaysAgo)
       .eq("status", "submitted")
@@ -54,7 +54,7 @@ export async function GET() {
 
     if (fetchError) {
       throw new Error(
-        `Database fetch failed: ${fetchError.message || "Unknown DB error"}`
+        `Database fetch failed: ${fetchError.message || "Unknown DB error"}`,
       );
     }
 
@@ -74,14 +74,14 @@ export async function GET() {
         user_id: string;
       };
 
-      if (userInfo && userInfo.email) {
+      if (userInfo && userInfo.email && userId) {
         userDetailMap.set(userId, {
           email: userInfo.email,
           fullName: userInfo.full_name ?? userInfo.email.split("@")[0],
         });
       }
 
-      if (job) {
+      if (job && userId) {
         if (!usersToRemind.has(userId)) {
           usersToRemind.set(userId, []);
         }
@@ -119,7 +119,7 @@ export async function GET() {
       const BATCH_SIZE = 5;
 
       console.log(
-        `[BACKGROUND JOB] Starting status reminders for ${totalUsers} users.`
+        `[BACKGROUND JOB] Starting status reminders for ${totalUsers} users.`,
       );
 
       for (let i = 0; i < userEntries.length; i += BATCH_SIZE) {
@@ -137,7 +137,7 @@ export async function GET() {
               React.createElement(ApplicationStatusReminderEmail, {
                 userName,
                 appliedJobs: jobs,
-              })
+              }),
             );
 
             await resend.emails.send({
@@ -179,7 +179,7 @@ export async function GET() {
 
       await sendEmailForStatusUpdate(report);
       console.log(
-        `[BACKGROUND JOB] Finished. Success: ${successfulSends.length}, Failed: ${failedSends.length}`
+        `[BACKGROUND JOB] Finished. Success: ${successfulSends.length}, Failed: ${failedSends.length}`,
       );
     };
 
@@ -196,11 +196,11 @@ export async function GET() {
         "JOB APPLICATION STATUS CHECK REMINDER: ",
         "CRITICAL FAILURE:",
         `Error: ${e instanceof Error ? e.message : String(e)}`,
-      ].join("\n")
+      ].join("\n"),
     );
     return NextResponse.json(
       { error: "Internal server error during reminder process" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

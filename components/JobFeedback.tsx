@@ -4,9 +4,9 @@ import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState, useTransition } from "react";
 import { submitJobFeedback } from "@/app/actions/jobs-feedback";
+import { TJobFeedbackVoteEnum } from "@/utils/types";
 
-type VoteType = "upvote" | "downvote";
-type CurrentVote = "upvote" | "downvote" | null;
+type CurrentVote = TJobFeedbackVoteEnum | null;
 
 interface JobsFeedbackProps {
   jobId: string;
@@ -20,7 +20,7 @@ export default function JobsFeedback({
   const [userVote, setUserVote] = useState<CurrentVote>(initialVote);
   const [isPending, startTransition] = useTransition();
 
-  const handleVote = (voteType: VoteType) => {
+  const handleVote = (voteType: TJobFeedbackVoteEnum) => {
     if (isPending) return;
 
     const newVote = userVote === voteType ? null : voteType;
