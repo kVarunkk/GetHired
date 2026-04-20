@@ -1,5 +1,45 @@
-User-Agent: *
+# Allow good search engine bots
+User-agent: Googlebot
 Allow: /
+Crawl-delay: 2
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 2
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 2
+
+# Block aggressive SEO/scraping bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: DataForSeoBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+# Default for all other bots - allow but with rate limiting
+User-agent: *
+Allow: /
+Crawl-delay: 10
 Disallow: /api/
 
-Sitemap: https://gethired.devhub.co.in/sitemap.xml
+Sitemap: https://gethired.devhub.co.in/sitemap/0.xml
