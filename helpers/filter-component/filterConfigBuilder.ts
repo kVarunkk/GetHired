@@ -22,23 +22,20 @@ export const filterConfigBuilder = (
         {
           name: "jobType",
           label: "Job Type",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the type of Job",
           options: [
             { value: "Fulltime", label: "Full Time" },
             { value: "Intern", label: "Internship" },
             { value: "Contract", label: "Contract" },
-            // 'all' is handled by the absence of the parameter in the URL
           ],
         },
         {
           name: "jobTitleKeywords",
           label: "Job Title Keywords",
-          type: "multi-select-input", // Use multi-select for this
+          type: "multi-select-input",
           placeholder: "Type or select from dropdown",
           options: [
-            // Provide a list of common job title keywords for the dropdown
-            // You can import this from a constants file if you have one
             { value: "Engineer", label: "Engineer" },
             { value: "Developer", label: "Developer" },
             { value: "Manager", label: "Manager" },
@@ -49,24 +46,21 @@ export const filterConfigBuilder = (
             { value: "Director", label: "Director" },
             { value: "Architect", label: "Architect" },
             { value: "Specialist", label: "Specialist" },
-            // ... add more common keywords as needed
           ],
         },
         {
           name: "location",
           label: "Location",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the location of Job",
           options: countries ? toOptions(countries) : [],
-
           isVirtualized: true,
         },
         {
           name: "visaRequirement",
           label: "Visa Requirement",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the Visa configuration",
-
           options: [
             {
               value: "US Citizenship/Visa Not Required",
@@ -80,7 +74,7 @@ export const filterConfigBuilder = (
         {
           name: "companyName",
           label: "Company",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the company",
           options: uniqueCompanies?.map((each) => ({
             value: each.company_name,
@@ -91,12 +85,12 @@ export const filterConfigBuilder = (
         {
           name: "platform",
           label: "Platform",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the platform",
-
           options: [
             { value: "ycombinator", label: "YCombinator" },
             { value: "wellfound", label: "Wellfound" },
+            { value: "khosla", label: "Khosla Ventures" },
             { value: "workingnomads", label: "Working Nomads" },
             { value: "jobleads", label: "JobLeads" },
             { value: "glassdoor", label: "Glassdoor" },
@@ -110,7 +104,7 @@ export const filterConfigBuilder = (
         {
           name: "applicationStatus",
           label: "Application Status",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the status",
           options: Object.keys(TApplicationStatus).map((each) => ({
             label: each,
@@ -151,19 +145,18 @@ export const filterConfigBuilder = (
         {
           name: "jobType",
           label: "Job Type",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the type of Job",
           options: [
             { value: "Fulltime", label: "Full Time" },
             { value: "Intern", label: "Internship" },
             { value: "Contract", label: "Contract" },
-            // 'all' is handled by the absence of the parameter in the URL
           ],
         },
         {
           name: "jobRole",
           label: "Job Role",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the Job Role",
           options: uniqueJobRoles?.map((each) => ({
             value: each.job_role,
@@ -173,7 +166,7 @@ export const filterConfigBuilder = (
         {
           name: "industryPreference",
           label: "Industry Preference",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the Industry Preference",
           options: uniqueIndustryPreferences?.map((each) => ({
             value: each.industry_preference,
@@ -183,7 +176,7 @@ export const filterConfigBuilder = (
         {
           name: "workStylePreference",
           label: "Work Style Preference",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the Work Style Preference",
           options: uniqueWorkStylePreferences?.map((each) => ({
             value: each.work_style_preference,
@@ -193,7 +186,7 @@ export const filterConfigBuilder = (
         {
           name: "skills",
           label: "Skills",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the Skills",
           options: uniqueSkills?.map((each) => ({
             value: each.skill,
@@ -203,7 +196,7 @@ export const filterConfigBuilder = (
         {
           name: "location",
           label: "Location",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the location of Job",
 
           options: uniqueLocations?.map((each) => ({
@@ -231,7 +224,7 @@ export const filterConfigBuilder = (
         {
           name: "name",
           label: "Company",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the Company",
           options: uniqueCompanies?.map((each) => ({
             value: each.company_name,
@@ -241,7 +234,7 @@ export const filterConfigBuilder = (
         {
           name: "location",
           label: "Location",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the location of Company",
           options: uniqueLocations?.map((each) => ({
             value: each.location,
@@ -252,7 +245,7 @@ export const filterConfigBuilder = (
         {
           name: "industry",
           label: "Industry",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the Industry type",
           options: uniqueIndustries?.map((each) => ({
             value: each.industry,
@@ -263,7 +256,7 @@ export const filterConfigBuilder = (
         {
           name: "size",
           label: "Size",
-          type: "multi-select", // Changed to multi-select
+          type: "multi-select",
           placeholder: "Select the Size",
           options: [
             "1-10",
