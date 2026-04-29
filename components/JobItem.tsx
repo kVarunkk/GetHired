@@ -174,6 +174,9 @@ function JobDetailBadges({
     case "workingnomads":
       platform_url = "https://www.workingnomads.com";
       break;
+    case "khosla":
+      platform_url = "https://jobs.khoslaventures.com/jobs";
+      break;
     default:
       platform_url = "";
       break;
