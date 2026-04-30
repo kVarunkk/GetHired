@@ -10,6 +10,8 @@ const reader = createReader(process.cwd(), keystaticConfig);
 export default async function Page() {
   // 2. Read the "Posts" collection
   const posts = await reader.collections.posts.all();
+  console.log("cwd:", process.cwd());
+  console.log("posts:", await reader.collections.posts.all());
   return (
     <div>
       <div className="mx-auto  mb-20 max-w-3xl px-4 text-center">
