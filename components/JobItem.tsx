@@ -180,6 +180,9 @@ function JobDetailBadges({
     case "sierra":
       platform_url = "https://careers.sierraventures.com/jobs";
       break;
+    case "accel":
+      platform_url = "https://jobs.accel.com/jobs";
+      break;
     default:
       platform_url = "";
       break;
