@@ -177,6 +177,12 @@ function JobDetailBadges({
     case "khosla":
       platform_url = "https://jobs.khoslaventures.com/jobs";
       break;
+    case "sierra":
+      platform_url = "https://careers.sierraventures.com/jobs";
+      break;
+    case "accel":
+      platform_url = "https://jobs.accel.com/jobs";
+      break;
     default:
       platform_url = "";
       break;

@@ -21,6 +21,9 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
+  outputFileTracingIncludes: {
+    "/**": ["./app/content/**/*"],
+  },
 };
 
 export default nextConfig;
