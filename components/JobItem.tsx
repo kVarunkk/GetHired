@@ -183,6 +183,9 @@ function JobDetailBadges({
     case "accel":
       platform_url = "https://jobs.accel.com/jobs";
       break;
+    case "susa":
+      platform_url = "https://jobs.susaventures.com/jobs";
+      break;
     default:
       platform_url = "";
       break;
