@@ -92,6 +92,7 @@ export const filterConfigBuilder = (
             { value: "wellfound", label: "Wellfound" },
             { value: "khosla", label: "Khosla Ventures" },
             { value: "susa", label: "Susa Ventures" },
+            { value: "sapphire", label: "Sapphire Ventures" },
             { value: "sierra", label: "Sierra Ventures" },
             { value: "accel", label: "Accel" },
             { value: "workingnomads", label: "Working Nomads" },
