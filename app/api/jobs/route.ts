@@ -36,6 +36,8 @@ export async function GET(request: NextRequest) {
   const jobId = searchParams.get("jobId");
   const cursor = searchParams.get("cursor");
   const limit = parseInt(searchParams.get("limit") || "20");
+  // only used for job digest endpoint to include AI suggestions, not for relevant job feed
+  const type = searchParams.get("type");
 
   try {
     let userEmbedding = null;
@@ -43,13 +45,18 @@ export async function GET(request: NextRequest) {
     let userId;
     let aiCredits = 0;
 
-    let relevanceSearchType: "standard" | "job_digest" | "similar_jobs" | null =
-      null;
+    let relevanceSearchType:
+      | "standard"
+      | "job_digest"
+      | "job_digest_with_suggestions"
+      | "similar_jobs"
+      | null = null;
 
     if (sortBy === "relevance") {
       if (applicantUserId) {
         userId = applicantUserId;
-        relevanceSearchType = "job_digest";
+        relevanceSearchType =
+          type === "digest" ? "job_digest_with_suggestions" : "job_digest";
       } else {
         relevanceSearchType = jobId ? "similar_jobs" : "standard";
 
@@ -98,7 +105,10 @@ export async function GET(request: NextRequest) {
       aiCredits < TAICredits.AI_SEARCH_ASK_AI_RESUME
     ) {
       return NextResponse.json(
-        { error: "Insufficient AI credits. Please top up to continue." },
+        {
+          error:
+            "Insufficient AI credits. Please navigate to dashboard to top up.",
+        },
         { status: 402 },
       );
     }
@@ -131,6 +141,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error }, { status: 500 });
     }
 
+    // only used if relevanceSearchType is job_digest, similar_jobs or job_digest_with_suggestions.
     const { initialJobs, totalCount } = await rerankJobsIfApplicable({
       initialJobs: data,
       initialCount: count,

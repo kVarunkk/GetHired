@@ -1,6 +1,5 @@
 import JobDigestEmail from "@/emails/JobDigestEmail";
 import { createServiceRoleClient } from "../../lib/supabase/service-role";
-// import { IFormData, IJob } from "../../utils/types";
 import { render } from "@react-email/components";
 import { Resend } from "resend";
 import { AllJobWithRelations } from "@/utils/types";
@@ -8,10 +7,8 @@ import { AllJobWithRelations } from "@/utils/types";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function getAllDigestUsers() {
-  // Use the client with elevated privileges
   const supabase = createServiceRoleClient();
 
-  // Select user data from the user_info table
   const { data, error } = await supabase
     .from("user_info")
     .select(
@@ -19,7 +16,8 @@ export async function getAllDigestUsers() {
             user_id, 
             email, 
             full_name, 
-            is_job_digest_active
+            is_job_digest_active,
+            ai_credits
         `,
     )
     .neq("email", null)
@@ -32,7 +30,6 @@ export async function getAllDigestUsers() {
     throw new Error("Failed to fetch eligible users for digest.");
   }
 
-  // Map the data to your expected interface
   return data;
 }
 
@@ -41,29 +38,30 @@ export async function sendJobDigestEmail(
   userName: string,
   jobs: AllJobWithRelations[],
   digestDate: string,
+  insufficientCredits: boolean = false,
 ) {
-  // Check if jobs array is empty before rendering
-  if (jobs.length === 0) {
-    console.log(`Skipped digest for ${email}: No jobs to send.`);
-    return { success: true };
-  }
-
-  // 1. Render the React Email component to HTML and Plain Text
   const emailHtml = await render(
-    <JobDigestEmail userName={userName} jobs={jobs} />,
+    <JobDigestEmail
+      userName={userName}
+      jobs={jobs}
+      insufficientCredits={insufficientCredits}
+    />,
   );
 
   const emailText = await render(
-    <JobDigestEmail userName={userName} jobs={jobs} />,
+    <JobDigestEmail
+      userName={userName}
+      jobs={jobs}
+      insufficientCredits={insufficientCredits}
+    />,
     { plainText: true },
   );
 
-  // 2. Send the email using Resend
   try {
     const { error } = await resend.emails.send({
-      from: "GetHired <varun@devhub.co.in>", // Use a clean, dedicated sender email
+      from: "GetHired <varun@devhub.co.in>",
       to: [email],
-      subject: `Your Weekly Job Digest for ${digestDate}`,
+      subject: `Your Daily Job Digest for ${digestDate}`,
       html: emailHtml,
       text: emailText,
     });

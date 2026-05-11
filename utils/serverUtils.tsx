@@ -2,7 +2,6 @@ import { createVertex } from "@ai-sdk/google-vertex";
 import { User } from "@supabase/supabase-js";
 import fs from "fs/promises";
 import path from "path";
-// import { createClient } from "./supabase/server";
 import { createServiceRoleClient } from "../lib/supabase/service-role";
 import { Resend } from "resend";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
@@ -118,7 +117,6 @@ export async function handleUserUpsert(user: User) {
       );
 
       if (updateAppMetaError) {
-        // Critical failure, throw immediately
         throw new Error(`Admin metadata update failed: ${updateAppMetaError}`);
       }
       const newUserInfo = {
@@ -158,7 +156,6 @@ export async function handleUserUpsert(user: User) {
       metadataUpdated: false,
       error: errorMessage,
     };
-    // throw new Error(`FATAL_UPSERT_FAILURE: ${errorMessage}`);
   }
 }
 
@@ -221,7 +218,6 @@ export const sendEmailForStatusUpdate = async (emailText: string) => {
       from: "GetHired <varun@devhub.co.in>",
       to: ["varunkumawatleap2@gmail.com"],
       subject: `Important: Status Update`,
-      // html: emailHTML,
       text: emailText,
     });
   } catch {
@@ -235,12 +231,17 @@ export const sendEmailForRelevantJobsStatusUpdate = async (
   email: string,
   name: string,
   url: string,
+  insufficientCredits = false,
 ) => {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const emailHtml = await render(
-      <RelevantJobsSetupUpdateEmail userName={name} inviteUrl={url} />,
+      <RelevantJobsSetupUpdateEmail
+        userName={name}
+        inviteUrl={url}
+        insufficientCredits={insufficientCredits}
+      />,
     );
 
     resend.emails.send({

@@ -35,18 +35,15 @@ export async function GET(request: NextRequest) {
           `[RELEVANCE UPDATE] Processing single user: ${userIdParam}`,
         );
 
-        // let sendRelevantJobFeedUpdate = true;
-
         const { data } = await supabase
           .from("user_info")
-          .select("is_relevant_jobs_generated, email, full_name")
+          .select("is_relevant_jobs_generated, email, full_name, ai_credits")
           .eq("user_id", userIdParam);
 
-        // if (data && data.length > 0 && data[0].is_relevant_jobs_generated) {
-        //   sendRelevantJobFeedUpdate = false;
-        // }
-
         if (data && data.length > 0) {
+          const insufficientCredits =
+            (data[0].ai_credits || 0) < TAICredits.AI_SEARCH_ASK_AI_RESUME;
+
           const email = "(Onboarding)";
           const result = await processUserRelevance(
             userIdParam,
@@ -56,21 +53,19 @@ export async function GET(request: NextRequest) {
 
           if (!result.success) {
             await sendEmailForStatusUpdate(
-              `[RELEVANCE UPDATE] Failed for ${userIdParam}: ${result.error}`,
+              `[RELEVANCE UPDATE] Failed for ${userIdParam}: ${result.error}. ${insufficientCredits ? "Insufficient AI credits." : ""}`,
             );
           } else {
             await sendEmailForStatusUpdate(
-              `[RELEVANCE UPDATE] Success for ${userIdParam}`,
+              `[RELEVANCE UPDATE] Success for ${userIdParam}. ${insufficientCredits ? "However, user has insufficient AI credits." : ""}`,
             );
 
-            //   send email update to user regarding ai job feed
-            // if (data && data.length > 0) {
             await sendEmailForRelevantJobsStatusUpdate(
               data[0].email!,
               data[0].full_name || "",
               URL + "/jobs?sortBy=relevance",
+              insufficientCredits,
             );
-            // }
           }
         }
       };

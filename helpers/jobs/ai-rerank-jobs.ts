@@ -24,7 +24,12 @@ export async function rerankJobsIfApplicable({
   jobId: string | null;
   aiCredits?: number;
   matchedJobIds: string[];
-  relevanceSearchType: "standard" | "job_digest" | "similar_jobs" | null;
+  relevanceSearchType:
+    | "standard"
+    | "job_digest"
+    | "job_digest_with_suggestions"
+    | "similar_jobs"
+    | null;
   cursor: string | null;
 }): Promise<RerankResult> {
   let finalJobs = initialJobs;
@@ -35,6 +40,15 @@ export async function rerankJobsIfApplicable({
   const host = headersList.get("host");
   const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
   const url = `${protocol}://${host}`;
+  const requiredCredits = TAICredits.AI_SEARCH_ASK_AI_RESUME;
+
+  // Restore vector similarity order first
+  if (matchedJobIds.length > 0) {
+    const jobMap = new Map(initialJobs.map((job) => [job.id, job]));
+    initialJobs = matchedJobIds
+      .map((id) => jobMap.get(id))
+      .filter((job): job is AllJobWithRelations => !!job);
+  }
 
   if (
     cursor ||
@@ -42,66 +56,109 @@ export async function rerankJobsIfApplicable({
     finalJobs.length === 0 ||
     !relevanceSearchType ||
     relevanceSearchType === "standard" ||
-    (relevanceSearchType === "similar_jobs" && !jobId)
+    (relevanceSearchType === "similar_jobs" && !jobId) ||
+    aiCredits < requiredCredits
   ) {
-    return { initialJobs: finalJobs, totalCount: finalCount };
+    return { initialJobs, totalCount: finalCount };
   }
 
-  const requiredCredits = TAICredits.AI_SEARCH_ASK_AI_RESUME;
+  try {
+    const requestHeaders: Record<string, string> = {};
+    if (
+      (relevanceSearchType === "job_digest" ||
+        relevanceSearchType === "job_digest_with_suggestions") &&
+      INTERNAL_API_SECRET
+    ) {
+      requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
 
-  if (aiCredits >= requiredCredits || relevanceSearchType === "job_digest") {
-    try {
-      const requestHeaders: Record<string, string> = {};
-      if (relevanceSearchType === "job_digest" && INTERNAL_API_SECRET) {
-        requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
-        removedJobs = initialJobs.splice(40);
-      }
-
-      const cookie = headersList.get("Cookie");
-      if (cookie) {
-        requestHeaders["Cookie"] = cookie;
-      }
-
-      const aiRerankRes = await fetch(
-        `${url}/api/ai-search/jobs${
-          relevanceSearchType === "similar_jobs" ? "/similar-jobs" : ""
-        }`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...requestHeaders,
-          },
-          body: JSON.stringify({
-            userId: userId,
-            jobs: initialJobs.map((job) => ({
-              id: job.id,
-              job_name: job.job_name,
-              description: job.description?.slice(0, 400),
-              visa_requirement: job.visa_requirement,
-              salary_range: job.salary_range,
-              locations: job.locations,
-              experience: job.experience,
-            })),
-            ...(relevanceSearchType === "similar_jobs"
-              ? { jobId: jobId, aiCredits }
-              : {}),
-          }),
-        },
+      // Now splice — top 30 by similarity go to LLM, rest are appended after
+      removedJobs = initialJobs.splice(
+        relevanceSearchType === "job_digest" ? 40 : 20,
       );
+    }
 
-      const aiRerankResult: {
-        rerankedJobs: string[];
-        filteredOutJobs: string[];
-      } = await aiRerankRes.json();
+    const cookie = headersList.get("Cookie");
+    if (cookie) {
+      requestHeaders["Cookie"] = cookie;
+    }
 
-      if (aiRerankRes.ok && aiRerankResult.rerankedJobs) {
+    const aiRerankRes = await fetch(
+      `${url}/api/ai-search/jobs${
+        relevanceSearchType === "similar_jobs" ? "/similar-jobs" : ""
+      }`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...requestHeaders,
+        },
+        body: JSON.stringify({
+          userId: userId,
+          jobs: initialJobs.map((job) => ({
+            id: job.id,
+            job_name: job.job_name,
+            description: job.description?.slice(0, 400),
+            visa_requirement: job.visa_requirement,
+            salary_range: job.salary_range,
+            locations: job.locations,
+            experience: job.experience,
+          })),
+          ...(relevanceSearchType === "similar_jobs"
+            ? { jobId: jobId, aiCredits }
+            : {
+                type: relevanceSearchType,
+              }),
+        }),
+      },
+    );
+
+    const aiRerankResult: {
+      rerankedJobs: string[] | { id: string; reason?: string }[];
+      filteredOutJobs: string[];
+    } = await aiRerankRes.json();
+
+    if (aiRerankRes.ok && aiRerankResult.rerankedJobs) {
+      const filteredOutIdsSet = new Set(aiRerankResult.filteredOutJobs || []);
+      const jobMap = new Map(initialJobs.map((job) => [job.id, job]));
+
+      if (
+        relevanceSearchType === "job_digest_with_suggestions" &&
+        aiRerankResult.rerankedJobs.length > 0 &&
+        typeof aiRerankResult.rerankedJobs[0] === "object"
+      ) {
+        // New shape: [{ id, reason }]
+        const rerankedWithReasons = aiRerankResult.rerankedJobs as {
+          id: string;
+          reason?: string;
+        }[];
+
+        const uniqueSeen = new Set<string>();
+        const reorderedJobs = rerankedWithReasons
+          .filter(({ id }) => {
+            if (uniqueSeen.has(id) || filteredOutIdsSet.has(id)) return false;
+            uniqueSeen.add(id);
+            return true;
+          })
+          .map(({ id, reason }) => {
+            const job = jobMap.get(id);
+            if (!job) return null;
+            return { ...job, match_reason: reason };
+          })
+          .filter(
+            (
+              job,
+            ): job is AllJobWithRelations & {
+              match_reason: string | undefined;
+            } => !!job,
+          );
+
+        finalJobs = reorderedJobs;
+        finalCount = reorderedJobs.length;
+      } else {
+        // Old shape: string[]
         const uniqueRerankedIds = Array.from(
           new Set(aiRerankResult.rerankedJobs as string[]),
         );
-        const filteredOutIdsSet = new Set(aiRerankResult.filteredOutJobs || []);
-
-        const jobMap = new Map(initialJobs.map((job) => [job.id, job]));
 
         const reorderedJobs = uniqueRerankedIds
           .map((id: string) => jobMap.get(id))
@@ -114,21 +171,9 @@ export async function rerankJobsIfApplicable({
         finalJobs = reorderedJobs;
         finalCount = reorderedJobs.length;
       }
-    } catch (e) {
-      console.error("Error during AI Rerank fetch:", e);
     }
-  } else if (
-    // --- 2. Handle Insufficient Credits Case ---
-    aiCredits < requiredCredits &&
-    matchedJobIds // Assuming the initial search response includes pre-matched IDs from vector search
-  ) {
-    const jobMap = new Map(initialJobs.map((job) => [job.id, job]));
-
-    finalJobs = matchedJobIds
-      .map((id: string) => jobMap.get(id))
-      .filter((job) => job !== undefined);
-
-    finalCount = finalJobs.length || 0;
+  } catch (e) {
+    console.error("Error during AI Rerank fetch:", e);
   }
 
   return { initialJobs: finalJobs, totalCount: finalCount };

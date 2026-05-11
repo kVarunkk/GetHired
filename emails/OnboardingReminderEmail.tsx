@@ -19,11 +19,10 @@ export const OnboardingReminderEmail = ({
         We just noticed that have not completed your Profile yet. Please
         complete it at the earliest so you don't miss out on the{" "}
         <strong>premium AI features</strong> that help you get hired in minutes
-        and your <strong>Weekly Job Digest</strong> consisting of the best jobs
-        out of a pool of <strong>3200+</strong> jobs.
+        and your <strong>Daily Job Digest</strong> consisting of the best jobs
+        out of a pool of <strong>2500+</strong> jobs.
       </Text>
 
-      {/* CTA Button */}
       <Section className="text-start my-16">
         <Button
           href="https://gethired.devhub.co.in/get-started"

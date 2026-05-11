@@ -40,6 +40,7 @@ export type AllJobWithRelations = AllJobsRow & {
     applications: ApplicationsRow[];
   })[];
   job_feedback?: JobFeedbackRow[];
+  match_reason?: string;
 };
 
 export type JobsBuildQueryResult = {
@@ -82,8 +83,10 @@ export type TResumeRowContent = {
   }[];
 };
 
-export interface IJobPost
-  extends Omit<JobPostingsRow, "applications" | "company_info"> {
+export interface IJobPost extends Omit<
+  JobPostingsRow,
+  "applications" | "company_info"
+> {
   applications?: { count: number }[];
   company_info?: {
     name: string | null;
