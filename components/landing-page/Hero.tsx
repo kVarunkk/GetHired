@@ -52,7 +52,7 @@ export default function Hero() {
         </p>
       ) : (
         <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-          Find your next job from over 2000 quailty listings with the power of
+          Find your next job from over 2500 quailty listings with the power of
           AI
         </p>
       )}

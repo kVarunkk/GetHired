@@ -32,7 +32,10 @@ export async function submitOnboardingAction(formData: FormData) {
     };
   }
 
-  if ((profile.ai_credits || 0) < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
+  if (
+    (profile.ai_credits || 0) < TAICredits.AI_SEARCH_ASK_AI_RESUME &&
+    resumeFile
+  ) {
     return {
       error: `Insufficient AI credits for resume upload. Please top up to continue.`,
     };

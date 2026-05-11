@@ -90,8 +90,8 @@ export default function UserOnboardingPersonalization({
                 }
               />
               <Label htmlFor="job_digest" className="text-sm cursor-pointer">
-                Weekly Job Digest: Receive top AI-matched job recommendations
-                every week.
+                Daily Job Digest: Receive top AI-matched job recommendations
+                every 3 days.
               </Label>
               <InfoTooltip
                 content={

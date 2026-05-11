@@ -4,7 +4,7 @@ import {
   getAllDigestUsers,
   sendJobDigestEmail,
 } from "@/helpers/jobs/digest-utils";
-import { AllJobWithRelations } from "@/utils/types";
+import { AllJobWithRelations, TAICredits } from "@/utils/types";
 import { deploymentUrl, sendEmailForStatusUpdate } from "@/utils/serverUtils";
 
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
@@ -14,7 +14,6 @@ const URL = deploymentUrl();
 export async function GET() {
   const headersList = await headers();
 
-  // --- 1. Security Check (CRITICAL) ---
   const cronSecret = headersList.get("X-Internal-Secret");
   if (cronSecret !== INTERNAL_API_SECRET) {
     return NextResponse.json(
@@ -30,7 +29,6 @@ export async function GET() {
   });
 
   try {
-    // 2. Fetch all users who have opted into the weekly digest
     const users = await getAllDigestUsers();
 
     if (!users || users.length === 0) {
@@ -43,8 +41,6 @@ export async function GET() {
       });
     }
 
-    // --- 3. BACKGROUND EXECUTION (FIRE-AND-FORGET) ---
-
     const processAllDigests = async () => {
       const results: { userEmail: string; success: boolean; error?: string }[] =
         [];
@@ -54,7 +50,6 @@ export async function GET() {
         `[DIGEST JOB] Starting background processing for ${users.length} users.`,
       );
 
-      // Process users in batches to stay within rate limits and prevent CPU spikes
       for (let i = 0; i < users.length; i += BATCH_SIZE) {
         const batch = users.slice(i, i + BATCH_SIZE);
 
@@ -80,7 +75,6 @@ export async function GET() {
         });
       }
 
-      // --- 4. Final Admin Report (Runs after all background tasks finish) ---
       const successfulSends = results
         .filter((r) => r.success)
         .map((r) => r.userEmail);
@@ -106,11 +100,6 @@ export async function GET() {
 
     after(processAllDigests);
 
-    // Trigger the heavy background workload without 'await'
-    // processAllDigests();
-
-    // 5. Respond immediately to the Cron scheduler
-    // This avoids the 5-10 second timeout from Supabase/Vercel
     return NextResponse.json({
       success: true,
       message: `Job digest processing started for ${users.length} users. Results will be emailed to admin.`,
@@ -130,24 +119,44 @@ export async function GET() {
   }
 }
 
-/**
- * Core logic to fetch, rerank, and send jobs for a single user.
- */
 async function processUserDigest(
   user: {
     user_id: string;
     email: string | null;
     full_name: string | null;
     is_job_digest_active: boolean;
+    ai_credits: number;
   },
   digestDate: string,
 ) {
   try {
-    // const cutoffDate = getCutOffDate(30);
-    const cutoffDays = "7";
+    if (
+      user.ai_credits < TAICredits.AI_SEARCH_ASK_AI_RESUME &&
+      user.email &&
+      user.full_name
+    ) {
+      console.log(`Skipped digest for ${user.email}: Insufficient AI credits.`);
+      const { success, error } = await sendJobDigestEmail(
+        user.email,
+        user.full_name,
+        [],
+        digestDate,
+        true,
+      );
+      if (!success || error) {
+        throw new Error(`Failed to send email: ${error}`);
+      }
+      return {
+        success: false,
+        userEmail: user.email,
+        error: "Insufficient AI credits",
+      };
+    }
+
+    const cutoffDays = "3";
 
     const jobFetchRes = await fetch(
-      `${URL}/api/jobs?sortBy=relevance&limit=100&createdAfter=${cutoffDays}&userId=${user.user_id}`,
+      `${URL}/api/jobs?sortBy=relevance&createdAfter=${cutoffDays}&userId=${user.user_id}&type=digest`,
       {
         headers: {
           "X-Internal-Secret": INTERNAL_API_SECRET || "",
@@ -164,20 +173,19 @@ async function processUserDigest(
     const result = await jobFetchRes.json();
     const finalJobs: AllJobWithRelations[] = result.data || [];
 
-    // --- 4. Send Email (Top 10 Jobs) ---
-    const topJobs = finalJobs.slice(0, 10);
-
-    if (topJobs.length > 0 && user.email && user.full_name) {
+    if (finalJobs.length > 0 && user.email && user.full_name) {
       const { success, error } = await sendJobDigestEmail(
         user.email,
         user.full_name,
-        topJobs,
+        finalJobs,
         digestDate,
       );
       if (!success || error) {
         throw new Error(`Failed to send email: ${error}`);
       }
-      console.log(`Sent digest to ${user.email} with ${topJobs.length} jobs.`);
+      console.log(
+        `Sent digest to ${user.email} with ${finalJobs.length} jobs.`,
+      );
       return { success: true, userEmail: user.email };
     } else {
       console.log(`Skipped digest for ${user?.email}: no suitable jobs found.`);

@@ -13,7 +13,6 @@ import { Button } from "./ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Progress } from "./ui/progress";
-// import { IFormData, IResume } from "@/utils/types";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
@@ -32,7 +31,6 @@ import useSWR from "swr";
 import { submitOnboardingAction } from "@/app/actions/submit-onboarding";
 
 type IFormData = {
-  // user_id: string;
   email: string | null;
   full_name: string;
   linkedin_url: string;
@@ -235,9 +233,8 @@ export const OnboardingForm: React.FC = () => {
     };
 
     fetchUserAndData();
-  }, [countries, isLoadingLocations]); // Run once on mount
+  }, [countries, isLoadingLocations]);
 
-  // Validation function for current step
   const validateStep = useCallback(() => {
     const currentStepFields = steps[currentStep].fields;
     const newErrors: Partial<Record<keyof IFormData, string>> = {};

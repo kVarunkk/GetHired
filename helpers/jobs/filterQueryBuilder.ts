@@ -64,7 +64,12 @@ export const buildQuery = async ({
   createdAfter: string | null;
   isInternalCall: boolean;
   jobEmbedding: string | null;
-  relevanceSearchType: "standard" | "job_digest" | "similar_jobs" | null;
+  relevanceSearchType:
+    | "standard"
+    | "job_digest"
+    | "job_digest_with_suggestions"
+    | "similar_jobs"
+    | null;
   userId: string | null;
 }): Promise<JobsBuildQueryResult> => {
   try {
@@ -195,7 +200,9 @@ export const buildQuery = async ({
     // --- VECTOR SEARCH ---
     if (
       createdAfter &&
-      ((relevanceSearchType === "job_digest" && userEmbedding) ||
+      (((relevanceSearchType === "job_digest" ||
+        relevanceSearchType === "job_digest_with_suggestions") &&
+        userEmbedding) ||
         (relevanceSearchType === "similar_jobs" && jobEmbedding))
     ) {
       const { data: searchData, error: searchError } = await supabase.rpc(
@@ -205,8 +212,14 @@ export const buildQuery = async ({
             relevanceSearchType === "similar_jobs"
               ? jobEmbedding!
               : userEmbedding!,
-          match_threshold: 0.4,
-          match_count: relevanceSearchType === "similar_jobs" ? 10 : 100,
+          // the cosine distance between the job and user embedding must be less than 0.3
+          match_threshold: 0.3,
+          match_count:
+            relevanceSearchType === "similar_jobs"
+              ? 10
+              : relevanceSearchType === "job_digest_with_suggestions"
+                ? 50
+                : 100,
           min_created_at: createdAfter,
         },
       );
@@ -279,7 +292,12 @@ export const buildQuery = async ({
       query = query.order("id", { ascending: sortOrder === "asc" }); // Tiebreaker
     }
 
-    if (limit && relevanceSearchType !== "standard") {
+    if (
+      limit &&
+      relevanceSearchType !== "standard" &&
+      relevanceSearchType !== "job_digest" &&
+      relevanceSearchType === "job_digest_with_suggestions"
+    ) {
       query = query.limit(limit);
     }
 

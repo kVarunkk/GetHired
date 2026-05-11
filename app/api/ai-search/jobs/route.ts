@@ -12,17 +12,18 @@ export async function POST(request: NextRequest) {
     const internalSecret = request.headers.get("X-Internal-Secret");
     const isInternalCall = internalSecret === process.env.INTERNAL_API_SECRET;
 
-    // Choose the client based on the header
     const supabase = isInternalCall
-      ? createServiceRoleClient() // No session needed, bypasses RLS
+      ? createServiceRoleClient()
       : await createClient();
 
     const {
       userId,
       jobs,
+      type,
     }: {
       userId: string;
       jobs: AllJobWithRelations[];
+      type?: "job_digest" | "job_digest_with_suggestions";
     } = await request.json();
 
     if (!userId || !jobs) {
@@ -34,7 +35,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 1: Fetch user preferences from the database
     const { data } = await supabase
       .from("user_info")
       .select(
@@ -61,7 +61,6 @@ export async function POST(request: NextRequest) {
       projects: "",
     };
 
-    // Step 2: Construct the userQuery based on fetched preferences
     const userQuery = `
       User is a candidate with the following preferences:
       - Desired Roles: ${userPreferences.desired_roles?.join(", ")}
@@ -86,7 +85,6 @@ export async function POST(request: NextRequest) {
       Please re-rank the job listings to find the best possible match for this candidate.
     `;
 
-    // Step 3: Call the AI with the augmented prompt
     const vertex = await getVertexClient();
     const model = vertex("gemini-2.5-flash-lite");
 
@@ -105,7 +103,7 @@ export async function POST(request: NextRequest) {
         ---
         ID: ${job.id}
         Title: ${job.job_name}
-        Description: ${job.description}
+        Description: ${job.description?.slice(0, 800)}
         Experience: ${job.experience}
         Visa Requirement: ${job.visa_requirement}
         Salary Range: ${job.salary_range}
@@ -118,9 +116,15 @@ export async function POST(request: NextRequest) {
       **Instructions:**
       1.  Read the user's query carefully.
       2.  Analyze each job listing to determine its relevance to the query.
-      3.  Re-rank the job IDs from most relevant to least relevant.
+      3.  Re-rank the jobs from most relevant to least relevant.
       4.  Filter out any jobs that are completely irrelevant or do not match the user's core intent.
-      5.  Output a JSON array of the re-ranked job IDs. Do not include any other text.
+      5.  Output only valid JSON matching the schema. No other text.
+      ${
+        type === "job_digest_with_suggestions" &&
+        `6. For each job you keep, write a reason: two sentences, max 50 words, second person ("Your...").
+     Be specific — reference the actual skill or experience overlap, never generic phrases like "Great match".
+     Example: "Your 3 years of React experience aligns directly with their frontend-heavy stack."`
+      }
     `;
 
     const { output: object } = await generateText({
@@ -128,11 +132,29 @@ export async function POST(request: NextRequest) {
       prompt: rerankPrompt,
       output: Output.object({
         schema: z.object({
-          reranked_job_ids: z
-            .array(z.string())
-            .describe(
-              "The list of re-ranked job IDs from most to least relevant.",
-            ),
+          ...(type === "job_digest_with_suggestions"
+            ? {
+                reranked_jobs: z
+                  .array(
+                    z.object({
+                      id: z.string(),
+                      reason: z
+                        .string()
+                        .describe(
+                          "Two sentences, max 50 words, specific to this candidate and job. Must reference a concrete skill or experience overlap. Written in second person.",
+                        ),
+                    }),
+                  )
+                  .describe("Re-ranked jobs from most to least relevant"),
+              }
+            : {
+                reranked_job_ids: z
+                  .array(z.string())
+                  .describe(
+                    "The list of re-ranked job IDs from most to least relevant.",
+                  ),
+              }),
+
           filtered_out_job_ids: z
             .array(z.string())
             .describe(
@@ -142,16 +164,24 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    if (!isInternalCall) {
-      await deductUserCreditsHelper(
-        supabase,
-        userId,
-        TAICredits.AI_SEARCH_ASK_AI_RESUME,
-      );
-    }
+    await deductUserCreditsHelper(
+      supabase,
+      userId,
+      TAICredits.AI_SEARCH_ASK_AI_RESUME,
+    );
 
     return NextResponse.json({
-      rerankedJobs: object.reranked_job_ids,
+      rerankedJobs:
+        type === "job_digest_with_suggestions"
+          ? (
+              object as {
+                reranked_jobs?: {
+                  id: string;
+                  reason: string;
+                }[];
+              }
+            ).reranked_jobs
+          : (object as { reranked_job_ids?: string[] }).reranked_job_ids,
       filteredOutJobs: object.filtered_out_job_ids,
     });
   } catch {

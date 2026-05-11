@@ -3,12 +3,11 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { mutate } from "swr";
 import { revalidateCache } from "@/app/actions/revalidate";
-import { deductCreditsForUserRelevantJobSearch } from "@/app/actions/deduct-credits-user-relevant-job";
 import { PROFILE_API_KEY } from "@/utils/utils";
 
 interface PollerOptions {
   userId: string | null;
-  isGenerated: boolean; // initial/generated flag from server data
+  isGenerated: boolean;
   isSuitable: boolean;
   isSimilarSearch: boolean;
   currentPage: string;
@@ -53,17 +52,14 @@ export function useRelevantJobPoller({
         .single();
 
       if (data?.is_relevant_jobs_generated) {
-        await deductCreditsForUserRelevantJobSearch();
         await mutate(PROFILE_API_KEY);
         await revalidateCache("jobs-feed");
         router.refresh();
       } else {
-        // schedule another poll
         timeoutId = setTimeout(checkFlag, 2000);
       }
     };
 
-    // kick off
     checkFlag();
 
     return () => clearTimeout(timeoutId);
