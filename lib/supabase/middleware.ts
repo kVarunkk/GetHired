@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../../utils/utils";
 import { UserAppMetadata } from "@supabase/supabase-js";
+import { headers } from "next/headers";
+import { getUserFromRequest } from "./get-user-from-request";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -11,11 +13,42 @@ export async function updateSession(request: NextRequest) {
   if (!hasEnvVars) {
     return supabaseResponse;
   }
+  const headersList = await headers();
+
+  const authHeader = headersList.get("Authorization");
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.replace("Bearer ", "")
+    : null;
+
+  if (bearerToken?.startsWith("gh_")) {
+    // Only allow API routes for gh_ tokens
+    // gh_ tokens are for MCP/programmatic access only
+    const allowedPaths = [
+      "/api/user/profile",
+      "/api/jobs",
+      "/api/ai-search/jobs",
+    ];
+
+    const isAllowed = allowedPaths.some((path) =>
+      request.nextUrl.pathname.startsWith(path),
+    );
+
+    if (!isAllowed) {
+      return NextResponse.json(
+        { error: "API tokens can only be used with API routes" },
+        { status: 403 },
+      );
+    }
+    return supabaseResponse;
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: bearerToken
+        ? { headers: { Authorization: `Bearer ${bearerToken}` } }
+        : undefined,
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -35,9 +68,7 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUserFromRequest();
 
   const deleteSearchParams = (url: URL) => {
     url.searchParams.forEach((value, key) => {

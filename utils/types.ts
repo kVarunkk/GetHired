@@ -14,6 +14,7 @@ export type PaymentsRow = Tables<"payments">;
 export type PricePlanRow = Tables<"price_plan">;
 type UserInfoRow = Tables<"user_info">;
 export type TJobFeedbackVoteEnum = Enums<"job_feedback_vote">;
+export type UserApiTokensRow = Tables<"user_api_tokens">;
 
 export type TCompanyInfo = CompanyInfoRow & {
   user_favorites_companies?: UserFavoritesCompanyInfoRow[];

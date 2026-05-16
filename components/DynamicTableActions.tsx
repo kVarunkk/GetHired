@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { FormEvent, useState } from "react";
+import { SubmitEvent, useState } from "react";
 import toast from "react-hot-toast";
 import {
   Dialog,
@@ -15,7 +15,7 @@ import {
 import { Button } from "./ui/button";
 import { Loader2, Pencil, Trash } from "lucide-react";
 import { Input } from "./ui/input";
-import { BookmarkRow } from "@/utils/types";
+import { BookmarkRow, UserApiTokensRow } from "@/utils/types";
 import { TResumeReviewTableData } from "./ResumeReviewsTable";
 import { TResumeReviewResume } from "@/utils/types/review.types";
 import { Database } from "@/utils/types/database.types";
@@ -28,7 +28,11 @@ interface FormField {
   required?: boolean;
 }
 
-type Item = TResumeReviewResume | TResumeReviewTableData | BookmarkRow;
+type Item =
+  | TResumeReviewResume
+  | TResumeReviewTableData
+  | BookmarkRow
+  | UserApiTokensRow;
 type TableName = keyof Database["public"]["Tables"];
 
 interface DynamicActionsProps<T extends Item> {
@@ -61,7 +65,7 @@ export default function DynamicActions<T extends Item>({
   const itemId = String(item[idKey]);
 
   // --- UPDATE LOGIC ---
-  const handleUpdate = async (e: FormEvent<HTMLFormElement>) => {
+  const handleUpdate = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormLoading(true);
 

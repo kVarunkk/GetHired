@@ -82,6 +82,12 @@ export async function rerankJobsIfApplicable({
       requestHeaders["Cookie"] = cookie;
     }
 
+    // for stdio mcp gh token
+    const authHeader = headersList.get("Authorization");
+    if (authHeader) {
+      requestHeaders["Authorization"] = authHeader;
+    }
+
     const aiRerankRes = await fetch(
       `${url}/api/ai-search/jobs${
         relevanceSearchType === "similar_jobs" ? "/similar-jobs" : ""

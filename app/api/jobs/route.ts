@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { rerankJobsIfApplicable } from "@/helpers/jobs/ai-rerank-jobs";
 import { TAICredits } from "@/utils/types";
 import { getCutOffDate } from "@/utils/serverUtils";
+import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 
 export async function GET(request: NextRequest) {
   const internalSecret = request.headers.get("X-Internal-Secret");
@@ -60,17 +61,12 @@ export async function GET(request: NextRequest) {
       } else {
         relevanceSearchType = jobId ? "similar_jobs" : "standard";
 
-        const {
-          data: { user },
-          error,
-        } = await supabase.auth.getUser();
-
-        if (error || !user) {
+        const user = await getUserFromRequest();
+        userId = user?.id;
+        if (!userId) {
           relevanceSearchType = null;
           return;
         }
-
-        userId = user.id;
 
         if (jobId) {
           const { data: jobData, error: jobDataError } = await supabase

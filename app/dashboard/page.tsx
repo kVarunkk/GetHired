@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     const { data: userInfoData, error: userInfoError } = await supabase
       .from("user_info")
       .select(
-        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id)",
+        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id), user_api_tokens(id)",
       )
       .eq("user_id", user.id)
       .single();
@@ -277,6 +277,27 @@ export default async function DashboardPage() {
                 <Button asChild>
                   <Link href={"/dashboard/buy-credits/payments"}>
                     View Purchase History
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="flex flex-col  p-4 text-center shadow-none  transition-colors">
+              {/* <CardHeader className="p-0"></CardHeader> */}
+              <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full flex-1">
+                <div className=" flex items-center gap-3 ">
+                  <span className="text-4xl font-extrabold">
+                    {userInfoData.user_api_tokens.length}
+                  </span>
+
+                  <span className="text-muted-foreground font-medium">
+                    API Keys created
+                  </span>
+                </div>
+                <Button asChild>
+                  <Link href={"/dashboard/api-keys"}>
+                    View API Keys
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>
