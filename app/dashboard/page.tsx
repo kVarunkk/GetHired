@@ -292,7 +292,7 @@ export default async function DashboardPage() {
                   </span>
 
                   <span className="text-muted-foreground font-medium">
-                    MCP API Keys created
+                    API Keys created
                   </span>
                 </div>
                 <Button asChild>
