@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { ConsentButtons } from "./consent-buttons";
 
 export default async function ConsentPage({
   searchParams,
@@ -50,22 +51,7 @@ export default async function ConsentPage({
       )}
       <form action="/api/oauth/decision" method="POST" className="flex gap-3">
         <input type="hidden" name="authorization_id" value={authorizationId} />
-        <button
-          type="submit"
-          name="decision"
-          value="approve"
-          className="flex-1 bg-primary text-primary-foreground rounded px-4 py-2"
-        >
-          Approve
-        </button>
-        <button
-          type="submit"
-          name="decision"
-          value="deny"
-          className="flex-1 border rounded px-4 py-2"
-        >
-          Deny
-        </button>
+        <ConsentButtons />
       </form>
     </div>
   );
