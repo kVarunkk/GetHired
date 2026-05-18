@@ -27,6 +27,8 @@ export async function updateSession(request: NextRequest) {
       "/api/user/profile",
       "/api/jobs",
       "/api/ai-search/jobs",
+      "/api/resumes",
+      "/api/resume-review",
     ];
 
     const isAllowed = allowedPaths.some((path) =>

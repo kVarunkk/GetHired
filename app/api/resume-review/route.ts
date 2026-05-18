@@ -11,6 +11,7 @@ import {
 import { updateReviewAnalysisStatus } from "@/helpers/resume-review/update-review-analysis";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 import { sendResumeReviewStatusEmail } from "@/app/actions/send-review-status-email";
+import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -27,7 +28,6 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // throw new Error("testing");
     const { reviewId, targetJd }: { reviewId: string; targetJd: string } =
       await req.json();
 
@@ -242,6 +242,40 @@ CONSTRAINTS:
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Some error occured" },
       { status: 500 },
+    );
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const searchParams = req.nextUrl.searchParams;
+    const limit = searchParams.get("limit") || "10";
+    const supabase = await createClient();
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { data: reviews, error } = await supabase
+      .from("resume_reviews")
+      .select(
+        `id, name, status, score, created_at, updated_at, analysis_failed, resume_id, job_id`,
+      )
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(parseInt(limit));
+
+    if (error) {
+      return NextResponse.json(
+        { error: "Failed to fetch resume reviews." },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({ data: reviews });
+  } catch {
+    return NextResponse.json(
+      { error: "Error fetching your resume reviews." },
+      { status: 405 },
     );
   }
 }
