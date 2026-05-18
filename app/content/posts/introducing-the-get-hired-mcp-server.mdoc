@@ -1,0 +1,79 @@
+---
+title: Introducing the GetHired MCP Server
+image: /images/posts/introducing-the-get-hired-mcp-server/image.jpg
+---
+We’re excited to launch the GetHired MCP Server — a new way to connect AI tools like Cursor and Claude directly to your GetHired account.
+
+This means your AI assistant can now securely access your jobs, resumes, applications, and profile information through the Model Context Protocol (MCP).
+
+## What Does This Enable?
+
+With the GetHired MCP Server, compatible AI clients can:
+
+- Search for jobs from GetHired
+- Retrieve relevant jobs based on your profile
+- Access saved and applied jobs
+- Fetch resume details and resume reviews
+- Use your GetHired data directly inside AI workflows
+
+Instead of manually copying information between platforms, your AI tools can now work with your GetHired data in real time.
+
+## Supported Clients
+
+The MCP server has been tested with:
+
+- Cursor
+- Claude Desktop
+- MCP Inspector
+
+We’re continuing to improve compatibility across additional MCP clients.
+
+## Secure Authentication
+
+The GetHired MCP Server uses OAuth 2.1 for HTTP-based clients.
+
+When connecting through clients like Cursor:
+
+1. You’ll be redirected to GetHired
+1. You approve access
+1. The AI client is securely connected to your account
+
+No manual token pasting is required for supported HTTP clients.
+
+For local stdio clients like Claude Desktop, users can generate an API token from their GetHired dashboard.
+
+## Why We Built This
+
+AI-native workflows are quickly becoming the default way developers and professionals interact with software.
+
+We wanted GetHired to be accessible not only through the web app, but also through AI agents, coding assistants, and automation tools.
+
+The MCP Server is the first step toward making GetHired programmable and AI-native.
+
+## Getting Started
+
+You can find the full setup guide, installation steps, and configuration instructions here:
+
+GitHub Repository: [https://github.com/kVarunkk/GetHired-mcp-server](https://github.com/kVarunkk/GetHired-mcp-server)
+
+The README includes:
+
+- Cursor setup
+- Claude Desktop setup
+- HTTP and stdio configuration
+- Authentication flow
+- Available tools
+- Troubleshooting
+
+## What’s Next
+
+We plan to continue expanding the MCP integration with:
+
+- More AI workflows
+- Additional tools
+- Better client compatibility
+- Deeper job and resume automation
+
+If you try the MCP server, we’d love your feedback.
+
+Welcome to an AI-native job search with GetHired.
