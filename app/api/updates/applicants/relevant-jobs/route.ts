@@ -215,15 +215,6 @@ async function processUserRelevance(
     const json = await response.json();
     const jobs: AllJobWithRelations[] = json.data || [];
 
-    if (jobs.length === 0) {
-      return {
-        success: true,
-        userEmail,
-        fullName,
-        message: "No relevant jobs found",
-      };
-    }
-
     // 2. Prepare Data for Insertion
     const rowsToInsert = jobs.map((job, index) => ({
       user_id: userId,
@@ -241,11 +232,13 @@ async function processUserRelevance(
     if (deleteError) throw new Error(`Delete failed: ${deleteError.message}`);
 
     // Step B: Insert the new ranked list
-    const { error: insertError } = await supabase
-      .from("user_relevant_jobs")
-      .insert(rowsToInsert);
+    if (rowsToInsert.length > 0) {
+      const { error: insertError } = await supabase
+        .from("user_relevant_jobs")
+        .insert(rowsToInsert);
 
-    if (insertError) throw new Error(`Insert failed: ${insertError.message}`);
+      if (insertError) throw new Error(`Insert failed: ${insertError.message}`);
+    }
 
     await supabase
       .from("user_info")
