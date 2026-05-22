@@ -19,7 +19,6 @@ import { User } from "@supabase/supabase-js";
 import FeedbackForm from "./FeedbackForm";
 import SocialsComponent from "./SocialsComponent";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { usePathname } from "next/navigation";
 import { INavItem, INavItemWithActive } from "@/utils/types";
 import {
@@ -34,15 +33,15 @@ export default function NavbarComponent({
   navItems,
   variant = "vertical",
   initialUser,
+  isDesktop,
 }: {
   navItems: INavItem[];
   variant?: "vertical" | "horizontal";
   initialUser: User | null;
+  isDesktop: boolean;
 }) {
   const [user, setUser] = useState<User | null>(initialUser);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-  const [isMounted, setIsMounted] = useState(false);
   const pathname = usePathname();
   const navbarItems = navItems.map((each) => {
     let isActive = false;
@@ -62,7 +61,6 @@ export default function NavbarComponent({
   });
 
   useEffect(() => {
-    setIsMounted(true);
     const supabase = createClient();
 
     const {
@@ -75,8 +73,6 @@ export default function NavbarComponent({
       subscription.unsubscribe();
     };
   }, []);
-
-  if (!isMounted) return null;
 
   if (variant === "horizontal" || !isDesktop) {
     return (
