@@ -36,7 +36,6 @@ export async function generateStaticParams() {
 async function getAliasMap() {
   const map = new Map<string, string>();
 
-  // Basic combinations for critical pSEO locations
   map.set("bengaluru", "bangalore");
   map.set("gurugram", "gurgaon");
   map.set("sf", "san francisco");
@@ -79,8 +78,6 @@ export async function generateMetadata({
   };
 }
 
-// const navItems = authPageNavItems;
-
 export default async function RemoteJobsLocationPage({
   params,
 }: {
@@ -107,7 +104,5 @@ export default async function RemoteJobsLocationPage({
       </div>
       <Footer />
     </div>
-    //   </div>
-    // </main>
   );
 }

@@ -436,3 +436,8 @@ export const featureData = {
   ),
   currentDialogId: "AI_PREP_QANDA_V1", // New, unique ID for this feature tour
 };
+
+export const HeroMaskStyle = {
+  maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+  WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+};

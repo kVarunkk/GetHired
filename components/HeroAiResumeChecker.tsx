@@ -1,34 +1,13 @@
-"use client";
-
 import { Sparkles } from "lucide-react";
-import { useTheme } from "next-themes";
 import Image from "next/image";
-import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import Link from "next/link";
+import { HeroMaskStyle } from "@/utils/utils";
 
 const JOB_SEEKER_DARK = "/hero/dark-ai-resume-checker.png";
 const JOB_SEEKER_LIGHT = "/hero/light-ai-resume-checker.png";
 
-const maskStyle = {
-  maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
-  WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
-};
-
 export default function HeroAiResumeChecker() {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  const isDark = resolvedTheme === "dark";
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const getImagePath = () => {
-    return isDark ? JOB_SEEKER_DARK : JOB_SEEKER_LIGHT;
-  };
-
   return (
     <div className="flex flex-col gap-5 w-full items-center text-center px-4 py-3 lg:px-20 xl:px-40 2xl:px-80">
       <div className="space-y-4 max-w-3xl">
@@ -57,17 +36,26 @@ export default function HeroAiResumeChecker() {
         </Link>
       </div>
 
-      {mounted && (
+      <div>
         <Image
-          className="rounded-xl border border-border drop-shadow-xl mt-8"
-          src={getImagePath()}
-          style={maskStyle}
-          height={2000}
-          width={2000}
-          alt="Snapshot of the GetHired's CV Reviewer"
+          className="rounded-xl border border-border drop-shadow-xl mt-8 dark:hidden"
+          src={JOB_SEEKER_LIGHT}
+          style={HeroMaskStyle}
+          height={1200}
+          width={1200}
+          alt="Snapshot of the GetHired Job Board"
           priority
         />
-      )}
+        <Image
+          className="rounded-xl border border-border drop-shadow-xl mt-8 hidden dark:block"
+          src={JOB_SEEKER_DARK}
+          style={HeroMaskStyle}
+          height={1200}
+          width={1200}
+          alt="Snapshot of the GetHired Job Board"
+          priority
+        />
+      </div>
     </div>
   );
 }

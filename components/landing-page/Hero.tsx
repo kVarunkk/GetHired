@@ -1,43 +1,19 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { Button } from "../ui/button";
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { cn } from "@/utils/utils";
+import { cn, HeroMaskStyle } from "@/utils/utils";
 
-const maskStyle = {
-  maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
-  WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)", // For older browsers
-};
-
-// Define local paths
 const JOB_SEEKER_DARK = "/hero/job-seeker-hero-dark.png";
 const JOB_SEEKER_LIGHT = "/hero/job-seeker-hero-light.png";
 const HIRE_PAGE_DARK = "/hero/company-hero-dark.png";
 const HIRE_PAGE_LIGHT = "/hero/company-hero-light.png";
 
 export default function Hero() {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const isHirePage = pathname.startsWith("/hire");
-
-  const isDark = resolvedTheme === "dark";
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const getImagePath = () => {
-    if (isHirePage) {
-      return isDark ? HIRE_PAGE_DARK : HIRE_PAGE_LIGHT;
-    } else {
-      return isDark ? JOB_SEEKER_DARK : JOB_SEEKER_LIGHT;
-    }
-  };
 
   return (
     <div className="flex flex-col gap-5 w-full items-center text-center px-4 py-3 lg:px-20 xl:px-40 2xl:px-80">
@@ -75,17 +51,26 @@ export default function Hero() {
         </Link>
       </div>
 
-      {mounted && (
+      <div>
         <Image
-          className="rounded-xl border border-border drop-shadow-xl mt-8"
-          src={getImagePath()} // Using the new local path function
-          style={maskStyle}
-          height={2000}
-          width={2000}
+          className="rounded-xl border border-border drop-shadow-xl mt-8 dark:hidden"
+          src={isHirePage ? HIRE_PAGE_LIGHT : JOB_SEEKER_LIGHT}
+          style={HeroMaskStyle}
+          height={1200}
+          width={1200}
           alt="Snapshot of the GetHired Job Board"
-          priority // Set priority to load this critical image fast
+          priority
         />
-      )}
+        <Image
+          className="rounded-xl border border-border drop-shadow-xl mt-8 hidden dark:block"
+          src={isHirePage ? HIRE_PAGE_DARK : JOB_SEEKER_DARK}
+          style={HeroMaskStyle}
+          height={1200}
+          width={1200}
+          alt="Snapshot of the GetHired Job Board"
+          priority
+        />
+      </div>
     </div>
   );
 }
