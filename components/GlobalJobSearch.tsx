@@ -84,11 +84,6 @@ export default function GlobalJobSearch() {
 
     if (!query) return;
 
-    if (query.length > 100) {
-      setError("Prompt should be shorter than 100 characters.");
-      return;
-    }
-
     setIsLoading(true);
 
     try {
