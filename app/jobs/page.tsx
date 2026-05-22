@@ -172,6 +172,7 @@ export default async function JobsPage({
   params.set("tab", activeTab);
   const isRelevantSorting = params.get("sortBy") === "relevance";
   const isSimilarSearch = !!(isRelevantSorting && params.get("jobId"));
+  const isSavedOrAppliedTab = activeTab === "saved" || activeTab === "applied";
 
   if (isSimilarSearch) {
     params.set("createdAfter", "30");
@@ -186,7 +187,10 @@ export default async function JobsPage({
     const jobFetchPromise = fetch(`${url}/api/jobs?${params.toString()}`, {
       cache: isRelevantSorting ? "no-cache" : "force-cache",
       next: { revalidate: 3600, tags: ["jobs-feed"] },
-      headers: { Cookie: headersList.get("Cookie") || "" },
+      headers:
+        isRelevantSorting || isSavedOrAppliedTab
+          ? { Cookie: headersList.get("Cookie") || "" }
+          : undefined,
     });
     const [jobsResponse] = await Promise.all([jobFetchPromise]);
 
