@@ -7,6 +7,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/components";
 import { Resend } from "resend";
 import { v4 as uuidv4 } from "uuid";
+import { updateUserAppMetadata } from "./update-user-metadata";
 
 const URL = deploymentUrl();
 
@@ -55,6 +56,16 @@ export async function sendInviteEmail(
         error ? error.message : "Error occured while creating Invite link.",
       );
     } else {
+      const { error: updateAppMetaError } = await updateUserAppMetadata(
+        data.user?.id,
+        {
+          type: "applicant",
+          onboarding_complete: false,
+        },
+      );
+
+      if (updateAppMetaError) throw new Error(updateAppMetaError);
+
       const { error: invitedUserError } = await serviceRoleSupabase
         .from("user_info")
         .insert({
@@ -62,7 +73,6 @@ export async function sendInviteEmail(
           email: data.user?.email,
           is_job_digest_active: true,
           is_promotion_active: true,
-          // invited_by: referrerUserId,
         });
 
       if (invitedUserError) {
