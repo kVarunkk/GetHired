@@ -128,14 +128,14 @@ export default function ResumeReviewClient({
 
       if (!res.ok) {
         const { error } = await res.json();
-        throw error;
+        throw new Error(error);
       }
 
       // Refresh the server-side props to stay in sync
       startTransition(() => {
         router.refresh();
       });
-    } catch {
+    } catch (error) {
       // Revert status on failure
       setCurrentReview((prev) => ({
         ...prev,
@@ -143,7 +143,11 @@ export default function ResumeReviewClient({
         analysis_failed: true,
       }));
       await markAnalysisAsFailedAction(review.id);
-      toast.error("Something went wrong. Please try again.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.",
+      );
     }
   };
 
