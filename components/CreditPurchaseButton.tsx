@@ -36,7 +36,7 @@ const CreditPurchaseButton: React.FC<CreditPurchaseButtonProps> = ({
         throw new Error(data.error || "Failed to create checkout session.");
       }
 
-      // Redirect to the Stripe Checkout page
+      // Redirect to the Dodo Checkout page
       window.location.assign(data.checkoutUrl);
     } catch (error) {
       toast.dismiss();

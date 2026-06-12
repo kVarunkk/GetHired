@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json(
       { error: "Authentication required." },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     if (!productId || !creditAmount || !planId) {
       return NextResponse.json(
         { error: "Missing priceId or creditAmount or planId." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       .from("payments")
       .insert({
         user_id: user.id,
-        session_id: session.session_id, // Stripe's session ID
+        session_id: session.session_id, // Dodo's session ID
         product_id: productId,
         credit_amount: creditAmount,
         price_plan_id: planId,
@@ -59,12 +59,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ checkoutUrl: session.checkout_url });
   } catch (error) {
-    console.error("Stripe Checkout Error:", error);
+    console.error("Dodo Checkout Error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Some error occurred.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
