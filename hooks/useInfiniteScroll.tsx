@@ -69,7 +69,7 @@ export function useInfiniteScroll<T>({
           loadMore();
         }
       },
-      { threshold: 0.1, rootMargin: "100px" }, // Added rootMargin to start loading earlier
+      { rootMargin: "1200px" }, // Added rootMargin to start loading earlier
     );
 
     const el = loaderRef.current;
