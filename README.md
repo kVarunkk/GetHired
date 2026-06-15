@@ -39,3 +39,31 @@ GetHired is built on a modern, high-performance stack designed for speed and sca
 | **Database/Storage**     | **Supabase (PostgreSQL)**        | Primary database, secure file storage, and real-time user preference tracking.          |
 | **Vector Search Engine** | **`pgvector` (HNSW Index)**      | High-speed similarity search for job and user embeddings, run directly in the database. |
 | **AI/LLM Processing**    | **Vercel AI SDK / FastAPI**      | Used for structured query parsing (Natural Language Search) and external AI re-ranking. |
+
+## Getting Started
+
+### Prerequisites
+
+Ensure you have [Node.js](https://nodejs.org/) (v18+ recommended) installed.
+
+### Installation & Configuration
+
+1. **Clone the repository and install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Configure environment variables:**
+   Create your `.env.local` file from the example template and fill in the required keys:
+   ```bash
+   cp .env.example .env.local
+   ```
+
+### Running the Project
+
+Start the local development server:
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
