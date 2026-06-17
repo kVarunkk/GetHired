@@ -244,6 +244,7 @@ async function processUserRelevance(
       .from("user_info")
       .update({
         is_relevant_jobs_generated: true,
+        is_relevant_job_update_failed: false,
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", userId);
