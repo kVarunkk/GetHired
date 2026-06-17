@@ -3,8 +3,6 @@
 import { deploymentUrl } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
 
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
-
 const URL = deploymentUrl();
 
 export async function triggerRelevanceUpdate(userId: string) {

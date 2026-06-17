@@ -281,3 +281,5 @@ export const parseMultiSelectParam = <T extends string>(
         .filter(Boolean) as T[])
     : [];
 };
+
+export const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET || "";

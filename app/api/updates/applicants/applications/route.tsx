@@ -4,11 +4,14 @@ import { Resend } from "resend";
 import { render } from "@react-email/render";
 import ApplicationStatusReminderEmail from "@/emails/ApplicationStatusReminderEmail";
 import { headers } from "next/headers";
-import { sendEmailForStatusUpdate } from "@/utils/serverUtils";
+import {
+  INTERNAL_API_SECRET,
+  sendEmailForStatusUpdate,
+} from "@/utils/serverUtils";
 import React from "react";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
+
 const DAYS_AGO = 7;
 
 export interface AppliedJob {

@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
   deploymentUrl,
+  INTERNAL_API_SECRET,
   sendEmailForRelevantJobsStatusUpdate,
   sendEmailForStatusUpdate,
 } from "@/utils/serverUtils";
@@ -17,7 +18,6 @@ type RelevanceJobMessage = {
   };
 };
 
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 const URL = deploymentUrl();
 const BATCH_SIZE = 5;
 const VISIBILITY_TIMEOUT = 60; // seconds before a failed message is requeued

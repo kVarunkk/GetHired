@@ -5,9 +5,11 @@ import {
   sendJobDigestEmail,
 } from "@/helpers/jobs/digest-utils";
 import { AllJobWithRelations, TAICredits } from "@/utils/types";
-import { deploymentUrl, sendEmailForStatusUpdate } from "@/utils/serverUtils";
-
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
+import {
+  deploymentUrl,
+  INTERNAL_API_SECRET,
+  sendEmailForStatusUpdate,
+} from "@/utils/serverUtils";
 
 const URL = deploymentUrl();
 

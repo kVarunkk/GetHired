@@ -3,10 +3,12 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { headers } from "next/headers";
-import { sendEmailForStatusUpdate } from "@/utils/serverUtils";
+import {
+  INTERNAL_API_SECRET,
+  sendEmailForStatusUpdate,
+} from "@/utils/serverUtils";
 import OnboardingReminderEmail from "@/emails/OnboardingReminderEmail";
 
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 const resend = new Resend(RESEND_API_KEY);

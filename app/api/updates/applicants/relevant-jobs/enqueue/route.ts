@@ -4,8 +4,6 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { TAICredits } from "@/utils/types";
 import { sendEmailForStatusUpdate } from "@/utils/serverUtils";
 
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
-
 export async function GET() {
   const headersList = await headers();
   const cronSecret = headersList.get("X-Internal-Secret");

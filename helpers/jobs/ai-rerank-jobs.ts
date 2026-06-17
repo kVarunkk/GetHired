@@ -1,12 +1,11 @@
 import { headers } from "next/headers";
 import { AllJobWithRelations, TAICredits } from "../../utils/types";
+import { INTERNAL_API_SECRET } from "@/utils/serverUtils";
 
 interface RerankResult {
   initialJobs: AllJobWithRelations[];
   totalCount: number;
 }
-
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
 export async function rerankJobsIfApplicable({
   initialJobs,

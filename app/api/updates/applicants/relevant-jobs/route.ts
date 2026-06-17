@@ -3,12 +3,11 @@ import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
   deploymentUrl,
+  INTERNAL_API_SECRET,
   sendEmailForRelevantJobsStatusUpdate,
   sendEmailForStatusUpdate,
 } from "@/utils/serverUtils";
 import { AllJobWithRelations, TAICredits } from "@/utils/types";
-
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
 const URL = deploymentUrl();
 
