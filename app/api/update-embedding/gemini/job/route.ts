@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { embed } from "ai";
-import { getVertexClient } from "@/utils/serverUtils";
+import { getVertexClient, INTERNAL_API_SECRET } from "@/utils/serverUtils";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
