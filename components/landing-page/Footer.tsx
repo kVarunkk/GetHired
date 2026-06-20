@@ -36,6 +36,10 @@ const popularSearches = [
     href: "/jobs?platform=greenhouse&sortBy=created_at&sortOrder=desc",
   },
   {
+    name: "a16z Jobs",
+    href: "/jobs?platform=a16z&sortBy=created_at&sortOrder=desc",
+  },
+  {
     name: "Glassdoor Jobs",
     href: "/jobs?platform=glassdoor&sortBy=created_at&sortOrder=desc",
   },
