@@ -177,6 +177,9 @@ function JobDetailBadges({
     case "sapphire":
       platform_url = "https://jobs.sapphireventures.com/jobs";
       break;
+    case "a16z":
+      platform_url = "https://jobs.a16z.com/jobs";
+      break;
     default:
       platform_url = "";
       break;
