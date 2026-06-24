@@ -163,22 +163,25 @@ function JobDetailBadges({
       platform_url = "https://www.workingnomads.com";
       break;
     case "khosla":
-      platform_url = "https://jobs.khoslaventures.com/jobs";
+      platform_url = "https://khoslaventures.com";
       break;
     case "sierra":
-      platform_url = "https://careers.sierraventures.com/jobs";
+      platform_url = "https://sierraventures.com";
       break;
     case "accel":
-      platform_url = "https://jobs.accel.com/jobs";
+      platform_url = "https://accel.com";
       break;
     case "susa":
-      platform_url = "https://jobs.susaventures.com/jobs";
+      platform_url = "https://susaventures.com";
       break;
     case "sapphire":
-      platform_url = "https://jobs.sapphireventures.com/jobs";
+      platform_url = "https://sapphireventures.com";
       break;
     case "a16z":
-      platform_url = "https://jobs.a16z.com/jobs";
+      platform_url = "https://a16z.com";
+      break;
+    case "lightspeed":
+      platform_url = "https://lsvp.com";
       break;
     default:
       platform_url = "";

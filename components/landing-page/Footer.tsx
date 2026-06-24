@@ -9,63 +9,67 @@ import { Button } from "../ui/button";
 const popularSearches = [
   {
     name: "Remote Jobs",
-    href: "/jobs?location=Remote&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?location=Remote",
   },
   {
     name: "Y Combinator Jobs",
-    href: "/jobs?platform=ycombinator&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?platform=ycombinator",
   },
   {
     name: "Wellfound Jobs",
-    href: "/jobs?platform=wellfound&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?platform=wellfound",
   },
   {
     name: "RemoteOK Jobs",
-    href: "/jobs?platform=remoteok&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?platform=remoteok",
   },
   {
     name: "We Work Remotely Jobs",
-    href: "/jobs?platform=weworkremotely&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?platform=weworkremotely",
   },
   {
     name: "Uplers Jobs",
-    href: "/jobs?platform=uplers&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?platform=uplers",
   },
   {
     name: "Greenhouse Jobs",
-    href: "/jobs?platform=greenhouse&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?platform=greenhouse",
   },
   {
     name: "a16z Jobs",
-    href: "/jobs?platform=a16z&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?platform=a16z",
+  },
+  {
+    name: "Lightspeed Jobs",
+    href: "/jobs?platform=lightspeed",
   },
   {
     name: "Glassdoor Jobs",
-    href: "/jobs?platform=glassdoor&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?platform=glassdoor",
   },
   {
     name: "JobLeads Jobs",
-    href: "/jobs?platform=jobleads&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?platform=jobleads",
   },
   {
     name: "Working Nomads Jobs",
-    href: "/jobs?platform=workingnomads&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?platform=workingnomads",
   },
   {
     name: "Jobs in San Francisco",
-    href: "/jobs?location=San+Francisco&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?location=San+Francisco",
   },
   {
     name: "Jobs in New York",
-    href: "/jobs?location=New+York&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?location=New+York",
   },
   {
     name: "Tech Jobs in Bengaluru",
-    href: "/jobs?jobTitleKeywords=developer%7Cengineer&location=Bangalore&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?jobTitleKeywords=developer%7Cengineer&location=Bangalore",
   },
   {
     name: "Senior Developer Roles",
-    href: "/jobs?jobTitleKeywords=senior&sortBy=created_at&sortOrder=desc",
+    href: "/jobs?jobTitleKeywords=senior",
   },
 ];
 

@@ -6,7 +6,13 @@ import { HeroMaskStyle } from "@/utils/utils";
 const JOB_SEEKER_DARK = "/hero/job-seeker-hero-dark.png";
 const JOB_SEEKER_LIGHT = "/hero/job-seeker-hero-light.png";
 
-export default function HeroRemotePage({ location }: { location: string }) {
+export default function HeroRemotePage({
+  location,
+  jobCount,
+}: {
+  location: string;
+  jobCount: number;
+}) {
   const decodedLocation = decodeURIComponent(location);
 
   return (
@@ -16,8 +22,8 @@ export default function HeroRemotePage({ location }: { location: string }) {
       </h1>
 
       <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-        Find your next remote job from over 1500 quailty listings with the power
-        of AI
+        Find your next remote job from over {jobCount.toLocaleString()} quality
+        listings with the power of AI
       </p>
 
       <div className="flex items-center gap-5">

@@ -90,6 +90,7 @@ export const filterConfigBuilder = (
           options: [
             { value: "ycombinator", label: "YCombinator" },
             { value: "wellfound", label: "Wellfound" },
+            { value: "lightspeed", label: "Lightspeed Ventures" },
             { value: "a16z", label: "a16z" },
             { value: "khosla", label: "Khosla Ventures" },
             { value: "susa", label: "Susa Ventures" },

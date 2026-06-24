@@ -6,7 +6,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "../ui/accordion"; // Shadcn Accordion
+} from "../ui/accordion";
 
 export default function FAQSection() {
   const faqs = [
@@ -18,7 +18,7 @@ export default function FAQSection() {
     {
       question: "Which job boards do I have access to with GetHired?",
       answer:
-        "You will get access to 14+ leading job platforms. We aggregate jobs from platforms like Y Combinator, Greenhouse, Wellfound, RemoteOK, We Work Remotely, Uplers and VCs like a16z, Khosla, Sapphire, Accel and more on a daily basis so that you have access to the latest jobs posted all across the globe.",
+        "You will get access to 15+ leading job platforms. We aggregate jobs from platforms like Y Combinator, Greenhouse, Wellfound, RemoteOK, We Work Remotely, Uplers and VCs like a16z, Lightspeed, Khosla, Sapphire, Accel and more on a daily basis so that you have access to the latest jobs posted all across the globe.",
     },
     {
       question: "Can I really apply to jobs on multiple platforms?",
@@ -34,7 +34,7 @@ export default function FAQSection() {
     {
       question: "Do companies post jobs directly on GetHired?",
       answer:
-        "Absolutely! We partner with a growing number of companies that post jobs directly on our platform, often providing exclusive opportunities not found elsewhere.",
+        "Absolutely! We aim to partner with a growing number of companies that post jobs directly on our platform, often providing exclusive opportunities not found elsewhere.",
     },
   ];
 

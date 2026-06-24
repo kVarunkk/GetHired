@@ -5,6 +5,7 @@ import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
+import { getJobCount } from "@/utils/serverUtils";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -42,13 +43,17 @@ export const metadata: Metadata = {
   },
 };
 
+export const revalidate = 86400;
+
 export default async function AIResumeChecker() {
+  const jobCount = await getJobCount();
+
   return (
     <div className="flex-1 flex flex-col gap-32  w-full">
       <HeroAiResumeChecker />
-      <HowWeHelp />
+      <HowWeHelp jobCount={jobCount} />
       <AIFeatures />
-      <TheGetHiredAdvantageSection />
+      <TheGetHiredAdvantageSection jobCount={jobCount} />
       <FAQSection />
       <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
         <FootComponent />

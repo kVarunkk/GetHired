@@ -25,7 +25,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 }) => (
   <Card className="text-center bg-card transition-transform duration-300 hover:scale-[1.02] !border border-border">
     <CardHeader>
-      <CardTitle className="text-2xl sm:text-4xl font-extrabold text-primary mb-2">
+      <CardTitle className="text-2xl sm:text-5xl font-extrabold text-primary mb-2">
         {value}
       </CardTitle>
       <CardDescription className=" font-semibold">{title}</CardDescription>
@@ -36,7 +36,11 @@ const MetricCard: React.FC<MetricCardProps> = ({
   </Card>
 );
 
-export default function TheGetHiredAdvantageSection() {
+export default function TheGetHiredAdvantageSection({
+  jobCount,
+}: {
+  jobCount: number;
+}) {
   const pathname = usePathname();
   const isHirePage = pathname.startsWith("/hire");
   return (
@@ -81,8 +85,7 @@ export default function TheGetHiredAdvantageSection() {
             }
           />
           <MetricCard
-            // Second Card Modification
-            value={isHirePage ? "40% Higher Conversion" : "3x More Relevant"}
+            value={isHirePage ? "40% Higher Conversion" : "5x More Relevant"}
             title={
               isHirePage
                 ? "Engage Pre-Qualified Talent"
@@ -95,12 +98,16 @@ export default function TheGetHiredAdvantageSection() {
             }
           />
           <MetricCard
-            value={isHirePage ? "Zero Vacancy Time" : "2500+ Jobs"}
+            value={
+              isHirePage
+                ? "Zero Vacancy Time"
+                : `${jobCount.toLocaleString()} Jobs`
+            }
             title={isHirePage ? "Direct Talent Access" : "Market-Wide Reach"}
             description={
               isHirePage
                 ? "Gain a competitive advantage by connecting instantly and directly with candidates who are ready to interview."
-                : "Browse over 2,500 active roles from the most innovative startups and tech companies, updated daily for your growth."
+                : `Browse over ${jobCount.toLocaleString()} active roles from the most innovative startups and tech companies, updated daily for your growth.`
             }
           />
         </div>
