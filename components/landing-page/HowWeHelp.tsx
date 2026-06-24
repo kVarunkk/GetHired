@@ -1,7 +1,6 @@
 "use client";
 
 import { LightningBoltIcon } from "@radix-ui/react-icons";
-import { v4 as uuidv4 } from "uuid";
 import { BentoCard, BentoGrid } from "@/components/magicui/bento-grid";
 import { OrbitingCircles } from "../magicui/orbiting-circles";
 import { useEffect, useMemo, useState } from "react";
@@ -9,63 +8,12 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { cn } from "@/utils/utils";
+import { cn, platforms } from "@/utils/utils";
 
-const platforms = [
-  {
-    id: uuidv4(),
-    name: "ycombinator",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/ycombinator.png",
-    href: "https://workatastartup.com",
-  },
-  {
-    id: uuidv4(),
-    name: "remoteok",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/remoteok.png",
-    href: "https://remoteok.com",
-  },
-  {
-    id: uuidv4(),
-    name: "uplers",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/uplers-1.png",
-    href: "https://ats.uplers.com",
-  },
-  {
-    id: uuidv4(),
-    name: "wellfound",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/wellfound-1.png",
-    href: "https://wellfound.com",
-  },
-  {
-    id: uuidv4(),
-    name: "greenhouse",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/greenhouse-logo.jpeg",
-    href: "https://my.greenhouse.io",
-  },
-  {
-    id: uuidv4(),
-    name: "weworkremotely",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/weworkremotely-logo.png",
-    href: "https://weworkremotely.com",
-  },
-  {
-    id: uuidv4(),
-    name: "uplers",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/uplers-1.png",
-    href: "https://ats.uplers.com",
-  },
-  {
-    id: uuidv4(),
-    name: "glassdoor",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/glassdoor.jpeg",
-    href: "https://www.glassdoor.com",
-  },
-];
-
-export function HowWeHelp() {
+export function HowWeHelp({ jobCount }: { jobCount: number }) {
   const [isPaused, setIsPaused] = useState(false);
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false); // State to track if component is mounted
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const isHirePage = pathname.startsWith("/hire");
 
@@ -77,7 +25,6 @@ export function HowWeHelp() {
     if (mounted) {
       return [
         {
-          // Icon: FileSearchIcon,
           name: isHirePage
             ? "Personalized Candidate Discovery"
             : "Personalized Job Discovery",
@@ -106,7 +53,6 @@ export function HowWeHelp() {
           className: "lg:row-start-2 lg:row-end-3 lg:col-start-2 lg:col-end-3",
         },
         {
-          // Icon: InputIcon,
           name: isHirePage
             ? "Effortless Applicant Tracking"
             : "Effortless Application Management",
@@ -135,11 +81,10 @@ export function HowWeHelp() {
           className: "lg:col-start-2 lg:col-end-3 lg:row-start-1 lg:row-end-2",
         },
         {
-          // Icon: GlobeIcon,
           name: isHirePage ? "AI Job Composer" : "Multiplatform Support",
           description: isHirePage
             ? "Create high-converting roles instantly. Our templates mandate key data to ensure clarity and attract only the most qualified, focused talent."
-            : "Get access to a pool of over 2500 quality listings from over 14 leading Job Boards.",
+            : `Get access to a pool of over ${jobCount.toLocaleString()} quality listings from over 15 leading Job Boards.`,
           href: isHirePage ? "/company" : "/",
           cta: "Learn more",
           background: isHirePage ? (
@@ -158,26 +103,21 @@ export function HowWeHelp() {
             </div>
           ) : (
             <div className="relative flex flex-col items-center justify-center overflow-hidden h-[250px] lg:h-[350px] w-full opacity-80 scale-125">
-              {/* Layer 1: Slower, larger orbit, maybe less saturated logos */}
-
-              {/* Layer 2: Main orbit, standard size and speed */}
               <OrbitingCircles paused={isPaused} iconSize={60} duration={25}>
-                {/* Adjust duration to your liking */}
                 {platforms
-                  .filter((platform, index) => index <= 3)
+                  .filter((platform, index) => index <= 5)
                   .map((each) => (
                     <Link
                       onMouseEnter={() => setIsPaused(true)}
                       onMouseLeave={() => setIsPaused(false)}
                       href={each.href}
-                      key={each.id} // Key should be on the outermost element
+                      key={each.id}
                       className="flex items-center justify-center p-3 rounded-full bg-white/10 dark:bg-gray-700/50 shadow-md backdrop-blur-sm transition-transform duration-300 ease-in-out
-               hover:scale-150" // Background div for consistency
-                      // style={{ width: "60px", height: "60px" }} // Fixed size for the container
+               hover:scale-150"
                     >
                       <Image
                         src={each.src}
-                        className="object-contain max-w-full max-h-full drop-shadow-md " // Ensure image fits within its container
+                        className="object-contain max-w-full max-h-full drop-shadow-md "
                         alt={each.name || `Platform logo for ${each.id}`}
                         width={400}
                         height={400}
@@ -187,31 +127,28 @@ export function HowWeHelp() {
                   ))}
               </OrbitingCircles>
 
-              {/* Layer 3: Smaller, faster, reversed orbit, perhaps more prominent logos or a different set */}
               <OrbitingCircles
                 radius={100}
                 reverse
                 duration={15}
-                iconSize={40} // This iconSize might need adjustment based on the new container size
+                iconSize={40}
                 className="z-10"
                 paused={isPaused}
               >
-                {/* Faster, smaller radius, z-index to appear on top */}
                 {platforms
-                  .filter((platform, index) => index > 3) // Pick another subset
+                  .filter((platform, index) => index > 5)
                   .map((each) => (
                     <Link
                       onMouseEnter={() => setIsPaused(true)}
                       onMouseLeave={() => setIsPaused(false)}
                       href={each.href}
-                      key={each.id} // Key should be on the outermost element
+                      key={each.id}
                       className="flex items-center justify-center p-2 rounded-full bg-white/10 dark:bg-gray-700/50 shadow-md backdrop-blur-sm transition-transform duration-300 ease-in-out
-               hover:scale-150" // Background div for consistency
-                      // style={{ width: "60px", height: "60px" }} // Fixed size for the container
+               hover:scale-150"
                     >
                       <Image
                         src={each.src}
-                        className="object-contain max-w-full max-h-full drop-shadow-md " // Ensure image fits within its container
+                        className="object-contain max-w-full max-h-full drop-shadow-md "
                         alt={each.name || `Platform logo for ${each.id}`}
                         width={400}
                         height={400}
@@ -221,7 +158,6 @@ export function HowWeHelp() {
                   ))}
               </OrbitingCircles>
 
-              {/* Optional: Central element or text */}
               <div className="absolute z-20  text-center">
                 <LightningBoltIcon height={30} />
               </div>
@@ -230,7 +166,6 @@ export function HowWeHelp() {
           className: "lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3",
         },
         {
-          // Icon: CalendarIcon,
           name: isHirePage
             ? "Direct Talent Pipeline"
             : "Direct Connections & Opportunities",

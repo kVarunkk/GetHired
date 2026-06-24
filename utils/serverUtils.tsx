@@ -283,3 +283,17 @@ export const parseMultiSelectParam = <T extends string>(
 };
 
 export const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET || "";
+
+export async function getJobCount(): Promise<number> {
+  const supabase = createServiceRoleClient();
+  const { count, error } = await supabase
+    .from("all_jobs")
+    .select("id", { count: "exact", head: true });
+
+  if (error) {
+    console.error("Failed to fetch job count:", error);
+    return 6000;
+  }
+
+  return count ?? 0;
+}
