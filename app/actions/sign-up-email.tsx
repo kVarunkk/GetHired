@@ -3,13 +3,13 @@
 import AuthConfirmationEmail from "@/emails/AuthConfirmationEmail";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/components";
-import { Resend } from "resend";
+// import { Resend } from "resend";
 import { updateUserAppMetadata } from "./update-user-metadata";
-import { deploymentUrl } from "@/utils/serverUtils";
+import { deploymentUrl, sendEmail } from "@/utils/serverUtils";
 
 const URL = deploymentUrl();
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendSignupEmail(
   email: string,
@@ -76,15 +76,22 @@ export async function sendSignupEmail(
         },
       );
 
-      const { error } = await resend.emails.send({
-        from: "GetHired <varun@devhub.co.in>", // Use a clean, dedicated sender email
-        to: [email],
-        subject: `Confirm your Signup to GetHired`,
-        html: emailHtml,
-        text: emailText,
-      });
+      // const { error } = await resend.emails.send({
+      //   from: "GetHired <varun@devhub.co.in>", // Use a clean, dedicated sender email
+      //   to: [email],
+      //   subject: `Confirm your Signup to GetHired`,
+      //   html: emailHtml,
+      //   text: emailText,
+      // });
 
-      if (error) throw new Error("Error sending invitation email.");
+      // if (error) throw new Error("Error sending invitation email.");
+
+      await sendEmail({
+        toEmail: email,
+        subject: "Confirm your Signup to GetHired",
+        htmlContent: emailHtml,
+        textContent: emailText,
+      });
 
       return {
         success: true,

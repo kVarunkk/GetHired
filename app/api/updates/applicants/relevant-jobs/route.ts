@@ -55,9 +55,9 @@ export async function GET(request: NextRequest) {
               `[RELEVANCE UPDATE] Failed for ${userIdParam}: ${result.error}. ${insufficientCredits ? "Insufficient AI credits." : ""}`,
             );
           } else {
-            await sendEmailForStatusUpdate(
-              `[RELEVANCE UPDATE] Success for ${userIdParam}. ${insufficientCredits ? "However, user has insufficient AI credits." : ""}`,
-            );
+            // await sendEmailForStatusUpdate(
+            //   `[RELEVANCE UPDATE] Success for ${userIdParam}. ${insufficientCredits ? "However, user has insufficient AI credits." : ""}`,
+            // );
 
             await sendEmailForRelevantJobsStatusUpdate(
               data[0].email!,

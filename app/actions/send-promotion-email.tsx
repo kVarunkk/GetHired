@@ -1,11 +1,12 @@
 "use server";
 
-import { Resend } from "resend";
+// import { Resend } from "resend";
 import { render } from "@react-email/components";
 import { PromotionEmail } from "@/emails/PromotionEmail";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { sendEmail } from "@/utils/serverUtils";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * Sends a promotional email to all users who have 'is_promotion_active' set to true.
@@ -27,8 +28,8 @@ export async function sendPromotionEmails(promoDetails: {
     .from("user_info")
     .select("user_id, email, full_name") // Select necessary fields
     .eq("is_promotion_active", true)
-    .eq("filled", true); // Filter for active promotions
-  // .eq("user_id", "4e6d6c65-ced7-4ec0-b51d-21a850cb1b1f");
+    .eq("filled", true) // Filter for active promotions
+    .eq("email", "varunkumawatleap2@gmail.com");
 
   if (fetchError) {
     console.error("Error fetching promotional users:", fetchError);
@@ -64,11 +65,18 @@ export async function sendPromotionEmails(promoDetails: {
       if (!user.email) {
         throw new Error("User email is missing.");
       }
-      await resend.emails.send({
-        from: "GetHired <varun@devhub.co.in>", // Use a dedicated sender
-        to: [user.email],
+      // await resend.emails.send({
+      //   from: "GetHired <varun@devhub.co.in>", // Use a dedicated sender
+      //   to: [user.email],
+      //   subject: promoDetails.title,
+      //   html: emailHtml,
+      // });
+
+      await sendEmail({
+        toEmail: user.email,
         subject: promoDetails.title,
-        html: emailHtml,
+        htmlContent: emailHtml,
+        textContent: promoDetails.content,
       });
 
       // Standardized success return
@@ -83,7 +91,7 @@ export async function sendPromotionEmails(promoDetails: {
 
   // 3. Execute all sends in parallel
   const results = await Promise.all(emailPromises);
-  console.log(results);
+  // console.log(results);
   const successCount = results.filter((r) => r.success).length;
 
   return { success: true, count: successCount };

@@ -1,14 +1,14 @@
 "use server";
 
 import ResetPasswordEmail from "@/emails/ResetPasswordEmail";
-import { deploymentUrl } from "@/utils/serverUtils";
+import { deploymentUrl, sendEmail } from "@/utils/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/components";
-import { Resend } from "resend";
+// import { Resend } from "resend";
 
 const URL = deploymentUrl();
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendResetPasswordEmail(email: string) {
   try {
@@ -41,15 +41,22 @@ export async function sendResetPasswordEmail(email: string) {
         },
       );
 
-      const { error } = await resend.emails.send({
-        from: "GetHired <varun@devhub.co.in>", // Use a clean, dedicated sender email
-        to: [email],
-        subject: `Reset Password for ${email} on GetHired`,
-        html: emailHtml,
-        text: emailText,
-      });
+      // const { error } = await resend.emails.send({
+      //   from: "GetHired <varun@devhub.co.in>", // Use a clean, dedicated sender email
+      //   to: [email],
+      //   subject: `Reset Password for ${email} on GetHired`,
+      //   html: emailHtml,
+      //   text: emailText,
+      // });
 
-      if (error) throw new Error("Error sending password reset email.");
+      // if (error) throw new Error("Error sending password reset email.");
+
+      await sendEmail({
+        toEmail: email,
+        subject: `Reset Password for ${email} on GetHired`,
+        htmlContent: emailHtml,
+        textContent: emailText,
+      });
 
       return {
         success: true,

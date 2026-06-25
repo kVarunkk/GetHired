@@ -1,11 +1,12 @@
 "use server";
 
-import { Resend } from "resend";
+// import { Resend } from "resend";
 import { render } from "@react-email/components";
 import React from "react";
 import ResumeParsingStatusEmail from "@/emails/ResumeParsingStatusEmail";
+import { sendEmail } from "@/utils/serverUtils";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * sendResumeParsingStatusEmail
@@ -60,18 +61,25 @@ export async function sendResumeParsingStatusEmail(
       : `Action Required: Resume Parsing Issue for ${resumeName}`;
 
   try {
-    const { error } = await resend.emails.send({
-      from: "GetHired <varun@devhub.co.in>",
-      to: [email],
-      subject: subject,
-      html: emailHtml,
-      text: emailText,
-    });
+    // const { error } = await resend.emails.send({
+    //   from: "GetHired <varun@devhub.co.in>",
+    //   to: [email],
+    //   subject: subject,
+    //   html: emailHtml,
+    //   text: emailText,
+    // });
 
-    if (error) {
-      console.error("Resend delivery error:", error);
-      throw new Error(error.message);
-    }
+    // if (error) {
+    //   console.error("Resend delivery error:", error);
+    //   throw new Error(error.message);
+    // }
+
+    await sendEmail({
+      toEmail: email,
+      subject: subject,
+      htmlContent: emailHtml,
+      textContent: emailText,
+    });
 
     return { success: true };
   } catch (err) {
