@@ -7,6 +7,7 @@ import { Resend } from "resend";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
 import { render } from "@react-email/components";
 import RelevantJobsSetupUpdateEmail from "@/emails/RelevantJobsSetupUpdateEmail";
+import { BrevoClient } from "@getbrevo/brevo";
 
 export async function getVertexClient() {
   const credentialsJson = process.env.GOOGLE_CREDENTIALS_JSON;
@@ -212,13 +213,20 @@ export async function grantReferralCredits(
 
 export const sendEmailForStatusUpdate = async (emailText: string) => {
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    // const resend = new Resend(process.env.RESEND_API_KEY);
 
-    await resend.emails.send({
-      from: "GetHired <varun@devhub.co.in>",
-      to: ["varunkumawatleap2@gmail.com"],
+    // await resend.emails.send({
+    //   from: "GetHired <varun@devhub.co.in>",
+    //   to: ["varunkumawatleap2@gmail.com"],
+    //   subject: `Important: Status Update`,
+    //   text: emailText,
+    // });
+
+    await sendEmail({
+      toEmail: "varunkumawatleap2@gmail.com",
       subject: `Important: Status Update`,
-      text: emailText,
+      htmlContent: `<p>${emailText}</p>`,
+      textContent: emailText,
     });
   } catch {
     console.error(
@@ -296,4 +304,42 @@ export async function getJobCount(): Promise<number> {
   }
 
   return count ?? 0;
+}
+
+export async function sendEmail({
+  toEmail,
+  subject,
+  htmlContent,
+  textContent,
+}: {
+  toEmail: string;
+  subject: string;
+  htmlContent: string;
+  textContent: string;
+}) {
+  try {
+    const brevo = new BrevoClient({ apiKey: process.env.BREVO_API_KEY || "" });
+    const result = await brevo.transactionalEmails.sendTransacEmail({
+      subject,
+      htmlContent,
+      sender: { name: "Varun from GetHired", email: "varun@devhub.co.in" },
+      to: [{ email: toEmail }],
+    });
+    console.log(result);
+  } catch (brevoError) {
+    console.error("Brevo failed, trying Resend fallback:", brevoError);
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      await resend.emails.send({
+        from: "GetHired <varun@devhub.co.in>",
+        to: [toEmail],
+        subject,
+        html: htmlContent,
+        text: textContent,
+      });
+    } catch (resendError) {
+      console.error("Resend fallback also failed:", resendError);
+      throw new Error(`Email delivery failed to ${toEmail}: ${resendError}`);
+    }
+  }
 }

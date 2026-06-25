@@ -1,19 +1,20 @@
 import { after, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { Resend } from "resend";
+// import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { headers } from "next/headers";
 import {
   INTERNAL_API_SECRET,
+  sendEmail,
   sendEmailForStatusUpdate,
 } from "@/utils/serverUtils";
 import FavoriteJobReminderEmail from "@/emails/FavoriteJobStatusReminderEmail";
 import React from "react";
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
+// const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const DAYS_AGO = 7;
 
-const resend = new Resend(RESEND_API_KEY);
+// const resend = new Resend(RESEND_API_KEY);
 
 export interface FavoritedJob {
   id: string;
@@ -162,12 +163,30 @@ export async function GET() {
               }),
             );
 
-            await resend.emails.send({
-              from: "GetHired <varun@devhub.co.in>",
-              to: [user.email],
+            const emailText = await render(
+              React.createElement(FavoriteJobReminderEmail, {
+                userName: user.fullName,
+                favoritedJobs: jobs,
+              }),
+              {
+                plainText: true,
+              },
+            );
+
+            // await resend.emails.send({
+            //   from: "GetHired <varun@devhub.co.in>",
+            //   to: [user.email],
+            //   subject: `Reminder: Your ${jobs.length} Saved Jobs Are Waiting.`,
+            //   html: emailHtml,
+            // });
+
+            await sendEmail({
+              toEmail: user.email,
               subject: `Reminder: Your ${jobs.length} Saved Jobs Are Waiting.`,
-              html: emailHtml,
+              htmlContent: emailHtml,
+              textContent: emailText,
             });
+
             results.push({ email: user.email, success: true });
           } catch (err: unknown) {
             results.push({

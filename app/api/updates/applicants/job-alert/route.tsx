@@ -1,23 +1,24 @@
 import { after, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { Resend } from "resend";
+// import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { headers } from "next/headers";
 import {
   deploymentUrl,
   INTERNAL_API_SECRET,
+  sendEmail,
   sendEmailForStatusUpdate,
 } from "@/utils/serverUtils";
 import React from "react";
 import BookmarkAlertEmail from "@/emails/BookmarkAlertEmail";
 import { AllJobWithRelations } from "@/utils/types";
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
+// const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const URL = deploymentUrl();
 
 const DAYS_AGO = 7;
 
-const resend = new Resend(RESEND_API_KEY);
+// const resend = new Resend(RESEND_API_KEY);
 
 export async function GET() {
   const headersList = await headers();
@@ -105,11 +106,30 @@ export async function GET() {
                 }),
               );
 
-              await resend.emails.send({
-                from: "GetHired <varun@devhub.co.in>",
-                to: [userInfo.email],
+              const emailText = await render(
+                React.createElement(BookmarkAlertEmail, {
+                  userName: userInfo.full_name || userInfo.email.split("@")[0],
+                  bookmarkName: bookmark.name || "Your Saved Search",
+                  jobs: newJobs,
+                  bookmarkUrl: URL + bookmark.url,
+                }),
+                {
+                  plainText: true,
+                },
+              );
+
+              // await resend.emails.send({
+              //   from: "GetHired <varun@devhub.co.in>",
+              //   to: [userInfo.email],
+              //   subject: `Job Alert: ${newJobs.length} new matches for "${bookmark.name}"`,
+              //   html: emailHtml,
+              // });
+
+              await sendEmail({
+                toEmail: userInfo.email,
                 subject: `Job Alert: ${newJobs.length} new matches for "${bookmark.name}"`,
-                html: emailHtml,
+                htmlContent: emailHtml,
+                textContent: emailText,
               });
 
               results.push({

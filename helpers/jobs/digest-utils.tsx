@@ -1,10 +1,11 @@
 import JobDigestEmail from "@/emails/JobDigestEmail";
 import { createServiceRoleClient } from "../../lib/supabase/service-role";
 import { render } from "@react-email/components";
-import { Resend } from "resend";
+// import { Resend } from "resend";
 import { AllJobWithRelations } from "@/utils/types";
+import { sendEmail } from "@/utils/serverUtils";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function getAllDigestUsers() {
   const supabase = createServiceRoleClient();
@@ -58,18 +59,25 @@ export async function sendJobDigestEmail(
   );
 
   try {
-    const { error } = await resend.emails.send({
-      from: "GetHired <varun@devhub.co.in>",
-      to: [email],
-      subject: `Your Daily Job Digest for ${digestDate}`,
-      html: emailHtml,
-      text: emailText,
-    });
+    // const { error } = await resend.emails.send({
+    //   from: "GetHired <varun@devhub.co.in>",
+    //   to: [email],
+    //   subject: `Your Daily Job Digest for ${digestDate}`,
+    //   html: emailHtml,
+    //   text: emailText,
+    // });
 
-    if (error) {
-      console.error(`Resend failed for ${email}:`, error);
-      return { success: false, error: error.message };
-    }
+    // if (error) {
+    //   console.error(`Resend failed for ${email}:`, error);
+    //   return { success: false, error: error.message };
+    // }
+
+    await sendEmail({
+      toEmail: email,
+      subject: `Your Daily Job Digest for ${digestDate}`,
+      htmlContent: emailHtml,
+      textContent: emailText,
+    });
 
     console.log(`Successfully sent ${jobs.length} jobs to ${email}.`);
     return { success: true };

@@ -1,16 +1,17 @@
 import { after, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { Resend } from "resend";
+// import { Resend } from "resend";
 import { render } from "@react-email/render";
 import ApplicationStatusReminderEmail from "@/emails/ApplicationStatusReminderEmail";
 import { headers } from "next/headers";
 import {
   INTERNAL_API_SECRET,
+  sendEmail,
   sendEmailForStatusUpdate,
 } from "@/utils/serverUtils";
 import React from "react";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// const resend = new Resend(process.env.RESEND_API_KEY);
 
 const DAYS_AGO = 7;
 
@@ -143,11 +144,28 @@ export async function GET() {
               }),
             );
 
-            await resend.emails.send({
-              from: "GetHired <varun@devhub.co.in>",
-              to: [email],
+            const emailText = await render(
+              React.createElement(ApplicationStatusReminderEmail, {
+                userName,
+                appliedJobs: jobs,
+              }),
+              {
+                plainText: true,
+              },
+            );
+
+            // await resend.emails.send({
+            //   from: "GetHired <varun@devhub.co.in>",
+            //   to: [email],
+            //   subject: `Reminder: Check the status of your ${jobs.length} recent applications`,
+            //   html: emailHtml,
+            // });
+
+            await sendEmail({
+              toEmail: email,
               subject: `Reminder: Check the status of your ${jobs.length} recent applications`,
-              html: emailHtml,
+              htmlContent: emailHtml,
+              textContent: emailText,
             });
 
             results.push({ email, success: true });

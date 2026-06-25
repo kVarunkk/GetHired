@@ -1,17 +1,18 @@
 import { after, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { Resend } from "resend";
+// import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { headers } from "next/headers";
 import {
   INTERNAL_API_SECRET,
+  sendEmail,
   sendEmailForStatusUpdate,
 } from "@/utils/serverUtils";
 import OnboardingReminderEmail from "@/emails/OnboardingReminderEmail";
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
+// const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-const resend = new Resend(RESEND_API_KEY);
+// const resend = new Resend(RESEND_API_KEY);
 
 export async function GET() {
   const headersList = await headers();
@@ -74,12 +75,25 @@ export async function GET() {
             const emailHtml = await render(
               <OnboardingReminderEmail userName={userName} />,
             );
+            const emailText = await render(
+              <OnboardingReminderEmail userName={userName} />,
+              {
+                plainText: true,
+              },
+            );
 
-            await resend.emails.send({
-              from: "GetHired <varun@devhub.co.in>",
-              to: [user.email],
+            // await resend.emails.send({
+            //   from: "GetHired <varun@devhub.co.in>",
+            //   to: [user.email],
+            //   subject: "Urgent: Complete Your Profile for Instant Job Matches",
+            //   html: emailHtml,
+            // });
+
+            await sendEmail({
+              toEmail: user.email,
               subject: "Urgent: Complete Your Profile for Instant Job Matches",
-              html: emailHtml,
+              htmlContent: emailHtml,
+              textContent: emailText,
             });
 
             results.push({
