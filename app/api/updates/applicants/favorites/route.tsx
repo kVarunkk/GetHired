@@ -11,10 +11,7 @@ import {
 import FavoriteJobReminderEmail from "@/emails/FavoriteJobStatusReminderEmail";
 import React from "react";
 
-// const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const DAYS_AGO = 7;
-
-// const resend = new Resend(RESEND_API_KEY);
 
 export interface FavoritedJob {
   id: string;
@@ -172,13 +169,6 @@ export async function GET() {
                 plainText: true,
               },
             );
-
-            // await resend.emails.send({
-            //   from: "GetHired <varun@devhub.co.in>",
-            //   to: [user.email],
-            //   subject: `Reminder: Your ${jobs.length} Saved Jobs Are Waiting.`,
-            //   html: emailHtml,
-            // });
 
             await sendEmail({
               toEmail: user.email,
