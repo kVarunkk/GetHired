@@ -1,17 +1,36 @@
 import { z } from "zod";
 
 const JOB_TYPES = ["Fulltime", "Contract", "Intern"] as const;
-const VISA_REQUIREMENTS = [
-  "US Citizenship/Visa Not Required",
-  "US Citizen/Visa Only",
-  "Will Sponsor",
-] as const;
+// const VISA_REQUIREMENTS = [
+//   "US Citizenship/Visa Not Required",
+//   "US Citizen/Visa Only",
+//   "Will Sponsor",
+// ] as const;
 const APPLICATION_STATUSES = [
   "submitted",
   "reviewed",
   "selected",
   "stand_by",
   "rejected",
+] as const;
+const PLATFORMS = [
+  "ycombinator",
+  "wellfound",
+  "lightspeed",
+  "a16z",
+  "khosla",
+  "susa",
+  "sapphire",
+  "accel",
+  "sierra",
+  "workingnomads",
+  "jobleads",
+  "glassdoor",
+  "greenhouse",
+  "weworkremotely",
+  "remoteok",
+  "uplers",
+  "gethired",
 ] as const;
 
 const preprocessArray = (schema: z.ZodArray<any>) =>
@@ -36,14 +55,14 @@ export const jobFilterSchema = z.object({
   location: preprocessArray(z.array(z.string()))
     .optional()
     .describe(
-      "List of general locations (e.g., 'Bangalore', 'Gurgaon', 'Remote').",
+      "List of general locations (e.g., 'Bangalore' (change 'bengaluru' to 'bangalore'), 'Gurgaon' (change 'gurugram' to 'gurgaon'), 'Remote').",
     ),
 
-  visaRequirement: preprocessArray(z.array(z.enum(VISA_REQUIREMENTS)))
-    .optional()
-    .describe("List of visa requirement terms."),
+  // visaRequirement: preprocessArray(z.array(z.enum(VISA_REQUIREMENTS)))
+  //   .optional()
+  //   .describe("List of visa requirement terms."),
 
-  platform: preprocessArray(z.array(z.string()))
+  platform: preprocessArray(z.array(z.enum(PLATFORMS)))
     .optional()
     .describe("List of job source platforms."),
 
@@ -65,17 +84,19 @@ export const jobFilterSchema = z.object({
     .number()
     .min(0)
     .optional()
-    .describe("Minimum years of experience required."),
+    .describe(
+      "Minimum years of experience required. Add 3 for a Senior postition. 2 for Mid level. 0 for Junior/Fresher position.",
+    ),
 
   createdAfter: z
     .enum(["1", "3", "7", "14"])
     .optional()
     .describe(
-      "Filter jobs posted within the specified time frame (eg., Last week means '7', Last 24 hours means '1' and so on).",
+      "Filter jobs posted within the specified time frame (eg., Last week means '7', Last 24 hours means '1' and so on. If user specifies a number not present in the enum available then choose the closest option available).",
     ),
 
   sortBy: z
-    .enum(["created_at", "company_name", "salary_min", "relevance"])
+    .enum(["created_at", "company_name", "salary_min"])
     .optional()
     .describe("List of fields to sort by."),
 
@@ -86,7 +107,7 @@ export const jobFilterSchema = z.object({
     .optional()
     .describe("Tab to filter by."),
 
-  jobId: z.string().optional().describe("Job ID for similar job search."),
+  // jobId: z.string().optional().describe("Job ID for similar job search."),
 });
 
 export type TJobFilters = z.infer<typeof jobFilterSchema>;

@@ -9,6 +9,7 @@ import JobFavoriteBtn from "./JobFavoriteBtn";
 import JobApplyBtn from "./JobApplyBtn";
 import React from "react";
 import { AllJobWithRelations } from "@/utils/types";
+import { platformsArray } from "@/utils/platforms";
 
 const JobItem = React.memo(
   ({
@@ -129,64 +130,8 @@ function JobDetailBadges({
     },
   ];
 
-  let platform_url;
+  const platform = platformsArray.find((_) => _.value === job.platform);
 
-  switch (job.platform) {
-    case "ycombinator":
-      platform_url = "https://www.workatastartup.com/companies";
-      break;
-    case "uplers":
-      platform_url = "https://ats.uplers.com/talent/all-opportunities";
-      break;
-    case "remoteok":
-      platform_url = "https://remoteok.com";
-      break;
-    case "wellfound":
-      platform_url = "https://wellfound.com";
-      break;
-    case "gethired":
-      platform_url = "https://gethired.devhub.co.in";
-      break;
-    case "weworkremotely":
-      platform_url = "https://weworkremotely.com";
-      break;
-    case "greenhouse":
-      platform_url = "https://my.greenhouse.io";
-      break;
-    case "glassdoor":
-      platform_url = "https://www.glassdoor.co.in";
-      break;
-    case "jobleads":
-      platform_url = "https://www.jobleads.com";
-      break;
-    case "workingnomads":
-      platform_url = "https://www.workingnomads.com";
-      break;
-    case "khosla":
-      platform_url = "https://khoslaventures.com";
-      break;
-    case "sierra":
-      platform_url = "https://sierraventures.com";
-      break;
-    case "accel":
-      platform_url = "https://accel.com";
-      break;
-    case "susa":
-      platform_url = "https://susaventures.com";
-      break;
-    case "sapphire":
-      platform_url = "https://sapphireventures.com";
-      break;
-    case "a16z":
-      platform_url = "https://a16z.com";
-      break;
-    case "lightspeed":
-      platform_url = "https://lsvp.com";
-      break;
-    default:
-      platform_url = "";
-      break;
-  }
   return (
     <div className="flex items-center gap-4 flex-wrap">
       {jobDetails
@@ -206,7 +151,7 @@ function JobDetailBadges({
       {job.platform && (
         <Link
           onClick={(e) => e.stopPropagation()}
-          href={platform_url || ""}
+          href={platform?.platform_url || ""}
           target="_blank"
           rel="noopener noreferrer"
           prefetch={false}

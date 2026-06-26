@@ -1,3 +1,4 @@
+import { platformsArray } from "@/utils/platforms";
 import { FilterConfig, TApplicationStatus } from "@/utils/types";
 
 const toOptions = (list?: { location: string }[]) =>
@@ -56,20 +57,20 @@ export const filterConfigBuilder = (
           options: countries ? toOptions(countries) : [],
           isVirtualized: true,
         },
-        {
-          name: "visaRequirement",
-          label: "Visa Requirement",
-          type: "multi-select",
-          placeholder: "Select the Visa configuration",
-          options: [
-            {
-              value: "US Citizenship/Visa Not Required",
-              label: "US Citizenship/Visa Not Required",
-            },
-            { value: "Will Sponsor", label: "Will Sponsor" },
-            { value: "US Citizen/Visa Only", label: "US Citizen/Visa Only" },
-          ],
-        },
+        // {
+        //   name: "visaRequirement",
+        //   label: "Visa Requirement",
+        //   type: "multi-select",
+        //   placeholder: "Select the Visa configuration",
+        //   options: [
+        //     {
+        //       value: "US Citizenship/Visa Not Required",
+        //       label: "US Citizenship/Visa Not Required",
+        //     },
+        //     { value: "Will Sponsor", label: "Will Sponsor" },
+        //     { value: "US Citizen/Visa Only", label: "US Citizen/Visa Only" },
+        //   ],
+        // },
 
         {
           name: "companyName",
@@ -87,25 +88,7 @@ export const filterConfigBuilder = (
           label: "Platform",
           type: "multi-select",
           placeholder: "Select the platform",
-          options: [
-            { value: "ycombinator", label: "YCombinator" },
-            { value: "wellfound", label: "Wellfound" },
-            { value: "lightspeed", label: "Lightspeed Ventures" },
-            { value: "a16z", label: "a16z" },
-            { value: "khosla", label: "Khosla Ventures" },
-            { value: "susa", label: "Susa Ventures" },
-            { value: "sapphire", label: "Sapphire Ventures" },
-            { value: "sierra", label: "Sierra Ventures" },
-            { value: "accel", label: "Accel" },
-            { value: "workingnomads", label: "Working Nomads" },
-            { value: "jobleads", label: "JobLeads" },
-            { value: "glassdoor", label: "Glassdoor" },
-            { value: "greenhouse", label: "Greenhouse" },
-            { value: "weworkremotely", label: "We Work Remotely" },
-            { value: "remoteok", label: "Remote Ok" },
-            { value: "uplers", label: "Uplers" },
-            { value: "gethired", label: "GetHired" },
-          ],
+          options: platformsArray,
         },
         {
           name: "applicationStatus",

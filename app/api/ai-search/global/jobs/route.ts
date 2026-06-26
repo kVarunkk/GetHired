@@ -57,7 +57,7 @@ export async function POST(req: Request) {
   }
 
   const vertex = await getVertexClient();
-  const model = vertex("gemini-2.5-flash-lite");
+  const model = vertex("gemini-2.5-flash");
 
   const systemPrompt = `
       You are a strict search filter parser for a job board. 

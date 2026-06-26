@@ -83,13 +83,8 @@ export default function FilterComponent({
   }, [FILTER_CONFIG, searchParams]);
 
   const [filters, setFilters] = useState<FiltersState>(currentUrlFilters);
-
   const [prevKey, setPrevKey] = useState(dynamicKey);
 
-  /** * THE PATTERN: Reset state during rendering.
-   * If the URL has changed (dynamicKey), update local state
-   * to match the URL immediately.
-   */
   if (dynamicKey !== prevKey) {
     setPrevKey(dynamicKey);
     setFilters(currentUrlFilters);
@@ -212,6 +207,7 @@ export default function FilterComponent({
       case "text":
         return (
           <InputFilter
+            key={dynamicKey}
             name={String(config.name)}
             type={config.type}
             placeholder={config.placeholder}
