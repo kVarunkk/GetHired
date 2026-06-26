@@ -35,7 +35,6 @@ export default async function ProfilesPage({
   }
   const onboarding_complete = companyData.filled;
 
-  // --- Data Fetching ---
   const headersList = await headers();
   const host = headersList.get("host");
   const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
@@ -51,7 +50,6 @@ export default async function ProfilesPage({
   );
   const dynamicKey = params.toString();
   try {
-    // params.set("limit", "20");
     if (params.get("sortBy") === "relevance") {
       params.set("limit", "100");
     }
@@ -79,93 +77,6 @@ export default async function ProfilesPage({
     initialProfiles = data || [];
     totalCount = count || 0;
     initialCursor = nextCursor || null;
-
-    // --- AI Re-ranking Logic ---
-    // if (
-    //   params.get("sortBy") === "relevance" &&
-    //   params.get("job_post") &&
-    //   user &&
-    //   onboarding_complete &&
-    //   data &&
-    //   data.length > 0 &&
-    //   companyData.ai_credits >= TAICredits.AI_SEARCH_ASK_AI_RESUME
-    // ) {
-    //   try {
-    //     const aiRerankRes = await fetch(`${url}/api/ai-search/profiles`, {
-    //       method: "POST",
-    //       headers: {
-    //         "Content-Type": "application/json",
-    //         Cookie: headersList.get("Cookie") || "",
-    //       },
-    //       body: JSON.stringify({
-    //         userId: user.id,
-    //         job_post_id: params.get("job_post"),
-    //         companyId: companyData.id,
-    //         profiles: data.map((profile) => ({
-    //           user_id: profile.user_id,
-    //           full_name: profile.full_name,
-    //           desired_roles: profile.desired_roles,
-    //           experience_years: profile.experience_years,
-    //           preferred_locations: profile.preferred_locations,
-    //           top_skills: profile.top_skills,
-    //           work_style_preferences: profile.work_style_preferences,
-    //         })),
-    //       } satisfies AiSearchProfileBody),
-    //     });
-
-    //     const aiRerankResult: {
-    //       rerankedProfiles: string[];
-    //       filteredOutProfiles: string[];
-    //     } = await aiRerankRes.json();
-
-    //     if (aiRerankRes.ok && aiRerankResult.rerankedProfiles) {
-    //       const rerankedIds = aiRerankResult.rerankedProfiles;
-    //       const filteredOutIds = aiRerankResult.filteredOutProfiles || [];
-
-    //       const profilesMap = new Map(
-    //         data.map((profile) => [profile.user_id, profile]),
-    //       );
-
-    //       const reorderedProfiles = rerankedIds
-    //         .map((user_id: string) => profilesMap.get(user_id))
-    //         .filter(
-    //           (profile): profile is AllProfileWithRelations =>
-    //             profile !== undefined &&
-    //             typeof profile.user_id === "string" &&
-    //             !filteredOutIds.includes(profile.user_id),
-    //         );
-    //       initialProfiles = reorderedProfiles || [];
-    //       totalCount = reorderedProfiles.length || 0;
-    //     }
-    //   } catch (e) {
-    //     throw e;
-    //   }
-    // } else if (
-    //   params.get("sortBy") === "relevance" &&
-    //   params.get("job_post") &&
-    //   user &&
-    //   onboarding_complete &&
-    //   matchedProfileIds &&
-    //   data &&
-    //   data.length > 0 &&
-    //   companyData.ai_credits < TAICredits.AI_SEARCH_ASK_AI_RESUME
-    // ) {
-    //   const profilesMap = new Map(
-    //     data.map((profile) => [profile.user_id, profile]),
-    //   );
-    //   const reorderedProfiles = matchedProfileIds
-    //     .map((user_id: string) => profilesMap.get(user_id))
-    //     .filter(
-    //       (profile): profile is AllProfileWithRelations =>
-    //         profile !== undefined && typeof profile.user_id === "string",
-    //     );
-    //   initialProfiles = reorderedProfiles || [];
-    //   totalCount = reorderedProfiles.length || 0;
-    // } else {
-    //   initialProfiles = data || [];
-    //   totalCount = count || 0;
-    //   initialCursor = nextCursor || null;
-    // }
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }

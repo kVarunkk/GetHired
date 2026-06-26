@@ -5,13 +5,10 @@ import { deploymentUrl, sendEmail } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/components";
-// import { Resend } from "resend";
 import { v4 as uuidv4 } from "uuid";
 import { updateUserAppMetadata } from "./update-user-metadata";
 
 const URL = deploymentUrl();
-
-// const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendInviteEmail(
   invitedEmail: string,
@@ -94,16 +91,6 @@ export async function sendInviteEmail(
           plainText: true,
         },
       );
-
-      // const { error } = await resend.emails.send({
-      //   from: "GetHired <varun@devhub.co.in>", // Use a clean, dedicated sender email
-      //   to: [invitedEmail],
-      //   subject: `You are Invited by ${userName} to Join GetHired`,
-      //   html: emailHtml,
-      //   text: emailText,
-      // });
-
-      // if (error) throw new Error("Error sending invitation email.");
 
       await sendEmail({
         toEmail: invitedEmail,

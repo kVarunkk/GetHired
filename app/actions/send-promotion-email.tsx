@@ -1,12 +1,9 @@
 "use server";
 
-// import { Resend } from "resend";
 import { render } from "@react-email/components";
 import { PromotionEmail } from "@/emails/PromotionEmail";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendEmail } from "@/utils/serverUtils";
-
-// const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * Sends a promotional email to all users who have 'is_promotion_active' set to true.
@@ -20,15 +17,13 @@ export async function sendPromotionEmails(promoDetails: {
   ctaLabel: string;
   imageLink?: string;
 }): Promise<{ success: boolean; count: number; error?: string }> {
-  // Use the Service Role Client to bypass RLS and fetch all user data securely
   const supabase = createServiceRoleClient();
 
-  // 1. Fetch Users Opted In
   const { data: users, error: fetchError } = await supabase
     .from("user_info")
-    .select("user_id, email, full_name") // Select necessary fields
+    .select("user_id, email, full_name")
     .eq("is_promotion_active", true)
-    .eq("filled", true) // Filter for active promotions
+    .eq("filled", true)
     .eq("email", "varunkumawatleap2@gmail.com");
 
   if (fetchError) {
@@ -44,7 +39,6 @@ export async function sendPromotionEmails(promoDetails: {
     };
   }
 
-  // 2. Prepare Email Sending Promises
   const emailPromises = users.map(async (user) => {
     const userName =
       user.full_name || (user.email ? user.email.split("@")[0] : "");
@@ -60,17 +54,10 @@ export async function sendPromotionEmails(promoDetails: {
       />,
     );
 
-    // FIX: Standardize the return structure for both success and failure
     try {
       if (!user.email) {
         throw new Error("User email is missing.");
       }
-      // await resend.emails.send({
-      //   from: "GetHired <varun@devhub.co.in>", // Use a dedicated sender
-      //   to: [user.email],
-      //   subject: promoDetails.title,
-      //   html: emailHtml,
-      // });
 
       await sendEmail({
         toEmail: user.email,
@@ -79,19 +66,14 @@ export async function sendPromotionEmails(promoDetails: {
         textContent: promoDetails.content,
       });
 
-      // Standardized success return
       return { success: true, email: user.email, emailHtml: emailHtml };
     } catch (err) {
-      // Catch individual send failures and allow others to continue
       console.error(`Failed to send email to ${user.email}:`, err);
-      // Standardized failure return
       return { success: false, email: user.email };
     }
   });
 
-  // 3. Execute all sends in parallel
   const results = await Promise.all(emailPromises);
-  // console.log(results);
   const successCount = results.filter((r) => r.success).length;
 
   return { success: true, count: successCount };

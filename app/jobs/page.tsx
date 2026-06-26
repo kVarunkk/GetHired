@@ -14,9 +14,8 @@ import {
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<JobListingSearchParams>; // Removed Promise as searchParams is usually a direct object
+  searchParams: Promise<JobListingSearchParams>;
 }): Promise<Metadata> {
-  // Access searchParams directly, assuming the Next.js App Router pattern
   const { jobTitleKeywords, location, jobType } = await searchParams;
 
   const baseTitle = "Find Your Next Job";
@@ -27,7 +26,7 @@ export async function generateMetadata({
     "jobs",
     "career",
     "employment",
-    "remote",
+    "remote jobs",
     "tech jobs",
     "remote jobs in india",
     "software engineer jobs",
@@ -37,9 +36,6 @@ export async function generateMetadata({
 
   const titleParts: string[] = [];
 
-  // --- 1. Dynamic Title Construction ---
-
-  // B. Job Type (e.g., "Remote", "Full-Time") - Placed first for prefixing
   if (jobType) {
     const typesArray = jobType
       .split("|")
@@ -51,7 +47,6 @@ export async function generateMetadata({
     }
   }
 
-  // A. Job Title Keywords (e.g., "Software Engineer")
   if (jobTitleKeywords) {
     const keywordsArray = jobTitleKeywords
       .split("|")
@@ -65,7 +60,6 @@ export async function generateMetadata({
     }
   }
 
-  // C. Location (e.g., "in Bangalore")
   if (location) {
     const locationsArray = location
       .split("|")
@@ -74,38 +68,27 @@ export async function generateMetadata({
     if (locationsArray.length > 0) {
       const locationString = locationsArray.join(", ");
 
-      // If we have any keywords (Type or Title), use "in [Location]"
       if (titleParts.length > 0) {
         titleParts.push(`in ${locationString}`);
       } else {
-        // If only location is present, use location name directly
         titleParts.push(locationString);
       }
       keywords.push(...locationsArray);
     }
   }
 
-  // --- 2. Final Consolidation and Edge Case Handling ---
-
   if (titleParts.length > 0) {
-    // Add "Jobs" keyword only ONCE at the very end if not already present
-    // This fixes "Remote Jobs Jobs" issue.
     if (!titleParts.some((p) => p.toLowerCase().includes("jobs"))) {
       titleParts.push("Jobs");
     }
 
-    // Join all parts (e.g., "Remote Software Engineer in Bangalore Jobs")
     const dynamicSearchTerm = titleParts.join(" ");
 
-    // Final SEO Title: [Search Term] - GetHired
     title = `${dynamicSearchTerm}`;
 
-    // Update description using the finalized search term
     description = `Search and apply for ${dynamicSearchTerm} roles. Filtered by location, salary, and company, we help you find the best career opportunities now.`;
   }
 
-  // --- 3. Keyword Cleanup ---
-  // Ensure the final keywords array is unique and joined
   const finalKeywords = Array.from(new Set(keywords)).join(", ");
 
   return {

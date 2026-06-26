@@ -52,10 +52,6 @@ export function simpleTimeAgo(
   const date = new Date(dateString);
   const now = new Date();
 
-  // Normalize both dates to midnight (UTC or local, depending on preference)
-  // to accurately calculate the day difference, ignoring time of day.
-
-  // For consistency with server timestamps, we'll use local date components:
   const startOfToday = new Date(
     now.getFullYear(),
     now.getMonth(),
@@ -213,15 +209,6 @@ export async function grantReferralCredits(
 
 export const sendEmailForStatusUpdate = async (emailText: string) => {
   try {
-    // const resend = new Resend(process.env.RESEND_API_KEY);
-
-    // await resend.emails.send({
-    //   from: "GetHired <varun@devhub.co.in>",
-    //   to: ["varunkumawatleap2@gmail.com"],
-    //   subject: `Important: Status Update`,
-    //   text: emailText,
-    // });
-
     await sendEmail({
       toEmail: "varunkumawatleap2@gmail.com",
       subject: `Important: Status Update`,
@@ -257,7 +244,6 @@ export const sendEmailForRelevantJobsStatusUpdate = async (
       to: [email],
       subject: `Important: Your AI Smart Search Job Feed is ready!`,
       html: emailHtml,
-      // text: email,
     });
   } catch {
     console.error(
@@ -271,8 +257,6 @@ export const deploymentUrl = () => {
     case "production":
       return "https://gethired.devhub.co.in";
     case "preview":
-      // VERCEL_URL is always the current deployment's unique URL
-      // e.g. "job-application-agent-abc123.vercel.app"
       return `https://${process.env.VERCEL_URL}`;
     default:
       return "http://localhost:3000";
