@@ -204,11 +204,10 @@ export const buildQuery = async ({
           // the cosine distance between the job and user embedding must be less than 0.3
           match_threshold: 0.3,
           match_count:
-            relevanceSearchType === "similar_jobs"
+            relevanceSearchType === "similar_jobs" ||
+            relevanceSearchType === "job_digest_with_suggestions"
               ? 50
-              : relevanceSearchType === "job_digest_with_suggestions"
-                ? 20
-                : 100,
+              : 100,
           min_created_at: createdAfter,
         },
       );
