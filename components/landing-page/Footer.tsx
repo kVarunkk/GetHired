@@ -12,6 +12,10 @@ const popularSearches = [
     href: "/jobs?location=Remote",
   },
   {
+    name: "Naukri Jobs",
+    href: "/jobs?platform=naukri",
+  },
+  {
     name: "Y Combinator Jobs",
     href: "/jobs?platform=ycombinator",
   },

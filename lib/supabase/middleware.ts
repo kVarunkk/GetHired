@@ -105,7 +105,6 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/applicants/relevant-jobs/worker",
     "/api/ai-search/jobs",
     "/api/dodo/webhook",
-    "/api/new-user-created",
     "/privacy-policy",
     "/terms-of-service",
     "/sitemap.xml",

@@ -31,14 +31,14 @@ export async function GET() {
     const uniqueWorkStylePreferences =
       filterData?.uniqueWorkStylePreferences || [];
     const uniqueSkills = filterData?.uniqueSkills || [];
-    const locations = filterData?.uniqueLocations || [];
+    const uniqueLocations = filterData?.uniqueLocations || [];
     return NextResponse.json(
       {
         uniqueJobRoles,
         uniqueIndustryPreferences,
         uniqueWorkStylePreferences,
         uniqueSkills,
-        locations,
+        uniqueLocations,
       },
       { status: 200 },
     );

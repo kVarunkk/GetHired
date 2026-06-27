@@ -204,11 +204,10 @@ export const buildQuery = async ({
           // the cosine distance between the job and user embedding must be less than 0.3
           match_threshold: 0.3,
           match_count:
-            relevanceSearchType === "similar_jobs"
-              ? 10
-              : relevanceSearchType === "job_digest_with_suggestions"
-                ? 50
-                : 100,
+            relevanceSearchType === "similar_jobs" ||
+            relevanceSearchType === "job_digest_with_suggestions"
+              ? 50
+              : 100,
           min_created_at: createdAfter,
         },
       );
@@ -269,7 +268,6 @@ export const buildQuery = async ({
       query = query.gte("salary_min", parseInt(minSalary));
     }
     if (minExperience) {
-      console.log("Filtering for min experience:", minExperience);
       query = query.gte("experience_min", parseInt(minExperience));
     }
 
@@ -281,12 +279,7 @@ export const buildQuery = async ({
       query = query.order("id", { ascending: sortOrder === "asc" }); // Tiebreaker
     }
 
-    if (
-      limit &&
-      relevanceSearchType !== "standard" &&
-      relevanceSearchType !== "job_digest" &&
-      relevanceSearchType !== "job_digest_with_suggestions"
-    ) {
+    if (limit && !relevanceSearchType) {
       query = query.limit(limit);
     }
 
@@ -313,7 +306,7 @@ export const buildQuery = async ({
     }
 
     let nextCursor = null;
-    if (data && data.length === limit) {
+    if (data && data.length === limit && !relevanceSearchType) {
       const lastItem = data[data.length - 1];
       const cursorValue = lastItem[sortBy as keyof typeof lastItem] ?? "null";
 

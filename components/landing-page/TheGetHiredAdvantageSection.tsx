@@ -25,7 +25,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 }) => (
   <Card className="text-center bg-card transition-transform duration-300 hover:scale-[1.02] !border border-border">
     <CardHeader>
-      <CardTitle className="text-2xl sm:text-5xl font-extrabold text-primary mb-2">
+      <CardTitle className="text-4xl sm:text-5xl font-extrabold text-primary mb-2">
         {value}
       </CardTitle>
       <CardDescription className=" font-semibold">{title}</CardDescription>
