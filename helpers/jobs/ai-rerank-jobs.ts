@@ -64,17 +64,17 @@ export async function rerankJobsIfApplicable({
   try {
     const requestHeaders: Record<string, string> = {};
     if (
-      (relevanceSearchType === "job_digest" ||
-        relevanceSearchType === "job_digest_with_suggestions") &&
+      // (relevanceSearchType === "job_digest" ||
+      //   relevanceSearchType === "job_digest_with_suggestions" || relevanceSearchType === "similar_jobs")
+      //    &&
       INTERNAL_API_SECRET
     ) {
       requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
-
-      // Now splice — top 30 by similarity go to LLM, rest are appended after
-      removedJobs = initialJobs.splice(
-        relevanceSearchType === "job_digest" ? 40 : 20,
-      );
     }
+
+    removedJobs = initialJobs.splice(
+      relevanceSearchType === "job_digest" ? 40 : 20,
+    );
 
     const cookie = headersList.get("Cookie");
     if (cookie) {

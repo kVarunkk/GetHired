@@ -20,8 +20,9 @@ export default function Page() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                You&apos;ve successfully signed up. Please check your email to
-                confirm your account before signing in.
+                You have successfully signed up. Please check your email to
+                confirm your account before signing in. If you do not see the
+                email in your primary inbox, please check the spam folder.
               </p>
             </CardContent>
           </Card>

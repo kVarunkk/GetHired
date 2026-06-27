@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import InfoTooltip from "@/components/InfoTooltip";
 import NotFound from "../NotFound";
 import CreateReviewForJob from "@/components/CreateReviewForJob";
+import ProfileCompletionBanner from "@/components/ProfileCompletionBanner";
 
 export async function generateMetadata({
   params,
@@ -346,6 +347,10 @@ export default async function JobPage({
             </Card>
           </div>
         </div>
+
+        {user && !onboardingComplete && !isCompanyUser && (
+          <ProfileCompletionBanner />
+        )}
       </div>
     );
   } catch {

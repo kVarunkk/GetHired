@@ -28,9 +28,17 @@ export default async function Page({
                   An unspecified error occurred.
                 </p>
               )}
-              <Link href={"/auth/login"} className="text-sm underline ">
-                Back to Login
-              </Link>
+              <div className="flex items-center gap-4 flex-wrap">
+                <Link href={"/auth/login"} className="text-sm underline ">
+                  Back to Login
+                </Link>
+                <Link
+                  href={"mailto:varun@devhub.co.in"}
+                  className="text-sm underline "
+                >
+                  Contact Support
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -29,6 +29,7 @@ import ModifiedLink from "./ModifiedLink";
 import FootComponent from "./FootComponent";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useRelevantJobPoller } from "@/hooks/useRelevantJobPoller";
+import ProfileCompletionBanner from "./ProfileCompletionBanner";
 
 export default function JobsComponent({
   initialJobs,
@@ -70,7 +71,8 @@ export default function JobsComponent({
   const searchParams = useSearchParams();
   const startProgress = useProgress();
   const isSuitable = searchParams.get("sortBy") === "relevance";
-  const isSimilarSearch = !!(isSuitable && searchParams.get("jobId"));
+  const jobId = searchParams.get("jobId");
+  const isSimilarSearch = !!(isSuitable && jobId);
   const isGenerated = data?.profile?.is_relevant_jobs_generated ?? false;
   const isFailed = data?.profile?.is_relevant_job_update_failed ?? false;
 
@@ -196,8 +198,12 @@ export default function JobsComponent({
     }
 
     if (current_page === "jobs") {
-      return jobs
-        .filter((job): job is AllJobWithRelations => "job_name" in job)
+      const items = jobs.filter(
+        (job): job is AllJobWithRelations => "job_name" in job,
+      );
+
+      const items1 = items
+        .filter((_, i, arr) => i < arr.length - 20)
         .map((job) => (
           <JobItem
             isCompanyUser={isCompanyUser}
@@ -209,6 +215,27 @@ export default function JobsComponent({
             isOnboardingComplete={isOnboardingComplete}
           />
         ));
+      const items2 = items
+        .filter((_, i, arr) => i >= arr.length - 20)
+        .map((job) => (
+          <JobItem
+            isCompanyUser={isCompanyUser}
+            key={job.id}
+            job={job}
+            user={user}
+            isSuitable={isSuitable}
+            isAppliedJobsTabActive={isAppliedJobsTabActive}
+            isOnboardingComplete={isOnboardingComplete}
+          />
+        ));
+
+      return [
+        ...items1,
+        user && !isOnboardingComplete && !isCompanyUser && (
+          <ProfileCompletionBanner key={"profile-completion-banner"} />
+        ),
+        ...items2,
+      ];
     }
 
     return jobs
@@ -253,9 +280,19 @@ export default function JobsComponent({
                 ? "profiles"
                 : current_page === "jobs"
                   ? "jobs"
-                  : "companies"}
+                  : "companies"}{" "}
+              {isSimilarSearch && current_page === "jobs" && "similar to"}{" "}
+              {isSimilarSearch && current_page === "jobs" && (
+                <Link
+                  href={`/jobs/${jobId}`}
+                  target="_blank"
+                  className="underline text-blue-500"
+                >
+                  this job
+                </Link>
+              )}
             </p>
-            {current_page === "jobs" && isSuitable ? (
+            {current_page === "jobs" && isSuitable && !isSimilarSearch ? (
               <InfoTooltip
                 content={
                   <p>
@@ -298,8 +335,6 @@ export default function JobsComponent({
 
           {!isOnboardingComplete && user && !isCompanyUser && (
             <div className="flex items-center gap-2">
-              <InfoTooltip content="Please complete your profile to use this feature" />
-
               <Button
                 asChild
                 className="flex items-center gap-2 rounded-full text-sm"
