@@ -25,6 +25,7 @@ const PLATFORMS = [
   "sierra",
   "workingnomads",
   "jobleads",
+  "naukri",
   "glassdoor",
   "greenhouse",
   "weworkremotely",

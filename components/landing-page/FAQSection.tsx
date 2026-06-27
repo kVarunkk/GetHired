@@ -18,7 +18,7 @@ export default function FAQSection() {
     {
       question: "Which job boards do I have access to with GetHired?",
       answer:
-        "You will get access to 15+ leading job platforms. We aggregate jobs from platforms like Y Combinator, Greenhouse, Wellfound, RemoteOK, We Work Remotely, Uplers and VCs like a16z, Lightspeed, Khosla, Sapphire, Accel and more on a daily basis so that you have access to the latest jobs posted all across the globe.",
+        "You will get access to 16+ leading job platforms. We aggregate jobs from platforms like Y Combinator, Greenhouse, Wellfound, RemoteOK, We Work Remotely, Naukri, Uplers and VCs like a16z, Lightspeed, Khosla, Sapphire, Accel and more on a daily basis so that you have access to the latest jobs posted all across the globe.",
     },
     {
       question: "Can I really apply to jobs on multiple platforms?",

@@ -229,8 +229,6 @@ export const sendEmailForRelevantJobsStatusUpdate = async (
   insufficientCredits = false,
 ) => {
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-
     const emailHtml = await render(
       <RelevantJobsSetupUpdateEmail
         userName={name}
@@ -239,11 +237,22 @@ export const sendEmailForRelevantJobsStatusUpdate = async (
       />,
     );
 
-    resend.emails.send({
-      from: "GetHired <varun@devhub.co.in>",
-      to: [email],
+    const emailText = await render(
+      <RelevantJobsSetupUpdateEmail
+        userName={name}
+        inviteUrl={url}
+        insufficientCredits={insufficientCredits}
+      />,
+      {
+        plainText: true,
+      },
+    );
+
+    sendEmail({
+      toEmail: email,
       subject: `Important: Your AI Smart Search Job Feed is ready!`,
-      html: emailHtml,
+      htmlContent: emailHtml,
+      textContent: emailText,
     });
   } catch {
     console.error(

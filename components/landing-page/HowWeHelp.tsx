@@ -84,7 +84,7 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
           name: isHirePage ? "AI Job Composer" : "Multiplatform Support",
           description: isHirePage
             ? "Create high-converting roles instantly. Our templates mandate key data to ensure clarity and attract only the most qualified, focused talent."
-            : `Get access to a pool of over ${jobCount.toLocaleString()} quality listings from over 15 leading Job Boards.`,
+            : `Get access to a pool of over ${jobCount.toLocaleString()} quality listings from over 16 leading Job Boards.`,
           href: isHirePage ? "/company" : "/",
           cta: "Learn more",
           background: isHirePage ? (
