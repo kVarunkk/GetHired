@@ -71,7 +71,11 @@ export const platformsArray = [
     label: "Remote Ok",
     platform_url: "https://remoteok.com",
   },
-
+  {
+    value: "naukri",
+    label: "Naukri",
+    platform_url: "https://www.naukri.com",
+  },
   {
     value: "gethired",
     label: "GetHired",
