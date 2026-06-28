@@ -63,18 +63,12 @@ export async function rerankJobsIfApplicable({
 
   try {
     const requestHeaders: Record<string, string> = {};
-    if (
-      // (relevanceSearchType === "job_digest" ||
-      //   relevanceSearchType === "job_digest_with_suggestions" || relevanceSearchType === "similar_jobs")
-      //    &&
-      INTERNAL_API_SECRET
-    ) {
+    if (INTERNAL_API_SECRET) {
       requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
     }
 
-    removedJobs = initialJobs.splice(
-      relevanceSearchType === "job_digest" ? 40 : 20,
-    );
+    // only keep top 20 jobs in initialJobs(will be sent to AI for filtering) and rest in removedJobs(will be concatenated later).
+    removedJobs = initialJobs.splice(20);
 
     const cookie = headersList.get("Cookie");
     if (cookie) {
