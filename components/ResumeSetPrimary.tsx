@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { TResumeReviewResume } from "@/utils/types/review.types";
-// import { IResume } from "@/utils/types";
 import { Star } from "lucide-react";
 import { Dispatch, SetStateAction } from "react";
 import toast from "react-hot-toast";
@@ -14,7 +13,7 @@ export default function ResumeSetPrimary({
   setItems,
   items,
   resumeId,
-  // updateLocalItem
+  userId,
 }: {
   isProcessing: boolean;
   setIsProcessing: Dispatch<SetStateAction<boolean>>;
@@ -22,13 +21,10 @@ export default function ResumeSetPrimary({
   setItems: Dispatch<SetStateAction<TResumeReviewResume[]>>;
   items: TResumeReviewResume[];
   resumeId: string;
-  // updateLocalItem: (updatedItem: IResume) => void
+  userId: string;
 }) {
-  //   const [isLoading, setIsLoading] = useState(false);
-
   const handleSetPrimary = async (resumeId: string) => {
     try {
-      //   setIsLoading(true);
       setIsProcessing(true);
       const supabase = createClient();
       const {
@@ -63,13 +59,21 @@ export default function ResumeSetPrimary({
         throw setError;
       }
 
-      toast.success("Primary resume updated");
+      toast.success(
+        "Primary resume updated. Your profile is being updated in the background.",
+      );
+
+      fetch(`/api/update-embedding/gemini/user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userId,
+        }),
+      }).catch(() => {});
     } catch {
       // console.error("Failed to set primary:", err);
       toast.error("Could not update primary resume");
     } finally {
-      //   setProcessingId(null);
-      //   setIsLoading(false);
       setIsProcessing(false);
     }
   };

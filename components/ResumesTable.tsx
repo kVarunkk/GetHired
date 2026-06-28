@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-// import { IResume } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import DynamicActions from "./DynamicTableActions";
 import { Input } from "./ui/input";
@@ -34,9 +33,10 @@ import ResumeStatusBadge from "./ResumeStatusBadge";
 
 interface ResumesTableProps {
   data: TResumeReviewResume[];
+  userId: string;
 }
 
-export default function ResumesTable({ data }: ResumesTableProps) {
+export default function ResumesTable({ data, userId }: ResumesTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<
     import("@tanstack/react-table").ColumnFiltersState
@@ -76,6 +76,7 @@ export default function ResumesTable({ data }: ResumesTableProps) {
               items={items}
               setItems={setItems}
               resumeId={row.original.id}
+              userId={userId}
             />
           );
         },

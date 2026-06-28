@@ -130,7 +130,9 @@ export async function submitOnboardingAction(formData: FormData) {
           {
             method: "POST",
             headers: internalHeaders,
-            body: JSON.stringify(profileData),
+            body: JSON.stringify({
+              userId: userId,
+            }),
           },
         );
         if (!embedRes.ok) throw new Error("Background Embedding Failed");

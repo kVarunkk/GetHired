@@ -32,7 +32,7 @@ export default async function ResumePage() {
           <h1 className="text-3xl font-medium ">All Resumes</h1>
           <CreateResumeDialog key={tableKey} existingResumes={resumes} />
         </div>
-        <ResumesTable key={tableKey} data={resumes || []} />
+        <ResumesTable key={tableKey} data={resumes || []} userId={user.id} />
       </div>
     );
   } catch {
