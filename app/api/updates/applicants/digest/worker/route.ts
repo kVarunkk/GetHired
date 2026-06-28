@@ -2,25 +2,24 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
-  deploymentUrl,
   INTERNAL_API_SECRET,
   sendEmailForStatusUpdate,
 } from "@/utils/serverUtils";
 import {
-  processUserRelevance,
-  sendEmailForRelevantJobsStatusUpdate,
-} from "@/helpers/jobs/relevant-jobs-utils";
+  processUserDigest,
+  sendJobDigestEmail,
+} from "@/helpers/jobs/digest-utils";
 
-type RelevanceJobMessage = {
+export type RelevanceJobMessage = {
   msg_id: number;
   message: {
-    userId: string;
+    user_id: string;
     email: string;
-    fullName: string;
+    full_name: string | null;
+    ai_credits: number;
   };
 };
 
-const URL = deploymentUrl();
 const BATCH_SIZE = 5;
 const VISIBILITY_TIMEOUT = 60; // seconds before a failed message is requeued
 
@@ -34,6 +33,12 @@ export async function GET() {
     );
   }
 
+  const digestDate = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   const supabase = createServiceRoleClient();
 
   try {
@@ -41,14 +46,14 @@ export async function GET() {
     const { data: messages, error } = (await supabase
       .schema("pgmq_public")
       .rpc("read", {
-        queue_name: "relevance_jobs",
+        queue_name: "job_digest",
         sleep_seconds: VISIBILITY_TIMEOUT,
         n: BATCH_SIZE,
       })) as { data: RelevanceJobMessage[] | null; error: Error | null };
 
     if (error) {
       await sendEmailForStatusUpdate(
-        `RELEVANCE WORKER: Failed to read queue.\n${error.message}`,
+        `JOB DIGEST WORKER: Failed to read queue.\n${error.message}`,
       );
       return NextResponse.json(
         { success: false, message: "Failed to read queue." },
@@ -62,21 +67,23 @@ export async function GET() {
 
     const results = await Promise.allSettled(
       messages.map(async (msg) => {
-        const { userId, email, fullName } = msg.message;
+        const { email, full_name } = msg.message;
 
-        const result = await processUserRelevance(userId, email, fullName);
+        const result = await processUserDigest(msg.message);
 
         if (result.success) {
           // Delete message from queue on success
           await supabase.schema("pgmq_public").rpc("delete", {
-            queue_name: "relevance_jobs",
+            queue_name: "job_digest",
             message_id: msg.msg_id,
           });
 
-          await sendEmailForRelevantJobsStatusUpdate(
+          await sendJobDigestEmail(
             email,
-            fullName,
-            URL + "/jobs?sortBy=relevance",
+            full_name!,
+            result.jobs || [],
+            digestDate,
+            result.isInsufficientCredits,
           );
         }
         // On failure: message stays in queue, becomes visible again after VISIBILITY_TIMEOUT
@@ -97,7 +104,7 @@ export async function GET() {
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     await sendEmailForStatusUpdate(
-      `RELEVANCE WORKER CRITICAL FAILURE:\n${errorMsg}`,
+      `JOB DIGEST WORKER CRITICAL FAILURE:\n${errorMsg}`,
     );
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },

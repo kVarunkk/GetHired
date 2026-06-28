@@ -4,10 +4,10 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
   deploymentUrl,
   INTERNAL_API_SECRET,
-  sendEmailForRelevantJobsStatusUpdate,
   sendEmailForStatusUpdate,
 } from "@/utils/serverUtils";
 import { AllJobWithRelations, TAICredits } from "@/utils/types";
+import { sendEmailForRelevantJobsStatusUpdate } from "@/helpers/jobs/relevant-jobs-utils";
 
 const URL = deploymentUrl();
 

@@ -5,8 +5,6 @@ import path from "path";
 import { createServiceRoleClient } from "../lib/supabase/service-role";
 import { Resend } from "resend";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
-import { render } from "@react-email/components";
-import RelevantJobsSetupUpdateEmail from "@/emails/RelevantJobsSetupUpdateEmail";
 import { BrevoClient } from "@getbrevo/brevo";
 
 export async function getVertexClient() {
@@ -116,24 +114,26 @@ export async function handleUserUpsert(user: User) {
       if (updateAppMetaError) {
         throw new Error(`Admin metadata update failed: ${updateAppMetaError}`);
       }
-      const newUserInfo = {
-        user_id: user.id,
-        email: user.email,
-        is_job_digest_active: true,
-        is_promotion_active: true,
-      };
+      if (user.email) {
+        const newUserInfo = {
+          user_id: user.id,
+          email: user.email,
+          is_job_digest_active: true,
+          is_promotion_active: true,
+        };
 
-      const { error: insertError } = await supabase
-        .from("user_info")
-        .insert(newUserInfo);
+        const { error: insertError } = await supabase
+          .from("user_info")
+          .insert(newUserInfo);
 
-      if (insertError) {
-        console.error(
-          "CRITICAL DB ERROR: Failed to insert new user_info row:",
-          insertError,
-        );
-        // Critical failure, throw immediately
-        throw new Error(`DB insert failed: ${insertError.message}`);
+        if (insertError) {
+          console.error(
+            "CRITICAL DB ERROR: Failed to insert new user_info row:",
+            insertError,
+          );
+          // Critical failure, throw immediately
+          throw new Error(`DB insert failed: ${insertError.message}`);
+        }
       }
       return {
         metadataUpdated: true,
@@ -222,45 +222,6 @@ export const sendEmailForStatusUpdate = async (emailText: string) => {
   }
 };
 
-export const sendEmailForRelevantJobsStatusUpdate = async (
-  email: string,
-  name: string,
-  url: string,
-  insufficientCredits = false,
-) => {
-  try {
-    const emailHtml = await render(
-      <RelevantJobsSetupUpdateEmail
-        userName={name}
-        inviteUrl={url}
-        insufficientCredits={insufficientCredits}
-      />,
-    );
-
-    const emailText = await render(
-      <RelevantJobsSetupUpdateEmail
-        userName={name}
-        inviteUrl={url}
-        insufficientCredits={insufficientCredits}
-      />,
-      {
-        plainText: true,
-      },
-    );
-
-    sendEmail({
-      toEmail: email,
-      subject: `Important: Your AI Smart Search Job Feed is ready!`,
-      htmlContent: emailHtml,
-      textContent: emailText,
-    });
-  } catch {
-    console.error(
-      "Some error occured while sending status update email to Varun Kumawat",
-    );
-  }
-};
-
 export const deploymentUrl = () => {
   switch (process.env.VERCEL_ENV) {
     case "production":
@@ -312,13 +273,12 @@ export async function sendEmail({
 }) {
   try {
     const brevo = new BrevoClient({ apiKey: process.env.BREVO_API_KEY || "" });
-    const result = await brevo.transactionalEmails.sendTransacEmail({
+    await brevo.transactionalEmails.sendTransacEmail({
       subject,
       htmlContent,
       sender: { name: "Varun from GetHired", email: "varun@devhub.co.in" },
       to: [{ email: toEmail }],
     });
-    console.log(result);
   } catch (brevoError) {
     console.error("Brevo failed, trying Resend fallback:", brevoError);
     try {
