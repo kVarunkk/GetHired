@@ -6,27 +6,45 @@ import { TResumeRowContent } from "@/utils/types";
 
 export async function POST(request: Request) {
   try {
-    const userData = await request.json();
+    const { userId } = await request.json();
 
     // 1. Validation
-    if (!userData || !userData.user_id) {
+    if (!userId) {
       return NextResponse.json(
-        { error: "User data or user_id is missing." },
+        { error: "userId is missing." },
         { status: 400 },
       );
     }
 
     const supabase = await createClient();
 
-    const { data: resumeData, error: resumeError } = await supabase
-      .from("resumes")
-      .select("content")
-      .eq("user_id", userData.user_id)
-      .eq("is_primary", true)
-      .maybeSingle();
+    const result = await Promise.all([
+      supabase
+        .from("resumes")
+        .select("content")
+        .eq("user_id", userId)
+        .eq("is_primary", true)
+        .maybeSingle(),
+      supabase
+        .from("user_info")
+        .select(
+          "user_id, top_skills, desired_roles, preferred_locations, min_salary,max_salary, experience_years, work_style_preferences, visa_sponsorship_required,  career_goals_short_term, career_goals_long_term, job_type,industry_preferences",
+        )
+        .single(),
+    ]);
 
-    if (resumeError) {
-      console.error("Error fetching primary resume:", resumeError);
+    const [resume, profile] = result;
+
+    const { data: resumeData, error: resumeError } = resume;
+    const { data: userData, error: profileError } = profile;
+
+    if (resumeError || profileError) {
+      throw new Error(
+        "Some error occured." +
+          resumeError?.message +
+          "---------" +
+          profileError?.message,
+      );
     }
 
     const extractSectionText = (type: string) => {

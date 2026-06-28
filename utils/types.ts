@@ -12,7 +12,7 @@ export type TJobTypeEnum = Enums<"job_type_enum">;
 export type BookmarkRow = Tables<"bookmarks">;
 export type PaymentsRow = Tables<"payments">;
 export type PricePlanRow = Tables<"price_plan">;
-type UserInfoRow = Tables<"user_info">;
+export type UserInfoRow = Tables<"user_info">;
 export type TJobFeedbackVoteEnum = Enums<"job_feedback_vote">;
 export type UserApiTokensRow = Tables<"user_api_tokens">;
 
