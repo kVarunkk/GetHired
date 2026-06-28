@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         ---
         ID: ${job.id}
         Title: ${job.job_name}
-        Description: ${job.description?.slice(0, 800)}
+        Description: ${job.description?.slice(0, 2500)}
         Experience: ${job.experience}
         Visa Requirement: ${job.visa_requirement}
         Salary Range: ${job.salary_range}
