@@ -63,17 +63,19 @@ export async function sendInviteEmail(
 
       if (updateAppMetaError) throw new Error(updateAppMetaError);
 
-      const { error: invitedUserError } = await serviceRoleSupabase
-        .from("user_info")
-        .insert({
-          user_id: data.user?.id,
-          email: data.user?.email,
-          is_job_digest_active: true,
-          is_promotion_active: true,
-        });
+      if (data.user.email) {
+        const { error: invitedUserError } = await serviceRoleSupabase
+          .from("user_info")
+          .insert({
+            user_id: data.user.id,
+            email: data.user.email,
+            is_job_digest_active: true,
+            is_promotion_active: true,
+          });
 
-      if (invitedUserError) {
-        throw new Error("Error creating record for invited user.");
+        if (invitedUserError) {
+          throw new Error("Error creating record for invited user.");
+        }
       }
 
       const userName =
