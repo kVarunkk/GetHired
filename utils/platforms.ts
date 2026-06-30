@@ -1,5 +1,10 @@
 export const platformsArray = [
   {
+    value: "indeed",
+    label: "Indeed",
+    platform_url: "https://in.indeed.com",
+  },
+  {
     value: "naukri",
     label: "Naukri",
     platform_url: "https://www.naukri.com",
