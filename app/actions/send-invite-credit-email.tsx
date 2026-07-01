@@ -35,8 +35,10 @@ export async function sendInviteEmail(
     if (refError || !referrerData) {
       throw new Error("Failed to retrieve inviter's code.");
     }
-    if (referrerData.invitations_count >= 10) {
-      throw new Error("Invitation limit reached for this week.");
+    if (referrerData.invitations_count >= 5) {
+      throw new Error(
+        "No more invitations available. Please purchase credits to continue using the AI features.",
+      );
     }
     const referralCode = referrerData.referral_code;
 
