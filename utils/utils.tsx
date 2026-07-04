@@ -1,11 +1,12 @@
 import { clsx, type ClassValue } from "clsx";
-import { FileUser, Info, ScanSearch, Sparkle, User } from "lucide-react";
+import { FileUser, Info, ScanSearch, Sparkle, UserIcon } from "lucide-react";
 
 import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
 import { Briefcase, Building2, Home, LayoutDashboard } from "lucide-react";
 import { INavItem } from "./types";
 import { v4 as uuidv4 } from "uuid";
+import { User } from "@supabase/supabase-js";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -212,6 +213,7 @@ export const formatCurrency = (amount: number, currency: string) => {
 
 export const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export const PROFILE_API_KEY = "/api/current-user";
+export const JOB_POSTING_API_KEY = "/api/job-posting";
 export const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export const copyToClipboard = (content: string, toastMessage: string) => {
@@ -319,7 +321,7 @@ export const companyNavbarItems: INavItem[] = [
     label: "Profiles",
     href: "/company/profiles",
     type: "startswith",
-    icon: <User className="h-4 w-4" />,
+    icon: <UserIcon className="h-4 w-4" />,
   },
 ];
 
@@ -339,7 +341,7 @@ export const homePageNavItems: INavItem[] = [
   {
     id: "features",
     label: "Features",
-    href: "#howwehelp",
+    href: "/#howwehelp",
     type: "includes",
   },
   {
@@ -372,41 +374,40 @@ export const authPageNavItems: INavItem[] = [
   ...homePageNavItems,
 ];
 
+const verticalNavbarPaths = [
+  "/dashboard",
+  "/company",
+  "/jobs",
+  "/companies",
+  "/get-started",
+  "/resume-review",
+  "/resume",
+];
+
+export const noScrollToTop = ["/resume-review/"];
+
 export const getNavItemsByPath = (
   path: string,
   isCompanyUser: boolean,
+  user: User | null = null,
 ): INavItem[] => {
-  if (
-    path.startsWith("/dashboard") ||
-    path.startsWith("/jobs") ||
-    path.startsWith("/companies") ||
-    path.startsWith("/get-started") ||
-    path.startsWith("/resume-review") ||
-    path.startsWith("/resume")
-  ) {
-    if (isCompanyUser) {
-      return companyNavbarItems;
-    }
+  if (user && !isCompanyUser) {
     return applicantNavbarItems;
-  } else if (path.startsWith("/company")) {
+  } else if (user && isCompanyUser) {
     return companyNavbarItems;
   } else if (path.startsWith("/auth")) {
     return authPageNavItems;
-  } else return homePageNavItems;
+  } else if (verticalNavbarPaths.some((p) => path.startsWith(p))) {
+    return applicantNavbarItems; // Default to applicantNavbarItems for vertical paths if user is not logged in
+  } else {
+    return homePageNavItems;
+  }
 };
 
 export const getNavbarVairantByPath = (
   path: string,
 ): "horizontal" | "vertical" => {
-  if (
-    path.startsWith("/dashboard") ||
-    path.startsWith("/company") ||
-    path.startsWith("/jobs") ||
-    path.startsWith("/companies") ||
-    path.startsWith("/get-started") ||
-    path.startsWith("/resume-review") ||
-    path.startsWith("/resume")
-  ) {
+  if (verticalNavbarPaths.some((p) => path.startsWith(p))) {
     return "vertical";
   } else {
     return "horizontal";

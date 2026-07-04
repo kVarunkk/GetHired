@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-// import { IPayment } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import {
   Select,
@@ -148,6 +147,7 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         header: "Actions",
         cell: ({ row }) => (
           <ModifiedLink
+            prefetch={false}
             href={`/dashboard/buy-credits/payments/${row.original.id}`}
           >
             <Button variant="ghost" size="sm">

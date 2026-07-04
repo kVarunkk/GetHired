@@ -1,40 +1,23 @@
 "use server";
 
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import {
+  buildEquityRange,
+  buildExperience,
+  buildSalaryRange,
+  deploymentUrl,
+  INTERNAL_API_SECRET,
+} from "@/utils/serverUtils";
 import { ICreateJobPostingFormData } from "@/utils/types";
-// import { createClient } from "../../lib/supabase/server";
-// import { revalidatePath } from "next/cache";
+import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
+import { revalidateTag } from "next/cache";
 
 /**
  * SERVER ACTION: upsertJobPostingAction
  * Orchestrates the database logic across 'job_postings' and 'all_jobs' tables.
  */
 
-const buildSalaryRange = (
-  currency?: string,
-  salary_min?: number,
-  salary_max?: number,
-) => {
-  if (currency && salary_min && salary_max) {
-    return `${currency}${salary_min} - ${currency}${salary_max}`;
-  } else return null;
-};
-
-const buildEquityRange = (equity_min?: number, equity_max?: number) => {
-  if (equity_max && equity_min) {
-    return `${equity_min}% - ${equity_max}%`;
-  } else if (!equity_max && equity_min) {
-    return `${equity_min}% +`;
-  } else return null;
-};
-
-const buildExperience = (exp_min?: number, exp_max?: number) => {
-  if (exp_max && exp_min) {
-    return `${exp_min} - ${exp_max} Years`;
-  } else if (!exp_max && exp_min) {
-    return `${exp_min}+ Years`;
-  } else return null;
-};
+// status for new job posting is INACTIVE
 
 export async function upsertJobPostingAction(params: {
   values: ICreateJobPostingFormData;
@@ -42,6 +25,8 @@ export async function upsertJobPostingAction(params: {
   existingPostingId?: string;
   existingJobId?: string | null;
 }) {
+  const baseUrl = deploymentUrl();
+
   const { values, companyId, existingPostingId, existingJobId } = params;
   const supabase = createServiceRoleClient();
 
@@ -55,6 +40,8 @@ export async function upsertJobPostingAction(params: {
     values.min_experience,
     values.max_experience,
   );
+
+  let embedding = null;
 
   try {
     const payload = {
@@ -80,6 +67,39 @@ export async function upsertJobPostingAction(params: {
 
     if (postingError || !new_posting) throw postingError;
 
+    // record already exists in the job_postings table
+    if (existingPostingId) {
+      // updates embedding of job_postings record
+      const embeddingResult = await fetch(
+        `${baseUrl}/api/update-embedding/gemini/job`,
+        {
+          method: "POST",
+          headers: {
+            "X-Internal-Secret": INTERNAL_API_SECRET,
+          },
+          body: JSON.stringify({
+            id: existingPostingId,
+            job_name: values.title.trim(),
+            locations: values.location,
+            description: values.description,
+            job_type: values.job_type,
+            salary_range,
+            table: "job_postings",
+          }),
+        },
+      );
+
+      if (!embeddingResult.ok) {
+        const errorData = await embeddingResult.json();
+        return {
+          success: false,
+          error: errorData.error,
+        };
+      }
+
+      embedding = (await embeddingResult.json()).data;
+    }
+
     // 2. Sync changes to the public 'all_jobs' aggregate table
     if (existingJobId) {
       // Handle Updates for existing listings
@@ -101,19 +121,14 @@ export async function upsertJobPostingAction(params: {
           description: values.description.trim(),
           locations: values.location,
           updated_at: new Date().toISOString(),
+          embedding_new: embedding,
         })
         .eq("id", existingJobId);
 
       if (updateError) throw new Error("Failed to update public job feed.");
+
+      revalidateTag(`job-${existingJobId}`);
     } else {
-      // Handle activation for brand new listings
-      const { error: activateError } = await supabase
-        .from("job_postings")
-        .update({ status: "active" })
-        .eq("id", new_posting.id);
-
-      if (activateError) throw activateError;
-
       if (!new_posting.job_id) {
         // Create the public entry for the first time
         const { data: insertedJob, error: insertError } = await supabase
@@ -136,6 +151,7 @@ export async function upsertJobPostingAction(params: {
             company_url: "/companies/" + new_posting.company_info?.id,
             company_name: new_posting.company_info?.name,
             platform: "gethired",
+            status: "inactive",
           })
           .select("id")
           .single();
@@ -150,8 +166,10 @@ export async function upsertJobPostingAction(params: {
       }
     }
 
-    // Ensure the jobs feed is refreshed across the site
-    // revalidatePath("/jobs");
+    // if the job posting is updated and the status is active then trigger profile relevance update
+    if (new_posting.status === "active") {
+      triggerJobPostingRelevanceUpdate(new_posting.id);
+    }
 
     return { success: true, isUpdate: !!existingPostingId };
   } catch (error: unknown) {

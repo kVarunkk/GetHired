@@ -156,7 +156,11 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <ModifiedLink href={`/company/job-posts/${row.original.id}`} passHref>
+          <ModifiedLink
+            prefetch={false}
+            href={`/company/job-posts/${row.original.id}`}
+            passHref
+          >
             <Button variant="ghost" size="sm">
               View Job
               <ChevronRight className="ml-2 h-4 w-4" />

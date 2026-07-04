@@ -50,11 +50,8 @@ export default async function ProfilesPage({
   );
   const dynamicKey = params.toString();
   try {
-    if (params.get("sortBy") === "relevance") {
-      params.set("limit", "100");
-    }
     const res = await fetch(`${url}/api/profiles?${params.toString()}`, {
-      cache: "force-cache",
+      cache: isAISearch ? "no-cache" : "force-cache",
       next: { revalidate: 3600, tags: ["profiles-feed"] },
       headers: {
         Cookie: headersList.get("Cookie") || "",

@@ -18,58 +18,89 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
-import { useState, useMemo } from "react";
-import { AllJobWithRelations, TApplicationStatus } from "@/utils/types";
-import { User } from "@supabase/supabase-js";
+import { useState } from "react";
+import { AllJobWithRelations } from "@/utils/types";
 import PropagationStopper from "./StopPropagation";
 import InfoTooltip from "./InfoTooltip";
 import JobApplicationForm from "./JobApplicationForm";
 import Link from "next/link";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
+import { mutate } from "swr";
+import { PROFILE_API_KEY } from "@/utils/utils";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export default function JobApplicationDialog({
   jobPost,
-  user,
-  isAppliedJobsTabActive,
+  userId,
+  appliedJob,
+  isApplyDialogOpen,
 }: {
   jobPost: AllJobWithRelations | TJobIdPageData;
-  user: User | null;
-  isAppliedJobsTabActive: boolean;
+  userId: string | null;
+  appliedJob?: {
+    all_jobs_id: string;
+    status: string;
+  };
+  isApplyDialogOpen: boolean;
 }) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [overrideStatus, setOverrideStatus] =
-    useState<TApplicationStatus | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(isApplyDialogOpen);
+  const applicationStatus = appliedJob?.status || null;
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const applicationStatus = useMemo(() => {
-    if (overrideStatus) return overrideStatus;
-    if (isAppliedJobsTabActive) {
-      return jobPost?.applications?.[0]?.status ?? null;
-    }
-    const app = jobPost.job_postings?.[0]?.applications?.find(
-      (each) => each.applicant_user_id === user?.id,
+  const jobApplicationFormSuccess = () => {
+    handleCloseDialog();
+
+    mutate(
+      PROFILE_API_KEY,
+      (currentData) => {
+        if (!currentData) return currentData;
+
+        const profile = currentData.profile || {};
+        const currentApplications = profile.applications || [];
+
+        const newApplicationRecord = {
+          all_jobs_id: jobPost.id,
+          status: "submitted",
+        };
+
+        return {
+          ...currentData,
+          profile: {
+            ...profile,
+            applications: [newApplicationRecord, ...currentApplications],
+          },
+        };
+      },
+      false,
     );
-    return app?.status ?? null;
-  }, [overrideStatus, jobPost, user?.id, isAppliedJobsTabActive]);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("apply");
+
+    router.replace(
+      `${pathname}${params.toString() ? `?${params.toString()}` : ""}`,
+      {
+        scroll: false,
+      },
+    );
+  };
 
   return (
     <Dialog
       open={isDialogOpen}
       onOpenChange={(open) => {
+        if (!open) handleCloseDialog();
         setIsDialogOpen(open);
       }}
     >
       <PropagationStopper>
         <div className="flex items-center gap-2">
-          {applicationStatus && (
-            <InfoTooltip
-              content={
-                <p>
-                  Your current application status is <b>{applicationStatus}</b>.
-                  You&apos;ll be notified via email if the status changes.
-                </p>
-              }
-            />
-          )}
           {applicationStatus ? (
             <Button
               onClick={(e) => e.stopPropagation()}
@@ -92,6 +123,17 @@ export default function JobApplicationDialog({
                 Easy Apply <ArrowRight className=" h-4 w-4" />
               </Button>
             </DialogTrigger>
+          )}
+
+          {applicationStatus && (
+            <InfoTooltip
+              content={
+                <p>
+                  Your current application status is <b>{applicationStatus}</b>.
+                  You&apos;ll be notified via email if the status changes.
+                </p>
+              }
+            />
           )}
         </div>
       </PropagationStopper>
@@ -173,16 +215,11 @@ export default function JobApplicationDialog({
           </div>
           {/* right pane */}
           <div className="flex-1  overflow-y-auto p-6">
-            {user && (
+            {userId && (
               <JobApplicationForm
                 jobPost={jobPost}
-                user={user}
-                onSuccess={() => {
-                  setIsDialogOpen(false);
-                  setOverrideStatus(
-                    "submitted" as TApplicationStatus.SUBMITTED,
-                  );
-                }}
+                userId={userId}
+                onSuccess={jobApplicationFormSuccess}
               />
             )}
           </div>

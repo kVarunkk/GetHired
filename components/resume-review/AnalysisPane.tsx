@@ -5,12 +5,10 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
-  Eye,
   Info,
   Loader2,
   Target,
 } from "lucide-react";
-import { Button } from "../ui/button";
 import { Dispatch, SetStateAction, useState } from "react";
 import { TResumeReviewServer } from "@/utils/types/review.types";
 
@@ -89,7 +87,7 @@ export default function AnalysisPane({
         </div>
       )}
 
-      {currentReview.ai_response?.overall_feedback && (
+      {currentReview?.ai_response?.overall_feedback && (
         <div className="rounded-2xl border border-brand/20 bg-brandSoft overflow-hidden transition-all duration-300 shadow-sm">
           <button
             onClick={() => setIsOverallOpen(!isOverallOpen)}
@@ -122,14 +120,14 @@ export default function AnalysisPane({
           >
             <div className="relative ">
               <p className="text-xs leading-relaxed text-brand-soft-foreground font-medium ">
-                {currentReview.ai_response.overall_feedback}
+                {currentReview?.ai_response?.overall_feedback}
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {currentReview.ai_response?.bullet_points?.map((bp) => (
+      {currentReview?.ai_response?.bullet_points?.map((bp) => (
         <button
           key={bp.bullet_id}
           onMouseEnter={() => {
@@ -179,12 +177,13 @@ export default function AnalysisPane({
               <Copy className="h-4 w-4 hidden group-hover:inline ml-2 transition-all" />
             </p>
           </div>
+          {/* TODO FIX THIS FOR MOBILE SCREENS */}
           {/* TOUCH SCREEN ACTION BUTTONS 
                    Hiding logic: 
                    - 'hidden' by default.
                    - '[@media(hover:none)]:flex' only shows these on touchscreens (mobile/tablet).
                 */}
-          <div className="hidden [@media(hover:none)]:flex items-center gap-2 pt-2">
+          {/* <div className="hidden [@media(hover:none)]:flex items-center gap-2 pt-2">
             <Button
               size="sm"
               variant="outline"
@@ -214,7 +213,7 @@ export default function AnalysisPane({
               <Eye size={12} />
               {activeHighlightId === bp.bullet_id ? "Focused" : "Focus"}
             </Button>
-          </div>
+          </div> */}
 
           <p className="text-[11px] text-muted-foreground border-t border-zinc-100 dark:border-zinc-800 pt-3 leading-relaxed flex items-center gap-2">
             <Info className="w-3 h-3  text-muted-foreground shrink-0" />

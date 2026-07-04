@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Badge } from "./ui/badge";
-import { User } from "@supabase/supabase-js";
 import { cn } from "@/utils/utils";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import JobFavoriteBtn from "./JobFavoriteBtn";
@@ -14,18 +13,23 @@ import { platformsArray } from "@/utils/platforms";
 const JobItem = React.memo(
   ({
     job,
-    user,
+    userId,
     isSuitable,
     isCompanyUser,
-    isAppliedJobsTabActive,
     isOnboardingComplete,
+    isFavorite,
+    appliedJob,
   }: {
     job: AllJobWithRelations;
-    user: User | null;
+    userId: string | null;
     isSuitable: boolean;
     isCompanyUser: boolean;
-    isAppliedJobsTabActive: boolean;
     isOnboardingComplete: boolean;
+    isFavorite: boolean;
+    appliedJob?: {
+      all_jobs_id: string;
+      status: string;
+    };
   }) => {
     return (
       <div
@@ -50,9 +54,9 @@ const JobItem = React.memo(
                 </Link>
                 <JobFavoriteBtn
                   isCompanyUser={isCompanyUser}
-                  user={user}
-                  userFavorites={job.user_favorites}
+                  userId={userId}
                   job_id={job.id}
+                  isFavorite={isFavorite}
                 />
               </div>
               {job.company_url ? (
@@ -73,10 +77,12 @@ const JobItem = React.memo(
           </div>
           <JobApplyBtn
             isCompanyUser={isCompanyUser}
-            user={user}
+            userId={userId}
             job={job}
             isOnboardingComplete={isOnboardingComplete}
-            isAppliedJobsTabActive={isAppliedJobsTabActive}
+            appliedJob={appliedJob}
+            isJobIdPage={false}
+            isDialogOpen={false}
           />
         </div>
         {job.status === "inactive" && (

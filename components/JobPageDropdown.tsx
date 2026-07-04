@@ -13,33 +13,31 @@ import { Button } from "./ui/button";
 import { Check, File, MoreHorizontal, Share2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useState } from "react";
-import { User } from "@supabase/supabase-js";
 import { TApplicationStatus } from "@/utils/types";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
-import { copyToClipboard } from "@/utils/utils";
+import { copyToClipboard, PROFILE_API_KEY } from "@/utils/utils";
+import { mutate } from "swr";
 
 const applicationStatuses = Object.values(TApplicationStatus);
 
 export default function JobPageDropdown({
-  user,
+  userId,
   jobId,
   isCompanyUser,
   applicationStatus,
   isPlatformJob,
 }: {
-  user: User | null;
+  userId: string | null;
   jobId: string;
   isCompanyUser: boolean;
   applicationStatus: TApplicationStatus | null;
   isPlatformJob: boolean;
 }) {
   const [appStatus, setAppStatus] = useState(applicationStatus);
-  const router = useRouter();
 
   const updateApplicationStatus = async (status: TApplicationStatus) => {
     try {
-      if (!user || isCompanyUser || !appStatus || isPlatformJob) {
+      if (!userId || isCompanyUser || !appStatus || isPlatformJob) {
         return;
       }
       setAppStatus(status);
@@ -49,12 +47,13 @@ export default function JobPageDropdown({
         .from("applications")
         .update({ status: status, updated_at: new Date().toISOString() })
         .eq("all_jobs_id", jobId)
-        .eq("applicant_user_id", user.id);
+        .eq("applicant_user_id", userId);
 
       if (error) throw error;
 
+      mutate(PROFILE_API_KEY);
+
       toast.success("Application status updated.");
-      router.refresh();
     } catch {
       toast.error("An unexpected error occurred.");
     }
@@ -69,7 +68,7 @@ export default function JobPageDropdown({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          {!isCompanyUser && user && appStatus && !isPlatformJob && (
+          {!isCompanyUser && userId && appStatus && !isPlatformJob && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <File className="h-4 w-4 " />

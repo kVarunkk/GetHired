@@ -48,7 +48,7 @@ export default function ProfileDropdown({
   const logout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.replace("/auth/login");
+    router.replace(!isCompanyUser ? "/auth/login" : "/auth/login?company=true");
     router.refresh();
   };
 

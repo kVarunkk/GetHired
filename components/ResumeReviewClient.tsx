@@ -1,7 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import BackButton from "./BackButton";
 import ResumeSection from "./resume-review/ResumeSection";
@@ -11,36 +10,50 @@ import {
   TResumeReviewServer,
 } from "@/utils/types/review.types";
 import AnalysisPane from "./resume-review/AnalysisPane";
-import { useRouter } from "next/navigation";
 import { markAnalysisAsFailedAction } from "@/app/actions/mark-review-analysis-failed";
+import useSWR, { mutate } from "swr";
+import { fetcher } from "@/utils/utils";
 
 interface ReviewWorkspaceProps {
-  review: TResumeReviewServer;
+  initialReview: TResumeReviewServer;
   initialJd: string;
   existingResumes: TResumeReviewResume[];
 }
 
 export default function ResumeReviewClient({
-  review,
+  initialReview,
   initialJd,
   existingResumes,
 }: ReviewWorkspaceProps) {
-  const supabase = createClient();
-
-  const [currentReview, setCurrentReview] = useState(review);
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(
     null,
   );
   const [isJdPaneOpen, setIsJdPaneOpen] = useState(true);
+  const [activeTriggerState, setActiveTriggerState] = useState<
+    "idle" | "saving_jd" | "triggering_analysis" | "triggering_parse"
+  >("idle");
 
-  const router = useRouter();
-
-  const isMounted = useRef(true);
-  useEffect(() => {
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
+  const cacheKey = `/api/resume-review/${initialReview.id}`;
+  const {
+    data: { data: review },
+  } = useSWR(cacheKey, fetcher, {
+    fallbackData: { data: initialReview },
+    refreshInterval: (swrRootData) => {
+      const data = swrRootData?.data;
+      const isParsing =
+        (data?.resume_id &&
+          !data?.resumes?.content &&
+          !data?.resumes?.parsing_failed) ||
+        activeTriggerState === "triggering_parse";
+      console.log(data?.status, activeTriggerState);
+      const isAnalyzing =
+        data?.status === "processing" ||
+        activeTriggerState === "triggering_analysis";
+      return isParsing || isAnalyzing ? 2000 : 0;
+    },
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  });
 
   useEffect(() => {
     if (!activeHighlightId) return;
@@ -50,143 +63,48 @@ export default function ResumeReviewClient({
     }
   }, [activeHighlightId]);
 
-  const linkedResume = currentReview?.resumes;
-  const isResumeLinked = !!currentReview?.resume_id;
+  const linkedResume = review?.resumes;
+  const isResumeLinked = !!review?.resume_id;
   const isParsed = !!linkedResume?.content;
   const isParsingFailed = !!linkedResume?.parsing_failed;
-  const isAnalyzing = currentReview.status === "processing";
+  const isAnalyzing = review?.status === "processing";
 
-  useEffect(() => {
-    if (
-      currentReview.status !== "processing" ||
-      currentReview.ai_response ||
-      currentReview.analysis_failed
-    ) {
-      return;
-    }
-
-    let timerId: NodeJS.Timeout;
-
-    const checkStatus = async () => {
-      if (!isMounted.current) return;
-      try {
-        const { data, error } = await supabase
-          .from("resume_reviews")
-          .select("ai_response, score, status, analysis_failed")
-          .eq("id", currentReview.id)
-          .single();
-
-        if (!error && data) {
-          if (data.ai_response && data.analysis_failed === false) {
-            toast.success("Analysis complete!");
-            router.refresh();
-            return;
-          }
-
-          if (data.analysis_failed === true) {
-            toast.error("Analysis failed.");
-            router.refresh();
-            return;
-          }
-        }
-
-        timerId = setTimeout(checkStatus, 3000);
-      } catch {
-        timerId = setTimeout(checkStatus, 5000);
-      }
-    };
-
-    timerId = setTimeout(checkStatus, 1000);
-    return () => clearTimeout(timerId);
-  }, [
-    currentReview.id,
-    currentReview.status,
-    currentReview.ai_response,
-    currentReview.analysis_failed,
-    supabase,
-    router,
-  ]);
-
-  const runAnalysis = async (jd: string) => {
-    setCurrentReview((prev) => ({
-      ...prev,
-      status: "processing",
-      analysis_failed: false,
-      ai_response: null,
-      score: null,
-    }));
-
+  const runAnalysis = async () => {
     try {
       const res = await fetch("/api/resume-review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          reviewId: currentReview.id,
-          targetJd: jd,
+          reviewId: review.id,
         }),
       });
 
       if (!res.ok) {
         const { error } = await res.json();
-        throw new Error(error);
+        throw new Error(error || "API routing processing failed");
       }
 
-      // Refresh the server-side props to stay in sync
-      startTransition(() => {
-        router.refresh();
-      });
+      mutate(cacheKey);
     } catch (error) {
-      // Revert status on failure
-      setCurrentReview((prev) => ({
-        ...prev,
+      mutate(cacheKey, (currentReview) => ({
+        ...currentReview,
         status: "failed",
         analysis_failed: true,
       }));
       await markAnalysisAsFailedAction(review.id);
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong. Please try again.",
+        error instanceof Error ? error.message : "Something went wrong.",
       );
+    } finally {
+      changeTriggerState("idle");
     }
   };
 
-  useEffect(() => {
-    if (!isResumeLinked || isParsed || isParsingFailed) return;
-
-    let timerId: NodeJS.Timeout;
-
-    const checkStatus = async () => {
-      if (!isMounted.current) return;
-
-      try {
-        const { data, error } = await supabase
-          .from("resumes")
-          .select("id, name, content, resume_path, parsing_failed")
-          .eq("id", currentReview.resume_id!)
-          .single();
-
-        if (!error && data && (data.content || data.parsing_failed)) {
-          router.refresh();
-          return;
-        }
-
-        timerId = setTimeout(checkStatus, 3000);
-      } catch {
-        timerId = setTimeout(checkStatus, 5000);
-      }
-    };
-
-    timerId = setTimeout(checkStatus, 2000);
-    return () => clearTimeout(timerId);
-  }, [
-    isResumeLinked,
-    isParsed,
-    isParsingFailed,
-    currentReview.resume_id,
-    supabase,
-    router,
-  ]);
+  const changeTriggerState = (
+    state: "idle" | "saving_jd" | "triggering_analysis" | "triggering_parse",
+  ) => {
+    setActiveTriggerState(state);
+  };
 
   return (
     <div className="flex flex-col sm:flex-row sm:h-[calc(100vh)] sm:overflow-hidden bg-background">
@@ -197,13 +115,13 @@ export default function ResumeReviewClient({
             <BackButton />
             <div className="flex flex-col ">
               <h2 className="text-lg font-bold">Analysis Pane</h2>
-              <p className=" text-muted-foreground text-sm">{review.name}</p>
+              <p className=" text-muted-foreground text-sm">{review?.name}</p>
             </div>
           </div>
-          {currentReview.score && (
+          {review?.score && (
             <div className="text-right">
               <div className="text-2xl font-black text-brand">
-                {currentReview.score}
+                {review.score}
               </div>
               <div className=" text-muted-foreground font-bold  tracking-tighter">
                 Match Score
@@ -216,7 +134,7 @@ export default function ResumeReviewClient({
           isParsed={isParsed}
           isResumeLinked={isResumeLinked}
           isParsingFailed={isParsingFailed}
-          currentReview={currentReview}
+          currentReview={review}
           isAnalyzing={isAnalyzing}
           setActiveHighlightId={setActiveHighlightId}
           activeHighlightId={activeHighlightId}
@@ -233,8 +151,8 @@ export default function ResumeReviewClient({
           activeHighlightId={activeHighlightId}
           isResumeLinked={isResumeLinked}
           isParsingFailed={isParsingFailed}
-          setCurrentReview={setCurrentReview}
-          reviewId={review.id}
+          reviewId={review?.id}
+          changeTriggerState={changeTriggerState}
         />
 
         <JdSection
@@ -243,8 +161,9 @@ export default function ResumeReviewClient({
           isParsed={isParsed}
           isAnalyzing={isAnalyzing}
           initialJd={initialJd}
-          reviewId={review.id}
+          reviewId={review?.id}
           runAnalysis={runAnalysis}
+          changeTriggerState={changeTriggerState}
         />
       </div>
     </div>

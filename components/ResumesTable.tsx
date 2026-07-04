@@ -127,7 +127,7 @@ export default function ResumesTable({ data, userId }: ResumesTableProps) {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <ModifiedLink href={`/resume/${row.original.id}`}>
+          <ModifiedLink prefetch={false} href={`/resume/${row.original.id}`}>
             <Button variant="ghost" size="sm">
               View Resume
               <ChevronRight className="ml-2 h-4 w-4" />

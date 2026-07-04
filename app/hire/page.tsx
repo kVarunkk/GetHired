@@ -38,7 +38,7 @@ export default async function HirePage() {
             heading="Smartest Path to the Perfect Candidate"
             subheading="Find Exceptional candidates, Streamline your screening, and connect Directly with motivated talent"
             ctaText="Hire Talent"
-            ctaLink="/hire"
+            ctaLink="/auth/sign-up?company=true"
             imgLight={HIRE_PAGE_LIGHT}
             imgDark={HIRE_PAGE_DARK}
           />

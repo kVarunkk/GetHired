@@ -15,6 +15,8 @@ export type PricePlanRow = Tables<"price_plan">;
 export type UserInfoRow = Tables<"user_info">;
 export type TJobFeedbackVoteEnum = Enums<"job_feedback_vote">;
 export type UserApiTokensRow = Tables<"user_api_tokens">;
+type ResumesRow = Tables<"resumes">;
+type JobRelevantProfilesRow = Tables<"job_relevant_profiles">;
 
 export type TCompanyInfo = CompanyInfoRow & {
   user_favorites_companies?: UserFavoritesCompanyInfoRow[];
@@ -22,6 +24,8 @@ export type TCompanyInfo = CompanyInfoRow & {
 
 export type AllProfileWithRelations = UserInfoRow & {
   company_favorites?: UserFavoritesCompanyInfoRow[];
+  resumes?: ResumesRow[];
+  job_relevant_profiles?: JobRelevantProfilesRow[];
 };
 
 export type ProfilesBuildQueryResult = {

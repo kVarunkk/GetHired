@@ -30,7 +30,7 @@ export default async function ResumePage() {
       <div className="flex flex-col w-full gap-8 p-4 mb-20">
         <div className="flex items-center justify-between flex-wrap gap-4 w-full">
           <h1 className="text-3xl font-medium ">All Resumes</h1>
-          <CreateResumeDialog key={tableKey} existingResumes={resumes} />
+          <CreateResumeDialog />
         </div>
         <ResumesTable key={tableKey} data={resumes || []} userId={user.id} />
       </div>

@@ -131,6 +131,7 @@ export async function POST(request: Request) {
       .from("user_info")
       .update({
         embedding_new: embedding as unknown as string,
+        embedding_updated_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", userData.user_id);

@@ -1,15 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
-import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-// import { IFormData } from "@/utils/types";
 import ProfileFavoriteStar from "@/components/ProfileFavoriteStar";
 import { buildSalaryRange } from "../../applicants/[applicant_id]/page";
 import ProfileActiveApplication from "@/components/ProfileActiveApplications";
 import SelectProfile from "@/components/SelectProfile";
-import { Mail } from "lucide-react";
+import { ArrowLeft, Mail } from "lucide-react";
 import Link from "next/link";
 import { GitHubLogoIcon, LinkedInLogoIcon } from "@radix-ui/react-icons";
 
@@ -29,7 +27,6 @@ export default async function ProfilePage({
       throw new Error("User not authenticated.");
     }
 
-    // Fetch the company ID of the logged-in user
     const { data: companyData, error: companyError } = await supabase
       .from("company_info")
       .select("*, job_postings(id, title, job_id)")
@@ -40,7 +37,6 @@ export default async function ProfilePage({
       throw new Error("Logged-in user does not have a company profile.");
     }
 
-    // Fetch the applicant's profile details
     const { data: applicantProfile, error } = await supabase
       .from("user_info")
       .select(
@@ -71,8 +67,6 @@ export default async function ProfilePage({
       return <ErrorComponent />;
     }
 
-    // const applicantProfile = applicantProfileData as IFormData;
-
     const { data: signedUrlData } = await supabase.storage
       .from("resumes")
       .createSignedUrl(applicantProfile.resumes?.[0]?.resume_path || "", 3600);
@@ -81,9 +75,12 @@ export default async function ProfilePage({
 
     return (
       <div className="flex flex-col w-full p-4 gap-8 ">
-        <div className="flex items-center justify-between">
-          <BackButton />
-        </div>
+        <Link
+          href="/company/profiles"
+          className="text-muted-foreground hover:text-primary transition-colors w-fit p-2 pl-0"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
 
         <div className="flex items-center justify-between flex-wrap gap-5">
           <div className="flex flex-col gap-2">
@@ -92,11 +89,12 @@ export default async function ProfilePage({
                 {applicantProfile.full_name}
               </h1>
               <ProfileFavoriteStar
-                profile={applicantProfile}
+                profileId={applicantProfile.user_id}
                 companyId={companyData.id}
+                // TODO: MAKE THIS DYNAMIC
+                isFavorite={false}
               />
             </div>
-            {/* <p className="text-muted-foreground">{applicantProfile.email}</p> */}
             <div className="flex items-center gap-2">
               <Link
                 href={`mailto:${applicantProfile.email}`}

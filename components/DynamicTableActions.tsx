@@ -43,6 +43,7 @@ interface DynamicActionsProps<T extends Item> {
   removeLocalItem: (id: string) => void;
   entityName?: string;
   identifierKey?: keyof T;
+  selectString?: string;
 }
 
 export default function DynamicActions<T extends Item>({
@@ -53,6 +54,7 @@ export default function DynamicActions<T extends Item>({
   removeLocalItem,
   entityName = "Item",
   identifierKey = "id",
+  selectString = "*",
 }: DynamicActionsProps<T>) {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -86,7 +88,7 @@ export default function DynamicActions<T extends Item>({
           updates as Database["public"]["Tables"][typeof tableName]["Update"],
         )
         .eq(String(idKey), itemId)
-        .select("*")
+        .select(selectString)
         .single();
 
       if (error) throw error;

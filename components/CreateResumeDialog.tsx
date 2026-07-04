@@ -13,22 +13,17 @@ import { Button } from "./ui/button";
 import ResumeSourceSelector from "./ResumeSourceSelector";
 import { startTransition, useState } from "react";
 import toast from "react-hot-toast";
-// import { createResumeAction } from "@/app/actions/create-resume";
 import { TAICredits } from "@/utils/types";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import InfoTooltip from "./InfoTooltip";
 import Link from "next/link";
-import { TResumeReviewResume } from "@/utils/types/review.types";
 import { uploadResumeAction } from "@/app/actions/upload-resume-file";
 import { useProgress } from "react-transition-progress";
+import { TResumeReviewResume } from "@/utils/types/review.types";
 
-export default function CreateResumeDialog({
-  existingResumes,
-}: {
-  existingResumes: TResumeReviewResume[];
-}) {
+export default function CreateResumeDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -41,6 +36,8 @@ export default function CreateResumeDialog({
     staleTime: 5 * 60 * 1000,
   });
   const creditsState = data && data.profile ? data.profile.ai_credits : 0;
+  const existingResumes: TResumeReviewResume[] =
+    data && data.profile ? data.profile.resumes : [];
 
   const handleStartProcessing = async () => {
     if (!selectedFile) return;
@@ -56,7 +53,6 @@ export default function CreateResumeDialog({
         toast.success("Resume added succesfully!");
         setIsOpen(false);
         setSelectedFile(null);
-        // router.refresh();
         startTransition(() => {
           startProgress();
           router.push(`/resume/${result.resumeId}`);

@@ -108,10 +108,11 @@ export default async function CompanyIdPage({
                 <h1 className="text-3xl font-medium">{companyData.name}</h1>
                 <JobFavoriteBtn
                   isCompanyUser={isCompanyUser}
-                  user={user}
-                  userFavoritesCompanyInfo={
-                    companyData.user_favorites_companies
-                  }
+                  userId={user?.id || null}
+                  // userFavoritesCompanyInfo={
+                  //   companyData.user_favorites_companies
+                  // }
+                  isFavorite={companyData.user_favorites_companies.length > 0}
                   company_id={company_id}
                 />
               </div>

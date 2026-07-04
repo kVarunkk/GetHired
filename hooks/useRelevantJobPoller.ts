@@ -1,9 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { mutate } from "swr";
-import { revalidateCache } from "@/app/actions/revalidate";
-import { PROFILE_API_KEY } from "@/utils/utils";
+import { JOB_POSTING_API_KEY, PROFILE_API_KEY } from "@/utils/utils";
 
 interface PollerOptions {
   userId: string | null;
@@ -12,6 +11,9 @@ interface PollerOptions {
   isSimilarSearch: boolean;
   currentPage: string;
   isFailed: boolean;
+  isRelevantProfileSearch: boolean;
+  jobPostingId: string | null;
+  loading: boolean;
 }
 
 /**
@@ -21,42 +23,104 @@ interface PollerOptions {
  * hook only performs the side effects.
  */
 export function useRelevantJobPoller({
+  loading,
   userId,
   isGenerated,
   isSuitable,
   isSimilarSearch,
   currentPage,
   isFailed,
+  isRelevantProfileSearch,
+  jobPostingId,
 }: PollerOptions) {
   const router = useRouter();
+  const [isRefreshing, startTransition] = useTransition();
 
   useEffect(() => {
+    console.log(
+      "isLoading",
+      loading,
+      "generated",
+      isGenerated,
+      "failed",
+      isFailed,
+      "issuitable negation",
+      !isSuitable,
+      "current page",
+      currentPage,
+      "similar search",
+      isSimilarSearch,
+      "userId",
+      userId,
+      "relevant profile search negation",
+      !isRelevantProfileSearch,
+    );
+
     if (
+      loading ||
       isGenerated ||
-      currentPage !== "jobs" ||
-      !isSuitable ||
-      isSimilarSearch ||
       isFailed ||
-      !userId
-    )
+      !isSuitable ||
+      (currentPage === "jobs" && (isSimilarSearch || !userId)) ||
+      (currentPage === "profiles" && !isRelevantProfileSearch)
+    ) {
       return;
+    }
 
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const checkFlag = async () => {
       const supabase = createClient();
-      const { data } = await supabase
-        .from("user_info")
-        .select("is_relevant_jobs_generated")
-        .eq("user_id", userId)
-        .single();
 
-      if (data?.is_relevant_jobs_generated) {
-        await mutate(PROFILE_API_KEY);
-        await revalidateCache("jobs-feed");
-        router.refresh();
+      let completed = false;
+
+      if (isRelevantProfileSearch) {
+        const { data, error } = await supabase
+          .from("job_postings")
+          .select("matching_status")
+          .eq("id", jobPostingId!)
+          .single();
+
+        if (error) {
+          timeoutId = setTimeout(checkFlag, 1000);
+          return;
+        }
+
+        completed =
+          data?.matching_status === "completed" ||
+          data?.matching_status === "failed";
       } else {
-        timeoutId = setTimeout(checkFlag, 2000);
+        const { data, error } = await supabase
+          .from("user_info")
+          .select("relevant_jobs_update_status")
+          .eq("user_id", userId!)
+          .single();
+
+        console.log("data from polling hook: ", data);
+
+        if (error) {
+          timeoutId = setTimeout(checkFlag, 1000);
+          return;
+        }
+
+        completed =
+          data?.relevant_jobs_update_status === "completed" ||
+          data?.relevant_jobs_update_status === "failed";
+      }
+
+      console.log("COMPLETED: ", completed);
+
+      if (completed) {
+        await mutate(
+          isRelevantProfileSearch
+            ? `${JOB_POSTING_API_KEY}?jobId=${jobPostingId}`
+            : PROFILE_API_KEY,
+        );
+        startTransition(() => {
+          router.refresh();
+        });
+      } else {
+        timeoutId = setTimeout(checkFlag, 1000);
       }
     };
 
@@ -71,5 +135,10 @@ export function useRelevantJobPoller({
     isSuitable,
     isSimilarSearch,
     isFailed,
+    isRelevantProfileSearch,
+    jobPostingId,
+    loading,
   ]);
+
+  return { isRefreshing };
 }

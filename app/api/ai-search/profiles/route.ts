@@ -9,10 +9,10 @@ import { AiSearchProfileBody } from "@/utils/types/api.types";
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { userId, job_post_id, profiles, companyId }: AiSearchProfileBody =
+    const { userId, jobId, profiles, companyId }: AiSearchProfileBody =
       await request.json();
 
-    if (!userId || !profiles || !job_post_id || !companyId) {
+    if (!userId || !profiles || !jobId || !companyId) {
       return NextResponse.json(
         {
           message: "Required fields are missing in the request body.",
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         questions
       `,
       )
-      .eq("id", job_post_id)
+      .eq("id", jobId)
       .single();
 
     if (jobError || !jobPosting) {
@@ -104,21 +104,24 @@ export async function POST(request: NextRequest) {
       ${jobQuery}
 
       **User Profiles to Evaluate:**
-      ${profiles
-        .map(
-          (profile) => `
+      ${profiles.map(
+        (profile) => `
         ---
-        ID: ${profile.user_id}
-        Name: ${profile.full_name}
-        Desired Roles: ${profile.desired_roles?.join(", ")}
-        Experience: ${profile.experience_years} years
-        Preferred Locations: ${profile.preferred_locations?.join(", ")}
-        Top Skills: ${profile.top_skills?.join(", ")}
-        Work Style: ${profile.work_style_preferences?.join(", ")}
+        - Desired Roles: ${profile.desired_roles?.join(", ")}
+        - Work Experience: ${profile.resume_experience}
+        - Preferred Locations: ${profile.preferred_locations?.join(", ")}
+        - Preferred Industries: ${profile.industry_preferences?.join(", ")}
+        - Skills: ${profile.resume_skills + profile.top_skills?.join(", ")}
+        - Projects: ${profile.resume_projects}
+        - Work Style: ${profile.work_style_preferences?.join(", ")}
+        - Job Type: ${profile.job_type?.join(", ")}
+        - Company Size: ${profile.company_size_preference}
+        - Career Goals: ${profile.career_goals_short_term} and ${
+          profile.career_goals_long_term
+        }
         ---
       `,
-        )
-        .join("\n")}
+      )}
       
       **Instructions:**
       1.  Read the job posting requirements carefully.
@@ -147,21 +150,11 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    // Step 3: Increment AI search uses for the company
-
-    await supabase
-      .from("company_info")
-      .update({
-        ai_credits: companyInfo.ai_credits - TAICredits.AI_SEARCH_ASK_AI_RESUME,
-      })
-      .eq("id", companyId);
-
     return NextResponse.json({
       rerankedProfiles: object.reranked_profile_ids,
       filteredOutProfiles: object.filtered_out_profile_ids,
     });
   } catch {
-    // console.error(e);
     return NextResponse.json(
       {
         message: "An error occurred",

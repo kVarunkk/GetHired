@@ -1,53 +1,24 @@
-import { useEffect, useState } from "react";
 import { StepProps } from "../OnboardingComponent";
-import { createClient } from "@/lib/supabase/client";
 import { CardContent } from "../ui/card";
 import { Label } from "../ui/label";
 import { Loader2 } from "lucide-react";
 import ResumeSourceSelector from "../ResumeSourceSelector";
 import { TResumeReviewResume } from "@/utils/types/review.types";
-import toast from "react-hot-toast";
+import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
+import useSWR from "swr";
 
 export const Step6ResumeUpload: React.FC<StepProps> = ({
   formData,
   setFormData,
   errors,
 }) => {
-  const [existingResumes, setExistingResumes] = useState<TResumeReviewResume[]>(
-    [],
-  );
-  const [fetchingResumes, setFetchingResumes] = useState(true);
-
-  useEffect(() => {
-    const fetchResumes = async () => {
-      try {
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          setFetchingResumes(false);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from("resumes")
-          .select("id, name, created_at, is_primary, parsing_failed")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-
-        if (!error) {
-          setExistingResumes(data || []);
-        }
-      } catch {
-        toast.error("Failed to load your resumes. Please refresh the page.");
-      } finally {
-        setFetchingResumes(false);
-      }
-    };
-
-    fetchResumes();
-  }, []);
+  const { data, isLoading } = useSWR(PROFILE_API_KEY, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const existingResumes: TResumeReviewResume[] =
+    data && data.profile ? data.profile.resumes : [];
 
   return (
     <CardContent className="!p-0 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -56,7 +27,7 @@ export const Step6ResumeUpload: React.FC<StepProps> = ({
           <Label>Professional Resume</Label>
         </div>
 
-        {fetchingResumes ? (
+        {isLoading ? (
           <div className="h-32 flex items-center justify-center border-2 border-dashed rounded-xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/20">
             <Loader2 className="animate-spin h-5 w-5 " />
           </div>

@@ -22,7 +22,9 @@ const resumeReviewServerQuery = supabase
 
 const resumeReviewTableQuery = supabase
   .from("resume_reviews")
-  .select("id, created_at, resumes(name), status, job_id, name")
+  .select(
+    "id, created_at, resumes(name), all_jobs(job_name), status, job_id, name",
+  )
   .single();
 //   .eq("user_id", "")
 

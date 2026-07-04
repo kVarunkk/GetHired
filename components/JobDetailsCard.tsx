@@ -7,24 +7,26 @@ import { cn, copyToClipboard } from "@/utils/utils";
 import { JobPostingsRow, TAICredits } from "@/utils/types";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
-import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import InfoTooltip from "./InfoTooltip";
 import Link from "next/link";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
+import { Skeleton } from "./ui/skeleton";
 
 type JobDescriptionCardProps =
   | {
       job: TJobIdPageData;
       page: "all-jobs";
-      user?: User | null;
+      userId: string | null;
       isCompanyUser?: boolean;
+      inactive?: boolean;
     }
   | {
       job: JobPostingsRow;
       page: "job-posts";
-      user?: User | null;
+      userId: string | null;
       isCompanyUser?: boolean;
+      inactive?: boolean;
     };
 
 const isAllJobsJob = (
@@ -35,9 +37,10 @@ const isAllJobsJob = (
 
 export default function JobDescriptionCard({
   job,
-  user,
+  userId,
   page,
   isCompanyUser = false,
+  inactive = false,
 }: JobDescriptionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAISummary, setIsAISummary] = useState(false);
@@ -83,7 +86,7 @@ export default function JobDescriptionCard({
   };
 
   const handleAISummary = () => {
-    if (!user) {
+    if (!userId) {
       router.push("/auth/sign-up?returnTo=/jobs/" + job.id);
       return;
     }
@@ -127,43 +130,48 @@ export default function JobDescriptionCard({
                 <Copy className="h-4 w-4" />
               </Button>
             </CardTitle>
-            {page === "all-jobs" && !isCompanyUser && (
-              <div className="flex items-center">
-                <Button
-                  variant={"link"}
-                  className="underline pl-0 sm:pl-3"
-                  onClick={handleAISummary}
-                  disabled={isLoading || !job.description}
-                >
-                  {!isLoading && !isAISummary && (
-                    <Sparkle className="h-4 w-4 " />
-                  )}
-                  {isLoading ? (
-                    <>Processing...</>
-                  ) : !user ? (
-                    "Summarize with AI"
-                  ) : isAISummary ? (
-                    "Show Original"
-                  ) : (
-                    "Summarize with AI"
-                  )}
-                </Button>
+            {inactive ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              page === "all-jobs" &&
+              !isCompanyUser && (
+                <div className="flex items-center">
+                  <Button
+                    variant={"link"}
+                    className="underline pl-0 sm:pl-3"
+                    onClick={handleAISummary}
+                    disabled={isLoading || !job.description}
+                  >
+                    {!isLoading && !isAISummary && (
+                      <Sparkle className="h-4 w-4 " />
+                    )}
+                    {isLoading ? (
+                      <>Processing...</>
+                    ) : !userId ? (
+                      "Summarize with AI"
+                    ) : isAISummary ? (
+                      "Show Original"
+                    ) : (
+                      "Summarize with AI"
+                    )}
+                  </Button>
 
-                <InfoTooltip
-                  content={
-                    <p>
-                      This feature uses {TAICredits.AI_SUMMARY} AI credits per
-                      use.{" "}
-                      <Link
-                        href={"/dashboard/buy-credits"}
-                        className="text-blue-500"
-                      >
-                        Recharge Credits
-                      </Link>
-                    </p>
-                  }
-                />
-              </div>
+                  <InfoTooltip
+                    content={
+                      <p>
+                        This feature uses {TAICredits.AI_SUMMARY} AI credits per
+                        use.{" "}
+                        <Link
+                          href={"/dashboard/buy-credits"}
+                          className="text-blue-500"
+                        >
+                          Recharge Credits
+                        </Link>
+                      </p>
+                    }
+                  />
+                </div>
+              )
             )}
           </div>
         </CardHeader>

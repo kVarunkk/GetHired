@@ -40,12 +40,22 @@ export async function GET(request: NextRequest) {
   const sortBy = searchParams.get("sortBy") ?? "created_at";
   const sortOrder = searchParams.get("sortOrder") ?? "desc";
   const isFavoriteTabActive = searchParams.get("tab") === "saved";
-  const job_post_id = searchParams.get("job_post");
+  const jobId = searchParams.get("job_post");
   const limit = parseInt(searchParams.get("limit") || "20");
   const cursor = searchParams.get("cursor");
   const jobEmbedding =
-    companyData.job_postings?.find((job) => job.id === job_post_id)
-      ?.embedding_new || null;
+    companyData.job_postings?.find((job) => job.id === jobId)?.embedding_new ||
+    null;
+  // used for digest only
+  // digest = we find profiles according to job id and insert them to job_relevant_profiles
+  // standard = we serve the pre calculated profiles from job_relevant_profiles
+  const type = searchParams.get("type");
+  const relevanceSearchType: "digest" | "standard" | null =
+    sortBy === "relevance" && !!jobId
+      ? type === "digest"
+        ? "digest"
+        : "standard"
+      : null;
 
   try {
     const { data, error, nextCursor, count, matchedProfileIds } =
@@ -68,6 +78,8 @@ export async function GET(request: NextRequest) {
         limit,
         isFavoriteTabActive,
         jobEmbedding,
+        relevanceSearchType,
+        jobId,
       });
 
     if (error) {
@@ -78,10 +90,10 @@ export async function GET(request: NextRequest) {
       initialProfiles: data,
       initialCount: count,
       userId: user.id,
-      jobId: job_post_id,
+      jobId: jobId,
       aiCredits: companyData.ai_credits,
       matchedProfileIds,
-      isRelevantSearch: sortBy === "relevance" && !!job_post_id,
+      relevanceSearchType,
       cursor,
       companyId: companyData.id,
     });

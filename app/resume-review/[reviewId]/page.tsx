@@ -65,7 +65,7 @@ export default async function ResumeReviewPage({
   return (
     <ResumeReviewClient
       key={remountKey}
-      review={review}
+      initialReview={review}
       initialJd={initialJd}
       existingResumes={userResumes || []}
     />

@@ -101,7 +101,7 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/applicants/onboarding",
     "/api/updates/applicants/job-alert",
     "/api/update-embedding/gemini/job",
-    "/api/updates/applicants/relevant-jobs",
+    // "/api/updates/applicants/relevant-jobs",
     "/api/updates/applicants/relevant-jobs/enqueue",
     "/api/updates/applicants/relevant-jobs/worker",
     "/api/ai-search/jobs",

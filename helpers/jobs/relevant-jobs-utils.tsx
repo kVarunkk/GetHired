@@ -1,8 +1,16 @@
 import { render } from "@react-email/components";
 import RelevantJobsSetupUpdateEmail from "@/emails/RelevantJobsSetupUpdateEmail";
-import { INTERNAL_API_SECRET, sendEmail } from "@/utils/serverUtils";
-import { AllJobWithRelations } from "@/utils/types";
+import {
+  deploymentUrl,
+  INTERNAL_API_SECRET,
+  sendEmail,
+  sendEmailForStatusUpdate,
+} from "@/utils/serverUtils";
+import { AllJobWithRelations, TAICredits } from "@/utils/types";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { createClient } from "@/lib/supabase/server";
+
+const URL = deploymentUrl();
 
 export const sendEmailForRelevantJobsStatusUpdate = async (
   email: string,
@@ -43,6 +51,52 @@ export const sendEmailForRelevantJobsStatusUpdate = async (
   }
 };
 
+export const singleUserTask = async (userId: string) => {
+  console.log(`[RELEVANCE UPDATE] Processing single user: ${userId}`);
+
+  const supabase = await createClient();
+
+  try {
+    const { data } = await supabase
+      .from("user_info")
+      .select("email, full_name, ai_credits")
+      .eq("user_id", userId);
+
+    if (data && data.length > 0) {
+      const insufficientCredits =
+        (data[0].ai_credits || 0) < TAICredits.AI_SEARCH_ASK_AI_RESUME;
+
+      const email = "(Onboarding)";
+      const result = await processUserRelevance(
+        userId,
+        email,
+        data[0].full_name || "",
+      );
+
+      if (!result.success) {
+        await sendEmailForStatusUpdate(
+          `[RELEVANCE UPDATE] Failed for ${userId}: ${result.error}. ${insufficientCredits ? "Insufficient AI credits." : ""}`,
+        );
+      } else {
+        await sendEmailForRelevantJobsStatusUpdate(
+          data[0].email!,
+          data[0].full_name || "",
+          URL + "/jobs?sortBy=relevance",
+          insufficientCredits,
+        );
+      }
+    } else throw new Error("user data not found");
+  } catch {
+    await supabase
+      .from("user_info")
+      .update({
+        relevant_jobs_update_status: "failed",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId);
+  }
+};
+
 export async function processUserRelevance(
   userId: string,
   userEmail: string,
@@ -51,6 +105,7 @@ export async function processUserRelevance(
   const supabase = createServiceRoleClient();
 
   try {
+    // fix this route
     const response = await fetch(
       `${URL}/api/jobs?sortBy=relevance&limit=100&createdAfter=30&userId=${userId}`,
       {
@@ -85,17 +140,29 @@ export async function processUserRelevance(
       if (insertError) throw new Error(`Insert failed: ${insertError.message}`);
     }
 
-    await supabase
+    const { error: updateError } = await supabase
       .from("user_info")
       .update({
-        is_relevant_jobs_generated: true,
-        is_relevant_job_update_failed: false,
+        relevant_jobs_update_status: "completed",
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", userId);
 
+    if (updateError)
+      throw new Error(
+        "Some error occured while updating relevant jobs generation info",
+      );
+
     return { success: true, userEmail, fullName };
   } catch (error) {
+    await supabase
+      .from("user_info")
+      .update({
+        relevant_jobs_update_status: "failed",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId);
+    console.log(error);
     const msg = error instanceof Error ? error.message : String(error);
     return { success: false, userEmail, fullName, error: msg };
   }

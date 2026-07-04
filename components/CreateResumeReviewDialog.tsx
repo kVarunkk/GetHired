@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, startTransition } from "react";
+import React, { useState, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -14,7 +14,6 @@ import {
 import { toast } from "react-hot-toast";
 import { Loader2, Plus } from "lucide-react";
 import ResumeSourceSelector from "./ResumeSourceSelector";
-import { createClient } from "@/lib/supabase/client";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -22,25 +21,13 @@ import { TAICredits } from "@/utils/types";
 import InfoTooltip from "./InfoTooltip";
 import { createResumeReviewAction } from "@/app/actions/create-resume-review";
 import { useProgress } from "react-transition-progress";
+import useSWR from "swr";
+import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
+import { TResumeReviewResume } from "@/utils/types/review.types";
 
-interface CreateResumeReviewDialogProps {
-  userId: string;
-}
-
-export default function CreateResumeReviewDialog({
-  userId,
-}: CreateResumeReviewDialogProps) {
+export default function CreateResumeReviewDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [existingResumes, setExistingResumes] = useState<
-    {
-      id: string;
-      name: string | null;
-      created_at: string;
-      is_primary: boolean;
-      parsing_failed: boolean;
-    }[]
-  >([]);
   const [file, setFile] = useState<File | null>(null);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
 
@@ -48,25 +35,13 @@ export default function CreateResumeReviewDialog({
 
   const router = useRouter();
 
-  useEffect(() => {
-    if (isOpen && userId) {
-      const fetchResumes = async () => {
-        try {
-          const supabase = createClient();
-          const { data, error } = await supabase
-            .from("resumes")
-            .select("id, name, created_at, is_primary, parsing_failed")
-            .eq("user_id", userId)
-            .order("created_at", { ascending: false });
-
-          if (!error) {
-            setExistingResumes(data || []);
-          }
-        } catch {}
-      };
-      fetchResumes();
-    }
-  }, [isOpen, userId]);
+  const { data } = useSWR(PROFILE_API_KEY, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const existingResumes: TResumeReviewResume[] =
+    data && data.profile ? data.profile.resumes : [];
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

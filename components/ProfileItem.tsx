@@ -7,7 +7,6 @@ import { Button } from "./ui/button";
 import Link from "next/link";
 import { Badge } from "./ui/badge";
 import ProfileFavoriteStar from "./ProfileFavoriteStar";
-import ProgressBtn from "./ProgressBtn";
 import { AllProfileWithRelations } from "@/utils/types";
 
 const ProfileItem = React.memo(
@@ -15,51 +14,61 @@ const ProfileItem = React.memo(
     profile,
     isSuitable,
     companyId,
+    isFavorite,
   }: {
     profile: AllProfileWithRelations;
     isSuitable: boolean;
     companyId?: string;
+    isFavorite: boolean;
   }) => {
     return (
-      <ProgressBtn
-        href={`/company/profiles/${profile.user_id}`}
-        className="text-start"
+      <div
+        className={cn(
+          "flex flex-col gap-3 p-4 group rounded-lg transition  hover:bg-secondary",
+        )}
       >
-        <div
-          className={cn(
-            "flex flex-col gap-3 p-4 group rounded-lg transition  hover:bg-secondary",
-          )}
-        >
-          <div className="flex-col sm:flex-row sm:flex items-center justify-between gap-4">
-            <div className="flex flex-col gap-2 mb-6 sm:mb-0">
-              <div className="flex items-center flex-wrap">
+        <div className="flex-col sm:flex-row sm:flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-2 mb-6 sm:mb-0">
+            <div className="flex items-center flex-wrap">
+              <Link
+                href={`/company/profiles/${profile.user_id}`}
+                target="_blank"
+                className="inline hover:underline group-hover:underline underline sm:no-underline underline-offset-[4px]"
+                prefetch={false}
+              >
                 <h3 className="text-lg sm:text-xl font-semibold">
                   {profile.full_name || "N/A"}
                 </h3>
-                <Dot />
-                <p className="text-muted-foreground text-wrap">
-                  {profile?.desired_roles?.[0] || ""}
-                </p>
-
-                <ProfileFavoriteStar profile={profile} companyId={companyId} />
-              </div>
-              <ProfileDetailBadges profile={profile} isSuitable={isSuitable} />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Link
-                href={`/company/profiles/${profile.user_id}`}
-                prefetch={false}
-              >
-                <Button>
-                  View Profile
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
               </Link>
+
+              <Dot />
+              <p className="text-muted-foreground text-wrap">
+                {profile?.desired_roles?.[0] || ""}
+              </p>
+
+              <ProfileFavoriteStar
+                profileId={profile.user_id}
+                companyId={companyId}
+                isFavorite={isFavorite}
+              />
             </div>
+            <ProfileDetailBadges profile={profile} isSuitable={isSuitable} />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/company/profiles/${profile.user_id}`}
+              prefetch={false}
+              target="_blank"
+            >
+              <Button>
+                View Profile
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </div>
-      </ProgressBtn>
+      </div>
     );
   },
 );

@@ -23,7 +23,6 @@ import { Loader2 } from "lucide-react";
 import { useProgress } from "react-transition-progress";
 import GoogleAuthBtn from "./GoogleAuthBtn";
 
-// Helper function to check if an email is a generic public domain
 const isGenericEmail = (email: string) => {
   const genericDomains = [
     "gmail.com",
@@ -36,7 +35,6 @@ const isGenericEmail = (email: string) => {
   return genericDomains.includes(domain);
 };
 
-// Zod schema for form validation
 const loginSchema = (isCompany: boolean) =>
   z.object({
     email: z
@@ -115,7 +113,7 @@ export function LoginForm({
           </CardTitle>
           <CardDescription>
             Enter your {isCompany && "company"} email below to login to your
-            {isCompany && "hiring"} account
+            {isCompany && " hiring"} account
           </CardDescription>
         </CardHeader>
         <CardContent>
