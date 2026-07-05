@@ -5,19 +5,15 @@ import {
   INTERNAL_API_SECRET,
   sendEmailForStatusUpdate,
 } from "@/utils/serverUtils";
-import {
-  processUserDigest,
-  sendJobDigestEmail,
-} from "@/helpers/jobs/digest-utils";
+import { processJobPostingRelevance } from "@/helpers/profiles/relevant-profiles-utils";
 
-export type RelevanceJobMessage = {
+type RelevanceJobMessage = {
   msg_id: number;
   read_ct: number;
+
   message: {
-    user_id: string;
-    email: string;
-    full_name: string | null;
-    ai_credits: number;
+    userId: string;
+    jobId: string;
   };
 };
 
@@ -35,12 +31,6 @@ export async function GET() {
     );
   }
 
-  const digestDate = new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
   const supabase = createServiceRoleClient();
 
   try {
@@ -48,14 +38,14 @@ export async function GET() {
     const { data: messages, error } = (await supabase
       .schema("pgmq_public")
       .rpc("read", {
-        queue_name: "job_digest",
+        queue_name: "relevance_profiles",
         sleep_seconds: VISIBILITY_TIMEOUT,
         n: BATCH_SIZE,
       })) as { data: RelevanceJobMessage[] | null; error: Error | null };
 
     if (error) {
       await sendEmailForStatusUpdate(
-        `JOB DIGEST WORKER: Failed to read queue.\n${error.message}`,
+        `PROFILES RELEVANCE WORKER: Failed to read queue.\n${error.message}`,
       );
       return NextResponse.json(
         { success: false, message: "Failed to read queue." },
@@ -69,26 +59,15 @@ export async function GET() {
 
     const results = await Promise.allSettled(
       messages.map(async (msg) => {
-        const { email, full_name } = msg.message;
+        const { userId, jobId } = msg.message;
 
-        const result = await processUserDigest(msg.message);
+        const result = await processJobPostingRelevance(userId, jobId, true);
 
         if (result.success) {
-          // Delete message from queue on success
           await supabase.schema("pgmq_public").rpc("delete", {
-            queue_name: "job_digest",
+            queue_name: "relevance_profiles",
             message_id: msg.msg_id,
           });
-
-          if ((result.jobs?.length || 0) > 0) {
-            await sendJobDigestEmail(
-              email,
-              full_name!,
-              result.jobs || [],
-              digestDate,
-              result.isInsufficientCredits,
-            );
-          }
         } else {
           console.warn(
             `[WORKER] Message ${msg.msg_id} failed. Attempt count: ${msg.read_ct}`,
@@ -100,17 +79,15 @@ export async function GET() {
             );
 
             await supabase.schema("pgmq_public").rpc("delete", {
-              queue_name: "job_digest",
+              queue_name: "relevance_profiles",
               message_id: msg.msg_id,
             });
 
             await sendEmailForStatusUpdate(
-              `JOB WORKER POISON ALERT: Message ${msg.msg_id} for User ${email} dropped after failing ${msg.read_ct} times.`,
+              `PROFILES WORKER POISON ALERT: Message ${msg.msg_id} for Job ${jobId} dropped after failing ${msg.read_ct} times.`,
             );
           }
         }
-        // On failure: message stays in queue, becomes visible again after VISIBILITY_TIMEOUT
-
         return { ...result, msgId: msg.msg_id };
       }),
     );
@@ -127,7 +104,7 @@ export async function GET() {
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     await sendEmailForStatusUpdate(
-      `JOB DIGEST WORKER CRITICAL FAILURE:\n${errorMsg}`,
+      `PROFILE RELEVANCE WORKER CRITICAL FAILURE:\n${errorMsg}`,
     );
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },

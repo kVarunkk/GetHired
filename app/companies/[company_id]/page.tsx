@@ -109,9 +109,6 @@ export default async function CompanyIdPage({
                 <JobFavoriteBtn
                   isCompanyUser={isCompanyUser}
                   userId={user?.id || null}
-                  // userFavoritesCompanyInfo={
-                  //   companyData.user_favorites_companies
-                  // }
                   isFavorite={companyData.user_favorites_companies.length > 0}
                   company_id={company_id}
                 />

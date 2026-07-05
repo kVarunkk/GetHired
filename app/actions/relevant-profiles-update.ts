@@ -1,55 +1,46 @@
 "use server";
 
-import { deploymentUrl } from "@/utils/serverUtils";
+import { processJobPostingRelevance } from "@/helpers/profiles/relevant-profiles-utils";
 import { createClient } from "@/lib/supabase/server";
-import { headers } from "next/headers";
-
-const URL = deploymentUrl();
+import { after } from "next/server";
 
 export async function triggerJobPostingRelevanceUpdate(jobId: string) {
   if (!jobId) {
     return { success: false, error: "User ID is required" };
   }
 
-  const supabase = await createClient();
-  const headersList = await headers();
-
-  const url = `${URL}/api/updates/company/relevant-profiles?jobPostingId=${jobId}`;
-
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      // headers: {
-      //   "X-Internal-Secret": INTERNAL_API_SECRET || "",
-      //   "Content-Type": "application/json",
-      // },
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: headersList.get("Cookie") || "",
-      },
-      cache: "no-store",
-    });
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(
-        errorData.error || `API request failed with status ${response.status}`,
-      );
+    if (!user?.id) {
+      throw new Error("user id not found");
     }
 
-    const data = await response.json();
-    return { success: true, message: data.message };
+    const userId = user.id;
+
+    after(async () => {
+      try {
+        processJobPostingRelevance(userId, jobId);
+      } catch {
+        await supabase
+          .from("job_postings")
+          .update({
+            matching_status: "failed",
+            matching_error: "unknown error occured",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", jobId);
+      }
+    });
+
+    return { success: true, message: "processing started" };
   } catch (error) {
     console.error("[Server Action] Failed to trigger relevance update:", error);
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
-    await supabase
-      .from("job_postings")
-      .update({
-        matching_error: errorMsg,
-        matching_status: "failed",
-        matched_at: new Date().toISOString(),
-      })
-      .eq("id", jobId);
+
     return {
       success: false,
       error: errorMsg,

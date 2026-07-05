@@ -2,13 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { TAICredits } from "@/utils/types";
 import { getVertexClient } from "@/utils/serverUtils";
 import { AiSearchProfileBody } from "@/utils/types/api.types";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const internalSecret = request.headers.get("X-Internal-Secret");
+    const isInternalCall = internalSecret === process.env.INTERNAL_API_SECRET;
+
+    const supabase = isInternalCall
+      ? createServiceRoleClient()
+      : await createClient();
+
     const { userId, jobId, profiles, companyId }: AiSearchProfileBody =
       await request.json();
 
@@ -18,28 +24,6 @@ export async function POST(request: NextRequest) {
           message: "Required fields are missing in the request body.",
         },
         { status: 400 },
-      );
-    }
-
-    const { data: companyInfo } = await supabase
-      .from("company_info")
-      .select("ai_credits")
-      .eq("id", companyId)
-      .single();
-
-    if (!companyInfo) {
-      return NextResponse.json(
-        {
-          message: "Company not found.",
-        },
-        { status: 404 },
-      );
-    }
-
-    if (companyInfo.ai_credits < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
-      return NextResponse.json(
-        { message: "Insufficient AI credits. Please top up to continue." },
-        { status: 402 },
       );
     }
 

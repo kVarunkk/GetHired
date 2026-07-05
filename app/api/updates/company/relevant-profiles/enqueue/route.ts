@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { TAICredits } from "@/utils/types";
 import {
   INTERNAL_API_SECRET,
   sendEmailForStatusUpdate,
@@ -20,36 +19,51 @@ export async function GET() {
   const supabase = createServiceRoleClient();
 
   try {
-    const { data: users, error: userError } = await supabase
-      .from("user_info")
-      .select("user_id")
-      .eq("filled", true)
-      .gte("ai_credits", TAICredits.AI_SEARCH_ASK_AI_RESUME);
+    const { data: usersData, error: userError } = await supabase.rpc(
+      "get_users_needing_match",
+    );
 
-    if (userError || !users || users.length === 0) {
+    if (!usersData || !usersData.length || userError) {
+      console.log(userError);
+      return NextResponse.json(
+        { success: true, message: "No unmatched users found." },
+        { status: 500 },
+      );
+    }
+
+    console.log("are eligible users present?: ", usersData.length);
+
+    const { data: jobPostings, error: jobPostingsError } = await supabase
+      .from("job_postings")
+      .select("id, company_info(user_id, email, name) ")
+      .eq("status", "active");
+
+    if (jobPostingsError || !jobPostings || jobPostings.length === 0) {
       await sendEmailForStatusUpdate(
-        "RELEVANCE CRON: No eligible users found.",
+        "PROFILE RELEVANCE CRON: No eligible job postings found.",
       );
       return NextResponse.json({
         success: true,
-        message: "No users to enqueue.",
+        message: "No job postings to enqueue.",
       });
     }
 
-    const messages = users.map((user) => ({
-      userId: user.user_id,
+    // Enqueue one message per user
+    const messages = jobPostings.map((job) => ({
+      userId: job.company_info.user_id,
+      jobId: job.id,
     }));
 
     for (const message of messages) {
       await supabase.schema("pgmq_public").rpc("send", {
-        queue_name: "relevance_jobs",
+        queue_name: "relevance_profiles",
         message,
         sleep_seconds: 0,
       });
     }
 
     await sendEmailForStatusUpdate(
-      `RELEVANCE CRON: Enqueued ${messages.length} users for relevance update.`,
+      `PROFILE RELEVANCE CRON: Enqueued ${messages.length} users for relevance update.`,
     );
 
     return NextResponse.json({
@@ -59,7 +73,7 @@ export async function GET() {
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     await sendEmailForStatusUpdate(
-      `RELEVANCE CRON CRITICAL FAILURE:\n${errorMsg}`,
+      `PROFILE RELEVANCE CRON CRITICAL FAILURE:\n${errorMsg}`,
     );
     return NextResponse.json(
       { success: false, message: "Internal Server Error" },

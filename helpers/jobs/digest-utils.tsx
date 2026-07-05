@@ -74,22 +74,13 @@ export async function processUserDigest(user: RelevanceJobMessage["message"]) {
     const result = await jobFetchRes.json();
     const finalJobs: AllJobWithRelations[] = result.data || [];
 
-    if (finalJobs.length > 0 && user.email && user.full_name) {
-      return { success: true, userEmail: user.email, jobs: finalJobs };
-    } else {
-      console.log(`Skipped digest for ${user?.email}: no suitable jobs found.`);
-      return {
-        success: false,
-        userEmail: user.email ?? "Unknown",
-        msg: "No suitable jobs found",
-      };
-    }
+    return { success: true, userEmail: user.email, jobs: finalJobs };
   } catch (e) {
     console.error(`Error processing digest for user ${user?.email}:`, e);
     return {
       success: false,
       userEmail: user.email ?? "Unknown",
-      msg: e instanceof Error ? e.message : String(e),
+      msg: e instanceof Error ? e.message : "unknown error occured.",
     };
   }
 }

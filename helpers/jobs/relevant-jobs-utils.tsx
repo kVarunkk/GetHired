@@ -9,6 +9,7 @@ import {
 import { AllJobWithRelations, TAICredits } from "@/utils/types";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { createClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
 
 const URL = deploymentUrl();
 
@@ -51,95 +52,77 @@ export const sendEmailForRelevantJobsStatusUpdate = async (
   }
 };
 
-export const singleUserTask = async (userId: string) => {
-  console.log(`[RELEVANCE UPDATE] Processing single user: ${userId}`);
-
-  const supabase = await createClient();
-
-  try {
-    const { data } = await supabase
-      .from("user_info")
-      .select("email, full_name, ai_credits")
-      .eq("user_id", userId);
-
-    if (data && data.length > 0) {
-      const insufficientCredits =
-        (data[0].ai_credits || 0) < TAICredits.AI_SEARCH_ASK_AI_RESUME;
-
-      const email = "(Onboarding)";
-      const result = await processUserRelevance(
-        userId,
-        email,
-        data[0].full_name || "",
-      );
-
-      if (!result.success) {
-        await sendEmailForStatusUpdate(
-          `[RELEVANCE UPDATE] Failed for ${userId}: ${result.error}. ${insufficientCredits ? "Insufficient AI credits." : ""}`,
-        );
-      } else {
-        await sendEmailForRelevantJobsStatusUpdate(
-          data[0].email!,
-          data[0].full_name || "",
-          URL + "/jobs?sortBy=relevance",
-          insufficientCredits,
-        );
-      }
-    } else throw new Error("user data not found");
-  } catch {
-    await supabase
-      .from("user_info")
-      .update({
-        relevant_jobs_update_status: "failed",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId);
-  }
-};
-
 export async function processUserRelevance(
   userId: string,
-  userEmail: string,
-  fullName: string,
+  isInternalCall: boolean = false,
 ) {
-  const supabase = createServiceRoleClient();
+  const supabase = isInternalCall
+    ? createServiceRoleClient()
+    : await createClient();
 
   try {
-    // fix this route
-    const response = await fetch(
-      `${URL}/api/jobs?sortBy=relevance&limit=100&createdAfter=30&userId=${userId}`,
-      {
-        headers: { "X-Internal-Secret": INTERNAL_API_SECRET || "" },
-      },
-    );
+    const { data, error } = await supabase
+      .from("user_info")
+      .select("email, full_name, ai_credits")
+      .eq("user_id", userId)
+      .single();
 
-    if (!response.ok) throw new Error(`Jobs API returned ${response.status}`);
-
-    const json = await response.json();
-    const jobs: AllJobWithRelations[] = json.data || [];
-
-    const rowsToInsert = jobs.map((job, index) => ({
-      user_id: userId,
-      jobs_id: job.id,
-      relevance_rank: index + 1,
-      updated_at: new Date().toISOString(),
-    }));
-
-    const { error: deleteError } = await supabase
-      .from("user_relevant_jobs")
-      .delete()
-      .eq("user_id", userId);
-
-    if (deleteError) throw new Error(`Delete failed: ${deleteError.message}`);
-
-    if (rowsToInsert.length > 0) {
-      const { error: insertError } = await supabase
-        .from("user_relevant_jobs")
-        .insert(rowsToInsert);
-
-      if (insertError) throw new Error(`Insert failed: ${insertError.message}`);
+    if (!data || error) {
+      throw new Error(error.message || "User not found.");
     }
 
+    const insufficientCredits =
+      (data.ai_credits || 0) < TAICredits.AI_SEARCH_ASK_AI_RESUME;
+
+    if (!insufficientCredits) {
+      const headersList = await headers();
+      const cookie = headersList.get("Cookie");
+
+      const requestHeaders: Record<string, string> = {};
+      if (isInternalCall) {
+        requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
+      } else if (cookie) {
+        requestHeaders["Cookie"] = cookie;
+      }
+
+      const response = await fetch(
+        `${URL}/api/jobs?sortBy=relevance&limit=100&createdAfter=30&userId=${userId}`,
+        {
+          cache: "no-cache",
+          headers: requestHeaders,
+        },
+      );
+
+      if (!response.ok) throw new Error(`Jobs API returned ${response.status}`);
+
+      const json = await response.json();
+      const jobs: AllJobWithRelations[] = json.data || [];
+
+      const rowsToInsert = jobs.map((job, index) => ({
+        user_id: userId,
+        jobs_id: job.id,
+        relevance_rank: index + 1,
+        updated_at: new Date().toISOString(),
+      }));
+
+      const { error: deleteError } = await supabase
+        .from("user_relevant_jobs")
+        .delete()
+        .eq("user_id", userId);
+
+      if (deleteError) throw new Error(`Delete failed: ${deleteError.message}`);
+
+      if (rowsToInsert.length > 0) {
+        const { error: insertError } = await supabase
+          .from("user_relevant_jobs")
+          .insert(rowsToInsert);
+
+        if (insertError)
+          throw new Error(`Insert failed: ${insertError.message}`);
+      }
+    }
+
+    // this will run even if the user has Insufficient AI Credits
     const { error: updateError } = await supabase
       .from("user_info")
       .update({
@@ -153,7 +136,16 @@ export async function processUserRelevance(
         "Some error occured while updating relevant jobs generation info",
       );
 
-    return { success: true, userEmail, fullName };
+    // email to user in case of success
+
+    await sendEmailForRelevantJobsStatusUpdate(
+      data.email!,
+      data.full_name || "",
+      URL + "/jobs?sortBy=relevance",
+      insufficientCredits,
+    );
+
+    return { success: true };
   } catch (error) {
     await supabase
       .from("user_info")
@@ -162,8 +154,14 @@ export async function processUserRelevance(
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", userId);
-    console.log(error);
-    const msg = error instanceof Error ? error.message : String(error);
-    return { success: false, userEmail, fullName, error: msg };
+
+    const msg =
+      error instanceof Error ? error.message : "unknown error occured.";
+
+    // emmail to admin in case of error
+    await sendEmailForStatusUpdate(
+      `[RELEVANCE UPDATE] Failed for ${userId}: ${msg}.`,
+    );
+    return { success: false, error: msg };
   }
 }

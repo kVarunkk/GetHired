@@ -185,6 +185,7 @@ export default function JobsComponent({
         .from("user_info")
         .update({
           relevant_jobs_update_status: "progress",
+          updated_at: new Date().toISOString(),
         })
         .eq("user_id", currentUserData.profile.user_id);
 
@@ -197,6 +198,7 @@ export default function JobsComponent({
         .update({
           matching_status: "progress",
           matching_error: null,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", jobPostingId);
       await mutate(key);

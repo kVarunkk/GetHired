@@ -29,13 +29,17 @@ export default async function ProfilePage({
 
     const { data: companyData, error: companyError } = await supabase
       .from("company_info")
-      .select("*, job_postings(id, title, job_id)")
+      .select("*, job_postings(id, title, job_id),  company_favorites(user_id)")
       .eq("user_id", user.id)
       .single();
 
     if (companyError || !companyData) {
       throw new Error("Logged-in user does not have a company profile.");
     }
+
+    const isFavorite =
+      companyData?.company_favorites?.some((_) => _.user_id === profile_id) ||
+      false;
 
     const { data: applicantProfile, error } = await supabase
       .from("user_info")
@@ -91,8 +95,7 @@ export default async function ProfilePage({
               <ProfileFavoriteStar
                 profileId={applicantProfile.user_id}
                 companyId={companyData.id}
-                // TODO: MAKE THIS DYNAMIC
-                isFavorite={false}
+                isFavorite={isFavorite}
               />
             </div>
             <div className="flex items-center gap-2">

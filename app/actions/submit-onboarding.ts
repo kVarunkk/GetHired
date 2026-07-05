@@ -138,6 +138,14 @@ export async function submitOnboardingAction(formData: FormData) {
         if (!embedRes.ok) throw new Error("Background Embedding Failed");
 
         // // STEP C: Relevant Jobs Update
+        await supabase
+          .from("user_info")
+          .update({
+            relevant_jobs_update_status: "progress",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", userId);
+
         const relevanceUpdateRes = await triggerRelevanceUpdate(userId);
 
         if (relevanceUpdateRes.error) {

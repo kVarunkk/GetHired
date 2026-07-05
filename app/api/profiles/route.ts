@@ -1,15 +1,27 @@
 import { rerankProfilesIfApplicable } from "@/helpers/profiles/ai-rerank-profiles";
 import { buildProfileQuery } from "@/helpers/profiles/profilesFilterQueryBuilder";
+import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
+  const internalSecret = request.headers.get("X-Internal-Secret");
+  const isInternalCall = internalSecret === process.env.INTERNAL_API_SECRET;
+
+  const supabase = isInternalCall
+    ? createServiceRoleClient()
+    : await createClient();
+
   const searchParams = request.nextUrl.searchParams;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = searchParams.get("userId");
+
+  const user =
+    isInternalCall && userId
+      ? (await supabase.auth.admin.getUserById(userId)).data.user
+      : await getUserFromRequest();
+
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -52,7 +64,7 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type");
   const relevanceSearchType: "digest" | "standard" | null =
     sortBy === "relevance" && !!jobId
-      ? type === "digest"
+      ? type === "digest" && userId
         ? "digest"
         : "standard"
       : null;
@@ -80,6 +92,8 @@ export async function GET(request: NextRequest) {
         jobEmbedding,
         relevanceSearchType,
         jobId,
+        isInternalCall,
+        companyId: companyData.id,
       });
 
     if (error) {
@@ -96,6 +110,7 @@ export async function GET(request: NextRequest) {
       relevanceSearchType,
       cursor,
       companyId: companyData.id,
+      isInternalCall,
     });
 
     return NextResponse.json({

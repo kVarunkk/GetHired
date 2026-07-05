@@ -5,6 +5,7 @@ import {
 import { createClient } from "../../lib/supabase/server";
 import { PostgrestError } from "@supabase/supabase-js";
 import { parseMultiSelectParam } from "@/utils/serverUtils";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 const userInfoSelectString = `user_id, desired_roles, preferred_locations, min_salary, max_salary, experience_years, industry_preferences, visa_sponsorship_required, top_skills, work_style_preferences, career_goals_short_term, career_goals_long_term, company_size_preference, created_at, updated_at, job_type, ai_credits, filled, full_name, email, salary_currency, is_public`;
 
@@ -29,6 +30,8 @@ export async function buildProfileQuery({
   limit,
   relevanceSearchType,
   jobId,
+  companyId,
+  isInternalCall,
 }: {
   searchQuery: string | null;
   jobRoles: string | null;
@@ -50,45 +53,16 @@ export async function buildProfileQuery({
   limit: number | null;
   relevanceSearchType: "standard" | "digest" | null;
   jobId: string | null;
+  companyId: string;
+  isInternalCall: boolean;
 }): Promise<ProfilesBuildQueryResult> {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return {
-        data: [],
-        error: "User not authenticated to view profiles.",
-        count: 0,
-        matchedProfileIds: [],
-        nextCursor: null,
-      };
-    }
-
-    const { data: companyData } = await supabase
-      .from("company_info")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!companyData) {
-      return {
-        data: [],
-        error: "Company profile not found.",
-        count: 0,
-        matchedProfileIds: [],
-        nextCursor: null,
-      };
-    }
-
-    const companyId = companyData.id;
+    const supabase = isInternalCall
+      ? createServiceRoleClient()
+      : await createClient();
 
     let query;
     let selectString;
-
-    // const isRelevanceSearch = sortBy === "relevance" && jobEmbedding && jobId;
 
     if (isFavoriteTabActive) {
       selectString = `${userInfoSelectString}, company_favorites!inner(company_id)`;
@@ -103,12 +77,10 @@ export async function buildProfileQuery({
         .from("user_info")
         .select(
           `
-          ${userInfoSelectString}, job_relevant_profiles!inner(*), company_favorites!left(*)
+          ${userInfoSelectString}, job_relevant_profiles!inner(*)
         `,
         )
-        // .eq("job_relevant_profiles.company_id", companyId)
         .eq("job_relevant_profiles.job_posting_id", jobId!)
-        .eq("company_favorites.company_id", companyId)
         .eq("filled", true)
         .eq("is_public", true);
     }
@@ -118,7 +90,7 @@ export async function buildProfileQuery({
         .from("user_info")
         .select(
           `
-          ${userInfoSelectString}, company_favorites(*) ${relevanceSearchType === "digest" ? ",resumes(content, is_primary)" : ""}
+          ${userInfoSelectString} ${relevanceSearchType === "digest" ? ",resumes(content, is_primary)" : ""}
         `,
         )
         .eq("filled", true)

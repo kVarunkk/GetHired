@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { AllProfileWithRelations } from "../../utils/types";
+import { INTERNAL_API_SECRET } from "@/utils/serverUtils";
 
 interface RerankResult {
   initialProfiles: AllProfileWithRelations[];
@@ -14,6 +15,7 @@ export async function rerankProfilesIfApplicable({
   relevanceSearchType,
   cursor,
   companyId,
+  isInternalCall,
 }: {
   initialProfiles: AllProfileWithRelations[];
   initialCount: number;
@@ -24,6 +26,7 @@ export async function rerankProfilesIfApplicable({
   cursor: string | null;
   companyId: string;
   relevanceSearchType: "digest" | "standard" | null;
+  isInternalCall: boolean;
 }): Promise<RerankResult> {
   let finalProfiles = initialProfiles;
   let finalCount = initialCount;
@@ -47,12 +50,13 @@ export async function rerankProfilesIfApplicable({
 
   try {
     const requestHeaders: Record<string, string> = {};
-
     const cookie = headersList.get("Cookie");
-    if (cookie) {
+
+    if (isInternalCall) {
+      requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
+    } else if (cookie) {
       requestHeaders["Cookie"] = cookie;
     }
-
     removedProfiles = initialProfiles.splice(20);
 
     const aiRerankRes = await fetch(`${url}/api/ai-search/profiles`, {

@@ -1,8 +1,8 @@
 "use server";
 
+import { processUserRelevance } from "@/helpers/jobs/relevant-jobs-utils";
 import { createClient } from "@/lib/supabase/server";
 import { after } from "next/server";
-import { singleUserTask } from "@/helpers/jobs/relevant-jobs-utils";
 
 export async function triggerRelevanceUpdate(userId: string) {
   if (!userId) {
@@ -14,7 +14,7 @@ export async function triggerRelevanceUpdate(userId: string) {
   try {
     after(async () => {
       try {
-        singleUserTask(userId);
+        processUserRelevance(userId);
       } catch {
         await supabase
           .from("user_info")

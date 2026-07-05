@@ -168,6 +168,14 @@ export async function upsertJobPostingAction(params: {
 
     // if the job posting is updated and the status is active then trigger profile relevance update
     if (new_posting.status === "active") {
+      await supabase
+        .from("job_postings")
+        .update({
+          matching_status: "progress",
+          matching_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", new_posting.id);
       triggerJobPostingRelevanceUpdate(new_posting.id);
     }
 

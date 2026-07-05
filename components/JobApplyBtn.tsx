@@ -58,11 +58,22 @@ export default function JobApplyBtn({
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        Job Posting
+                        Original Job Posting
                       </Link>
                       . You can update your status by clicking on{" "}
                       <MoreHorizontal className="h-4 w-4 inline-block mx-1" />{" "}
-                      button.
+                      button{" "}
+                      {!isJobIdPage && (
+                        <Link
+                          onClick={(e) => e.stopPropagation()}
+                          className="underline text-blue-500"
+                          href={`/jobs/${job.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          here.
+                        </Link>
+                      )}
                     </p>
                   }
                 />
