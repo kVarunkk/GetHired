@@ -1,7 +1,5 @@
 "use client";
 
-// import { IApplication } from "@/utils/types";
-// import { Link as ModifiedLink } from "react-transition-progress/next";
 import { format } from "date-fns";
 import { Button } from "./ui/button";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
@@ -21,7 +19,7 @@ export default function ProfileActiveApplication({
         <p className=" text-sm">
           Applied for:{" "}
           <ModifiedLink
-            href={`/jobs/${app.job_postings?.id}`}
+            href={`/company/job-posts/${app.job_postings?.id}`}
             className="underline"
           >
             {app.job_postings?.title}

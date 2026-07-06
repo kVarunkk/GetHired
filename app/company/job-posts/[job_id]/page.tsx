@@ -6,7 +6,6 @@ import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
 import DeleteJobPosting from "@/components/DeleteJobPosting";
 import { Briefcase, DollarSign, Users, MapPin } from "lucide-react";
 import { format } from "date-fns";
-// import { IApplication,  } from "@/utils/types";
 import BackButton from "@/components/BackButton";
 import { JobStatusSwitch } from "@/components/JobPostingsTable";
 import ApplicantsTable from "@/components/ApplicantsTable";
@@ -22,6 +21,9 @@ export default async function JobPostPage({
   try {
     const { job_id } = await params;
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const { data: job, error } = await supabase
       .from("job_postings")
       .select(
@@ -91,7 +93,11 @@ export default async function JobPostPage({
         {/* --- Job Details Section --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Details Card */}
-          <JobDescriptionCard job={job} page={"job-posts"} />
+          <JobDescriptionCard
+            job={job}
+            page={"job-posts"}
+            userId={user?.id || null}
+          />
 
           {/* Key Metrics/Details Sidebar */}
           <div className="grid gap-4">

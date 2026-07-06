@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-// import { IResumeReview } from "@/utils/types";
 import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
 import {
   Select,
@@ -43,6 +42,7 @@ interface ResumeReviewsTableProps {
 
 export type TResumeReviewTableData = TResumeReviewTable & {
   resume: string;
+  job: string;
 };
 
 const reviewStatuses = ["All Statuses", "completed", "failed", "draft"];
@@ -74,10 +74,13 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
     return items.map((item) => ({
       ...item,
       resume: item?.resumes?.name,
+      job: item?.all_jobs?.job_name,
     }));
   }, [items]);
 
-  const columns: ColumnDef<TResumeReviewTable & { resume: string }>[] = useMemo(
+  const columns: ColumnDef<
+    TResumeReviewTable & { resume: string; job: string }
+  >[] = useMemo(
     () => [
       {
         accessorKey: "created_at",
@@ -124,10 +127,21 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
       },
 
       {
+        accessorKey: "job",
+        header: "Job Name",
+        cell: ({ row }) => (
+          <div className="text-sm font-medium">{row.original.job}</div>
+        ),
+      },
+
+      {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <ModifiedLink href={`/resume-review/${row.original.id}`}>
+          <ModifiedLink
+            prefetch={false}
+            href={`/resume-review/${row.original.id}`}
+          >
             <Button variant="ghost" size="sm">
               View Review
               <ChevronRight className="ml-2 h-4 w-4" />
@@ -151,6 +165,9 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
                   required: true,
                 },
               ]}
+              selectString={
+                "id, created_at, resumes(name), status, job_id, name"
+              }
               updateLocalItem={updateLocalItem}
               removeLocalItem={removeLocalItem}
             />

@@ -188,8 +188,8 @@ export default function FindSuitableJobs({
           </SelectTrigger>
           <SelectGroup>
             <SelectContent>
-              <SelectLabel className="flex items-center text-sm justify-between gap-4 w-[200px]">
-                <div className="flex flex-col gap-1">
+              <SelectLabel className="flex items-center text-sm justify-between gap-4 ">
+                <div className="flex flex-col gap-1 w-[200px]">
                   <p>Select a Job Posting</p>
                   <p className="text-xs text-muted-foreground">
                     Suitable Profiles will be found according to the selected

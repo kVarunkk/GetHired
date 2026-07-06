@@ -42,7 +42,7 @@ export async function sendSignupEmail(
       if (isCompany) {
         const { error: signupUserError } = await serviceRoleSupabase
           .from("company_info")
-          .insert({ user_id: data.user?.id });
+          .insert({ user_id: data.user.id, email });
 
         if (signupUserError)
           throw new Error("Error creating record for new user.");

@@ -3,7 +3,7 @@
 import { AuthButton } from "./auth-button";
 import ProfileDropdown from "./ProfileDropdown";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -13,14 +13,14 @@ import {
 } from "@/components/ui/sheet";
 import { ChevronLeft, ChevronRight, Menu } from "lucide-react";
 import Brand from "./Brand";
-import { cn } from "@/utils/utils";
+import { cn, getNavItemsByPath } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import FeedbackForm from "./FeedbackForm";
 import SocialsComponent from "./SocialsComponent";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
 import { usePathname } from "next/navigation";
-import { INavItem, INavItemWithActive } from "@/utils/types";
+import { INavItemWithActive } from "@/utils/types";
 import {
   Tooltip,
   TooltipContent,
@@ -30,19 +30,21 @@ import WaitlistCTA from "./WaitlistCTA";
 import ModifiedLink from "./ModifiedLink";
 
 export default function NavbarComponent({
-  navItems,
   variant = "vertical",
   initialUser,
-  isDesktop,
 }: {
-  navItems: INavItem[];
   variant?: "vertical" | "horizontal";
   initialUser: User | null;
-  isDesktop: boolean;
 }) {
   const [user, setUser] = useState<User | null>(initialUser);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
+  const navItems = useMemo(() => {
+    const isCompanyUser = user?.app_metadata?.type === "company";
+
+    return getNavItemsByPath(pathname, isCompanyUser, user);
+  }, [pathname, user]);
+
   const navbarItems = navItems.map((each) => {
     let isActive = false;
 
@@ -74,9 +76,15 @@ export default function NavbarComponent({
     };
   }, []);
 
-  if (variant === "horizontal" || !isDesktop) {
-    return (
-      <div className="flex flex-col ">
+  return (
+    <>
+      {/* horizontal */}
+      <div
+        className={cn(
+          "w-full flex flex-col md:hidden",
+          variant === "horizontal" && "md:flex",
+        )}
+      >
         <WaitlistCTA
           content={<p>Review your resume with our new AI Resume Checker</p>}
           redirectTo="/ai-resume-checker"
@@ -84,6 +92,7 @@ export default function NavbarComponent({
         <div
           className={cn(
             "w-full flex items-center justify-between relative px-4 py-3 lg:px-20 xl:px-40 2xl:px-80 border-b mb-16 overflow-x-auto",
+            // for mobile screens
             (pathname.startsWith("/jobs") ||
               pathname.startsWith("/companies") ||
               pathname.startsWith("/profiles") ||
@@ -99,6 +108,7 @@ export default function NavbarComponent({
               <Brand type="long" />
             </Link>
           </div>
+
           {navbarItems && (
             <div className=" absolute left-1/2 -translate-x-1/2 items-center gap-4 text-sm hidden md:flex">
               {navbarItems.map((item) => (
@@ -115,14 +125,14 @@ export default function NavbarComponent({
               ))}
             </div>
           )}
+
           <div className="justify-end">
-            {user && (
+            {user ? (
               <div className="flex items-center gap-5">
                 <FeedbackForm user={user} isMenuOpen={false} />
                 <ProfileDropdown user={user} isMenuOpen={false} />
               </div>
-            )}
-            {user === null && (
+            ) : (
               <div className="flex items-center gap-2">
                 <Link
                   className="hover:text-primary p-2"
@@ -139,59 +149,56 @@ export default function NavbarComponent({
           </div>
         </div>
       </div>
-    );
-  }
 
-  if (variant === "vertical") {
-    return (
+      {/* vertical */}
       <div
         className={cn(
-          "h-screen flex flex-col gap-3 p-4 border-r overflow-y-auto overflow-x-hidden sticky transition-all duration-300 ease-in-out top-0 shrink-0",
+          "h-screen flex-col gap-3 p-4 border-r overflow-y-auto overflow-x-hidden sticky top-0 shrink-0 transition-all duration-300 ease-in-out",
+          variant === "vertical" ? "hidden md:flex" : "hidden",
           isMenuOpen ? "w-52" : "w-20",
         )}
       >
         <Link href={"/"} className={cn(!isMenuOpen && "mx-auto")}>
           <Brand type={isMenuOpen ? "long" : "short"} />
         </Link>
+
         {navbarItems && (
           <div
             className={cn(
-              "  gap-4 text-sm hidden md:flex md:flex-col  mb-auto",
+              "gap-4 text-sm flex flex-col mb-auto",
               isMenuOpen ? "items-start" : "items-center",
             )}
           >
             {navbarItems.map((item) => (
               <Tooltip key={item.id} delayDuration={100}>
                 <TooltipTrigger asChild>
-                  {
-                    <ModifiedLink
-                      key={item.id}
-                      href={item.href}
-                      className={cn(
-                        "hover:bg-secondary transition-all rounded-lg  gap-2 items-center  p-2 flex w-full truncate",
-                        item.active && "bg-secondary",
-                        isMenuOpen ? "justify-start" : "justify-center",
-                      )}
-                    >
-                      <span className="shrink-0">{item.icon}</span>
-                      {isMenuOpen && item.label}
-                    </ModifiedLink>
-                  }
+                  <ModifiedLink
+                    href={item.href}
+                    className={cn(
+                      "hover:bg-secondary transition-all rounded-lg gap-2 items-center p-2 flex w-full truncate",
+                      item.active && "bg-secondary",
+                      isMenuOpen ? "justify-start" : "justify-center",
+                    )}
+                  >
+                    <span className="shrink-0">{item.icon}</span>
+                    {isMenuOpen && item.label}
+                  </ModifiedLink>
                 </TooltipTrigger>
                 <TooltipContent side="right" hidden={isMenuOpen}>
-                  {<p>{item.label}</p>}
+                  <p>{item.label}</p>
                 </TooltipContent>
               </Tooltip>
             ))}
           </div>
         )}
+
         <div className="justify-end flex flex-col gap-4">
           <Tooltip delayDuration={100}>
             <TooltipTrigger asChild>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className={cn(
-                  "hidden md:flex p-2  items-center w-full gap-2 hover:bg-secondary transition-all rounded-lg truncate",
+                  "flex p-2 items-center w-full gap-2 hover:bg-secondary transition-all rounded-lg truncate",
                   isMenuOpen ? "justify-start" : "justify-center",
                 )}
               >
@@ -204,11 +211,12 @@ export default function NavbarComponent({
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" hidden={isMenuOpen}>
-              <p>{isMenuOpen ? "Collapse " : "Expand "}</p>
+              <p>{isMenuOpen ? "Collapse" : "Expand"}</p>
             </TooltipContent>
           </Tooltip>
-          {user && (
-            <div className="flex md:flex-col items-center gap-5">
+
+          {user ? (
+            <div className="flex flex-col items-center gap-5">
               <FeedbackForm
                 isMenuOpen={isMenuOpen}
                 user={user}
@@ -220,9 +228,8 @@ export default function NavbarComponent({
                 isVertical={true}
               />
             </div>
-          )}
-          {user === null && (
-            <div className="flex md:flex-col items-center gap-4">
+          ) : (
+            <div className="flex flex-col items-center gap-4">
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <Link
@@ -235,10 +242,8 @@ export default function NavbarComponent({
                     aria-label="Join Community"
                   >
                     <DiscordLogoIcon className="h-4 w-4" />
-                    {isMenuOpen ? (
+                    {isMenuOpen && (
                       <span className="text-sm">Join Community</span>
-                    ) : (
-                      ""
                     )}
                   </Link>
                 </TooltipTrigger>
@@ -251,8 +256,8 @@ export default function NavbarComponent({
           )}
         </div>
       </div>
-    );
-  }
+    </>
+  );
 }
 
 const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {

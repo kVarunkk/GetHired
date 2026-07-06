@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     // 1. Validation
     if (!jobData || !jobData.id) {
       return NextResponse.json(
-        { error: "User data or user_id is missing." },
+        { error: "Job data or job id is missing." },
         { status: 400 },
       );
     }
@@ -60,6 +60,9 @@ export async function POST(request: Request) {
       .update({
         embedding_new: embedding,
         updated_at: new Date().toISOString(),
+        ...(jobData.table === "job_postings" && {
+          embedding_updated_at: new Date().toISOString(),
+        }),
       })
       .eq("id", jobData.id);
 
@@ -73,7 +76,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       message: "Embedding successfully created and updated via Vertex AI.",
-      // data: { embedding } // Optional: return if needed
+      data: embedding,
     });
   } catch (error) {
     console.error("Error in embedding route:", error);

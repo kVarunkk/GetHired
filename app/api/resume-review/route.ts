@@ -28,12 +28,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { reviewId, targetJd }: { reviewId: string; targetJd: string } =
-      await req.json();
+    const { reviewId }: { reviewId: string } = await req.json();
 
     const userId = user.id;
 
-    if (!reviewId || !targetJd || !userId) {
+    if (!reviewId || !userId) {
       return NextResponse.json(
         { error: "Missing parameters" },
         { status: 400 },
@@ -65,9 +64,15 @@ export async function POST(req: NextRequest) {
     // 1. Fetch Resume Content (The Digital Twin)
     const { data: reviewData } = await supabase
       .from("resume_reviews")
-      .select(`name, resume_id, resumes ( content )`)
+      .select(`name, resume_id, resumes ( content ), target_jd`)
       .eq("id", reviewId)
       .single();
+
+    const targetJd = reviewData?.target_jd;
+
+    if (!targetJd) {
+      throw new Error("Job Description not found");
+    }
 
     const resumeJson = reviewData?.resumes?.content;
     if (!resumeJson) {

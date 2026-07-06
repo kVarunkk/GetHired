@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Badge } from "./ui/badge";
-import { User } from "@supabase/supabase-js";
 import { cn } from "@/utils/utils";
 import JobFavoriteBtn from "./JobFavoriteBtn";
 import { Button } from "./ui/button";
@@ -13,14 +12,16 @@ import { TCompanyInfo } from "@/utils/types";
 const CompanyItem = React.memo(
   ({
     company,
-    user,
+    userId,
     isSuitable,
     isCompanyUser,
+    isFavorite,
   }: {
     company: TCompanyInfo;
-    user: User | null;
+    userId: string | null;
     isSuitable: boolean;
     isCompanyUser: boolean;
+    isFavorite: boolean;
   }) => {
     return (
       <div
@@ -47,9 +48,9 @@ const CompanyItem = React.memo(
                 </div>
                 <JobFavoriteBtn
                   isCompanyUser={isCompanyUser}
-                  user={user}
-                  userFavoritesCompanyInfo={company.user_favorites_companies}
+                  userId={userId}
                   company_id={company.id}
+                  isFavorite={isFavorite}
                 />
               </div>
               {company.tag_line && (

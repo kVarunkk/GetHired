@@ -5,6 +5,7 @@ import {
 import { createClient } from "../../lib/supabase/server";
 import { PostgrestError } from "@supabase/supabase-js";
 import { parseMultiSelectParam } from "@/utils/serverUtils";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 const userInfoSelectString = `user_id, desired_roles, preferred_locations, min_salary, max_salary, experience_years, industry_preferences, visa_sponsorship_required, top_skills, work_style_preferences, career_goals_short_term, career_goals_long_term, company_size_preference, created_at, updated_at, job_type, ai_credits, filled, full_name, email, salary_currency, is_public`;
 
@@ -27,6 +28,10 @@ export async function buildProfileQuery({
   jobEmbedding,
   cursor,
   limit,
+  relevanceSearchType,
+  jobId,
+  companyId,
+  isInternalCall,
 }: {
   searchQuery: string | null;
   jobRoles: string | null;
@@ -46,45 +51,20 @@ export async function buildProfileQuery({
   jobEmbedding: string | null;
   cursor: string | null;
   limit: number | null;
+  relevanceSearchType: "standard" | "digest" | null;
+  jobId: string | null;
+  companyId: string;
+  isInternalCall: boolean;
 }): Promise<ProfilesBuildQueryResult> {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const supabase = isInternalCall
+      ? createServiceRoleClient()
+      : await createClient();
 
     let query;
     let selectString;
 
     if (isFavoriteTabActive) {
-      if (!user) {
-        return {
-          data: [],
-          error: "User not authenticated to view favorite profiles.",
-          count: 0,
-          matchedProfileIds: [],
-          nextCursor: null,
-        };
-      }
-      // Assuming you have fetched the companyId of the logged-in user
-      const { data: companyData } = await supabase
-        .from("company_info")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!companyData) {
-        return {
-          data: [],
-          error: "Company profile not found.",
-          count: 0,
-          matchedProfileIds: [],
-          nextCursor: null,
-        };
-      }
-
-      const companyId = companyData.id;
-
       selectString = `${userInfoSelectString}, company_favorites!inner(company_id)`;
       query = supabase
         .from("user_info")
@@ -92,12 +72,25 @@ export async function buildProfileQuery({
         .eq("company_favorites.company_id", companyId)
         .eq("filled", true)
         .eq("is_public", true);
-    } else {
+    } else if (relevanceSearchType === "standard") {
       query = supabase
         .from("user_info")
         .select(
           `
-          ${userInfoSelectString}, company_favorites(*)
+          ${userInfoSelectString}, job_relevant_profiles!inner(*)
+        `,
+        )
+        .eq("job_relevant_profiles.job_posting_id", jobId!)
+        .eq("filled", true)
+        .eq("is_public", true);
+    }
+    // for normal search and digest
+    else {
+      query = supabase
+        .from("user_info")
+        .select(
+          `
+          ${userInfoSelectString} ${relevanceSearchType === "digest" ? ",resumes(content, is_primary)" : ""}
         `,
         )
         .eq("filled", true)
@@ -128,7 +121,8 @@ export async function buildProfileQuery({
     let matchedProfileIds: string[] = [];
 
     // --- NEW: VECTOR SEARCH LOGIC ---
-    if (sortBy === "relevance" && jobEmbedding) {
+    if (relevanceSearchType === "digest" && jobEmbedding) {
+      query.eq("resumes.is_primary", true);
       // Re-build the query to include the similarity score and order by it
       const { data: searchData, error: searchError } = await supabase.rpc(
         "match_user_profiles",
@@ -145,6 +139,10 @@ export async function buildProfileQuery({
 
       matchedProfileIds = searchData.map(
         (userInfo: { user_id: string }) => userInfo.user_id,
+      );
+
+      console.log(
+        matchedProfileIds.length + " profiles found through VECTOR SEARCH",
       );
 
       // We now filter the main query to only include the matched jobs
@@ -205,7 +203,7 @@ export async function buildProfileQuery({
       query = query.order("user_id", { ascending: sortOrder === "asc" }); // Tiebreaker
     }
 
-    if (limit && sortBy !== "relevance") {
+    if (limit && !relevanceSearchType) {
       query = query.limit(limit);
     }
 
@@ -213,6 +211,14 @@ export async function buildProfileQuery({
       data: AllProfileWithRelations[] | null;
       error: PostgrestError | null;
     };
+
+    if (relevanceSearchType === "standard" && data) {
+      data.sort((a, b) => {
+        const rankA = a.job_relevant_profiles?.[0]?.relevance_rank ?? 999;
+        const rankB = b.job_relevant_profiles?.[0]?.relevance_rank ?? 999;
+        return rankA - rankB;
+      });
+    }
 
     let totalCount = 0;
     if (!cursor) {
@@ -226,7 +232,7 @@ export async function buildProfileQuery({
     }
 
     let nextCursor = null;
-    if (data && data.length === limit) {
+    if (data && data.length === limit && !relevanceSearchType) {
       const lastItem = data[data.length - 1];
       const cursorValue = lastItem[sortBy as keyof typeof lastItem] ?? "null";
 

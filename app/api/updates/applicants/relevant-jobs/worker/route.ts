@@ -2,27 +2,22 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
-  deploymentUrl,
   INTERNAL_API_SECRET,
   sendEmailForStatusUpdate,
 } from "@/utils/serverUtils";
-import {
-  processUserRelevance,
-  sendEmailForRelevantJobsStatusUpdate,
-} from "@/helpers/jobs/relevant-jobs-utils";
+import { processUserRelevance } from "@/helpers/jobs/relevant-jobs-utils";
 
 type RelevanceJobMessage = {
   msg_id: number;
+  read_ct: number;
   message: {
     userId: string;
-    email: string;
-    fullName: string;
   };
 };
 
-const URL = deploymentUrl();
 const BATCH_SIZE = 5;
 const VISIBILITY_TIMEOUT = 60; // seconds before a failed message is requeued
+const MAX_RETRIES = 3;
 
 export async function GET() {
   const headersList = await headers();
@@ -37,7 +32,6 @@ export async function GET() {
   const supabase = createServiceRoleClient();
 
   try {
-    // Dequeue a batch of messages
     const { data: messages, error } = (await supabase
       .schema("pgmq_public")
       .rpc("read", {
@@ -62,24 +56,39 @@ export async function GET() {
 
     const results = await Promise.allSettled(
       messages.map(async (msg) => {
-        const { userId, email, fullName } = msg.message;
+        const { userId } = msg.message;
 
-        const result = await processUserRelevance(userId, email, fullName);
+        const result = await processUserRelevance(
+          userId,
+
+          true,
+        );
 
         if (result.success) {
-          // Delete message from queue on success
           await supabase.schema("pgmq_public").rpc("delete", {
             queue_name: "relevance_jobs",
             message_id: msg.msg_id,
           });
-
-          await sendEmailForRelevantJobsStatusUpdate(
-            email,
-            fullName,
-            URL + "/jobs?sortBy=relevance",
+        } else {
+          console.warn(
+            `[WORKER] Message ${msg.msg_id} failed. Attempt count: ${msg.read_ct}`,
           );
+
+          if (msg.read_ct >= MAX_RETRIES) {
+            console.error(
+              `[WORKER] Message ${msg.msg_id} exceeded max retries (${MAX_RETRIES}). Evicting...`,
+            );
+
+            await supabase.schema("pgmq_public").rpc("delete", {
+              queue_name: "relevance_jobs",
+              message_id: msg.msg_id,
+            });
+
+            await sendEmailForStatusUpdate(
+              `JOB WORKER POISON ALERT: Message ${msg.msg_id} for User ${userId} dropped after failing ${msg.read_ct} times.`,
+            );
+          }
         }
-        // On failure: message stays in queue, becomes visible again after VISIBILITY_TIMEOUT
 
         return { ...result, msgId: msg.msg_id };
       }),
@@ -95,12 +104,13 @@ export async function GET() {
       message: `Processed ${results.length} messages. Success: ${successful}, Failed: ${failed}.`,
     });
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg =
+      error instanceof Error ? error.message : "unknown error occured.";
     await sendEmailForStatusUpdate(
-      `RELEVANCE WORKER CRITICAL FAILURE:\n${errorMsg}`,
+      `JOB RELEVANCE WORKER CRITICAL FAILURE:\n${errorMsg}`,
     );
     return NextResponse.json(
-      { success: false, message: "Internal Server Error" },
+      { success: false, message: errorMsg },
       { status: 500 },
     );
   }

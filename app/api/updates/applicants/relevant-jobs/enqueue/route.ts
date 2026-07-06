@@ -22,7 +22,7 @@ export async function GET() {
   try {
     const { data: users, error: userError } = await supabase
       .from("user_info")
-      .select("user_id, email, full_name")
+      .select("user_id")
       .eq("filled", true)
       .gte("ai_credits", TAICredits.AI_SEARCH_ASK_AI_RESUME);
 
@@ -36,11 +36,8 @@ export async function GET() {
       });
     }
 
-    // Enqueue one message per user
     const messages = users.map((user) => ({
       userId: user.user_id,
-      email: user.email ?? "unknown",
-      fullName: user.full_name ?? user.email?.split("@")[0] ?? "unknown",
     }));
 
     for (const message of messages) {

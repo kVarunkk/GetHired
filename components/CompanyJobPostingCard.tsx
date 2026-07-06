@@ -18,7 +18,7 @@ export default function CompanyJobPostingCard({
       <CardHeader className="p-0 mb-2">
         <CardTitle className="text-lg font-bold flex items-center justify-between min-h-10">
           <Link
-            className="hover:underline underline underline-offset-4 sm:no-underline"
+            className="hover:underline underline underline-offset-4 sm:no-underline truncate"
             href={`/company/job-posts/${job.id}`}
           >
             {job.title}

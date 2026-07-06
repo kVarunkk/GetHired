@@ -16,6 +16,7 @@ export async function rerankJobsIfApplicable({
   matchedJobIds,
   relevanceSearchType,
   cursor,
+  isInternalCall,
 }: {
   initialJobs: AllJobWithRelations[];
   initialCount: number;
@@ -30,6 +31,7 @@ export async function rerankJobsIfApplicable({
     | "similar_jobs"
     | null;
   cursor: string | null;
+  isInternalCall: boolean;
 }): Promise<RerankResult> {
   let finalJobs = initialJobs;
   let finalCount = initialCount;
@@ -62,25 +64,31 @@ export async function rerankJobsIfApplicable({
   }
 
   try {
+    // const requestHeaders: Record<string, string> = {};
+    // if (relevanceSearchType !== "similar_jobs") {
+    //   requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
+    // }
+
+    // const cookie = headersList.get("Cookie");
+    // if (cookie) {
+    //   requestHeaders["Cookie"] = cookie;
+    // }
+
     const requestHeaders: Record<string, string> = {};
-    if (INTERNAL_API_SECRET) {
+    const cookie = headersList.get("Cookie");
+    const authHeader = headersList.get("Authorization");
+
+    if (isInternalCall) {
       requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
+    } else if (cookie) {
+      requestHeaders["Cookie"] = cookie;
+    } else if (authHeader) {
+      // for stdio mcp gh token
+      requestHeaders["Authorization"] = authHeader;
     }
 
     // only keep top 20 jobs in initialJobs(will be sent to AI for filtering) and rest in removedJobs(will be concatenated later).
     removedJobs = initialJobs.splice(20);
-
-    const cookie = headersList.get("Cookie");
-    if (cookie) {
-      requestHeaders["Cookie"] = cookie;
-    }
-
-    // for stdio mcp gh token
-    const authHeader = headersList.get("Authorization");
-    if (authHeader) {
-      requestHeaders["Authorization"] = authHeader;
-    }
-
     const aiRerankRes = await fetch(
       `${url}/api/ai-search/jobs${
         relevanceSearchType === "similar_jobs" ? "/similar-jobs" : ""

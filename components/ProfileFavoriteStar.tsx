@@ -1,63 +1,83 @@
 "use client";
 
-import { revalidateCache } from "@/app/actions/revalidate";
 import { createClient } from "@/lib/supabase/client";
-import { AllProfileWithRelations } from "@/utils/types";
-import { TApplicantProfile } from "@/utils/types/user.types";
+import { PROFILE_API_KEY } from "@/utils/utils";
 import { Star } from "lucide-react";
-import { useState } from "react";
+import toast from "react-hot-toast";
+import { mutate } from "swr";
 
 export default function ProfileFavoriteStar({
-  profile,
+  profileId,
   companyId,
+  isFavorite,
 }: {
-  profile: TApplicantProfile | AllProfileWithRelations;
+  profileId: string;
   companyId?: string;
+  isFavorite: boolean;
 }) {
-  const supabase = createClient();
-  const [isFavorite, setIsFavorite] = useState(
-    profile.company_favorites &&
-      profile.company_favorites.filter((each) => each.company_id === companyId)
-        .length > 0,
-  );
-
   const handleFavorite = async () => {
+    if (!companyId || !profileId) return;
+
+    const nextFavoriteState = !isFavorite;
+
+    mutate(
+      PROFILE_API_KEY,
+      (currentData) => {
+        if (!currentData) return currentData;
+
+        const profile = currentData.profile || {};
+
+        const currentProfiles = profile.company_favorites || [];
+
+        let updatedProfiles = [...currentProfiles];
+
+        if (nextFavoriteState) {
+          if (!updatedProfiles.some((p) => p.user_id === profileId)) {
+            updatedProfiles.push({ user_id: profileId });
+          }
+        } else {
+          updatedProfiles = updatedProfiles.filter(
+            (p) => p.user_id !== profileId,
+          );
+        }
+
+        return {
+          ...currentData,
+          profile: {
+            ...profile,
+            company_favorites: updatedProfiles,
+          },
+        };
+      },
+      false,
+    );
+
     try {
-      let query;
+      const supabase = createClient();
 
-      if (!companyId) throw new Error("Company info not found");
-
-      if (
-        profile.company_favorites &&
-        profile.company_favorites.filter(
-          (each) => each.company_id === companyId,
-        ).length > 0
-      ) {
-        query = supabase
+      if (!nextFavoriteState) {
+        await supabase
           .from("company_favorites")
           .delete()
-          .eq("user_info_id", profile.user_id)
+          .eq("user_id", profileId)
           .eq("company_id", companyId);
-      } else
-        query = supabase.from("company_favorites").insert([
-          {
-            user_info_id: profile.user_id,
-            company_id: companyId,
-          },
-        ]);
+      } else {
+        await supabase
+          .from("company_favorites")
+          .insert([{ user_id: profileId, company_id: companyId }]);
+      }
 
-      const { error } = await query;
-
-      if (error) throw new Error(error.details);
-      await revalidateCache("profiles-feed");
-    } catch {}
+      mutate(PROFILE_API_KEY);
+    } catch {
+      toast.error("Failed to update favorite status.");
+      mutate(PROFILE_API_KEY);
+    }
   };
 
   return (
     <button
       onClick={(e) => {
         e.stopPropagation();
-        setIsFavorite(!isFavorite);
         handleFavorite();
       }}
       className="ml-3"

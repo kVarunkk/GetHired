@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowRight, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
-import { User } from "@supabase/supabase-js";
 import { toast } from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
@@ -21,9 +20,12 @@ import {
 import { AllJobWithRelations } from "@/utils/types";
 import { createClient } from "@/lib/supabase/client";
 import ResumeSourceSelector from "./ResumeSourceSelector";
-import { cn } from "@/utils/utils";
+import { cn, fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { uploadResumeAction } from "@/app/actions/upload-resume-file";
+import useSWR from "swr";
+import { TResumeReviewResume } from "@/utils/types/review.types";
+import { revalidateCacheAction } from "@/app/actions/revalidate";
 
 const createFormSchema = (questions: string[]) => {
   const schemaFields = questions.reduce<Record<string, z.ZodTypeAny>>(
@@ -38,31 +40,19 @@ const createFormSchema = (questions: string[]) => {
 
 interface JobApplicationFormProps {
   jobPost: AllJobWithRelations | TJobIdPageData;
-  user: User;
+  userId: string;
   onSuccess: () => void;
 }
 
 export default function JobApplicationForm({
   jobPost,
-  user,
+  userId,
   onSuccess,
 }: JobApplicationFormProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
-
-  const [existingResumes, setExistingResumes] = useState<
-    {
-      id: string;
-      name: string | null;
-      created_at: string;
-      is_primary: boolean;
-      resume_path: string | null;
-      parsing_failed: boolean;
-    }[]
-  >([]);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [newFile, setNewFile] = useState<File | null>(null);
-  const [isFetchingResumes, setIsFetchingResumes] = useState(true);
 
   const questions = useMemo(
     () => jobPost.job_postings?.[0]?.questions || [],
@@ -73,35 +63,22 @@ export default function JobApplicationForm({
     resolver: zodResolver(formSchema),
   });
 
+  const { data, isLoading } = useSWR(PROFILE_API_KEY, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const existingResumes: TResumeReviewResume[] =
+    data && data.profile ? data.profile.resumes : [];
+
   useEffect(() => {
-    const fetchResumes = async () => {
-      const supabase = createClient();
-      try {
-        const { data, error } = await supabase
-          .from("resumes")
-          .select(
-            "id, name, created_at, is_primary, resume_path, parsing_failed",
-          )
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-
-        setExistingResumes(data || []);
-
-        const primary = data?.find((r) => r.is_primary);
-        if (primary) {
-          setSelectedResumeId(primary.id);
-        }
-      } catch {
-        toast.error("Failed to load your resumes.");
-      } finally {
-        setIsFetchingResumes(false);
+    if (existingResumes.length > 0) {
+      const primaryResume = existingResumes.find((resume) => resume.is_primary);
+      if (primaryResume) {
+        setSelectedResumeId(primaryResume.id);
       }
-    };
-
-    fetchResumes();
-  }, [user.id]);
+    }
+  }, [existingResumes]);
 
   const onSubmit = async (values: Record<string, string>) => {
     setLoading(true);
@@ -129,13 +106,15 @@ export default function JobApplicationForm({
       const { error } = await supabase.from("applications").insert({
         job_post_id: jobPost.job_postings![0].id,
         all_jobs_id: jobPost.id,
-        applicant_user_id: user.id,
+        applicant_user_id: userId,
         answers: Object.values(values),
         resume_id: finalResumeId,
         status: "submitted",
       });
 
       if (error) throw error;
+
+      await revalidateCacheAction(`profile-${userId}`);
 
       toast.success("Application sent!");
       onSuccess();
@@ -165,7 +144,7 @@ export default function JobApplicationForm({
           </div>
           <span
             className={cn(
-              "text-[10px] font-black uppercase tracking-widest",
+              "text-[10px] font-bold uppercase tracking-widest",
               step === 1 ? "text-brand" : "text-muted-foreground",
             )}
           >
@@ -186,7 +165,7 @@ export default function JobApplicationForm({
           </div>
           <span
             className={cn(
-              "text-[10px] font-black uppercase tracking-widest",
+              "text-[10px] font-bold uppercase tracking-widest",
               step === 2 ? "text-brand" : "text-muted-foreground",
             )}
           >
@@ -205,7 +184,7 @@ export default function JobApplicationForm({
               </p>
             </div>
 
-            {isFetchingResumes ? (
+            {isLoading ? (
               <div className="py-12 flex flex-col items-center gap-3">
                 <Loader2 className="h-6 w-6 animate-spin" />
                 <p className="text-xs text-muted-foreground ">

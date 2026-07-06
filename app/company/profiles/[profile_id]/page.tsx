@@ -1,17 +1,84 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
-import BackButton from "@/components/BackButton";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-// import { IFormData } from "@/utils/types";
-import ProfileFavoriteStar from "@/components/ProfileFavoriteStar";
-import { buildSalaryRange } from "../../applicants/[applicant_id]/page";
-import ProfileActiveApplication from "@/components/ProfileActiveApplications";
-import SelectProfile from "@/components/SelectProfile";
-import { Mail } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { GitHubLogoIcon, LinkedInLogoIcon } from "@radix-ui/react-icons";
+import { unstable_cache } from "next/cache";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import ProfileClientHydrator from "@/components/ProfileClientHydrator";
+
+// CACHE 1: Core profile data, scoped strictly by profile_id
+const getCachedApplicantProfile = (profile_id: string) =>
+  unstable_cache(
+    async () => {
+      const supabase = createServiceRoleClient();
+      const { data, error } = await supabase
+        .from("user_info")
+        .select(
+          `
+          full_name,
+          user_id,
+          linkedin_url,
+          github_url,
+          email,
+          min_salary,
+          max_salary,
+          experience_years,
+          work_style_preferences,
+          company_size_preference,
+          career_goals_long_term,
+          career_goals_short_term,
+          visa_sponsorship_required,
+          preferred_locations,
+          desired_roles,
+          salary_currency,
+          top_skills,
+          resumes(resume_path)
+        `,
+        )
+        .eq("user_id", profile_id)
+        .eq("resumes.is_primary", true)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    [`applicant-profile-${profile_id}`],
+    {
+      revalidate: 86400,
+      tags: [`profile-${profile_id}`],
+    },
+  )();
+
+// FETCH 2: Company-scoped applications (Secure, Not globally cached)
+const getCompanyScopedApplications = async (
+  profile_id: string,
+  company_id: string,
+) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("applications")
+    .select(
+      `
+      id,
+      status,
+      created_at,
+      job_postings!inner (
+        id,
+        title,
+        company_id
+      )
+    `,
+    )
+    .eq("applicant_user_id", profile_id)
+    .eq("job_postings.company_id", company_id)
+    .order("created_at", {
+      ascending: false,
+    });
+
+  if (error) return [];
+  return data;
+};
 
 export default async function ProfilePage({
   params,
@@ -20,7 +87,9 @@ export default async function ProfilePage({
 }) {
   try {
     const { profile_id } = await params;
+
     const supabase = await createClient();
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -29,10 +98,9 @@ export default async function ProfilePage({
       throw new Error("User not authenticated.");
     }
 
-    // Fetch the company ID of the logged-in user
     const { data: companyData, error: companyError } = await supabase
       .from("company_info")
-      .select("*, job_postings(id, title, job_id)")
+      .select("id")
       .eq("user_id", user.id)
       .single();
 
@@ -40,231 +108,33 @@ export default async function ProfilePage({
       throw new Error("Logged-in user does not have a company profile.");
     }
 
-    // Fetch the applicant's profile details
-    const { data: applicantProfile, error } = await supabase
-      .from("user_info")
-      .select(
-        `
-        *,
-        resumes(resume_path),
-        company_favorites (
-          company_id
-        ),
-        applications (
-          id,
-          status,
-          created_at,
-          job_postings!inner (
-            id,
-            title,
-            company_id
-          )
-        )
-      `,
-      )
-      .eq("user_id", profile_id)
-      .eq("resumes.is_primary", true)
-      .eq("applications.job_postings.company_id", companyData.id)
-      .single();
-
-    if (error || !applicantProfile) {
-      return <ErrorComponent />;
-    }
-
-    // const applicantProfile = applicantProfileData as IFormData;
+    const [profile, applications] = await Promise.all([
+      getCachedApplicantProfile(profile_id),
+      getCompanyScopedApplications(profile_id, companyData.id),
+    ]);
 
     const { data: signedUrlData } = await supabase.storage
       .from("resumes")
-      .createSignedUrl(applicantProfile.resumes?.[0]?.resume_path || "", 3600);
+      .createSignedUrl(profile.resumes?.[0]?.resume_path || "", 3600);
 
     const signedUrl = signedUrlData?.signedUrl;
 
+    const completeProfileData = {
+      ...profile,
+      signedUrl,
+      applications,
+    };
+
     return (
-      <div className="flex flex-col w-full p-4 gap-8 ">
-        <div className="flex items-center justify-between">
-          <BackButton />
-        </div>
+      <div className="flex flex-col gap-4 w-full p-4 mb-20">
+        <Link
+          href="/company/profiles"
+          className="text-muted-foreground hover:text-primary transition-colors w-fit p-2 pl-0"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
 
-        <div className="flex items-center justify-between flex-wrap gap-5">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-1">
-              <h1 className="text-3xl font-medium">
-                {applicantProfile.full_name}
-              </h1>
-              <ProfileFavoriteStar
-                profile={applicantProfile}
-                companyId={companyData.id}
-              />
-            </div>
-            {/* <p className="text-muted-foreground">{applicantProfile.email}</p> */}
-            <div className="flex items-center gap-2">
-              <Link
-                href={`mailto:${applicantProfile.email}`}
-                className=" text-muted-foreground hover:text-primary transition-colors"
-              >
-                <Mail className="h-6 w-6" />
-              </Link>
-              {applicantProfile.linkedin_url && (
-                <Link
-                  target="_blank"
-                  href={applicantProfile.linkedin_url}
-                  className=" text-muted-foreground hover:text-primary transition-colors"
-                >
-                  <LinkedInLogoIcon className="h-6 w-6" />
-                </Link>
-              )}
-              {applicantProfile.github_url && (
-                <Link
-                  target="_blank"
-                  href={applicantProfile.github_url}
-                  className=" text-muted-foreground hover:text-primary transition-colors"
-                >
-                  <GitHubLogoIcon className="h-6 w-6" />
-                </Link>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-5">
-            <SelectProfile
-              jobPostings={companyData.job_postings}
-              companyId={companyData.id}
-              applicantProfile={applicantProfile}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left Panel: Applicant Info Card */}
-          <div className="md:col-span-1 space-y-4">
-            <Card>
-              <CardContent>
-                <div className="space-y-4 pt-5">
-                  {signedUrl && (
-                    <a
-                      href={signedUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Button className="w-full">View Resume</Button>
-                    </a>
-                  )}
-                  <div>
-                    <p className="font-semibold text-sm">Desired Roles</p>
-                    <p className="text-sm text-muted-foreground">
-                      {applicantProfile.desired_roles?.join(", ") ||
-                        "Not specified"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">Preferred Locations</p>
-                    <p className="text-sm text-muted-foreground">
-                      {applicantProfile.preferred_locations?.join(", ") ||
-                        "Not specified"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">Visa Sponsorship</p>
-                    <p className="text-sm text-muted-foreground">
-                      {applicantProfile.visa_sponsorship_required
-                        ? "Required"
-                        : "Not Required"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">
-                      Short Term Career Goals
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {applicantProfile.career_goals_short_term ||
-                        "Not specified"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">
-                      Long Term Career Goals
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {applicantProfile.career_goals_long_term ||
-                        "Not specified"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">
-                      Preferred Company Size
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {applicantProfile.company_size_preference ||
-                        "Not specified"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">
-                      Preferred Work Style
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {applicantProfile.work_style_preferences?.join(", ") ||
-                        "Not specified"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">Experience</p>
-                    <p className="text-sm text-muted-foreground">
-                      {applicantProfile.experience_years} Years
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">Salary Expectation</p>
-                    <p className="text-sm text-muted-foreground">
-                      {buildSalaryRange(
-                        applicantProfile.min_salary ?? undefined,
-                        applicantProfile.max_salary ?? undefined,
-                        applicantProfile.salary_currency,
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">Skills</p>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {applicantProfile.top_skills &&
-                      applicantProfile.top_skills.length > 0 ? (
-                        applicantProfile.top_skills.map((skill, index) => (
-                          <Badge key={index} variant="secondary">
-                            {skill}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-sm text-muted-foreground">
-                          Not specified
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Panel: Job and Application History */}
-          <div className="md:col-span-2 space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Application History</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {applicantProfile.applications &&
-                applicantProfile.applications.length > 0 ? (
-                  applicantProfile.applications.map((app) => (
-                    <ProfileActiveApplication key={app.id} app={app} />
-                  ))
-                ) : (
-                  <p className="text-muted-foreground w-full text-center text-sm">
-                    No application history found.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <ProfileClientHydrator applicantProfile={completeProfileData} />
       </div>
     );
   } catch {

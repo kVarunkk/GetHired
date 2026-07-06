@@ -4,13 +4,7 @@ import { cn } from "@/utils/utils";
 import { Eye, File, FileText, Loader2, RefreshCcw } from "lucide-react";
 import ResumeSourceSelector from "../ResumeSourceSelector";
 import DigitalTwinMirror from "./DigitalTwinMirror";
-import {
-  Dispatch,
-  SetStateAction,
-  startTransition,
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 import { uploadResumeAction } from "@/app/actions/upload-resume-file";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
@@ -21,8 +15,8 @@ import {
   TResumeReviewServer,
 } from "@/utils/types/review.types";
 import { TResumeRowContent } from "@/utils/types";
-import { useRouter } from "next/navigation";
 import { retryResumeParsingAction } from "@/app/actions/retry-resume-parsing";
+import { mutate } from "swr";
 
 export default function ResumeSection({
   isParsed,
@@ -33,7 +27,7 @@ export default function ResumeSection({
   isResumeLinked,
   isParsingFailed,
   reviewId,
-  setCurrentReview,
+  changeTriggerState,
 }: {
   isParsed: boolean;
   isJdPaneOpen: boolean;
@@ -43,7 +37,9 @@ export default function ResumeSection({
   isResumeLinked: boolean;
   isParsingFailed: boolean;
   reviewId: string;
-  setCurrentReview: Dispatch<SetStateAction<TResumeReviewServer>>;
+  changeTriggerState: (
+    state: "idle" | "saving_jd" | "triggering_analysis" | "triggering_parse",
+  ) => void;
 }) {
   const supabase = createClient();
 
@@ -53,12 +49,29 @@ export default function ResumeSection({
   const [isRetrying, setIsRetrying] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
-  const router = useRouter();
 
   const handleLinkResume = async (resumeId: string | null) => {
     if (!resumeId) return;
 
     try {
+      mutate(
+        `/api/resume-review/${reviewId}`,
+        (currentData) => {
+          if (!currentData) return currentData;
+
+          const review = currentData.data || {};
+
+          return {
+            ...currentData,
+            data: {
+              ...review,
+              resume_id: resumeId,
+            },
+          };
+        },
+        false,
+      );
+
       const { error } = await supabase
         .from("resume_reviews")
         .update({ resume_id: resumeId, updated_at: new Date().toISOString() })
@@ -66,13 +79,14 @@ export default function ResumeSection({
 
       if (error) {
         toast.error("Failed to link resume asset.");
+        throw error;
       } else {
-        // Update local state to trigger the polling effect
-        setCurrentReview((prev) => ({ ...prev, resume_id: resumeId }));
         toast.success("Resume linked successfully.");
+        mutate(`/api/resume-review/${reviewId}`);
       }
     } catch {
       toast.error("Link action failed.");
+      mutate(`/api/resume-review/${reviewId}`);
     }
   };
 
@@ -130,21 +144,32 @@ export default function ResumeSection({
 
     setIsRetrying(true);
     const toastId = toast.loading("Restarting document synchronization...");
+    const targetCacheKey = `/api/resume-review/${reviewId}`;
 
     try {
-      //  OPTIMISTIC UPDATE:
+      changeTriggerState("triggering_parse");
 
-      setCurrentReview((prev) => {
-        if (!prev.resumes) return prev;
-        return {
-          ...prev,
-          resumes: {
-            ...prev.resumes,
-            parsing_failed: false,
-            content: null,
-          },
-        };
-      });
+      mutate(
+        targetCacheKey,
+        (currentData) => {
+          if (!currentData) return currentData;
+
+          const reviewData = currentData?.data || {};
+          const resumesData = reviewData?.resumes || {};
+          return {
+            ...currentData,
+            data: {
+              ...reviewData,
+              resumes: {
+                ...resumesData,
+                parsing_failed: false,
+                content: null,
+              },
+            },
+          };
+        },
+        false,
+      );
 
       const result = await retryResumeParsingAction(linkedResume.id);
 
@@ -153,21 +178,18 @@ export default function ResumeSection({
       }
 
       toast.success("Sync restarted! AI is re-indexing...", { id: toastId });
-
-      startTransition(() => {
-        router.refresh();
-      });
     } catch (err) {
       toast.error(
         err instanceof Error
           ? err.message
           : "Failed to restart sync. Please try again.",
-        {
-          id: toastId,
-        },
+        { id: toastId },
       );
     } finally {
       setIsRetrying(false);
+
+      changeTriggerState("idle");
+      mutate(targetCacheKey);
     }
   };
 

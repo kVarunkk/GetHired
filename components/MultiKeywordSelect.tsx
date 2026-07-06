@@ -160,6 +160,7 @@ export default function MultiKeywordSelect({
               removeKeyword={removeKeyword}
               name={name}
               header={header}
+              loading={loading}
             />
           </PopoverContent>
         </Popover>
@@ -212,6 +213,7 @@ export default function MultiKeywordSelect({
                   addKeyword={addKeyword}
                   removeKeyword={removeKeyword}
                   name={name}
+                  loading={loading}
                 />
               </div>
             </DrawerContent>
@@ -235,6 +237,7 @@ export default function MultiKeywordSelect({
                   removeKeyword={removeKeyword}
                   name={name}
                   header={header}
+                  loading={loading}
                 />
               </div>
             </DrawerContent>
@@ -271,6 +274,7 @@ const Row = React.memo(
     style,
     data,
     name,
+    loading,
   }: {
     index: number;
     style: CSSProperties;
@@ -282,6 +286,7 @@ const Row = React.memo(
       onResize: (index: number, size: number) => void;
     };
     name: keyof GenericFormData;
+    loading: boolean;
   }): ReactElement => {
     Row.displayName = "Row";
     const {
@@ -315,7 +320,7 @@ const Row = React.memo(
                 addKeyword(itemData);
               }
             }}
-            disabled={checked && name === "profile"}
+            disabled={(checked && name === "profile") || loading}
             className="cursor-pointer"
           >
             <Check
@@ -343,6 +348,7 @@ function ItemsList({
   removeKeyword,
   name,
   header,
+  loading,
 }: {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
@@ -353,6 +359,7 @@ function ItemsList({
       index,
       style,
       data,
+      loading,
     }: {
       index: number;
       style: CSSProperties;
@@ -364,6 +371,7 @@ function ItemsList({
         onResize: (index: number, size: number) => void;
       };
       name: keyof GenericFormData;
+      loading: boolean;
     }) => ReactElement
   >;
   initialKeywords: string[];
@@ -374,6 +382,7 @@ function ItemsList({
     heading: string;
     description?: string;
   };
+  loading: boolean;
 }) {
   const [rowHeights, setRowHeights] = useState<Record<string, number>>({});
   const listRef = useRef<VariableSizeList | null>(null);
@@ -403,6 +412,7 @@ function ItemsList({
           removeKeyword,
           onResize: handleResize,
         }}
+        loading={loading}
       />
     ),
     [
@@ -413,6 +423,7 @@ function ItemsList({
       handleResize,
       Row,
       name,
+      loading,
     ],
   );
 

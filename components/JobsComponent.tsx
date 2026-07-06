@@ -6,7 +6,7 @@ import {
   TCompanyInfo,
 } from "@/utils/types";
 import Link from "next/link";
-import { startTransition, useMemo } from "react";
+import { startTransition, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppLoader from "./AppLoader";
 import { User } from "@supabase/supabase-js";
@@ -21,7 +21,12 @@ import SortingComponent from "./SortingComponent";
 import { useProgress } from "react-transition-progress";
 import CompanyItem from "./CompanyItem";
 import InfoTooltip from "./InfoTooltip";
-import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/utils/utils";
+import {
+  copyToClipboard,
+  fetcher,
+  PROFILE_API_KEY,
+  JOB_POSTING_API_KEY,
+} from "@/utils/utils";
 import useSWR, { mutate } from "swr";
 import { createClient } from "@/lib/supabase/client";
 import { triggerRelevanceUpdate } from "@/app/actions/relevant-jobs-update";
@@ -30,6 +35,7 @@ import FootComponent from "./FootComponent";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useRelevantJobPoller } from "@/hooks/useRelevantJobPoller";
 import ProfileCompletionBanner from "./ProfileCompletionBanner";
+import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
 
 export default function JobsComponent({
   initialJobs,
@@ -61,20 +67,53 @@ export default function JobsComponent({
   error: string | null;
   dynamicKey: string;
 }) {
-  const { data } = useSWR(PROFILE_API_KEY, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    staleTime: 5 * 60 * 1000,
-  });
-
   const router = useRouter();
   const searchParams = useSearchParams();
   const startProgress = useProgress();
   const isSuitable = searchParams.get("sortBy") === "relevance";
   const jobId = searchParams.get("jobId");
   const isSimilarSearch = !!(isSuitable && jobId);
-  const isGenerated = data?.profile?.is_relevant_jobs_generated ?? false;
-  const isFailed = data?.profile?.is_relevant_job_update_failed ?? false;
+  const jobPostingId = searchParams.get("job_post");
+  const isRelevantProfileSearch = !!(
+    current_page === "profiles" &&
+    isCompanyUser &&
+    jobPostingId
+  );
+
+  const [aiGenBtnLoading, setAiGenBtnLoading] = useState(false);
+
+  const { data: currentUserData, isLoading: currentUserDataLoading } = useSWR(
+    PROFILE_API_KEY,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      staleTime: 5 * 60 * 1000,
+    },
+  );
+
+  const { data, isLoading } = useSWR(
+    jobPostingId ? `${JOB_POSTING_API_KEY}?jobId=${jobPostingId}` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      staleTime: 5 * 60 * 1000,
+    },
+  );
+
+  // for companyUsers
+  const isLimitOnProfiles =
+    currentUserData?.profile?.company_tiers?.allowed_profiles !== null;
+
+  const isGenerated = isRelevantProfileSearch
+    ? data?.data?.matching_status === "completed"
+    : currentUserData?.profile?.relevant_jobs_update_status === "completed";
+  const isFailed = isRelevantProfileSearch
+    ? data?.data?.matching_status === "failed"
+    : currentUserData?.profile?.relevant_jobs_update_status === "failed";
+  const isPending =
+    isRelevantProfileSearch && data?.data?.matching_status === "pending";
 
   const {
     items: jobs,
@@ -122,13 +161,16 @@ export default function JobsComponent({
     ],
   });
 
-  useRelevantJobPoller({
-    userId: user?.id ?? null,
+  const { isRefreshing } = useRelevantJobPoller({
+    loading: isLoading,
+    userId: currentUserData?.profile?.user_id ?? null,
     isGenerated,
     isSuitable,
     isSimilarSearch,
     currentPage: current_page,
     isFailed,
+    isRelevantProfileSearch,
+    jobPostingId,
   });
 
   const navigateBack = async () => {
@@ -142,19 +184,48 @@ export default function JobsComponent({
     });
   };
 
-  const generateAIFeed = async () => {
+  const generateAIFeed = async (type: "job" | "profile") => {
+    setAiGenBtnLoading(true);
     const supabase = createClient();
-    await supabase
-      .from("user_info")
-      .update({
-        is_relevant_job_update_failed: false,
-      })
-      .eq("user_id", data.profile.user_id);
-    mutate(PROFILE_API_KEY);
-    triggerRelevanceUpdate(data.profile.user_id);
+    if (type === "job") {
+      await supabase
+        .from("user_info")
+        .update({
+          relevant_jobs_update_status: "progress",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", currentUserData.profile.user_id);
+
+      await mutate(PROFILE_API_KEY);
+      triggerRelevanceUpdate(currentUserData.profile.user_id);
+    } else if (type === "profile" && jobPostingId) {
+      const key = `${JOB_POSTING_API_KEY}?jobId=${jobPostingId}`;
+      await supabase
+        .from("job_postings")
+        .update({
+          matching_status: "progress",
+          matching_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", jobPostingId);
+      await mutate(key);
+      triggerJobPostingRelevanceUpdate(jobPostingId);
+    }
+    setAiGenBtnLoading(false);
   };
 
   const renderedList = useMemo(() => {
+    const favoriteJobs: { job_id: string }[] =
+      currentUserData?.profile?.user_favorites ?? [];
+    const favoriteCompanies: { company_id: string }[] =
+      currentUserData?.profile?.user_favorites_companies ?? [];
+    const favoriteProfiles: { user_id: string }[] =
+      currentUserData?.profile?.company_favorites ?? [];
+    const appliedJobs: {
+      all_jobs_id: string;
+      status: string;
+    }[] = currentUserData?.profile?.applications ?? [];
+
     if (jobs.length === 0) {
       return (
         <p className="text-muted-foreground mt-20 mx-auto text-center">
@@ -193,6 +264,9 @@ export default function JobsComponent({
             profile={profile}
             isSuitable={isSuitable}
             companyId={companyId}
+            isFavorite={
+              !!favoriteProfiles?.some((fav) => fav.user_id === profile.user_id)
+            }
           />
         ));
     }
@@ -209,10 +283,11 @@ export default function JobsComponent({
             isCompanyUser={isCompanyUser}
             key={job.id}
             job={job}
-            user={user}
+            userId={user?.id || null}
             isSuitable={isSuitable}
-            isAppliedJobsTabActive={isAppliedJobsTabActive}
             isOnboardingComplete={isOnboardingComplete}
+            isFavorite={!!favoriteJobs?.some((fav) => fav.job_id === job.id)}
+            appliedJob={appliedJobs?.find((app) => app.all_jobs_id === job.id)}
           />
         ));
       const items2 = items
@@ -222,10 +297,11 @@ export default function JobsComponent({
             isCompanyUser={isCompanyUser}
             key={job.id}
             job={job}
-            user={user}
+            userId={user?.id || null}
             isSuitable={isSuitable}
-            isAppliedJobsTabActive={isAppliedJobsTabActive}
             isOnboardingComplete={isOnboardingComplete}
+            isFavorite={!!favoriteJobs?.some((fav) => fav.job_id === job.id)}
+            appliedJob={appliedJobs?.find((app) => app.all_jobs_id === job.id)}
           />
         ));
 
@@ -245,8 +321,11 @@ export default function JobsComponent({
           isCompanyUser={isCompanyUser}
           key={company.id}
           company={company}
-          user={user}
+          userId={user?.id || null}
           isSuitable={isSuitable}
+          isFavorite={
+            !!favoriteCompanies?.some((fav) => fav.company_id === company.id)
+          }
         />
       ));
   }, [
@@ -258,6 +337,7 @@ export default function JobsComponent({
     isOnboardingComplete,
     user,
     companyId,
+    currentUserData,
   ]);
 
   return (
@@ -403,10 +483,13 @@ export default function JobsComponent({
             {error}
           </p>
         </div>
+      ) : (!data || isRefreshing) && user && isRelevantProfileSearch ? (
+        <div className="flex items-center justify-center text-muted-foreground py-10">
+          Loading...
+        </div>
       ) : !isGenerated &&
-        current_page === "jobs" &&
-        isSuitable &&
-        !isSimilarSearch ? (
+        ((current_page === "jobs" && isSuitable && !isSimilarSearch) ||
+          isRelevantProfileSearch) ? (
         isFailed ? (
           <div className="flex flex-col items-center justify-center my-20 gap-5">
             <p className=" text-muted-foreground text-sm text-center sm:w-1/2">
@@ -417,19 +500,47 @@ export default function JobsComponent({
             </p>
             <Button
               onClick={() => {
-                generateAIFeed();
+                generateAIFeed(isRelevantProfileSearch ? "profile" : "job");
               }}
+              disabled={aiGenBtnLoading}
             >
-              Generate AI Feed
+              <>
+                {" "}
+                Generate AI Feed
+                {aiGenBtnLoading && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+              </>
+            </Button>
+          </div>
+        ) : isPending ? (
+          <div className="flex flex-col items-center justify-center my-20 gap-5">
+            <p className=" text-muted-foreground text-sm text-center sm:w-1/2">
+              AI Smart Search Feed is only generated for active job postings.
+              This job posting is currently inactive. Please click the button
+              below to start the feed generation process. This is a one time
+              process and might take some time. You will be notified via email
+              once your feed is ready.
+            </p>
+            <Button
+              onClick={() => {
+                generateAIFeed("profile");
+              }}
+              disabled={aiGenBtnLoading}
+            >
+              <>
+                Generate AI Feed
+                {<Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              </>
             </Button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center my-20">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             <p className="mt-4 text-muted-foreground animate-pulse text-sm text-center sm:w-3/4">
-              AI is curating your personalized job feed. This is a one time
-              process and might take some time. You will be notified via email
-              once your feed is ready.
+              AI is curating your personalized feed. This is a one time process
+              and might take some time. You will be notified via email once your
+              feed is ready.
             </p>
           </div>
         )
@@ -444,9 +555,8 @@ export default function JobsComponent({
       in JobsComponent handles the transition.
     */}
           {!isGenerated &&
-          current_page === "jobs" &&
-          isSuitable &&
-          !isSimilarSearch ? null /* Case B: Guest Wall.
+          ((current_page === "jobs" && isSuitable && !isSimilarSearch) ||
+            isRelevantProfileSearch) ? null /* Case B: Guest Wall.
       If not logged in and they've seen ~2 batches (40 items), 
       we show the FootComponent instead of the loaderRef. 
       Because loaderRef is not rendered, infinite scroll stops here.
@@ -465,6 +575,16 @@ export default function JobsComponent({
             </div>
           )}
         </>
+      )}
+
+      {current_page === "profiles" &&
+      !currentUserDataLoading &&
+      jobs.length !== 0 &&
+      !error &&
+      isLimitOnProfiles ? (
+        <FootComponent />
+      ) : (
+        ""
       )}
 
       <ScrollToTopButton />

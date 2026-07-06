@@ -1,12 +1,11 @@
 "use client";
 
-import { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import JobApplicationDialog from "./JobApplicationDialog";
 import { ArrowRight, MoreHorizontal } from "lucide-react";
-import { AllJobWithRelations, TApplicationStatus } from "@/utils/types";
-import { useCallback, useState } from "react";
+import { AllJobWithRelations } from "@/utils/types";
+import { useState } from "react";
 import PropagationStopper from "./StopPropagation";
 import InfoTooltip from "./InfoTooltip";
 import JobStatusDialog from "@/helpers/jobs/JobStatusDialog";
@@ -14,44 +13,44 @@ import { TJobIdPageData } from "@/utils/types/jobs.types";
 
 export default function JobApplyBtn({
   isCompanyUser,
-  user,
+  userId,
   job,
   isOnboardingComplete,
-  isAppliedJobsTabActive = false,
+  appliedJob,
+  isJobIdPage,
+  isDialogOpen,
 }: {
   isCompanyUser: boolean;
-  user: User | null;
+  userId: string | null;
   job: AllJobWithRelations | TJobIdPageData;
   isOnboardingComplete: boolean;
-  isAppliedJobsTabActive?: boolean;
+  appliedJob?: {
+    all_jobs_id: string;
+    status: string;
+  };
+  isJobIdPage: boolean;
+  isDialogOpen: boolean;
 }) {
   const [showReturnDialog, setShowReturnDialog] = useState(false);
-  const handleJobApplicationStatus = () => {
-    setShowReturnDialog(true);
-  };
-  const [appStatus, setAppStatus] = useState(job.applications?.[0]?.status);
-
-  const handleCloseDialog = useCallback(
-    (applicationStatus?: TApplicationStatus) => {
-      if (applicationStatus) setAppStatus(applicationStatus);
-      setShowReturnDialog(false);
-    },
-    [],
-  );
 
   return (
     <>
-      {isCompanyUser ? null : user ? (
+      {isCompanyUser ? null : userId ? (
         job.job_url ? (
-          appStatus ? (
+          appliedJob?.status ? (
             <PropagationStopper>
               <div className="flex items-center gap-2">
+                <Button className="capitalize" disabled>
+                  {appliedJob.status}
+                </Button>
+
                 <InfoTooltip
                   content={
                     <p>
                       Your current application status is{" "}
-                      <b className="capitalize">{appStatus}</b>. You&apos;ll
-                      have to manually track your application status via the{" "}
+                      <b className="capitalize">{appliedJob.status}</b>.
+                      You&apos;ll have to manually track your application status
+                      via the{" "}
                       <Link
                         onClick={(e) => e.stopPropagation()}
                         className="underline text-blue-500"
@@ -59,17 +58,25 @@ export default function JobApplyBtn({
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        Job Posting
+                        Original Job Posting
                       </Link>
                       . You can update your status by clicking on{" "}
                       <MoreHorizontal className="h-4 w-4 inline-block mx-1" />{" "}
-                      button.
+                      button{" "}
+                      {!isJobIdPage && (
+                        <Link
+                          onClick={(e) => e.stopPropagation()}
+                          className="underline text-blue-500"
+                          href={`/jobs/${job.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          here.
+                        </Link>
+                      )}
                     </p>
                   }
                 />
-                <Button className="capitalize" disabled>
-                  {appStatus}
-                </Button>
               </div>
             </PropagationStopper>
           ) : (
@@ -84,7 +91,7 @@ export default function JobApplyBtn({
               <Button
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleJobApplicationStatus();
+                  setShowReturnDialog(true);
                 }}
               >
                 Apply Now <ArrowRight />
@@ -92,11 +99,22 @@ export default function JobApplyBtn({
             </Link>
           )
         ) : isOnboardingComplete ? (
-          <JobApplicationDialog
-            jobPost={job}
-            user={user}
-            isAppliedJobsTabActive={isAppliedJobsTabActive}
-          />
+          !isJobIdPage && job.status === "active" ? (
+            <Link
+              onClick={(e) => e.stopPropagation()}
+              href={"/jobs/" + job.id + "?apply=true"}
+              target={"_blank"}
+            >
+              <Button>Easy Apply</Button>
+            </Link>
+          ) : (
+            <JobApplicationDialog
+              jobPost={job}
+              userId={userId}
+              appliedJob={appliedJob}
+              isApplyDialogOpen={isDialogOpen}
+            />
+          )
         ) : (
           <Link onClick={(e) => e.stopPropagation()} href={"/get-started"}>
             <Button>Complete Onboarding to Apply</Button>
@@ -118,8 +136,8 @@ export default function JobApplyBtn({
         <JobStatusDialog
           job={job}
           showDialog={showReturnDialog}
-          onClose={handleCloseDialog}
-          userId={user?.id}
+          onClose={() => setShowReturnDialog(false)}
+          userId={userId}
         />
       )}
     </>

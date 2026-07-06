@@ -4,15 +4,16 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { TAICredits } from "@/utils/types";
 import { uploadResumeAction } from "./upload-resume-file";
+import { randomUUID } from "crypto";
 
 export async function createResumeReviewAction(formData: FormData) {
   const supabase = await createClient();
   const reviewName =
-    (formData.get("name") as string) ||
-    `Review ${new Date().toLocaleDateString()}`;
+    (formData.get("name") as string) || `Review ${randomUUID().slice(0, 8)}`;
   const existingResumeId = formData.get("existingResumeId") as string | null;
   const file = formData.get("file") as File | null;
   const jobId = formData.get("jobId") as string | null;
+  let jobDescription = null;
 
   const {
     data: { user },
@@ -35,6 +36,8 @@ export async function createResumeReviewAction(formData: FormData) {
       if (!jobData?.description) {
         return { error: "Job description not found for the provided job." };
       }
+
+      jobDescription = jobData.description;
     }
 
     const { data: profile } = await supabase
@@ -74,6 +77,7 @@ export async function createResumeReviewAction(formData: FormData) {
         status: "draft",
         name: reviewName,
         job_id: jobId ?? null,
+        target_jd: jobDescription,
       })
       .select("id")
       .single();

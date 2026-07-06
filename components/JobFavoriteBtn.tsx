@@ -1,111 +1,129 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { User } from "@supabase/supabase-js";
 import { Star } from "lucide-react";
 import Link from "next/link";
-import { startTransition, useMemo, useOptimistic } from "react";
 import PropagationStopper from "./StopPropagation";
-import { revalidateCache } from "@/app/actions/revalidate";
-import { IUserFavorites, IUserFavoritesCompanyInfo } from "@/utils/types";
-
-function isCompanyFavorite(
-  fav: IUserFavoritesCompanyInfo | IUserFavorites,
-): fav is IUserFavoritesCompanyInfo {
-  return "company_id" in fav;
-}
+import toast from "react-hot-toast";
+import { mutate } from "swr";
+import { PROFILE_API_KEY } from "@/utils/utils";
 
 export default function JobFavoriteBtn({
   isCompanyUser,
-  user,
-  userFavorites,
+  userId,
   job_id,
-  userFavoritesCompanyInfo,
   company_id,
+  isFavorite,
 }: {
   isCompanyUser: boolean;
-  user: User | null;
-  userFavorites?: IUserFavorites[];
+  userId: string | null;
   job_id?: string;
-  userFavoritesCompanyInfo?: IUserFavoritesCompanyInfo[];
   company_id?: string;
+  isFavorite: boolean;
 }) {
-  const supabase = createClient();
   const isCompanyMode = !!company_id && !job_id;
   const targetId = isCompanyMode ? company_id : job_id;
-  const targetIdKey = isCompanyMode ? "company_id" : "job_id";
-  const revalidateTag = isCompanyMode ? `companies-feed` : `jobs-feed`;
-
-  const isActuallyFavorited = useMemo(() => {
-    if (!user || !targetId) return false;
-    const list = isCompanyMode ? userFavoritesCompanyInfo : userFavorites;
-    return list?.some(
-      (fav) =>
-        fav.user_id === user.id &&
-        (isCompanyFavorite(fav)
-          ? fav.company_id === targetId
-          : fav.job_id === targetId),
-    );
-  }, [
-    user,
-    targetId,
-    userFavorites,
-    userFavoritesCompanyInfo,
-    isCompanyMode,
-    targetIdKey,
-  ]);
-
-  const [optimisticFavorite, toggleOptimistic] = useOptimistic(
-    isActuallyFavorited,
-    (state, newState: boolean) => newState,
-  );
 
   const handleFavorite = async () => {
-    if (!user || !targetId) return;
-    startTransition(async () => {
-      const nextState = !optimisticFavorite;
-      toggleOptimistic(nextState);
-      try {
-        if (optimisticFavorite) {
-          if (isCompanyMode) {
-            await supabase
-              .from("user_favorites_companies")
-              .delete()
-              .eq("user_id", user.id)
-              .eq("company_id", targetId);
+    if (!userId || !targetId) return;
+
+    const nextFavoriteState = !isFavorite;
+
+    mutate(
+      PROFILE_API_KEY,
+      (currentData) => {
+        if (!currentData) return currentData;
+
+        const profile = currentData.profile || {};
+
+        const currentJobs = profile.user_favorites || [];
+        const currentCompanies = profile.user_favorites_companies || [];
+
+        let updatedJobs = [...currentJobs];
+        let updatedCompanies = [...currentCompanies];
+
+        if (isCompanyMode) {
+          // --- COMPANY CASE ---
+          if (nextFavoriteState) {
+            if (!updatedCompanies.some((c) => c.company_id === targetId)) {
+              updatedCompanies.push({ company_id: targetId });
+            }
           } else {
-            await supabase
-              .from("user_favorites")
-              .delete()
-              .eq("user_id", user.id)
-              .eq("job_id", targetId);
+            updatedCompanies = updatedCompanies.filter(
+              (c) => c.company_id !== targetId,
+            );
           }
         } else {
-          if (isCompanyMode) {
-            await supabase
-              .from("user_favorites_companies")
-              .insert([{ user_id: user.id, company_id: targetId }]);
+          // --- JOB CASE ---
+          if (nextFavoriteState) {
+            if (!updatedJobs.some((j) => j.job_id === targetId)) {
+              updatedJobs.push({ job_id: targetId });
+            }
           } else {
-            await supabase
-              .from("user_favorites")
-              .insert([{ user_id: user.id, job_id: targetId }]);
+            updatedJobs = updatedJobs.filter((j) => j.job_id !== targetId);
           }
         }
-        await revalidateCache(revalidateTag);
-      } catch {}
-    });
+
+        return {
+          ...currentData,
+          profile: {
+            ...profile,
+            user_favorites: updatedJobs,
+            user_favorites_companies: updatedCompanies,
+          },
+        };
+      },
+      false,
+    );
+
+    try {
+      const supabase = createClient();
+
+      if (!nextFavoriteState) {
+        // DELETE Paths
+        if (isCompanyMode) {
+          await supabase
+            .from("user_favorites_companies")
+            .delete()
+            .eq("user_id", userId)
+            .eq("company_id", targetId);
+        } else {
+          await supabase
+            .from("user_favorites")
+            .delete()
+            .eq("user_id", userId)
+            .eq("job_id", targetId);
+        }
+      } else {
+        // INSERT Paths
+        if (isCompanyMode) {
+          await supabase
+            .from("user_favorites_companies")
+            .insert([{ user_id: userId, company_id: targetId }]);
+        } else {
+          await supabase
+            .from("user_favorites")
+            .insert([{ user_id: userId, job_id: targetId }]);
+        }
+      }
+
+      mutate(PROFILE_API_KEY);
+    } catch {
+      toast.error("Failed to update favorite status.");
+      mutate(PROFILE_API_KEY);
+    }
   };
 
   return (
     <PropagationStopper className="!ml-3 inline-block align-middle">
-      {isCompanyUser ? null : user ? (
+      {isCompanyUser ? null : userId ? (
         <button
           onClick={() => {
             handleFavorite();
           }}
         >
           <Star
-            className={`${optimisticFavorite && "fill-black dark:fill-white"} h-5 w-5`}
+            className={`${isFavorite && "fill-black dark:fill-white"} h-5 w-5`}
           />
         </button>
       ) : (

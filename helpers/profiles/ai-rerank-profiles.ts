@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
-import { AllProfileWithRelations, TAICredits } from "../../utils/types";
+import { AllProfileWithRelations } from "../../utils/types";
+import { INTERNAL_API_SECRET } from "@/utils/serverUtils";
 
 interface RerankResult {
   initialProfiles: AllProfileWithRelations[];
@@ -11,11 +12,10 @@ export async function rerankProfilesIfApplicable({
   initialCount,
   userId,
   jobId,
-  aiCredits,
-  matchedProfileIds,
-  isRelevantSearch,
+  relevanceSearchType,
   cursor,
   companyId,
+  isInternalCall,
 }: {
   initialProfiles: AllProfileWithRelations[];
   initialCount: number;
@@ -23,13 +23,14 @@ export async function rerankProfilesIfApplicable({
   jobId: string | null;
   aiCredits: number;
   matchedProfileIds: string[];
-  isRelevantSearch: boolean;
   cursor: string | null;
   companyId: string;
+  relevanceSearchType: "digest" | "standard" | null;
+  isInternalCall: boolean;
 }): Promise<RerankResult> {
-  let finalJobs = initialProfiles;
+  let finalProfiles = initialProfiles;
   let finalCount = initialCount;
-  let removedJobs: AllProfileWithRelations[] = [];
+  let removedProfiles: AllProfileWithRelations[] = [];
 
   const headersList = await headers();
   const host = headersList.get("host");
@@ -38,36 +39,42 @@ export async function rerankProfilesIfApplicable({
 
   if (
     cursor ||
-    !finalJobs ||
-    finalJobs.length === 0 ||
-    !isRelevantSearch ||
-    !jobId
+    !finalProfiles ||
+    finalProfiles.length === 0 ||
+    !relevanceSearchType ||
+    relevanceSearchType === "standard" ||
+    (relevanceSearchType === "digest" && !jobId)
   ) {
-    return { initialProfiles: finalJobs, totalCount: finalCount };
+    return { initialProfiles: finalProfiles, totalCount: finalCount };
   }
 
-  const requiredCredits = TAICredits.AI_SEARCH_ASK_AI_RESUME;
+  try {
+    const requestHeaders: Record<string, string> = {};
+    const cookie = headersList.get("Cookie");
 
-  if (aiCredits >= requiredCredits) {
-    try {
-      const requestHeaders: Record<string, string> = {};
+    if (isInternalCall) {
+      requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
+    } else if (cookie) {
+      requestHeaders["Cookie"] = cookie;
+    }
+    removedProfiles = initialProfiles.splice(20);
 
-      const cookie = headersList.get("Cookie");
-      if (cookie) {
-        requestHeaders["Cookie"] = cookie;
-      }
+    const aiRerankRes = await fetch(`${url}/api/ai-search/profiles`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...requestHeaders,
+      },
+      body: JSON.stringify({
+        userId: userId,
+        jobId,
+        companyId,
+        profiles: initialProfiles.map((profile) => {
+          const resumeContent = profile.resumes?.[0]?.content as
+            | { experience?: string; skills?: string; projects?: string }
+            | undefined;
 
-      const aiRerankRes = await fetch(`${url}/api/ai-search/profiles`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...requestHeaders,
-        },
-        body: JSON.stringify({
-          userId: userId,
-          job_post_id: jobId,
-          companyId,
-          profiles: initialProfiles.map((profile) => ({
+          return {
             user_id: profile.user_id,
             full_name: profile.full_name,
             desired_roles: profile.desired_roles,
@@ -75,60 +82,48 @@ export async function rerankProfilesIfApplicable({
             preferred_locations: profile.preferred_locations,
             top_skills: profile.top_skills,
             work_style_preferences: profile.work_style_preferences,
-          })),
+            company_size_preference: profile.company_size_preference,
+            career_goals_short_term: profile.career_goals_short_term,
+            career_goals_long_term: profile.career_goals_long_term,
+            job_type: profile.job_type,
+            industry_preferences: profile.industry_preferences,
+            resume_experience: resumeContent?.experience ?? "",
+            resume_skills: resumeContent?.skills ?? "",
+            resume_projects: resumeContent?.projects ?? "",
+          };
         }),
-      });
+      }),
+    });
 
-      const aiRerankResult: {
-        rerankedProfiles: string[];
-        filteredOutProfiles: string[];
-      } = await aiRerankRes.json();
+    const aiRerankResult: {
+      rerankedProfiles: string[];
+      filteredOutProfiles: string[];
+    } = await aiRerankRes.json();
 
-      if (aiRerankRes.ok && aiRerankResult.rerankedProfiles) {
-        const uniqueRerankedIds = Array.from(
-          new Set(aiRerankResult.rerankedProfiles as string[]),
-        );
-        const filteredOutIdsSet = new Set(
-          aiRerankResult.filteredOutProfiles || [],
-        );
+    if (aiRerankRes.ok && aiRerankResult.rerankedProfiles) {
+      const uniqueRerankedIds = Array.from(
+        new Set(aiRerankResult.rerankedProfiles as string[]),
+      );
+      const filteredOutIdsSet = new Set(
+        aiRerankResult.filteredOutProfiles || [],
+      );
 
-        const jobMap = new Map(
-          initialProfiles.map((job) => [job.user_id, job]),
-        );
+      const jobMap = new Map(initialProfiles.map((job) => [job.user_id, job]));
 
-        const reorderedJobs = uniqueRerankedIds
-          .map((id: string) => jobMap.get(id))
-          .filter(
-            (job): job is AllProfileWithRelations =>
-              !!job && !filteredOutIdsSet.has(job.user_id),
-          )
-          .concat(removedJobs);
+      const reorderedJobs = uniqueRerankedIds
+        .map((id: string) => jobMap.get(id))
+        .filter(
+          (job): job is AllProfileWithRelations =>
+            !!job && !filteredOutIdsSet.has(job.user_id),
+        )
+        .concat(removedProfiles);
 
-        finalJobs = reorderedJobs;
-        finalCount = reorderedJobs.length;
-
-        // console.log(
-        //   "********FINAL PROFILES START**********",
-        //   finalJobs,
-        //   "*********FINAL PROFILES END**********",
-        // );
-      }
-    } catch (e) {
-      console.error("Error during AI Rerank fetch:", e);
+      finalProfiles = reorderedJobs;
+      finalCount = reorderedJobs.length;
     }
-  } else if (
-    // --- 2. Handle Insufficient Credits Case ---
-    aiCredits < requiredCredits &&
-    matchedProfileIds // Assuming the initial search response includes pre-matched IDs from vector search
-  ) {
-    const jobMap = new Map(initialProfiles.map((job) => [job.user_id, job]));
-
-    finalJobs = matchedProfileIds
-      .map((id: string) => jobMap.get(id))
-      .filter((job) => job !== undefined);
-
-    finalCount = finalJobs.length || 0;
+  } catch (e) {
+    console.error("Error during AI Rerank fetch:", e);
   }
 
-  return { initialProfiles: finalJobs, totalCount: finalCount };
+  return { initialProfiles: finalProfiles, totalCount: finalCount };
 }

@@ -1,9 +1,8 @@
 "use server";
 
-import { deploymentUrl, INTERNAL_API_SECRET } from "@/utils/serverUtils";
+import { processUserRelevance } from "@/helpers/jobs/relevant-jobs-utils";
 import { createClient } from "@/lib/supabase/server";
-
-const URL = deploymentUrl();
+import { after } from "next/server";
 
 export async function triggerRelevanceUpdate(userId: string) {
   if (!userId) {
@@ -12,35 +11,25 @@ export async function triggerRelevanceUpdate(userId: string) {
 
   const supabase = await createClient();
 
-  const url = `${URL}/api/updates/applicants/relevant-jobs?userId=${userId}`;
-
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "X-Internal-Secret": INTERNAL_API_SECRET || "",
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
+    after(async () => {
+      try {
+        processUserRelevance(userId);
+      } catch {
+        await supabase
+          .from("user_info")
+          .update({
+            relevant_jobs_update_status: "failed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", userId);
+      }
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(
-        errorData.error || `API request failed with status ${response.status}`,
-      );
-    }
-
-    const data = await response.json();
-    return { success: true, message: data.message };
+    return { success: true, message: "processing started" };
   } catch (error) {
     console.error("[Server Action] Failed to trigger relevance update:", error);
-    await supabase
-      .from("user_info")
-      .update({
-        is_relevant_job_update_failed: true,
-      })
-      .eq("user_id", userId);
+
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

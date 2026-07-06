@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
+import { mutate } from "swr";
+import { PROFILE_API_KEY } from "@/utils/utils";
 
 export default function JobStatusDialog({
   job,
@@ -27,8 +29,8 @@ export default function JobStatusDialog({
 }: {
   job: AllJobWithRelations | TJobIdPageData;
   showDialog: boolean;
-  onClose: (applicationStatus?: TApplicationStatus) => void;
-  userId?: string;
+  onClose: () => void;
+  userId: string | null;
 }) {
   const [loading, setLoading] = useState(false);
   const updateJobApplicationStatus = async () => {
@@ -42,7 +44,9 @@ export default function JobStatusDialog({
       });
       if (error) throw error;
 
-      onClose(TApplicationStatus.SUBMITTED);
+      await mutate(PROFILE_API_KEY);
+
+      onClose();
       toast.success(
         job.job_name && job.company_name ? (
           <p>

@@ -147,6 +147,7 @@ export async function GET(request: NextRequest) {
       matchedJobIds,
       relevanceSearchType,
       cursor,
+      isInternalCall,
     });
 
     return NextResponse.json({

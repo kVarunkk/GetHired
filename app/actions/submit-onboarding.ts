@@ -7,6 +7,7 @@ import { after } from "next/server";
 import { triggerRelevanceUpdate } from "./relevant-jobs-update";
 import { TAICredits } from "@/utils/types";
 import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
+import { revalidateCacheAction } from "./revalidate";
 
 export async function submitOnboardingAction(formData: FormData) {
   const supabase = await createClient();
@@ -124,6 +125,8 @@ export async function submitOnboardingAction(formData: FormData) {
           }
         }
 
+        await revalidateCacheAction(`profile-${userId}`);
+
         // STEP B: Update Embedding (Reads the 'content' column we just filled)
         const embedRes = await fetch(
           `${baseUrl}/api/update-embedding/gemini/user`,
@@ -138,6 +141,14 @@ export async function submitOnboardingAction(formData: FormData) {
         if (!embedRes.ok) throw new Error("Background Embedding Failed");
 
         // // STEP C: Relevant Jobs Update
+        await supabase
+          .from("user_info")
+          .update({
+            relevant_jobs_update_status: "progress",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", userId);
+
         const relevanceUpdateRes = await triggerRelevanceUpdate(userId);
 
         if (relevanceUpdateRes.error) {

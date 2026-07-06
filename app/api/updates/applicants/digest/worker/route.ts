@@ -12,6 +12,7 @@ import {
 
 export type RelevanceJobMessage = {
   msg_id: number;
+  read_ct: number;
   message: {
     user_id: string;
     email: string;
@@ -22,6 +23,7 @@ export type RelevanceJobMessage = {
 
 const BATCH_SIZE = 5;
 const VISIBILITY_TIMEOUT = 60; // seconds before a failed message is requeued
+const MAX_RETRIES = 3;
 
 export async function GET() {
   const headersList = await headers();
@@ -78,13 +80,34 @@ export async function GET() {
             message_id: msg.msg_id,
           });
 
-          await sendJobDigestEmail(
-            email,
-            full_name!,
-            result.jobs || [],
-            digestDate,
-            result.isInsufficientCredits,
+          if ((result.jobs?.length || 0) > 0) {
+            await sendJobDigestEmail(
+              email,
+              full_name!,
+              result.jobs || [],
+              digestDate,
+              result.isInsufficientCredits,
+            );
+          }
+        } else {
+          console.warn(
+            `[WORKER] Message ${msg.msg_id} failed. Attempt count: ${msg.read_ct}`,
           );
+
+          if (msg.read_ct >= MAX_RETRIES) {
+            console.error(
+              `[WORKER] Message ${msg.msg_id} exceeded max retries (${MAX_RETRIES}). Evicting...`,
+            );
+
+            await supabase.schema("pgmq_public").rpc("delete", {
+              queue_name: "job_digest",
+              message_id: msg.msg_id,
+            });
+
+            await sendEmailForStatusUpdate(
+              `JOB WORKER POISON ALERT: Message ${msg.msg_id} for User ${email} dropped after failing ${msg.read_ct} times.`,
+            );
+          }
         }
         // On failure: message stays in queue, becomes visible again after VISIBILITY_TIMEOUT
 

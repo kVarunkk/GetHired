@@ -19,26 +19,21 @@ import InfoTooltip from "./InfoTooltip";
 import useSWR, { mutate } from "swr";
 import { copyToClipboard, fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import ResumeSourceSelector from "./ResumeSourceSelector";
-import { createClient } from "@/lib/supabase/client";
 import { TResumeReviewResume } from "@/utils/types/review.types";
 
 export default function AskAIDialog({
   jobId,
   isOnboardingComplete,
-  userId,
 }: {
   jobId: string;
   isOnboardingComplete: boolean;
-  userId: string | null;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLTextAreaElement>(null);
   const [answer, setAnswer] = useState<string | null>(null);
   const [view, setView] = useState<"form" | "resume">("form");
-  const [existingResumes, setExistingResumes] = useState<TResumeReviewResume[]>(
-    [],
-  );
+
   const [selectedResume, setSelectedResume] =
     useState<TResumeReviewResume | null>(null);
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
@@ -47,6 +42,15 @@ export default function AskAIDialog({
     staleTime: 5 * 60 * 1000,
   });
   const creditsState = data && data.profile ? data.profile.ai_credits : 0;
+  const existingResumes: TResumeReviewResume[] =
+    data && data.profile ? data.profile.resumes : [];
+
+  useEffect(() => {
+    if (existingResumes && existingResumes.length > 0) {
+      const primaryResume = existingResumes.find((resume) => resume.is_primary);
+      setSelectedResume(primaryResume || existingResumes[0]);
+    }
+  }, [existingResumes]);
 
   const handleSubmit = async (formData?: FormData) => {
     setError(null);
@@ -105,25 +109,6 @@ export default function AskAIDialog({
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (userId) {
-      const fetchResumes = async () => {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("resumes")
-          .select("id, name, created_at, is_primary, parsing_failed")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false });
-
-        if (!error) {
-          setExistingResumes(data || []);
-          setSelectedResume(data?.find((_) => _.is_primary) || null);
-        }
-      };
-      fetchResumes();
-    }
-  }, [userId]);
 
   return (
     <Dialog>

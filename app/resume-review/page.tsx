@@ -16,7 +16,9 @@ export default async function ResumeReviewPage() {
 
     const { data: reviews, error: reviewsError } = await supabase
       .from("resume_reviews")
-      .select("id, created_at, resumes(name), status, job_id, name")
+      .select(
+        "id, created_at, resumes(name), all_jobs(job_name), status, job_id, name",
+      )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -30,7 +32,7 @@ export default async function ResumeReviewPage() {
       <div className="flex flex-col w-full gap-8 p-4 mb-20">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <h1 className="text-3xl font-medium ">All CV Reviews</h1>
-          <CreateResumeReviewDialog userId={user.id} />
+          <CreateResumeReviewDialog />
         </div>
         <ResumeReviewsTable key={tableKey} data={reviews || []} />
       </div>

@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, startTransition, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { ChevronDown, ChevronUp, Loader2, Save } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "../../utils/utils";
 import { Textarea } from "../ui/textarea";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { mutate } from "swr";
 
 interface JdSectionProps {
   isJdPaneOpen: boolean;
@@ -16,7 +16,10 @@ interface JdSectionProps {
   isAnalyzing: boolean;
   initialJd: string;
   reviewId: string;
-  runAnalysis: (jd: string) => Promise<void>;
+  runAnalysis: () => Promise<void>;
+  changeTriggerState: (
+    state: "idle" | "saving_jd" | "triggering_analysis" | "triggering_parse",
+  ) => void;
 }
 
 export default function JdSection({
@@ -27,10 +30,10 @@ export default function JdSection({
   initialJd,
   reviewId,
   runAnalysis,
+  changeTriggerState,
 }: JdSectionProps) {
   const [localJd, setLocalJd] = useState(initialJd);
   const [isSaving, setIsSaving] = useState(false);
-  const router = useRouter();
 
   const lastSavedJd = useRef(initialJd);
 
@@ -45,7 +48,6 @@ export default function JdSection({
         .eq("id", reviewId);
       if (error) throw error;
       lastSavedJd.current = localJd;
-      startTransition(() => router.refresh());
     } catch {
       toast.error("Some error occured. Progress not saved.");
     } finally {
@@ -59,8 +61,31 @@ export default function JdSection({
     if (window) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+
+    changeTriggerState("triggering_analysis");
+    mutate(
+      `/api/resume-review/${reviewId}`,
+      (currentData) => {
+        if (!currentData) return currentData;
+
+        const review = currentData.data || {};
+
+        return {
+          ...currentData,
+          data: {
+            ...review,
+            status: "processing",
+            analysis_failed: false,
+            ai_response: null,
+            score: null,
+          },
+        };
+      },
+      false,
+    );
+
     await saveJd();
-    await runAnalysis(localJd);
+    await runAnalysis();
   };
 
   return (

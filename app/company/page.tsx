@@ -5,7 +5,6 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
 import { Button } from "@/components/ui/button";
-// import { IApplication, IJobPosting } from "@/utils/types";
 import CompanyJobPostingCard from "@/components/CompanyJobPostingCard";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import { TApplicationStatus } from "@/utils/types";
@@ -21,7 +20,6 @@ export default async function CompanyPage() {
     if (error) throw error;
     if (!user) throw new Error("User not found");
 
-    // Fetch company info
     const { data: companyInfo, error: companyInfoError } = await supabase
       .from("company_info")
       .select("id, name")
@@ -32,7 +30,6 @@ export default async function CompanyPage() {
       throw new Error("Company profile not found");
     }
 
-    // --- Fetch all data in parallel to avoid a request waterfall ---
     const [metricsRes, jobsRes, applicantsRes] = await Promise.all([
       supabase.rpc("get_company_metrics", { company_id: companyInfo.id }),
       supabase

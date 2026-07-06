@@ -10,9 +10,9 @@ import {
   Loader2,
   Target,
 } from "lucide-react";
-import { Button } from "../ui/button";
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { TResumeReviewServer } from "@/utils/types/review.types";
+import { Button } from "../ui/button";
 
 export default function AnalysisPane({
   isParsed,
@@ -32,6 +32,13 @@ export default function AnalysisPane({
   activeHighlightId: string | null;
 }) {
   const [isOverallOpen, setIsOverallOpen] = useState(true);
+
+  const [isMounted, setIsMounted] = useState(false);
+
+  // 2. Set it to true when the component initialises in the browser
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <div className="h-[400px] sm:h-full sm:flex-1 overflow-y-scroll p-6 space-y-8 ">
@@ -89,7 +96,7 @@ export default function AnalysisPane({
         </div>
       )}
 
-      {currentReview.ai_response?.overall_feedback && (
+      {currentReview?.ai_response?.overall_feedback && (
         <div className="rounded-2xl border border-brand/20 bg-brandSoft overflow-hidden transition-all duration-300 shadow-sm">
           <button
             onClick={() => setIsOverallOpen(!isOverallOpen)}
@@ -122,14 +129,14 @@ export default function AnalysisPane({
           >
             <div className="relative ">
               <p className="text-xs leading-relaxed text-brand-soft-foreground font-medium ">
-                {currentReview.ai_response.overall_feedback}
+                {currentReview?.ai_response?.overall_feedback}
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {currentReview.ai_response?.bullet_points?.map((bp) => (
+      {currentReview?.ai_response?.bullet_points?.map((bp) => (
         <button
           key={bp.bullet_id}
           onMouseEnter={() => {
@@ -179,42 +186,45 @@ export default function AnalysisPane({
               <Copy className="h-4 w-4 hidden group-hover:inline ml-2 transition-all" />
             </p>
           </div>
+
           {/* TOUCH SCREEN ACTION BUTTONS 
                    Hiding logic: 
                    - 'hidden' by default.
                    - '[@media(hover:none)]:flex' only shows these on touchscreens (mobile/tablet).
                 */}
-          <div className="hidden [@media(hover:none)]:flex items-center gap-2 pt-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation(); // Prevent duplicate trigger from card click
-                copyToClipboard(bp.suggested, "Suggestion copied!");
-              }}
-              className="flex-1 gap-2 text-[10px] font-bold uppercase tracking-tighter border-zinc-200 dark:border-zinc-800 rounded-lg h-9 active:bg-brandSoft"
-            >
-              <Copy size={12} />
-              Copy
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                setActiveHighlightId(bp.bullet_id);
-              }}
-              className={cn(
-                "flex-1 gap-2 text-[10px] font-bold uppercase tracking-tighter border-zinc-200 dark:border-zinc-800 rounded-lg h-9 transition-all",
-                activeHighlightId === bp.bullet_id
-                  ? "bg-brand border-brand text-white"
-                  : "active:bg-brandSoft",
-              )}
-            >
-              <Eye size={12} />
-              {activeHighlightId === bp.bullet_id ? "Focused" : "Focus"}
-            </Button>
-          </div>
+          {isMounted && (
+            <div className="hidden [@media(hover:none)]:flex items-center gap-2 pt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation(); // Prevent duplicate trigger from card click
+                  copyToClipboard(bp.suggested, "Suggestion copied!");
+                }}
+                className="flex-1 gap-2 text-[10px] font-bold uppercase tracking-tighter border-zinc-200 dark:border-zinc-800 rounded-lg h-9 active:bg-brandSoft"
+              >
+                <Copy size={12} />
+                Copy
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  setActiveHighlightId(bp.bullet_id);
+                }}
+                className={cn(
+                  "flex-1 gap-2 text-[10px] font-bold uppercase tracking-tighter border-zinc-200 dark:border-zinc-800 rounded-lg h-9 transition-all",
+                  activeHighlightId === bp.bullet_id
+                    ? "bg-brand border-brand text-white"
+                    : "active:bg-brandSoft",
+                )}
+              >
+                <Eye size={12} />
+                {activeHighlightId === bp.bullet_id ? "Focused" : "Focus"}
+              </Button>
+            </div>
+          )}
 
           <p className="text-[11px] text-muted-foreground border-t border-zinc-100 dark:border-zinc-800 pt-3 leading-relaxed flex items-center gap-2">
             <Info className="w-3 h-3  text-muted-foreground shrink-0" />

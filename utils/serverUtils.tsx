@@ -296,3 +296,19 @@ export async function sendEmail({
     }
   }
 }
+
+export const buildEquityRange = (equity_min?: number, equity_max?: number) => {
+  if (equity_max && equity_min) {
+    return `${equity_min}% - ${equity_max}%`;
+  } else if (!equity_max && equity_min) {
+    return `${equity_min}% +`;
+  } else return null;
+};
+
+export const buildExperience = (exp_min?: number, exp_max?: number) => {
+  if (exp_max && exp_min) {
+    return `${exp_min} - ${exp_max} Years`;
+  } else if (!exp_max && exp_min) {
+    return `${exp_min}+ Years`;
+  } else return null;
+};
