@@ -1,12 +1,34 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { unstable_cache } from "next/cache";
 import { allJobsSelectString } from "@/helpers/jobs/filterQueryBuilder";
 import JobClientHydrator from "@/components/JobClientHydrator";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Metadata } from "next";
+
+const getStaticJobDetails = (jobId: string) =>
+  unstable_cache(
+    async (id: string) => {
+      const supabase = createServiceRoleClient();
+      const selectString = `
+        ${allJobsSelectString},
+        description,
+        job_postings(*, company_info(*))
+      `;
+
+      const { data, error } = await supabase
+        .from("all_jobs")
+        .select(selectString)
+        .eq("id", id)
+        .single();
+
+      if (error || !data) return null;
+      return data;
+    },
+    [`job-detail-${jobId}`],
+    { revalidate: 86400, tags: [`job-${jobId}`] },
+  )(jobId);
 
 export async function generateMetadata({
   params,
@@ -14,23 +36,9 @@ export async function generateMetadata({
   params: Promise<{ job_id: string }>;
 }): Promise<Metadata> {
   try {
-    const supabase = await createClient();
     const { job_id } = await params;
-    const selectString = `
-           ${allJobsSelectString},
-            description,
-            user_favorites(*),
-            job_postings(*, company_info(*), applications(*)),
-            applications(*)
-        `;
-
-    const { data, error } = await supabase
-      .from("all_jobs")
-      .select(selectString)
-      .eq("id", job_id)
-      .single();
-
-    if (error) throw error;
+    const data = await getStaticJobDetails(job_id);
+    if (!data) throw new Error("Job not found");
 
     return {
       title: `${data?.job_name} at ${data?.company_name}`,
@@ -58,27 +66,6 @@ export default async function JobPage({
   params: Promise<{ job_id: string }>;
 }) {
   const { job_id } = await params;
-  const getStaticJobDetails = unstable_cache(
-    async (id: string) => {
-      const supabase = createServiceRoleClient();
-      const selectString = `
-        ${allJobsSelectString},
-        description,
-        job_postings(*, company_info(*))
-      `;
-
-      const { data, error } = await supabase
-        .from("all_jobs")
-        .select(selectString)
-        .eq("id", id)
-        .single();
-
-      if (error || !data) return null;
-      return data;
-    },
-    [`${job_id}`],
-    { revalidate: 86400, tags: [`job-${job_id}`] },
-  );
   const job = await getStaticJobDetails(job_id);
 
   if (!job) {
