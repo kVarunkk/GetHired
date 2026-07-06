@@ -52,8 +52,13 @@ export async function generateMetadata({
   }
 }
 
-const getStaticJobDetails = (jobId: string) =>
-  unstable_cache(
+export default async function JobPage({
+  params,
+}: {
+  params: Promise<{ job_id: string }>;
+}) {
+  const { job_id } = await params;
+  const getStaticJobDetails = unstable_cache(
     async (id: string) => {
       const supabase = createServiceRoleClient();
       const selectString = `
@@ -71,16 +76,9 @@ const getStaticJobDetails = (jobId: string) =>
       if (error || !data) return null;
       return data;
     },
-    [`job-detail-${jobId}`],
-    { revalidate: 86400, tags: [`job-${jobId}`] },
-  )(jobId);
-
-export default async function JobPage({
-  params,
-}: {
-  params: Promise<{ job_id: string }>;
-}) {
-  const { job_id } = await params;
+    [`${job_id}`],
+    { revalidate: 86400, tags: [`job-${job_id}`] },
+  );
   const job = await getStaticJobDetails(job_id);
 
   if (!job) {
