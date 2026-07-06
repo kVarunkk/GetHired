@@ -24,14 +24,11 @@ export async function GET() {
     );
 
     if (!usersData || !usersData.length || userError) {
-      console.log(userError);
       return NextResponse.json(
         { success: true, message: "No unmatched users found." },
         { status: 500 },
       );
     }
-
-    console.log("are eligible users present?: ", usersData.length);
 
     const { data: jobPostings, error: jobPostingsError } = await supabase
       .from("job_postings")

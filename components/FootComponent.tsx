@@ -9,6 +9,7 @@ export default function FootComponent() {
   const pathname = usePathname();
   const isHirePage = pathname.startsWith("/hire");
   const isJobsPage = pathname.startsWith("/jobs");
+  const isProfilesPage = pathname.startsWith("/company/profiles");
   // Define content variants
   const hireContent = {
     heading: "Ready to accelerate your talent search?",
@@ -40,11 +41,23 @@ export default function FootComponent() {
     secondaryButtonHref: "/auth/login",
   };
 
+  const profilesPageContent = {
+    heading: "You are currently subscribed to the Free plan",
+    subtext:
+      "You can only view these number of profiles in your current plan. Upgrade today for full acess.",
+    primaryButtonText: "Contact Support",
+    primaryButtonHref: "mailto:varun@devhub.co.in",
+    secondaryButtonText: "",
+    secondaryButtonHref: "",
+  };
+
   const content = isHirePage
     ? hireContent
-    : isJobsPage
-      ? seekerGuestContent
-      : defaultContent;
+    : isProfilesPage
+      ? profilesPageContent
+      : isJobsPage
+        ? seekerGuestContent
+        : defaultContent;
 
   return (
     <div className="flex flex-col items-center justify-center py-12 px-6 bg-primary-foreground rounded-xl shadow-2xl border border-primary/20">
@@ -66,15 +79,20 @@ export default function FootComponent() {
           </Button>
         </Link>
 
-        <Link className="w-full" href={content.secondaryButtonHref} passHref>
-          <Button
-            variant="outline"
-            size="lg"
-            className="w-full sm:w-auto px-8 py-3 text-lg font-semibold transition-colors duration-200 hover:bg-primary hover:text-primary-foreground border-primary text-primary"
-          >
-            {content.secondaryButtonText}
-          </Button>
-        </Link>
+        {content.secondaryButtonHref.length &&
+        content.secondaryButtonText.length ? (
+          <Link className="w-full" href={content.secondaryButtonHref} passHref>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full sm:w-auto px-8 py-3 text-lg font-semibold transition-colors duration-200 hover:bg-primary hover:text-primary-foreground border-primary text-primary"
+            >
+              {content.secondaryButtonText}
+            </Button>
+          </Link>
+        ) : (
+          ""
+        )}
       </div>
     </div>
   );

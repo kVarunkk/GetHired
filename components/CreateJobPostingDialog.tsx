@@ -176,12 +176,14 @@ export default function CreateJobPostingDialog({
       }
       setIsOpen(false);
       router.refresh();
-    } catch {
-      toast.error(
-        `An error occurred while ${
-          existingValues ? "updating" : "creating"
-        } the job posting. Please try again.`,
-      );
+    } catch (e) {
+      const errMsg =
+        e instanceof Error
+          ? e.message
+          : `An error occurred while ${
+              existingValues ? "updating" : "creating"
+            } the job posting. Please try again.`;
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }

@@ -25,6 +25,7 @@ import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { uploadResumeAction } from "@/app/actions/upload-resume-file";
 import useSWR from "swr";
 import { TResumeReviewResume } from "@/utils/types/review.types";
+import { revalidateCacheAction } from "@/app/actions/revalidate";
 
 const createFormSchema = (questions: string[]) => {
   const schemaFields = questions.reduce<Record<string, z.ZodTypeAny>>(
@@ -112,6 +113,8 @@ export default function JobApplicationForm({
       });
 
       if (error) throw error;
+
+      await revalidateCacheAction(`profile-${userId}`);
 
       toast.success("Application sent!");
       onSuccess();

@@ -297,16 +297,6 @@ export async function sendEmail({
   }
 }
 
-export const buildSalaryRange = (
-  currency?: string,
-  salary_min?: number,
-  salary_max?: number,
-) => {
-  if (currency && salary_min && salary_max) {
-    return `${currency}${salary_min} - ${currency}${salary_max}`;
-  } else return null;
-};
-
 export const buildEquityRange = (equity_min?: number, equity_max?: number) => {
   if (equity_max && equity_min) {
     return `${equity_min}% - ${equity_max}%`;

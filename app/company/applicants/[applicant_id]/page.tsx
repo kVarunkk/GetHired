@@ -16,6 +16,7 @@ import ApplicationStatusSelect from "@/components/ApplicationStatusSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import { TApplicationStatus } from "@/utils/types";
+import { buildSalaryRange } from "@/utils/buildSalaryRange";
 
 export default async function ApplicantPage({
   params,
@@ -227,8 +228,8 @@ export default async function ApplicantPage({
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {buildSalaryRange(
-                            application.user_info?.min_salary ?? undefined,
-                            application.user_info?.max_salary ?? undefined,
+                            application.user_info?.min_salary,
+                            application.user_info?.max_salary,
                             application.user_info?.salary_currency,
                           )}
                         </p>
@@ -337,22 +338,3 @@ export default async function ApplicantPage({
     return <Error />;
   }
 }
-
-export const buildSalaryRange = (
-  min_salary?: number | "",
-  max_salary?: number | "",
-  salary_currency?: string,
-) => {
-  const minSalary = min_salary || 0;
-  const maxSalary = max_salary || 0;
-  if (minSalary === 0 && maxSalary === 0) {
-    return "Not specified";
-  }
-  if (minSalary === maxSalary) {
-    return `${minSalary} ${salary_currency || ""}`;
-  }
-  if (!maxSalary) {
-    return `${minSalary}${salary_currency || ""} + `;
-  }
-  return `${minSalary} - ${maxSalary} ${salary_currency || ""}`;
-};

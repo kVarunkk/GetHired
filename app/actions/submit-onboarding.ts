@@ -7,6 +7,7 @@ import { after } from "next/server";
 import { triggerRelevanceUpdate } from "./relevant-jobs-update";
 import { TAICredits } from "@/utils/types";
 import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
+import { revalidateCacheAction } from "./revalidate";
 
 export async function submitOnboardingAction(formData: FormData) {
   const supabase = await createClient();
@@ -123,6 +124,8 @@ export async function submitOnboardingAction(formData: FormData) {
             throw new Error("Background Parse Failed");
           }
         }
+
+        await revalidateCacheAction(`profile-${userId}`);
 
         // STEP B: Update Embedding (Reads the 'content' column we just filled)
         const embedRes = await fetch(

@@ -37,25 +37,6 @@ export function useRelevantJobPoller({
   const [isRefreshing, startTransition] = useTransition();
 
   useEffect(() => {
-    console.log(
-      "isLoading",
-      loading,
-      "generated",
-      isGenerated,
-      "failed",
-      isFailed,
-      "issuitable negation",
-      !isSuitable,
-      "current page",
-      currentPage,
-      "similar search",
-      isSimilarSearch,
-      "userId",
-      userId,
-      "relevant profile search negation",
-      !isRelevantProfileSearch,
-    );
-
     if (
       loading ||
       isGenerated ||
@@ -96,8 +77,6 @@ export function useRelevantJobPoller({
           .eq("user_id", userId!)
           .single();
 
-        console.log("data from polling hook: ", data);
-
         if (error) {
           timeoutId = setTimeout(checkFlag, 1000);
           return;
@@ -107,8 +86,6 @@ export function useRelevantJobPoller({
           data?.relevant_jobs_update_status === "completed" ||
           data?.relevant_jobs_update_status === "failed";
       }
-
-      console.log("COMPLETED: ", completed);
 
       if (completed) {
         await mutate(

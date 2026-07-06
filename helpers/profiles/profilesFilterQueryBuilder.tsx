@@ -203,7 +203,7 @@ export async function buildProfileQuery({
       query = query.order("user_id", { ascending: sortOrder === "asc" }); // Tiebreaker
     }
 
-    if (limit && sortBy !== "relevance") {
+    if (limit && !relevanceSearchType) {
       query = query.limit(limit);
     }
 

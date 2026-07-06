@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Badge } from "./ui/badge";
 import ProfileFavoriteStar from "./ProfileFavoriteStar";
 import { AllProfileWithRelations } from "@/utils/types";
+import { buildSalaryRange } from "@/utils/buildSalaryRange";
 
 const ProfileItem = React.memo(
   ({
@@ -81,20 +82,6 @@ function ProfileDetailBadges({
   isSuitable: boolean;
 }) {
   const jobDetails = useMemo(() => {
-    const buildSalaryRange = () => {
-      const minSalary = profile?.min_salary || 0;
-      const maxSalary = profile?.max_salary || 0;
-      if (minSalary === 0 && maxSalary === 0) {
-        return "Not specified";
-      }
-      if (minSalary === maxSalary) {
-        return `${minSalary} ${profile?.salary_currency || ""}`;
-      }
-      if (!maxSalary) {
-        return `${minSalary}${profile?.salary_currency || ""} + `;
-      }
-      return `${minSalary} - ${maxSalary} ${profile?.salary_currency || ""}`;
-    };
     return [
       {
         id: "experience",
@@ -105,7 +92,11 @@ function ProfileDetailBadges({
       },
       {
         id: "salary_range",
-        value: buildSalaryRange(),
+        value: buildSalaryRange(
+          profile?.min_salary,
+          profile?.max_salary,
+          profile?.salary_currency,
+        ),
         label: "Salary Range",
       },
       {

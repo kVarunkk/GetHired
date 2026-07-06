@@ -136,8 +136,6 @@ export const buildCompaniesQuery = async ({
       count: number | null;
     };
 
-    console.log(error);
-
     return {
       data: data || [],
       error: error?.details,
@@ -145,7 +143,6 @@ export const buildCompaniesQuery = async ({
       matchedCompanyIds,
     };
   } catch (e: unknown) {
-    console.log(e);
     return {
       data: [],
       error:

@@ -27,7 +27,9 @@ export async function GET(request: NextRequest) {
   }
   const { data: companyData, error: companyError } = await supabase
     .from("company_info")
-    .select("id, ai_credits, filled, job_postings(id, embedding_new)")
+    .select(
+      "id, ai_credits, filled, job_postings(id, embedding_new), company_tiers(name, allowed_profiles)",
+    )
     .eq("user_id", user.id)
     .single();
   if (companyError || !companyData) {
@@ -36,6 +38,10 @@ export async function GET(request: NextRequest) {
       { status: 403 },
     );
   }
+
+  const companyTier = companyData.company_tiers;
+  const isLimitOnProfiles = companyTier?.allowed_profiles !== null;
+  const allowedProfiles = companyTier?.allowed_profiles || 0;
 
   const searchQuery = searchParams.get("search");
   const jobRoles = searchParams.get("jobRole");
@@ -53,7 +59,9 @@ export async function GET(request: NextRequest) {
   const sortOrder = searchParams.get("sortOrder") ?? "desc";
   const isFavoriteTabActive = searchParams.get("tab") === "saved";
   const jobId = searchParams.get("job_post");
-  const limit = parseInt(searchParams.get("limit") || "20");
+  const limit = isLimitOnProfiles
+    ? allowedProfiles
+    : parseInt(searchParams.get("limit") || "20");
   const cursor = searchParams.get("cursor");
   const jobEmbedding =
     companyData.job_postings?.find((job) => job.id === jobId)?.embedding_new ||
@@ -116,7 +124,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data: initialProfiles,
       count: totalCount,
-      nextCursor,
+      nextCursor: isLimitOnProfiles ? null : nextCursor,
     });
   } catch (err: unknown) {
     return NextResponse.json(

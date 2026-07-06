@@ -45,7 +45,6 @@ export default function ResumeReviewClient({
           !data?.resumes?.content &&
           !data?.resumes?.parsing_failed) ||
         activeTriggerState === "triggering_parse";
-      console.log(data?.status, activeTriggerState);
       const isAnalyzing =
         data?.status === "processing" ||
         activeTriggerState === "triggering_analysis";

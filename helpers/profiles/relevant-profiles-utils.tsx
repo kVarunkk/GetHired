@@ -110,8 +110,6 @@ export async function processJobPostingRelevance(
     const json = await response.json();
     const profiles: AllProfileWithRelations[] = json.data || [];
 
-    console.log("relevant profiles", profiles.length);
-
     const rowsToInsert = profiles.map((profile, index) => ({
       job_posting_id: jobPostingId,
       user_id: profile.user_id,
@@ -176,7 +174,6 @@ export async function processJobPostingRelevance(
     );
     return {
       success: false,
-
       error: msg,
     };
   }

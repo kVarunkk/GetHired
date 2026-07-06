@@ -1,6 +1,5 @@
 "use client";
 
-// import { IFormData } from "@/utils/types";
 import MultiKeywordSelect, { GenericFormData } from "./MultiKeywordSelect";
 import { useCallback, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -8,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { TApplicantProfile } from "@/utils/types/user.types";
+import { mutate } from "swr";
+import { PROFILE_API_KEY } from "@/utils/utils";
 
 export default function SelectProfile({
   jobPostings,
@@ -19,7 +20,9 @@ export default function SelectProfile({
     title: string;
     job_id: string | null;
   }[];
-  applicantProfile: TApplicantProfile;
+  applicantProfile: TApplicantProfile & {
+    signedUrl?: string;
+  };
   companyId: string;
 }) {
   const router = useRouter();
@@ -134,6 +137,7 @@ export default function SelectProfile({
 
           setSelectedProfiles(selectedProfiles);
         } finally {
+          mutate(PROFILE_API_KEY);
           setLoading(false);
         }
       }

@@ -88,9 +88,8 @@ export default function JobsComponent({
     staleTime: 5 * 60 * 1000,
   });
 
-  // giving 500 with jobpostingid as null and cant do conditional as getting error regarding number of hooks hydration mismatch
   const { data, isLoading } = useSWR(
-    `${JOB_POSTING_API_KEY}?jobId=${jobPostingId}`,
+    jobPostingId ? `${JOB_POSTING_API_KEY}?jobId=${jobPostingId}` : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -98,6 +97,10 @@ export default function JobsComponent({
       staleTime: 5 * 60 * 1000,
     },
   );
+
+  // for companyUsers
+  const isLimitOnProfiles =
+    currentUserData?.profile?.company_tiers?.allowed_profiles !== null;
 
   const isGenerated = isRelevantProfileSearch
     ? data?.data?.matching_status === "completed"
@@ -569,6 +572,12 @@ export default function JobsComponent({
           )}
         </>
       )}
+
+      {/* TODO: ADD A FOOT COMPONENT */}
+      {current_page === "profiles" &&
+        jobs.length !== 0 &&
+        !error &&
+        isLimitOnProfiles && <FootComponent />}
 
       <ScrollToTopButton />
     </div>

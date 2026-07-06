@@ -4,13 +4,13 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
   buildEquityRange,
   buildExperience,
-  buildSalaryRange,
   deploymentUrl,
   INTERNAL_API_SECRET,
 } from "@/utils/serverUtils";
 import { ICreateJobPostingFormData } from "@/utils/types";
 import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
 import { revalidateTag } from "next/cache";
+import { buildSalaryRange } from "@/utils/buildSalaryRange";
 
 /**
  * SERVER ACTION: upsertJobPostingAction
@@ -31,9 +31,9 @@ export async function upsertJobPostingAction(params: {
   const supabase = createServiceRoleClient();
 
   const salary_range = buildSalaryRange(
-    values.salary_currency,
     values.min_salary,
     values.max_salary,
+    values.salary_currency,
   );
   const equity_range = buildEquityRange(values.min_equity, values.max_equity);
   const experience = buildExperience(
@@ -44,6 +44,28 @@ export async function upsertJobPostingAction(params: {
   let embedding = null;
 
   try {
+    const { data: companyData, error: companyError } = await supabase
+      .from("company_info")
+      .select("job_posts_created, company_tiers(allowed_job_posts)")
+      .eq("id", companyId)
+      .single();
+
+    if (!companyData || companyError)
+      throw new Error(companyError.message || "Error fetching company data.");
+
+    // TODO: IN CASE OF PAID TIER WHEN THE ALLOWED JOBS POSTS IS NULL
+    if (
+      companyData?.company_tiers?.allowed_job_posts !== null &&
+      companyData?.job_posts_created >=
+        (companyData?.company_tiers?.allowed_job_posts || 0)
+    ) {
+      throw new Error(
+        "You are not allowed to create more than " +
+          companyData?.company_tiers?.allowed_job_posts +
+          " job posts in your current plan. Please contact support for an upgrade.",
+      );
+    }
+
     const payload = {
       company_id: companyId,
       ...values,
@@ -163,6 +185,10 @@ export async function upsertJobPostingAction(params: {
           .from("job_postings")
           .update({ job_id: insertedJob.id })
           .eq("id", new_posting.id);
+
+        await supabase.from("company_info").update({
+          job_posts_created: (companyData?.job_posts_created || 0) + 1,
+        });
       }
     }
 
@@ -183,7 +209,10 @@ export async function upsertJobPostingAction(params: {
   } catch (error: unknown) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error occurred",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error occurred while processing job post.",
     };
   }
 }
