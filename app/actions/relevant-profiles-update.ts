@@ -8,9 +8,9 @@ export async function triggerJobPostingRelevanceUpdate(jobId: string) {
   if (!jobId) {
     return { success: false, error: "User ID is required" };
   }
+  const supabase = await createClient();
 
   try {
-    const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -38,6 +38,14 @@ export async function triggerJobPostingRelevanceUpdate(jobId: string) {
 
     return { success: true, message: "processing started" };
   } catch (error) {
+    await supabase
+      .from("job_postings")
+      .update({
+        matching_status: "failed",
+        matching_error: "unknown error occured",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", jobId);
     console.error("[Server Action] Failed to trigger relevance update:", error);
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
 

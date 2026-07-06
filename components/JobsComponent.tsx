@@ -82,11 +82,15 @@ export default function JobsComponent({
 
   const [aiGenBtnLoading, setAiGenBtnLoading] = useState(false);
 
-  const { data: currentUserData } = useSWR(PROFILE_API_KEY, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: currentUserData, isLoading: currentUserDataLoading } = useSWR(
+    PROFILE_API_KEY,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      staleTime: 5 * 60 * 1000,
+    },
+  );
 
   const { data, isLoading } = useSWR(
     jobPostingId ? `${JOB_POSTING_API_KEY}?jobId=${jobPostingId}` : null,
@@ -573,11 +577,15 @@ export default function JobsComponent({
         </>
       )}
 
-      {/* TODO: ADD A FOOT COMPONENT */}
       {current_page === "profiles" &&
-        jobs.length !== 0 &&
-        !error &&
-        isLimitOnProfiles && <FootComponent />}
+      !currentUserDataLoading &&
+      jobs.length !== 0 &&
+      !error &&
+      isLimitOnProfiles ? (
+        <FootComponent />
+      ) : (
+        ""
+      )}
 
       <ScrollToTopButton />
     </div>

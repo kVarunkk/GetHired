@@ -53,7 +53,6 @@ export async function upsertJobPostingAction(params: {
     if (!companyData || companyError)
       throw new Error(companyError.message || "Error fetching company data.");
 
-    // TODO: IN CASE OF PAID TIER WHEN THE ALLOWED JOBS POSTS IS NULL
     if (
       companyData?.company_tiers?.allowed_job_posts !== null &&
       companyData?.job_posts_created >=
