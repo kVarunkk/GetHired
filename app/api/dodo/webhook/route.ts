@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await serviceRoleSupabase
     .from("user_info")
     .select("full_name, email")
-    .eq("user_id", webhookPayload.metadata.user_id)
+    .eq("user_id", String(webhookPayload.metadata.user_id))
     .single();
 
   if (data && !error) {
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
           typeof webhookPayload.customer
         >,
       })
-      .eq("user_id", webhookPayload.metadata?.user_id)
+      .eq("user_id", String(webhookPayload.metadata?.user_id || ""))
       .eq("session_id", webhookPayload.checkout_session_id!);
 
     if (paymentUpdateError) {
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
           typeof webhookPayload.customer
         >,
       })
-      .eq("user_id", webhookPayload.metadata?.user_id)
+      .eq("user_id", String(webhookPayload.metadata?.user_id || ""))
       .eq("session_id", webhookPayload.checkout_session_id!);
 
     if (paymentUpdateError) {
@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
           typeof webhookPayload.customer
         >,
       })
-      .eq("user_id", webhookPayload.metadata?.user_id)
+      .eq("user_id", String(webhookPayload.metadata?.user_id || ""))
       .eq("session_id", webhookPayload.checkout_session_id!);
 
     if (paymentUpdateError) {
