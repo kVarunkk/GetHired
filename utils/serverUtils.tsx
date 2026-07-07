@@ -223,14 +223,18 @@ export const sendEmailForStatusUpdate = async (emailText: string) => {
 };
 
 export const deploymentUrl = () => {
-  switch (process.env.VERCEL_ENV) {
-    case "production":
-      return "https://gethired.devhub.co.in";
-    case "preview":
-      return `https://${process.env.VERCEL_URL}`;
-    default:
-      return "http://localhost:3000";
-  }
+  // switch (process.env.VERCEL_ENV) {
+  //   case "production":
+  //     return "https://gethired.devhub.co.in";
+  //   case "preview":
+  //     return `https://${process.env.VERCEL_URL}`;
+  //   default:
+  //     return "http://localhost:3000";
+  // }
+
+  if (process.env.RENDER) {
+    return "https://gethired.devhub.co.in";
+  } else return "http://localhost:3000";
 };
 
 export const parseMultiSelectParam = <T extends string>(
