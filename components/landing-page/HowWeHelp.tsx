@@ -8,7 +8,9 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { cn, platforms } from "@/utils/utils";
+import { cn, getCloudfrontPath, platforms } from "@/utils/utils";
+
+const cloudFrontUrl = getCloudfrontPath();
 
 export function HowWeHelp({ jobCount }: { jobCount: number }) {
   const [isPaused, setIsPaused] = useState(false);
@@ -39,11 +41,11 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
               src={
                 resolvedTheme === "dark"
                   ? isHirePage
-                    ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-dark-1.png"
-                    : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20205115.png"
+                    ? `${cloudFrontUrl}/hire/company-howwehelp-dark-1.webp`
+                    : `${cloudFrontUrl}/applicant/howwehelp-dark-1.webp`
                   : isHirePage
-                    ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-light-1.png"
-                    : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20204910.png"
+                    ? `${cloudFrontUrl}/hire/company-howwehelp-light-1.webp`
+                    : `${cloudFrontUrl}/applicant/howwehelp-light-1.webp`
               }
               width={400}
               height={400}
@@ -67,11 +69,11 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
               src={
                 resolvedTheme === "dark"
                   ? isHirePage
-                    ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-dark-2.png"
-                    : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20203706.png"
+                    ? `${cloudFrontUrl}/hire/company-howwehelp-dark-2.webp`
+                    : `${cloudFrontUrl}/applicant/howwehelp-dark-2.webp`
                   : isHirePage
-                    ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-light-2.png"
-                    : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20204646.png"
+                    ? `${cloudFrontUrl}/hire/company-howwehelp-light-2.webp`
+                    : `${cloudFrontUrl}/applicant/howwehelp-light-2.webp`
               }
               width={400}
               height={400}
@@ -93,8 +95,8 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
                 alt="Feature"
                 src={
                   resolvedTheme === "dark"
-                    ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-dark-4.png"
-                    : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-light-4.png"
+                    ? `${cloudFrontUrl}/hire/company-howwehelp-dark-4.webp`
+                    : `${cloudFrontUrl}/hire/company-howwehelp-light-4.webp`
                 }
                 width={400}
                 height={400}
@@ -180,11 +182,11 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
               src={
                 resolvedTheme === "dark"
                   ? isHirePage
-                    ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-dark-3.png"
-                    : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20223352.png"
+                    ? `${cloudFrontUrl}/hire/company-howwehelp-dark-3.webp`
+                    : `${cloudFrontUrl}/applicant/howwehelp-dark-3.webp`
                   : isHirePage
-                    ? "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/hire_page/company-howwehelp-light-3.png"
-                    : "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/Screenshot%202025-07-29%20223643.png"
+                    ? `${cloudFrontUrl}/hire/company-howwehelp-light-3.webp`
+                    : `${cloudFrontUrl}/applicant/howwehelp-light-3.webp`
               }
               width={400}
               height={400}

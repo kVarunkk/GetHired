@@ -450,71 +450,77 @@ export const HIRE_PAGE_LIGHT = "/hero/company-hero-light.png";
 export const MCP_SERVER_DARK = "/hero/mcp-server-hero-dark.png";
 export const MCP_SERVER_LIGHT = "/hero/mcp-server-hero-light.png";
 
+export const getCloudfrontPath = () => {
+  return process.env.NEXT_PUBLIC_CLOUDFRONT_PATH || "";
+};
+
+const cloudFrontUrl = getCloudfrontPath();
+
 export const platforms = [
   {
     id: uuidv4(),
     name: "Y Combinator",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/ycombinator.png",
+    src: `${cloudFrontUrl}/brands/ycombinator.webp`,
     href: "https://workatastartup.com",
   },
   {
     id: uuidv4(),
     name: "RemoteOK",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/remoteok.png",
+    src: `${cloudFrontUrl}/brands/remoteok.webp`,
     href: "https://remoteok.com",
   },
   {
     id: uuidv4(),
     name: "Uplers",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/uplers-1.png",
+    src: `${cloudFrontUrl}/brands/uplers-1.webp`,
     href: "https://ats.uplers.com",
   },
   {
     id: uuidv4(),
     name: "Wellfound",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/wellfound-1.png",
+    src: `${cloudFrontUrl}/brands/wellfound-1.webp`,
     href: "https://wellfound.com",
   },
   {
     id: uuidv4(),
     name: "Greenhouse",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/greenhouse-logo.jpeg",
+    src: `${cloudFrontUrl}/brands/greenhouse-logo.webp`,
     href: "https://my.greenhouse.io",
   },
   {
     id: uuidv4(),
     name: "WeWorkRemotely",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/weworkremotely-logo.png",
+    src: `${cloudFrontUrl}/brands/weworkremotely-logo.webp`,
     href: "https://weworkremotely.com",
   },
   {
     id: uuidv4(),
     name: "a16z",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/a16z-com-logo.png",
+    src: `${cloudFrontUrl}/brands/a16z-com-logo.webp`,
     href: "https://a16z.com",
   },
   {
     id: uuidv4(),
     name: "Khosla Ventures",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/khoslaventures-com-logo.png",
+    src: `${cloudFrontUrl}/brands/khoslaventures-com-logo.webp`,
     href: "https://khoslaventures.com",
   },
   {
     id: uuidv4(),
     name: "Sapphire Ventures",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/sapphireventures-com-logo.png",
+    src: `${cloudFrontUrl}/brands/sapphireventures-com-logo.webp`,
     href: "https://sapphireventures.com",
   },
   {
     id: uuidv4(),
     name: "Lightspeed Ventures",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/lsvp-com-logo.png",
+    src: `${cloudFrontUrl}/brands/lsvp-com-logo.webp`,
     href: "https://lsvp.com",
   },
   {
     id: uuidv4(),
     name: "Glassdoor",
-    src: "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/brands/glassdoor.jpeg",
+    src: `${cloudFrontUrl}/brands/glassdoor.webp`,
     href: "https://www.glassdoor.com",
   },
 ];

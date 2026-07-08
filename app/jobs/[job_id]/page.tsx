@@ -27,7 +27,7 @@ const getStaticJobDetails = (jobId: string) =>
       return data;
     },
     [`job-detail-${jobId}`],
-    { revalidate: 86400, tags: [`job-${jobId}`] },
+    { revalidate: 60 * 60 * 24 * 7, tags: [`job-${jobId}`] },
   )(jobId);
 
 export async function generateMetadata({
