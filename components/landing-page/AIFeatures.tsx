@@ -1,7 +1,10 @@
 "use client";
 
+import { getCloudfrontPath } from "@/utils/utils";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+const cloudFrontUrl = getCloudfrontPath();
 
 export default function AIFeatures() {
   const pathname = usePathname();
@@ -14,8 +17,7 @@ export default function AIFeatures() {
           title: "AI Smart Search",
           description:
             "Identify top talent without rigid keyword matching. Our semantic engine understands technical nuances, ensuring a search for 'Backend' surfaces 'Node.js' and 'Systems' experts that traditional filters overlook.",
-          video:
-            "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/videos/ai-smart-search-profiles.mp4",
+          video: `${cloudFrontUrl}/videos/ai-smart-search-profiles.mp4`,
         },
       ];
     }
@@ -24,43 +26,37 @@ export default function AIFeatures() {
         title: "AI Smart Search",
         description:
           "Move beyond rigid keywords. Our semantic engine understands technical relationships, ensuring a search for 'Frontend' surfaces 'React' and 'Web Engineer' roles that traditional boards miss.",
-        video:
-          "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/videos/ai-smart-search.mp4",
+        video: `${cloudFrontUrl}/videos/ai-smart-search.mp4`,
       },
       {
         title: "AI Global Search",
         description:
           "Find jobs using natural language. Simply type prompts like 'Remote JavaScript roles over $100k' to receive a curated list of high-paying matches in less than two seconds.",
-        video:
-          "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/videos/ai-global-search.mp4",
+        video: `${cloudFrontUrl}/videos/ai-global-search.mp4`,
       },
       {
         title: "Ask AI",
         description:
           "End writer's block instantly. Generate tailored cover letters and draft compelling answers to complex application questions based on your profile and the specific job requirements.",
-        video:
-          "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/videos/ask-ai.mp4",
+        video: `${cloudFrontUrl}/videos/ask-ai.mp4`,
       },
       {
         title: "AI Similar Search",
         description:
           "Found a role that resonates? Use it as a seed to discover 'twin' roles. Our AI analyzes the technical DNA—stack, seniority, and culture—to surface identical opportunities across our database.",
-        video:
-          "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/videos/ai-similar-search.mp4",
+        video: `${cloudFrontUrl}/videos/ai-similar-search.mp4`,
       },
       {
         title: "Job Alerts",
         description:
           "Never miss a match. Get instant notifications for new roles that align with your specific skills and salary expectations, keeping your pipeline full automatically.",
-        video:
-          "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/videos/Job-alert.mp4",
+        video: `${cloudFrontUrl}/videos/Job-alert.mp4`,
       },
       {
         title: "AI Summarizer",
         description:
           "Scan 50 jobs in the time it takes to read one. Instantly extract key details like tech stack, salary, and visa sponsorship from messy, long job descriptions.",
-        video:
-          "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/landing_page/videos/ai-summarizer.mp4",
+        video: `${cloudFrontUrl}/videos/ai-summarizer.mp4`,
       },
     ];
   }, [isHirePage]);
