@@ -2,9 +2,7 @@
 
 import { after } from "next/server";
 import { createClient } from "../../lib/supabase/server";
-import { deploymentUrl } from "@/utils/serverUtils";
-import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
-import { headers } from "next/headers";
+import { parseResume } from "@/helpers/resume/parse-resume";
 
 /**
  * retryResumeParsingAction
@@ -13,16 +11,13 @@ import { headers } from "next/headers";
  */
 export async function retryResumeParsingAction(resumeId: string) {
   const supabase = await createClient();
-  const headersList = await headers();
 
-  // 1. Auth Guard
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
   try {
-    // 2. Reset State (Instant DB update)
     const { error: resetError } = await supabase
       .from("resumes")
       .update({
@@ -35,28 +30,11 @@ export async function retryResumeParsingAction(resumeId: string) {
 
     if (resetError) throw resetError;
 
-    // 3. Hand off to background processing
     after(async () => {
       try {
-        const baseUrl = deploymentUrl();
-        const res = await fetch(`${baseUrl}/api/parse-resume`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Cookie: headersList.get("Cookie") || "",
-          },
-          body: JSON.stringify({ resumeId }),
-        });
-
-        if (!res.ok) {
-          console.log((await res.json()).error);
-          throw new Error(
-            `API Parse failed with status: ${res.status}. Error: ${await res.text()}`,
-          );
-        }
+        await parseResume(user.id, resumeId);
       } catch (err) {
         console.error("[RETRY_BG_ERROR]:", err);
-        await updateResumeParsingStatus(true, resumeId);
       }
     });
 

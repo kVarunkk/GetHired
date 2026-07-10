@@ -1,23 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
-import { embed } from "ai";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getVertexClient } from "@/utils/serverUtils";
 import { TResumeRowContent } from "@/utils/types";
+import { embed } from "ai";
 
-export async function POST(request: Request) {
+export async function updateUserEmbedding(userId: string) {
   try {
-    const { userId } = await request.json();
-
-    // 1. Validation
-    if (!userId) {
-      return NextResponse.json(
-        { error: "userId is missing." },
-        { status: 400 },
-      );
-    }
-
-    const supabase = await createClient();
-
+    const supabase = createServiceRoleClient();
     const result = await Promise.all([
       supabase
         .from("resumes")
@@ -30,6 +18,7 @@ export async function POST(request: Request) {
         .select(
           "user_id, top_skills, desired_roles, preferred_locations, min_salary,max_salary, experience_years, work_style_preferences, visa_sponsorship_required,  career_goals_short_term, career_goals_long_term, job_type,industry_preferences",
         )
+        .eq("user_id", userId)
         .single(),
     ]);
 
@@ -80,32 +69,32 @@ export async function POST(request: Request) {
     // 2. Construct the text to embed
     // This replicates the logic from your Python backend to ensure the embedding represents the full profile
     const textToEmbed = `
-      PREFERRED ROLES: ${Array.isArray(userData.desired_roles) ? userData.desired_roles.join(", ") : userData.desired_roles || ""}
-
-      PREFERRED LOCATIONS: ${Array.isArray(userData.preferred_locations) ? userData.preferred_locations.join(", ") : userData.preferred_locations || ""}
+            PREFERRED ROLES: ${Array.isArray(userData.desired_roles) ? userData.desired_roles.join(", ") : userData.desired_roles || ""}
       
-      PREFERRED SALARY: ${userData.min_salary || "N/A"} - ${userData.max_salary || "N/A"}
-      
-      EXPERIENCE YEARS: ${userData.experience_years || "N/A"} years
-      
-      SKILLS: ${combinedSkills}
-      
-      EXPERIENCE: ${resumeExperience || "N/A"}
-      
-      PROJECTS: ${resumeProjects || "N/A"}
-      
-      WORK STYLE: ${Array.isArray(userData.work_style_preferences) ? userData.work_style_preferences.join(", ") : ""}
-      
-      VISA SPONSORSHIP REQUIRED: ${userData.visa_sponsorship_required}
-      
-      CAREER GOALS LONG TERM: ${userData.career_goals_long_term}
-      
-      CAREER GOALS SHORT TERM: ${userData.career_goals_short_term}
-      
-      DESIRED JOB TYPE: ${Array.isArray(userData.job_type) ? userData.job_type.join(", ") : userData.job_type || ""}
-      
-      PREFERRED INDUSTRY:${Array.isArray(userData.industry_preferences) ? userData.industry_preferences.join(", ") : userData.industry_preferences || ""}
-    `.trim();
+            PREFERRED LOCATIONS: ${Array.isArray(userData.preferred_locations) ? userData.preferred_locations.join(", ") : userData.preferred_locations || ""}
+            
+            PREFERRED SALARY: ${userData.min_salary || "N/A"} - ${userData.max_salary || "N/A"}
+            
+            EXPERIENCE YEARS: ${userData.experience_years || "N/A"} years
+            
+            SKILLS: ${combinedSkills}
+            
+            EXPERIENCE: ${resumeExperience || "N/A"}
+            
+            PROJECTS: ${resumeProjects || "N/A"}
+            
+            WORK STYLE: ${Array.isArray(userData.work_style_preferences) ? userData.work_style_preferences.join(", ") : ""}
+            
+            VISA SPONSORSHIP REQUIRED: ${userData.visa_sponsorship_required}
+            
+            CAREER GOALS LONG TERM: ${userData.career_goals_long_term}
+            
+            CAREER GOALS SHORT TERM: ${userData.career_goals_short_term}
+            
+            DESIRED JOB TYPE: ${Array.isArray(userData.job_type) ? userData.job_type.join(", ") : userData.job_type || ""}
+            
+            PREFERRED INDUSTRY:${Array.isArray(userData.industry_preferences) ? userData.industry_preferences.join(", ") : userData.industry_preferences || ""}
+          `.trim();
 
     const vertex = await getVertexClient();
     // 3. Generate Embedding using Vertex AI
@@ -120,10 +109,7 @@ export async function POST(request: Request) {
     });
 
     if (!embedding) {
-      return NextResponse.json(
-        { error: "Failed to generate embedding." },
-        { status: 500 },
-      );
+      throw new Error("Failed to generate embedding");
     }
 
     // 4. Update Supabase
@@ -138,21 +124,18 @@ export async function POST(request: Request) {
 
     if (updateError) {
       console.error("Supabase update error:", updateError);
-      return NextResponse.json(
-        { error: "Failed to update user embedding in Supabase." },
-        { status: 500 },
-      );
+      throw new Error("Failed to update user embedding");
     }
 
-    return NextResponse.json({
-      message: "Embedding successfully created and updated via Vertex AI.",
-      // data: { embedding } // Optional: return if needed
-    });
+    return { success: true };
   } catch (error) {
-    console.error("Error in embedding route:", error);
-    return NextResponse.json(
-      { error: "Internal server error." },
-      { status: 500 },
-    );
+    console.error(error instanceof Error ? error.message : String(error));
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error occured while updating user embedding",
+    };
   }
 }

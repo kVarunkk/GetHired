@@ -1,12 +1,10 @@
 "use server";
 
-import { deploymentUrl } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
 import { after } from "next/server";
 import { TAICredits } from "@/utils/types";
-import { headers } from "next/headers";
-import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
 import { revalidatePath } from "next/cache";
+import { parseResume } from "@/helpers/resume/parse-resume";
 
 /**
  * SERVER ACTION: uploadResumeAction
@@ -17,7 +15,6 @@ import { revalidatePath } from "next/cache";
  */
 export async function uploadResumeAction(formData: FormData) {
   const supabase = await createClient();
-  const headersList = await headers();
 
   const {
     data: { user },
@@ -63,14 +60,11 @@ export async function uploadResumeAction(formData: FormData) {
   }
 
   try {
-    // 1. Prepare Metadata
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const fileName = `resumes/${userId}/${Date.now()}-${sanitizedName}`;
-
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 2. Upload to storage
     const { error: storageError } = await supabase.storage
       .from("resumes")
       .upload(fileName, buffer, {
@@ -79,14 +73,13 @@ export async function uploadResumeAction(formData: FormData) {
 
     if (storageError) throw storageError;
 
-    // 3. Create DB entry immediately to get an ID
     const { data: resumeEntry, error: resumeError } = await supabase
       .from("resumes")
       .insert({
         user_id: userId,
         name: file.name,
         resume_path: fileName,
-        content: null, // To be filled by background parser
+        content: null,
       })
       .select("id")
       .single();
@@ -95,37 +88,14 @@ export async function uploadResumeAction(formData: FormData) {
 
     after(async () => {
       try {
-        const baseUrl = deploymentUrl();
-        const res = await fetch(`${baseUrl}/api/parse-resume`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Cookie: headersList.get("Cookie") || "",
-          },
-          body: JSON.stringify({ resumeId: resumeEntry.id }),
-        });
-
-        if (!res.ok) {
-          console.log((await res.json()).error);
-          throw new Error(
-            `[BG_ERROR]: parse-resume API returned ${res.status}`,
-          );
-        }
-
-        console.log(
-          `[BG_SUCCESS]: Resume ${resumeEntry.id} processing initiated.`,
-        );
+        await parseResume(userId, resumeEntry.id);
       } catch (err) {
-        // Network failure - fetch itself threw
         console.error("[BG_FATAL_ERROR]:", err);
-        await updateResumeParsingStatus(true, resumeEntry.id);
       }
     });
     revalidatePath("/resume");
-    // Return the ID instantly
     return { success: true, resumeId: resumeEntry.id };
   } catch (err: unknown) {
-    // console.error("[UPLOAD_ACTION_ERROR]:", err);
     return {
       error: err instanceof Error ? err.message : "Failed to initiate upload.",
     };

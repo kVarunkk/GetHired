@@ -1,17 +1,12 @@
 "use server";
 
-import { deploymentUrl } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
-import { headers } from "next/headers";
-import { after } from "next/server";
-import { triggerRelevanceUpdate } from "./relevant-jobs-update";
 import { TAICredits } from "@/utils/types";
-import { updateResumeParsingStatus } from "@/helpers/resume/update-resume-parsing";
-import { revalidateCacheAction } from "./revalidate";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export async function submitOnboardingAction(formData: FormData) {
   const supabase = await createClient();
-  const headersList = await headers();
+  const serviceRoleClient = createServiceRoleClient();
 
   const resumeId = formData.get("resumeId") as string | null;
   const resumeFile = formData.get("resumeFile") as File | null;
@@ -96,75 +91,19 @@ export async function submitOnboardingAction(formData: FormData) {
 
     if (userError) throw userError;
 
-    // 4. SEQUENTIAL[IMP] BACKGROUND CHAIN
-    after(async () => {
-      const baseUrl = deploymentUrl();
-      const internalHeaders = {
-        "Content-Type": "application/json",
-        Cookie: headersList.get("Cookie") || "",
-      };
+    // 4. Enqueue message
+    const { error: queueError } = await serviceRoleClient
+      .schema("pgmq_public")
+      .rpc("send", {
+        queue_name: "onboarding_pipeline",
+        message: {
+          userId: userId,
+          resumeId: finalResumeId,
+          shouldParse: !!(resumeFile && resumeFile.size > 0),
+        },
+      });
 
-      try {
-        // STEP A: If new file, Upload & Parse first
-        if (resumeFile && resumeFile.size > 0 && finalResumeId) {
-          // Call Parse API and WAIT for it to finish updating the 'content' column
-          try {
-            const parseRes = await fetch(`${baseUrl}/api/parse-resume`, {
-              method: "POST",
-              headers: internalHeaders,
-              body: JSON.stringify({ resumeId: finalResumeId }),
-            });
-            if (!parseRes.ok) {
-              // await updateResumeParsingStatus(true, finalResumeId);
-
-              throw new Error("Background Parse Failed");
-            }
-          } catch {
-            await updateResumeParsingStatus(true, finalResumeId);
-            throw new Error("Background Parse Failed");
-          }
-        }
-
-        await revalidateCacheAction(`profile-${userId}`);
-
-        // STEP B: Update Embedding (Reads the 'content' column we just filled)
-        const embedRes = await fetch(
-          `${baseUrl}/api/update-embedding/gemini/user`,
-          {
-            method: "POST",
-            headers: internalHeaders,
-            body: JSON.stringify({
-              userId: userId,
-            }),
-          },
-        );
-        if (!embedRes.ok) throw new Error("Background Embedding Failed");
-
-        // // STEP C: Relevant Jobs Update
-        await supabase
-          .from("user_info")
-          .update({
-            relevant_jobs_update_status: "progress",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", userId);
-
-        const relevanceUpdateRes = await triggerRelevanceUpdate(userId);
-
-        if (relevanceUpdateRes.error) {
-          throw new Error("Relevance job update failed");
-        }
-
-        console.log(
-          `[ONBOARDING_CHAIN_SUCCESS]: Process complete for ${userId}`,
-        );
-      } catch (err) {
-        console.error(
-          "[ONBOARDING_CHAIN_FAILURE]:",
-          err instanceof Error ? err.message : "Some error occured",
-        );
-      }
-    });
+    if (queueError) throw queueError;
 
     return { success: true };
   } catch (err: unknown) {
