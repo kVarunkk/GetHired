@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { setPrimaryResumeAction } from "@/app/actions/set-primary-resume";
 import { TResumeReviewResume } from "@/utils/types/review.types";
 import { Star } from "lucide-react";
 import { Dispatch, SetStateAction } from "react";
@@ -13,7 +13,6 @@ export default function ResumeSetPrimary({
   setItems,
   items,
   resumeId,
-  userId,
 }: {
   isProcessing: boolean;
   setIsProcessing: Dispatch<SetStateAction<boolean>>;
@@ -21,19 +20,15 @@ export default function ResumeSetPrimary({
   setItems: Dispatch<SetStateAction<TResumeReviewResume[]>>;
   items: TResumeReviewResume[];
   resumeId: string;
-  userId: string;
 }) {
   const handleSetPrimary = async (resumeId: string) => {
+    // Capture previous items array for structural rollback if server rejects request
+    const previousItems = [...items];
+
     try {
       setIsProcessing(true);
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Unauthorized");
 
-      // Step 1: Optimistic UI Update
-      const previousItems = [...items];
+      // Step 1: Optimistic UI Update (Immediate visual feedback)
       setItems((prev) =>
         prev.map((item) => ({
           ...item,
@@ -41,38 +36,23 @@ export default function ResumeSetPrimary({
         })),
       );
 
-      // Step 2: Database Update
-      const { error: clearError } = await supabase
-        .from("resumes")
-        .update({ is_primary: false })
-        .eq("user_id", user.id);
+      // Step 2: Invoke the Server Action
+      const result = await setPrimaryResumeAction(resumeId);
 
-      if (clearError) throw clearError;
-
-      const { error: setError } = await supabase
-        .from("resumes")
-        .update({ is_primary: true })
-        .eq("id", resumeId);
-
-      if (setError) {
-        setItems(previousItems); // Rollback on error
-        throw setError;
+      if (result.error) {
+        // Rollback optimistic state if the server operation explicitly returned a failure status
+        setItems(previousItems);
+        toast.error(result.error);
+        return;
       }
 
       toast.success(
         "Primary resume updated. Your profile is being updated in the background.",
       );
-
-      fetch(`/api/update-embedding/gemini/user`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: userId,
-        }),
-      }).catch(() => {});
     } catch {
-      // console.error("Failed to set primary:", err);
-      toast.error("Could not update primary resume");
+      // Rollback optimistic state if network connection drop occurs
+      setItems(previousItems);
+      toast.error("An unexpected error occurred.");
     } finally {
       setIsProcessing(false);
     }

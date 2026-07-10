@@ -33,10 +33,9 @@ import ResumeStatusBadge from "./ResumeStatusBadge";
 
 interface ResumesTableProps {
   data: TResumeReviewResume[];
-  userId: string;
 }
 
-export default function ResumesTable({ data, userId }: ResumesTableProps) {
+export default function ResumesTable({ data }: ResumesTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<
     import("@tanstack/react-table").ColumnFiltersState
@@ -76,7 +75,6 @@ export default function ResumesTable({ data, userId }: ResumesTableProps) {
               items={items}
               setItems={setItems}
               resumeId={row.original.id}
-              userId={userId}
             />
           );
         },

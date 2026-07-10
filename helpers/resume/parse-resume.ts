@@ -1,16 +1,14 @@
-import { NextResponse } from "next/server";
-import { generateText, Output } from "ai";
-import { z } from "zod";
 import { getVertexClient } from "@/utils/serverUtils";
-import "pdf-parse/worker";
+import { z } from "zod";
+import { wrapInSandbox } from "../ai/security";
+import { generateText, Output } from "ai";
 import { CanvasFactory } from "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
-import { wrapInSandbox } from "@/helpers/ai/security";
-import { v4 as uuidv4 } from "uuid";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendResumeParsingStatusEmail } from "@/app/actions/send-resume-status-email";
-import { createClient } from "@/lib/supabase/server";
-import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
+import { deductUserCreditsHelper } from "../ai/deduct-user-credits";
 import { TAICredits } from "@/utils/types";
+import { v4 as uuidv4 } from "uuid";
 
 const ResumeSchema = z.object({
   sections: z.array(
@@ -106,111 +104,93 @@ async function generateStructuredProfile(lines: string[]) {
   }
 }
 
-export async function POST(req: Request) {
-  const { resumeId } = await req.json();
-
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json(
-      { error: "Unauthorized access or user mismatch." },
-      { status: 401 },
-    );
-  }
-  const userId = user.id;
-
-  if (!userId || !resumeId) {
-    return NextResponse.json(
-      {
-        error:
-          "Missing user ID or resume path." +
-          "user, userid, resumeid: " +
-          // JSON.stringify(user) +
-          "------------------" +
-          userId +
-          "--------------------" +
-          resumeId,
-      },
-      { status: 400 },
-    );
-  }
-
-  const { data: resumeData, error: resumeError } = await supabase
-    .from("resumes")
-    .select("resume_path, name, user_info(email)")
-    .eq("id", resumeId)
-    .eq("user_id", userId)
-    .single();
-
-  if (resumeError || !resumeData || !resumeData.resume_path) {
-    return NextResponse.json(
-      { error: "Resume not found for the given user." },
-      { status: 404 },
-    );
-  }
+export async function parseResume(userId: string, resumeId: string) {
+  const supabase = createServiceRoleClient();
 
   try {
-    // throw new Error("Testing error");
-    const { data: signedUrlData, error: signedUrlError } =
-      await supabase.storage
+    if (!userId || !resumeId)
+      throw new Error("User id or resume id not found.");
+
+    const { data: resumeData, error: resumeError } = await supabase
+      .from("resumes")
+      .select("resume_path, name, user_info(email)")
+      .eq("id", resumeId)
+      .eq("user_id", userId)
+      .single();
+
+    if (resumeError || !resumeData || !resumeData.resume_path) {
+      throw new Error(
+        resumeError?.message || "Error occured while fetching resume data.",
+      );
+    }
+
+    try {
+      const { data: signedUrlData, error: signedUrlError } =
+        await supabase.storage
+          .from("resumes")
+          .createSignedUrl(resumeData.resume_path, 120);
+
+      if (signedUrlError || !signedUrlData?.signedUrl) {
+        console.error("Storage signed URL generation failed:", signedUrlError);
+        throw new Error(
+          signedUrlError?.message ||
+            "Failed to generate signed URL for resume file.",
+        );
+      }
+
+      const lines = await extractTextFromPdf(signedUrlData?.signedUrl);
+
+      if (!lines || lines.length === 0) {
+        throw new Error("Resume file contained no readable text.");
+      }
+
+      const parsedProfile = await generateStructuredProfile(lines);
+
+      const { error: dbError } = await supabase
         .from("resumes")
-        .createSignedUrl(resumeData.resume_path, 120);
+        .update({
+          content: parsedProfile,
+          parsing_failed: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", resumeId);
 
-    if (signedUrlError || !signedUrlData?.signedUrl) {
-      console.error("Storage signed URL generation failed:", signedUrlError);
-      throw new Error("Failed to generate signed URL for resume file.");
+      if (dbError) throw new Error(dbError.message);
+
+      await sendResumeParsingStatusEmail(
+        resumeData.user_info?.email ?? null,
+        "success",
+        resumeData.name,
+        resumeId,
+      );
+
+      await deductUserCreditsHelper(
+        supabase,
+        userId,
+        TAICredits.AI_SEARCH_ASK_AI_RESUME,
+      );
+    } catch (e) {
+      await sendResumeParsingStatusEmail(
+        resumeData.user_info?.email ?? null,
+        "failure",
+        resumeData.name,
+        resumeId,
+      );
+      throw new Error(e instanceof Error ? e.message : "Unknown error");
     }
-
-    const lines = await extractTextFromPdf(signedUrlData?.signedUrl);
-
-    if (!lines || lines.length === 0) {
-      throw new Error("Resume file contained no readable text.");
-    }
-
-    const parsedProfile = await generateStructuredProfile(lines);
-
-    const { error: dbError } = await supabase
+  } catch (e) {
+    await supabase
       .from("resumes")
       .update({
-        content: parsedProfile,
-        parsing_failed: false,
+        parsing_failed: true,
         updated_at: new Date().toISOString(),
       })
       .eq("id", resumeId);
-
-    if (dbError) throw dbError;
-
-    await sendResumeParsingStatusEmail(
-      resumeData.user_info?.email ?? null,
-      "success",
-      resumeData.name,
-      resumeId,
-    );
-
-    await deductUserCreditsHelper(
-      supabase,
-      userId,
-      TAICredits.AI_SEARCH_ASK_AI_RESUME,
-    );
-
-    return NextResponse.json({
-      success: true,
-    });
-  } catch (e) {
-    console.error("Resume parsing process failed:", e);
-    await sendResumeParsingStatusEmail(
-      resumeData.user_info?.email ?? null,
-      "failure",
-      resumeData.name,
-      resumeId,
-    );
-    return NextResponse.json(
-      { error: "Internal server processing failure during file extraction." },
-      { status: 500 },
+    console.error(
+      "Resume parsing process failed:",
+      e instanceof Error
+        ? e.message
+        : "Unknown error occured while parsing resume",
     );
   }
 }
