@@ -27,6 +27,7 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 86400;
+export const dynamic = "force-static";
 
 export default async function HirePage() {
   const { jobCount, applicationCount, resumeCount, userCount } =

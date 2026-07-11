@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isRenderProduction = process.env.RENDER === "true";
+
 const nextConfig: NextConfig = {
   /* config options here */
   reactStrictMode: false,
@@ -19,10 +21,10 @@ const nextConfig: NextConfig = {
     "/**": ["./app/content/**/*"],
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: isRenderProduction,
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: isRenderProduction,
   },
 };
 

@@ -2,6 +2,8 @@ import FootComponent from "@/components/FootComponent";
 import Footer from "@/components/landing-page/Footer";
 import PrivacyPolicy from "@/components/PrivacyPolicy";
 
+export const dynamic = "force-static";
+
 export default async function PrivacyPolicyPage() {
   return (
     <>

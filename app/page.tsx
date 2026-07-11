@@ -10,6 +10,7 @@ import { getPlatformStats } from "@/utils/serverUtils";
 import { JOB_SEEKER_DARK, JOB_SEEKER_LIGHT } from "@/utils/utils";
 
 export const revalidate = 86400;
+export const dynamic = "force-static";
 
 export default async function Home() {
   const { jobCount, applicationCount, resumeCount, userCount } =
