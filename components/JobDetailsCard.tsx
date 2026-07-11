@@ -12,6 +12,7 @@ import InfoTooltip from "./InfoTooltip";
 import Link from "next/link";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { Skeleton } from "./ui/skeleton";
+import { SummarizeJobAction } from "@/app/actions/summarize-job";
 
 type JobDescriptionCardProps =
   | {
@@ -58,27 +59,11 @@ export default function JobDescriptionCard({
   const fetchAISummary = async (jobId: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/summarize/job", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_id: jobId }),
-      });
-
-      if (!response.ok) {
-        const errorResult = await response.json();
-        throw new Error(
-          errorResult.error ||
-            `AI Summary failed with status ${response.status}`,
-        );
-      }
-
-      const result = await response.json();
-      const newSummary = result.summary;
-
-      setAiSummary(newSummary);
+      const result = await SummarizeJobAction(jobId);
+      if (result.error) throw new Error(result.error);
+      setAiSummary(result.summary || null);
     } catch (error) {
       toast.error(`Failed to generate summary: ${(error as Error).message}.`);
-
       setIsAISummary(false);
     } finally {
       setIsLoading(false);
