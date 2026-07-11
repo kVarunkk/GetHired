@@ -108,6 +108,8 @@ export async function updateSession(request: NextRequest) {
     "/api/ai-search/jobs",
     "/api/ai-search/profiles",
     "/api/dodo/webhook",
+    "/api/internal/jobs/bulk-upsert",
+    "/api/internal/scraper-state",
     "/privacy-policy",
     "/terms-of-service",
     "/sitemap.xml",
