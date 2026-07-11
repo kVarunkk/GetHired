@@ -6,7 +6,8 @@ import toast from "react-hot-toast";
 import { IJobPost } from "@/utils/types";
 import { TCompanyIdPageData } from "@/utils/types/jobs.types";
 import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
-import { revalidateCacheAction } from "@/app/actions/revalidate";
+import { revalidateCacheAction } from "@/app/actions/revalidate-tag";
+import { revalidatePathAction } from "@/app/actions/revalidate-path";
 
 export const useJobPostingStatus = (
   initialStatus: "active" | "inactive",
@@ -35,6 +36,7 @@ export const useJobPostingStatus = (
         if (updateAllJobsError) throw updateAllJobsError;
 
         await revalidateCacheAction(`job-${job.job_id}`);
+        await revalidatePathAction(`/jobs/${job.job_id}`);
       }
 
       // if the job posting is activated, trigger profile relevance update

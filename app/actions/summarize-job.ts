@@ -6,7 +6,8 @@ import { getVertexClient } from "@/utils/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { TAICredits } from "@/utils/types";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
-import { revalidateCacheAction } from "./revalidate";
+import { revalidatePathAction } from "./revalidate-path";
+import { revalidateCacheAction } from "./revalidate-tag";
 
 const MAX_SUMMARY_LENGTH = 500;
 
@@ -91,6 +92,7 @@ export async function SummarizeJobAction(jobId: string) {
     if (updateError) throw new Error("Failed to save summary to database.");
 
     await revalidateCacheAction(`job-${jobId}`);
+    await revalidatePathAction(`/jobs/${jobId}`);
 
     await deductUserCreditsHelper(
       authenticatedSupabase,

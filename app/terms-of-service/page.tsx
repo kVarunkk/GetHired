@@ -2,6 +2,8 @@ import FootComponent from "@/components/FootComponent";
 import Footer from "@/components/landing-page/Footer";
 import TermsOfService from "@/components/TermsOfService";
 
+export const dynamic = "force-static";
+
 export default async function TermsOfServicePage() {
   return (
     <>

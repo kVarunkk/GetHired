@@ -6,7 +6,7 @@ import {
   sendEmailForStatusUpdate,
 } from "@/utils/serverUtils";
 import { parseResume } from "@/helpers/resume/parse-resume";
-import { revalidateCacheAction } from "@/app/actions/revalidate";
+import { revalidateCacheAction } from "@/app/actions/revalidate-tag";
 import { processUserRelevance } from "@/helpers/jobs/relevant-jobs-utils";
 import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
 

@@ -24,6 +24,7 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 86400;
+export const dynamic = "force-static";
 
 export default async function MCPServerPage() {
   const { jobCount, applicationCount, resumeCount, userCount } =
