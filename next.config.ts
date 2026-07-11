@@ -18,12 +18,12 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": ["./app/content/**/*"],
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // typescript: {
+  //   ignoreBuildErrors: true,
+  // },
+  // eslint: {
+  //   ignoreDuringBuilds: true,
+  // },
 };
 
 export default nextConfig;

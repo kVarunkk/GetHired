@@ -4,8 +4,9 @@ import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
 import Hero from "@/components/landing-page/Hero";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
+import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
-import { getJobCount } from "@/utils/serverUtils";
+import { getPlatformStats } from "@/utils/serverUtils";
 import { MCP_SERVER_DARK, MCP_SERVER_LIGHT } from "@/utils/utils";
 import { Metadata } from "next";
 
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
 export const revalidate = 86400;
 
 export default async function MCPServerPage() {
-  const jobCount = await getJobCount();
+  const { jobCount, applicationCount, resumeCount, userCount } =
+    await getPlatformStats();
   return (
     <main className="min-h-screen flex flex-col items-center">
       <div className="flex-1 w-full flex flex-col gap-20 items-center">
@@ -42,6 +44,11 @@ export default async function MCPServerPage() {
           />
           <HowWeHelp jobCount={jobCount} />
           <AIFeatures />
+          <PlatformStats
+            applicationCount={applicationCount}
+            resumeCount={resumeCount}
+            userCount={userCount}
+          />
           <TheGetHiredAdvantageSection jobCount={jobCount} />
           <FAQSection />
           <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">

@@ -250,18 +250,24 @@ export const parseMultiSelectParam = <T extends string>(
 
 export const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET || "";
 
-export async function getJobCount(): Promise<number> {
+export async function getPlatformStats() {
   const supabase = createServiceRoleClient();
-  const { count, error } = await supabase
-    .from("all_jobs")
-    .select("id", { count: "exact", head: true });
+  const { data, error } = await supabase.rpc("get_platform_stats");
 
-  if (error) {
-    console.error("Failed to fetch job count:", error);
-    return 6000;
-  }
+  if (error || !data || !data.length)
+    return {
+      jobCount: 8120,
+      applicationCount: 520,
+      resumeCount: 230,
+      userCount: 2110,
+    };
 
-  return count ?? 0;
+  return {
+    jobCount: data[0].job_count || 8120,
+    applicationCount: data[0].application_count || 520,
+    resumeCount: data[0].resume_count || 230,
+    userCount: data[0].user_count || 2110,
+  };
 }
 
 export async function sendEmail({
