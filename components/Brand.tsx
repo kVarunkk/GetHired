@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  BRAND_LONG_DARK,
+  BRAND_LONG_LIGHT,
+  BRAND_SHORT_DARK,
+  BRAND_SHORT_LIGHT,
+} from "@/utils/utils";
 import Image from "next/image";
 
 interface BrandProps {
@@ -17,9 +23,7 @@ export default function Brand({ type }: BrandProps) {
       {/* Light Mode Logo */}
       <div className="dark:hidden w-full h-full relative">
         <Image
-          src={
-            type === "long" ? "/logos/long-light.png" : "/logos/short-light.png"
-          }
+          src={type === "long" ? BRAND_LONG_LIGHT : BRAND_SHORT_LIGHT}
           alt="GetHired logo"
           fill
           sizes="(max-width: 640px) 100px, (max-width: 768px) 150px, 150px"
@@ -31,9 +35,7 @@ export default function Brand({ type }: BrandProps) {
       {/* Dark Mode Logo */}
       <div className="hidden dark:block w-full h-full relative">
         <Image
-          src={
-            type === "long" ? "/logos/long-dark.png" : "/logos/short-dark.png"
-          }
+          src={type === "long" ? BRAND_LONG_DARK : BRAND_SHORT_DARK}
           alt="GetHired logo"
           fill
           sizes="(max-width: 640px) 100px, (max-width: 768px) 150px, 150px"

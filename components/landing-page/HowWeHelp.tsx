@@ -8,9 +8,7 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { cn, getCloudfrontPath, platforms } from "@/utils/utils";
-
-const cloudFrontUrl = getCloudfrontPath();
+import { cloudFrontUrl, cn, platforms } from "@/utils/utils";
 
 export function HowWeHelp({ jobCount }: { jobCount: number }) {
   const [isPaused, setIsPaused] = useState(false);

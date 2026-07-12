@@ -2,10 +2,11 @@ import { Sparkles } from "lucide-react";
 import Image from "next/image";
 import { Button } from "./ui/button";
 import Link from "next/link";
-import { HeroMaskStyle } from "@/utils/utils";
-
-const JOB_SEEKER_DARK = "/hero/dark-ai-resume-checker.png";
-const JOB_SEEKER_LIGHT = "/hero/light-ai-resume-checker.png";
+import {
+  HeroMaskStyle,
+  RESUME_CHECKER_DARK,
+  RESUME_CHECKER_LIGHT,
+} from "@/utils/utils";
 
 export default function HeroAiResumeChecker() {
   return (
@@ -39,7 +40,7 @@ export default function HeroAiResumeChecker() {
       <div>
         <Image
           className="rounded-xl border border-border drop-shadow-xl mt-8 dark:hidden"
-          src={JOB_SEEKER_LIGHT}
+          src={RESUME_CHECKER_LIGHT}
           style={HeroMaskStyle}
           height={1200}
           width={1200}
@@ -48,7 +49,7 @@ export default function HeroAiResumeChecker() {
         />
         <Image
           className="rounded-xl border border-border drop-shadow-xl mt-8 hidden dark:block"
-          src={JOB_SEEKER_DARK}
+          src={RESUME_CHECKER_DARK}
           style={HeroMaskStyle}
           height={1200}
           width={1200}
