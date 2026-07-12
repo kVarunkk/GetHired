@@ -7,6 +7,9 @@ import JobClientHydrator from "@/components/JobClientHydrator";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Metadata } from "next";
 
+export const revalidate = 604800;
+export const dynamic = "force-static";
+
 const getStaticJobDetails = (jobId: string) =>
   unstable_cache(
     async (id: string) => {
@@ -59,9 +62,6 @@ export async function generateMetadata({
     };
   }
 }
-
-export const revalidate = 604800;
-export const dynamic = "force-static";
 
 export default async function JobPage({
   params,

@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/tooltip";
 import React from "react";
 import MenuTrigger from "@/helpers/profile-dropdown/MenuTrigger";
+import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
+import useSWR from "swr";
 
 export default function ProfileDropdown({
   user,
@@ -51,6 +53,12 @@ export default function ProfileDropdown({
     router.replace(!isCompanyUser ? "/auth/login" : "/auth/login?company=true");
     router.refresh();
   };
+
+  const { data } = useSWR(PROFILE_API_KEY, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
 
   return (
     <DropdownMenu>
@@ -89,6 +97,18 @@ export default function ProfileDropdown({
             {isCompanyUser ? "Company" : "Applicant"}
           </Badge>
         </DropdownMenuLabel>
+
+        <DropdownMenuItem
+          asChild
+          className="text-muted-foreground text-xs focus:bg-transparent focus:text-muted-foreground cursor-pointer data-[highlighted]:bg-transparent"
+        >
+          <Link href="/dashboard/buy-credits" className="w-full text-left">
+            {data?.profile?.ai_credits} credits available.{" "}
+            <span className="underline font-medium text-foreground">
+              Recharge now
+            </span>
+          </Link>
+        </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
           <Link

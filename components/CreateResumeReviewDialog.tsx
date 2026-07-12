@@ -100,7 +100,8 @@ export default function CreateResumeReviewDialog() {
                 <InfoTooltip
                   content={
                     <p>
-                      This analysis consumes {TAICredits.AI_CV_REVIEW} Credits.
+                      This analysis consumes{" "}
+                      {TAICredits.AI_SEARCH_ASK_AI_RESUME} Credits.
                     </p>
                   }
                 />

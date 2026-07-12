@@ -12,7 +12,9 @@ export const Step3SkillsExperience: React.FC<StepProps> = ({
 }) => (
   <CardContent className="flex flex-col gap-4 !p-0">
     <div>
-      <Label htmlFor="experience_years">Years of Professional Experience</Label>
+      <Label htmlFor="experience_years">
+        Years of Professional Experience*
+      </Label>
       <Input
         id="experience_years"
         type="number"
@@ -37,7 +39,7 @@ export const Step3SkillsExperience: React.FC<StepProps> = ({
 
     <div>
       <Label htmlFor="top_skills" className="mt-4">
-        Top 5-10 Skills
+        Top 5-10 Skills*
       </Label>
 
       <div className="mt-2">

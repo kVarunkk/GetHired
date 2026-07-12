@@ -156,9 +156,8 @@ export enum TResumeReviewStatus {
 }
 
 export enum TAICredits {
-  AI_SEARCH_ASK_AI_RESUME = 3,
-  AI_SUMMARY = 1,
-  AI_CV_REVIEW = 5,
+  AI_SEARCH_ASK_AI_RESUME = 5,
+  AI_SUMMARY = 2,
 }
 
 export enum TWaitlistType {

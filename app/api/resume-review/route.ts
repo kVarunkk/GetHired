@@ -226,7 +226,7 @@ CONSTRAINTS:
         await deductUserCreditsHelper(
           supabase,
           userId,
-          TAICredits.AI_CV_REVIEW,
+          TAICredits.AI_SEARCH_ASK_AI_RESUME,
         );
 
         console.log(`[BG_SUCCESS]: Review ${reviewId} analysis completed.`);

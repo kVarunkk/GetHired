@@ -298,7 +298,6 @@ export const OnboardingForm: React.FC = () => {
             isValid = false;
           }
           break;
-        case "industry_preferences":
         case "work_style_preferences":
           if (((value as string[]) ?? []).length === 0) {
             newErrors[field] = "This field is required.";
@@ -329,8 +328,6 @@ export const OnboardingForm: React.FC = () => {
             isValid = false;
           }
           break;
-        case "career_goals_short_term":
-        case "career_goals_long_term":
         case "company_size_preference":
           if (!value) {
             newErrors[field] = "This field is required.";

@@ -61,7 +61,7 @@ export const Step4VisaWorkStyle: React.FC<StepProps> = ({
 
     <div>
       <Label htmlFor="work_style_preferences" className="mt-4">
-        Preferred Work Styles
+        Preferred Work Styles*
       </Label>
 
       <div className="mt-2">

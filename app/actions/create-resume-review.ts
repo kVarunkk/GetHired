@@ -53,9 +53,9 @@ export async function createResumeReviewAction(formData: FormData) {
       };
     }
 
-    if ((profile.ai_credits || 0) < TAICredits.AI_CV_REVIEW) {
+    if ((profile.ai_credits || 0) < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
       return {
-        error: `Insufficient AI credits (${TAICredits.AI_CV_REVIEW} required).`,
+        error: `Insufficient AI credits (${TAICredits.AI_SEARCH_ASK_AI_RESUME} required).`,
       };
     }
 

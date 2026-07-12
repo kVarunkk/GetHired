@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import InfoTooltip from "../InfoTooltip";
 
 export const Step2LocationSalary: React.FC<StepProps> = ({
   formData,
@@ -20,7 +21,12 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
 }) => (
   <CardContent className="flex flex-col gap-4 !p-0">
     <div>
-      <Label htmlFor="preferred_locations">Preferred Locations</Label>
+      <Label htmlFor="preferred_locations">
+        Preferred Locations*
+        <InfoTooltip
+          content={<p>Make sure to select cities for better job matches.</p>}
+        />
+      </Label>
 
       <div className="mt-2">
         <MultiKeywordSelect
@@ -46,7 +52,7 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
 
     <div>
       <Label htmlFor="min_salary" className="mt-4">
-        Minimum Salary per annum
+        Minimum Salary per annum*
       </Label>
       <div className="flex items-center gap-2">
         <Select
@@ -91,7 +97,7 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
 
     <div>
       <Label htmlFor="max_salary" className="mt-4">
-        Maximum Salary per annum (Optional)
+        Maximum Salary per annum
       </Label>
       <div className="flex items-center gap-2">
         <Select

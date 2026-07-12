@@ -10,7 +10,7 @@ export const Step1JobRole = ({ formData, setFormData, errors }: StepProps) => {
   return (
     <CardContent className="flex flex-col gap-4 !p-0">
       <div>
-        <Label htmlFor="full_name">Full Name</Label>
+        <Label htmlFor="full_name">Full Name*</Label>
         <Input
           id="full_name"
           type="text"
@@ -73,7 +73,7 @@ export const Step1JobRole = ({ formData, setFormData, errors }: StepProps) => {
       </div>
 
       <div>
-        <Label htmlFor="desired_roles">Desired Job Titles / Roles</Label>
+        <Label htmlFor="desired_roles">Desired Job Titles / Roles*</Label>
 
         <div className="mt-2">
           <MultiKeywordSelectInput
@@ -95,7 +95,7 @@ export const Step1JobRole = ({ formData, setFormData, errors }: StepProps) => {
       </div>
 
       <div>
-        <Label htmlFor="job_type">What type of job are you looking for?</Label>
+        <Label htmlFor="job_type">What type of job are you looking for?*</Label>
 
         <MultiKeywordSelect
           name={"job_type"}

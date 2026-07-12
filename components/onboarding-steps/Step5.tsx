@@ -65,7 +65,7 @@ export const Step5CareerGoals: React.FC<StepProps> = ({
 
     <div>
       <Label htmlFor="company_size_preference" className="mt-4">
-        Preferred Company Size
+        Preferred Company Size*
       </Label>
       <Select
         onValueChange={(value) =>

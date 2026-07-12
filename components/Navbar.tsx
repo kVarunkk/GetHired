@@ -11,7 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ChevronLeft, ChevronRight, Menu } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu, Wallet } from "lucide-react";
 import Brand from "./Brand";
 import { cn, getNavItemsByPath } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -217,6 +217,23 @@ export default function NavbarComponent({
 
           {user ? (
             <div className="flex flex-col items-center gap-5">
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <Link
+                    href="/dashboard/buy-credits"
+                    className={cn(
+                      "text-brand flex p-2 items-center w-full gap-2 hover:bg-secondary transition-all rounded-lg truncate",
+                      isMenuOpen ? "justify-start" : "justify-center",
+                    )}
+                  >
+                    <Wallet className="h-4 w-4" />
+                    {isMenuOpen && <span className="text-sm">Recharge</span>}
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" hidden={isMenuOpen}>
+                  <p>{isMenuOpen ? "" : "Recharge"}</p>
+                </TooltipContent>
+              </Tooltip>
               <FeedbackForm
                 isMenuOpen={isMenuOpen}
                 user={user}
