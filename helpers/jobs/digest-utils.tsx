@@ -19,11 +19,13 @@ export async function getAllDigestUsers() {
             user_id, 
             email, 
             full_name, 
-            ai_credits
+            ai_credits,
+            preferred_locations
         `,
     )
     .neq("full_name", null)
     .eq("filled", true)
+    .gte("ai_credits", TAICredits.AI_SEARCH_ASK_AI_RESUME)
     .eq("is_job_digest_active", true);
 
   if (error) {
@@ -36,6 +38,7 @@ export async function getAllDigestUsers() {
 
 export async function processUserDigest(user: RelevanceJobMessage["message"]) {
   const URL = deploymentUrl();
+  const params = new URLSearchParams();
 
   try {
     if (
@@ -56,14 +59,22 @@ export async function processUserDigest(user: RelevanceJobMessage["message"]) {
 
     const cutoffDays = "3";
 
-    const jobFetchRes = await fetch(
-      `${URL}/api/jobs?sortBy=relevance&createdAfter=${cutoffDays}&userId=${user.user_id}&type=digest`,
-      {
-        headers: {
-          "X-Internal-Secret": INTERNAL_API_SECRET || "",
-        },
+    params.set("sortBy", "relevance");
+    params.set("createdAfter", cutoffDays);
+    params.set("userId", user.user_id);
+    params.set("type", "digest");
+    if (
+      Array.isArray(user.preferred_locations) &&
+      user.preferred_locations.length > 0
+    ) {
+      params.set("location", user.preferred_locations.join("|"));
+    }
+
+    const jobFetchRes = await fetch(`${URL}/api/jobs?${params.toString()}`, {
+      headers: {
+        "X-Internal-Secret": INTERNAL_API_SECRET || "",
       },
-    );
+    });
 
     if (!jobFetchRes.ok) {
       throw new Error(

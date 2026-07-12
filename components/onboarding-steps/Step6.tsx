@@ -24,7 +24,7 @@ export const Step6ResumeUpload: React.FC<StepProps> = ({
     <CardContent className="!p-0 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="space-y-3">
         <div className="flex flex-col gap-1">
-          <Label>Professional Resume</Label>
+          <Label>Professional Resume*</Label>
         </div>
 
         {isLoading ? (

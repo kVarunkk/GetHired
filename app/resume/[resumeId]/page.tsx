@@ -76,8 +76,8 @@ export default async function ResumeIdPage({
                 <InfoTooltip
                   content={
                     <p>
-                      This feature uses {TAICredits.AI_CV_REVIEW} AI credits per
-                      use.{" "}
+                      This feature uses {TAICredits.AI_SEARCH_ASK_AI_RESUME} AI
+                      credits per use.{" "}
                       <Link
                         href={"/dashboard/buy-credits"}
                         className="text-blue-500"

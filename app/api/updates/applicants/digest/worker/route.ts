@@ -18,6 +18,7 @@ export type RelevanceJobMessage = {
     email: string;
     full_name: string | null;
     ai_credits: number;
+    preferred_locations: string[] | null;
   };
 };
 
