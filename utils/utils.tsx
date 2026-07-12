@@ -443,18 +443,20 @@ export const HeroMaskStyle = {
   WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
 };
 
-export const JOB_SEEKER_DARK = "/hero/job-seeker-hero-dark.png";
-export const JOB_SEEKER_LIGHT = "/hero/job-seeker-hero-light.png";
-export const HIRE_PAGE_DARK = "/hero/company-hero-dark.png";
-export const HIRE_PAGE_LIGHT = "/hero/company-hero-light.png";
-export const MCP_SERVER_DARK = "/hero/mcp-server-hero-dark.png";
-export const MCP_SERVER_LIGHT = "/hero/mcp-server-hero-light.png";
+export const cloudFrontUrl = process.env.NEXT_PUBLIC_CLOUDFRONT_PATH || "";
 
-export const getCloudfrontPath = () => {
-  return process.env.NEXT_PUBLIC_CLOUDFRONT_PATH || "";
-};
-
-const cloudFrontUrl = getCloudfrontPath();
+export const JOB_SEEKER_DARK = `${cloudFrontUrl}/hero/job-seeker-hero-dark.webp`;
+export const JOB_SEEKER_LIGHT = `${cloudFrontUrl}/hero/job-seeker-hero-light.webp`;
+export const HIRE_PAGE_DARK = `${cloudFrontUrl}/hero/company-hero-dark.webp`;
+export const HIRE_PAGE_LIGHT = `${cloudFrontUrl}/hero/company-hero-light.webp`;
+export const MCP_SERVER_DARK = `${cloudFrontUrl}/hero/mcp-server-hero-dark.webp`;
+export const MCP_SERVER_LIGHT = `${cloudFrontUrl}/hero/mcp-server-hero-light.webp`;
+export const RESUME_CHECKER_DARK = `${cloudFrontUrl}/hero/dark-ai-resume-checker.webp`;
+export const RESUME_CHECKER_LIGHT = `${cloudFrontUrl}/hero/light-ai-resume-checker.webp`;
+export const BRAND_LONG_LIGHT = `${cloudFrontUrl}/brand/long-light.webp`;
+export const BRAND_LONG_DARK = `${cloudFrontUrl}/brand/long-dark.webp`;
+export const BRAND_SHORT_LIGHT = `${cloudFrontUrl}/brand/short-light.webp`;
+export const BRAND_SHORT_DARK = `${cloudFrontUrl}/brand/short-dark.webp`;
 
 export const platforms = [
   {

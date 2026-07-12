@@ -98,17 +98,31 @@ export default function ProfileDropdown({
           </Badge>
         </DropdownMenuLabel>
 
-        <DropdownMenuItem
-          asChild
-          className="text-muted-foreground text-xs focus:bg-transparent focus:text-muted-foreground cursor-pointer data-[highlighted]:bg-transparent"
-        >
-          <Link href="/dashboard/buy-credits" className="w-full text-left">
-            {data?.profile?.ai_credits} credits available.{" "}
-            <span className="underline font-medium text-foreground">
-              Recharge now
-            </span>
-          </Link>
-        </DropdownMenuItem>
+        {data?.profile && data?.role && (
+          <DropdownMenuItem
+            asChild
+            className="text-muted-foreground text-xs focus:bg-transparent focus:text-muted-foreground cursor-pointer data-[highlighted]:bg-transparent"
+          >
+            {data.role === "applicant" ? (
+              <Link href="/dashboard/buy-credits" className="w-full text-left">
+                {data.profile?.ai_credits} credits available.{" "}
+                <span className="underline font-medium text-foreground">
+                  Recharge now
+                </span>
+              </Link>
+            ) : (
+              <Link
+                href="mailto:varun@devhub.co.in"
+                className="w-full text-left"
+              >
+                Active Plan: {data.profile?.company_tiers?.name}.{" "}
+                <span className="underline font-medium text-foreground">
+                  Upgrade
+                </span>
+              </Link>
+            )}
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuItem asChild>
           <Link

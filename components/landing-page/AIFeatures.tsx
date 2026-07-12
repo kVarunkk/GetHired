@@ -1,10 +1,8 @@
 "use client";
 
-import { getCloudfrontPath } from "@/utils/utils";
+import { cloudFrontUrl } from "@/utils/utils";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-
-const cloudFrontUrl = getCloudfrontPath();
 
 export default function AIFeatures() {
   const pathname = usePathname();
