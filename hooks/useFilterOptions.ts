@@ -36,7 +36,6 @@ export function useFilterOptions(
     () => filterData?.uniqueLocations || [],
     [filterData?.uniqueLocations],
   );
-  console.log(uniqueLocations);
   const uniqueJobRoles = useMemo(
     () => filterData?.uniqueJobRoles || [],
     [filterData?.uniqueJobRoles],

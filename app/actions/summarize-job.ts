@@ -15,8 +15,6 @@ export async function SummarizeJobAction(jobId: string) {
   try {
     if (!jobId) throw new Error("Job id not found.");
 
-    console.log("hola");
-
     const authenticatedSupabase = await createClient();
     const serviceRoleSupbase = createServiceRoleClient();
     const {
