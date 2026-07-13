@@ -322,7 +322,7 @@ function ItemsList({
       />
       <CommandList>
         {!loading && availableItems.length === 0 && (
-          <CommandEmpty className="text-muted-foreground text-center py-6 text-sm">
+          <CommandEmpty className="text-muted-foreground text-center py-6 text-sm h-60">
             No matching items found
           </CommandEmpty>
         )}
