@@ -485,7 +485,7 @@ function ItemsList({
                 </div>
               )
             : filteredAvailableItems.length > 0 && (
-                <div className="h-60">
+                <div className="h-60 overflow-y-auto">
                   {filteredAvailableItems.map((item) => (
                     <CommandItem
                       key={item}
