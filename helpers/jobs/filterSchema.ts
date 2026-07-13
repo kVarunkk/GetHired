@@ -56,9 +56,7 @@ export const jobFilterSchema = z.object({
 
   location: preprocessArray(z.array(z.string()))
     .optional()
-    .describe(
-      "List of general locations (e.g., 'Bangalore' (change 'bengaluru' to 'bangalore'), 'Gurgaon' (change 'gurugram' to 'gurgaon'), 'Remote').",
-    ),
+    .describe("List of general locations including 'Remote')."),
 
   // visaRequirement: preprocessArray(z.array(z.enum(VISA_REQUIREMENTS)))
   //   .optional()

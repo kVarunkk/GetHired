@@ -1,5 +1,4 @@
 import { cn } from "@/utils/utils";
-import MultiKeywordSelect from "../MultiKeywordSelect";
 import { StepProps } from "../OnboardingComponent";
 import { CardContent } from "../ui/card";
 import { Input } from "../ui/input";
@@ -12,12 +11,12 @@ import {
   SelectValue,
 } from "../ui/select";
 import InfoTooltip from "../InfoTooltip";
+import LocationSearchSelect from "../LocationSearchSelect";
 
 export const Step2LocationSalary: React.FC<StepProps> = ({
   formData,
   setFormData,
   errors,
-  loadingLocations,
 }) => (
   <CardContent className="flex flex-col gap-4 !p-0">
     <div>
@@ -29,7 +28,7 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
       </Label>
 
       <div className="mt-2">
-        <MultiKeywordSelect
+        {/* <MultiKeywordSelect
           name="preferred_locations"
           placeholder="Select preferred locations"
           initialKeywords={formData.preferred_locations ?? []}
@@ -39,6 +38,17 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
           availableItems={formData.default_locations}
           isVirtualized={true}
           loading={loadingLocations}
+          className={cn(errors.preferred_locations ? "border-red-500" : "")}
+        /> */}
+
+        <LocationSearchSelect
+          name={"preferred_locations"}
+          initialLocations={formData.preferred_locations ?? []}
+          onChange={(name, keywords) =>
+            setFormData((prev) => ({ ...prev, [name]: keywords }))
+          }
+          placeholder={"Select preferred locations"}
+          isSingleSelect={false}
           className={cn(errors.preferred_locations ? "border-red-500" : "")}
         />
       </div>

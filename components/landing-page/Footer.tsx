@@ -73,7 +73,7 @@ const popularSearches = [
   },
   {
     name: "Tech Jobs in Bengaluru",
-    href: "/jobs?jobTitleKeywords=developer%7Cengineer&location=Bangalore",
+    href: "/jobs?jobTitleKeywords=developer%7Cengineer&location=Bengaluru",
   },
   {
     name: "Senior Developer Roles",
@@ -84,7 +84,7 @@ const popularSearches = [
 const remoteJobs = [
   {
     name: "Remote Jobs in Bengaluru",
-    href: "/remote-jobs/bangalore",
+    href: "/remote-jobs/Bengaluru",
   },
   {
     name: "Remote Jobs in Gurugram",

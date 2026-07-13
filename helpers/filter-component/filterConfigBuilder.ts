@@ -1,9 +1,6 @@
 import { platformsArray } from "@/utils/platforms";
 import { FilterConfig, TApplicationStatus } from "@/utils/types";
 
-const toOptions = (list?: { location: string }[]) =>
-  list?.map((each) => ({ value: each.location, label: each.location })) || [];
-
 export const filterConfigBuilder = (
   currentPage: "jobs" | "profiles" | "companies",
   uniqueCompanies?: { company_name: string }[],
@@ -12,7 +9,6 @@ export const filterConfigBuilder = (
   uniqueIndustryPreferences?: { industry_preference: string }[],
   uniqueSkills?: { skill: string }[],
   uniqueWorkStylePreferences?: { work_style_preference: string }[],
-  countries?: { location: string }[],
   uniqueIndustries?: { industry: string }[],
   onboardingComplete?: boolean,
 ) => {
@@ -52,9 +48,9 @@ export const filterConfigBuilder = (
         {
           name: "location",
           label: "Location",
-          type: "multi-select",
+          type: "location-search-select",
           placeholder: "Select the location of Job",
-          options: countries ? toOptions(countries) : [],
+          options: [],
           isVirtualized: true,
         },
         // {
@@ -151,6 +147,7 @@ export const filterConfigBuilder = (
             value: each.job_role,
             label: each.job_role,
           })),
+          isVirtualized: true,
         },
         {
           name: "industryPreference",
@@ -161,6 +158,7 @@ export const filterConfigBuilder = (
             value: each.industry_preference,
             label: each.industry_preference,
           })),
+          isVirtualized: true,
         },
         {
           name: "workStylePreference",
@@ -171,6 +169,7 @@ export const filterConfigBuilder = (
             value: each.work_style_preference,
             label: each.work_style_preference,
           })),
+          isVirtualized: true,
         },
         {
           name: "skills",
@@ -181,17 +180,18 @@ export const filterConfigBuilder = (
             value: each.skill,
             label: each.skill,
           })),
+          isVirtualized: true,
         },
         {
           name: "location",
           label: "Location",
           type: "multi-select",
           placeholder: "Select the location of Job",
-
           options: uniqueLocations?.map((each) => ({
             value: each.location,
             label: each.location,
           })),
+          isVirtualized: true,
         },
 
         {

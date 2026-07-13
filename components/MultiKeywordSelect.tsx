@@ -142,7 +142,11 @@ export default function MultiKeywordSelect({
                   !showKeywords && "rounded-l-none shadow-none",
                 )}
               >
-                <span className="truncate">{placeholder}</span>
+                <span className="truncate">
+                  {initialKeywords.length > 0
+                    ? `${initialKeywords.length} items selected`
+                    : placeholder}
+                </span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             )}

@@ -9,7 +9,8 @@ export const getInitialState = (
     const paramValue = searchParams.get(filter.name);
     if (
       filter.type === "multi-select" ||
-      filter.type === "multi-select-input"
+      filter.type === "multi-select-input" ||
+      filter.type === "location-search-select"
     ) {
       (initialState[filter.name] as string[]) = paramValue
         ? paramValue

@@ -28,9 +28,9 @@ import { User } from "@supabase/supabase-js";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LocationSelector } from "./LocationSelector";
 import { commonIndustries } from "@/utils/utils";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
+import LocationSearchSelect from "./LocationSearchSelect";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -446,9 +446,14 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
                     <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
-                    <LocationSelector
-                      value={field.value}
-                      onChange={field.onChange}
+                    <LocationSearchSelect
+                      name={field.name}
+                      initialLocations={[field.value]}
+                      onChange={(name, selectedLocations) =>
+                        field.onChange(selectedLocations?.[0])
+                      }
+                      placeholder="Select preferred locations"
+                      isSingleSelect={true}
                     />
                   </FormControl>
                   <FormMessage />

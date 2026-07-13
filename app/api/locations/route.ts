@@ -1,69 +1,59 @@
-import { createClient } from "@/lib/supabase/server";
-import { ICountry } from "@/utils/types";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { unstable_cache } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
-const manipulateLocations = (
-  data: {
-    country: string | null;
-    cities: string[] | null;
-    iso: string | null;
-  }[],
-) => {
-  const locationSet = new Set<string>();
+const getCachedLocations = (search: string) =>
+  unstable_cache(
+    async (query: string) => {
+      console.log(`=== [CACHE MISS] Fetching "${query}" from Supabase ===`);
+      const supabase = createServiceRoleClient();
+      const { data, error } = await supabase
+        .from("flat_locations")
+        .select("country, city")
+        .or(`country.ilike.%${query}%,city.ilike.%${query}%`);
 
-  locationSet.add("Remote");
-
-  if (Array.isArray(data)) {
-    data.forEach((countryData) => {
-      if (countryData.country) {
-        locationSet.add(countryData.country);
-      }
-
-      if (Array.isArray(countryData.cities)) {
-        countryData.cities.forEach((city: string) => {
-          locationSet.add(city);
-        });
-      }
-    });
-  }
-
-  const locations = Array.from(locationSet).map((loc) => ({
-    location: loc,
-  }));
-  return locations;
-};
+      if (error) throw error;
+      return data || [];
+    },
+    [`location-search-${search}`],
+    { revalidate: 3600, tags: ["locations"] },
+  )(search);
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const filterComponent = searchParams.get("filterComponent");
+    const search = searchParams.get("query")?.trim() || "";
 
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-      .from("countries_and_cities")
-      .select("country, cities, iso");
-
-    if (error) {
-      throw error;
+    if (!search) {
+      return NextResponse.json({ data: [{ location: "Remote" }] });
     }
 
-    if (!data) {
-      throw new Error("Data not available");
+    const data = await getCachedLocations(search);
+
+    const locationSet = new Set<string>();
+    const lowerSearch = search.toLowerCase();
+
+    if (Array.isArray(data)) {
+      data.forEach((row) => {
+        if (row.country && row.country.toLowerCase().includes(lowerSearch)) {
+          locationSet.add(row.country);
+        }
+        if (row.city && row.city.toLowerCase().includes(lowerSearch)) {
+          locationSet.add(row.city);
+        }
+      });
     }
 
-    const finalLocations = filterComponent
-      ? manipulateLocations(data)
-      : (data as ICountry[]);
+    const finalLocations = Array.from(locationSet)
+      .slice(0, 50)
+      .map((loc) => ({ location: loc }));
 
-    return NextResponse.json({ data: finalLocations || [] });
+    return NextResponse.json({ data: finalLocations });
   } catch (err: unknown) {
     return NextResponse.json(
       {
         error:
-          err instanceof Error
-            ? err.message
-            : String(err) || "An unexpected error occurred",
+          err instanceof Error ? err.message : "An unexpected error occurred",
       },
       { status: 500 },
     );

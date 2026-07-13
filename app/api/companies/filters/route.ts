@@ -19,12 +19,14 @@ export async function GET() {
     const locations = locationsResult.data || [];
     const companies = companiesResult.data || [];
 
-    return NextResponse.json({ locations, companies }, { status: 200 });
+    return NextResponse.json(
+      { uniqueLocations: locations, companies },
+      { status: 200 },
+    );
   } catch {
-    // console.error("Error fetching filters:", e);
     return NextResponse.json(
       { error: "Failed to fetch filters" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
