@@ -164,7 +164,9 @@ function ItemsList({
         }}
       />
       <CommandList>
-        <CommandEmpty>No items available</CommandEmpty>
+        <CommandEmpty className="h-60 text-muted-foreground">
+          No items available
+        </CommandEmpty>
         <CommandGroup>
           <div className="h-60 w-full">
             <AutoSizer>

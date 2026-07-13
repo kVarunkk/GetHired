@@ -30,10 +30,9 @@ import { Step4VisaWorkStyle } from "./onboarding-steps/Step4";
 import { Step5CareerGoals } from "./onboarding-steps/Step5";
 import { Step6ResumeUpload } from "./onboarding-steps/Step6";
 import { Step7ReviewSubmit } from "./onboarding-steps/Step7";
-import { fetcher, isValidUrl } from "@/utils/utils";
+import { isValidUrl } from "@/utils/utils";
 import { Loader2 } from "lucide-react";
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
-import useSWR from "swr";
 import { submitOnboardingAction } from "@/app/actions/submit-onboarding";
 import { useProgress } from "react-transition-progress";
 
@@ -58,7 +57,6 @@ type IFormData = {
   resume_file: File | null;
   resume_id: string | null;
   no_of_resumes?: number;
-  default_locations?: string[];
   job_type: string[];
   user_id?: string;
   is_promotion_active?: boolean;
@@ -73,7 +71,6 @@ export interface StepProps {
   setErrors: React.Dispatch<
     React.SetStateAction<Partial<Record<keyof IFormData, string>>>
   >;
-  loadingLocations?: boolean;
 }
 
 export const OnboardingForm: React.FC = () => {
@@ -97,7 +94,6 @@ export const OnboardingForm: React.FC = () => {
     company_size_preference: "",
     resume_file: null,
     resume_id: null,
-    default_locations: [],
     job_type: [],
     email: "",
   });
@@ -110,23 +106,8 @@ export const OnboardingForm: React.FC = () => {
   >({});
   const [user, setUser] = useState<User | null>(null);
   const startProgress = useProgress();
-
-  const {
-    data: countriesData,
-    error: countriesError,
-    isLoading: isLoadingLocations,
-  } = useSWR(`/api/locations?filterComponent=true`, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    staleTime: 10 * 60 * 1000,
-  });
-
-  const countries: { location: string }[] = useMemo(
-    () => (countriesData && !countriesError ? countriesData.data : []),
-    [countriesData, countriesError],
-  );
-
   const router = useRouter();
+
   const steps = useMemo(() => {
     return [
       {
@@ -227,10 +208,6 @@ export const OnboardingForm: React.FC = () => {
             is_public: data.is_public || false,
             no_of_resumes: noOfResumes,
             resume_file: null,
-            default_locations:
-              !isLoadingLocations && countries
-                ? countries.map((each: { location: string }) => each.location)
-                : [],
           }));
         } else if (error && error.code !== "PGRST116") {
           setError(`Failed to load user data: ${error.message}`);
@@ -242,7 +219,7 @@ export const OnboardingForm: React.FC = () => {
     };
 
     fetchUserAndData();
-  }, [countries, isLoadingLocations]);
+  }, []);
 
   const validateStep = useCallback(() => {
     const currentStepFields = steps[currentStep].fields;
@@ -524,7 +501,7 @@ export const OnboardingForm: React.FC = () => {
             setFormData={setFormData}
             errors={formErrors}
             setErrors={setFormErrors}
-            loadingLocations={isLoadingLocations}
+            // loadingLocations={isLoadingLocations}
           />
           {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
 

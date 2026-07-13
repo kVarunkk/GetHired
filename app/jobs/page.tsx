@@ -150,8 +150,8 @@ export default async function JobsPage({
 
   const validated = jobFilterSchema.safeParse(searchParameters);
   const cleanParams = validated.success ? validated.data : {};
-  const dynamicKey = serializeFiltersToURL(cleanParams);
-  const params = new URLSearchParams(dynamicKey);
+  // const dynamicKey = serializeFiltersToURL(cleanParams);
+  const params = new URLSearchParams(serializeFiltersToURL(cleanParams));
   params.set("tab", activeTab);
   const isRelevantSorting = params.get("sortBy") === "relevance";
   const isSimilarSearch = !!(isRelevantSorting && params.get("jobId"));
@@ -204,7 +204,7 @@ export default async function JobsPage({
     <div className="flex items-start px-4  gap-5">
       <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[100vh] overflow-y-auto">
         <FilterComponent
-          dynamicKey={dynamicKey}
+          dynamicKey={params.toString()}
           onboardingComplete={onboardingComplete}
           currentPage="jobs"
         />
@@ -220,7 +220,7 @@ export default async function JobsPage({
           {!applicationStatusFilter && (
             <TabsContent value="all">
               <JobsComponent
-                dynamicKey={dynamicKey}
+                dynamicKey={params.toString()}
                 initialJobs={initialJobs || []}
                 user={user}
                 isCompanyUser={isCompanyUser}
@@ -240,7 +240,7 @@ export default async function JobsPage({
             !isAISearch && (
               <TabsContent value="saved">
                 <JobsComponent
-                  dynamicKey={dynamicKey}
+                  dynamicKey={params.toString()}
                   initialJobs={initialJobs || []}
                   user={user}
                   isCompanyUser={isCompanyUser}
@@ -257,7 +257,7 @@ export default async function JobsPage({
           {user && !isCompanyUser && !isAISearch && (
             <TabsContent value="applied">
               <JobsComponent
-                dynamicKey={dynamicKey}
+                dynamicKey={params.toString()}
                 initialJobs={initialJobs || []}
                 user={user}
                 isCompanyUser={isCompanyUser}

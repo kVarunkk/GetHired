@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   FormEvent,
   useState,
@@ -20,6 +20,7 @@ import FilterActions from "./FilterActions";
 import { useFilterOptions } from "@/hooks/useFilterOptions";
 import { filterConfigBuilder } from "@/helpers/filter-component/filterConfigBuilder";
 import { getInitialState } from "@/helpers/filter-component/getInitialState";
+import LocationSearchSelect from "./LocationSearchSelect";
 
 export default function FilterComponent({
   setOpenSheet,
@@ -33,7 +34,10 @@ export default function FilterComponent({
   dynamicKey: string;
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useMemo(
+    () => new URLSearchParams(dynamicKey),
+    [dynamicKey],
+  );
   const startProgress = useProgress();
   const [isPending, startTransition] = useTransition();
 
@@ -44,7 +48,6 @@ export default function FilterComponent({
     uniqueIndustryPreferences,
     uniqueSkills,
     uniqueWorkStylePreferences,
-    countries,
     uniqueIndustries,
   } = useFilterOptions(currentPage);
 
@@ -57,7 +60,6 @@ export default function FilterComponent({
       uniqueIndustryPreferences,
       uniqueSkills,
       uniqueWorkStylePreferences,
-      countries,
       uniqueIndustries,
       onboardingComplete,
     );
@@ -71,7 +73,6 @@ export default function FilterComponent({
     uniqueLocations,
     uniqueSkills,
     uniqueWorkStylePreferences,
-    countries,
   ]);
 
   const sortBy = searchParams.get("sortBy");
@@ -90,16 +91,13 @@ export default function FilterComponent({
     setFilters(currentUrlFilters);
   }
 
-  const handleChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
-      setFilters((prevFilters) => ({
-        ...prevFilters,
-        [name as keyof FiltersState]: value,
-      }));
-    },
-    [setFilters],
-  );
+  const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters((prevFilters) => ({
+      ...prevFilters,
+      [name as keyof FiltersState]: value,
+    }));
+  }, []);
 
   const handleMultiKeywordSelectChange = useCallback(
     (name: keyof GenericFormData, keywords: string[]) => {
@@ -108,7 +106,7 @@ export default function FilterComponent({
         [name]: keywords,
       }));
     },
-    [setFilters],
+    [],
   );
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -127,7 +125,8 @@ export default function FilterComponent({
 
       if (
         filterConfig?.type === "multi-select" ||
-        filterConfig?.type === "multi-select-input"
+        filterConfig?.type === "multi-select-input" ||
+        filterConfig?.type === "location-search-select"
       ) {
         if (Array.isArray(value) && value.length > 0) {
           if (filterConfig.name === "createdAfter") {
@@ -200,6 +199,18 @@ export default function FilterComponent({
             onChange={handleMultiKeywordSelectChange}
             className="mt-1 w-full"
             availableItems={config.options?.map((e) => e.value)}
+          />
+        );
+
+      case "location-search-select":
+        return (
+          <LocationSearchSelect
+            name={config.name}
+            initialLocations={filters[config.name] as string[]}
+            onChange={handleMultiKeywordSelectChange}
+            placeholder={config.placeholder}
+            isSingleSelect={false}
+            className="mt-1 w-full"
           />
         );
 

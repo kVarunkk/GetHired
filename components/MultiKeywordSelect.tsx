@@ -142,7 +142,11 @@ export default function MultiKeywordSelect({
                   !showKeywords && "rounded-l-none shadow-none",
                 )}
               >
-                <span className="truncate">{placeholder}</span>
+                <span className="truncate">
+                  {initialKeywords.length > 0
+                    ? `${initialKeywords.length} items selected`
+                    : placeholder}
+                </span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             )}
@@ -445,7 +449,7 @@ function ItemsList({
         <CommandEmpty
           className={`${
             name === "profile" && "py-10"
-          } text-secondary-foreground text-center py-5`}
+          } text-muted-foreground text-center py-5 h-60`}
         >
           No items available
         </CommandEmpty>
@@ -480,32 +484,36 @@ function ItemsList({
                   </AutoSizer>
                 </div>
               )
-            : filteredAvailableItems.map((item) => (
-                <CommandItem
-                  key={item}
-                  value={item}
-                  disabled={
-                    initialKeywords.includes(item) && name === "profile"
-                  }
-                  onSelect={() => {
-                    if (initialKeywords.includes(item)) {
-                      removeKeyword(item);
-                    } else {
-                      addKeyword(item);
-                    }
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      initialKeywords.includes(item)
-                        ? "opacity-100"
-                        : "opacity-0",
-                    )}
-                  />
-                  {item}
-                </CommandItem>
-              ))}
+            : filteredAvailableItems.length > 0 && (
+                <div className="h-60">
+                  {filteredAvailableItems.map((item) => (
+                    <CommandItem
+                      key={item}
+                      value={item}
+                      disabled={
+                        initialKeywords.includes(item) && name === "profile"
+                      }
+                      onSelect={() => {
+                        if (initialKeywords.includes(item)) {
+                          removeKeyword(item);
+                        } else {
+                          addKeyword(item);
+                        }
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          initialKeywords.includes(item)
+                            ? "opacity-100"
+                            : "opacity-0",
+                        )}
+                      />
+                      {item}
+                    </CommandItem>
+                  ))}
+                </div>
+              )}
         </CommandGroup>
       </CommandList>
     </Command>

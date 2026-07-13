@@ -195,7 +195,12 @@ export type FiltersState = {
 export interface FilterConfig {
   name: keyof FiltersState;
   label: string;
-  type: "text" | "number" | "multi-select" | "multi-select-input";
+  type:
+    | "text"
+    | "number"
+    | "multi-select"
+    | "multi-select-input"
+    | "location-search-select";
   placeholder?: string;
   options?: { value: string; label: string }[];
   isVirtualized?: boolean;

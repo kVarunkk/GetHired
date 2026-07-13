@@ -9,7 +9,6 @@ export interface FilterOptions {
   uniqueIndustryPreferences: { industry_preference: string }[];
   uniqueSkills: { skill: string }[];
   uniqueWorkStylePreferences: { work_style_preference: string }[];
-  countries: { location: string }[];
   uniqueIndustries: { industry: string }[];
   loading: boolean;
   error: any;
@@ -26,22 +25,34 @@ export function useFilterOptions(
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     staleTime: ONE_DAY_MS,
-    // prevents fetch on re mount
     revalidateIfStale: false,
   });
 
-  const {
-    data: countriesData,
-    error: countriesError,
-    isLoading: countriesLoading,
-  } = useSWR(`/api/locations?filterComponent=true`, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    staleTime: ONE_DAY_MS,
-    revalidateIfStale: false,
-  });
-
-  const countries = useMemo(() => countriesData?.data || [], [countriesData]);
+  const uniqueCompanies = useMemo(
+    () => filterData?.companies || [],
+    [filterData?.companies],
+  );
+  const uniqueLocations = useMemo(
+    () => filterData?.uniqueLocations || [],
+    [filterData?.uniqueLocations],
+  );
+  console.log(uniqueLocations);
+  const uniqueJobRoles = useMemo(
+    () => filterData?.uniqueJobRoles || [],
+    [filterData?.uniqueJobRoles],
+  );
+  const uniqueIndustryPreferences = useMemo(
+    () => filterData?.uniqueIndustryPreferences || [],
+    [filterData?.uniqueIndustryPreferences],
+  );
+  const uniqueSkills = useMemo(
+    () => filterData?.uniqueSkills || [],
+    [filterData?.uniqueSkills],
+  );
+  const uniqueWorkStylePreferences = useMemo(
+    () => filterData?.uniqueWorkStylePreferences || [],
+    [filterData?.uniqueWorkStylePreferences],
+  );
 
   const uniqueIndustries = useMemo(
     () => commonIndustries.map((each) => ({ industry: each })),
@@ -49,15 +60,14 @@ export function useFilterOptions(
   );
 
   return {
-    uniqueCompanies: filterData?.companies || [],
-    uniqueLocations: filterData?.uniqueLocations || [],
-    uniqueJobRoles: filterData?.uniqueJobRoles || [],
-    uniqueIndustryPreferences: filterData?.uniqueIndustryPreferences || [],
-    uniqueSkills: filterData?.uniqueSkills || [],
-    uniqueWorkStylePreferences: filterData?.uniqueWorkStylePreferences || [],
-    countries,
+    uniqueCompanies,
+    uniqueLocations,
+    uniqueJobRoles,
+    uniqueIndustryPreferences,
+    uniqueSkills,
+    uniqueWorkStylePreferences,
     uniqueIndustries,
-    loading: filterLoading || countriesLoading,
-    error: filterError || countriesError,
+    loading: filterLoading,
+    error: filterError,
   };
 }

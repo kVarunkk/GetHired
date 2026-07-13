@@ -34,10 +34,10 @@ import {
 import { Loader2, Pencil, PlusCircle, Trash } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import MultiLocationSelector from "./MultiLocationSelector";
 import { ICreateJobPostingFormData } from "@/utils/types";
 import { upsertJobPostingAction } from "@/app/actions/upsert-job-posting";
 import { mutate } from "swr";
+import LocationSearchSelect from "./LocationSearchSelect";
 
 const jobFormSchema = z
   .object({
@@ -295,9 +295,14 @@ export default function CreateJobPostingDialog({
                     <FormItem>
                       <FormLabel>Locations</FormLabel>
                       <FormControl>
-                        <MultiLocationSelector
-                          value={field.value}
-                          onChange={field.onChange}
+                        <LocationSearchSelect
+                          name={field.name}
+                          initialLocations={field.value ?? []}
+                          onChange={(name, selectedLocations) =>
+                            field.onChange(selectedLocations)
+                          }
+                          placeholder="Select preferred locations"
+                          isSingleSelect={false}
                         />
                       </FormControl>
                       <FormMessage />

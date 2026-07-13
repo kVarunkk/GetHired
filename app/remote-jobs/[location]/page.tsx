@@ -38,8 +38,8 @@ export async function generateStaticParams() {
 async function getAliasMap() {
   const map = new Map<string, string>();
 
-  map.set("bengaluru", "bangalore");
-  map.set("gurugram", "gurgaon");
+  // map.set("bengaluru", "bangalore");
+  // map.set("gurugram", "gurgaon");
   map.set("sf", "san francisco");
   map.set("nyc", "new york");
   return map;
