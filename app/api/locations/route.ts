@@ -5,7 +5,6 @@ import { NextRequest, NextResponse } from "next/server";
 const getCachedLocations = (search: string) =>
   unstable_cache(
     async (query: string) => {
-      console.log(`=== [CACHE MISS] Fetching "${query}" from Supabase ===`);
       const supabase = createServiceRoleClient();
       const { data, error } = await supabase
         .from("flat_locations")

@@ -90,6 +90,7 @@ export async function updateSession(request: NextRequest) {
     "/api/jobs",
     "/api/profiles",
     "/api/locations",
+    "/api/health",
     "/api/jobs/filters",
     "/api/companies",
     "/api/companies/filters",
