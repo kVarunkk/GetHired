@@ -1,10 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "./ui/button";
-import { HeroMaskStyle } from "@/utils/utils";
-
-const JOB_SEEKER_DARK = "/hero/job-seeker-hero-dark.png";
-const JOB_SEEKER_LIGHT = "/hero/job-seeker-hero-light.png";
+import {
+  HeroMaskStyle,
+  JOB_SEEKER_DARK,
+  JOB_SEEKER_LIGHT,
+} from "@/utils/utils";
 
 export default function HeroRemotePage({
   location,
