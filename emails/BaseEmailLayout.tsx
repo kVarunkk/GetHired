@@ -1,3 +1,4 @@
+import { BRAND_SHORT_LIGHT } from "@/utils/utils";
 import {
   Body,
   Container,
@@ -36,7 +37,7 @@ export const BaseEmailLayout = ({
                 <Column className="w-full">
                   <Link href="https://gethired.devhub.co.in">
                     <Img
-                      src="https://gethired.devhub.co.in/logos/short-light.png"
+                      src={BRAND_SHORT_LIGHT}
                       width="50"
                       alt="GetHired"
                       className="max-w-[50px]"
