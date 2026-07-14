@@ -1,5 +1,5 @@
 import PaymentUpdateEmail from "@/emails/PaymentUpdateEmail";
-import { sendEmail } from "@/utils/serverUtils";
+import { sendEmail } from "@/utils/email";
 import { TWebhookPaymentDetails } from "@/utils/types/payments.types";
 import { render } from "@react-email/components";
 

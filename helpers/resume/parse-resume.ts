@@ -1,4 +1,4 @@
-import { getVertexClient } from "@/utils/serverUtils";
+import { getVertexClient } from "@/utils/vertex";
 import { z } from "zod";
 import { wrapInSandbox } from "../ai/security";
 import { generateText, Output } from "ai";

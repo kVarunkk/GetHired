@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import {
-  INTERNAL_API_SECRET,
-  sendEmailForStatusUpdate,
-} from "@/utils/serverUtils";
+import { sendEmailForStatusUpdate } from "@/utils/email";
 import { processJobPostingRelevance } from "@/helpers/profiles/relevant-profiles-utils";
+import { INTERNAL_API_SECRET } from "@/utils/formatters";
 
 type RelevanceJobMessage = {
   msg_id: number;
@@ -74,6 +72,15 @@ export async function GET() {
           );
 
           if (msg.read_ct >= MAX_RETRIES) {
+            await supabase
+              .from("job_postings")
+              .update({
+                matching_status: "failed",
+                matching_error: `Failed after retrying for ${MAX_RETRIES} time.`,
+                matched_at: new Date().toISOString(),
+              })
+              .eq("id", msg.message.jobId);
+
             console.error(
               `[WORKER] Message ${msg.msg_id} exceeded max retries (${MAX_RETRIES}). Evicting...`,
             );

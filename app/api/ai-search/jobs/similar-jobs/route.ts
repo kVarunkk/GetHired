@@ -3,7 +3,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { AIRerankRequestBody, TAICredits } from "@/utils/types";
-import { getVertexClient } from "@/utils/serverUtils";
+import { getVertexClient } from "@/utils/vertex";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 
 export async function POST(request: NextRequest) {
@@ -102,11 +102,6 @@ export async function POST(request: NextRequest) {
         }),
       }),
     });
-
-    // await supabase.rpc("deduct_user_credits", {
-    //   p_user_id: userId,
-    //   p_amount: TAICredits.AI_SEARCH_ASK_AI_RESUME,
-    // });
 
     await deductUserCreditsHelper(
       supabase,

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { embed } from "ai";
-import { getVertexClient, INTERNAL_API_SECRET } from "@/utils/serverUtils";
+import { getVertexClient } from "@/utils/vertex";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { INTERNAL_API_SECRET } from "@/utils/formatters";
 
 export async function POST(request: Request) {
   const headersList = await headers();

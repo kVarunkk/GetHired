@@ -2,7 +2,7 @@
 
 import { generateText } from "ai";
 import { createClient } from "@/lib/supabase/server";
-import { getVertexClient } from "@/utils/serverUtils";
+import { getVertexClient } from "@/utils/vertex";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { TAICredits } from "@/utils/types";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";

@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { AllJobWithRelations, TAICredits } from "../../utils/types";
-import { INTERNAL_API_SECRET } from "@/utils/serverUtils";
+import { INTERNAL_API_SECRET } from "@/utils/formatters";
 
 interface RerankResult {
   initialJobs: AllJobWithRelations[];

@@ -1,7 +1,7 @@
 import { TCompanyInfo } from "@/utils/types";
 import { createClient } from "../../lib/supabase/server";
 import { PostgrestError } from "@supabase/supabase-js";
-import { parseMultiSelectParam } from "@/utils/serverUtils";
+import { parseMultiSelectParam } from "@/utils/formatters";
 export const companiesSelectString = `id, created_at, updated_at, name, industry, description, website, headquarters, company_size, logo_url, tag_line`;
 
 export const buildCompaniesQuery = async ({

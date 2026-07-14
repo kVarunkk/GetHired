@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import {
-  INTERNAL_API_SECRET,
-  sendEmailForStatusUpdate,
-} from "@/utils/serverUtils";
+import { sendEmailForStatusUpdate } from "@/utils/email";
+import { INTERNAL_API_SECRET } from "@/utils/formatters";
 
 export async function GET() {
   const headersList = await headers();

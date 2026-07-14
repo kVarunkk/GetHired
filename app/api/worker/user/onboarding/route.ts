@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import {
-  INTERNAL_API_SECRET,
-  sendEmailForStatusUpdate,
-} from "@/utils/serverUtils";
+import { sendEmailForStatusUpdate } from "@/utils/email";
 import { parseResume } from "@/helpers/resume/parse-resume";
 import { revalidateCacheAction } from "@/app/actions/revalidate-tag";
 import { processUserRelevance } from "@/helpers/jobs/relevant-jobs-utils";
 import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
+import { INTERNAL_API_SECRET } from "@/utils/formatters";
 
 export type OnboardingMessage = {
   msg_id: number;
@@ -21,7 +19,7 @@ export type OnboardingMessage = {
 };
 
 const BATCH_SIZE = 2;
-const VISIBILITY_TIMEOUT = 60;
+const VISIBILITY_TIMEOUT = 90;
 const MAX_RETRIES = 3;
 
 export async function GET() {
@@ -66,6 +64,14 @@ export async function GET() {
           const { userId, resumeId, shouldParse } = msg.message;
 
           if (msg.read_ct >= MAX_RETRIES) {
+            await supabase
+              .from("user_info")
+              .update({
+                relevant_jobs_update_status: "failed",
+                updated_at: new Date().toISOString(),
+              })
+              .eq("user_id", msg.message.userId);
+
             await supabase.schema("pgmq_public").rpc("delete", {
               queue_name: "onboarding_pipeline",
               message_id: msg.msg_id,

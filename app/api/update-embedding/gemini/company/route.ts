@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { embed } from "ai";
-import { getVertexClient } from "@/utils/serverUtils";
+import { getVertexClient } from "@/utils/vertex";
 
 export async function POST(request: Request) {
   try {

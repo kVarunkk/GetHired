@@ -1,12 +1,8 @@
 import { RelevantProfilesUpdateEmail } from "@/emails/RelevantProfilesUpdateEmail";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import {
-  deploymentUrl,
-  INTERNAL_API_SECRET,
-  sendEmail,
-  sendEmailForStatusUpdate,
-} from "@/utils/serverUtils";
+import { sendEmail, sendEmailForStatusUpdate } from "@/utils/email";
+import { deploymentUrl, INTERNAL_API_SECRET } from "@/utils/formatters";
 import { AllProfileWithRelations } from "@/utils/types";
 import { render } from "@react-email/components";
 import { headers } from "next/headers";

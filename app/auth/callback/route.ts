@@ -1,4 +1,4 @@
-import { handleUserUpsert } from "@/utils/serverUtils";
+import { handleUserUpsert } from "@/utils/auth-handlers";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 

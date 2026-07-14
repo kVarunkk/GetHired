@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateText, Output } from "ai";
-import { getVertexClient } from "@/utils/serverUtils";
+import { getVertexClient } from "@/utils/vertex";
 import { createClient } from "@/lib/supabase/server";
 import { TAICredits } from "@/utils/types";
 import { jobFilterSchema } from "@/helpers/jobs/filterSchema";

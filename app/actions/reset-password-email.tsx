@@ -1,8 +1,9 @@
 "use server";
 
 import ResetPasswordEmail from "@/emails/ResetPasswordEmail";
-import { deploymentUrl, sendEmail } from "@/utils/serverUtils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { sendEmail } from "@/utils/email";
+import { deploymentUrl } from "@/utils/formatters";
 import { render } from "@react-email/components";
 
 const URL = deploymentUrl();

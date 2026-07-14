@@ -3,7 +3,7 @@
 import { render } from "@react-email/components";
 import { PromotionEmail } from "@/emails/PromotionEmail";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { sendEmail } from "@/utils/serverUtils";
+import { sendEmail } from "@/utils/email";
 
 /**
  * Sends a promotional email to all users who have 'is_promotion_active' set to true.

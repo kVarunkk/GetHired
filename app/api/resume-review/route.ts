@@ -2,7 +2,7 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getVertexClient } from "@/utils/serverUtils";
+import { getVertexClient } from "@/utils/vertex";
 import { TAICredits } from "@/utils/types";
 import {
   validateAndSanitizeSearchQuery,

@@ -1,15 +1,11 @@
 import { render } from "@react-email/components";
 import RelevantJobsSetupUpdateEmail from "@/emails/RelevantJobsSetupUpdateEmail";
-import {
-  deploymentUrl,
-  INTERNAL_API_SECRET,
-  sendEmail,
-  sendEmailForStatusUpdate,
-} from "@/utils/serverUtils";
+import { sendEmail, sendEmailForStatusUpdate } from "@/utils/email";
 import { AllJobWithRelations, TAICredits } from "@/utils/types";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
+import { deploymentUrl, INTERNAL_API_SECRET } from "@/utils/formatters";
 
 const URL = deploymentUrl();
 

@@ -2,15 +2,16 @@ import JobDigestEmail from "@/emails/JobDigestEmail";
 import { createServiceRoleClient } from "../../lib/supabase/service-role";
 import { render } from "@react-email/components";
 import { AllJobWithRelations, TAICredits } from "@/utils/types";
-import {
-  deploymentUrl,
-  INTERNAL_API_SECRET,
-  sendEmail,
-} from "@/utils/serverUtils";
+import { sendEmail } from "@/utils/email";
 import { RelevanceJobMessage } from "@/app/api/updates/applicants/digest/worker/route";
+import { deploymentUrl, INTERNAL_API_SECRET } from "@/utils/formatters";
 
 export async function getAllDigestUsers() {
   const supabase = createServiceRoleClient();
+
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+  const threeDaysAgoISO = threeDaysAgo.toISOString();
 
   const { data, error } = await supabase
     .from("user_info")
@@ -26,7 +27,8 @@ export async function getAllDigestUsers() {
     .neq("full_name", null)
     .eq("filled", true)
     .gte("ai_credits", TAICredits.AI_SEARCH_ASK_AI_RESUME)
-    .eq("is_job_digest_active", true);
+    .eq("is_job_digest_active", true)
+    .lt("created_at", threeDaysAgoISO);
 
   if (error) {
     console.error("Supabase Error fetching digest users:", error);
