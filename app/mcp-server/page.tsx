@@ -6,7 +6,7 @@ import Hero from "@/components/landing-page/Hero";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
-import { getPlatformStats } from "@/utils/serverUtils";
+import { getPlatformStats } from "@/utils/auth-handlers";
 import { MCP_SERVER_DARK, MCP_SERVER_LIGHT } from "@/utils/utils";
 import { Metadata } from "next";
 

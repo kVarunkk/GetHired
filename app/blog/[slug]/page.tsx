@@ -8,7 +8,7 @@ import { Metadata } from "next";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import FootComponent from "@/components/FootComponent";
-import { deploymentUrl } from "@/utils/serverUtils";
+import { deploymentUrl } from "@/utils/formatters";
 
 const reader = createReader(process.cwd(), keystaticConfig);
 type tParams = Promise<{ slug: string }>;

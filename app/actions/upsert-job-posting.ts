@@ -1,16 +1,17 @@
 "use server";
 
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+
+import { ICreateJobPostingFormData } from "@/utils/types";
+import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
+import { revalidateTag } from "next/cache";
+import { buildSalaryRange } from "@/utils/buildSalaryRange";
 import {
   buildEquityRange,
   buildExperience,
   deploymentUrl,
   INTERNAL_API_SECRET,
-} from "@/utils/serverUtils";
-import { ICreateJobPostingFormData } from "@/utils/types";
-import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
-import { revalidateTag } from "next/cache";
-import { buildSalaryRange } from "@/utils/buildSalaryRange";
+} from "@/utils/formatters";
 
 /**
  * SERVER ACTION: upsertJobPostingAction

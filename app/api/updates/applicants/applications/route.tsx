@@ -3,12 +3,9 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/render";
 import ApplicationStatusReminderEmail from "@/emails/ApplicationStatusReminderEmail";
 import { headers } from "next/headers";
-import {
-  INTERNAL_API_SECRET,
-  sendEmail,
-  sendEmailForStatusUpdate,
-} from "@/utils/serverUtils";
+import { sendEmail, sendEmailForStatusUpdate } from "@/utils/email";
 import React from "react";
+import { INTERNAL_API_SECRET } from "@/utils/formatters";
 
 const DAYS_AGO = 7;
 

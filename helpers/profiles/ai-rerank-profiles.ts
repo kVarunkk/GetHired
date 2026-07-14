@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { AllProfileWithRelations } from "../../utils/types";
-import { INTERNAL_API_SECRET } from "@/utils/serverUtils";
+import { INTERNAL_API_SECRET } from "@/utils/formatters";
 
 interface RerankResult {
   initialProfiles: AllProfileWithRelations[];

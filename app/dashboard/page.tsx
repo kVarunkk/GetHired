@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import InfoTooltip from "@/components/InfoTooltip";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
-import { simpleTimeAgo } from "@/utils/serverUtils";
+import { simpleTimeAgo } from "@/utils/date";
 import { ArrowRight } from "lucide-react";
 import RechargeCredits from "@/components/RechargeCredits";
 import DashboardDropdown from "@/components/DashboardDropdown";

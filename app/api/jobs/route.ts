@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { rerankJobsIfApplicable } from "@/helpers/jobs/ai-rerank-jobs";
 import { TAICredits } from "@/utils/types";
-import { getCutOffDate } from "@/utils/serverUtils";
+import { getCutOffDate } from "@/utils/date";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 
 export async function GET(request: NextRequest) {

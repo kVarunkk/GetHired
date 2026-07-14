@@ -3,7 +3,7 @@
 import { render } from "@react-email/components";
 import React from "react";
 import ResumeParsingStatusEmail from "@/emails/ResumeParsingStatusEmail";
-import { sendEmail } from "@/utils/serverUtils";
+import { sendEmail } from "@/utils/email";
 
 /**
  * sendResumeParsingStatusEmail

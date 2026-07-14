@@ -6,7 +6,7 @@ import Footer from "@/components/landing-page/Footer";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
-import { getPlatformStats } from "@/utils/serverUtils";
+import { getPlatformStats } from "@/utils/auth-handlers";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

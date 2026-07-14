@@ -2,15 +2,11 @@ import { after, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/render";
 import { headers } from "next/headers";
-import {
-  deploymentUrl,
-  INTERNAL_API_SECRET,
-  sendEmail,
-  sendEmailForStatusUpdate,
-} from "@/utils/serverUtils";
+import { sendEmail, sendEmailForStatusUpdate } from "@/utils/email";
 import React from "react";
 import BookmarkAlertEmail from "@/emails/BookmarkAlertEmail";
 import { AllJobWithRelations } from "@/utils/types";
+import { deploymentUrl, INTERNAL_API_SECRET } from "@/utils/formatters";
 
 const URL = deploymentUrl();
 

@@ -4,7 +4,8 @@ import AuthConfirmationEmail from "@/emails/AuthConfirmationEmail";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/components";
 import { updateUserAppMetadata } from "./update-user-metadata";
-import { deploymentUrl, sendEmail } from "@/utils/serverUtils";
+import { sendEmail } from "@/utils/email";
+import { deploymentUrl } from "@/utils/formatters";
 
 const URL = deploymentUrl();
 

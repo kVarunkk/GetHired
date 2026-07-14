@@ -2,7 +2,7 @@
 
 import { render } from "@react-email/components";
 import ApplicationStatusUpdateEmail from "@/emails/ApplicationStatusUpdateEmail";
-import { sendEmail } from "@/utils/serverUtils";
+import { sendEmail } from "@/utils/email";
 
 export async function sendStatusUpdateEmail(
   email: string,

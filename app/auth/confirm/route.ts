@@ -1,4 +1,4 @@
-import { grantReferralCredits } from "@/utils/serverUtils";
+import { grantReferralCredits } from "@/utils/auth-handlers";
 import { createClient } from "@/lib/supabase/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";

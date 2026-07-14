@@ -3,7 +3,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { TAICredits, TResumeContent } from "@/utils/types";
-import { getVertexClient } from "@/utils/serverUtils";
+import { getVertexClient } from "@/utils/vertex";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 
 export async function POST(request: NextRequest) {

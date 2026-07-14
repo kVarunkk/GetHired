@@ -1,12 +1,13 @@
 "use server";
 
 import InviteUserEmail from "@/emails/InviteUserEmail";
-import { deploymentUrl, sendEmail } from "@/utils/serverUtils";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "@react-email/components";
 import { v4 as uuidv4 } from "uuid";
 import { updateUserAppMetadata } from "./update-user-metadata";
+import { deploymentUrl } from "@/utils/formatters";
+import { sendEmail } from "@/utils/email";
 
 const URL = deploymentUrl();
 
