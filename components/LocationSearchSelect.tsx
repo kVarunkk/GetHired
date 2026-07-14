@@ -316,7 +316,7 @@ function ItemsList({
   return (
     <Command shouldFilter={false}>
       <CommandInput
-        placeholder="Type a location..."
+        placeholder="Search cities or countries..."
         value={searchTerm}
         onValueChange={setSearchTerm}
       />
@@ -334,7 +334,7 @@ function ItemsList({
             </div>
           </CommandGroup>
         ) : (
-          <CommandGroup>
+          <CommandGroup heading={!searchTerm && "Suggested"}>
             {availableItems.length > 0 && (
               <div className="h-60 w-full">
                 <AutoSizer>

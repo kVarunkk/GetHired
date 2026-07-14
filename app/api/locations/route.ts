@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { DEFAULT_CITIES } from "@/utils/utils";
 import { unstable_cache } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -24,7 +25,9 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("query")?.trim() || "";
 
     if (!search) {
-      return NextResponse.json({ data: [{ location: "Remote" }] });
+      return NextResponse.json({
+        data: DEFAULT_CITIES,
+      });
     }
 
     const data = await getCachedLocations(search);
