@@ -103,6 +103,8 @@ export async function updateSession(request: NextRequest) {
     "/api/update-embedding/gemini/job",
     "/api/updates/applicants/relevant-jobs/enqueue",
     "/api/updates/applicants/relevant-jobs/worker",
+    "/api/updates/applicants/recharge/enqueue",
+    "/api/updates/applicants/recharge/worker",
     "/api/updates/company/relevant-profiles/enqueue",
     "/api/updates/company/relevant-profiles/worker",
     "/api/worker/user/onboarding",
