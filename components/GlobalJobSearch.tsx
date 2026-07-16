@@ -33,6 +33,7 @@ interface ParsedFilters {
 
 const premadePrompts = [
   "Show me remote frontend jobs for a senior engineer.",
+  "Software Engineer jobs in Bengaluru.",
   "I'm looking for fulltime backend roles in New York.",
   "Find entry-level data science jobs in San Francisco.",
   "What are the latest Java developer jobs, minimum salary $90k?",
