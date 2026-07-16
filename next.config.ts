@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
-const isRenderProduction = process.env.RENDER === "true";
-
+const isRenderProduction = true;
+// process.env.RENDER === "true"
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "standalone",
   reactStrictMode: false,
   images: {
     minimumCacheTTL: 60 * 60 * 24 * 7, // cache for 7 days

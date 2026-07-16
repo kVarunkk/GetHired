@@ -105,6 +105,8 @@ async function generateStructuredProfile(lines: string[]) {
 }
 
 export async function parseResume(userId: string, resumeId: string) {
+  const before = process.memoryUsage().rss / 1024 / 1024;
+
   const supabase = createServiceRoleClient();
 
   try {
@@ -145,6 +147,13 @@ export async function parseResume(userId: string, resumeId: string) {
       }
 
       const parsedProfile = await generateStructuredProfile(lines);
+
+      const after = process.memoryUsage().rss / 1024 / 1024;
+      if (after - before > 2) {
+        console.log(
+          `[mem-delta] PARSE RESUME : ${before.toFixed(0)}MB -> ${after.toFixed(0)}MB (+${(after - before).toFixed(0)}MB)`,
+        );
+      }
 
       const { error: dbError } = await supabase
         .from("resumes")

@@ -8,6 +8,8 @@ import { getCutOffDate } from "@/utils/date";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 
 export async function GET(request: NextRequest) {
+  const before = process.memoryUsage().rss / 1024 / 1024;
+
   const internalSecret = request.headers.get("X-Internal-Secret");
   const isInternalCall = internalSecret === process.env.INTERNAL_API_SECRET;
 
@@ -149,6 +151,13 @@ export async function GET(request: NextRequest) {
       cursor,
       isInternalCall,
     });
+
+    const after = process.memoryUsage().rss / 1024 / 1024;
+    if (after - before > 2) {
+      console.log(
+        `[mem-delta jobs api] ${request.nextUrl.pathname} : ${before.toFixed(0)}MB -> ${after.toFixed(0)}MB (+${(after - before).toFixed(0)}MB)`,
+      );
+    }
 
     return NextResponse.json({
       data: initialJobs,

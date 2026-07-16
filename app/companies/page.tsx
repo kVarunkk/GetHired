@@ -5,6 +5,7 @@ import { TAICredits, TCompanyInfo } from "@/utils/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import JobsComponent from "@/components/JobsComponent";
+import { getBaseUrl } from "@/utils/get-base-url";
 
 export default async function JobsPage({
   searchParams,
@@ -48,9 +49,11 @@ export default async function JobsPage({
 
   // --- Data Fetching ---
   const headersList = await headers();
-  const host = headersList.get("host");
-  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-  const url = `${protocol}://${host}`;
+  // const host = headersList.get("host");
+  // const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+  // const url = `${protocol}://${host}`;
+
+  const url = await getBaseUrl();
 
   let initialCompanies: TCompanyInfo[] = [];
 
