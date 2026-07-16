@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { AllJobWithRelations, TAICredits } from "../../utils/types";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
+import { getBaseUrl } from "@/utils/get-base-url";
 
 interface RerankResult {
   initialJobs: AllJobWithRelations[];
@@ -38,9 +39,11 @@ export async function rerankJobsIfApplicable({
   let removedJobs: AllJobWithRelations[] = [];
 
   const headersList = await headers();
-  const host = headersList.get("host");
-  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-  const url = `${protocol}://${host}`;
+  // const host = headersList.get("host");
+  // const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+  // const url = `${protocol}://${host}`;
+  const url = await getBaseUrl();
+
   const requiredCredits = TAICredits.AI_SEARCH_ASK_AI_RESUME;
 
   // Restore vector similarity order first

@@ -10,6 +10,7 @@ import {
   jobFilterSchema,
   serializeFiltersToURL,
 } from "@/helpers/jobs/filterSchema";
+import { getBaseUrl } from "@/utils/get-base-url";
 
 export async function generateMetadata({
   searchParams,
@@ -144,9 +145,10 @@ export default async function JobsPage({
 
   // --- Data Fetching ---
   const headersList = await headers();
-  const host = headersList.get("host");
-  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-  const url = `${protocol}://${host}`;
+  // const host = headersList.get("host");
+  // const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+  // const url = `${protocol}://${host}`;
+  const url = await getBaseUrl();
 
   const validated = jobFilterSchema.safeParse(searchParameters);
   const cleanParams = validated.success ? validated.data : {};

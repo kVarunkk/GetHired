@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { AllProfileWithRelations } from "../../utils/types";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
+import { getBaseUrl } from "@/utils/get-base-url";
 
 interface RerankResult {
   initialProfiles: AllProfileWithRelations[];
@@ -33,9 +34,11 @@ export async function rerankProfilesIfApplicable({
   let removedProfiles: AllProfileWithRelations[] = [];
 
   const headersList = await headers();
-  const host = headersList.get("host");
-  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-  const url = `${protocol}://${host}`;
+  // const host = headersList.get("host");
+  // const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+  // const url = `${protocol}://${host}`;
+
+  const url = await getBaseUrl();
 
   if (
     cursor ||

@@ -42,18 +42,28 @@ export async function GET(request: Request) {
         }
       }
 
-      const forwardedHost = request.headers.get("x-forwarded-host");
-      const isLocalEnv = process.env.NODE_ENV === "development";
+      // const forwardedHost = request.headers.get("x-forwarded-host");
+      // const isLocalEnv = process.env.NODE_ENV === "development";
 
-      if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}${finalRedirectPath}`);
-      } else if (forwardedHost) {
+      // if (isLocalEnv) {
+      //   return NextResponse.redirect(`${origin}${finalRedirectPath}`);
+      // } else if (forwardedHost) {
+      //   return NextResponse.redirect(
+      //     `https://${forwardedHost}${finalRedirectPath}`,
+      //   );
+      // } else {
+      //   return NextResponse.redirect(`${origin}${finalRedirectPath}`);
+      // }
+
+      const forwardedHost = request.headers.get("x-forwarded-host");
+      const forwardedProto = request.headers.get("x-forwarded-proto");
+
+      if (forwardedHost) {
         return NextResponse.redirect(
-          `https://${forwardedHost}${finalRedirectPath}`,
+          `${forwardedProto ?? "https"}://${forwardedHost}${finalRedirectPath}`,
         );
-      } else {
-        return NextResponse.redirect(`${origin}${finalRedirectPath}`);
       }
+      return NextResponse.redirect(`${origin}${finalRedirectPath}`);
     } catch {
       return NextResponse.redirect(`${origin}/auth/error`);
     }
