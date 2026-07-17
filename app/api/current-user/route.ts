@@ -17,9 +17,7 @@ export async function GET() {
   }
 
   const userRole = user.app_metadata?.type as
-    | "applicant"
-    | "company"
-    | undefined;
+    "applicant" | "company" | undefined;
   const userId = user.id;
 
   let profileData = null;
