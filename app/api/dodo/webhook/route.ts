@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { client } from "@/lib/dodo/initialize";
+import { getDodoClient } from "@/lib/dodo/initialize";
 import { WebhookPayload } from "dodopayments/resources/webhook-events.mjs";
 import { SendPaymentUpdateEmail } from "@/lib/dodo/utils";
 import { JsonCompatible, TPaymentStatus } from "@/utils/types";
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
   const webhookPayload = body.data as WebhookPayload.Payment;
   let userName = "";
   let email = "";
+  const client = getDodoClient();
 
   try {
     client.webhooks.unwrap(reqText, {
@@ -240,14 +241,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
     }
 
-    const credits = parseInt(credit_amount, 10);
+    const credits = parseInt(String(credit_amount), 10);
 
     try {
       // Idempotency Check: Ensure we haven't already fulfilled this payment
       const { data: payment } = await serviceRoleSupabase
         .from("payments")
         .select("credits_fulfilled")
-        .eq("user_id", user_id)
+        .eq("user_id", String(user_id))
         .eq("session_id", webhookPayload.checkout_session_id!)
         .single();
 
@@ -262,7 +263,7 @@ export async function POST(req: NextRequest) {
         await serviceRoleSupabase
           .from("user_info")
           .select("ai_credits")
-          .eq("user_id", user_id)
+          .eq("user_id", String(user_id))
           .single();
 
       if (userInfoError || !userInfoData) {
@@ -274,7 +275,7 @@ export async function POST(req: NextRequest) {
         .update({
           ai_credits: (userInfoData.ai_credits || 0) + credits,
         })
-        .eq("user_id", user_id);
+        .eq("user_id", String(user_id));
 
       if (creditError)
         throw new Error(`Credit update failed: ${creditError.message}`);
@@ -297,7 +298,7 @@ export async function POST(req: NextRequest) {
             typeof webhookPayload.customer
           >,
         })
-        .eq("user_id", user_id)
+        .eq("user_id", String(user_id))
         .eq("session_id", webhookPayload.checkout_session_id!);
 
       if (updateError)

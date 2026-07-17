@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { client } from "@/lib/dodo/initialize";
+import { getDodoClient } from "@/lib/dodo/initialize";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // const internalPaymentId = uuidv4();
-
+    const client = getDodoClient();
     const session = await client.checkoutSessions.create({
       product_cart: [{ product_id: productId, quantity: 1 }],
       customer: { email: user.email ?? "" },
