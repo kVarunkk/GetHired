@@ -4,7 +4,14 @@ import { cookies, headers } from "next/headers";
 import { createServiceRoleClient } from "./service-role";
 import { hashToken } from "@/utils/edgeUtils";
 
+let clientCreationCount = 0;
+
 export async function createClient() {
+  clientCreationCount++;
+  if (clientCreationCount % 10 === 0) {
+    console.log(`[supabase] createClient called ${clientCreationCount} times`);
+  }
+
   const cookieStore = await cookies();
   const headersList = await headers();
 
@@ -46,6 +53,9 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      auth: {
+        autoRefreshToken: false,
+      },
       global: bearerToken
         ? { headers: { Authorization: `Bearer ${bearerToken}` } }
         : undefined,
