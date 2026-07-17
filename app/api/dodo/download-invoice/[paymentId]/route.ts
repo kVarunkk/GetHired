@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { Buffer } from "buffer";
-import { client } from "@/lib/dodo/initialize";
+import { getDodoClient } from "@/lib/dodo/initialize";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ paymentId: string }> }
+  { params }: { params: Promise<{ paymentId: string }> },
 ) {
   const supabase = await createClient();
 
@@ -21,7 +21,7 @@ export async function GET(
   if (!paymentId) {
     return NextResponse.json(
       { error: "Missing paymentId in request body." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -36,16 +36,16 @@ export async function GET(
 
     if (dbError || !paymentRecord) {
       console.error(
-        `Invoice fetch failed for payment ${paymentId}: User ${user.id} does not own it.`
+        `Invoice fetch failed for payment ${paymentId}: User ${user.id} does not own it.`,
       );
       return NextResponse.json(
         { error: "Invoice not found or access denied." },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // --- 4. FETCH INVOICE FILE FROM DODO PAYMENTS ---
-
+    const client = getDodoClient();
     // Retrieve the payment object which contains the invoice file access
     const paymentWithInvoice =
       await client.invoices.payments.retrieve(paymentId);
@@ -70,7 +70,7 @@ export async function GET(
     console.error("Invoice retrieval failed:", error);
     return NextResponse.json(
       { error: "Failed to retrieve invoice file." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

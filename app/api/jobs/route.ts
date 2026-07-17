@@ -67,7 +67,10 @@ export async function GET(request: NextRequest) {
         userId = user?.id;
         if (!userId) {
           relevanceSearchType = null;
-          return;
+          return NextResponse.json(
+            { error: "User not found." },
+            { status: 401 },
+          );
         }
 
         if (jobId) {
@@ -78,7 +81,10 @@ export async function GET(request: NextRequest) {
             .single();
           if (jobDataError || !jobData) {
             relevanceSearchType = null;
-            return;
+            return NextResponse.json(
+              { error: "Job not found." },
+              { status: 404 },
+            );
           }
           jobEmbedding = jobData.embedding_new;
         }
@@ -92,7 +98,10 @@ export async function GET(request: NextRequest) {
 
       if (userDataError || !userData) {
         relevanceSearchType = null;
-        return;
+        return NextResponse.json(
+          { error: "User profile not found." },
+          { status: 404 },
+        );
       }
       aiCredits = userData.ai_credits;
       userEmbedding = userData.embedding_new;

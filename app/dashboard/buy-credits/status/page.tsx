@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { DollarSign, XCircle, CheckCircle, Headset, Clock } from "lucide-react";
-import { client } from "@/lib/dodo/initialize";
+import { getDodoClient } from "@/lib/dodo/initialize";
 import { Payment } from "dodopayments/resources/payments.mjs";
 import { formatCurrency } from "@/utils/utils";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceBtn";
@@ -39,6 +39,8 @@ export default async function CreditsStatusPage({
 
   if (paymentId) {
     try {
+      const client = getDodoClient();
+
       paymentDetails = await client.payments.retrieve(paymentId);
 
       if (isSuccess) {
