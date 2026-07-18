@@ -41,8 +41,8 @@ const ResumeSchema = z.object({
 });
 
 async function extractTextFromPdf(url: string): Promise<string[]> {
+  const parser = new PDFParse({ url: url, CanvasFactory });
   try {
-    const parser = new PDFParse({ url: url, CanvasFactory });
     const result = await parser.getText();
     const rawText = result.text
       .split("\n")
@@ -50,7 +50,9 @@ async function extractTextFromPdf(url: string): Promise<string[]> {
       .filter((line) => line.length > 0);
     return rawText;
   } catch {
-    throw new Error("Some error occured while ");
+    throw new Error("Some error occured while extracting text from pdf.");
+  } finally {
+    parser.destroy();
   }
 }
 
