@@ -1,4 +1,5 @@
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { createPublicClient } from "@/lib/supabase/public";
+// import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { MetadataRoute } from "next";
 // import { createClient } from "@/lib/supabase/server";
 
@@ -11,29 +12,26 @@ const LIMIT_PER_SITEMAP = 45000;
  * 1. GENERATE SITEMAPS (The Indexer)
  */
 export async function generateSitemaps() {
-  const supabase = createServiceRoleClient();
+  const supabase = createPublicClient();
 
-  // Get Counts
   const { count: jobCount } = await supabase
     .from("all_jobs")
     .select("id", { count: "exact", head: true });
-  // const { count: aliasCount } = await supabase
-  //   .from("location_aliases")
-  //   .select("id", { count: "exact", head: true });
-  const { data: geoData } = await supabase
-    .from("countries_and_cities")
-    .select("country");
 
-  // const cityCount =
-  //   geoData?.reduce((acc, curr) => acc + (curr.cities?.length || 0), 0) || 0;
-  const countryCount = geoData?.length || 0;
+  const { count: countryCount } = await supabase
+    .from("countries_and_cities")
+    .select("*", {
+      count: "exact",
+      head: true,
+    });
+
   const staticCount = 50;
 
   const totalUrls =
     (jobCount || 0) +
     // (aliasCount || 0) +
     // cityCount +
-    countryCount +
+    (countryCount || 0) +
     staticCount;
   const numberOfSitemaps = Math.ceil(totalUrls / LIMIT_PER_SITEMAP);
 
@@ -49,7 +47,9 @@ export default async function sitemap({
 }: {
   id: number;
 }): Promise<MetadataRoute.Sitemap> {
-  const supabase = createServiceRoleClient();
+  // const supabase = createServiceRoleClient();
+  const supabase = createPublicClient();
+
   const start = id * LIMIT_PER_SITEMAP;
   const end = start + LIMIT_PER_SITEMAP;
 
@@ -118,7 +118,7 @@ export default async function sitemap({
   });
 
   const allLocationUrls: MetadataRoute.Sitemap = Array.from(
-    locationSlugsSet
+    locationSlugsSet,
   ).map((slug) => ({
     url: `${SITE_URL}/remote-jobs/${encodeURIComponent(slug)}`,
     lastModified: new Date(),

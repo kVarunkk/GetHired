@@ -6,12 +6,15 @@ import Footer from "@/components/landing-page/Footer";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { createPublicClient } from "@/lib/supabase/public";
+// import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getPlatformStats } from "@/utils/auth-handlers";
 import { Metadata } from "next";
 
 export async function generateStaticParams() {
-  const supabase = createServiceRoleClient();
+  // const supabase = createServiceRoleClient();
+  const supabase = createPublicClient();
+
   const slugs = new Set<string>();
 
   try {
