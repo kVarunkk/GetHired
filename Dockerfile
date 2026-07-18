@@ -14,13 +14,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=1536"
 # RUN npm run build
-RUN --mount=type=secret,id=NEXT_PUBLIC_SUPABASE_URL \
-    --mount=type=secret,id=NEXT_PUBLIC_SUPABASE_ANON_KEY \
-    --mount=type=secret,id=SERVICE_ROLE_KEY \
-    export NEXT_PUBLIC_SUPABASE_URL=$(cat /run/secrets/NEXT_PUBLIC_SUPABASE_URL) && \
-    export NEXT_PUBLIC_SUPABASE_ANON_KEY=$(cat /run/secrets/NEXT_PUBLIC_SUPABASE_ANON_KEY) && \
-    export SERVICE_ROLE_KEY=$(cat /run/secrets/SERVICE_ROLE_KEY) && \
-    npm run build
+RUN npm run build
 
 # Run
 FROM base AS runner
