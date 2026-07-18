@@ -66,7 +66,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@react-email/preview-server": "^4.3.1",
+    "@react-email/preview-server": "^5.2.10",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -76,7 +76,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.3.1",
     "postcss": "^8",
-    "react-email": "4.3.1",
+    "react-email": "^6.9.0",
     "supabase": "^2.81.3",
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
