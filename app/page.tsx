@@ -6,7 +6,7 @@ import Hero from "@/components/landing-page/Hero";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
-import { getPlatformStats } from "@/utils/auth-handlers";
+import { getPlatformStats } from "@/utils/platform-stats";
 import { JOB_SEEKER_DARK, JOB_SEEKER_LIGHT } from "@/utils/utils";
 
 export const revalidate = 86400;

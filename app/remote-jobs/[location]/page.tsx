@@ -8,7 +8,7 @@ import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
 import { createPublicClient } from "@/lib/supabase/public";
 // import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { getPlatformStats } from "@/utils/auth-handlers";
+import { getPlatformStats } from "@/utils/platform-stats";
 import { Metadata } from "next";
 
 export async function generateStaticParams() {
