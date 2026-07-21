@@ -6,16 +6,19 @@ import { allJobsSelectString } from "@/helpers/jobs/filterQueryBuilder";
 import JobClientHydrator from "@/components/JobClientHydrator";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Metadata } from "next";
+import { TJobIdPageData } from "@/utils/types/jobs.types";
+import { buildJobPostingJsonLd } from "@/helpers/jobs/jobId/jsonld";
 
 export const revalidate = 604800;
 export const dynamic = "force-static";
 
-const getStaticJobDetails = (jobId: string) =>
+const getStaticJobDetails = (jobId: string): Promise<TJobIdPageData | null> =>
   unstable_cache(
     async (id: string) => {
       const supabase = createServiceRoleClient();
       const selectString = `
         ${allJobsSelectString},
+        normalized_locations,
         description,
         job_postings(*, company_info(*))
       `;
@@ -75,8 +78,16 @@ export default async function JobPage({
     notFound();
   }
 
+  const jsonLd = buildJobPostingJsonLd(job);
+
   return (
     <div className="flex flex-col gap-4 w-full p-4 mb-20">
+      {jsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      ) : null}
       <Link
         href="/jobs"
         className="text-muted-foreground hover:text-primary transition-colors w-fit p-2 pl-0"

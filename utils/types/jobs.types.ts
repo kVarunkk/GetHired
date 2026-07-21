@@ -35,6 +35,7 @@ const applicationQuery = supabase
 
 const jobIdSelectString = `
              ${allJobsSelectString},
+             normalized_locations,
               description,
               job_postings(*, company_info(*))
           `;
