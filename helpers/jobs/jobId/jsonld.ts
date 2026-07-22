@@ -41,18 +41,21 @@ function normalizeEmploymentType(jobType?: string | null) {
   return undefined;
 }
 
+function isRemoteLikeLocation(location?: string | null) {
+  const normalized = (location || "").toLowerCase();
+
+  return (
+    normalized.includes("remote") ||
+    normalized.includes("telecommute") ||
+    normalized.includes("anywhere") ||
+    normalized.includes("worldwide")
+  );
+}
+
 function isRemoteLocation(locations?: string[] | null) {
   if (!Array.isArray(locations)) return false;
 
-  return locations.some((location) => {
-    const normalized = (location || "").toLowerCase();
-    return (
-      normalized.includes("remote") ||
-      normalized.includes("telecommute") ||
-      normalized.includes("anywhere") ||
-      normalized.includes("worldwide")
-    );
-  });
+  return locations.some((location) => isRemoteLikeLocation(location));
 }
 
 function isWorldwideRemoteLocation(locations?: string[] | null) {
@@ -62,6 +65,20 @@ function isWorldwideRemoteLocation(locations?: string[] | null) {
     const normalized = (location || "").toLowerCase();
     return normalized.includes("anywhere") || normalized.includes("worldwide");
   });
+}
+
+function isRemoteOnlyLocation(locations?: string[] | null) {
+  if (!Array.isArray(locations)) return false;
+
+  const normalizedLocations = locations.filter((location): location is string =>
+    Boolean(location && location.trim()),
+  );
+
+  if (normalizedLocations.length === 0) return false;
+
+  return normalizedLocations.every((location) =>
+    isRemoteLikeLocation(location),
+  );
 }
 
 function getApplicantLocationRequirement(locations?: string[] | null) {
@@ -85,7 +102,7 @@ function getApplicantLocationRequirement(locations?: string[] | null) {
     };
   }
 
-  if (isWorldwideRemoteLocation(locations)) {
+  if (isRemoteOnlyLocation(locations) || isWorldwideRemoteLocation(locations)) {
     return {
       "@type": "Country",
       name: "Worldwide",
