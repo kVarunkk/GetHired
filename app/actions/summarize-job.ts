@@ -9,6 +9,7 @@ import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 import { revalidatePathAction } from "./revalidate-path";
 import { revalidateCacheAction } from "./revalidate-tag";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
+import { after } from "next/server";
 
 const MAX_SUMMARY_LENGTH = 500;
 
@@ -93,15 +94,19 @@ export async function SummarizeJobAction(jobId: string) {
     await revalidateCacheAction(`job-${jobId}`);
     await revalidatePathAction(`/jobs/${jobId}`);
 
-    await deductUserCreditsHelper(
-      authenticatedSupabase,
-      user.id,
-      TAICredits.AI_SUMMARY,
-    );
+    after(async () => {
+      try {
+        await deductUserCreditsHelper(
+          authenticatedSupabase,
+          user.id,
+          TAICredits.AI_SUMMARY,
+        );
 
-    await eventCaptureServer({
-      event: PostHogEvent.AiSummarizerUsed,
-      distinctId: user?.id,
+        await eventCaptureServer({
+          event: PostHogEvent.AiSummarizerUsed,
+          distinctId: user?.id,
+        });
+      } catch {}
     });
 
     return {

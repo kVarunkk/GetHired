@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { getVertexClient } from "@/utils/vertex";
 import { createClient } from "@/lib/supabase/server";
@@ -87,12 +87,16 @@ export async function POST(req: Request) {
       TAICredits.AI_SEARCH_ASK_AI_RESUME,
     );
 
-    await eventCaptureServer({
-      event: PostHogEvent.AiGlobalSearchUsed,
-      distinctId: user.id,
-      properties: {
-        query: userQuery,
-      },
+    after(async () => {
+      try {
+        await eventCaptureServer({
+          event: PostHogEvent.AiGlobalSearchUsed,
+          distinctId: user.id,
+          properties: {
+            query: userQuery,
+          },
+        });
+      } catch {}
     });
 
     return NextResponse.json({ filters });

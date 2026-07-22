@@ -8,6 +8,7 @@ import { sendEmail } from "@/utils/email";
 import { deploymentUrl } from "@/utils/formatters";
 import { PostHogEvent } from "@/utils/types";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
+import { after } from "next/server";
 
 const URL = deploymentUrl();
 
@@ -63,32 +64,36 @@ export async function sendSignupEmail(
           throw new Error("Error creating record for new user.");
       }
 
-      await eventCaptureServer({
-        event: PostHogEvent.SignupRequested,
-        distinctId: data.user?.id,
-        properties: {
-          user_type: isCompany ? "company" : "applicant",
-        },
-      });
+      after(async () => {
+        try {
+          await eventCaptureServer({
+            event: PostHogEvent.SignupRequested,
+            distinctId: data.user?.id,
+            properties: {
+              user_type: isCompany ? "company" : "applicant",
+            },
+          });
 
-      const signupUrl = `${URL}/auth/confirm?token_hash=${data.properties.hashed_token}&type=signup&next=${finalRedirectUrl}`;
+          const signupUrl = `${URL}/auth/confirm?token_hash=${data.properties.hashed_token}&type=signup&next=${finalRedirectUrl}`;
 
-      const emailHtml = await render(
-        <AuthConfirmationEmail signupUrl={signupUrl} />,
-      );
+          const emailHtml = await render(
+            <AuthConfirmationEmail signupUrl={signupUrl} />,
+          );
 
-      const emailText = await render(
-        <AuthConfirmationEmail signupUrl={signupUrl} />,
-        {
-          plainText: true,
-        },
-      );
+          const emailText = await render(
+            <AuthConfirmationEmail signupUrl={signupUrl} />,
+            {
+              plainText: true,
+            },
+          );
 
-      await sendEmail({
-        toEmail: email,
-        subject: "Confirm your Signup to GetHired",
-        htmlContent: emailHtml,
-        textContent: emailText,
+          await sendEmail({
+            toEmail: email,
+            subject: "Confirm your Signup to GetHired",
+            htmlContent: emailHtml,
+            textContent: emailText,
+          });
+        } catch {}
       });
 
       return {

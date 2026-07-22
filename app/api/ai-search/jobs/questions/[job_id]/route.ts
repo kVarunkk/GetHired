@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateText } from "ai";
 import { getVertexClient } from "@/utils/vertex";
@@ -131,15 +131,19 @@ Generate the response now. Do not include any introductory text like "Here is yo
     });
     answer = text;
 
-    await deductUserCreditsHelper(
-      supabase,
-      userId,
-      TAICredits.AI_SEARCH_ASK_AI_RESUME,
-    );
+    after(async () => {
+      try {
+        await deductUserCreditsHelper(
+          supabase,
+          userId,
+          TAICredits.AI_SEARCH_ASK_AI_RESUME,
+        );
 
-    await eventCaptureServer({
-      event: PostHogEvent.AskAiUsed,
-      distinctId: user?.id,
+        await eventCaptureServer({
+          event: PostHogEvent.AskAiUsed,
+          distinctId: user?.id,
+        });
+      } catch {}
     });
 
     return NextResponse.json({ success: true, answer: answer });
