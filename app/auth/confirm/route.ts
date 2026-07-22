@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { type NextRequest } from "next/server";
+import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
+import { PostHogEvent } from "@/utils/types";
 
 const DEFAULT_REDIRECT_PATH = "/jobs";
 
@@ -39,9 +41,27 @@ export async function GET(request: NextRequest) {
       token_hash,
     });
     if (!error && data.user && data.user.email) {
+      await eventCaptureServer({
+        event: PostHogEvent.SignupCompleted,
+        distinctId: data.user?.id,
+        properties: {
+          user_type: data.user.app_metadata?.type,
+          referred: !!referralCode,
+        },
+      });
+
       if (referralCode) {
         await grantReferralCredits(referralCode, data.user.email);
+
+        await eventCaptureServer({
+          event: PostHogEvent.ReferralSignupCompleted,
+          distinctId: data.user?.id,
+          properties: {
+            referral_code: referralCode,
+          },
+        });
       }
+
       redirect(next);
     } else {
       redirect(`/auth/error?error=${error?.message}`);

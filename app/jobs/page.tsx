@@ -145,14 +145,10 @@ export default async function JobsPage({
 
   // --- Data Fetching ---
   const headersList = await headers();
-  // const host = headersList.get("host");
-  // const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-  // const url = `${protocol}://${host}`;
   const url = await getBaseUrl();
 
   const validated = jobFilterSchema.safeParse(searchParameters);
   const cleanParams = validated.success ? validated.data : {};
-  // const dynamicKey = serializeFiltersToURL(cleanParams);
   const params = new URLSearchParams(serializeFiltersToURL(cleanParams));
   params.set("tab", activeTab);
   const isRelevantSorting = params.get("sortBy") === "relevance";

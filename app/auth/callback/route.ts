@@ -5,10 +5,8 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  // Set a default redirect path (without the flag initially)
   let next = searchParams.get("next") ?? "/jobs";
 
-  // Ensure 'next' is a safe, internal path
   if (!next.startsWith("/")) {
     next = "/jobs";
   }
@@ -19,9 +17,6 @@ export async function GET(request: Request) {
 
       if (error || !data.user) {
         throw new Error("Auth code exchange failed");
-        // Auth exchange failed (e.g., expired code, network issue)
-        // console.error("Auth code exchange failed:", error?.message);
-        // return NextResponse.redirect(`${origin}/auth/error`);
       }
 
       const { metadataUpdated, error: upsertUserError } =
@@ -33,7 +28,6 @@ export async function GET(request: Request) {
 
       let finalRedirectPath = next;
 
-      // Only append the parameter if the metadata was successfully updated
       if (metadataUpdated) {
         if (finalRedirectPath.includes("?")) {
           finalRedirectPath += "&metadata_updated=true";
@@ -41,19 +35,6 @@ export async function GET(request: Request) {
           finalRedirectPath += "?metadata_updated=true";
         }
       }
-
-      // const forwardedHost = request.headers.get("x-forwarded-host");
-      // const isLocalEnv = process.env.NODE_ENV === "development";
-
-      // if (isLocalEnv) {
-      //   return NextResponse.redirect(`${origin}${finalRedirectPath}`);
-      // } else if (forwardedHost) {
-      //   return NextResponse.redirect(
-      //     `https://${forwardedHost}${finalRedirectPath}`,
-      //   );
-      // } else {
-      //   return NextResponse.redirect(`${origin}${finalRedirectPath}`);
-      // }
 
       const forwardedHost = request.headers.get("x-forwarded-host");
       const forwardedProto = request.headers.get("x-forwarded-proto");

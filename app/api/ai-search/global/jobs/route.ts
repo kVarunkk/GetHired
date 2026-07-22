@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { getVertexClient } from "@/utils/vertex";
 import { createClient } from "@/lib/supabase/server";
-import { TAICredits } from "@/utils/types";
+import { PostHogEvent, TAICredits } from "@/utils/types";
 import { jobFilterSchema } from "@/helpers/jobs/filterSchema";
 import {
   validateAndSanitizeSearchQuery,
   wrapInSandbox,
 } from "@/helpers/ai/security";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
+import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 
 export async function POST(req: Request) {
   const { userQuery: rawQuery } = await req.json();
@@ -85,6 +86,14 @@ export async function POST(req: Request) {
       user.id,
       TAICredits.AI_SEARCH_ASK_AI_RESUME,
     );
+
+    await eventCaptureServer({
+      event: PostHogEvent.AiGlobalSearchUsed,
+      distinctId: user.id,
+      properties: {
+        query: userQuery,
+      },
+    });
 
     return NextResponse.json({ filters });
   } catch (error) {

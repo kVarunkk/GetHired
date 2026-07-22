@@ -1,12 +1,13 @@
 import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
+import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { User } from "@supabase/supabase-js";
+import { PostHogEvent } from "./types";
 
 const REFERRAL_CREDITS = 10;
 
 export async function handleUserUpsert(user: User) {
   try {
-    // const supabase = await createClient();
     const supabase = createServiceRoleClient();
 
     const { data: userData, error: selectError } = await supabase
@@ -52,10 +53,18 @@ export async function handleUserUpsert(user: User) {
             "CRITICAL DB ERROR: Failed to insert new user_info row:",
             insertError,
           );
-          // Critical failure, throw immediately
           throw new Error(`DB insert failed: ${insertError.message}`);
         }
       }
+
+      await eventCaptureServer({
+        event: PostHogEvent.SignupCompleted,
+        distinctId: user.id,
+        properties: {
+          user_type: "applicant",
+        },
+      });
+
       return {
         metadataUpdated: true,
         error: null,
@@ -119,6 +128,11 @@ export async function grantReferralCredits(
     if (creditError) {
       console.error("Error granting credits to referrer");
     } else {
+      await eventCaptureServer({
+        event: PostHogEvent.ReferralCreditsGranted,
+        distinctId: referrerId,
+      });
+
       console.log(
         `Successfully granted ${REFERRAL_CREDITS} credits to ${referrerId} for referral and updated invitation status.`,
       );

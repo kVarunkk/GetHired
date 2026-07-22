@@ -230,3 +230,20 @@ export type TResumeContent = {
 };
 
 export type JsonCompatible<T> = T & { [key: string]: Json | undefined };
+
+export enum PostHogEvent {
+  SignupRequested = "signup_requested",
+  SignupCompleted = "signup_completed",
+  SignupRequestFailed = "signup_request_failed",
+  ReferralSignupCompleted = "referral_signup_completed",
+  ReferralCreditsGranted = "referral_credits_granted",
+
+  JobSearchPerformed = "job_search_performed",
+
+  AiSimilarSearchUsed = "ai_similar_search_used",
+  AskAiUsed = "ask_ai_cover_letter_generated",
+  AiSummarizerUsed = "ai_summarizer_used",
+  FindSuitableJobsMatchingProfileUsed = "find_suitable_jobs_matching_profile_used",
+  AiSearchUsed = "ai_search_used",
+  AiGlobalSearchUsed = "ai_global_search_used",
+}

@@ -24,25 +24,12 @@ import { Textarea } from "./ui/textarea";
 import { TAICredits } from "@/utils/types";
 import InfoTooltip from "./InfoTooltip";
 import useSWR, { mutate } from "swr";
-import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
+import { fetcher, premadePrompts, PROFILE_API_KEY } from "@/utils/utils";
 import Link from "next/link";
 
 interface ParsedFilters {
   [key: string]: string | string[] | undefined;
 }
-
-const premadePrompts = [
-  "Show me remote frontend jobs for a senior engineer.",
-  "Software Engineer jobs in Bengaluru.",
-  "I'm looking for fulltime backend roles in New York.",
-  "Find entry-level data science jobs in San Francisco.",
-  "What are the latest Java developer jobs, minimum salary $90k?",
-  "Show me jobs from Google or Microsoft.",
-  "Show me Remote jobs posted in the past week.",
-  "I want to see all react native jobs that are reviewed.",
-  "Find jobs sorted by highest salary.",
-  "Show me contract Software Developer Jobs.",
-];
 
 export default function GlobalJobSearch() {
   const [isOpen, setIsOpen] = useState(false);

@@ -14,13 +14,14 @@ import {
 import MultiKeywordSelect, { GenericFormData } from "./MultiKeywordSelect";
 import MultiKeywordSelectInput from "./MultiKeywordSelectInput";
 import InputFilter from "./InputFilterComponent";
-import { FilterConfig, FiltersState } from "@/utils/types";
+import { FilterConfig, FiltersState, PostHogEvent } from "@/utils/types";
 import { useProgress } from "react-transition-progress";
 import FilterActions from "./FilterActions";
 import { useFilterOptions } from "@/hooks/useFilterOptions";
 import { filterConfigBuilder } from "@/helpers/filter-component/filterConfigBuilder";
 import { getInitialState } from "@/helpers/filter-component/getInitialState";
 import LocationSearchSelect from "./LocationSearchSelect";
+import posthog from "posthog-js";
 
 export default function FilterComponent({
   setOpenSheet,
@@ -153,6 +154,29 @@ export default function FilterComponent({
 
     if (setOpenSheet) setOpenSheet(false);
 
+    posthog.capture(PostHogEvent.JobSearchPerformed, {
+      tab,
+      filters_used: Object.keys(filters).filter((key) => {
+        const filterKey = key as keyof FiltersState;
+        const value = filters[filterKey];
+        return (
+          value &&
+          value !== "" &&
+          (Array.isArray(value) ? value.length !== 0 : true)
+        );
+      }),
+      filter_count: Object.keys(filters).filter((key) => {
+        const filterKey = key as keyof FiltersState;
+        const value = filters[filterKey];
+        return (
+          value &&
+          value !== "" &&
+          (Array.isArray(value) ? value.length !== 0 : true)
+        );
+      }).length,
+      sort_by: sortBy,
+      sort_order: sortOrder,
+    });
     startTransition(() => {
       startProgress();
       router.push(

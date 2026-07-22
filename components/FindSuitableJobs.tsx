@@ -26,9 +26,10 @@ import Link from "next/link";
 import { useProgress } from "react-transition-progress";
 import { Button } from "./ui/button";
 import InfoTooltip from "./InfoTooltip";
-import { TAICredits } from "@/utils/types";
+import { PostHogEvent, TAICredits } from "@/utils/types";
 import useSWR from "swr";
 import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
+import posthog from "posthog-js";
 
 const fetchCompanyJobs = async (companyId: string) => {
   const supabase = createClient();
@@ -125,6 +126,8 @@ export default function FindSuitableJobs({
         params.set("minExperience", userInfo.experience_years.toString());
       }
 
+      posthog.capture(PostHogEvent.FindSuitableJobsMatchingProfileUsed);
+
       startTransition(() => {
         startProgress();
         router.push(`/jobs?${params.toString()}`);
@@ -145,6 +148,10 @@ export default function FindSuitableJobs({
       if (value) {
         params.set("job_post", value);
       }
+      posthog.capture(PostHogEvent.AiSearchUsed, {
+        user_type: user?.app_metadata?.type,
+      });
+
       startTransition(() => {
         startProgress();
         router.push(

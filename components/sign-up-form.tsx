@@ -31,6 +31,7 @@ const isGenericEmail = (email: string) => {
     "outlook.com",
     "hotmail.com",
     "aol.com",
+    "icloud.com",
   ];
   const domain = email.split("@")[1];
   return genericDomains.includes(domain);

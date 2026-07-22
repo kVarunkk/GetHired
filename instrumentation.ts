@@ -1,5 +1,5 @@
 export async function register() {
-  if (process.env.NEXT_RUNTIME === "nodejs") {
+  if (process.env.NEXT_RUNTIME === "nodejs" && process.env.RENDER) {
     const v8 = await import("node:v8");
     setInterval(() => {
       const m = process.memoryUsage();

@@ -6,6 +6,8 @@ import { render } from "@react-email/components";
 import { updateUserAppMetadata } from "./update-user-metadata";
 import { sendEmail } from "@/utils/email";
 import { deploymentUrl } from "@/utils/formatters";
+import { PostHogEvent } from "@/utils/types";
+import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 
 const URL = deploymentUrl();
 
@@ -60,6 +62,14 @@ export async function sendSignupEmail(
         if (signupUserError)
           throw new Error("Error creating record for new user.");
       }
+
+      await eventCaptureServer({
+        event: PostHogEvent.SignupRequested,
+        distinctId: data.user?.id,
+        properties: {
+          user_type: isCompany ? "company" : "applicant",
+        },
+      });
 
       const signupUrl = `${URL}/auth/confirm?token_hash=${data.properties.hashed_token}&type=signup&next=${finalRedirectUrl}`;
 

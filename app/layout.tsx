@@ -12,6 +12,7 @@ import LayoutWrapper from "@/components/LayoutWrapper";
 import { createClient } from "@/lib/supabase/server";
 import { hasEnvVars } from "@/utils/utils";
 import EnvWarning from "@/components/env-warning";
+import PostHogIdentify from "@/lib/posthog/posthogidentify";
 
 export const metadata: Metadata = {
   title: {
@@ -72,6 +73,7 @@ export default async function RootLayout({
             <TooltipProvider>
               <ProgressBar className="fixed h-1 rounded-r-md shadow-lg shadow-sky-500/20 bg-primary top-0 z-[100]" />
               <LayoutWrapper user={user}>{children}</LayoutWrapper>
+              <PostHogIdentify initialUser={user} />
               <ThemeAwareToaster />
               <Suspense>
                 <MetadataUpdateRefresh />

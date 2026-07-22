@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
-const isRenderProduction = true;
-// process.env.RENDER === "true"
+const isRenderProduction = process.env.RENDER === "true";
 const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: false,

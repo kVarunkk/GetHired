@@ -4,10 +4,11 @@ import { generateText } from "ai";
 import { createClient } from "@/lib/supabase/server";
 import { getVertexClient } from "@/utils/vertex";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { TAICredits } from "@/utils/types";
+import { PostHogEvent, TAICredits } from "@/utils/types";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 import { revalidatePathAction } from "./revalidate-path";
 import { revalidateCacheAction } from "./revalidate-tag";
+import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 
 const MAX_SUMMARY_LENGTH = 500;
 
@@ -97,6 +98,11 @@ export async function SummarizeJobAction(jobId: string) {
       user.id,
       TAICredits.AI_SUMMARY,
     );
+
+    await eventCaptureServer({
+      event: PostHogEvent.AiSummarizerUsed,
+      distinctId: user?.id,
+    });
 
     return {
       success: true,
