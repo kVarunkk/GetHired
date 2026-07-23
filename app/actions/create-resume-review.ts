@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TAICredits } from "@/utils/types";
 import { uploadResumeAction } from "./upload-resume-file";
 import { randomUUID } from "crypto";
+import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 
 export async function createResumeReviewAction(formData: FormData) {
   const supabase = await createClient();
@@ -88,10 +89,17 @@ export async function createResumeReviewAction(formData: FormData) {
 
     return { success: true, reviewId: reviewEntry.id };
   } catch (err: unknown) {
-    console.error("[CREATE_REVIEW_ACTION_ERROR]:", err);
+    const error =
+      err instanceof Error
+        ? err.message
+        : "An unexpected error occurred while creating resume review.";
+    await eventCaptureServerException({
+      error: err,
+      distinctId: userId,
+      properties: { flow: "create_resume_review" },
+    });
     return {
-      error:
-        err instanceof Error ? err.message : "An unexpected error occurred.",
+      error,
     };
   }
 }

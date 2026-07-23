@@ -1,5 +1,6 @@
 "use server";
 
+import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { createClient } from "@/lib/supabase/server";
 import { TJobFeedbackVoteEnum } from "@/utils/types";
 
@@ -52,8 +53,16 @@ export async function submitJobFeedback(
     }
 
     return { success: true, status: "inserted" };
-  } catch (e) {
-    // console.error("Database feedback error:", e);
-    return { success: false, status: "error", error: (e as Error).message };
+  } catch (err) {
+    const error =
+      err instanceof Error
+        ? err.message
+        : "An unexpected error occurred while submitting job feedback.";
+    await eventCaptureServerException({
+      error: err,
+      distinctId: userId,
+      properties: { flow: "submit_job_feedback" },
+    });
+    return { success: false, status: "error", error };
   }
 }

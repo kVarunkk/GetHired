@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { buildCompaniesQuery } from "@/helpers/companies/companiesFilterQueryBuilder";
+import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 
 let COMPANIES_PER_PAGE = 20;
 
@@ -22,12 +23,12 @@ export async function GET(request: NextRequest) {
   const startIndex = (page - 1) * COMPANIES_PER_PAGE;
   const endIndex = startIndex + COMPANIES_PER_PAGE - 1;
 
-  try {
-    let userEmbedding = null;
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  let userEmbedding = null;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
+  try {
     if (sortBy === "relevance" && user) {
       const { data: userData, error } = await supabase
         .from("user_info")
@@ -57,18 +58,23 @@ export async function GET(request: NextRequest) {
     );
 
     if (error) {
-      throw error;
+      throw new Error(error);
     }
 
     return NextResponse.json({ data: data || [], count, matchedCompanyIds });
   } catch (err: unknown) {
-    console.log(err);
+    await eventCaptureServerException({
+      error: err,
+      distinctId: user?.id,
+      properties: { flow: "companies_api_route" },
+    });
+
     return NextResponse.json(
       {
         error:
           err instanceof Error
             ? err.message
-            : String(err) || "An unexpected error occurred",
+            : "An unexpected error occurred while fetching companies.",
       },
       { status: 500 },
     );

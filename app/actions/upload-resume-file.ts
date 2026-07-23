@@ -5,6 +5,7 @@ import { after } from "next/server";
 import { TAICredits } from "@/utils/types";
 import { revalidatePath } from "next/cache";
 import { parseResume } from "@/helpers/resume/parse-resume";
+import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 
 /**
  * SERVER ACTION: uploadResumeAction
@@ -90,14 +91,28 @@ export async function uploadResumeAction(formData: FormData) {
       try {
         await parseResume(userId, resumeEntry.id);
       } catch (err) {
-        console.error("[BG_FATAL_ERROR]:", err);
+        await eventCaptureServerException({
+          error: err,
+          distinctId: userId,
+          properties: { flow: "upload_resume_file_after_block" },
+        });
       }
     });
     revalidatePath("/resume");
     return { success: true, resumeId: resumeEntry.id };
   } catch (err: unknown) {
+    const error =
+      err instanceof Error
+        ? err.message
+        : "An unexpected error occurred while initiating resume upload.";
+    await eventCaptureServerException({
+      error: err,
+      distinctId: userId,
+      properties: { flow: "upload_resume_file" },
+    });
+
     return {
-      error: err instanceof Error ? err.message : "Failed to initiate upload.",
+      error,
     };
   }
 }

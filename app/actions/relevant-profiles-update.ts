@@ -1,5 +1,6 @@
 "use server";
 
+import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { processJobPostingRelevance } from "@/helpers/profiles/relevant-profiles-utils";
 import { createClient } from "@/lib/supabase/server";
 import { after } from "next/server";
@@ -10,21 +11,24 @@ export async function triggerJobPostingRelevanceUpdate(jobId: string) {
   }
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    return {
+      success: false,
+      error: "User id not found",
+    };
+  }
+
+  const userId = user.id;
+
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user?.id) {
-      throw new Error("user id not found");
-    }
-
-    const userId = user.id;
-
     after(async () => {
       try {
         processJobPostingRelevance(userId, jobId);
-      } catch {
+      } catch (err) {
         await supabase
           .from("job_postings")
           .update({
@@ -33,11 +37,17 @@ export async function triggerJobPostingRelevanceUpdate(jobId: string) {
             updated_at: new Date().toISOString(),
           })
           .eq("id", jobId);
+
+        await eventCaptureServerException({
+          error: err,
+          distinctId: userId,
+          properties: { flow: "trigger_job_posting_relevance_after_block" },
+        });
       }
     });
 
     return { success: true, message: "processing started" };
-  } catch (error) {
+  } catch (err) {
     await supabase
       .from("job_postings")
       .update({
@@ -46,12 +56,20 @@ export async function triggerJobPostingRelevanceUpdate(jobId: string) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", jobId);
-    console.error("[Server Action] Failed to trigger relevance update:", error);
-    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    const error =
+      err instanceof Error
+        ? err.message
+        : "An unexpected error occured while triggering job posting relevance update.";
+
+    await eventCaptureServerException({
+      error: err,
+      distinctId: userId,
+      properties: { flow: "trigger_job_posting_relevance" },
+    });
 
     return {
       success: false,
-      error: errorMsg,
+      error,
     };
   }
 }

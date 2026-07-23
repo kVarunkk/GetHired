@@ -10,21 +10,30 @@ import { revalidatePathAction } from "./revalidate-path";
 import { revalidateCacheAction } from "./revalidate-tag";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { after } from "next/server";
+import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 
 const MAX_SUMMARY_LENGTH = 500;
 
 export async function SummarizeJobAction(jobId: string) {
+  if (!jobId)
+    return {
+      success: false,
+      error: "Job id not found.",
+    };
+
+  const authenticatedSupabase = await createClient();
+  const serviceRoleSupbase = createServiceRoleClient();
+  const {
+    data: { user },
+  } = await authenticatedSupabase.auth.getUser();
+
+  if (!user)
+    return {
+      success: false,
+      error: "Unauthenticated",
+    };
+
   try {
-    if (!jobId) throw new Error("Job id not found.");
-
-    const authenticatedSupabase = await createClient();
-    const serviceRoleSupbase = createServiceRoleClient();
-    const {
-      data: { user },
-    } = await authenticatedSupabase.auth.getUser();
-
-    if (!user) throw new Error("Unauthenticated.");
-
     const { data, error } = await authenticatedSupabase
       .from("user_info")
       .select("ai_credits")
@@ -113,12 +122,19 @@ export async function SummarizeJobAction(jobId: string) {
       success: true,
       summary: rawSummary,
     };
-  } catch (e) {
+  } catch (err) {
+    const error =
+      err instanceof Error
+        ? err.message
+        : "An unexpected error occurred while summarizing job description.";
+    await eventCaptureServerException({
+      error: err,
+      distinctId: user?.id,
+      properties: { flow: "summarize_job" },
+    });
+
     return {
-      error:
-        e instanceof Error
-          ? e.message
-          : "Some error occured while summarizing job description.",
+      error,
     };
   }
 }

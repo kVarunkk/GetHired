@@ -221,6 +221,7 @@ CONSTRAINTS:
           "success",
           reviewData.name,
           reviewId,
+          userId,
         );
 
         await deductUserCreditsHelper(
@@ -238,6 +239,7 @@ CONSTRAINTS:
           "failure",
           reviewData.name,
           reviewId,
+          userId,
         );
       }
     });

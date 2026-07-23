@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { TAICredits } from "@/utils/types";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 
 export async function submitOnboardingAction(formData: FormData) {
   const supabase = await createClient();
@@ -107,9 +108,18 @@ export async function submitOnboardingAction(formData: FormData) {
 
     return { success: true };
   } catch (err: unknown) {
-    console.error("[ONBOARDING_SUBMIT_ERROR]:", err);
+    const error =
+      err instanceof Error
+        ? err.message
+        : "An unexpected error occurred while saving profile information.";
+    await eventCaptureServerException({
+      error: err,
+      distinctId: userId,
+      properties: { flow: "submit_onboarding" },
+    });
+
     return {
-      error: err instanceof Error ? err.message : "Failed to save profile.",
+      error,
     };
   }
 }

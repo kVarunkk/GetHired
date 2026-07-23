@@ -3,12 +3,8 @@
 import { after } from "next/server";
 import { createClient } from "../../lib/supabase/server";
 import { parseResume } from "@/helpers/resume/parse-resume";
+import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 
-/**
- * retryResumeParsingAction
- * 1. Resets the parsing state in the DB.
- * 2. Uses 'after()' to trigger the AI parser without blocking the UI.
- */
 export async function retryResumeParsingAction(resumeId: string) {
   const supabase = await createClient();
 
@@ -34,14 +30,28 @@ export async function retryResumeParsingAction(resumeId: string) {
       try {
         await parseResume(user.id, resumeId);
       } catch (err) {
-        console.error("[RETRY_BG_ERROR]:", err);
+        await eventCaptureServerException({
+          error: err,
+          distinctId: user.id,
+          properties: { flow: "retry_resume_parsing_after_block" },
+        });
       }
     });
 
     return { success: true };
   } catch (err) {
+    const error =
+      err instanceof Error
+        ? err.message
+        : "An unexpected error occurred while retrying resume parsing.";
+    await eventCaptureServerException({
+      error: err,
+      distinctId: user.id,
+      properties: { flow: "retry_resume_parsing" },
+    });
+
     return {
-      error: err instanceof Error ? err.message : "Failed to initialize retry.",
+      error,
     };
   }
 }

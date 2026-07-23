@@ -1,16 +1,16 @@
 "use server";
 
+import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export async function updateUserAppMetadata(
   userId: string,
-  dataToUpdate: Record<string, string | boolean>
+  dataToUpdate: Record<string, string | boolean>,
 ) {
   try {
     if (!userId || !dataToUpdate)
       throw new Error("User id or updation data not found.");
     const serviceRoleSupabase = createServiceRoleClient();
-    // const { data, error } = await serviceRoleSupabase.auth.getUser();
     const { data, error } =
       await serviceRoleSupabase.auth.admin.getUserById(userId);
     if (!data.user || error) throw new Error("Error retrieving User.");
@@ -25,12 +25,19 @@ export async function updateUserAppMetadata(
     return {
       error: null,
     };
-  } catch (e) {
+  } catch (err) {
+    const error =
+      err instanceof Error
+        ? err.message
+        : "An unexpected error occurred while updating user metadata.";
+    await eventCaptureServerException({
+      error: err,
+      distinctId: userId,
+      properties: { flow: "update_user_metadata" },
+    });
+
     return {
-      error:
-        e instanceof Error
-          ? e.message
-          : "Unexpected error occured while updating user metadata",
+      error,
     };
   }
 }

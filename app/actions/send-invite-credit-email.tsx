@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import { updateUserAppMetadata } from "./update-user-metadata";
 import { deploymentUrl } from "@/utils/formatters";
 import { sendEmail } from "@/utils/email";
+import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 
 const URL = deploymentUrl();
 
@@ -128,10 +129,18 @@ export async function sendInviteEmail(
       };
     }
   } catch (err: unknown) {
+    const error =
+      err instanceof Error
+        ? err.message
+        : "An unexpected error occurred while sending user invite email.";
+    await eventCaptureServerException({
+      error: err,
+      distinctId: referrerUserId,
+      properties: { flow: "send_invite_credit_email" },
+    });
     return {
       success: false,
-      error:
-        err instanceof Error ? err.message : "An unexpected error occurred.",
+      error,
     };
   }
 }

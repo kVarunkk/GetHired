@@ -4,9 +4,10 @@ import { render } from "@react-email/components";
 import React from "react";
 import ResumeReviewStatusEmail from "@/emails/ResumeReviewStatusEmail";
 import { sendEmail } from "@/utils/email";
+import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 
 /**
- * sendResumeParsingStatusEmail
+ * sendResumeReviewStatusEmail
  * Sends an automated notification when a resume finishes indexing.
  * @param email - Target user email
  * @param status - 'success' | 'failure'
@@ -18,6 +19,7 @@ export async function sendResumeReviewStatusEmail(
   status: "success" | "failure",
   reviewName: string | null,
   reviewId: string,
+  userId: string,
 ) {
   if (!process.env.RESEND_API_KEY) {
     console.error("Missing RESEND_API_KEY");
@@ -67,9 +69,19 @@ export async function sendResumeReviewStatusEmail(
 
     return { success: true };
   } catch (err) {
+    const error =
+      err instanceof Error
+        ? err.message
+        : "An unexpected error occurred while sending resume review status update email.";
+    await eventCaptureServerException({
+      error: err,
+      distinctId: userId,
+      properties: { flow: "send_resume_review_status_email" },
+    });
+
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to send email",
+      error,
     };
   }
 }

@@ -194,6 +194,7 @@ export async function parseResume(userId: string, resumeId: string) {
         "success",
         resumeName,
         resumeId,
+        userId,
       );
       await deductUserCreditsHelper(
         supabase,
@@ -229,6 +230,7 @@ export async function parseResume(userId: string, resumeId: string) {
         "failure",
         resumeName,
         resumeId,
+        userId,
       );
     } catch (emailErr) {
       console.error(

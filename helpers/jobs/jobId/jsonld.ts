@@ -217,9 +217,6 @@ export function buildJobPostingJsonLd(job: TJobIdPageData) {
 
   const salaryCurrency = getSalaryCurrency(job?.salary_range);
 
-  console.log(job?.salary_range);
-  console.log(salaryCurrency);
-
   if (job?.salary_min != null || job?.salary_max != null) {
     const minSalary =
       typeof job.salary_min === "number" ? job.salary_min : undefined;
