@@ -1,0 +1,36 @@
+diff --git a/node_modules/next/dist/server/lib/lru-cache.js b/node_modules/next/dist/server/lib/lru-cache.js
+index 8099b03..ed7646d 100644
+--- a/node_modules/next/dist/server/lib/lru-cache.js
++++ b/node_modules/next/dist/server/lib/lru-cache.js
+@@ -88,7 +88,8 @@ class LRUCache {
+    * - O(1) for uniform item sizes
+    * - O(k) where k is the number of items evicted (can be O(N) for variable sizes)
+    */ set(key, value) {
+-        const size = (this.calculateSize == null ? void 0 : this.calculateSize.call(this, value)) ?? 1;
++        // const size = (this.calculateSize == null ? void 0 : this.calculateSize.call(this, value)) ?? 1;
++        const size = (this.calculateSize == null ? void 0 : this.calculateSize.call(this, value, key)) ?? 1;
+         if (size > this.maxSize) {
+             console.warn('Single item size exceeds maxSize');
+             return;
+diff --git a/node_modules/next/dist/server/lib/router-utils/filesystem.js b/node_modules/next/dist/server/lib/router-utils/filesystem.js
+index 0357961..c10af69 100644
+--- a/node_modules/next/dist/server/lib/router-utils/filesystem.js
++++ b/node_modules/next/dist/server/lib/router-utils/filesystem.js
+@@ -118,9 +118,14 @@ const buildCustomRoute = (type, item, basePath, caseSensitive)=>{
+     };
+ };
+ async function setupFsCheck(opts) {
+-    const getItemsLru = !opts.dev ? new _lrucache.LRUCache(1024 * 1024, function length(value) {
+-        if (!value) return 0;
+-        return (value.fsPath || '').length + value.itemPath.length + value.type.length;
++    // const getItemsLru = !opts.dev ? new _lrucache.LRUCache(1024 * 1024, function length(value) {
++    //     if (!value) return 0;
++    //     return (value.fsPath || '').length + value.itemPath.length + value.type.length;
++    // }) : undefined;
++    const getItemsLru = !opts.dev ? new _lrucache.LRUCache(1024 * 1024, function length(value, key) {
++        const keyLen = key.length;
++        if (!value) return keyLen || 1;
++        return keyLen + (value.fsPath || '').length + value.itemPath.length + value.type.length;
+     }) : undefined;
+     // routes that have _next/data endpoints (SSG/SSP)
+     const nextDataRoutes = new Set();
