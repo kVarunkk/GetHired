@@ -19,7 +19,7 @@ export type OnboardingMessage = {
 };
 
 const BATCH_SIZE = 2;
-const VISIBILITY_TIMEOUT = 90;
+const VISIBILITY_TIMEOUT = 0;
 const MAX_RETRIES = 3;
 
 export async function GET() {
