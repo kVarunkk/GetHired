@@ -45,9 +45,9 @@ export async function GET() {
       })) as { data: OnboardingMessage[] | null; error: Error | null };
 
     if (error) {
-      await sendEmailForStatusUpdate(
-        `ONBOARDING WORKER: Failed to read queue.\n${error.message}`,
-      );
+      // await sendEmailForStatusUpdate(
+      //   `ONBOARDING WORKER: Failed to read queue.\n${error.message}`,
+      // );
       return NextResponse.json(
         { success: false, message: "Failed to read queue." },
         { status: 500 },
