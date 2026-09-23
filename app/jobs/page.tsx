@@ -152,12 +152,12 @@ export default async function JobsPage({
   const params = new URLSearchParams(serializeFiltersToURL(cleanParams));
   params.set("tab", activeTab);
   const isRelevantSorting = params.get("sortBy") === "relevance";
-  const isSimilarSearch = !!(isRelevantSorting && params.get("jobId"));
+  // const isSimilarSearch = !!(isRelevantSorting && params.get("jobId"));
   const isSavedOrAppliedTab = activeTab === "saved" || activeTab === "applied";
 
-  if (isSimilarSearch) {
-    params.set("createdAfter", "30");
-  }
+  // if (isSimilarSearch) {
+  //   params.set("createdAfter", "30");
+  // }
 
   let initialJobs: AllJobWithRelations[] = [];
   let count: number = 0;

@@ -39,9 +39,6 @@ export async function rerankJobsIfApplicable({
   let removedJobs: AllJobWithRelations[] = [];
 
   const headersList = await headers();
-  // const host = headersList.get("host");
-  // const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-  // const url = `${protocol}://${host}`;
   const url = await getBaseUrl();
 
   const requiredCredits = TAICredits.AI_SEARCH_ASK_AI_RESUME;
@@ -67,16 +64,6 @@ export async function rerankJobsIfApplicable({
   }
 
   try {
-    // const requestHeaders: Record<string, string> = {};
-    // if (relevanceSearchType !== "similar_jobs") {
-    //   requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
-    // }
-
-    // const cookie = headersList.get("Cookie");
-    // if (cookie) {
-    //   requestHeaders["Cookie"] = cookie;
-    // }
-
     const requestHeaders: Record<string, string> = {};
     const cookie = headersList.get("Cookie");
     const authHeader = headersList.get("Authorization");
@@ -90,8 +77,8 @@ export async function rerankJobsIfApplicable({
       requestHeaders["Authorization"] = authHeader;
     }
 
-    // only keep top 20 jobs in initialJobs(will be sent to AI for filtering) and rest in removedJobs(will be concatenated later).
-    removedJobs = initialJobs.splice(20);
+    // only keep top 50 jobs in initialJobs(will be sent to AI for filtering) and rest in removedJobs(will be concatenated later).
+    removedJobs = initialJobs.splice(50);
     const aiRerankRes = await fetch(
       `${url}/api/ai-search/jobs${
         relevanceSearchType === "similar_jobs" ? "/similar-jobs" : ""

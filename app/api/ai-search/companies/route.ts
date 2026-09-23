@@ -1,11 +1,13 @@
+// TODO: MIGRATE TO JEV
+
 import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { TAICredits, TResumeContent } from "@/utils/types";
-// import { getVertexClient } from "@/utils/vertex";
+import { TAICredits, TResumeRowContent } from "@/utils/types";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 import { google } from "@ai-sdk/google";
+import { extractSectionText } from "@/utils/extract-resume-content";
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,19 +63,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { experience, skills, projects } = (userPreferences.resumes?.[0]
-      ?.content as TResumeContent) || {
-      experience: "",
-      skills: "",
-      projects: "",
-    };
+    const resumeContent = userPreferences.resumes?.[0]
+      ?.content as TResumeRowContent;
+
+    const { experience, skills, projects } = extractSectionText(
+      ["experience", "skills", "projects"],
+      resumeContent,
+    );
 
     // Step 2: Construct the userQuery based on fetched preferences
     const userQuery = `
       User is a candidate with the following preferences:
       - Desired Roles: ${userPreferences.desired_roles?.join(", ")}
       - Work Experience: ${experience}
-      - Skills: ${skills + userPreferences.top_skills?.join(", ")}
+      - Skills: ${skills ?? "" + userPreferences.top_skills?.join(", ")}
       - Projects: ${projects}
       - Years of Experience: ${userPreferences.experience_years} 
       - Preferred Locations: ${userPreferences.preferred_locations?.join(", ")}

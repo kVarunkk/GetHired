@@ -18,5 +18,8 @@ export type AiSearchProfileBody = {
     resume_experience: string;
     resume_projects: string;
     resume_skills: string;
+    min_salary: number;
+    max_salary: number;
+    visa_sponsorship_required: boolean;
   }[];
 };

@@ -68,7 +68,7 @@ export type AIRerankJob = {
 
 export type AIRerankRequestBody = {
   userId: string;
-  jobs: AIRerankJob[];
+  jobs: AllJobWithRelations[];
   jobId?: string;
   aiCredits?: number;
 };
@@ -224,11 +224,63 @@ export interface IUserFavoritesCompanyInfo extends BaseFavorite {
   company_id: string | null;
 }
 
-export type TResumeContent = {
-  experience: string;
-  skills: string;
-  projects: string;
+export type UserPreferences = {
+  desired_roles?: string[];
+  top_skills?: string[];
+  experience_years?: number;
+  preferred_locations?: string[];
+  min_salary?: number;
+  max_salary?: number;
+  work_style_preferences?: string[];
+  job_type?: string[];
+  company_size_preference?: string;
+  career_goals_short_term?: string;
+  career_goals_long_term?: string;
+  visa_sponsorship_required?: boolean;
 };
+
+export interface GenericRerankOptions<TItem> {
+  type: RerankMode;
+  reference: CandidateState | AllJobWithRelations | JobPostingsRow;
+  items: TItem[];
+}
+
+export type ScoreReturnType = {
+  type: "score";
+  score: number;
+  probability?: number;
+  probabilities?: Record<string, number>;
+};
+
+export type CandidateState = {
+  id: string;
+  preferences: UserPreferences;
+  experienceText?: string;
+  skillsText?: string;
+  projectsText?: string;
+};
+
+export type JobListing = {
+  id: string;
+  job_name: string;
+  description: string;
+  experience: string;
+  visa_requirement: string;
+  salary_range: string;
+  locations: string | string[];
+};
+
+export type RerankResult = {
+  reranked_jobs?: Array<{ id: string; reason: string }>;
+  reranked_job_ids?: string[];
+  filtered_out_ids: string[];
+};
+
+export type RerankMode =
+  | "similar_jobs"
+  | "job_digest"
+  | "job_digest_with_suggestions"
+  | "relevant_profiles";
 
 export type JsonCompatible<T> = T & { [key: string]: Json | undefined };
 

@@ -60,6 +60,7 @@ export async function updateSession(request: NextRequest) {
     "/jobs",
     "/hire",
     "/mcp-server",
+    "/extension",
     "/ai-resume-checker",
     "/api/jobs",
     "/api/profiles",
@@ -98,7 +99,8 @@ export async function updateSession(request: NextRequest) {
     "/preview/AuthConfirmationEmai",
     "/auth/update-password",
     "/api/debug/heapdump",
-    // "/api/debug/memory",
+    "/api/extension/generate-answer",
+    "/api/extension/ensure-user",
   ];
 
   const authPaths = [

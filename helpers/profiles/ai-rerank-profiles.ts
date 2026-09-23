@@ -1,7 +1,8 @@
 import { headers } from "next/headers";
-import { AllProfileWithRelations } from "../../utils/types";
+import { AllProfileWithRelations, TResumeRowContent } from "../../utils/types";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
 import { getBaseUrl } from "@/utils/get-base-url";
+import { extractSectionText } from "@/utils/extract-resume-content";
 
 interface RerankResult {
   initialProfiles: AllProfileWithRelations[];
@@ -34,9 +35,6 @@ export async function rerankProfilesIfApplicable({
   let removedProfiles: AllProfileWithRelations[] = [];
 
   const headersList = await headers();
-  // const host = headersList.get("host");
-  // const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-  // const url = `${protocol}://${host}`;
 
   const url = await getBaseUrl();
 
@@ -60,7 +58,7 @@ export async function rerankProfilesIfApplicable({
     } else if (cookie) {
       requestHeaders["Cookie"] = cookie;
     }
-    removedProfiles = initialProfiles.splice(20);
+    removedProfiles = initialProfiles.splice(50);
 
     const aiRerankRes = await fetch(`${url}/api/ai-search/profiles`, {
       method: "POST",
@@ -73,9 +71,12 @@ export async function rerankProfilesIfApplicable({
         jobId,
         companyId,
         profiles: initialProfiles.map((profile) => {
-          const resumeContent = profile.resumes?.[0]?.content as
-            | { experience?: string; skills?: string; projects?: string }
-            | undefined;
+          const resumeContent = profile.resumes?.[0]
+            ?.content as TResumeRowContent;
+          const { experience, skills, projects } = extractSectionText(
+            ["experience", "skills", "projects"],
+            resumeContent,
+          );
 
           return {
             user_id: profile.user_id,
@@ -90,9 +91,12 @@ export async function rerankProfilesIfApplicable({
             career_goals_long_term: profile.career_goals_long_term,
             job_type: profile.job_type,
             industry_preferences: profile.industry_preferences,
-            resume_experience: resumeContent?.experience ?? "",
-            resume_skills: resumeContent?.skills ?? "",
-            resume_projects: resumeContent?.projects ?? "",
+            resume_experience: experience ?? "",
+            resume_skills: skills ?? "",
+            resume_projects: projects ?? "",
+            min_salary: profile.min_salary,
+            max_salary: profile.max_salary,
+            visa_sponsorship_required: profile.visa_sponsorship_required,
           };
         }),
       }),

@@ -37,10 +37,6 @@ export default async function ProfilesPage({
   const onboarding_complete = companyData.filled;
 
   const headersList = await headers();
-  // const host = headersList.get("host");
-  // const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-  // const url = `${protocol}://${host}`;
-
   const url = await getBaseUrl();
 
   let initialProfiles: AllProfileWithRelations[] = [];

@@ -12,6 +12,7 @@
   "dependencies": {
     "@ai-sdk/google": "^4.0.50",
     "@ai-sdk/react": "^3.0.5",
+    "@ai-sdk/typesafe-ai": "^3.0.4",
     "@getbrevo/brevo": "^5.0.4",
     "@google-cloud/storage": "^8.0.1",
     "@hookform/resolvers": "^5.2.1",
@@ -37,7 +38,7 @@
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@tanstack/react-table": "^8.21.3",
-    "ai": "^7.0.77",
+    "ai": "^7.0.109",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

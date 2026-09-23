@@ -213,6 +213,14 @@ export default function Footer() {
             </li>
             <li>
               <Link
+                href="/extension"
+                className="hover:underline hover:opacity-100 transition-opacity"
+              >
+                Chrome Extension
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/privacy-policy"
                 className="hover:underline hover:opacity-100 transition-opacity"
               >

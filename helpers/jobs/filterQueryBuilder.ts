@@ -9,6 +9,7 @@ import {
 } from "@/utils/types";
 import { PostgrestError } from "@supabase/supabase-js";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
+import { getCutOffDate } from "@/utils/date";
 export const allJobsSelectString = `id, created_at, updated_at, job_name, job_type, platform, locations, salary_range, visa_requirement, salary_min, salary_max, company_name, experience, experience_min, experience_max, equity_range, equity_min, equity_max, status, ai_summary, is_platform_job`;
 
 export const buildQuery = async ({
@@ -181,11 +182,10 @@ export const buildQuery = async ({
 
     // --- VECTOR SEARCH ---
     if (
-      createdAfter &&
-      (((relevanceSearchType === "job_digest" ||
+      ((relevanceSearchType === "job_digest" ||
         relevanceSearchType === "job_digest_with_suggestions") &&
         userEmbedding) ||
-        (relevanceSearchType === "similar_jobs" && jobEmbedding))
+      (relevanceSearchType === "similar_jobs" && jobEmbedding)
     ) {
       const { data: searchData, error: searchError } = await supabase.rpc(
         "match_all_jobs_test",
@@ -197,11 +197,8 @@ export const buildQuery = async ({
           // the cosine distance between the job and user embedding must be less than 0.3
           match_threshold: 0.3,
           match_count:
-            relevanceSearchType === "similar_jobs" ||
-            relevanceSearchType === "job_digest_with_suggestions"
-              ? 50
-              : 100,
-          min_created_at: createdAfter,
+            relevanceSearchType === "job_digest_with_suggestions" ? 50 : 100,
+          min_created_at: createdAfter ?? getCutOffDate(60),
         },
       );
 

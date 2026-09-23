@@ -304,10 +304,6 @@ export default function JobsComponent({
     }
 
     if (current_page === "jobs") {
-      // const items = jobs.filter(
-      //   (job): job is AllJobWithRelations => "job_name" in job,
-      // );
-
       const items = jobs
         .filter((job): job is AllJobWithRelations => "job_name" in job)
         .map((job) => {
@@ -581,7 +577,9 @@ export default function JobsComponent({
             >
               <>
                 Generate AI Feed
-                {<Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {aiGenBtnLoading && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
               </>
             </Button>
           </div>

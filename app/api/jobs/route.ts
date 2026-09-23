@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
           if (jobDataError || !jobData) {
             relevanceSearchType = null;
             return NextResponse.json(
-              { error: "Job not found." },
+              { error: "Some error occured. Please try again later." },
               { status: 404 },
             );
           }
