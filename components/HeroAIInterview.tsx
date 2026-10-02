@@ -1,0 +1,63 @@
+import { Sparkles } from "lucide-react";
+import Image from "next/image";
+import { Button } from "./ui/button";
+import Link from "next/link";
+import {
+  AI_INTERVIEW_DARK,
+  AI_INTERVIEW_LIGHT,
+  HeroMaskStyle,
+} from "@/utils/utils";
+
+export default function HeroAiInterview() {
+  return (
+    <div className="flex flex-col gap-5 w-full items-center text-center px-4 py-3 lg:px-20 xl:px-40 2xl:px-80">
+      <div className="space-y-4 max-w-3xl">
+        <div className="space-y-4 max-w-3xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brandSoft border border-brand/20 text-brand dark:text-primary text-[10px] font-bold uppercase tracking-widest mb-2 animate-in fade-in slide-in-from-top-2 duration-700">
+            <Sparkles size={12} />
+            Advanced AI Analysis
+          </div>
+
+          <h1 className="text-5xl sm:text-7xl font-black tracking-tight leading-[1.1]">
+            AI Interview
+          </h1>
+
+          <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
+            Prepare for your next interview with our AI-powered practice
+            sessions. Get personalized feedback and improve your chances of
+            landing the job.
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <Link href={"/interview"}>
+          <Button className="w-full sm:w-auto bg-brand hover:bg-brand/70 text-brand-foreground font-bold h-11 px-8 rounded-xl shadow-lg shadow-brand/20 transition-all active:scale-95 disabled:opacity-70">
+            Start Practicing
+          </Button>
+        </Link>
+      </div>
+
+      <div>
+        <Image
+          className="rounded-xl border border-border drop-shadow-xl mt-8 dark:hidden"
+          src={AI_INTERVIEW_LIGHT}
+          style={HeroMaskStyle}
+          height={1200}
+          width={1200}
+          alt="Snapshot of the GetHired Job Board"
+          priority
+        />
+        <Image
+          className="rounded-xl border border-border drop-shadow-xl mt-8 hidden dark:block"
+          src={AI_INTERVIEW_DARK}
+          style={HeroMaskStyle}
+          height={1200}
+          width={1200}
+          alt="Snapshot of the GetHired Job Board"
+          priority
+        />
+      </div>
+    </div>
+  );
+}

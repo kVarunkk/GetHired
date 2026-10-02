@@ -165,6 +165,14 @@ export default function Footer() {
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>
               <Link
+                href="/ai-interview"
+                className="hover:underline hover:opacity-100 transition-opacity"
+              >
+                AI Interview
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/ai-resume-checker"
                 className="hover:underline hover:opacity-100 transition-opacity"
               >

@@ -1,5 +1,12 @@
 import { clsx, type ClassValue } from "clsx";
-import { FileUser, Info, ScanSearch, Sparkle, UserIcon } from "lucide-react";
+import {
+  FileUser,
+  Headset,
+  Info,
+  ScanSearch,
+  Sparkle,
+  UserIcon,
+} from "lucide-react";
 
 import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
@@ -286,6 +293,13 @@ export const applicantNavbarItems: INavItem[] = [
     icon: <FileUser className="h-4 w-4" />,
   },
   {
+    id: "interviews",
+    label: "Interviews",
+    href: "/interview",
+    type: "startswith",
+    icon: <Headset className="h-4 w-4" />,
+  },
+  {
     id: "companies",
     label: "Companies",
     href: "/companies",
@@ -382,6 +396,7 @@ const verticalNavbarPaths = [
   "/get-started",
   "/resume-review",
   "/resume",
+  "/interview",
 ];
 
 export const noScrollToTop = ["/resume-review/"];
@@ -455,6 +470,8 @@ export const CHROME_EXTENSION_DARK = `${cloudFrontUrl}/hero/chrome-extension-her
 export const CHROME_EXTENSION_LIGHT = `${cloudFrontUrl}/hero/chrome-extension-hero-light.webp`;
 export const RESUME_CHECKER_DARK = `${cloudFrontUrl}/hero/dark-ai-resume-checker.webp`;
 export const RESUME_CHECKER_LIGHT = `${cloudFrontUrl}/hero/light-ai-resume-checker.webp`;
+export const AI_INTERVIEW_DARK = `${cloudFrontUrl}/hero/ai-interview-dark.webp`;
+export const AI_INTERVIEW_LIGHT = `${cloudFrontUrl}/hero/ai-interview-light.webp`;
 export const BRAND_LONG_LIGHT = `${cloudFrontUrl}/brand/long-light.webp`;
 export const BRAND_LONG_DARK = `${cloudFrontUrl}/brand/long-dark.webp`;
 export const BRAND_SHORT_LIGHT = `${cloudFrontUrl}/brand/short-light.webp`;

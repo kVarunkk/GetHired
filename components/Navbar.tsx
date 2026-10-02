@@ -87,8 +87,12 @@ export default function NavbarComponent({
         )}
       >
         <WaitlistCTA
-          content={<p>Review your resume with our new AI Resume Checker</p>}
-          redirectTo="/ai-resume-checker"
+          content={
+            <p>
+              Prepare for your next interview with our new AI Interview feature
+            </p>
+          }
+          redirectTo="/ai-interview"
         />
         <div
           className={cn(
@@ -99,6 +103,7 @@ export default function NavbarComponent({
               pathname.startsWith("/profiles") ||
               pathname.startsWith("/resume") ||
               pathname.startsWith("/company") ||
+              pathname.startsWith("/interview") ||
               pathname.startsWith("/dashboard")) &&
               "mb-0",
           )}
