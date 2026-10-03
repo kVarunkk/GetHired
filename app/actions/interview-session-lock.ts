@@ -40,7 +40,7 @@ export async function heartbeatInterviewSessionAction(
   );
 
   if (error) {
-    console.error("[INTERVIEW_SESSION_HEARTBEAT_ERROR]:", error);
+    // console.error("[INTERVIEW_SESSION_HEARTBEAT_ERROR]:", error);
     return { status: "error" as const, error: "Session heartbeat failed." };
   }
 
@@ -69,7 +69,7 @@ export async function releaseInterviewSessionAction(
   );
 
   if (error) {
-    console.error("[INTERVIEW_SESSION_RELEASE_ERROR]:", error);
+    // console.error("[INTERVIEW_SESSION_RELEASE_ERROR]:", error);
     return { success: false as const, error: "Session lock release failed." };
   }
 

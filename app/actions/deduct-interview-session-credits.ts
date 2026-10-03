@@ -39,7 +39,7 @@ export async function deductInterviewSessionCreditsAction(
   );
 
   if (error) {
-    console.error("[INTERVIEW_CREDIT_DEDUCTION_ERROR]:", error);
+    // console.error("[INTERVIEW_CREDIT_DEDUCTION_ERROR]:", error);
     return {
       success: false as const,
       error: error.message.includes("Insufficient AI credits")

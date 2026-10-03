@@ -11,12 +11,14 @@ import {
   Bot,
   Radio,
   ChevronDown,
-  ExternalLink,
+  FileUser,
+  Briefcase,
 } from "lucide-react";
 import BackButton from "./BackButton";
 import { TInterviewServer } from "@/utils/types/interview.types";
 import Link from "next/link";
 import { Button } from "./ui/button";
+import toast from "react-hot-toast";
 
 interface InterviewComponentProps {
   interviewId: string;
@@ -106,6 +108,14 @@ export default function InterviewComponent({
     return () => window.clearInterval(timer);
   }, [status]);
 
+  useEffect(() => {
+    if (errorMessage) {
+      toast.error(errorMessage);
+    } else if (status === "error") {
+      toast.error("Failed to connect. Please check mic permissions and try again.");
+    }
+  }, [errorMessage, status]);
+
   // Handle user scrolling up manually to disable auto-scroll
   const handleScroll = () => {
     if (!scrollContainerRef.current) return;
@@ -131,14 +141,14 @@ export default function InterviewComponent({
                 href={"/jobs/" + interview.job_id}
                 target="_blank"
               >
-                {interview.all_jobs?.job_name} <ExternalLink size={12} />
+               <Briefcase size={14} /> {interview.all_jobs?.job_name} 
               </Link>
               <Link
                 className="text-xs text-muted-foreground underline underline-offset-4 flex items-center gap-1"
                 href={"/resume/" + interview.resume_id}
                 target="_blank"
               >
-                {interview.resumes?.name} <ExternalLink size={12} />
+              <FileUser size={14} />  {interview.resumes?.name} 
               </Link>
             </div>
           </div>
