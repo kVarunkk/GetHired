@@ -287,10 +287,10 @@ export default function Footer() {
         </div>
 
         <div className="col-span-2 ">
-          <h3 className="text-lg font-bold mb-3 ">AI Resume Checker</h3>
-          <Link href={"/resume-review"}>
+          <h3 className="text-lg font-bold mb-3 ">AI Interview</h3>
+          <Link href={"/interview"}>
             <Button className="w-full sm:w-auto bg-brand hover:bg-brand/70 text-brand-foreground font-bold h-11 px-8 rounded-xl shadow-lg shadow-brand/20 transition-all active:scale-95 disabled:opacity-70">
-              Review My Resume
+              Interview Now
             </Button>
           </Link>{" "}
         </div>

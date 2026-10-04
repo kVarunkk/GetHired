@@ -11,10 +11,6 @@ export default async function InterviewIdPage({
   try {
     const supabase = await createClient();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
     const { data, error } = await supabase
       .from("interviews")
       .select("*, all_jobs(job_name), resumes(name)")

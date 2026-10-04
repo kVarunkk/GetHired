@@ -21,19 +21,19 @@ import JobPageDropdown from "./JobPageDropdown";
 import ProfileCompletionBanner from "./ProfileCompletionBanner";
 import JobDescriptionCard from "./JobDetailsCard";
 import AskAIDialog from "./AskAIDialog";
-import InfoTooltip from "./InfoTooltip";
-import { TAICredits } from "@/utils/types";
 import CreateReviewForJob from "./CreateReviewForJob";
 import { Skeleton } from "./ui/skeleton";
 import ModifiedLink from "./ModifiedLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
-import { useMemo } from "react";
+import { startTransition, useMemo } from "react";
+import { useProgress } from "react-transition-progress";
 
 export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const shouldApplyDialogOpen = searchParams.get("apply") === "true";
+  const startProgress = useProgress();
 
   const { data: currentUserData, isLoading } = useSWR(
     PROFILE_API_KEY,
@@ -163,27 +163,7 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
 
       {/* --- Features Section --- */}
       <div className="flex items-center gap-5 justify-between mt-2 flex-wrap">
-        {jobData.job_url ? (
-          isUrlsLoading ? (
-            <Skeleton className="h-8 w-24" />
-          ) : userId ? (
-            <Button variant={"link"} asChild>
-              <Link target="_blank" href={jobData.job_url}>
-                Original Job
-                <ExternalLink className="h-4 w-4" />
-              </Link>
-            </Button>
-          ) : (
-            <Button variant={"link"} asChild>
-              <Link href={"/auth/sign-up?returnTo=/jobs/" + jobData.id}>
-                Original Job
-                <ExternalLink className="h-4 w-4" />
-              </Link>
-            </Button>
-          )
-        ) : (
-          ""
-        )}
+       
         {!isCompanyUser && (
           <div className="flex items-center flex-wrap gap-3">
             {isLoading ? (
@@ -216,7 +196,10 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
                     create: "true",
                     jobUrl,
                   });
+                  startTransition(() => {
+                                    startProgress();
                   router.push(`/interview?${params.toString()}`);
+                                  });
                 }}
               >
                 <Sparkle className="h-4 w-4" />
@@ -268,6 +251,28 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
               </Button>
             )}
           </div>
+        )}
+
+         {jobData.job_url ? (
+          isUrlsLoading ? (
+            <Skeleton className="h-8 w-24" />
+          ) : userId ? (
+            <Button variant={"link"} asChild>
+              <Link target="_blank" href={jobData.job_url}>
+                Original Job
+                <ExternalLink className="h-4 w-4" />
+              </Link>
+            </Button>
+          ) : (
+            <Button variant={"link"} asChild>
+              <Link href={"/auth/sign-up?returnTo=/jobs/" + jobData.id}>
+                Original Job
+                <ExternalLink className="h-4 w-4" />
+              </Link>
+            </Button>
+          )
+        ) : (
+          ""
         )}
       </div>
 

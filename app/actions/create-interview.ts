@@ -52,6 +52,18 @@ export async function createInterviewAction(
       };
     }
 
+    const {data: jobsData} = await supabase
+      .from("all_jobs")
+      .select("id")
+      .eq("id", jobId)
+      .single();
+
+    if (!jobsData) {
+      return {
+        error: "Job not found. Please provide a valid job URL.",
+      };
+    }
+
     const { data: interviewData, error: interviewError } = await supabase
       .from("interviews")
       .insert({

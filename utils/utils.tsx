@@ -279,6 +279,13 @@ export const applicantNavbarItems: INavItem[] = [
     icon: <Briefcase className="h-4 w-4" />,
   },
   {
+    id: "interviews",
+    label: "Interviews",
+    href: "/interview",
+    type: "startswith",
+    icon: <Headset className="h-4 w-4" />,
+  },
+  {
     id: "reviews",
     label: "CV Reviews",
     href: "/resume-review",
@@ -291,13 +298,6 @@ export const applicantNavbarItems: INavItem[] = [
     href: "/resume",
     type: "startswith",
     icon: <FileUser className="h-4 w-4" />,
-  },
-  {
-    id: "interviews",
-    label: "Interviews",
-    href: "/interview",
-    type: "startswith",
-    icon: <Headset className="h-4 w-4" />,
   },
   {
     id: "companies",
@@ -347,9 +347,9 @@ export const homePageNavItems: INavItem[] = [
     type: "startswith",
   },
   {
-    id: "companies",
-    label: "Companies",
-    href: "/companies",
+    id: "interview",
+    label: "AI Interview",
+    href: "/ai-interview",
     type: "startswith",
   },
   {

@@ -9,7 +9,7 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { ArrowLeft, Loader2, Plus } from "lucide-react";
 import Link from "next/link";
@@ -23,6 +23,7 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { createInterviewAction } from "@/app/actions/create-interview";
 import { useRouter } from "next/navigation";
+import { useProgress } from "react-transition-progress";
 
 interface CreateInterviewDialogProps {
   initialOpen?: boolean;
@@ -41,6 +42,7 @@ export default function CreateInterviewDialog({
   const [selectedResume, setSelectedResume] =
     useState<TResumeReviewResume | null>(null);
   const router = useRouter();
+  const startProgress = useProgress();
 
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
     revalidateOnFocus: false,
@@ -94,8 +96,8 @@ export default function CreateInterviewDialog({
       }
 
       jobId = parsedJobUrl.pathname.split("/").filter(Boolean).pop() ?? null;
-    } catch {
-      setError("Invalid job URL or resume selection.");
+    } catch (e) {
+      setError((e as Error).message || "Invalid job URL.");
       return;
     }
 
@@ -116,8 +118,13 @@ export default function CreateInterviewDialog({
       if (result.error) {
         setError(result.error);
       } else if (result.success && result.interviewId) {
+        setOpen(false)
         toast.success("Interview created successfully!");
-        router.push(`/interview/${result.interviewId}`);
+        startTransition(() => {
+                  startProgress();
+                  router.push(`/interview/${result.interviewId}`);
+                });
+        
       }
     } catch (error) {
       toast.error(
@@ -222,7 +229,11 @@ export default function CreateInterviewDialog({
                 </div>
 
                 <div className="grid gap-2">
-                  <Label>Job URL</Label>
+                  <Label>Job URL <InfoTooltip
+                                    content="
+                                  Enter a valid Job URL from GetHired. For e.g., https://gethired.devhub.co.in/jobs/bf28fb7d-8a09-45f4-8376-c391c64ca782
+                                  "
+                                  /></Label>
                   <Input
                     required
                     name="jobUrl"
