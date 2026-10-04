@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: false,
   images: {
+    unoptimized: true,
     minimumCacheTTL: 60 * 60 * 24 * 7, // cache for 7 days
     remotePatterns: [
       {
