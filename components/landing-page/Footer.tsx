@@ -11,57 +11,101 @@ const popularSearches = [
     name: "Remote Jobs",
     href: "/jobs?location=Remote",
   },
+  // {
+  //   name: "Indeed Jobs",
+  //   href: "/jobs?platform=indeed",
+  // },
+  // {
+  //   name: "Naukri Jobs",
+  //   href: "/jobs?platform=naukri",
+  // },
+  // {
+  //   name: "Y Combinator Jobs",
+  //   href: "/jobs?platform=ycombinator",
+  // },
+  // {
+  //   name: "Wellfound Jobs",
+  //   href: "/jobs?platform=wellfound",
+  // },
+  // {
+  //   name: "RemoteOK Jobs",
+  //   href: "/jobs?platform=remoteok",
+  // },
+  // {
+  //   name: "We Work Remotely Jobs",
+  //   href: "/jobs?platform=weworkremotely",
+  // },
+  // {
+  //   name: "Uplers Jobs",
+  //   href: "/jobs?platform=uplers",
+  // },
+  // {
+  //   name: "Greenhouse Jobs",
+  //   href: "/jobs?platform=greenhouse",
+  // },
+  // {
+  //   name: "a16z Jobs",
+  //   href: "/jobs?platform=a16z",
+  // },
+  // {
+  //   name: "Lightspeed Jobs",
+  //   href: "/jobs?platform=lightspeed",
+  // },
+  // {
+  //   name: "Glassdoor Jobs",
+  //   href: "/jobs?platform=glassdoor",
+  // },
+  // {
+  //   name: "JobLeads Jobs",
+  //   href: "/jobs?platform=jobleads",
+  // },
+  // {
+  //   name: "Working Nomads Jobs",
+  //   href: "/jobs?platform=workingnomads",
+  // },
   {
-    name: "Indeed Jobs",
-    href: "/jobs?platform=indeed",
+    name: 'Workday Jobs',
+    href: '/jobs?platform=workday',
   },
   {
-    name: "Naukri Jobs",
-    href: "/jobs?platform=naukri",
+    name: 'Rippling Jobs',
+    href: '/jobs?platform=rippling',
   },
   {
-    name: "Y Combinator Jobs",
-    href: "/jobs?platform=ycombinator",
+    name: 'BambooHR Jobs',
+    href: '/jobs?platform=bamboohr',
   },
   {
-    name: "Wellfound Jobs",
-    href: "/jobs?platform=wellfound",
+    name: 'Jobvite Jobs',
+    href: '/jobs?platform=jobvite',
   },
   {
-    name: "RemoteOK Jobs",
-    href: "/jobs?platform=remoteok",
+    name: 'Greenhouse Jobs',
+    href: '/jobs?platform=greenhouse',
   },
   {
-    name: "We Work Remotely Jobs",
-    href: "/jobs?platform=weworkremotely",
+    name: 'Rippling Jobs',
+    href: '/jobs?platform=rippling',
   },
   {
-    name: "Uplers Jobs",
-    href: "/jobs?platform=uplers",
+    name: 'Workable Jobs',
+    href: '/jobs?platform=workable',
   },
   {
-    name: "Greenhouse Jobs",
-    href: "/jobs?platform=greenhouse",
+    name: 'Recruitee Jobs',
+    href: '/jobs?platform=recruitee',
   },
   {
-    name: "a16z Jobs",
-    href: "/jobs?platform=a16z",
+    name: 'Personio Jobs',
+    href: '/jobs?platform=personio',
   },
   {
-    name: "Lightspeed Jobs",
-    href: "/jobs?platform=lightspeed",
+    name: 'JazzHR Jobs',
+    href: '/jobs?platform=jazzhr',
   },
   {
-    name: "Glassdoor Jobs",
-    href: "/jobs?platform=glassdoor",
-  },
-  {
-    name: "JobLeads Jobs",
-    href: "/jobs?platform=jobleads",
-  },
-  {
-    name: "Working Nomads Jobs",
-    href: "/jobs?platform=workingnomads",
+    name: "Jobs in India",
+    href: "/jobs?location=India",
   },
   {
     name: "Jobs in San Francisco",

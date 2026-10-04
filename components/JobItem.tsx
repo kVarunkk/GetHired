@@ -8,7 +8,6 @@ import JobFavoriteBtn from "./JobFavoriteBtn";
 import JobApplyBtn from "./JobApplyBtn";
 import React from "react";
 import { AllJobWithRelations } from "@/utils/types";
-import { platformsArray } from "@/utils/platforms";
 
 const JobItem = React.memo(
   ({
@@ -142,8 +141,6 @@ function JobDetailBadges({
     },
   ];
 
-  const platform = platformsArray.find((_) => _.value === job.platform);
-
   return (
     <div className="flex items-center gap-4 flex-wrap">
       {jobDetails
@@ -161,23 +158,14 @@ function JobDetailBadges({
           </Badge>
         ))}
       {job.platform && (
-        <Link
-          onClick={(e) => e.stopPropagation()}
-          href={platform?.platform_url || ""}
-          target="_blank"
-          rel="noopener noreferrer"
-          prefetch={false}
-        >
           <Badge
             variant={"secondary"}
             className={cn(
-              "text-xs sm:text-sm font-medium hover:!text-secondary-foreground group-hover:border-secondary-foreground hover:underline",
-              "underline underline-offset-2 sm:no-underline",
+              "text-xs sm:text-sm font-medium hover:!text-secondary-foreground group-hover:border-secondary-foreground ",
             )}
           >
             {job.platform}
           </Badge>
-        </Link>
       )}
       {isSuitable && (
         <Badge

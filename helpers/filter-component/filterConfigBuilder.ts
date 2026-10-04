@@ -53,21 +53,6 @@ export const filterConfigBuilder = (
           options: [],
           isVirtualized: true,
         },
-        // {
-        //   name: "visaRequirement",
-        //   label: "Visa Requirement",
-        //   type: "multi-select",
-        //   placeholder: "Select the Visa configuration",
-        //   options: [
-        //     {
-        //       value: "US Citizenship/Visa Not Required",
-        //       label: "US Citizenship/Visa Not Required",
-        //     },
-        //     { value: "Will Sponsor", label: "Will Sponsor" },
-        //     { value: "US Citizen/Visa Only", label: "US Citizen/Visa Only" },
-        //   ],
-        // },
-
         {
           name: "companyName",
           label: "Company",
