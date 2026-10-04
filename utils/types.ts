@@ -159,6 +159,7 @@ export enum TAICredits {
   AI_SEARCH_ASK_AI_RESUME = 5,
   AI_SUMMARY = 2,
   JOB_APPLICATION = 1,
+  AI_INTERVIEW = 10,
 }
 
 export enum TWaitlistType {

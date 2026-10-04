@@ -32,7 +32,9 @@ export default function WaitlistCTA({
         <div className="flex items-center justify-center w-5 h-5 rounded-full bg-brand text-brand-foreground animate-pulse shrink-0">
           <Sparkles size={12} fill="currentColor" />
         </div>
-        <span className="text-sm font-semibold tracking-tight">{content}</span>
+        <span className="text-xs sm:text-sm font-semibold tracking-tight">
+          {content}
+        </span>
       </div>
 
       <ChevronRight

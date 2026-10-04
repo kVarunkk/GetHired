@@ -144,8 +144,9 @@ export default function JobsComponent({
   const isFailed = isRelevantProfileSearch
     ? data?.data?.matching_status === "failed"
     : currentUserData?.profile?.relevant_jobs_update_status === "failed";
-  const isPending =
-    isRelevantProfileSearch && data?.data?.matching_status === "pending";
+  const isPending = isRelevantProfileSearch
+    ? data?.data?.matching_status === "pending"
+    : currentUserData?.profile?.relevant_jobs_update_status === "pending";
 
   const {
     items: jobs,
@@ -563,15 +564,13 @@ export default function JobsComponent({
         ) : isPending ? (
           <div className="flex flex-col items-center justify-center my-20 gap-5">
             <p className=" text-muted-foreground text-sm text-center sm:w-1/2">
-              AI Smart Search Feed is only generated for active job postings.
-              This job posting is currently inactive. Please click the button
-              below to start the feed generation process. This is a one time
-              process and might take some time. You will be notified via email
-              once your feed is ready.
+              Please click the button below to start the AI Smart Search feed
+              generation. This is a one time process and might take some time.
+              You will be notified via email once your feed is ready.
             </p>
             <Button
               onClick={() => {
-                generateAIFeed("profile");
+                generateAIFeed(isRelevantProfileSearch ? "profile" : "job");
               }}
               disabled={aiGenBtnLoading}
             >

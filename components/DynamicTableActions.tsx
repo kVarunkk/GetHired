@@ -19,6 +19,7 @@ import { BookmarkRow, UserApiTokensRow } from "@/utils/types";
 import { TResumeReviewTableData } from "./ResumeReviewsTable";
 import { TResumeReviewResume } from "@/utils/types/review.types";
 import { Database } from "@/utils/types/database.types";
+import { TInterviewPageServer } from "@/utils/types/interview.types";
 
 interface FormField {
   name: string;
@@ -32,7 +33,8 @@ type Item =
   | TResumeReviewResume
   | TResumeReviewTableData
   | BookmarkRow
-  | UserApiTokensRow;
+  | UserApiTokensRow
+  | TInterviewPageServer;
 type TableName = keyof Database["public"]["Tables"];
 
 interface DynamicActionsProps<T extends Item> {

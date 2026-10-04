@@ -59,6 +59,7 @@ export async function updateSession(request: NextRequest) {
     "/oauth/consent",
     "/jobs",
     "/hire",
+    "/ai-interview",
     "/mcp-server",
     "/extension",
     "/ai-resume-checker",

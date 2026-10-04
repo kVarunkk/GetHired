@@ -41,8 +41,6 @@ export default function NavbarComponent({
   const pathname = usePathname();
   const isCompanyUser = user?.app_metadata?.type === "company";
   const navItems = useMemo(() => {
-    // const isCompanyUser = user?.app_metadata?.type === "company";
-
     return getNavItemsByPath(pathname, isCompanyUser, user);
   }, [pathname, user, isCompanyUser]);
 
@@ -87,8 +85,12 @@ export default function NavbarComponent({
         )}
       >
         <WaitlistCTA
-          content={<p>Review your resume with our new AI Resume Checker</p>}
-          redirectTo="/ai-resume-checker"
+          content={
+            <p>
+              Prepare for your next interview with our new AI Interview feature
+            </p>
+          }
+          redirectTo="/ai-interview"
         />
         <div
           className={cn(
@@ -99,6 +101,7 @@ export default function NavbarComponent({
               pathname.startsWith("/profiles") ||
               pathname.startsWith("/resume") ||
               pathname.startsWith("/company") ||
+              pathname.startsWith("/interview") ||
               pathname.startsWith("/dashboard")) &&
               "mb-0",
           )}
@@ -111,7 +114,7 @@ export default function NavbarComponent({
           </div>
 
           {navbarItems && (
-            <div className=" absolute left-1/2 -translate-x-1/2 items-center gap-4 text-sm hidden md:flex">
+            <div className=" absolute left-1/2 -translate-x-1/2 items-center gap-4 text-sm hidden lg:flex">
               {navbarItems.map((item) => (
                 <ModifiedLink
                   key={item.id}
@@ -285,7 +288,7 @@ const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <button onClick={() => setOpen(true)} className="md:hidden p-2">
+      <button onClick={() => setOpen(true)} className="lg:hidden p-2">
         <Menu />
       </button>
       <SheetContent
