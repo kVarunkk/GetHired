@@ -18,7 +18,7 @@ type JobEmbeddingMessage = {
 
 type EmbeddingTable = "all_jobs" | "job_postings";
 
-export async function POST(request: Request) {
+export async function POST() {
   const headersList = await headers();
   const cronSecret = headersList.get("X-Internal-Secret");
 
