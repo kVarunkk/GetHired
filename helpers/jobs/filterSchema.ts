@@ -1,11 +1,8 @@
+import { platformsArray } from "@/utils/platforms";
 import { z } from "zod";
 
 const JOB_TYPES = ["Fulltime", "Contract", "Intern"] as const;
-// const VISA_REQUIREMENTS = [
-//   "US Citizenship/Visa Not Required",
-//   "US Citizen/Visa Only",
-//   "Will Sponsor",
-// ] as const;
+
 const APPLICATION_STATUSES = [
   "submitted",
   "reviewed",
@@ -13,27 +10,10 @@ const APPLICATION_STATUSES = [
   "stand_by",
   "rejected",
 ] as const;
-const PLATFORMS = [
-  "ycombinator",
-  "wellfound",
-  "lightspeed",
-  "a16z",
-  "khosla",
-  "susa",
-  "sapphire",
-  "accel",
-  "sierra",
-  "workingnomads",
-  "jobleads",
-  "naukri",
-  "indeed",
-  "glassdoor",
-  "greenhouse",
-  "weworkremotely",
-  "remoteok",
-  "uplers",
-  "gethired",
-] as const;
+const PLATFORMS = platformsArray.map((platform) => platform.value) as [
+  (typeof platformsArray)[number]["value"],
+  ...(typeof platformsArray)[number]["value"][],
+];
 
 const preprocessArray = (schema: z.ZodArray<any>) =>
   z.preprocess((val) => {
