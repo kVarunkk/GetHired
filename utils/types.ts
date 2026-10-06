@@ -50,7 +50,7 @@ export type AllJobWithRelations = AllJobsRow & {
 
 export type JobsBuildQueryResult = {
   data: AllJobWithRelations[];
-  error: string | null | undefined;
+  error: string | null | undefined | unknown;
   nextCursor: string | null;
   count: number;
   matchedJobIds: string[];
