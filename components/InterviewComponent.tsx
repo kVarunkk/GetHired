@@ -1,6 +1,6 @@
 "use client";
 
-import { useVoiceAgent, Status } from "@/hooks/useVoiceAgent";
+import { useVoiceAgent } from "@/hooks/useVoiceAgent";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   PhoneOff,
@@ -19,17 +19,25 @@ import { TInterviewServer } from "@/utils/types/interview.types";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
+import ModifiedLink from "./ModifiedLink";
 
 interface InterviewComponentProps {
   interviewId: string;
   interview: TInterviewServer;
+  sessionHistory: {
+    id: string;
+    started_at: string;
+    status: string;
+    analysisStatus: string | null;
+  }[];
 }
 
 export default function InterviewComponent({
   interviewId,
   interview,
+  sessionHistory,
 }: InterviewComponentProps) {
-  const { status, errorMessage, lines, start, stop } =
+  const { status, errorMessage, lines, analysisSession, start, stop } =
     useVoiceAgent(interviewId);
   const [autoScroll, setAutoScroll] = useState(true);
   const [timeLeft, setTimeLeft] = useState(5 * 60);
@@ -52,38 +60,57 @@ export default function InterviewComponent({
     role: "user" | "assistant";
     text: string;
     turn_id: string;
-  }[] = useMemo(
-    () =>
-      (
-        (interview?.turns as {
-          user?: string;
-          assistant?: string;
-          turn_id: string;
-          interrupted?: boolean;
-        }[]) ?? []
+  }[] = useMemo(() => {
+    const latestSession = [...sessionHistory]
+      .sort(
+        (a, b) =>
+          new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
       )
-        .flatMap((t) => [
-          t.user
+      .at(-1);
+    const savedTurns = latestSession
+      ? interview.interview_sessions?.find(
+          (session) => session.id === latestSession.id,
+        )?.turns
+      : interview.turns;
+    const turns = (savedTurns ?? []) as {
+      user?: string;
+      assistant?: string;
+      turn_id?: string;
+      interrupted?: boolean;
+    }[];
+
+    return turns
+      .flatMap((turn, index) => {
+        const turnId = turn.turn_id ?? `turn-${index}`;
+        const sessionPrefix = latestSession?.id ?? "legacy";
+        return [
+          turn.user
             ? {
-                id: `h-user-${t.turn_id}`,
+                id: `h-user-${sessionPrefix}-${turnId}-${index}`,
                 role: "user" as const,
-                text: t.user,
-                turn_id: t.turn_id,
+                text: turn.user,
+                turn_id: turnId,
               }
             : null,
-          t.assistant
+          turn.assistant
             ? {
-                id: `h-assistant-${t.turn_id}`,
+                id: `h-assistant-${sessionPrefix}-${turnId}-${index}`,
                 role: "assistant" as const,
-                text: t.assistant,
-                turn_id: t.turn_id,
-                interrupted: t.interrupted,
+                text: turn.assistant,
+                turn_id: turnId,
+                interrupted: turn.interrupted,
               }
             : null,
-        ])
-        .filter((line): line is NonNullable<typeof line> => line !== null),
-    [interview?.turns],
-  );
+        ];
+      })
+      .filter((line): line is NonNullable<typeof line> => line !== null);
+  }, [interview?.turns, interview.interview_sessions, sessionHistory]);
+
+  const latestAnalysisSessionId =
+    analysisSession?.sessionId ??
+    [...sessionHistory]
+      .reverse()
+      .find((session) => session.analysisStatus !== null)?.id;
 
   // Auto scroll transcript to bottom as new messages arrive
   useEffect(() => {
@@ -112,7 +139,9 @@ export default function InterviewComponent({
     if (errorMessage) {
       toast.error(errorMessage);
     } else if (status === "error") {
-      toast.error("Failed to connect. Please check mic permissions and try again.");
+      toast.error(
+        "Failed to connect. Please check mic permissions and try again.",
+      );
     }
   }, [errorMessage, status]);
 
@@ -141,14 +170,14 @@ export default function InterviewComponent({
                 href={"/jobs/" + interview.job_id}
                 target="_blank"
               >
-               <Briefcase size={14} /> {interview.all_jobs?.job_name} 
+                <Briefcase size={14} /> {interview.all_jobs?.job_name}
               </Link>
               <Link
                 className="text-xs text-muted-foreground underline underline-offset-4 flex items-center gap-1"
                 href={"/resume/" + interview.resume_id}
                 target="_blank"
               >
-              <FileUser size={14} />  {interview.resumes?.name} 
+                <FileUser size={14} /> {interview.resumes?.name}
               </Link>
             </div>
           </div>
@@ -156,7 +185,14 @@ export default function InterviewComponent({
 
         {/* Status Badge */}
         <div className="flex items-center gap-2">
-          <StatusBadge status={status} />
+          {latestAnalysisSessionId && (
+            <ModifiedLink
+              href={`/interview/${interviewId}/analysis/${latestAnalysisSessionId}`}
+            >
+              <Button size="sm">Analysis</Button>
+            </ModifiedLink>
+          )}
+          {/* <StatusBadge status={status} /> */}
         </div>
       </header>
 
@@ -353,64 +389,6 @@ export default function InterviewComponent({
           </div>
         </section>
       </main>
-    </div>
-  );
-}
-
-/**
- * Status Badge Component
- */
-function StatusBadge({ status }: { status: Status }) {
-  const configs: Record<
-    Status,
-    { label: string; bg: string; text: string; dot: string; animate?: boolean }
-  > = {
-    idle: {
-      label: "Ready",
-      bg: "bg-muted",
-      text: "text-muted-foreground",
-      dot: "bg-muted-foreground",
-    },
-    connecting: {
-      label: "Connecting",
-      bg: "bg-amber-500/10",
-      text: "text-amber-600 dark:text-amber-400",
-      dot: "bg-amber-500",
-      animate: true,
-    },
-    live: {
-      label: "Live",
-      bg: "bg-emerald-500/10",
-      text: "text-emerald-600 dark:text-emerald-400",
-      dot: "bg-emerald-500",
-      animate: true,
-    },
-    stopped: {
-      label: "Completed",
-      bg: "bg-secondary",
-      text: "text-foreground",
-      dot: "bg-foreground",
-    },
-    error: {
-      label: "Error",
-      bg: "bg-destructive/10",
-      text: "text-destructive",
-      dot: "bg-destructive",
-    },
-  };
-
-  const config = configs[status] || configs.idle;
-
-  return (
-    <div
-      className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border border-border/50 ${config.bg} ${config.text}`}
-    >
-      <span
-        className={`w-2 h-2 rounded-full ${config.dot} ${
-          config.animate ? "animate-ping" : ""
-        }`}
-      />
-      <span>{config.label}</span>
     </div>
   );
 }

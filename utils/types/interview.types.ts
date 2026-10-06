@@ -9,7 +9,8 @@ const interviewServerQuery = supabase
     `
         *,
         all_jobs(job_name),
-        resumes(name)
+        resumes(name),
+        interview_sessions(id, turns)
       `,
   )
   .single();
