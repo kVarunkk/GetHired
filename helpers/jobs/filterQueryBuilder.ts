@@ -194,8 +194,8 @@ export const buildQuery = async ({
             relevanceSearchType === "similar_jobs"
               ? jobEmbedding!
               : userEmbedding!,
-          // the cosine distance between the job and user embedding must be less than 0.3
-          match_threshold: 0.3,
+          // the cosine distance between the job and user embedding must be less than 0.35
+          match_threshold: 0.35,
           match_count:
             relevanceSearchType === "job_digest_with_suggestions" ? 50 : 100,
           min_created_at: createdAfter ?? getCutOffDate(60),
@@ -334,7 +334,7 @@ export const buildQuery = async ({
 
     return {
       data: data || [],
-      error: error?.details,
+      error,
       nextCursor,
       count: totalCount,
       matchedJobIds,
@@ -342,10 +342,7 @@ export const buildQuery = async ({
   } catch (e: unknown) {
     return {
       data: [],
-      error:
-        e instanceof Error
-          ? e.message
-          : "Some error occurred while fetching Jobs",
+      error: e,
       nextCursor: null,
       count: 0,
       matchedJobIds: [],

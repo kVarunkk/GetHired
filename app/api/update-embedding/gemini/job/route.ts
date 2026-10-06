@@ -18,6 +18,15 @@ type JobEmbeddingMessage = {
 
 type EmbeddingTable = "all_jobs" | "job_postings";
 
+type EmbeddingJob = {
+  id: string;
+  job_name: string | null;
+  description: string | null;
+  locations: string[] | string | null;
+  job_type: string | null;
+  salary_range: string | null;
+};
+
 export async function POST() {
   const headersList = await headers();
   const cronSecret = headersList.get("X-Internal-Secret");
@@ -61,30 +70,99 @@ export async function POST() {
       tableByMessageId.set(message.msg_id, table);
     }
 
-    const jobIds = [...new Set(messages.map((message) => message.message.id))];
-
-    // 2. Fetch all corresponding job profiles in a single query
-    const { data: jobs, error: fetchError } = await supabase
-      .from("all_jobs")
-      .select("id, job_name, description, locations, job_type, salary_range")
-      .in("id", jobIds);
-
-    if (fetchError) {
-      throw new Error(`Failed to fetch job records from database: ${fetchError.message}`);
+    const idsByTable: Record<EmbeddingTable, string[]> = {
+      all_jobs: [],
+      job_postings: [],
+    };
+    for (const message of messages) {
+      idsByTable[tableByMessageId.get(message.msg_id)!].push(
+        message.message.id,
+      );
     }
 
-    if (!jobs || jobs.length === 0) {
-      throw new Error("No job records were found for the queue messages.");
-    }
+    // Queue messages can refer to either source table; normalize their fields
+    // before building embeddings.
+    const jobsByMessageKey = new Map<string, EmbeddingJob>();
+    const allJobIds = [...new Set(idsByTable.all_jobs)];
+    if (allJobIds.length > 0) {
+      const { data: jobs, error: fetchError } = await supabase
+        .from("all_jobs")
+        .select("id, job_name, description, locations, job_type, salary_range")
+        .in("id", allJobIds);
 
-    const jobsById = new Map(jobs.map((job) => [job.id, job]));
-    const jobsInMessageOrder = messages.map((message) => {
-      const job = jobsById.get(message.message.id);
-      if (!job) {
-        throw new Error(`Job ${message.message.id} was not found in all_jobs.`);
+      if (fetchError) {
+        throw new Error(
+          `Failed to fetch job records from all_jobs: ${fetchError.message}`,
+        );
       }
-      return job;
-    });
+
+      for (const job of jobs ?? []) {
+        jobsByMessageKey.set(`all_jobs:${job.id}`, job);
+      }
+    }
+
+    const postingIds = [...new Set(idsByTable.job_postings)];
+    if (postingIds.length > 0) {
+      const { data: postings, error: fetchError } = await supabase
+        .from("job_postings")
+        .select("id, title, description, location, job_type, salary_range")
+        .in("id", postingIds);
+
+      if (fetchError) {
+        throw new Error(
+          `Failed to fetch job records from job_postings: ${fetchError.message}`,
+        );
+      }
+
+      for (const posting of postings ?? []) {
+        jobsByMessageKey.set(`job_postings:${posting.id}`, {
+          id: posting.id,
+          job_name: posting.title,
+          description: posting.description,
+          locations: posting.location,
+          job_type: posting.job_type,
+          salary_range: posting.salary_range,
+        });
+      }
+    }
+
+    const processableMessages: JobEmbeddingMessage[] = [];
+    const jobsInMessageOrder: EmbeddingJob[] = [];
+    let skippedCount = 0;
+    for (const message of messages) {
+      const table = tableByMessageId.get(message.msg_id)!;
+      const job = jobsByMessageKey.get(`${table}:${message.message.id}`);
+
+      if (!job) {
+        console.warn(
+          `[EMBEDDING WORKER] Skipping stale queue message ${message.msg_id}: ${table} row ${message.message.id} no longer exists.`,
+        );
+        const { error: deleteError } = await supabase
+          .schema("pgmq_public")
+          .rpc("delete", {
+            queue_name: "job_embeddings_queue",
+            message_id: message.msg_id,
+          });
+        if (deleteError) {
+          throw new Error(
+            `Failed to delete stale queue message ${message.msg_id}: ${deleteError.message}`,
+          );
+        }
+        skippedCount++;
+        continue;
+      }
+
+      processableMessages.push(message);
+      jobsInMessageOrder.push(job);
+    }
+
+    if (processableMessages.length === 0) {
+      return NextResponse.json({
+        message: `No existing jobs to embed. Skipped ${skippedCount} stale queue messages.`,
+        processed_count: 0,
+        skipped_count: skippedCount,
+      });
+    }
 
     // 3. Format text payloads for embedding
     const textsToEmbed = jobsInMessageOrder.map((job) => `
@@ -109,8 +187,8 @@ export async function POST() {
 
     // 5. Update Supabase with the generated embeddings
     let processedCount = 0;
-    for (let i = 0; i < messages.length; i++) {
-      const message = messages[i];
+    for (let i = 0; i < processableMessages.length; i++) {
+      const message = processableMessages[i];
       const table = tableByMessageId.get(message.msg_id)!;
       const updatedAt = new Date().toISOString();
       const embedding = `[${embeddings[i].join(",")}]`;
@@ -152,8 +230,9 @@ export async function POST() {
     }
 
     return NextResponse.json({
-      message: `Successfully processed batch of ${processedCount} job embeddings via pgmq.`,
+      message: `Successfully processed ${processedCount} job embeddings and skipped ${skippedCount} stale queue messages.`,
       processed_count: processedCount,
+      skipped_count: skippedCount,
     });
   } catch (error) {
     console.error("Error in batch embedding route:", error);

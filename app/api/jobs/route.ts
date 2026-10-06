@@ -6,16 +6,11 @@ import { rerankJobsIfApplicable } from "@/helpers/jobs/ai-rerank-jobs";
 import { TAICredits } from "@/utils/types";
 import { getCutOffDate } from "@/utils/date";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
+import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 
 export async function GET(request: NextRequest) {
-  const before = process.memoryUsage().rss / 1024 / 1024;
-
   const internalSecret = request.headers.get("X-Internal-Secret");
   const isInternalCall = internalSecret === process.env.INTERNAL_API_SECRET;
-
-  const supabase = isInternalCall
-    ? createServiceRoleClient()
-    : await createClient();
 
   const searchParams = request.nextUrl.searchParams;
   const jobType = searchParams.get("jobType");
@@ -42,7 +37,15 @@ export async function GET(request: NextRequest) {
   // only used for job digest endpoint to include AI suggestions, not for relevant job feed
   const type = searchParams.get("type");
 
+  let failureStage = "initialize";
+  let distinctId = applicantUserId || "unknown";
+
   try {
+    const supabase = isInternalCall
+      ? createServiceRoleClient()
+      : await createClient();
+
+    failureStage = "resolve_relevance_profile";
     let userEmbedding = null;
     let jobEmbedding = null;
     let userId;
@@ -58,11 +61,13 @@ export async function GET(request: NextRequest) {
     if (sortBy === "relevance") {
       if (applicantUserId) {
         userId = applicantUserId;
+        distinctId = applicantUserId;
         relevanceSearchType =
           type === "digest" ? "job_digest_with_suggestions" : "job_digest";
       } else {
         relevanceSearchType = jobId ? "similar_jobs" : "standard";
 
+        failureStage = "authenticate_request";
         const user = await getUserFromRequest();
         userId = user?.id;
         if (!userId) {
@@ -72,13 +77,18 @@ export async function GET(request: NextRequest) {
             { status: 401 },
           );
         }
+        distinctId = userId;
 
         if (jobId) {
+          failureStage = "fetch_similar_job_embedding";
           const { data: jobData, error: jobDataError } = await supabase
             .from("all_jobs")
             .select("embedding_new")
             .eq("id", jobId)
             .single();
+          if (jobDataError && jobDataError.code !== "PGRST116") {
+            throw jobDataError;
+          }
           if (jobDataError || !jobData) {
             relevanceSearchType = null;
             return NextResponse.json(
@@ -90,12 +100,16 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      failureStage = "fetch_user_embedding_and_credits";
       const { data: userData, error: userDataError } = await supabase
         .from("user_info")
         .select("embedding_new, ai_credits")
         .eq("user_id", userId)
         .single();
 
+      if (userDataError && userDataError.code !== "PGRST116") {
+        throw userDataError;
+      }
       if (userDataError || !userData) {
         relevanceSearchType = null;
         return NextResponse.json(
@@ -120,6 +134,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    failureStage = "build_jobs_query";
     const { data, error, nextCursor, count, matchedJobIds } = await buildQuery({
       jobType,
       location,
@@ -145,10 +160,11 @@ export async function GET(request: NextRequest) {
     });
 
     if (error) {
-      return NextResponse.json({ error: error }, { status: 500 });
+      throw error;
     }
 
     // only used if relevanceSearchType is job_digest, similar_jobs or job_digest_with_suggestions.
+    failureStage = "rerank_jobs";
     const { initialJobs, totalCount } = await rerankJobsIfApplicable({
       initialJobs: data,
       initialCount: count,
@@ -161,25 +177,51 @@ export async function GET(request: NextRequest) {
       isInternalCall,
     });
 
-    const after = process.memoryUsage().rss / 1024 / 1024;
-    if (after - before > 2) {
-      console.log(
-        `[mem-delta jobs api] ${request.nextUrl.pathname} : ${before.toFixed(0)}MB -> ${after.toFixed(0)}MB (+${(after - before).toFixed(0)}MB)`,
-      );
-    }
-
     return NextResponse.json({
       data: initialJobs,
       totalCount,
       nextCursor,
     });
   } catch (err: unknown) {
+    const errorRecord =
+      typeof err === "object" && err !== null
+        ? (err as Record<string, unknown>)
+        : null;
+    const errorMessage =
+      err instanceof Error
+        ? err.message
+        : typeof errorRecord?.message === "string"
+          ? errorRecord.message
+          : String(err) || "An unexpected error occurred";
+    const errorForPostHog =
+      err instanceof Error ? err : new Error(errorMessage);
+
+    console.error(`[JOBS API] Failed during ${failureStage}:`, err);
+    await eventCaptureServerException({
+      error: errorForPostHog,
+      distinctId,
+      properties: {
+        flow: "jobs_api",
+        failure_stage: failureStage,
+        error_message: errorMessage,
+        error_name:
+          err instanceof Error
+            ? err.name
+            : typeof errorRecord?.name === "string"
+              ? errorRecord.name
+              : undefined,
+        error_code: errorRecord?.code,
+        error_details: errorRecord?.details,
+        error_hint: errorRecord?.hint,
+        request_path: request.nextUrl.pathname,
+        sort_by: sortBy,
+        created_after_days: createdAfter,
+        internal_call: isInternalCall,
+      },
+    });
     return NextResponse.json(
       {
-        error:
-          err instanceof Error
-            ? err.message
-            : String(err) || "An unexpected error occurred",
+        error: errorMessage,
       },
       { status: 500 },
     );
