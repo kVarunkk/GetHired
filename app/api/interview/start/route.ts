@@ -73,6 +73,8 @@ export async function POST(req: Request) {
     );
   }
 
+  let activatedSessionId: string | null = null;
+
   try {
     const r = await fetch(`${process.env.VOICE_BACKEND_URL}/sessions`, {
       method: "POST",
@@ -116,17 +118,33 @@ export async function POST(req: Request) {
         "The interview session reservation expired. Please try again.",
       );
     }
+    activatedSessionId = sessionId;
+
+    const { data: interviewSession, error: sessionInsertError } = await supabase
+      .from("interview_sessions")
+      .insert({
+        interview_id: interviewId,
+        voice_session_id: sessionId,
+        turns: [],
+      })
+      .select("id")
+      .single();
+
+    if (sessionInsertError || !interviewSession) {
+      throw sessionInsertError ?? new Error("Failed to create interview session.");
+    }
 
     return Response.json({
       wsUrl: `${process.env.NEXT_PUBLIC_VOICE_WS_URL}/ws/interview?session_id=${sessionId}`,
       sessionId,
+      interviewSessionId: interviewSession.id,
     });
   } catch (error) {
     const { error: releaseError } = await supabase.rpc(
       "release_interview_session",
       {
         p_interview_id: interviewId,
-        p_session_id: reservationId,
+        p_session_id: activatedSessionId ?? reservationId,
       },
     );
     if (releaseError) {

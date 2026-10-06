@@ -5,6 +5,7 @@ import {
   heartbeatInterviewSessionAction,
   releaseInterviewSessionAction,
 } from "@/app/actions/interview-session-lock";
+import { finalizeInterviewSessionAction } from "@/app/actions/finalize-interview-session";
 import { createClient } from "@/lib/supabase/client";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -59,7 +60,13 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
   const runIdRef = useRef(0);
   const startingRef = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
+  const interviewSessionIdRef = useRef<string | null>(null);
+  const finalizingRef = useRef(false);
   const sessionLockLostRef = useRef(false);
+  const [analysisSession, setAnalysisSession] = useState<{
+    sessionId: string;
+    status: "completed" | "ineligible";
+  } | null>(null);
 
   const muteRef = useRef(muteMicWhilePlaying);
   muteRef.current = muteMicWhilePlaying;
@@ -67,22 +74,53 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
   const turnsRef = useRef<Turn[]>([]);
   const saveChainRef = useRef(Promise.resolve());
 
-  const saveTurns = async () => {
-    const supabase = await createClient();
+  const saveTurns = useCallback(async () => {
+    const sessionId = interviewSessionIdRef.current;
+    if (!sessionId) return;
 
-    saveChainRef.current = saveChainRef.current.then(async () => {
-      const { error } = await supabase
-        .from("interviews")
-        .update({ turns: turnsRef.current })
-        .eq("id", interviewId);
+    const turns = turnsRef.current;
+    const supabase = createClient();
 
-      if (error) {
-        console.error("Failed to save turns:", error);
-      }
-    });
+    saveChainRef.current = saveChainRef.current
+      .catch(() => {})
+      .then(async () => {
+        const { error } = await supabase
+          .from("interview_sessions")
+          .update({ turns, updated_at: new Date().toISOString() })
+          .eq("id", sessionId)
+          .eq("interview_id", interviewId);
+
+        if (error) {
+          throw error;
+        }
+      });
 
     return saveChainRef.current;
-  };
+  }, [interviewId]);
+
+  const finalizeCurrentSession = useCallback(async () => {
+    const sessionId = interviewSessionIdRef.current;
+    if (!sessionId || finalizingRef.current) return;
+
+    finalizingRef.current = true;
+    try {
+      await saveTurns();
+      const result = await finalizeInterviewSessionAction(
+        interviewId,
+        sessionId,
+      );
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+      setAnalysisSession({
+        sessionId: result.result.sessionId,
+        status: result.result.status,
+      });
+    } catch (error) {
+      finalizingRef.current = false;
+      console.error("[INTERVIEW_ANALYSIS_FINALIZE_FAILED]:", error);
+    }
+  }, [interviewId, saveTurns]);
 
   const releaseSession = useCallback(() => {
     const sessionId = sessionIdRef.current;
@@ -250,6 +288,10 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
     setStatus("connecting");
     setErrorMessage(null);
     setLines([]);
+    setAnalysisSession(null);
+    turnsRef.current = [];
+    interviewSessionIdRef.current = null;
+    finalizingRef.current = false;
     sessionLockLostRef.current = false;
 
     try {
@@ -306,12 +348,14 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
         throw new Error(response?.error ?? "Failed to start the interview.");
       }
 
-      const { wsUrl, sessionId } = (await res.json()) as {
+      const { wsUrl, sessionId, interviewSessionId } = (await res.json()) as {
         wsUrl: string;
         sessionId: string;
+        interviewSessionId: string;
       };
 
       sessionIdRef.current = sessionId;
+      interviewSessionIdRef.current = interviewSessionId;
 
       if (stale()) {
         releaseSession();
@@ -435,42 +479,13 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
         }
       };
 
-      // ws.onclose = () => {
-      //   saveTurns();
-
-      //   if (stale()) {
-      //     return;
-      //   }
-
-      //   const finish = () => {
-      //     cleanup();
-      //     setStatus(sessionLockLostRef.current ? "error" : "stopped");
-      //   };
-
-      //   /*
-      //    * Preserve the existing behavior:
-      //    * wait until playback sources drain before
-      //    * performing teardown.
-      //    */
-      //   if (sourcesRef.current.length > 0) {
-      //     const checkInterval = setInterval(() => {
-      //       if (sourcesRef.current.length === 0) {
-      //         clearInterval(checkInterval);
-      //         finish();
-      //       }
-      //     }, 100);
-      //   } else {
-      //     finish();
-      //   }
-      // };
       ws.onclose = () => {
-        saveTurns();
-
         if (stale()) {
           return;
         }
 
-        const finish = () => {
+        const finish = async () => {
+          await finalizeCurrentSession();
           cleanup();
           setStatus(sessionLockLostRef.current ? "error" : "stopped");
         };
@@ -479,9 +494,13 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
         const checkInterval = setInterval(() => {
           if (sourcesRef.current.length === 0) {
             clearInterval(checkInterval);
-            finish();
+            void finish();
           }
         }, 100);
+        if (sourcesRef.current.length === 0) {
+          clearInterval(checkInterval);
+          void finish();
+        }
       };
 
       ws.onmessage = (event) => {
@@ -599,7 +618,9 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
             signal.turn,
           ];
 
-          saveTurns();
+          void saveTurns().catch((error: unknown) => {
+            console.error("Failed to save interview turns:", error);
+          });
         }
       };
     } catch (err) {
@@ -617,7 +638,13 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
         startingRef.current = false;
       }
     }
-  }, [interviewId, cleanup, releaseSession, stopPlayback]);
+  }, [
+    interviewId,
+    cleanup,
+    releaseSession,
+    stopPlayback,
+    finalizeCurrentSession,
+  ]);
 
   useEffect(() => {
     if (status !== "live") return;
@@ -662,18 +689,37 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
   }, [status, interviewId, cleanup]);
 
   const stop = useCallback(() => {
-    cleanup();
-    setStatus("stopped");
-  }, [cleanup]);
+    void (async () => {
+      const ws = wsRef.current;
+      if (ws) {
+        ws.onmessage = null;
+        ws.onclose = null;
+        try {
+          ws.close();
+        } catch (error) {
+          console.error("[INTERVIEW_SOCKET_CLOSE_FAILED]:", error);
+        }
+        wsRef.current = null;
+      }
+
+      await finalizeCurrentSession();
+      cleanup();
+      setStatus(sessionLockLostRef.current ? "error" : "stopped");
+    })();
+  }, [cleanup, finalizeCurrentSession]);
 
   useEffect(() => {
-    return () => cleanup();
-  }, [cleanup]);
+    return () => {
+      void finalizeCurrentSession();
+      cleanup();
+    };
+  }, [cleanup, finalizeCurrentSession]);
 
   return {
     status,
     errorMessage,
     lines,
+    analysisSession,
     start,
     stop,
   };
