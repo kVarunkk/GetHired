@@ -16,11 +16,31 @@ import PostHogIdentify from "@/lib/posthog/posthogidentify";
 
 export const metadata: Metadata = {
   title: {
-    default: "GetHired - Your smartest path to the perfect job",
+    default: "Find Tech & Remote Jobs | GetHired",
     template: "%s | GetHired",
   },
-  description: "Your smartest path to the perfect job.",
+  description:
+    "Find developer and tech jobs, including remote roles. Search current openings by role and location, then use GetHired's AI tools to focus your job search.",
   metadataBase: new URL("https://gethired.devhub.co.in"),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "GetHired",
+    title: "Find Tech & Remote Jobs | GetHired",
+    description:
+      "Search developer and tech jobs, including remote roles, and use AI tools to focus your job search.",
+    url: "/",
+    images: ["/opengraph-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Find Tech & Remote Jobs | GetHired",
+    description:
+      "Search developer and tech jobs, including remote roles, and use AI tools to focus your job search.",
+    images: ["/opengraph-image.jpg"],
+  },
   robots: {
     index: true,
     follow: true,

@@ -113,7 +113,7 @@ export default async function RemoteJobsLocationPage({
         userCount={userCount}
       />
       <TheGetHiredAdvantageSection jobCount={jobCount} />
-      <FAQSection />
+      <FAQSection topic="remote" />
       <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
         <FootComponent />
       </div>

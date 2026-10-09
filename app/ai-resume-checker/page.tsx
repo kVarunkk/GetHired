@@ -62,7 +62,7 @@ export default async function AIResumeChecker() {
         userCount={userCount}
       />
       <TheGetHiredAdvantageSection jobCount={jobCount} />
-      <FAQSection />
+      <FAQSection topic="resume" />
       <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
         <FootComponent />
       </div>

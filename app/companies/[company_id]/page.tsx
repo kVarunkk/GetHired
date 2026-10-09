@@ -55,10 +55,32 @@ export async function generateMetadata({
     const companyDescription =
       companyData.description ||
       `Learn about ${companyName} and see their active job openings on GetHired.`;
+    const description = companyDescription
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 157)
+      .trimEnd();
+    const canonical = `https://gethired.devhub.co.in/companies/${company_id}`;
 
     return {
-      title: `${companyName} - Job Openings and Company Profile | GetHired`,
-      description: companyDescription.substring(0, 160),
+      title: `${companyName} - Job Openings and Company Profile`,
+      description,
+      alternates: {
+        canonical,
+      },
+      openGraph: {
+        type: "website",
+        siteName: "GetHired",
+        title: `${companyName} - Job Openings`,
+        description,
+        url: canonical,
+      },
+      twitter: {
+        card: "summary",
+        title: `${companyName} - Job Openings`,
+        description,
+      },
       keywords: [
         companyName,
         "company profile",

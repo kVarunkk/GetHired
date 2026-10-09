@@ -17,12 +17,16 @@ export async function generateMetadata({
 }: {
   searchParams: Promise<JobListingSearchParams>;
 }): Promise<Metadata> {
-  const { jobTitleKeywords, location, jobType } = await searchParams;
+  const parameters = await searchParams;
+  const { jobTitleKeywords, location, jobType } = parameters;
+  const hasSearchParams = Object.values(parameters).some(
+    (value) => value !== undefined && value !== "",
+  );
 
-  const baseTitle = "Find Your Next Job";
+  const baseTitle = "Find Tech & Remote Jobs";
   let title = baseTitle;
   let description =
-    "Explore thousands of high-quality job postings filtered by relevance, salary, and experience. Start your career search here.";
+    "Search active tech and developer jobs by role, location, job type, salary, and experience. Explore remote and on-site openings from companies around the world.";
   const keywords = [
     "jobs",
     "career",
@@ -96,6 +100,10 @@ export async function generateMetadata({
     title: title,
     description: description,
     keywords: finalKeywords,
+    alternates: {
+      canonical: "/jobs",
+    },
+    ...(hasSearchParams ? { robots: { index: false, follow: true } } : {}),
   };
 }
 

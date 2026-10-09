@@ -12,9 +12,26 @@ import { HIRE_PAGE_LIGHT } from "@/utils/utils";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "GetHired - Your smartest path to the perfect candidate",
+  title: "AI Recruiting Software to Hire Tech Talent",
   description:
-    "Leverage proprietary AI to screen and qualify candidates instantly. Post your job, eliminate noise, and significantly reduce your time-to-hire with an always-on, empathetic recruiting co-pilot.",
+    "Post tech roles, review applicants, and use AI recruiting tools to help identify qualified candidates with GetHired.",
+  alternates: {
+    canonical: "/hire",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "GetHired",
+    title: "AI Recruiting Software to Hire Tech Talent",
+    description:
+      "Post tech roles, review applicants, and use AI recruiting tools to help identify qualified candidates with GetHired.",
+    url: "/hire",
+  },
+  twitter: {
+    card: "summary",
+    title: "AI Recruiting Software to Hire Tech Talent",
+    description:
+      "Post tech roles, review applicants, and use AI recruiting tools to help identify qualified candidates with GetHired.",
+  },
   keywords: [
     "hire tech talent",
     "ai recruiting platform",
@@ -38,8 +55,8 @@ export default async function HirePage() {
       <div className="flex-1 w-full flex flex-col gap-20 items-center">
         <div className="flex-1 flex flex-col gap-32  w-full">
           <Hero
-            heading="Smartest Path to the Perfect Candidate"
-            subheading="Find Exceptional candidates, Streamline your screening, and connect Directly with motivated talent"
+            heading="Hire Tech Talent with AI"
+            subheading="Post developer and tech roles, review applicants, and use AI recruiting tools to find qualified candidates."
             ctaText="Hire Talent"
             ctaLink="/auth/sign-up?company=true"
             imgLight={HIRE_PAGE_LIGHT}
@@ -53,7 +70,7 @@ export default async function HirePage() {
             userCount={userCount}
           />
           <TheGetHiredAdvantageSection jobCount={jobCount} />
-          <FAQSection />
+          <FAQSection topic="hiring" />
           <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
             <FootComponent />
           </div>

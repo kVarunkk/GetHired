@@ -11,9 +11,26 @@ import { MCP_SERVER_DARK, MCP_SERVER_LIGHT } from "@/utils/utils";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "GetHired MCP Server",
+  title: "MCP Server for AI-Powered Job Search",
   description:
-    "Discover the GetHired MCP Server, a powerful tool designed to enhance your job search experience. With AI-powered features, including an AI resume checker and job application automation, the MCP Server streamlines your path to employment. Integrating with Claude, it offers personalized job recommendations and insights to help you land your dream job faster.",
+    "Connect Claude to GetHired job-search tools for personalized job recommendations and resume support with the GetHired MCP Server.",
+  alternates: {
+    canonical: "/mcp-server",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "GetHired",
+    title: "MCP Server for AI-Powered Job Search",
+    description:
+      "Connect Claude to GetHired job-search tools for personalized job recommendations and resume support.",
+    url: "/mcp-server",
+  },
+  twitter: {
+    card: "summary",
+    title: "MCP Server for AI-Powered Job Search",
+    description:
+      "Connect Claude to GetHired job-search tools for personalized job recommendations and resume support.",
+  },
   keywords: [
     "GetHired MCP Server",
     "AI-powered job search",
@@ -51,7 +68,7 @@ export default async function MCPServerPage() {
             userCount={userCount}
           />
           <TheGetHiredAdvantageSection jobCount={jobCount} />
-          <FAQSection />
+          <FAQSection topic="mcp" />
           <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
             <FootComponent />
           </div>

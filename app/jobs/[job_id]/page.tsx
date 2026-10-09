@@ -9,7 +9,7 @@ import { Metadata } from "next";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { buildJobPostingJsonLd } from "@/helpers/jobs/jobId/jsonld";
 
-export const revalidate = 604800;
+export const revalidate = 86400;
 export const dynamic = "force-static";
 
 const getStaticJobDetails = (jobId: string): Promise<TJobIdPageData | null> =>
@@ -27,9 +27,13 @@ const getStaticJobDetails = (jobId: string): Promise<TJobIdPageData | null> =>
         .from("all_jobs")
         .select(selectString)
         .eq("id", id)
-        .single();
+        .eq("status", "active")
+        .maybeSingle();
 
-      if (error || !data) return null;
+      if (error) {
+        throw new Error(`Failed to fetch job ${id}: ${error.message}`);
+      }
+      if (!data) return null;
       return {
         ...data,
         job_url: null,
@@ -37,7 +41,7 @@ const getStaticJobDetails = (jobId: string): Promise<TJobIdPageData | null> =>
       };
     },
     [`job-detail-${jobId}`],
-    { revalidate: 604800, tags: [`job-${jobId}`] },
+    { revalidate: 86400, tags: [`job-${jobId}`] },
   )(jobId);
 
 export async function generateMetadata({
@@ -45,29 +49,42 @@ export async function generateMetadata({
 }: {
   params: Promise<{ job_id: string }>;
 }): Promise<Metadata> {
-  try {
-    const { job_id } = await params;
-    const data = await getStaticJobDetails(job_id);
-    if (!data) throw new Error("Job not found");
+  const { job_id } = await params;
+  const data = await getStaticJobDetails(job_id);
+  if (!data) notFound();
 
-    return {
-      title: `${data?.job_name} at ${data?.company_name}`,
-      description: `Apply for the ${data?.job_name} position at ${data?.company_name}.`,
-      keywords: [
-        data?.job_name || "",
-        data?.company_name || "",
-        data?.locations.join(", "),
-        "job",
-        "career",
-        "employment",
-      ],
-    };
-  } catch {
-    return {
-      title: "Job Details",
-      description: "Detailed view of the job posting.",
-    };
-  }
+  const title = `${data.job_name} at ${data.company_name}`;
+  const descriptionSource =
+    data.description ||
+    data.ai_summary ||
+    `Apply for ${data.job_name} at ${data.company_name}.`;
+  const description = descriptionSource
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 157)
+    .trimEnd();
+  const canonical = `https://gethired.devhub.co.in/jobs/${job_id}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      type: "website",
+      siteName: "GetHired",
+      title,
+      description,
+      url: canonical,
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
 }
 
 export default async function JobPage({

@@ -2,9 +2,27 @@ import { createReader } from "@keystatic/core/reader";
 import keystaticConfig from "../keystatic.config";
 import Link from "next/link";
 import FootComponent from "@/components/FootComponent";
+import { Metadata } from "next";
 
 export const revalidate = 86400;
 export const dynamic = "force-static";
+
+export const metadata: Metadata = {
+  title: "Job Search Advice, Career Tips & Hiring Insights",
+  description:
+    "Practical job-search advice, career guidance, and product updates from GetHired.",
+  alternates: {
+    canonical: "/blog",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "GetHired",
+    title: "Job Search Advice, Career Tips & Hiring Insights",
+    description:
+      "Practical job-search advice, career guidance, and product updates from GetHired.",
+    url: "/blog",
+  },
+};
 
 const reader = createReader(process.cwd(), keystaticConfig);
 

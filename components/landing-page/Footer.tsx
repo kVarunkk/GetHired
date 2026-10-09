@@ -4,104 +4,48 @@ import React from "react";
 import Link from "next/link";
 import Brand from "../Brand";
 import SocialsComponent from "../SocialsComponent";
-import { Button } from "../ui/button";
 
 const popularSearches = [
   {
     name: "Remote Jobs",
     href: "/jobs?location=Remote",
   },
-  // {
-  //   name: "Indeed Jobs",
-  //   href: "/jobs?platform=indeed",
-  // },
-  // {
-  //   name: "Naukri Jobs",
-  //   href: "/jobs?platform=naukri",
-  // },
-  // {
-  //   name: "Y Combinator Jobs",
-  //   href: "/jobs?platform=ycombinator",
-  // },
-  // {
-  //   name: "Wellfound Jobs",
-  //   href: "/jobs?platform=wellfound",
-  // },
-  // {
-  //   name: "RemoteOK Jobs",
-  //   href: "/jobs?platform=remoteok",
-  // },
-  // {
-  //   name: "We Work Remotely Jobs",
-  //   href: "/jobs?platform=weworkremotely",
-  // },
-  // {
-  //   name: "Uplers Jobs",
-  //   href: "/jobs?platform=uplers",
-  // },
-  // {
-  //   name: "Greenhouse Jobs",
-  //   href: "/jobs?platform=greenhouse",
-  // },
-  // {
-  //   name: "a16z Jobs",
-  //   href: "/jobs?platform=a16z",
-  // },
-  // {
-  //   name: "Lightspeed Jobs",
-  //   href: "/jobs?platform=lightspeed",
-  // },
-  // {
-  //   name: "Glassdoor Jobs",
-  //   href: "/jobs?platform=glassdoor",
-  // },
-  // {
-  //   name: "JobLeads Jobs",
-  //   href: "/jobs?platform=jobleads",
-  // },
-  // {
-  //   name: "Working Nomads Jobs",
-  //   href: "/jobs?platform=workingnomads",
-  // },
+
   {
-    name: 'Workday Jobs',
-    href: '/jobs?platform=workday',
+    name: "Workday Jobs",
+    href: "/jobs?platform=workday",
   },
   {
-    name: 'Rippling Jobs',
-    href: '/jobs?platform=rippling',
+    name: "BambooHR Jobs",
+    href: "/jobs?platform=bamboohr",
   },
   {
-    name: 'BambooHR Jobs',
-    href: '/jobs?platform=bamboohr',
+    name: "Jobvite Jobs",
+    href: "/jobs?platform=jobvite",
   },
   {
-    name: 'Jobvite Jobs',
-    href: '/jobs?platform=jobvite',
+    name: "Greenhouse Jobs",
+    href: "/jobs?platform=greenhouse",
   },
   {
-    name: 'Greenhouse Jobs',
-    href: '/jobs?platform=greenhouse',
+    name: "Rippling Jobs",
+    href: "/jobs?platform=rippling",
   },
   {
-    name: 'Rippling Jobs',
-    href: '/jobs?platform=rippling',
+    name: "Workable Jobs",
+    href: "/jobs?platform=workable",
   },
   {
-    name: 'Workable Jobs',
-    href: '/jobs?platform=workable',
+    name: "Recruitee Jobs",
+    href: "/jobs?platform=recruitee",
   },
   {
-    name: 'Recruitee Jobs',
-    href: '/jobs?platform=recruitee',
+    name: "Personio Jobs",
+    href: "/jobs?platform=personio",
   },
   {
-    name: 'Personio Jobs',
-    href: '/jobs?platform=personio',
-  },
-  {
-    name: 'JazzHR Jobs',
-    href: '/jobs?platform=jazzhr',
+    name: "JazzHR Jobs",
+    href: "/jobs?platform=jazzhr",
   },
   {
     name: "Jobs in India",
@@ -180,7 +124,7 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="px-4 py-20 lg:px-20 xl:px-40 2xl:px-80 mt-auto">
+    <footer className="m-0 px-4 pt-20 pb-0 lg:px-20 xl:px-40 2xl:px-80 mt-auto">
       <div className="container mx-auto max-w-6xl grid grid-cols-2 md:grid-cols-4 gap-8 text-center md:text-left">
         {/* ==================================== */}
         {/* 1. Brand / About (Col 1) */}
@@ -287,6 +231,22 @@ export default function Footer() {
                 Terms of Service
               </Link>
             </li>
+            <li>
+              <Link
+                href="/about"
+                className="hover:underline hover:opacity-100 transition-opacity"
+              >
+                About Us
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/contact"
+                className="hover:underline hover:opacity-100 transition-opacity"
+              >
+                Contact
+              </Link>
+            </li>
           </ul>
         </div>
 
@@ -329,15 +289,14 @@ export default function Footer() {
             ))}
           </ul>
         </div>
-
-        <div className="col-span-2 ">
-          <h3 className="text-lg font-bold mb-3 ">AI Interview</h3>
-          <Link href={"/interview"}>
-            <Button className="w-full sm:w-auto bg-brand hover:bg-brand/70 text-brand-foreground font-bold h-11 px-8 rounded-xl shadow-lg shadow-brand/20 transition-all active:scale-95 disabled:opacity-70">
-              Interview Now
-            </Button>
-          </Link>{" "}
-        </div>
+      </div>
+      <div className="m-0 px-1 pt-16 md:pt-24">
+        <p
+          className="m-0 whitespace-nowrap bg-foreground bg-clip-text text-center text-[clamp(2.5rem,14vw,16rem)] font-extrabold leading-[0.85] tracking-[-0.06em] text-transparent [mask-image:linear-gradient(to_bottom,#000_25%,transparent_100%)]"
+          aria-hidden="true"
+        >
+          GetHired
+        </p>
       </div>
     </footer>
   );
