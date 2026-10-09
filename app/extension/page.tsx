@@ -20,6 +20,10 @@ export const metadata: Metadata = {
     "job application automation",
     "Chrome Extension",
   ],
+  robots: {
+    index: false,
+    follow: true,
+  },
 };
 
 export const revalidate = 86400;
@@ -50,7 +54,7 @@ export default async function MCPServerPage() {
             userCount={userCount}
           />
           <TheGetHiredAdvantageSection jobCount={jobCount} />
-          <FAQSection />
+          <FAQSection topic="job-search" />
           <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
             <FootComponent />
           </div>

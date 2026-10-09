@@ -19,8 +19,8 @@ export default async function Home() {
   return (
     <div className="flex-1 flex flex-col gap-32 w-full">
       <Hero
-        heading="Smartest Path to the Perfect Job"
-        subheading={`Find your next job from over ${jobCount.toLocaleString()} quality listings with the power of AI`}
+        heading="Find Your Next Tech Job"
+        subheading={`Explore ${jobCount.toLocaleString()} developer and tech job listings, including remote opportunities, and use AI to focus your search.`}
         ctaText="Get Hired"
         ctaText2="Hire Talent"
         ctaLink="/jobs"
@@ -36,7 +36,7 @@ export default async function Home() {
         userCount={userCount}
       />
       <TheGetHiredAdvantageSection jobCount={jobCount} />
-      <FAQSection />
+      <FAQSection topic="job-search" />
       <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
         <FootComponent />
       </div>

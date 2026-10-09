@@ -1,0 +1,19 @@
+# GetHired
+
+> GetHired is a job board at gethired.devhub.co.in where job seekers can browse current job openings. It focuses on developer and tech roles from startups and companies.
+
+## Main pages
+
+- [Browse jobs](https://gethired.devhub.co.in/jobs): Current job listings, searchable by role, skill, and location
+- [Hire candidates](https://gethired.devhub.co.in/hire): Page for recuirters who want to hire candidates suiting their needs.
+- [About](https://gethired.devhub.co.in/about): What GetHired is and who runs it
+- [Contact](https://gethired.devhub.co.in/contact): How to reach the team for support or partnerships
+
+## Policies
+
+- [Privacy policy](https://gethired.devhub.co.in/privacy): How user data and cookies are handled
+- [Terms of use](https://gethired.devhub.co.in/terms): Rules for job seekers and employers
+
+## Optional
+
+- [Sitemap](https://gethired.devhub.co.in/sitemap/0.xml): Full list of pages on the site

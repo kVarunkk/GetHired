@@ -67,46 +67,41 @@ function isWorldwideRemoteLocation(locations?: string[] | null) {
   });
 }
 
-function isRemoteOnlyLocation(locations?: string[] | null) {
-  if (!Array.isArray(locations)) return false;
-
-  const normalizedLocations = locations.filter((location): location is string =>
-    Boolean(location && location.trim()),
-  );
-
-  if (normalizedLocations.length === 0) return false;
-
-  return normalizedLocations.every((location) =>
-    isRemoteLikeLocation(location),
-  );
-}
-
 function getApplicantLocationRequirement(locations?: string[] | null) {
   if (!Array.isArray(locations)) return undefined;
 
-  const nonRemoteLocations = locations.filter((location) => {
-    const normalized = (location || "").toLowerCase();
-    return !(
-      normalized.includes("remote") ||
-      normalized.includes("telecommute") ||
-      normalized.includes("anywhere") ||
-      normalized.includes("worldwide")
-    );
-  });
-
-  if (nonRemoteLocations.length > 0) {
-    const [firstLocation] = nonRemoteLocations;
-    return {
-      "@type": "Country",
-      name: firstLocation.trim(),
-    };
-  }
-
-  if (isRemoteOnlyLocation(locations) || isWorldwideRemoteLocation(locations)) {
+  if (isWorldwideRemoteLocation(locations)) {
     return {
       "@type": "Country",
       name: "Worldwide",
     };
+  }
+
+  return undefined;
+}
+
+function getSalaryUnit(salaryRange?: string | null) {
+  if (!salaryRange) return undefined;
+
+  const normalized = salaryRange.toLowerCase();
+  if (/\b(hourly|per\s+hour|\/\s*hour|\/\s*hr)\b/.test(normalized)) {
+    return "HOUR";
+  }
+  if (/\b(daily|per\s+day|\/\s*day)\b/.test(normalized)) {
+    return "DAY";
+  }
+  if (/\b(weekly|per\s+week|\/\s*week)\b/.test(normalized)) {
+    return "WEEK";
+  }
+  if (/\b(monthly|per\s+month|\/\s*month)\b/.test(normalized)) {
+    return "MONTH";
+  }
+  if (
+    /\b(annual(?:ly)?|per\s+year|\/\s*year|per\s+annum|lpa)\b/.test(
+      normalized,
+    )
+  ) {
+    return "YEAR";
   }
 
   return undefined;
@@ -219,6 +214,7 @@ export function buildJobPostingJsonLd(job: TJobIdPageData) {
   }
 
   const salaryCurrency = getSalaryCurrency(job?.salary_range);
+  const salaryUnit = getSalaryUnit(job?.salary_range);
 
   if (job?.salary_min != null || job?.salary_max != null) {
     const minSalary =
@@ -226,7 +222,7 @@ export function buildJobPostingJsonLd(job: TJobIdPageData) {
     const maxSalary =
       typeof job.salary_max === "number" ? job.salary_max : undefined;
 
-    if (salaryCurrency) {
+    if (salaryCurrency && salaryUnit) {
       jsonLd.baseSalary = {
         "@type": "MonetaryAmount",
         currency: salaryCurrency,
@@ -234,7 +230,7 @@ export function buildJobPostingJsonLd(job: TJobIdPageData) {
           "@type": "QuantitativeValue",
           ...(minSalary != null ? { minValue: minSalary } : {}),
           ...(maxSalary != null ? { maxValue: maxSalary } : {}),
-          unitText: "YEAR",
+          unitText: salaryUnit,
         },
       };
     }

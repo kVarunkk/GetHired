@@ -111,41 +111,6 @@ export default function PrivacyPolicy() {
               <li>To improve our Services.</li>
             </ul>
           </section>
-
-          {/* Add more sections as needed, e.g.,
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">4. Will Your Information Be Shared With Anyone?</h2>
-            <p>We only share information with your consent, to comply with laws, to provide you with services, to protect your rights, or to fulfill business obligations.</p>
-          </section>
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">5. Do We Use Cookies and Other Tracking Technologies?</h2>
-            <p>We may use cookies and similar tracking technologies (like web beacons and pixels) to access or store information. Specific information about how we use such technologies and how you can refuse certain cookies is set out in our Cookie Policy.</p>
-          </section>
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">6. How Long Do We Keep Your Information?</h2>
-            <p>We keep your information for as long as necessary to fulfill the purposes outlined in this privacy policy unless otherwise required by law (e.g., tax, accounting or other legal requirements).</p>
-          </section>
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">7. How Do We Keep Your Information Safe?</h2>
-            <p>We have implemented appropriate technical and organizational security measures designed to protect the security of any personal information we process. However, please also remember that we cannot guarantee that the internet itself is 100% secure. Although we will do our best to protect your personal information, transmission of personal information to and from our Services is at your own risk. You should only access the services within a secure environment.</p>
-          </section>
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">8. Do We Collect Information From Minors?</h2>
-            <p>We do not knowingly solicit data from or market to children under 18 years of age. By using the Services, you represent that you are at least 18 or that you are the parent or guardian of such a minor and consent to such minor dependent's use of the Services. If we learn that personal information from users less than 18 years of age has been collected, we will deactivate the account and take reasonable measures to promptly delete such data from our records.</p>
-          </section>
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">9. What Are Your Privacy Rights?</h2>
-            <p>In some regions (like the European Economic Area, UK, and California), you have rights that allow you greater access to and control over your personal information. You may review, change, or terminate your account at any time.</p>
-          </section>
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">10. Do We Make Updates To This Policy?</h2>
-            <p>Yes, we will update this policy as necessary to stay compliant with relevant laws. The updated version will be indicated by an updated "Revised" date and the updated version will be effective as soon as it is accessible. If we make material changes to this privacy policy, we may notify you either by prominently posting a notice of such changes or by directly sending you a notification. We encourage you to review this privacy policy frequently to be informed of how we are protecting your information.</p>
-          </section>
-          <section>
-            <h2 className="text-2xl font-semibold mb-3">11. How Can You Contact Us About This Policy?</h2>
-            <p>If you have questions or comments about this policy, you may email us at [Your Contact Email/Method].</p>
-          </section>
-          */}
         </CardContent>
       </Card>
     </div>

@@ -15,7 +15,15 @@ export async function generateMetadata(): Promise<Metadata> {
       "visa sponsorship companies",
     ],
     alternates: {
-      canonical: "https://gethired.devhub.co.in/companies",
+      canonical: "/companies",
+    },
+    openGraph: {
+      type: "website",
+      siteName: "GetHired",
+      title: "Discover Top Tech Companies Hiring Now | GetHired",
+      description:
+        "Explore companies hiring developers and engineers by industry, size, and location.",
+      url: "/companies",
     },
   };
 }
