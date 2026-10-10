@@ -48,6 +48,10 @@ const popularSearches = [
     href: "/jobs?platform=jazzhr",
   },
   {
+    name: "Keka Jobs",
+    href: "/jobs?platform=keka",
+  },
+  {
     name: "Jobs in India",
     href: "/jobs?location=India",
   },

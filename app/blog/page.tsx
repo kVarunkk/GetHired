@@ -1,6 +1,8 @@
 import { createReader } from "@keystatic/core/reader";
 import keystaticConfig from "../keystatic.config";
 import Link from "next/link";
+import Image from "next/image";
+import { Newspaper } from "lucide-react";
 import FootComponent from "@/components/FootComponent";
 import { Metadata } from "next";
 
@@ -28,22 +30,47 @@ const reader = createReader(process.cwd(), keystaticConfig);
 
 export default async function Page() {
   const posts = await reader.collections.posts.all();
+  // Posts with a cover image first; otherwise keep the reader's order.
+  const sortedPosts = [...posts].sort(
+    (a, b) => Number(Boolean(b.entry.image)) - Number(Boolean(a.entry.image)),
+  );
 
   return (
     <div>
-      <div className="mx-auto  mb-20 max-w-3xl px-4 text-center">
-        <h1 className="text-5xl sm:text-7xl font-black tracking-tight leading-[1.1] mb-8">
+      <div className="mx-auto mb-20 max-w-6xl px-4">
+        <h1 className="text-5xl sm:text-7xl font-black tracking-tight leading-[1.1] mb-12 text-center">
           Blog
         </h1>
-        <ol className="list-decimal list-inside space-y-4">
-          {posts.map((post) => (
+        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {sortedPosts.map((post, index) => (
             <li key={post.slug}>
-              <Link href={`/blog/${post.slug}`} className=" hover:underline">
-                {post.entry.title}
+              <Link
+                href={`/blog/${post.slug}`}
+                className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
+                  {post.entry.image ? (
+                    <Image
+                      src={post.entry.image}
+                      alt={post.entry.title}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
+                      priority={index < 3}
+                      className="object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand/25 to-muted">
+                      <Newspaper className="h-10 w-10 text-brand" />
+                    </div>
+                  )}
+                </div>
+                <h2 className="p-4 text-lg font-semibold leading-snug group-hover:underline">
+                  {post.entry.title}
+                </h2>
               </Link>
             </li>
           ))}
-        </ol>
+        </ul>
       </div>
       <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
         <FootComponent />

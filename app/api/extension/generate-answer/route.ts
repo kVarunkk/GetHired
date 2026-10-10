@@ -6,6 +6,21 @@ import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 import { TAICredits, TResumeRowContent } from "@/utils/types";
 import { extractSectionText } from "@/utils/extract-resume-content";
 
+/** Enforces the formatting rules even when the model ignores the prompt:
+ * no em/en dashes and no markdown, since answers go into plain text boxes. */
+function toPlainAnswer(text: string): string {
+  return text
+    .replace(/(\d)\s*[–—]\s*(\d)/g, "$1-$2") // ranges like 2019–2021
+    .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/\*\*(.+?)\*\*/g, "$1") // bold
+    .replace(/(^|\s)\*(\S.*?\S|\S)\*(?=\s|[.,!?]|$)/gm, "$1$2") // italics
+    .replace(/^\s*(?:[*\-•]|\d+[.)])\s+/gm, "") // list markers
+    .replace(/^#+\s*/gm, "") // headings
+    .replace(/,\s*([.,!?])/g, "$1") // stray comma left before punctuation
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get("Authorization");
@@ -77,8 +92,25 @@ export async function POST(request: NextRequest) {
 
     const promises = questions.slice(0, answerCount).map(async (question) => {
       const prompt = `
-You are helping a job applicant answer a job application question.
-Write a concise, specific, first-person answer. Do not invent facts not supported by the candidate's background below. Keep it under 150 words unless the question clearly asks for more detail.
+You are writing as a job applicant, answering a question on a job application form in their own voice.
+
+How the answer should read:
+- Write like a real person typing into a form: first person, conversational but professional, the way a thoughtful candidate would actually phrase it. It should not sound like AI wrote it.
+- Answer the question that was asked, directly. Lead with the point, not a restatement of the question.
+- Pick the one or two most relevant details from the background instead of listing everything. Mention specific projects, numbers or outcomes only when they actually support the answer.
+- Vary sentence length. Use plain, everyday words.
+- Avoid stock phrases like "I am excited to", "I am passionate about", "leverage", "utilize", "spearhead", "cutting-edge", "showcase", "demonstrating my expertise", "in today's fast-paced world".
+- Keep it under 120 words unless the question clearly asks for more. Short questions get short answers, even one sentence.
+- When the job context names the company or describes the role, connect the answer to something specific from it (what the company builds, a responsibility or requirement of the role) and how the candidate's background fits. Don't just drop the company name in, and don't copy sentences from the job description.
+
+Formatting rules (strict):
+- Plain text only. The answer is pasted into a plain text box, so no markdown: no bullet points, numbered lists, headings, bold, italics or asterisks.
+- Never use em dashes or en dashes. Use commas, periods or separate sentences instead.
+- Write in one or two short paragraphs.
+
+Accuracy rules (strict):
+- Only use facts from the candidate background below. Never invent names, links, usernames, numbers, employers or projects.
+- If the question asks for a link or detail the background doesn't contain, say briefly that you're happy to share it, rather than making one up.
 
 **Candidate background:**
 - Desired Roles: ${userInfo.desired_roles?.join(", ") ?? "N/A"}
@@ -98,7 +130,7 @@ Respond with only the answer text, no preamble, no quotation marks.
       `.trim();
 
       const { text } = await generateText({ model, prompt });
-      return { question, answer: text.trim() };
+      return { question, answer: toPlainAnswer(text) };
     });
 
     const results = await Promise.all(promises);

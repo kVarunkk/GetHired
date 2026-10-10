@@ -1,17 +1,14 @@
 "use client";
 
-import { LightningBoltIcon } from "@radix-ui/react-icons";
 import { BentoCard, BentoGrid } from "@/components/magicui/bento-grid";
-import { OrbitingCircles } from "../magicui/orbiting-circles";
+import { PlatformGrid } from "./PlatformGrid";
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cloudFrontUrl, cn, platforms } from "@/utils/utils";
 
 export function HowWeHelp({ jobCount }: { jobCount: number }) {
-  const [isPaused, setIsPaused] = useState(false);
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
@@ -84,8 +81,8 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
           name: isHirePage ? "AI Job Composer" : "Multiplatform Support",
           description: isHirePage
             ? "Create high-converting roles instantly. Our templates mandate key data to ensure clarity and attract only the most qualified, focused talent."
-            : `Get access to a pool of over ${jobCount.toLocaleString()} quality listings from over 10 leading ATS platforms.`,
-          href: isHirePage ? "/company" : "/",
+            : `Get access to a pool of over ${jobCount.toLocaleString()} quality listings from ${platforms.length} leading ATS platforms.`,
+          href: isHirePage ? "/company" : "/jobs",
           cta: "Learn more",
           background: isHirePage ? (
             <div className="h-[150px] lg:h-[350px]">
@@ -102,66 +99,7 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
               />
             </div>
           ) : (
-            <div className="relative flex flex-col items-center justify-center overflow-hidden h-[250px] lg:h-[350px] w-full opacity-80 scale-125">
-              <OrbitingCircles paused={isPaused} iconSize={60} duration={25}>
-                {platforms
-                  .filter((platform, index) => index <= 5)
-                  .map((each) => (
-                    <Link
-                      onMouseEnter={() => setIsPaused(true)}
-                      onMouseLeave={() => setIsPaused(false)}
-                      href={each.href}
-                      key={each.id}
-                      className="flex items-center justify-center p-3 rounded-full bg-white/10 dark:bg-gray-700/50 shadow-md backdrop-blur-sm transition-transform duration-300 ease-in-out
-               hover:scale-150"
-                    >
-                      <Image
-                        src={each.src}
-                        className="object-contain max-w-full max-h-full drop-shadow-md "
-                        alt={each.name || `Platform logo for ${each.id}`}
-                        width={400}
-                        height={400}
-                        title={each.name}
-                      />
-                    </Link>
-                  ))}
-              </OrbitingCircles>
-
-              <OrbitingCircles
-                radius={100}
-                reverse
-                duration={15}
-                iconSize={40}
-                className="z-10"
-                paused={isPaused}
-              >
-                {platforms
-                  .filter((platform, index) => index > 5)
-                  .map((each) => (
-                    <Link
-                      onMouseEnter={() => setIsPaused(true)}
-                      onMouseLeave={() => setIsPaused(false)}
-                      href={each.href}
-                      key={each.id}
-                      className="flex items-center justify-center p-2 rounded-full bg-white/10 dark:bg-gray-700/50 shadow-md backdrop-blur-sm transition-transform duration-300 ease-in-out
-               hover:scale-150"
-                    >
-                      <Image
-                        src={each.src}
-                        className="object-contain max-w-full max-h-full drop-shadow-md "
-                        alt={each.name || `Platform logo for ${each.id}`}
-                        width={400}
-                        height={400}
-                        title={each.name}
-                      />
-                    </Link>
-                  ))}
-              </OrbitingCircles>
-
-              <div className="absolute z-20  text-center">
-                <LightningBoltIcon height={30} />
-              </div>
-            </div>
+            <PlatformGrid />
           ),
           className: "lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3",
         },
@@ -170,9 +108,9 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
             ? "Direct Talent Pipeline"
             : "Direct Connections & Opportunities",
           description: isHirePage
-            ? "Manage all your active jobs and review pre-screened, engaged talent in a single, intuitive dashboard."
-            : "Connect directly with companies. Discover exclusive job postings and get your profile seen by hiring managers who are actively looking for talent like yours, right here on our platform.",
-          href: isHirePage ? "/company" : "/",
+            ? "Manage your open roles and review pre-screened talent in one dashboard."
+            : "Apply to roles posted directly on GetHired and get seen by hiring managers who are actively hiring.",
+          href: isHirePage ? "/company" : "/jobs",
           cta: "Learn more",
           background: (
             <Image
@@ -191,6 +129,7 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
               className={cn(
                 "absolute -right-0 opacity-30  sm:h-auto sm:w-auto",
                 !isHirePage && "-top-60 h-[450px] w-[400px]",
+                isHirePage && "lg:top-0 lg:w-1/2",
               )}
             />
           ),
@@ -198,7 +137,7 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
         },
       ];
     } else return [];
-  }, [isPaused, setIsPaused, mounted, resolvedTheme, isHirePage]);
+  }, [mounted, resolvedTheme, isHirePage, jobCount]);
   return (
     <div
       id="howwehelp"

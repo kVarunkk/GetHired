@@ -50,3 +50,6 @@ docker-compose.yml
 
 plan
 
+
+# agent instructions (local only)
+CLAUDE.md
