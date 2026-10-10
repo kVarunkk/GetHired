@@ -5,7 +5,8 @@ import fs from "fs";
 import { NextRequest } from "next/server";
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get("x-debug-token") !== process.env.HEAPDUMP_TOKEN) {
+  const token = process.env.HEAPDUMP_TOKEN;
+  if (!token || req.headers.get("x-debug-token") !== token) {
     return new Response("Forbidden", { status: 403 });
   }
 
