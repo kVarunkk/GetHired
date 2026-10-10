@@ -15,6 +15,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Cloud Run's filesystem is in-memory, so ISR/fetch cache files written to
+  // .next would grow RAM without bound. Keep the cache in a capped LRU only.
+  cacheMaxMemorySize: 32 * 1024 * 1024,
+  experimental: {
+    isrFlushToDisk: false,
+  },
   serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
   outputFileTracingIncludes: {
     "/**": ["./app/content/**/*"],
