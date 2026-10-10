@@ -12,8 +12,8 @@ import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
 import { Briefcase, Building2, Home, LayoutDashboard } from "lucide-react";
 import { INavItem } from "./types";
-import { v4 as uuidv4 } from "uuid";
 import { User } from "@supabase/supabase-js";
+import { platformsArray } from "./platforms";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -477,74 +477,15 @@ export const BRAND_LONG_DARK = `${cloudFrontUrl}/brand/long-dark.webp`;
 export const BRAND_SHORT_LIGHT = `${cloudFrontUrl}/brand/short-light.webp`;
 export const BRAND_SHORT_DARK = `${cloudFrontUrl}/brand/short-dark.webp`;
 
-export const platforms = [
-  {
-    id: uuidv4(),
-    name: "Y Combinator",
-    src: `${cloudFrontUrl}/brands/ycombinator.webp`,
-    href: "https://workatastartup.com",
-  },
-  {
-    id: uuidv4(),
-    name: "RemoteOK",
-    src: `${cloudFrontUrl}/brands/remoteok.webp`,
-    href: "https://remoteok.com",
-  },
-  {
-    id: uuidv4(),
-    name: "Uplers",
-    src: `${cloudFrontUrl}/brands/uplers-1.webp`,
-    href: "https://ats.uplers.com",
-  },
-  {
-    id: uuidv4(),
-    name: "Wellfound",
-    src: `${cloudFrontUrl}/brands/wellfound-1.webp`,
-    href: "https://wellfound.com",
-  },
-  {
-    id: uuidv4(),
-    name: "Greenhouse",
-    src: `${cloudFrontUrl}/brands/greenhouse-logo.webp`,
-    href: "https://my.greenhouse.io",
-  },
-  {
-    id: uuidv4(),
-    name: "WeWorkRemotely",
-    src: `${cloudFrontUrl}/brands/weworkremotely-logo.webp`,
-    href: "https://weworkremotely.com",
-  },
-  {
-    id: uuidv4(),
-    name: "a16z",
-    src: `${cloudFrontUrl}/brands/a16z-com-logo.webp`,
-    href: "https://a16z.com",
-  },
-  {
-    id: uuidv4(),
-    name: "Khosla Ventures",
-    src: `${cloudFrontUrl}/brands/khoslaventures-com-logo.webp`,
-    href: "https://khoslaventures.com",
-  },
-  {
-    id: uuidv4(),
-    name: "Sapphire Ventures",
-    src: `${cloudFrontUrl}/brands/sapphireventures-com-logo.webp`,
-    href: "https://sapphireventures.com",
-  },
-  {
-    id: uuidv4(),
-    name: "Lightspeed Ventures",
-    src: `${cloudFrontUrl}/brands/lsvp-com-logo.webp`,
-    href: "https://lsvp.com",
-  },
-  {
-    id: uuidv4(),
-    name: "Glassdoor",
-    src: `${cloudFrontUrl}/brands/glassdoor.webp`,
-    href: "https://www.glassdoor.com",
-  },
-];
+// Logos shown on the landing page, one per supported job platform.
+export const platforms = platformsArray
+  .filter((platform) => platform.value !== "gethired")
+  .map((platform) => ({
+    id: platform.value,
+    name: platform.label,
+    src: `${cloudFrontUrl}/brands/${platform.value}.webp`,
+    href: `/jobs?platform=${platform.value}`,
+  }));
 
 export const DEFAULT_CITIES = [
   { location: "Remote" },

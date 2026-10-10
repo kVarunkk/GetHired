@@ -101,7 +101,6 @@
   .theme {
     --animate-marquee: marquee var(--duration) infinite linear;
     --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
-    --animate-orbit: orbit calc(var(--duration)*1s) linear infinite;
   }
 }
 
