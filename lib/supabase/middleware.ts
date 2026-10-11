@@ -123,6 +123,8 @@ export async function updateSession(request: NextRequest) {
 
   const isResumeReviewPath = pathname.startsWith("/resume-review");
 
+  const isAgentPath = pathname === "/agent" || pathname.startsWith("/agent/");
+
   const isCompanyOnboardingPath =
     pathname === "/get-started" && searchParams.get("company") === "true";
 
@@ -257,11 +259,12 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // --- Restrict Access to Applicant only routes(dashboard and get-started) ---
+    // --- Restrict Access to Applicant only routes(dashboard, get-started, agent) ---
     if (
       (pathname.startsWith("/dashboard") ||
         isApplicantOnboardingPath ||
-        isResumeReviewPath) &&
+        isResumeReviewPath ||
+        isAgentPath) &&
       !isApplicant
     ) {
       const url = request.nextUrl.clone();

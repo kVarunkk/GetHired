@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import {
+  Bot,
   FileUser,
   Headset,
   Info,
@@ -279,6 +280,13 @@ export const applicantNavbarItems: INavItem[] = [
     icon: <Briefcase className="h-4 w-4" />,
   },
   {
+    id: "agent",
+    label: "Agent",
+    href: "/agent",
+    type: "startswith",
+    icon: <Bot className="h-4 w-4" />,
+  },
+  {
     id: "interviews",
     label: "Interviews",
     href: "/interview",
@@ -397,6 +405,7 @@ const verticalNavbarPaths = [
   "/resume-review",
   "/resume",
   "/interview",
+  "/agent",
 ];
 
 export const noScrollToTop = ["/resume-review/"];
