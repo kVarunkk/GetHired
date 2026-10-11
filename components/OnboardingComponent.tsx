@@ -32,7 +32,6 @@ import { Step6ResumeUpload } from "./onboarding-steps/Step6";
 import { Step7ReviewSubmit } from "./onboarding-steps/Step7";
 import { isValidUrl } from "@/utils/utils";
 import { Loader2 } from "lucide-react";
-import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
 import { submitOnboardingAction } from "@/app/actions/submit-onboarding";
 import { useProgress } from "react-transition-progress";
 
@@ -402,11 +401,7 @@ export const OnboardingForm: React.FC = () => {
         throw new Error(result.error);
       }
 
-      await updateUserAppMetadata(user.id, {
-        type: "applicant",
-        onboarding_complete: true,
-      });
-
+      // submitOnboardingAction also marks onboarding complete on the server.
       toast.success("Profile complete! Welcome to GetHired.", { id: toastId });
 
       startTransition(() => {

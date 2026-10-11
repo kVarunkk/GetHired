@@ -29,7 +29,7 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { commonIndustries } from "@/utils/utils";
-import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
+import { markMyOnboardingComplete } from "@/app/actions/update-user-metadata";
 import LocationSearchSelect from "./LocationSearchSelect";
 
 const formSchema = z.object({
@@ -216,13 +216,8 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
 
       if (error) throw error;
 
-      const { error: updateAppMetaError } = await updateUserAppMetadata(
-        user.id,
-        {
-          type: "company",
-          onboarding_complete: true,
-        },
-      );
+      const { error: updateAppMetaError } =
+        await markMyOnboardingComplete("company");
 
       if (updateAppMetaError) throw new Error(updateAppMetaError);
 

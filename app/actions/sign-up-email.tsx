@@ -3,7 +3,7 @@
 import AuthConfirmationEmail from "@/emails/AuthConfirmationEmail";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "react-email";
-import { updateUserAppMetadata } from "./update-user-metadata";
+import { setUserAppMetadata } from "@/helpers/user/set-app-metadata";
 import { sendEmail } from "@/utils/email";
 import { deploymentUrl } from "@/utils/formatters";
 import { PostHogEvent } from "@/utils/types";
@@ -35,7 +35,7 @@ export async function sendSignupEmail(
       );
     }
 
-    const { error: updateAppMetaError } = await updateUserAppMetadata(
+    const { error: updateAppMetaError } = await setUserAppMetadata(
       data.user?.id,
       {
         type: isCompany ? "company" : "applicant",
