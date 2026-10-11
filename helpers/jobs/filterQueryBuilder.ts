@@ -10,6 +10,7 @@ import {
 import { PostgrestError } from "@supabase/supabase-js";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { getCutOffDate } from "@/utils/date";
+import { expandLocations } from "@/helpers/locations/aliases";
 export const allJobsSelectString = `id, created_at, updated_at, job_name, job_type, platform, locations, salary_range, visa_requirement, salary_min, salary_max, company_name, experience, experience_min, experience_max, equity_range, equity_min, equity_max, status, ai_summary, is_platform_job`;
 
 export const buildQuery = async ({
@@ -229,10 +230,10 @@ export const buildQuery = async ({
     }
 
     if (locationsArray.length > 0) {
-      const lowercasedLocations = locationsArray.map((loc) =>
-        loc.toLowerCase().trim(),
-      );
-      query = query.overlaps("normalized_locations", lowercasedLocations);
+      // Every spelling of each place (e.g. bangalore + bengaluru), lowercased,
+      // since jobs aren't always stored under the canonical name.
+      const searchLocations = await expandLocations(locationsArray);
+      query = query.overlaps("normalized_locations", searchLocations);
     }
 
     if (platformsArray.length > 0) {
