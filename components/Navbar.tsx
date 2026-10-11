@@ -11,7 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ChevronLeft, ChevronRight, Menu, Wallet } from "lucide-react";
+import { ChevronRight, Menu, Wallet } from "lucide-react";
 import Brand from "./Brand";
 import { cn, getNavItemsByPath } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/tooltip";
 import WaitlistCTA from "./WaitlistCTA";
 import ModifiedLink from "./ModifiedLink";
+import SidebarLabel from "./SidebarLabel";
 
 export default function NavbarComponent({
   variant = "vertical",
@@ -37,6 +38,11 @@ export default function NavbarComponent({
   initialUser: User | null;
 }) {
   const [user, setUser] = useState<User | null>(initialUser);
+  // Statically rendered pages (home, blog, job pages) are built without
+  // cookies, so a null initialUser may just mean "unknown". Until the browser
+  // reports the session, render neither signed-in nor signed-out controls, so
+  // they don't swap after load.
+  const [authResolved, setAuthResolved] = useState(initialUser !== null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const isCompanyUser = user?.app_metadata?.type === "company";
@@ -68,6 +74,7 @@ export default function NavbarComponent({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setAuthResolved(true);
     });
 
     return () => {
@@ -84,17 +91,21 @@ export default function NavbarComponent({
           variant === "horizontal" && "md:flex",
         )}
       >
-        <WaitlistCTA
-          content={
-            <p>
-              Prepare for your next interview with our new AI Interview feature
-            </p>
-          }
-          redirectTo="/ai-interview"
-        />
+        {/* Promo banner for the public site only; in-app (vertical) pages skip it. */}
+        {variant === "horizontal" && (
+          <WaitlistCTA
+            content={
+              <p>
+                Prepare for your next interview with our new AI Interview
+                feature
+              </p>
+            }
+            redirectTo="/ai-interview"
+          />
+        )}
         <div
           className={cn(
-            "w-full flex items-center justify-between relative px-4 py-3 lg:px-20 xl:px-40 2xl:px-80 border-b mb-16 overflow-x-auto",
+            "w-full flex items-center justify-between gap-2 relative px-4 py-3 lg:px-20 xl:px-40 2xl:px-80 border-b mb-16",
             // for mobile screens
             (pathname.startsWith("/jobs") ||
               pathname.startsWith("/companies") ||
@@ -102,37 +113,68 @@ export default function NavbarComponent({
               pathname.startsWith("/resume") ||
               pathname.startsWith("/company") ||
               pathname.startsWith("/interview") ||
+              pathname.startsWith("/agent") ||
               pathname.startsWith("/dashboard")) &&
               "mb-0",
           )}
         >
-          <div className="flex items-center gap-1 justify-start">
-            {navbarItems ? <NavbarSheet items={navbarItems} /> : ""}
-            <Link href={"/"}>
-              <Brand type="long" />
+          <div className="flex min-w-0 items-center gap-1 justify-start">
+            {authResolved ? (
+              <NavbarSheet items={navbarItems} />
+            ) : (
+              // Same 40px footprint as the menu button, so the logo doesn't shift.
+              <LoadingNav className="lg:hidden p-2">
+                <SkeletonBar className="h-6 w-6" />
+              </LoadingNav>
+            )}
+            {/* The short logo on very small screens, so the bar fits without scrolling. */}
+            <Link href={"/"} aria-label="GetHired home" className="shrink-0">
+              <span className="block min-[400px]:hidden">
+                <Brand type="short" />
+              </span>
+              <span className="hidden min-[400px]:block">
+                <Brand type="long" />
+              </span>
             </Link>
           </div>
 
-          {navbarItems && (
-            <div className=" absolute left-1/2 -translate-x-1/2 items-center gap-4 text-sm hidden lg:flex">
-              {navbarItems.map((item) => (
-                <ModifiedLink
-                  key={item.id}
-                  href={item.href}
-                  className={cn(
-                    "hover:underline underline-offset-2",
-                    item.active && "underline underline-offset-2",
-                  )}
-                >
-                  {item.label}
-                </ModifiedLink>
+          {!authResolved ? (
+            <LoadingNav className="absolute left-1/2 -translate-x-1/2 items-center gap-4 hidden lg:flex">
+              {HORIZONTAL_SKELETON_WIDTHS.map((width, index) => (
+                <SkeletonBar key={index} className={cn("h-4", width)} />
               ))}
-            </div>
+            </LoadingNav>
+          ) : (
+            <nav
+              aria-label="Main"
+              className="absolute left-1/2 -translate-x-1/2 items-center gap-4 text-sm hidden lg:flex"
+            >
+              {/* Dashboard stays in the mobile menu, its only route on phones. */}
+              {navbarItems
+                .filter((item) => item.href !== "/dashboard")
+                .map((item) => (
+                  <ModifiedLink
+                    key={item.id}
+                    href={item.href}
+                    className={cn(
+                      "hover:underline underline-offset-2",
+                      item.active && "underline underline-offset-2",
+                    )}
+                  >
+                    {item.label}
+                  </ModifiedLink>
+                ))}
+            </nav>
           )}
 
-          <div className="justify-end">
-            {user ? (
-              <div className="flex items-center gap-5">
+          <div className="flex shrink-0 justify-end">
+            {!authResolved ? (
+              <div
+                aria-hidden
+                className="h-9 w-24 animate-pulse rounded-lg bg-muted"
+              />
+            ) : user ? (
+              <div className="flex items-center gap-1">
                 <FeedbackForm user={user} isMenuOpen={false} />
                 <ProfileDropdown user={user} isMenuOpen={false} />
               </div>
@@ -147,140 +189,200 @@ export default function NavbarComponent({
                 >
                   <DiscordLogoIcon />
                 </Link>
-                <AuthButton isMenuOpen={true} variant={variant} />
+                {/* This bar is horizontal even on sidebar pages (phones). */}
+                <AuthButton isMenuOpen={true} variant="horizontal" />
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* vertical */}
-      <div
-        className={cn(
-          "h-screen flex-col gap-3 p-4 border-r overflow-y-auto overflow-x-hidden sticky top-0 shrink-0 transition-all duration-300 ease-in-out",
-          variant === "vertical" ? "hidden md:flex" : "hidden",
-          isMenuOpen ? "w-52" : "w-20",
-        )}
-      >
-        <Link href={"/"} className={cn(!isMenuOpen && "mx-auto")}>
-          <Brand type={isMenuOpen ? "long" : "short"} />
-        </Link>
-
-        {navbarItems && (
-          <div
-            className={cn(
-              "gap-4 text-sm flex flex-col mb-auto",
-              isMenuOpen ? "items-start" : "items-center",
-            )}
+      {/* vertical (desktop only; phones use the horizontal bar above) */}
+      {variant === "vertical" && (
+        <div
+          className={cn(
+            "h-screen flex-col gap-3 p-4 border-r overflow-y-auto overflow-x-hidden sticky top-0 shrink-0 transition-all duration-300 ease-in-out",
+            "hidden md:flex",
+            isMenuOpen ? "w-52" : "w-20",
+          )}
+        >
+          {/* Always the long logo at the collapsed rail's width (48px tall), clipped
+            by the sidebar: its left 48px is the short logo, so collapsing hides
+            the wordmark without swapping images or moving the mark. */}
+          <Link
+            href={"/"}
+            aria-label="GetHired home"
+            className="block w-full shrink-0 overflow-hidden"
           >
-            {navbarItems.map((item) => (
-              <Tooltip key={item.id} delayDuration={100}>
-                <TooltipTrigger asChild>
-                  <ModifiedLink
-                    href={item.href}
+            <Brand type="long" className="h-12 w-[140px]" />
+          </Link>
+
+          {authResolved ? (
+            <div className="gap-4 text-sm flex flex-col mb-auto items-start">
+              {navbarItems.map((item) => (
+                <Tooltip key={item.id} delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <ModifiedLink
+                      href={item.href}
+                      className={cn(
+                        // px-4 centres the 16px icon in the collapsed rail, so it never moves.
+                        "hover:bg-secondary transition-colors rounded-lg gap-2 items-center px-4 py-2 flex w-full overflow-hidden",
+                        item.active && "bg-secondary",
+                      )}
+                    >
+                      <span className="shrink-0">{item.icon}</span>
+                      <SidebarLabel open={isMenuOpen}>
+                        {item.label}
+                      </SidebarLabel>
+                    </ModifiedLink>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" hidden={isMenuOpen}>
+                    <p>{item.label}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          ) : (
+            <LoadingNav className="mb-auto flex w-full flex-col gap-4">
+              {Array.from({ length: SIDEBAR_SKELETON_ROWS }, (_, index) => (
+                // Same geometry as a real item: px-4 keeps the icon centred when collapsed.
+                <div key={index} className="flex items-center gap-2 px-4 py-2">
+                  <SkeletonBar className="h-4 w-4 shrink-0" />
+                  <SkeletonBar
                     className={cn(
-                      "hover:bg-secondary transition-all rounded-lg gap-2 items-center p-2 flex w-full truncate",
-                      item.active && "bg-secondary",
-                      isMenuOpen ? "justify-start" : "justify-center",
+                      "h-3.5 w-20 transition-opacity duration-300",
+                      isMenuOpen ? "opacity-100" : "opacity-0",
                     )}
-                  >
-                    <span className="shrink-0">{item.icon}</span>
-                    {isMenuOpen && item.label}
-                  </ModifiedLink>
-                </TooltipTrigger>
-                <TooltipContent side="right" hidden={isMenuOpen}>
-                  <p>{item.label}</p>
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </div>
-        )}
+                  />
+                </div>
+              ))}
+            </LoadingNav>
+          )}
 
-        <div className="justify-end flex flex-col gap-4">
-          <Tooltip delayDuration={100}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className={cn(
-                  "flex p-2 items-center w-full gap-2 hover:bg-secondary transition-all rounded-lg truncate",
-                  isMenuOpen ? "justify-start" : "justify-center",
-                )}
-              >
-                {isMenuOpen ? (
-                  <ChevronLeft className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-                {isMenuOpen && <span className="text-sm">Collapse</span>}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" hidden={isMenuOpen}>
-              <p>{isMenuOpen ? "Collapse" : "Expand"}</p>
-            </TooltipContent>
-          </Tooltip>
+          <div className="justify-end flex flex-col gap-4">
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className={cn(
+                    "flex px-4 py-2 items-center w-full gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden",
+                  )}
+                >
+                  {/* One chevron that turns, instead of swapping icons. */}
+                  <ChevronRight
+                    className={cn(
+                      "h-4 w-4 shrink-0 transition-transform duration-300",
+                      isMenuOpen && "rotate-180",
+                    )}
+                  />
+                  <SidebarLabel open={isMenuOpen}>Collapse</SidebarLabel>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" hidden={isMenuOpen}>
+                <p>{isMenuOpen ? "Collapse" : "Expand"}</p>
+              </TooltipContent>
+            </Tooltip>
 
-          {user ? (
-            <div className="flex flex-col items-center gap-5">
-              {!isCompanyUser && (
+            {!authResolved ? (
+              <div
+                aria-hidden
+                className="h-24 w-full animate-pulse rounded-lg bg-muted"
+              />
+            ) : user ? (
+              <div className="flex flex-col items-center gap-5">
+                {!isCompanyUser && (
+                  <Tooltip delayDuration={100}>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href="/dashboard/buy-credits"
+                        className={cn(
+                          "text-brand flex px-4 py-2 items-center w-full gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden",
+                        )}
+                      >
+                        <Wallet className="h-4 w-4 shrink-0" />
+                        <SidebarLabel open={isMenuOpen}>Recharge</SidebarLabel>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" hidden={isMenuOpen}>
+                      <p>{isMenuOpen ? "" : "Recharge"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                <FeedbackForm
+                  isMenuOpen={isMenuOpen}
+                  user={user}
+                  isVertical={true}
+                />
+                <ProfileDropdown
+                  isMenuOpen={isMenuOpen}
+                  user={user}
+                  isVertical={true}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
                 <Tooltip delayDuration={100}>
                   <TooltipTrigger asChild>
                     <Link
-                      href="/dashboard/buy-credits"
                       className={cn(
-                        "text-brand flex p-2 items-center w-full gap-2 hover:bg-secondary transition-all rounded-lg truncate",
-                        isMenuOpen ? "justify-start" : "justify-center",
+                        "hover:text-primary px-4 py-2 flex items-center gap-2 transition-colors rounded-lg hover:bg-secondary w-full overflow-hidden",
                       )}
+                      href={"https://discord.gg/6xvKBqW5eW"}
+                      target="_blank"
+                      aria-label="Join Community"
                     >
-                      <Wallet className="h-4 w-4" />
-                      {isMenuOpen && <span className="text-sm">Recharge</span>}
+                      <DiscordLogoIcon className="h-4 w-4 shrink-0" />
+                      <SidebarLabel open={isMenuOpen}>
+                        Join Community
+                      </SidebarLabel>
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right" hidden={isMenuOpen}>
-                    <p>{isMenuOpen ? "" : "Recharge"}</p>
+                    <p>Join Community</p>
                   </TooltipContent>
                 </Tooltip>
-              )}
-              <FeedbackForm
-                isMenuOpen={isMenuOpen}
-                user={user}
-                isVertical={true}
-              />
-              <ProfileDropdown
-                isMenuOpen={isMenuOpen}
-                user={user}
-                isVertical={true}
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-4">
-              <Tooltip delayDuration={100}>
-                <TooltipTrigger asChild>
-                  <Link
-                    className={cn(
-                      "hover:text-primary p-2 flex items-center gap-2 transition-all rounded-lg hover:bg-secondary w-full truncate",
-                      isMenuOpen ? "justify-start" : "justify-center",
-                    )}
-                    href={"https://discord.gg/6xvKBqW5eW"}
-                    target="_blank"
-                    aria-label="Join Community"
-                  >
-                    <DiscordLogoIcon className="h-4 w-4" />
-                    {isMenuOpen && (
-                      <span className="text-sm">Join Community</span>
-                    )}
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right" hidden={isMenuOpen}>
-                  <p>Join Community</p>
-                </TooltipContent>
-              </Tooltip>
-              <AuthButton isMenuOpen={isMenuOpen} variant={variant} />
-            </div>
-          )}
+                <AuthButton isMenuOpen={isMenuOpen} variant={variant} />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
+}
+
+/** Placeholder widths for the desktop link row, roughly matching real labels. */
+const HORIZONTAL_SKELETON_WIDTHS = [
+  "w-10",
+  "w-12",
+  "w-16",
+  "w-20",
+  "w-16",
+  "w-14",
+];
+const SIDEBAR_SKELETON_ROWS = 6;
+
+/** A region that stands in for navigation while the session is unknown. */
+function LoadingNav({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      role="status"
+      aria-label="Loading navigation"
+      className={cn("animate-pulse", className)}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SkeletonBar({ className }: { className?: string }) {
+  return <div aria-hidden className={cn("rounded-md bg-muted", className)} />;
 }
 
 const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
@@ -288,7 +390,11 @@ const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <button onClick={() => setOpen(true)} className="lg:hidden p-2">
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="Open menu"
+        className="lg:hidden p-2"
+      >
         <Menu />
       </button>
       <SheetContent

@@ -14,13 +14,13 @@ import { Textarea } from "./ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { User } from "@supabase/supabase-js";
-import { cn } from "@/utils/utils";
 import { useState } from "react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import SidebarLabel from "./SidebarLabel";
 
 export default function FeedbackForm({
   user,
@@ -57,14 +57,9 @@ export default function FeedbackForm({
       {isVertical ? (
         <Tooltip delayDuration={100}>
           <TooltipTrigger asChild>
-            <DialogTrigger
-              className={cn(
-                "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-                isMenuOpen ? "justify-start" : "justify-center",
-              )}
-            >
-              <MessageCircle className="h-4 w-4" />
-              {isMenuOpen ? <span className=" text-sm">Feedback</span> : ""}
+            <DialogTrigger className="flex items-center w-full px-4 py-2 gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden">
+              <MessageCircle className="h-4 w-4 shrink-0" />
+              <SidebarLabel open={isMenuOpen}>Feedback</SidebarLabel>
             </DialogTrigger>
           </TooltipTrigger>
           <TooltipContent side="right" hidden={isMenuOpen}>
@@ -72,14 +67,12 @@ export default function FeedbackForm({
           </TooltipContent>
         </Tooltip>
       ) : (
+        // Horizontal navbar: an icon button the same size as the profile button.
         <DialogTrigger
-          className={cn(
-            "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-            isMenuOpen ? "justify-start" : "justify-center",
-          )}
+          aria-label="Feedback"
+          className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-secondary transition-colors"
         >
           <MessageCircle className="h-4 w-4" />
-          {isMenuOpen ? <span className=" text-sm">Feedback</span> : ""}
         </DialogTrigger>
       )}
 

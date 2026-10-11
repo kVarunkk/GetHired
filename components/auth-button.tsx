@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { LogIn, UserLock } from "lucide-react";
 import { cn } from "@/utils/utils";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   Tooltip,
   TooltipContent,
@@ -18,12 +17,14 @@ export function AuthButton({
   isMenuOpen: boolean;
   variant?: "horizontal" | "vertical";
 }) {
-  const isDesktop = useMediaQuery("(min-width: 768px)");
+  // The layout comes from where the buttons are, never from measuring the
+  // screen, so the first render is already right (no reflow after hydration).
+  // "vertical" is the desktop sidebar; the top bar always passes "horizontal".
   return (
     <div
       className={cn(
-        "flex  gap-4 w-full",
-        variant === "horizontal" || !isDesktop ? " gap-2" : "flex-col",
+        "flex w-full",
+        variant === "horizontal" ? "gap-2" : "flex-col gap-4",
       )}
     >
       {variant === "vertical" ? (
@@ -35,8 +36,8 @@ export function AuthButton({
               variant={"outline"}
               className={cn("w-full")}
             >
-              <Link href="/auth/login">
-                {isDesktop && <LogIn className="h-4 w-4" />}
+              <Link href="/auth/login" aria-label="Sign in">
+                <LogIn className="h-4 w-4" />
                 {isMenuOpen ? "Sign in" : ""}
               </Link>
             </Button>
@@ -60,8 +61,8 @@ export function AuthButton({
               variant={"default"}
               className={cn("w-full")}
             >
-              <Link href="/auth/sign-up">
-                {isDesktop && <UserLock className="h-4 w-4" />}
+              <Link href="/auth/sign-up" aria-label="Sign up">
+                <UserLock className="h-4 w-4" />
                 {isMenuOpen ? "Sign up" : ""}
               </Link>
             </Button>

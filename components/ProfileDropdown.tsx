@@ -70,6 +70,7 @@ export default function ProfileDropdown({
               open={open}
               isMenuOpen={isMenuOpen}
               isCompanyUser={isCompanyUser}
+              isVertical
             />
           </TooltipTrigger>
           <TooltipContent side="right" hidden={isMenuOpen}>

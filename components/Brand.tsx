@@ -7,19 +7,28 @@ import {
   BRAND_SHORT_LIGHT,
 } from "@/utils/utils";
 import Image from "next/image";
+import { cn } from "@/utils/utils";
 
 interface BrandProps {
   type: "long" | "short";
+  /**
+   * Replaces the default responsive size and pins the logo to the left edge.
+   * The long logo's left square is the short logo, so a container that clips
+   * it to a square shows exactly the short logo.
+   */
+  className?: string;
 }
 
-export default function Brand({ type }: BrandProps) {
-  const dimensionsClass =
-    type === "long"
+export default function Brand({ type, className }: BrandProps) {
+  const imageClass = cn("object-contain", className && "object-left");
+  const dimensionsClass = className
+    ? className
+    : type === "long"
       ? "w-[100px] sm:w-[150px] h-[30px] sm:h-[40px] md:h-[50px]"
       : "w-[32px] sm:w-[40px] md:w-[50px] h-[32px] sm:h-[40px] md:h-[50px]";
 
   return (
-    <div className={`relative ${dimensionsClass}`}>
+    <div className={cn("relative", dimensionsClass)}>
       {/* Light Mode Logo */}
       <div className="dark:hidden w-full h-full relative">
         <Image
@@ -27,7 +36,7 @@ export default function Brand({ type }: BrandProps) {
           alt="GetHired logo"
           fill
           sizes="(max-width: 640px) 100px, (max-width: 768px) 150px, 150px"
-          className="object-contain"
+          className={imageClass}
           priority // Replaces loading="eager" for LCP priority elements
         />
       </div>
@@ -39,7 +48,7 @@ export default function Brand({ type }: BrandProps) {
           alt="GetHired logo"
           fill
           sizes="(max-width: 640px) 100px, (max-width: 768px) 150px, 150px"
-          className="object-contain"
+          className={imageClass}
           priority
         />
       </div>
