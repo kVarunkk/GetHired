@@ -1,14 +1,15 @@
 import { handleUserUpsert } from "@/utils/auth-handlers";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { APPLICANT_HOME } from "@/helpers/user/home-path";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  let next = searchParams.get("next") ?? "/jobs";
+  let next = searchParams.get("next") ?? APPLICANT_HOME;
 
   if (!next.startsWith("/")) {
-    next = "/jobs";
+    next = APPLICANT_HOME;
   }
   if (code) {
     try {

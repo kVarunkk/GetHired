@@ -19,9 +19,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useProgress } from "react-transition-progress";
 import GoogleAuthBtn from "./GoogleAuthBtn";
+import { COMPANY_HOME, homePathFor } from "@/helpers/user/home-path";
 
 const isGenericEmail = (email: string) => {
   const genericDomains = [
@@ -81,7 +82,7 @@ export function LoginForm({
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
       });
@@ -90,9 +91,9 @@ export function LoginForm({
       startTransition(() => {
         startProgress();
         if (isCompany) {
-          router.push("/company");
+          router.push(COMPANY_HOME);
         } else {
-          router.push(returnToPath ?? "/jobs");
+          router.push(returnToPath ?? homePathFor(data.user?.app_metadata));
         }
       });
     } catch (error) {
@@ -133,7 +134,7 @@ export function LoginForm({
                         type="email"
                         placeholder="m@example.com"
                         required
-                        className="bg-input"
+                        aria-invalid={!!form.formState.errors.email}
                         {...field}
                       />
                       <FormMessage />
@@ -158,7 +159,7 @@ export function LoginForm({
                         id="password"
                         type="password"
                         required
-                        className="bg-input"
+                        aria-invalid={!!form.formState.errors.password}
                         {...field}
                       />
                       <FormMessage />
@@ -166,11 +167,20 @@ export function LoginForm({
                   )}
                 />
                 {form.formState.errors.root && (
-                  <p className="text-sm text-red-500">
+                  <p
+                    role="alert"
+                    className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+                  >
+                    <AlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
                     {form.formState.errors.root.message}
                   </p>
                 )}
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  variant="brand"
+                  className="w-full"
+                  disabled={isLoading}
+                >
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -183,7 +193,7 @@ export function LoginForm({
               </div>
               {!isCompany && (
                 <div className="flex flex-col gap-5 mt-5">
-                  <div className="text-center text-muted-foreground text-sm">
+                  <div className="text-center text-xs font-medium text-muted-foreground">
                     OR
                   </div>
                   <GoogleAuthBtn />
@@ -199,7 +209,7 @@ export function LoginForm({
                         ? "/auth/sign-up?returnTo=" + returnToPath
                         : "/auth/sign-up"
                   }
-                  className="underline underline-offset-4"
+                  className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
                 >
                   Sign up
                 </Link>
@@ -209,7 +219,7 @@ export function LoginForm({
                   Are you a company looking to hire candidates?{" "}
                   <Link
                     href={"/auth/login?company=true"}
-                    className="underline underline-offset-4"
+                    className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
                   >
                     Login here
                   </Link>
@@ -219,7 +229,7 @@ export function LoginForm({
                   Are you looking for jobs?{" "}
                   <Link
                     href={"/auth/login"}
-                    className="underline underline-offset-4"
+                    className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
                   >
                     Login here
                   </Link>

@@ -57,8 +57,38 @@ describe("middleware: /agent", () => {
     expect(passesThrough(await updateSession(request("/agent")))).toBe(true);
   });
 
-  it("redirects company users away", async () => {
+  it("sends company users straight to their dashboard", async () => {
     vi.mocked(getUserFromRequest).mockResolvedValue(company);
+
+    expect(redirectTarget(await updateSession(request("/agent")))).toBe("/company");
+    expect(redirectTarget(await updateSession(request("/agent/abc?x=1")))).toBe("/company");
+  });
+
+  it("sends companies that haven't onboarded to the dashboard too, which then routes them to onboarding", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(
+      mockUser({ type: "company", onboardingComplete: false }),
+    );
+
+    expect(redirectTarget(await updateSession(request("/agent")))).toBe("/company");
+    expect(redirectTarget(await updateSession(request("/company")))).toBe("/get-started?company=true");
+  });
+
+  it.each([true, false])(
+    "rejects company users on the agent API with 403 (onboarded: %s)",
+    async (onboardingComplete) => {
+      vi.mocked(getUserFromRequest).mockResolvedValue(
+        mockUser({ type: "company", onboardingComplete }),
+      );
+
+      const res = await updateSession(request("/api/agent/chat"));
+
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: "The agent is only available to job seekers." });
+    },
+  );
+
+  it("still sends users without a role from /agent to login", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue({ ...applicant, app_metadata: {} });
 
     expect(redirectTarget(await updateSession(request("/agent")))).toBe("/auth/login");
   });
@@ -76,6 +106,32 @@ describe("middleware: /agent", () => {
 
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({ error: "API tokens can only be used with API routes" });
+  });
+});
+
+describe("middleware: the agent is the applicant home", () => {
+  it("sends signed-in applicants from the login page to the agent", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+
+    expect(redirectTarget(await updateSession(request("/auth/login")))).toBe("/agent");
+  });
+
+  it("sends signed-in companies from the login page to the company dashboard", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(company);
+
+    expect(redirectTarget(await updateSession(request("/auth/login")))).toBe("/company");
+  });
+
+  it("sends applicants who open a company page to the agent", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+
+    expect(redirectTarget(await updateSession(request("/company/profiles")))).toBe("/agent");
+  });
+
+  it("sends users without a role from company pages to the job board, since the agent needs one", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue({ ...applicant, app_metadata: {} });
+
+    expect(redirectTarget(await updateSession(request("/company")))).toBe("/jobs");
   });
 });
 

@@ -5,8 +5,9 @@ import { redirect } from "next/navigation";
 import { type NextRequest } from "next/server";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { PostHogEvent } from "@/utils/types";
+import { APPLICANT_HOME } from "@/helpers/user/home-path";
 
-const DEFAULT_REDIRECT_PATH = "/jobs";
+const DEFAULT_REDIRECT_PATH = APPLICANT_HOME;
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);

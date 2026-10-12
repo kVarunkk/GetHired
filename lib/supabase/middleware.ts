@@ -4,6 +4,7 @@ import { hasEnvVars } from "../../utils/utils";
 import { UserAppMetadata } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { getUserFromRequest } from "./get-user-from-request";
+import { APPLICANT_HOME, COMPANY_HOME } from "@/helpers/user/home-path";
 
 export async function updateSession(request: NextRequest) {
   const supabaseResponse = NextResponse.next({
@@ -124,6 +125,7 @@ export async function updateSession(request: NextRequest) {
   const isResumeReviewPath = pathname.startsWith("/resume-review");
 
   const isAgentPath = pathname === "/agent" || pathname.startsWith("/agent/");
+  const isAgentApiPath = pathname.startsWith("/api/agent/");
 
   const isCompanyOnboardingPath =
     pathname === "/get-started" && searchParams.get("company") === "true";
@@ -200,7 +202,7 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone();
       let pathname;
       if (isApplicant) {
-        pathname = "/jobs";
+        pathname = APPLICANT_HOME;
         url.pathname = pathname;
         deleteSearchParams(url);
 
@@ -220,6 +222,23 @@ export async function updateSession(request: NextRequest) {
         }
         return NextResponse.redirect(url);
       }
+    }
+
+    // --- The agent is for job seekers only (SEC-001) ---
+    // Checked before company onboarding, so the API answers 403 rather than
+    // redirecting a company that hasn't onboarded yet.
+    if (isCompany && isAgentApiPath) {
+      return NextResponse.json(
+        { error: "The agent is only available to job seekers." },
+        { status: 403 },
+      );
+    }
+    if (isCompany && isAgentPath) {
+      const url = request.nextUrl.clone();
+      url.pathname = COMPANY_HOME;
+      deleteSearchParams(url);
+
+      return NextResponse.redirect(url);
     }
 
     // --- Enforce Company Onboarding ---
@@ -244,7 +263,8 @@ export async function updateSession(request: NextRequest) {
       !isCompany
     ) {
       const url = request.nextUrl.clone();
-      url.pathname = "/jobs";
+      // Users without a role yet can't open the agent, so they get the job board.
+      url.pathname = isApplicant ? APPLICANT_HOME : "/jobs";
       deleteSearchParams(url);
 
       return NextResponse.redirect(url);

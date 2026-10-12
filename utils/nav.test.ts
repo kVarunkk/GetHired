@@ -23,3 +23,14 @@ describe("Agent navigation (TASK-071)", () => {
     expect(getNavbarVairantByPath("/agent")).toBe("vertical");
   });
 });
+
+describe("signed-out horizontal navbar", () => {
+  it.each(["/", "/blog", "/auth/login"])("on %s leads with the agent and leaves out Features and Blog", (path) => {
+    const ids = getNavItemsByPath(path, false, null).map((item) => item.id);
+
+    expect(ids.filter((id) => id !== "home")[0]).toBe("agent");
+    expect(ids).not.toContain("features");
+    expect(ids).not.toContain("blog");
+    expect(ids).toEqual(expect.arrayContaining(["jobs", "interview", "hire", "cvreview"]));
+  });
+});

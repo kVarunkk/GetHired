@@ -10,6 +10,7 @@ import { PostHogEvent } from "@/utils/types";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { after } from "next/server";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
+import { APPLICANT_HOME } from "@/helpers/user/home-path";
 
 const URL = deploymentUrl();
 
@@ -20,7 +21,7 @@ export async function sendSignupEmail(
 ) {
   const serviceRoleSupabase = createServiceRoleClient();
 
-  const finalRedirectUrl = isCompany ? "/get-started?company=true" : "/jobs";
+  const finalRedirectUrl = isCompany ? "/get-started?company=true" : APPLICANT_HOME;
 
   const { data, error } = await serviceRoleSupabase.auth.admin.generateLink({
     type: "signup",

@@ -9,6 +9,7 @@ import { setUserAppMetadata } from "@/helpers/user/set-app-metadata";
 import { deploymentUrl } from "@/utils/formatters";
 import { sendEmail } from "@/utils/email";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
+import { APPLICANT_HOME } from "@/helpers/user/home-path";
 
 const URL = deploymentUrl();
 
@@ -44,7 +45,7 @@ export async function sendInviteEmail(
     }
     const referralCode = referrerData.referral_code;
 
-    const finalRedirectUrl = `/jobs?ref=${referralCode}`;
+    const finalRedirectUrl = `${APPLICANT_HOME}?ref=${referralCode}`;
 
     const { data, error } = await serviceRoleSupabase.auth.admin.generateLink({
       type: "signup",
