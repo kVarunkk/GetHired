@@ -65,7 +65,6 @@ export function createProfileTools(ctx: AgentToolContext) {
       description:
         "Update the user's job preferences on their profile (roles, locations, salary, job types, visa, skills, work style). Personalised matches are refreshed afterwards. The user must approve. Send only the fields that change.",
       inputSchema: preferencesInput,
-      needsApproval: true,
       execute: (preferences) =>
         withToolErrors(ctx, "updateMyPreferences", async () => {
           // Save canonical names ("Bangalore" -> "Bengaluru"), as the location picker does.

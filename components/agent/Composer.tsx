@@ -35,14 +35,27 @@ export default function Composer({
   busy,
   onSend,
   onStop,
+  initialDraft = "",
 }: {
   busy: boolean;
   /** Returns false when the message wasn't sent, so the draft is kept. */
   onSend: (text: string) => boolean;
   onStop: () => void;
+  /** Text the box starts with, ready to edit and send. */
+  initialDraft?: string;
 }) {
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(initialDraft);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // A prefilled draft gets focus with the caret at the end, ready to send.
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!initialDraft || !textarea) return;
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    // Only for the draft the box started with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Typing anywhere on the page writes into the message box. Focusing during
   // keydown makes the browser insert this same keystroke into the textarea.
@@ -82,7 +95,7 @@ export default function Composer({
             disabled={busy}
             rows={1}
             placeholder="Ask about jobs, your resume or applications…"
-            className="max-h-48 min-h-10 resize-none border-0 bg-transparent px-2 py-2 text-[15px] leading-6 shadow-none [field-sizing:content] focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-default"
+            className="max-h-48 min-h-10 resize-none border-0 bg-transparent px-2 py-2 text-[15px] leading-6 shadow-none [field-sizing:content] focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-default disabled:bg-transparent"
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
@@ -106,9 +119,10 @@ export default function Composer({
             <Button
               type="submit"
               size="icon"
+              variant="brand"
               aria-label="Send"
               disabled={!input.trim()}
-              className="shrink-0 rounded-xl bg-brand text-brand-foreground hover:bg-brand/90"
+              className="shrink-0 rounded-xl"
             >
               <ArrowUp className="h-4 w-4" />
             </Button>

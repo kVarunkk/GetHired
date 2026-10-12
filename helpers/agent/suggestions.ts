@@ -1,4 +1,4 @@
-import { generateText, LanguageModel, Output } from "ai";
+import { generateText, LanguageModel, Output, type TelemetryOptions } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
 import { wrapInSandbox } from "@/helpers/ai/security";
@@ -19,7 +19,7 @@ const followUpSchema = z.object({ suggestions: z.array(z.string()) });
  */
 export async function generateFollowUps(
   { userText, replyText }: { userText: string; replyText: string },
-  { model }: { model?: LanguageModel } = {},
+  { model, telemetry }: { model?: LanguageModel; telemetry?: TelemetryOptions } = {},
 ): Promise<string[]> {
   if (!replyText.trim()) return [];
 
@@ -27,6 +27,7 @@ export async function generateFollowUps(
     const { output } = await generateText({
       model: model ?? google(AGENT_TITLE_MODEL),
       system: FOLLOW_UP_SYSTEM_PROMPT,
+      telemetry,
       prompt: `${wrapInSandbox("user_message", userText)}\n\n${wrapInSandbox("assistant_reply", replyText)}`,
       output: Output.object({ schema: followUpSchema }),
     });

@@ -91,7 +91,6 @@ export function createOnboardingTools(ctx: AgentToolContext) {
       description:
         "Finish the user's onboarding with their profile and resume, the same as the /get-started form. Only for users whose profile shows onboarding isn't complete; gather the required fields first. The user must approve.",
       inputSchema: onboardingInput,
-      needsApproval: true,
       execute: ({ resumeId, ...input }) =>
         withToolErrors(ctx, "completeOnboarding", async () => {
           const { data: profile, error: profileError } = await supabase

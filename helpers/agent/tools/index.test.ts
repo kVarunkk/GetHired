@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createAgentTools } from "./index";
+import { agentToolApproval } from "../approval";
 import { inputJsonSchema, toolContext } from "@/test/utils/tools";
 import { createSupabaseMock } from "@/test/utils/supabase-mock";
 
@@ -50,10 +51,21 @@ describe("createAgentTools", () => {
     }
   });
 
-  it("requires approval only for credit-spending or profile-changing tools (REQ-014)", () => {
-    const needingApproval = Object.entries(tools)
-      .filter(([, tool]) => tool.needsApproval === true)
-      .map(([name]) => name)
+  it("leaves approvals to the toolApproval policy, not the deprecated needsApproval (SEC-012)", () => {
+    for (const [name, tool] of Object.entries(tools)) {
+      expect(tool.needsApproval, name).toBeUndefined();
+    }
+  });
+
+  it("asks for approval only for credit-spending or profile-changing tools (REQ-014)", () => {
+    const needingApproval = Object.keys(tools)
+      .filter(
+        (name) =>
+          agentToolApproval({
+            toolCall: { toolName: name, toolCallId: "c1" },
+            messages: [{ role: "user", content: "hi" }],
+          }) === "user-approval",
+      )
       .sort();
 
     expect(needingApproval).toEqual(["completeOnboarding", "startResumeReview", "updateMyPreferences"]);

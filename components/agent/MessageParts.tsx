@@ -8,6 +8,7 @@ import { ChevronDown, Coins, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 import ResumeUploadWidget, { type ResumeUploadOutput } from "./ResumeUploadWidget";
+import { rehypeAnimateWords } from "./animate-words";
 
 type MessagePart = UIMessage["parts"][number];
 type ToolPart = Extract<MessagePart, { toolCallId: string }>;
@@ -121,6 +122,13 @@ function postedAgo(postedAt: string | null | undefined) {
   return `${Math.floor(days / 30)}mo ago`;
 }
 
+/**
+ * A job row's layout. On phones the salary drops to its own line next to the
+ * date, so it can't squeeze the title and company down to nothing.
+ */
+const JOB_ROW_GRID =
+  "grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 [grid-template-areas:'title_title'_'meta_meta'_'salary_posted'] sm:[grid-template-areas:'title_salary'_'meta_posted']";
+
 /** Jobs as scannable rows, like the job board, not a grid of cards. */
 function JobResults({ jobs, totalCount }: { jobs: CompactJob[]; totalCount?: number }) {
   const [expanded, setExpanded] = useState(false);
@@ -141,25 +149,29 @@ function JobResults({ jobs, totalCount }: { jobs: CompactJob[]; totalCount?: num
               <Link
                 {...NEW_TAB}
                 href={job.url}
-                className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 px-4 py-3 transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none"
+                className={cn(
+                  JOB_ROW_GRID,
+                  "px-4 py-3 transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none",
+                )}
               >
-                <span className="truncate text-sm font-medium text-foreground">
+                <span className="truncate text-sm font-medium text-foreground [grid-area:title]">
                   {job.title ?? "Untitled role"}
                 </span>
-                <span className="text-right text-sm tabular-nums text-foreground">
+                <span className="min-w-0 truncate text-sm tabular-nums text-foreground [grid-area:salary] sm:text-right">
                   {job.salary}
                 </span>
-                <span className="flex min-w-0 items-center gap-3 text-[13px] text-muted-foreground">
-                  {job.company && <span className="truncate">{job.company}</span>}
+                <span className="flex min-w-0 items-center gap-3 text-[13px] text-muted-foreground [grid-area:meta]">
+                  {job.company && <span className="min-w-0 truncate">{job.company}</span>}
                   {job.locations && job.locations.length > 0 && (
-                    <span className="flex min-w-0 items-center gap-1">
+                    // Shrinks before the company does, so the company name stays readable.
+                    <span className="flex min-w-0 shrink-[3] items-center gap-1">
                       <MapPin aria-hidden className="h-3 w-3 shrink-0" />
                       <span className="truncate">{job.locations.join(", ")}</span>
                     </span>
                   )}
                 </span>
                 <span
-                  className="text-right text-xs tabular-nums text-muted-foreground"
+                  className="self-center text-right text-xs tabular-nums text-muted-foreground [grid-area:posted]"
                   suppressHydrationWarning
                 >
                   {posted}
@@ -312,10 +324,12 @@ function ApprovalCard({
           : `Allow the assistant to ${labelsFor(name).action}?`;
   const details = describeInput(part.input);
   const isOnboarding = name === "completeOnboarding";
+  const reason = (part.approval as { requestReason?: string }).requestReason;
 
   return (
     <ActionCard>
       <p className="text-sm font-medium text-foreground">{title}</p>
+      {reason && <p className="text-xs text-muted-foreground">{reason}</p>}
       {(details.length > 0 || isOnboarding) && (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
           {details.map(([key, value]) => (
@@ -339,7 +353,7 @@ function ApprovalCard({
       <div className="flex gap-2">
         <Button
           size="sm"
-          className="bg-brand text-brand-foreground hover:bg-brand/90"
+          variant="brand"
           onClick={() => onApprove({ id: part.approval.id, approved: true })}
         >
           Approve
@@ -360,14 +374,39 @@ function ApprovalCard({
 /** Links in agent replies open in a new tab, so the chat stays put. */
 const NEW_TAB = { target: "_blank", rel: "noopener noreferrer" } as const;
 
-/** Markdown links get the same treatment as the app's own links. */
+const APP_ORIGIN = "https://gethired.devhub.co.in";
+
+/** A link into the app: a relative path, or the app's own origin (SEC-014). */
+export function isInAppHref(href: string | undefined) {
+  if (!href) return false;
+  if (href.startsWith("/")) return !href.startsWith("//") && !href.startsWith("/\\");
+  try {
+    return new URL(href).origin === APP_ORIGIN;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Markdown links get the same treatment as the app's own links. Replies only
+ * link into the app, so a link planted in a job posting can't be clicked,
+ * and images aren't loaded, so a reply can't send data to another site
+ * (SEC-014).
+ */
 const MARKDOWN_COMPONENTS: Components = {
-  a: ({ href, title, className, children }) => (
-    <a href={href} title={title} className={className} {...NEW_TAB}>
-      {children}
-    </a>
-  ),
+  a: ({ href, title, className, children }) =>
+    isInAppHref(href) ? (
+      <a href={href} title={title} className={className} {...NEW_TAB}>
+        {children}
+      </a>
+    ) : (
+      <span>{children}</span>
+    ),
+  img: ({ alt }) => (alt ? <span>{alt}</span> : null),
 };
+
+/** Plugins for a reply that is still streaming: new words fade in. */
+const STREAMING_REHYPE_PLUGINS = [rehypeAnimateWords];
 
 const inlineLink = "font-medium text-foreground underline underline-offset-4 hover:text-brand";
 
@@ -553,8 +592,20 @@ function ToolStep({
       return <OutputStep name={name} output={part.output} />;
     case "output-error":
       return <Step tone="failed" label={`Couldn't ${labels.action}.`} />;
-    case "output-denied":
+    case "output-denied": {
+      // Denied by the app's rules rather than by the user (SEC-013).
+      const approval = (part as { approval?: { isAutomatic?: boolean; reason?: string } }).approval;
+      if (approval?.isAutomatic) {
+        return (
+          <Step tone="declined" label={`Skipped: ${labels.action}`}>
+            {approval.reason && (
+              <p className="text-xs text-muted-foreground">{approval.reason}</p>
+            )}
+          </Step>
+        );
+      }
       return <Step tone="declined" label={`Declined: ${labels.action}`} />;
+    }
     default:
       return null;
   }
@@ -582,15 +633,20 @@ function toBlocks(parts: MessagePart[]): Block[] {
   return blocks;
 }
 
-/** Renders one chat message's parts: text, tool steps, approvals, uploads. */
+/**
+ * Renders one chat message's parts: text, tool steps, approvals, uploads.
+ * `streaming` fades in each new word of a reply as it arrives.
+ */
 function MessageParts({
   message,
   onApprove,
   onToolOutput,
+  streaming = false,
 }: {
   message: UIMessage;
   onApprove: ApprovalHandler;
   onToolOutput: ToolOutputHandler;
+  streaming?: boolean;
 }) {
   if (message.role === "user") {
     return (
@@ -612,9 +668,14 @@ function MessageParts({
         block.kind === "text" ? (
           <div
             key={block.key}
-            className="prose prose-neutral max-w-none text-[15px] leading-7 dark:prose-invert prose-p:my-2 prose-a:font-medium prose-a:underline-offset-4 hover:prose-a:text-brand prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-strong:font-semibold"
+            className="prose prose-neutral min-w-0 max-w-none text-[15px] leading-7 [overflow-wrap:anywhere] dark:prose-invert prose-p:my-2 prose-a:font-medium prose-a:underline-offset-4 hover:prose-a:text-brand prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-strong:font-semibold prose-pre:max-w-full prose-pre:overflow-x-auto"
           >
-            <ReactMarkdown components={MARKDOWN_COMPONENTS}>{block.text}</ReactMarkdown>
+            <ReactMarkdown
+              components={MARKDOWN_COMPONENTS}
+              rehypePlugins={streaming ? STREAMING_REHYPE_PLUGINS : undefined}
+            >
+              {block.text}
+            </ReactMarkdown>
           </div>
         ) : (
           <ol key={block.key} className={TRAIL_CLASS}>

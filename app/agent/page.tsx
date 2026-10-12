@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import AgentShell from "@/components/agent/AgentShell";
 import { loadAgentPageData } from "@/helpers/agent/page-data";
+import { countUserMessagesToday } from "@/helpers/agent/persistence";
+import { readPromptParam } from "@/helpers/agent/prompt-draft";
 
 export const metadata: Metadata = {
   title: "Agent",
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
 export default async function AgentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ session?: string }>;
+  searchParams: Promise<{ session?: string; prompt?: string | string[] }>;
 }) {
   try {
     const supabase = await createClient();
@@ -26,18 +28,20 @@ export default async function AgentPage({
     if (error) throw error;
     if (!user) throw new Error("User not found");
 
-    const { session } = await searchParams;
-    const { sessions, activeSessionId, messages } = await loadAgentPageData(
-      supabase,
-      user.id,
-      session,
-    );
+    const { session, prompt: promptParam } = await searchParams;
+    const prompt = readPromptParam(promptParam);
+    const [{ sessions, activeSessionId, messages }, messagesUsedToday] = await Promise.all([
+      loadAgentPageData(supabase, user.id, session, { newChat: prompt !== "" }),
+      countUserMessagesToday(supabase, user.id, new Date()),
+    ]);
 
     return (
       <AgentShell
         initialSessions={sessions}
         activeSessionId={activeSessionId}
         initialMessages={messages}
+        initialDraft={prompt}
+        messagesUsedToday={messagesUsedToday}
       />
     );
   } catch {

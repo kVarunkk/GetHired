@@ -61,6 +61,45 @@ describe("loadAgentPageData", () => {
     ]);
   });
 
+  it("opens a new chat for a prompt when the newest one has messages", async () => {
+    supabase.queue("agent_sessions", { data: [S1, S2], error: null });
+    supabase.queue("agent_sessions", { data: FULL(S1), error: null });
+    supabase.queue("agent_messages", {
+      data: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }], metadata: null }],
+      error: null,
+    });
+    const created = { id: "s9", title: "New chat", updated_at: "now" };
+    supabase.queue("agent_sessions", { data: created, error: null });
+
+    const data = await loadAgentPageData(supabase.client, "u1", undefined, { newChat: true });
+
+    expect(data).toEqual({ sessions: [created, S1, S2], activeSessionId: "s9", messages: [] });
+  });
+
+  it("reuses the newest chat for a prompt when it is still empty", async () => {
+    supabase.queue("agent_sessions", { data: [S1, S2], error: null });
+    supabase.queue("agent_sessions", { data: FULL(S1), error: null });
+
+    const data = await loadAgentPageData(supabase.client, "u1", undefined, { newChat: true });
+
+    expect(data).toEqual({ sessions: [S1, S2], activeSessionId: "s1", messages: [] });
+    expect(supabase.callsFor("agent_sessions")).toHaveLength(2);
+  });
+
+  it("keeps a requested session even with a prompt", async () => {
+    supabase.queue("agent_sessions", { data: [S1, S2], error: null });
+    supabase.queue("agent_sessions", { data: FULL(S2), error: null });
+    supabase.queue("agent_messages", {
+      data: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }], metadata: null }],
+      error: null,
+    });
+
+    const data = await loadAgentPageData(supabase.client, "u1", "s2", { newChat: true });
+
+    expect(data.activeSessionId).toBe("s2");
+    expect(supabase.callsFor("agent_sessions")).toHaveLength(2);
+  });
+
   it("throws database errors", async () => {
     supabase.queue("agent_sessions", { data: null, error: new Error("list failed") });
 

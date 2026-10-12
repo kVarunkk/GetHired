@@ -7,7 +7,7 @@ import {
   SearchJobsResult,
 } from "@/helpers/jobs/search-jobs";
 import { JobQueryFilters, parseJobQuery } from "@/helpers/jobs/parse-job-query";
-import { validateAndSanitizeSearchQuery } from "@/helpers/ai/security";
+import { validateAndSanitizeSearchQuery, wrapInSandbox } from "@/helpers/ai/security";
 import { platformsArray } from "@/utils/platforms";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { PostHogEvent } from "@/utils/types";
@@ -293,17 +293,20 @@ export function createJobTools(ctx: AgentToolContext) {
           if (!job) return { error: "Job not found." };
 
           const description = job.description ?? "";
+          // Postings are third-party text: delimited as data, not instructions (SEC-011).
           return {
             ...compactJob(job),
-            description:
+            description: wrapInSandbox(
+              "job_description",
               description.length > AGENT_JOB_DESCRIPTION_MAX_CHARS
                 ? `${description.slice(0, AGENT_JOB_DESCRIPTION_MAX_CHARS)}…`
                 : description,
+            ),
             experience: job.experience,
             visaRequirement: job.visa_requirement,
             platform: job.platform,
             // companyUrl: job.company_url,
-            summary: job.ai_summary,
+            summary: job.ai_summary ? wrapInSandbox("job_summary", job.ai_summary) : null,
             isPlatformJob: job.is_platform_job,
             // externalUrl: job.job_url,
             applyUrl: `/jobs/${job.id}${job.is_platform_job ? `?apply=true` : ""}`,

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { UIMessage } from "ai";
 import { PanelLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { agentPromptHref, takePendingPrompt } from "@/helpers/agent/prompt-draft";
 import { cn } from "@/utils/utils";
 import ChatPane from "./ChatPane";
 import MemoriesPanel from "./MemoriesPanel";
@@ -19,11 +20,17 @@ export default function AgentShell({
   initialSessions,
   activeSessionId,
   initialMessages,
+  initialDraft = "",
+  messagesUsedToday = 0,
   titleRefreshDelayMs = TITLE_REFRESH_DELAY_MS,
 }: {
   initialSessions: AgentSessionSummary[];
   activeSessionId: string;
   initialMessages: UIMessage[];
+  /** Text to start the message box with (from `?prompt=`). */
+  initialDraft?: string;
+  /** The user's messages so far today, toward the daily cap. */
+  messagesUsedToday?: number;
   titleRefreshDelayMs?: number;
 }) {
   const router = useRouter();
@@ -31,6 +38,20 @@ export default function AgentShell({
   const [creating, setCreating] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // A prompt from the URL is now in the message box: drop it from the URL so a
+  // reload doesn't open another chat. With none, a prompt saved before logging
+  // in (helpers/agent/prompt-draft.ts) reopens the page with it.
+  useEffect(() => {
+    const pending = takePendingPrompt();
+    if (initialDraft) {
+      window.history.replaceState(null, "", `/agent?session=${activeSessionId}`);
+    } else if (pending) {
+      router.replace(agentPromptHref(pending));
+    }
+    // Only on arrival, not when switching chats.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openSession = (id: string) => {
     setMobileOpen(false);
@@ -161,7 +182,13 @@ export default function AgentShell({
           key={activeSessionId}
           sessionId={activeSessionId}
           initialMessages={initialMessages}
+          initialDraft={initialDraft}
+          messagesUsedToday={messagesUsedToday}
           onFinish={() => {
+            // The reply is saved before the stream closes. Drop the client
+            // Router Cache so coming back to this page loads the new turn
+            // instead of the payload from when the page was first opened.
+            router.refresh();
             setTimeout(refreshSessions, titleRefreshDelayMs);
           }}
         />

@@ -44,10 +44,6 @@ describe("getMyProfile tool", () => {
 });
 
 describe("updateMyPreferences tool", () => {
-  it("requires approval", () => {
-    expect(tools.updateMyPreferences.needsApproval).toBe(true);
-  });
-
   it("maps fields to user_info columns and refreshes the embedding after responding", async () => {
     supabase.queue("user_info", { data: [{ user_id: "u1" }], error: null });
 

@@ -94,3 +94,18 @@ describe("Composer: type anywhere to write a message", () => {
     expect(message()).not.toHaveFocus();
   });
 });
+
+describe("Composer: starting with a draft", () => {
+  it("prefills the box, focused with the caret at the end, without sending", () => {
+    const onSend = vi.fn(() => true);
+    render(
+      <Composer busy={false} onSend={onSend} onStop={vi.fn()} initialDraft="remote Go jobs" />,
+    );
+
+    const box = message() as HTMLTextAreaElement;
+    expect(box).toHaveValue("remote Go jobs");
+    expect(box).toHaveFocus();
+    expect(box.selectionStart).toBe("remote Go jobs".length);
+    expect(onSend).not.toHaveBeenCalled();
+  });
+});

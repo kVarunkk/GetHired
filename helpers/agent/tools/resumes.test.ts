@@ -113,10 +113,6 @@ describe("startResumeReview tool", () => {
     vi.mocked(startReviewAnalysis).mockResolvedValue({ ok: true });
   });
 
-  it("requires approval", () => {
-    expect(tools.startResumeReview.needsApproval).toBe(true);
-  });
-
   it("creates a review against a job and starts the analysis", async () => {
     supabase.queue("resumes", { data: parsedResume, error: null });
 

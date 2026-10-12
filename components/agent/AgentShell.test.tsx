@@ -31,6 +31,7 @@ const SESSIONS = [
 const MESSAGES: UIMessage[] = [{ id: "u1", role: "user", parts: [{ type: "text", text: "hi" }] }];
 
 let push: ReturnType<typeof vi.fn>;
+let refresh: ReturnType<typeof vi.fn>;
 let fetchMock: ReturnType<typeof vi.fn>;
 
 const json = (body: unknown, status = 200) =>
@@ -38,7 +39,8 @@ const json = (body: unknown, status = 200) =>
 
 beforeEach(() => {
   push = vi.fn();
-  vi.mocked(useRouter).mockReturnValue({ push } as never);
+  refresh = vi.fn();
+  vi.mocked(useRouter).mockReturnValue({ push, refresh } as never);
   fetchMock = vi.fn((url: string, init?: RequestInit) => {
     if (url === "/api/agent/sessions" && init?.method === "POST") {
       return json({ session: { id: "s3", title: "New chat", updated_at: "now" } }, 201);
@@ -147,5 +149,11 @@ describe("AgentShell", () => {
     expect(
       await within(sidebar()).findByRole("button", { name: "Remote React jobs" }),
     ).toBeInTheDocument();
+  });
+
+  it("refreshes the route after a reply, so coming back shows the new turn", async () => {
+    await userEvent.click(screen.getByRole("button", { name: "finish reply" }));
+
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 });

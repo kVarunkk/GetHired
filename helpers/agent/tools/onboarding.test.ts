@@ -43,10 +43,6 @@ beforeEach(() => {
 });
 
 describe("completeOnboarding tool", () => {
-  it("requires the user's approval", () => {
-    expect(tools.completeOnboarding.needsApproval).toBe(true);
-  });
-
   it("onboards the ctx user with their resume, saving canonical locations", async () => {
     supabase.queue("resumes", { data: readyResume, error: null });
 

@@ -81,7 +81,7 @@ export default function ResumeUploadWidget({
       <div className="flex gap-2">
         <Button
           size="sm"
-          className="bg-brand text-brand-foreground hover:bg-brand/90"
+          variant="brand"
           onClick={upload}
           disabled={!file || uploading}
         >

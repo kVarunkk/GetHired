@@ -1,5 +1,12 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { generateText, isTextUIPart, isToolUIPart, LanguageModel, type UIMessage } from "ai";
+import {
+  generateText,
+  isTextUIPart,
+  isToolUIPart,
+  LanguageModel,
+  type TelemetryOptions,
+  type UIMessage,
+} from "ai";
 import { google } from "@ai-sdk/google";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { Database } from "@/utils/types/database.types";
@@ -63,7 +70,7 @@ export async function summariseSession(
     summary: string | null;
     uptoId: string | null;
   },
-  { model }: { model?: LanguageModel } = {},
+  { model, telemetry }: { model?: LanguageModel; telemetry?: TelemetryOptions } = {},
 ): Promise<{ updated: false } | { updated: true; summary: string }> {
   if (!needsSummary(messages, uptoId, AGENT_SUMMARY_TRIGGER)) {
     return { updated: false };
@@ -80,6 +87,7 @@ export async function summariseSession(
   const { text } = await generateText({
     model: model ?? google(AGENT_TITLE_MODEL),
     system: SUMMARY_SYSTEM_PROMPT,
+    telemetry,
     prompt: `${previous}\n\nNew messages:\n${wrapInSandbox("transcript", transcript(pending))}`,
   });
 
@@ -104,7 +112,7 @@ export async function summariseSession(
  */
 export async function generateSessionTitle(
   messages: UIMessage[],
-  { model }: { model?: LanguageModel } = {},
+  { model, telemetry }: { model?: LanguageModel; telemetry?: TelemetryOptions } = {},
 ): Promise<string> {
   const firstUser = messages.find((message) => message.role === "user");
   const firstText = firstUser ? messageText(firstUser) : "";
@@ -114,6 +122,7 @@ export async function generateSessionTitle(
     const { text } = await generateText({
       model: model ?? google(AGENT_TITLE_MODEL),
       system: TITLE_SYSTEM_PROMPT,
+      telemetry,
       prompt: wrapInSandbox("first_message", firstText),
     });
 

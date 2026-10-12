@@ -6,6 +6,7 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   isTextUIPart,
+  smoothStream,
   stepCountIs,
   streamText,
   type UIMessage,
@@ -18,9 +19,13 @@ import {
   AGENT_DAILY_MESSAGE_CAP,
   AGENT_FULL_TOOL_OUTPUT_TURNS,
   AGENT_MAX_MESSAGE_CHARS,
+  AGENT_MAX_REGENERATIONS,
   AGENT_MAX_STEPS,
   AGENT_MODEL,
+  AGENT_SAFETY_SETTINGS,
+  AGENT_CONTENT_FILTER_MESSAGE,
 } from "@/helpers/agent/config";
+import { agentToolApproval } from "@/helpers/agent/approval";
 import { dropAbandonedToolCalls, selectContextMessages } from "@/helpers/agent/context";
 import { mergeClientUpdates } from "@/helpers/agent/client-updates";
 import { listMemories } from "@/helpers/agent/memory";
@@ -35,7 +40,10 @@ import {
 } from "@/helpers/agent/persistence";
 import { generateSessionTitle, summariseSession } from "@/helpers/agent/summarise";
 import { generateFollowUps } from "@/helpers/agent/suggestions";
+import { stoppedReply } from "@/helpers/agent/stopped";
+import { canRegenerate, withRegeneration } from "@/helpers/agent/regenerations";
 import { buildSystemPrompt } from "@/helpers/agent/system-prompt";
+import { agentTelemetry, flushAgentTraces } from "@/helpers/agent/telemetry";
 import { createAgentTools } from "@/helpers/agent/tools";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
@@ -65,6 +73,13 @@ const bodySchema = z
   });
 
 const badRequest = (error: string) => NextResponse.json({ error }, { status: 400 });
+const tooManyRequests = (error: string) => NextResponse.json({ error }, { status: 429 });
+
+const DAILY_CAP_MESSAGE = `You've reached today's limit of ${AGENT_DAILY_MESSAGE_CAP} messages. Try again tomorrow.`;
+
+/** Whether the user has sent today's allowance; regenerating then is refused too. */
+const dailyCapReached = async (supabase: Parameters<typeof countUserMessagesToday>[0], userId: string) =>
+  (await countUserMessagesToday(supabase, userId, new Date())) >= AGENT_DAILY_MESSAGE_CAP;
 
 const textOf = (message: UIMessage | undefined) =>
   (message?.parts ?? []).filter(isTextUIPart).map((part) => part.text).join("\n");
@@ -113,18 +128,19 @@ export async function POST(request: NextRequest) {
       const userIndex = history.findLastIndex((m, i) => i <= anchor && m.role === "user");
       if (anchor === -1 || userIndex === -1) return badRequest("Nothing to regenerate.");
 
-      await truncateAfter(supabase, sessionId, history[userIndex].id, { inclusive: false });
-      history = history.slice(0, userIndex + 1);
-    } else if (incoming!.role === "user") {
-      const used = await countUserMessagesToday(supabase, user.id, new Date());
-      if (used >= AGENT_DAILY_MESSAGE_CAP) {
-        return NextResponse.json(
-          {
-            error: `You've reached today's limit of ${AGENT_DAILY_MESSAGE_CAP} messages. Try again tomorrow.`,
-          },
-          { status: 429 },
+      const parent = history[userIndex];
+      if (!canRegenerate(parent)) {
+        return tooManyRequests(
+          `You can regenerate a reply up to ${AGENT_MAX_REGENERATIONS} times.`,
         );
       }
+      if (await dailyCapReached(supabase, user.id)) return tooManyRequests(DAILY_CAP_MESSAGE);
+
+      await truncateAfter(supabase, sessionId, parent.id, { inclusive: false });
+      toSave = withRegeneration(parent);
+      history = [...history.slice(0, userIndex), toSave];
+    } else if (incoming!.role === "user") {
+      if (await dailyCapReached(supabase, user.id)) return tooManyRequests(DAILY_CAP_MESSAGE);
 
       const message: UIMessage = { id: incoming!.id, role: "user", parts: incoming!.parts };
       const existing = history.findIndex((m) => m.id === message.id);
@@ -159,6 +175,9 @@ export async function POST(request: NextRequest) {
       { window: AGENT_CONTEXT_WINDOW, fullToolTurns: AGENT_FULL_TOOL_OUTPUT_TURNS },
     );
 
+    // Agent-only tracing to Arize AX; off when it isn't configured (spec §13).
+    const traceContext = { sessionId, userId: user.id };
+
     const result = streamText({
       model: google(AGENT_MODEL),
       system: buildSystemPrompt({
@@ -169,10 +188,20 @@ export async function POST(request: NextRequest) {
       }),
       messages: await convertToModelMessages(contextMessages, { tools }),
       tools,
+      // Which tool calls the user approves, and which are denied (spec §14).
+      toolApproval: agentToolApproval,
+      providerOptions: { google: { safetySettings: [...AGENT_SAFETY_SETTINGS] } },
       stopWhen: stepCountIs(AGENT_MAX_STEPS),
+      // Gemini sends text in large bursts; release it word by word so the
+      // reply flows (the client fades each word in).
+      experimental_transform: smoothStream({ chunking: "word" }),
+      // Stop pressed (or the connection dropped): end the model call and the
+      // tool loop too, instead of finishing the turn nobody is reading.
+      abortSignal: request.signal,
+      telemetry: agentTelemetry("agent-chat", traceContext),
     });
 
-    // Keep consuming if the client disconnects, so onEnd still saves the reply.
+    // Read the result to its end (or the abort) even with no client reading.
     result.consumeStream({ onError: () => {} });
 
     const reportStreamError = (error: unknown) => {
@@ -197,13 +226,27 @@ export async function POST(request: NextRequest) {
         }
 
         // Suggest replies only after a final answer, not when the turn is
-        // waiting on an approval or upload, hit the step limit, or failed.
+        // waiting on an approval or upload, hit the step limit, failed, or
+        // was stopped.
         const finishReason = await Promise.resolve(result.finishReason).catch(() => undefined);
-        if (finishReason === "stop") {
-          const suggestions = await generateFollowUps({
-            userText: textOf(history.findLast((m) => m.role === "user")),
-            replyText: await result.text,
-          });
+        const stopped = request.signal.aborted;
+
+        // The safety filter blocked the reply: say so instead of ending empty
+        // or cut off. It's saved with the message.
+        if (finishReason === "content-filter" && !stopped) {
+          writer.write({ type: "text-start", id: "content-filter" });
+          writer.write({ type: "text-delta", id: "content-filter", delta: AGENT_CONTENT_FILTER_MESSAGE });
+          writer.write({ type: "text-end", id: "content-filter" });
+        }
+
+        if (finishReason === "stop" && !stopped) {
+          const suggestions = await generateFollowUps(
+            {
+              userText: textOf(history.findLast((m) => m.role === "user")),
+              replyText: await result.text,
+            },
+            { telemetry: agentTelemetry("agent-suggestions", traceContext) },
+          );
           if (suggestions.length > 0) {
             writer.write({ type: "data-suggestions", id: "suggestions", data: { suggestions } });
           }
@@ -213,7 +256,8 @@ export async function POST(request: NextRequest) {
 
         // Token usage per turn (all steps), to see what fills the context.
         // Skipped when the model failed, since there's no usage to report.
-        if (finishReason && finishReason !== "error") {
+        const loggedReason = stopped ? "aborted" : finishReason;
+        if (loggedReason && loggedReason !== "error") {
           const [usage, steps] = await Promise.all([
             Promise.resolve(result.totalUsage).catch(() => null),
             Promise.resolve(result.steps).catch(() => null),
@@ -227,7 +271,7 @@ export async function POST(request: NextRequest) {
                   session_id: sessionId,
                   model: AGENT_MODEL,
                   steps: steps?.length ?? null,
-                  finish_reason: finishReason,
+                  finish_reason: loggedReason,
                   input_tokens: usage.inputTokens ?? null,
                   output_tokens: usage.outputTokens ?? null,
                   cached_input_tokens: usage.inputTokenDetails?.cacheReadTokens ?? null,
@@ -237,11 +281,21 @@ export async function POST(request: NextRequest) {
             );
           }
         }
+
+        // Send this turn's traces while the request is still open: Cloud Run
+        // may not give the instance CPU once the response has closed.
+        await flushAgentTraces();
       },
       onError: reportStreamError,
-      onEnd: async ({ messages, responseMessage }) => {
+      onEnd: async ({ messages: streamed, responseMessage, isAborted }) => {
+        // A stopped reply is saved as the user saw it, marked as stopped, or
+        // not at all if nothing had arrived yet.
+        const stopped = isAborted || request.signal.aborted;
+        const reply = stopped ? stoppedReply(responseMessage) : responseMessage;
+        const messages = [...streamed.slice(0, -1), ...(reply ? [reply] : [])];
+
         try {
-          await upsertMessages(supabase, sessionId, user.id, [responseMessage]);
+          if (reply) await upsertMessages(supabase, sessionId, user.id, [reply]);
           await touchSession(supabase, user.id, sessionId, new Date());
         } catch (error) {
           await eventCaptureServerException({
@@ -257,18 +311,24 @@ export async function POST(request: NextRequest) {
           const service = createServiceRoleClient();
           try {
             if (session.title === DEFAULT_TITLE) {
-              const title = await generateSessionTitle(messages);
+              const title = await generateSessionTitle(messages, {
+                telemetry: agentTelemetry("agent-title", traceContext),
+              });
               if (title !== DEFAULT_TITLE) {
                 await setSessionTitle(service, user.id, sessionId, title);
               }
             }
-            await summariseSession(service, {
-              sessionId,
-              userId: user.id,
-              messages,
-              summary: session.summary,
-              uptoId: session.summary_upto_message_id,
-            });
+            await summariseSession(
+              service,
+              {
+                sessionId,
+                userId: user.id,
+                messages,
+                summary: session.summary,
+                uptoId: session.summary_upto_message_id,
+              },
+              { telemetry: agentTelemetry("agent-summary", traceContext) },
+            );
           } catch (error) {
             await eventCaptureServerException({
               error,
@@ -276,13 +336,15 @@ export async function POST(request: NextRequest) {
               properties: { flow: "agent_chat_after", session_id: sessionId },
             });
           }
+          await flushAgentTraces();
         });
       },
     });
 
     return createUIMessageStreamResponse({
       stream,
-      // Read a copy to the end even if the client disconnects, so onEnd runs.
+      // Read a copy to the end even if the client disconnects, so onEnd runs
+      // and saves the stopped reply.
       consumeSseStream: ({ stream: copy }) => consumeStream({ stream: copy, onError: () => {} }),
     });
   } catch (error) {

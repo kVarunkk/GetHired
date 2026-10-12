@@ -90,7 +90,8 @@ export function selectContextMessages(
   return recent.map((message, i) => (i < cutoff ? stubMessage(message) : message));
 }
 
-const FINISHED_TOOL_STATES = new Set(["output-available", "output-error", "output-denied"]);
+/** Tool-part states that carry a result. */
+export const FINISHED_TOOL_STATES = new Set(["output-available", "output-error", "output-denied"]);
 
 /**
  * Removes unfinished tool calls (pending approvals, client tools never

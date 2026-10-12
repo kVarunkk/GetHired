@@ -218,3 +218,37 @@ describe("generateSessionTitle", () => {
     expect(google).toHaveBeenCalledWith(AGENT_TITLE_MODEL);
   });
 });
+
+describe("telemetry (REQ-025)", () => {
+  const fakeIntegration = () => ({ onStart: vi.fn() });
+
+  it("passes the title's telemetry options to the model call", async () => {
+    const integration = fakeIntegration();
+
+    await generateSessionTitle([user("u1", "react jobs")], {
+      model: mockGenerateModel("React jobs"),
+      telemetry: { functionId: "agent-title", integrations: [integration] },
+    });
+
+    expect(integration.onStart).toHaveBeenCalledWith(
+      expect.objectContaining({ functionId: "agent-title" }),
+    );
+  });
+
+  it("passes the summary's telemetry options to the model call", async () => {
+    const integration = fakeIntegration();
+
+    await summariseSession(
+      supabase.client,
+      { sessionId: "s1", userId: "u1", summary: null, uptoId: null, messages: conversation(20) },
+      {
+        model: mockGenerateModel("summary"),
+        telemetry: { functionId: "agent-summary", integrations: [integration] },
+      },
+    );
+
+    expect(integration.onStart).toHaveBeenCalledWith(
+      expect.objectContaining({ functionId: "agent-summary" }),
+    );
+  });
+});

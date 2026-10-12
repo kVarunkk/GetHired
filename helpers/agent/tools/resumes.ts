@@ -107,7 +107,6 @@ export function createResumeTools(ctx: AgentToolContext) {
         .refine((input) => Boolean(input.jobId) !== Boolean(input.jobDescription), {
           message: "Provide exactly one of jobId or jobDescription.",
         }),
-      needsApproval: true,
       execute: ({ resumeId, jobId, jobDescription, name }) =>
         withToolErrors(ctx, "startResumeReview", async () => {
           const { data: resume, error: resumeError } = await supabase

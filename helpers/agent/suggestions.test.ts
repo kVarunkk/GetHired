@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
 import { generateFollowUps } from "./suggestions";
 import { mockGenerateModel } from "@/test/utils/ai";
@@ -68,5 +68,23 @@ describe("generateFollowUps", () => {
     expect(
       await generateFollowUps({ userText: "a", replyText: "b" }, { model: makeModel() }),
     ).toEqual([]);
+  });
+});
+
+describe("generateFollowUps telemetry (REQ-025)", () => {
+  it("passes its telemetry options to the model call", async () => {
+    const integration = { onStart: vi.fn() };
+
+    await generateFollowUps(
+      { userText: "a", replyText: "b" },
+      {
+        model: mockGenerateModel(JSON.stringify({ suggestions: [] })),
+        telemetry: { functionId: "agent-suggestions", integrations: [integration] },
+      },
+    );
+
+    expect(integration.onStart).toHaveBeenCalledWith(
+      expect.objectContaining({ functionId: "agent-suggestions" }),
+    );
   });
 });

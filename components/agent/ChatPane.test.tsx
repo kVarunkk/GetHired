@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { DefaultChatTransport, type ChatInit, type UIMessage } from "ai";
 import { useChat } from "@ai-sdk/react";
 import ChatPane, { buildChatRequest, chatErrorMessage, SUGGESTED_PROMPTS } from "./ChatPane";
+import { AGENT_DAILY_MESSAGE_CAP, AGENT_MAX_REGENERATIONS } from "@/helpers/agent/config";
 
 vi.mock("@ai-sdk/react", () => ({ useChat: vi.fn() }));
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
@@ -27,6 +28,7 @@ function mockChat(overrides: Partial<ChatMock> = {}) {
     sendMessage: vi.fn(),
     regenerate: vi.fn(),
     stop: vi.fn(),
+    setMessages: vi.fn(),
     clearError: vi.fn(),
     addToolApprovalResponse: vi.fn(),
     addToolOutput: vi.fn(),
@@ -93,6 +95,62 @@ describe("ChatPane", () => {
     (vi.mocked(useChat).mock.calls[0][0] as ChatInit<UIMessage>).onFinish!({} as never);
 
     expect(onFinish).toHaveBeenCalled();
+  });
+
+  it("marks a stopped reply the way the server saves it", () => {
+    const onFinish = vi.fn();
+    renderPane([], onFinish);
+    const options = vi.mocked(useChat).mock.calls[0][0] as ChatInit<UIMessage>;
+    const partial: UIMessage = {
+      id: "a1",
+      role: "assistant",
+      parts: [
+        { type: "text", text: "Here are", state: "streaming" },
+        { type: "tool-saveJob", toolCallId: "c1", state: "input-available", input: {} },
+      ],
+    } as UIMessage;
+    const empty: UIMessage = { id: "a2", role: "assistant", parts: [{ type: "step-start" }] };
+
+    options.onFinish!({ message: partial, isAbort: true } as never);
+    const update = vi.mocked(chat.setMessages!).mock.calls[0][0] as (m: UIMessage[]) => UIMessage[];
+    expect(update([text("u1", "user", "hi"), partial])).toEqual([
+      text("u1", "user", "hi"),
+      {
+        id: "a1",
+        role: "assistant",
+        parts: [{ type: "text", text: "Here are", state: "done" }],
+        metadata: { stopped: true },
+      },
+    ]);
+
+    // A reply with nothing to show yet is removed, as the server doesn't save it.
+    options.onFinish!({ message: empty, isAbort: true } as never);
+    const remove = vi.mocked(chat.setMessages!).mock.calls[1][0] as (m: UIMessage[]) => UIMessage[];
+    expect(remove([text("u1", "user", "hi"), empty])).toEqual([text("u1", "user", "hi")]);
+    expect(onFinish).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves a finished reply alone", () => {
+    renderPane();
+
+    (vi.mocked(useChat).mock.calls[0][0] as ChatInit<UIMessage>).onFinish!({
+      message: text("a1", "assistant", "done"),
+      isAbort: false,
+    } as never);
+
+    expect(chat.setMessages).not.toHaveBeenCalled();
+  });
+
+  it("notes under a reply that it was stopped", () => {
+    mockChat({
+      messages: [
+        text("u1", "user", "hi"),
+        { ...text("a1", "assistant", "Here are"), metadata: { stopped: true } },
+      ],
+    });
+    renderPane();
+
+    expect(screen.getByText("Response stopped")).toBeInTheDocument();
   });
 
   it("shows suggested prompts when empty and sends one on click", async () => {
@@ -269,6 +327,58 @@ describe("ChatPane", () => {
     expect(buttons).toHaveLength(1);
     await userEvent.click(buttons[0]);
     expect(chat.regenerate).toHaveBeenCalledWith({ messageId: "a2" });
+  });
+
+  it("counts the regeneration on the parent user message", async () => {
+    mockChat({ messages: [text("u1", "user", "a"), text("a1", "assistant", "first")] });
+    renderPane();
+
+    await userEvent.click(screen.getByRole("button", { name: "Regenerate" }));
+
+    const update = vi.mocked(chat.setMessages!).mock.calls[0][0] as (m: UIMessage[]) => UIMessage[];
+    expect(update(chat.messages!)[0].metadata).toEqual({ regenerations: 1 });
+  });
+
+  it(`hides regenerate after ${AGENT_MAX_REGENERATIONS} regenerations`, () => {
+    mockChat({
+      messages: [
+        { ...text("u1", "user", "a"), metadata: { regenerations: AGENT_MAX_REGENERATIONS } },
+        text("a1", "assistant", "first"),
+      ],
+    });
+    renderPane();
+
+    expect(screen.queryByRole("button", { name: "Regenerate" })).not.toBeInTheDocument();
+  });
+
+  it("hides regenerate once today's messages are used up", () => {
+    mockChat({ messages: [text("u1", "user", "a"), text("a1", "assistant", "first")] });
+    render(
+      <ChatPane
+        sessionId={SESSION_ID}
+        initialMessages={[]}
+        messagesUsedToday={AGENT_DAILY_MESSAGE_CAP}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Regenerate" })).not.toBeInTheDocument();
+  });
+
+  it("hides regenerate as soon as the last message of the day is sent", async () => {
+    mockChat({ messages: [text("u1", "user", "a"), text("a1", "assistant", "first")] });
+    render(
+      <ChatPane
+        sessionId={SESSION_ID}
+        initialMessages={[]}
+        messagesUsedToday={AGENT_DAILY_MESSAGE_CAP - 1}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Regenerate" })).toBeInTheDocument();
+
+    await userEvent.type(screen.getByRole("textbox"), "one more{Enter}");
+
+    expect(chat.sendMessage).toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Regenerate" })).not.toBeInTheDocument();
   });
 
   it("shows the server's error, e.g. the daily cap", () => {

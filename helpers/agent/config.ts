@@ -9,8 +9,29 @@ export const AGENT_TITLE_MODEL = "gemini-3.1-flash-lite";
 export const AGENT_FOLLOW_UP_COUNT = 3;
 export const AGENT_FOLLOW_UP_MAX_CHARS = 80;
 
+/**
+ * Whether agent traces sent to Arize AX include prompts and outputs (chat
+ * text, system prompt with profile and memories, tool inputs and outputs).
+ * False keeps tracing (timings, tokens, structure) without the content.
+ */
+export const AGENT_TRACE_CONTENT = true;
+
 /** Max model steps (tool calls + final answer) per user turn. */
 export const AGENT_MAX_STEPS = 8;
+/** Credit-spending tool calls allowed per user turn; more are denied (SEC-013). */
+export const AGENT_MAX_CREDIT_CALLS_PER_TURN = 2;
+
+/** Gemini safety settings for the chat model (REQ-030). */
+export const AGENT_SAFETY_SETTINGS = [
+  { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+  { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+  { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+  { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+] as const;
+
+/** Shown when the safety filter blocks a reply (REQ-030). */
+export const AGENT_CONTENT_FILTER_MESSAGE =
+  "I can't help with that. I can help you find jobs, review your resume, track applications and practise interviews.";
 
 /** Most recent messages sent to the model verbatim (REQ-007). */
 export const AGENT_CONTEXT_WINDOW = 20;
@@ -35,6 +56,8 @@ export type AgentMemoryCategory = (typeof AGENT_MEMORY_CATEGORIES)[number];
 
 /** User messages per user per UTC day across all sessions (REQ-018). */
 export const AGENT_DAILY_MESSAGE_CAP = 20;
+/** Times the reply to one user message can be regenerated. */
+export const AGENT_MAX_REGENERATIONS = 3;
 /** Max characters of text in one user message. */
 export const AGENT_MAX_MESSAGE_CHARS = 4000;
 

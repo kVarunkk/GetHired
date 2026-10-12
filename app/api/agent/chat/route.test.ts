@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
 import type { UIMessage } from "ai";
+import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { POST } from "./route";
 import { buildRequest } from "@/test/utils/request";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
@@ -14,7 +15,15 @@ import { generateFollowUps } from "@/helpers/agent/suggestions";
 import { searchJobs } from "@/helpers/jobs/search-jobs";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
-import { AGENT_DAILY_MESSAGE_CAP, AGENT_MAX_STEPS, AGENT_MODEL } from "@/helpers/agent/config";
+import { agentTelemetry, flushAgentTraces } from "@/helpers/agent/telemetry";
+import {
+  AGENT_CONTENT_FILTER_MESSAGE,
+  AGENT_DAILY_MESSAGE_CAP,
+  AGENT_MAX_REGENERATIONS,
+  AGENT_MAX_STEPS,
+  AGENT_MODEL,
+  AGENT_SAFETY_SETTINGS,
+} from "@/helpers/agent/config";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -30,6 +39,10 @@ vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
 vi.mock("@/helpers/posthog/EventCaptureServer", () => ({ eventCaptureServer: vi.fn() }));
+vi.mock("@/helpers/agent/telemetry", () => ({
+  agentTelemetry: vi.fn(),
+  flushAgentTraces: vi.fn(),
+}));
 
 const SESSION_ID = "55555555-5555-4555-8555-555555555555";
 const SESSION = {
@@ -47,7 +60,7 @@ const text = (id: string, role: "user" | "assistant", value: string): UIMessage 
   role,
   parts: [{ type: "text", text: value }],
 });
-const asRow = (m: UIMessage) => ({ id: m.id, role: m.role, parts: m.parts, metadata: null });
+const asRow = (m: UIMessage) => ({ id: m.id, role: m.role, parts: m.parts, metadata: m.metadata ?? null });
 
 let supabase: SupabaseMock;
 let service: SupabaseMock;
@@ -82,6 +95,15 @@ const upserts = (mock: SupabaseMock) =>
     .filter((c) => c.chain[0].method === "upsert")
     .map((c) => c.chain[0].args[0] as { id: string; role: string; parts: unknown[] }[]);
 
+/**
+ * The reply text in an SSE body. The route releases text word by word
+ * (smoothStream), so it arrives split over many deltas.
+ */
+const streamedText = (body: string) =>
+  [...body.matchAll(/"type":"text-delta","id":"[^"]+","delta":"([^"]*)"/g)]
+    .map((m) => m[1])
+    .join("");
+
 /** The prompt the model received on its first call, as text. */
 const firstPrompt = () => JSON.stringify(model.doStreamCalls[0].prompt);
 
@@ -95,7 +117,14 @@ beforeEach(async () => {
   vi.mocked(generateSessionTitle).mockResolvedValue("Remote React jobs");
   vi.mocked(summariseSession).mockResolvedValue({ updated: false });
   vi.mocked(generateFollowUps).mockResolvedValue([]);
+  // Distinguishable per-call options, so tests can see which call got which.
+  vi.mocked(agentTelemetry).mockImplementation((functionId) => ({ isEnabled: false, functionId }));
+  vi.mocked(flushAgentTraces).mockResolvedValue(undefined);
 });
+
+/** The options agentTelemetry returned for `functionId` in this test. */
+const traced = (functionId: string) => ({ isEnabled: false, functionId });
+const TRACE_CONTEXT = { sessionId: SESSION_ID, userId: "u1" };
 
 describe("POST /api/agent/chat: guards", () => {
   it("returns 401 without a user", async () => {
@@ -170,7 +199,7 @@ describe("POST /api/agent/chat: a new message", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/event-stream");
-    expect(body).toContain("Hello from the agent");
+    expect(streamedText(body)).toBe("Hello from the agent");
     expect(google).toHaveBeenCalledWith(AGENT_MODEL);
     const prompt = firstPrompt();
     expect(prompt).toContain("GetHired job-search assistant");
@@ -205,10 +234,10 @@ describe("POST /api/agent/chat: a new message", () => {
     const res = await submit(text("u1", "user", "find react jobs"));
     const body = await res.text();
 
-    expect(generateFollowUps).toHaveBeenCalledWith({
-      userText: "find react jobs",
-      replyText: "Hello from the agent",
-    });
+    expect(generateFollowUps).toHaveBeenCalledWith(
+      { userText: "find react jobs", replyText: "Hello from the agent" },
+      { telemetry: traced("agent-suggestions") },
+    );
     expect(body).toContain('"type":"data-suggestions"');
     expect(body.indexOf("data-suggestions")).toBeLessThan(body.indexOf('"type":"finish"'));
     const [, replySave] = upserts(supabase);
@@ -244,12 +273,19 @@ describe("POST /api/agent/chat: a new message", () => {
       { method: "eq", args: ["id", SESSION_ID] },
       { method: "eq", args: ["user_id", "u1"] },
     ]);
-    expect(summariseSession).toHaveBeenCalledWith(service.client, {
-      sessionId: SESSION_ID,
-      userId: "u1",
-      messages: finalMessages,
-      summary: null,
-      uptoId: null,
+    expect(summariseSession).toHaveBeenCalledWith(
+      service.client,
+      {
+        sessionId: SESSION_ID,
+        userId: "u1",
+        messages: finalMessages,
+        summary: null,
+        uptoId: null,
+      },
+      { telemetry: traced("agent-summary") },
+    );
+    expect(vi.mocked(generateSessionTitle).mock.calls[0][1]).toEqual({
+      telemetry: traced("agent-title"),
     });
   });
 
@@ -303,8 +339,8 @@ describe("POST /api/agent/chat: history rules", () => {
     expect(firstPrompt()).not.toContain("stale answer");
   });
 
-  it("regenerates from the parent user message without saving or counting", async () => {
-    queueSession({ history, countCheck: false });
+  it("regenerates from the parent user message and counts the regeneration on it", async () => {
+    queueSession({ history });
     supabase.queue("agent_messages", { data: { seq: 3 }, error: null });
 
     const res = await chat({ sessionId: SESSION_ID, trigger: "regenerate-message", messageId: "a2" });
@@ -314,12 +350,52 @@ describe("POST /api/agent/chat: history rules", () => {
     expect(lookup?.chain[1]).toEqual({ method: "eq", args: ["id", "u2"] });
     const del = supabase.callsFor("agent_messages").find((c) => c.chain[0].method === "delete");
     expect(del?.chain[2]).toEqual({ method: "gt", args: ["seq", 3] });
-    expect(upserts(supabase)).toHaveLength(1);
+    const [parent, reply] = upserts(supabase);
+    expect(parent).toEqual([expect.objectContaining({ id: "u2", metadata: { regenerations: 1 } })]);
+    expect(reply).toEqual([expect.objectContaining({ role: "assistant" })]);
     expect(firstPrompt()).not.toContain("stale answer");
   });
 
+  it(`refuses a regeneration after ${AGENT_MAX_REGENERATIONS}, without counting or calling the model`, async () => {
+    const regenerated = { ...history[2], metadata: { regenerations: AGENT_MAX_REGENERATIONS } };
+    queueSession({ history: [history[0], history[1], regenerated, history[3]], countCheck: false });
+
+    const res = await chat({ sessionId: SESSION_ID, trigger: "regenerate-message", messageId: "a2" });
+
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({
+      error: `You can regenerate a reply up to ${AGENT_MAX_REGENERATIONS} times.`,
+    });
+    expect(upserts(supabase)).toHaveLength(0);
+    expect(model.doStreamCalls).toHaveLength(0);
+  });
+
+  it("refuses a regeneration once the daily cap is reached", async () => {
+    queueSession({ history, todayCount: AGENT_DAILY_MESSAGE_CAP });
+
+    const res = await chat({ sessionId: SESSION_ID, trigger: "regenerate-message", messageId: "a2" });
+
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({
+      error: `You've reached today's limit of ${AGENT_DAILY_MESSAGE_CAP} messages. Try again tomorrow.`,
+    });
+    expect(supabase.callsFor("agent_messages").some((c) => c.chain[0].method === "delete")).toBe(false);
+    expect(model.doStreamCalls).toHaveLength(0);
+  });
+
+  it("starts the regeneration count again when a message is edited", async () => {
+    const regenerated = { ...history[2], metadata: { regenerations: 2 } };
+    queueSession({ history: [history[0], history[1], regenerated, history[3]] });
+    supabase.queue("agent_messages", { data: { seq: 3 }, error: null });
+
+    const res = await submit(text("u2", "user", "second, edited"));
+    await res.text();
+
+    expect(upserts(supabase)[0]).toEqual([expect.objectContaining({ id: "u2", metadata: null })]);
+  });
+
   it("regenerates the last reply when no messageId is given", async () => {
-    queueSession({ history, countCheck: false });
+    queueSession({ history });
     supabase.queue("agent_messages", { data: { seq: 3 }, error: null });
 
     const res = await chat({ sessionId: SESSION_ID, trigger: "regenerate-message" });
@@ -375,6 +451,55 @@ describe("POST /api/agent/chat: history rules", () => {
 
     expect(res.status).toBe(400);
     expect(upserts(supabase)).toHaveLength(0);
+  });
+});
+
+describe("POST /api/agent/chat: tracing (REQ-025 – REQ-029)", () => {
+  it("traces the chat, suggestions, title and summary with the session and user", async () => {
+    queueSession();
+    vi.mocked(generateFollowUps).mockResolvedValue(["Only remote roles"]);
+
+    const res = await submit(text("u1", "user", "hi"));
+    await res.text();
+    await flushAfter();
+
+    for (const functionId of ["agent-chat", "agent-suggestions", "agent-title", "agent-summary"]) {
+      expect(agentTelemetry).toHaveBeenCalledWith(functionId, TRACE_CONTEXT);
+    }
+  });
+
+  it("flushes traces before the response stream closes, after the suggestions", async () => {
+    queueSession();
+    let flushedBeforeEnd = false;
+    vi.mocked(flushAgentTraces).mockImplementation(async () => {
+      flushedBeforeEnd = true;
+    });
+
+    const res = await submit(text("u1", "user", "hi"));
+    const body = await res.text();
+
+    // The flush ran while the stream was still open: it happened before
+    // res.text() could resolve, and after the follow-ups were generated.
+    expect(flushedBeforeEnd).toBe(true);
+    expect(body).toContain('"type":"finish"');
+    expect(vi.mocked(flushAgentTraces).mock.invocationCallOrder[0]).toBeGreaterThan(
+      vi.mocked(generateFollowUps).mock.invocationCallOrder[0],
+    );
+  });
+
+  it("flushes again after the background title and summary", async () => {
+    queueSession();
+
+    const res = await submit(text("u1", "user", "hi"));
+    await res.text();
+    expect(flushAgentTraces).toHaveBeenCalledTimes(1);
+
+    await flushAfter();
+
+    expect(flushAgentTraces).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(flushAgentTraces).mock.invocationCallOrder[1]).toBeGreaterThan(
+      vi.mocked(summariseSession).mock.invocationCallOrder[0],
+    );
   });
 });
 
@@ -442,7 +567,7 @@ describe("POST /api/agent/chat: tool loop", () => {
     expect(searchJobs).toHaveBeenCalledWith(supabase.client, { jobTitleKeywords: "react", limit: 10 });
     expect(body).toContain("tool-output-available");
     expect(body).toContain("React Dev");
-    expect(body).toContain("Found 1 job.");
+    expect(streamedText(body)).toBe("Found 1 job.");
     expect(model.doStreamCalls).toHaveLength(2);
   });
 
@@ -486,5 +611,216 @@ describe("POST /api/agent/chat: tool loop", () => {
         properties: expect.objectContaining({ flow: "agent_chat_stream" }),
       }),
     );
+  });
+});
+
+describe("POST /api/agent/chat: stopped by the user", () => {
+  /** Errors the stream once `signal` aborts, as a cancelled fetch does. */
+  function failOnAbort(controller: ReadableStreamDefaultController, signal?: AbortSignal) {
+    const fail = () => controller.error(new DOMException("Aborted", "AbortError"));
+    if (signal?.aborted) fail();
+    else signal?.addEventListener("abort", fail);
+  }
+
+  /**
+   * A model whose first step calls searchJobs and whose second streams
+   * `partial` and then hangs until the request is aborted, like a real
+   * provider call cancelled mid-reply.
+   */
+  function stallingModel(partial: LanguageModelV4StreamPart[]) {
+    const steps = [toolCallStream("searchJobs", { keywords: ["react"] })];
+    return new MockLanguageModelV4({
+      doStream: async ({ abortSignal }) =>
+        steps.shift() ?? {
+          stream: new ReadableStream<LanguageModelV4StreamPart>({
+            start(controller) {
+              partial.forEach((chunk) => controller.enqueue(chunk));
+              failOnAbort(controller, abortSignal);
+            },
+          }),
+        },
+    });
+  }
+
+  /**
+   * Submits, aborts the request once `needle` has streamed (as reply text or
+   * raw stream data), and reads to the end.
+   */
+  async function submitAndStop(needle: string) {
+    const controller = new AbortController();
+    const res = await POST(
+      buildRequest("/api/agent/chat", {
+        method: "POST",
+        body: { sessionId: SESSION_ID, trigger: "submit-message", message: text("u1", "user", "react jobs") },
+        signal: controller.signal,
+      }),
+    );
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let body = "";
+    while (!body.includes(needle) && !streamedText(body).includes(needle)) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      body += decoder.decode(value);
+    }
+    controller.abort();
+    for (let next = await reader.read(); !next.done; next = await reader.read()) {
+      body += decoder.decode(next.value);
+    }
+    return body;
+  }
+
+  beforeEach(() => {
+    vi.mocked(searchJobs).mockResolvedValue({
+      ok: true,
+      data: [{ id: "j1", job_name: "React Dev" }],
+      totalCount: 1,
+      nextCursor: null,
+    } as never);
+    vi.mocked(generateFollowUps).mockResolvedValue(["Only remote roles"]);
+  });
+
+  it("ends the model call and saves what was shown, marked as stopped", async () => {
+    queueSession();
+    model = stallingModel([
+      { type: "text-start", id: "t1" },
+      { type: "text-delta", id: "t1", delta: "Here are the first " },
+    ]);
+    vi.mocked(google).mockReturnValue(model as never);
+
+    await submitAndStop("Here are the first");
+
+    expect(generateFollowUps).not.toHaveBeenCalled();
+    const [, replySave] = upserts(supabase);
+    expect(replySave).toHaveLength(1);
+    const reply = replySave[0] as unknown as UIMessage;
+    expect(reply.metadata).toEqual({ stopped: true });
+    expect(reply.parts).toContainEqual(
+      expect.objectContaining({ type: "tool-searchJobs", state: "output-available" }),
+    );
+    expect(reply.parts).toContainEqual(
+      expect.objectContaining({ type: "text", text: "Here are the first ", state: "done" }),
+    );
+    expect(JSON.stringify(reply.parts)).not.toContain("data-suggestions");
+  });
+
+  it("drops a tool call that hadn't finished", async () => {
+    queueSession();
+    model = stallingModel([
+      { type: "tool-input-start", id: "call-2", toolName: "listSavedJobs" },
+      { type: "tool-input-delta", id: "call-2", delta: "{" },
+    ]);
+    vi.mocked(google).mockReturnValue(model as never);
+
+    await submitAndStop("tool-input-delta");
+
+    const [, replySave] = upserts(supabase);
+    const types = (replySave[0].parts as { type: string }[]).map((p) => p.type);
+    expect(types).toContain("tool-searchJobs");
+    expect(types).not.toContain("tool-listSavedJobs");
+  });
+
+  it("saves no reply when nothing had arrived yet", async () => {
+    queueSession();
+    model = new MockLanguageModelV4({
+      doStream: async ({ abortSignal }) => ({
+        stream: new ReadableStream<LanguageModelV4StreamPart>({
+          start(controller) {
+            failOnAbort(controller, abortSignal);
+          },
+        }),
+      }),
+    });
+    vi.mocked(google).mockReturnValue(model as never);
+
+    await submitAndStop(""); // Stop before any chunk is read.
+
+    expect(upserts(supabase)).toHaveLength(1); // Only the user message.
+  });
+
+  it("logs the turn's usage as aborted", async () => {
+    queueSession();
+    model = stallingModel([{ type: "text-start", id: "t1" }, { type: "text-delta", id: "t1", delta: "Partial " }]);
+    vi.mocked(google).mockReturnValue(model as never);
+
+    await submitAndStop("Partial");
+    await flushAfter();
+
+    expect(eventCaptureServer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        properties: expect.objectContaining({ finish_reason: "aborted", steps: 1 }),
+      }),
+    );
+  });
+});
+
+describe("POST /api/agent/chat: guardrails (spec §14)", () => {
+  it("runs the model with explicit Gemini safety settings (REQ-030)", async () => {
+    queueSession();
+
+    const res = await submit(text("u1", "user", "hi"));
+    await res.text();
+
+    expect(model.doStreamCalls[0].providerOptions?.google).toEqual({
+      safetySettings: [...AGENT_SAFETY_SETTINGS],
+    });
+  });
+
+  it("asks the user before a profile change, through the approval policy (SEC-012)", async () => {
+    queueSession();
+    model = mockModel([toolCallStream("updateMyPreferences", { minSalary: 100000 })]);
+    vi.mocked(google).mockReturnValue(model as never);
+
+    const res = await submit(text("u1", "user", "set my min salary to 100k"));
+    const body = await res.text();
+
+    expect(body).toContain("tool-approval-request");
+    expect(supabase.callsFor("user_info").some((c) => c.chain[0].method === "update")).toBe(false);
+  });
+
+  it("replaces a reply blocked by the safety filter with a readable message, and saves it", async () => {
+    queueSession();
+    model = new MockLanguageModelV4({
+      doStream: async () => ({
+        stream: new ReadableStream<LanguageModelV4StreamPart>({
+          start(controller) {
+            controller.enqueue({
+              type: "finish",
+              finishReason: { unified: "content-filter", raw: "SAFETY" },
+              usage: {
+                inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+                outputTokens: { total: 0, text: 0, reasoning: undefined },
+              },
+            });
+            controller.close();
+          },
+        }),
+      }),
+    });
+    vi.mocked(google).mockReturnValue(model as never);
+
+    const res = await submit(text("u1", "user", "something harmful"));
+    const body = await res.text();
+
+    expect(body).toContain(AGENT_CONTENT_FILTER_MESSAGE);
+    expect(generateFollowUps).not.toHaveBeenCalled();
+    const reply = upserts(supabase).at(-1)![0];
+    expect(reply.role).toBe("assistant");
+    expect(reply.parts).toContainEqual(
+      expect.objectContaining({ type: "text", text: AGENT_CONTENT_FILTER_MESSAGE }),
+    );
+  });
+});
+
+describe("POST /api/agent/chat: streaming", () => {
+  it("releases the model's text word by word, so the reply flows", async () => {
+    queueSession();
+
+    const res = await submit(text("u1", "user", "hi"));
+    const body = await res.text();
+
+    // The mock model sends "Hello from the agent" as one chunk.
+    expect(body.match(/"type":"text-delta"/g)!.length).toBeGreaterThan(1);
+    expect(streamedText(body)).toBe("Hello from the agent");
   });
 });
