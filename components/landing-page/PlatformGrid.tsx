@@ -6,7 +6,7 @@ import { platforms } from "@/utils/utils";
 // Static logo grid: hover/focus effects are CSS transitions only, so nothing
 // animates (or re-renders) while the user is just scrolling past.
 const tileClass =
-  "flex w-full flex-col items-center gap-1.5 rounded-xl p-1 outline-none sm:p-2 transition-[opacity,transform,background-color] duration-200 ease-out group-hover/logos:opacity-40 hover:!opacity-100 hover:-translate-y-1 hover:bg-muted focus-visible:!opacity-100 focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:hover:translate-y-0";
+  "flex w-full flex-col items-center gap-1.5 rounded-xl p-1 outline-none sm:p-2 transition-[opacity,transform,background-color] duration-200 ease-out group-hover/logos:opacity-40 hover:!opacity-100 hover:-translate-y-1 hover:bg-muted focus-visible:!opacity-100 focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring";
 
 export function PlatformGrid() {
   return (

@@ -14,7 +14,7 @@ export default function PlatformStats({
   return (
     <section className="relative px-4 py-16 lg:px-20 xl:px-40 2xl:px-80 ">
       <div className="text-center mb-16">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4">
+        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
           The Numbers Behind
         </h2>
         <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -34,7 +34,10 @@ export default function PlatformStats({
 function Card({ stat, title }: { stat: number; title: string }) {
   return (
     <div className="p-4 flex flex-col items-center gap-3 ">
-      <NumberTicker className="font-extrabold text-7xl" value={stat} />
+      <NumberTicker
+        className="font-semibold tracking-tight text-7xl"
+        value={stat}
+      />
       <p className="text-muted-foreground font-medium">{title}</p>
     </div>
   );

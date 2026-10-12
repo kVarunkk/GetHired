@@ -29,6 +29,7 @@ import {
 import WaitlistCTA from "./WaitlistCTA";
 import ModifiedLink from "./ModifiedLink";
 import SidebarLabel from "./SidebarLabel";
+import ScrollFade from "./ScrollFade";
 
 export default function NavbarComponent({
   variant = "vertical",
@@ -201,7 +202,8 @@ export default function NavbarComponent({
       {variant === "vertical" && (
         <div
           className={cn(
-            "h-screen flex-col gap-3 p-4 border-r overflow-y-auto overflow-x-hidden sticky top-0 shrink-0 transition-all duration-300 ease-in-out",
+            // Brand and the bottom controls stay put; only the items scroll.
+            "h-screen flex-col gap-3 p-4 border-r overflow-hidden sticky top-0 shrink-0 transition-all duration-300 ease-in-out",
             "hidden md:flex",
             isMenuOpen ? "w-52" : "w-20",
           )}
@@ -217,49 +219,54 @@ export default function NavbarComponent({
             <Brand type="long" className="h-12 w-[140px]" />
           </Link>
 
-          {authResolved ? (
-            <div className="gap-4 text-sm flex flex-col mb-auto items-start">
-              {navbarItems.map((item) => (
-                <Tooltip key={item.id} delayDuration={100}>
-                  <TooltipTrigger asChild>
-                    <ModifiedLink
-                      href={item.href}
+          <ScrollFade className="flex-1" contentClassName="py-1">
+            {authResolved ? (
+              <div className="gap-4 text-sm flex flex-col items-start">
+                {navbarItems.map((item) => (
+                  <Tooltip key={item.id} delayDuration={100}>
+                    <TooltipTrigger asChild>
+                      <ModifiedLink
+                        href={item.href}
+                        className={cn(
+                          // px-4 centres the 16px icon in the collapsed rail, so it never moves.
+                          "hover:bg-secondary transition-colors rounded-lg gap-2 items-center px-4 py-2 flex w-full overflow-hidden",
+                          item.active && "bg-secondary",
+                        )}
+                      >
+                        <span className="shrink-0">{item.icon}</span>
+                        <SidebarLabel open={isMenuOpen}>
+                          {item.label}
+                        </SidebarLabel>
+                      </ModifiedLink>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" hidden={isMenuOpen}>
+                      <p>{item.label}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            ) : (
+              <LoadingNav className="flex w-full flex-col gap-4">
+                {Array.from({ length: SIDEBAR_SKELETON_ROWS }, (_, index) => (
+                  // Same geometry as a real item: px-4 keeps the icon centred when collapsed.
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 px-4 py-2"
+                  >
+                    <SkeletonBar className="h-4 w-4 shrink-0" />
+                    <SkeletonBar
                       className={cn(
-                        // px-4 centres the 16px icon in the collapsed rail, so it never moves.
-                        "hover:bg-secondary transition-colors rounded-lg gap-2 items-center px-4 py-2 flex w-full overflow-hidden",
-                        item.active && "bg-secondary",
+                        "h-3.5 w-20 transition-opacity duration-300",
+                        isMenuOpen ? "opacity-100" : "opacity-0",
                       )}
-                    >
-                      <span className="shrink-0">{item.icon}</span>
-                      <SidebarLabel open={isMenuOpen}>
-                        {item.label}
-                      </SidebarLabel>
-                    </ModifiedLink>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" hidden={isMenuOpen}>
-                    <p>{item.label}</p>
-                  </TooltipContent>
-                </Tooltip>
-              ))}
-            </div>
-          ) : (
-            <LoadingNav className="mb-auto flex w-full flex-col gap-4">
-              {Array.from({ length: SIDEBAR_SKELETON_ROWS }, (_, index) => (
-                // Same geometry as a real item: px-4 keeps the icon centred when collapsed.
-                <div key={index} className="flex items-center gap-2 px-4 py-2">
-                  <SkeletonBar className="h-4 w-4 shrink-0" />
-                  <SkeletonBar
-                    className={cn(
-                      "h-3.5 w-20 transition-opacity duration-300",
-                      isMenuOpen ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                </div>
-              ))}
-            </LoadingNav>
-          )}
+                    />
+                  </div>
+                ))}
+              </LoadingNav>
+            )}
+          </ScrollFade>
 
-          <div className="justify-end flex flex-col gap-4">
+          <div className="shrink-0 justify-end flex flex-col gap-4">
             <Tooltip delayDuration={100}>
               <TooltipTrigger asChild>
                 <button

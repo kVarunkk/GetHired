@@ -65,11 +65,13 @@ export default function AIFeatures() {
       className="flex flex-col  items-center px-4 py-3 lg:px-20 xl:px-40 2xl:px-80"
     >
       <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4">Powered by AI</h2>
+        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
+          Powered by AI
+        </h2>
         <p className="text-muted-foreground max-w-2xl mx-auto">
           {isHirePage
             ? "Connecting you with exceptional, pre-qualified talent with speed and unmatched precision."
-            : "Revolutionizing your job search with efficiency and precision."}
+            : "The same AI tools the agent uses. Ask it in chat, or use them yourself."}
         </p>
       </div>
       <div className="grid sm:grid-cols-2 gap-6">
@@ -148,7 +150,7 @@ const FeatureCard = ({
   };
 
   return (
-    <div className="bg-secondary rounded-xl border-2 border-border shadow-lg">
+    <div className="bg-card rounded-xl border">
       <div
         className="aspect-video relative cursor-pointer group"
         onClick={togglePlay}
@@ -174,7 +176,7 @@ const FeatureCard = ({
             !isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           }`}
         >
-          <div className="h-14 w-14 flex items-center justify-center rounded-full bg-white/20  border border-white/30 text-white shadow-xl transform group-hover:scale-110 transition-transform">
+          <div className="h-14 w-14 flex items-center justify-center rounded-full bg-white/20 border border-white/30 text-white transform group-hover:scale-110 transition-transform">
             {isPlaying ? (
               <svg
                 width="24"
@@ -203,14 +205,14 @@ const FeatureCard = ({
 
         <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20 dark:bg-black/20 overflow-hidden">
           <div
-            className="h-full bg-blue-500 transition-all duration-100 ease-linear shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+            className="h-full bg-brand transition-all duration-100 ease-linear"
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
       <div className="p-4 flex flex-col gap-3">
-        <div className="text-lg font-bold">{title}</div>
-        <p> {desc}</p>
+        <div className="text-lg font-semibold tracking-tight">{title}</div>
+        <p className="text-[15px] leading-7 text-muted-foreground"> {desc}</p>
       </div>
     </div>
   );

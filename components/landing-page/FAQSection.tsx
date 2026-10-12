@@ -11,6 +11,11 @@ import {
 const FAQs = {
   "job-search": [
     {
+      question: "What is the GetHired agent?",
+      answer:
+        "An AI assistant you chat with. It searches jobs, finds roles matched to your resume, tracks your applications, starts resume reviews and sets up mock interviews. It asks before changing your profile, and AI features use credits as shown in your account.",
+    },
+    {
       question: "How can I find relevant tech jobs on GetHired?",
       answer:
         "Search current developer and tech openings, then narrow results by job title, location, job type, salary, and experience.",
@@ -131,7 +136,7 @@ export default function FAQSection({
     <section id="faq" className="px-4 py-3 lg:px-20 xl:px-40 2xl:px-80 ">
       <div className="container mx-auto max-w-4xl">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
             Frequently Asked Questions
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
