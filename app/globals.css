@@ -51,6 +51,14 @@
     --brand-soft: 238.73 83.53% 66.67%;
     --brand-soft-foreground: 239 84% 40%;
 
+    /* Status colours (soft badges use them as text on a 10% tint) */
+    --success: 142 72% 29%;
+    /* green-700 */
+    --success-foreground: 0 0% 98%;
+    --warning: 26 90% 37%;
+    /* amber-700 */
+    --warning-foreground: 0 0% 98%;
+
 
 
     /* Interactive Accents */
@@ -92,6 +100,14 @@
     --brand-soft: 238.73 83.53% 66.67%;
     --brand-soft-foreground: 239 84% 85%;
 
+    /* Status colours (Dark) */
+    --success: 142 69% 58%;
+    /* green-400 */
+    --success-foreground: 0 0% 9%;
+    --warning: 43 96% 56%;
+    /* amber-400 */
+    --warning-foreground: 0 0% 9%;
+
 
 
     /* --accent: 239 84% 15%; */
@@ -118,6 +134,15 @@
   .pause {
     animation-play-state: paused;
   }
+
+  /* Still scrolls (wheel, touch, keyboard), but shows no scrollbar. */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Keyframes should be defined directly, outside of @theme inline */
@@ -138,5 +163,21 @@
 
   to {
     transform: translateY(calc(-100% - var(--gap)));
+  }
+}
+/* Agent replies: each streamed word fades in (components/agent/animate-words.ts). */
+.agent-word {
+  animation: agent-word-in 0.4s ease-out both;
+}
+
+@keyframes agent-word-in {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
   }
 }

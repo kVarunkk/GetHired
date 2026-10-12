@@ -42,6 +42,15 @@ export default {
           DEFAULT: "hsl(var(--brand-soft)/0.2)",
           foreground: "hsl(var(--brand-soft-foreground))",
         },
+        // Status colours (design-system.md §1)
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
