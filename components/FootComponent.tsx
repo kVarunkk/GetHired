@@ -24,9 +24,9 @@ export default function FootComponent() {
   const defaultContent = {
     heading: "Ready to make your next big move?",
     subtext:
-      "Join thousands of professionals finding their dream job—or the perfect candidate—today.",
-    primaryButtonText: "Explore Job Listings",
-    primaryButtonHref: "/jobs",
+      "Tell the agent what you're looking for and let it do the searching, matching and tracking.",
+    primaryButtonText: "Chat with the agent",
+    primaryButtonHref: "/agent",
     secondaryButtonText: "Hire Top Talent",
     secondaryButtonHref: "/hire",
   };
@@ -60,21 +60,18 @@ export default function FootComponent() {
         : defaultContent;
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-6 bg-primary-foreground rounded-xl shadow-2xl border border-primary/20">
-      <h2 className="text-3xl sm:text-4xl font-extrabold text-primary text-center mb-3 tracking-tight">
+    <div className="flex flex-col items-center justify-center py-12 px-6 bg-muted/30 rounded-2xl border">
+      <h2 className="text-2xl sm:text-[28px] font-semibold text-center mb-3 tracking-tight">
         {content.heading}
       </h2>
 
-      <p className="text-lg text-primary/80 text-center mb-8 max-w-2xl">
+      <p className="text-[15px] leading-7 text-muted-foreground text-center mb-8 max-w-2xl">
         {content.subtext}
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-6">
         <Link className="w-full" href={content.primaryButtonHref} passHref>
-          <Button
-            size="lg"
-            className="w-full sm:w-auto px-8 py-3 text-lg font-semibold transition-transform duration-200 hover:scale-[1.03] shadow-lg shadow-primary/30"
-          >
+          <Button size="lg" variant="brand" className="w-full sm:w-auto px-8">
             {content.primaryButtonText}
           </Button>
         </Link>
@@ -85,7 +82,7 @@ export default function FootComponent() {
             <Button
               variant="outline"
               size="lg"
-              className="w-full sm:w-auto px-8 py-3 text-lg font-semibold transition-colors duration-200 hover:bg-primary hover:text-primary-foreground border-primary text-primary"
+              className="w-full sm:w-auto px-8"
             >
               {content.secondaryButtonText}
             </Button>

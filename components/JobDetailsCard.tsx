@@ -100,10 +100,10 @@ export default function JobDescriptionCard({
 
   return (
     <div className="md:col-span-2 ">
-      <Card className="shadow-sm border">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="text-xl font-semibold">
+            <CardTitle className="text-lg font-semibold tracking-tight">
               Job Description
               <Button
                 size={"icon"}
@@ -148,7 +148,7 @@ export default function JobDescriptionCard({
                         use.{" "}
                         <Link
                           href={"/dashboard/buy-credits"}
-                          className="text-blue-500"
+                          className="font-medium underline underline-offset-4"
                         >
                           Recharge Credits
                         </Link>
@@ -172,7 +172,7 @@ export default function JobDescriptionCard({
           >
             {isLoading ? (
               <div className="flex flex-col gap-3 items-center w-full min-h-[200px] justify-center">
-                <Loader2 className="animate-spin h-6 w-6 mx-auto" />
+                <Loader2 className="animate-spin h-6 w-6 mx-auto text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
                   Generating AI Summary...
                 </span>
@@ -189,7 +189,7 @@ export default function JobDescriptionCard({
           >
             <button
               onClick={toggleDescription}
-              className="flex items-center justify-center gap-1 text-primary hover:underline font-semibold w-full mb-5"
+              className="flex items-center justify-center gap-1 text-primary hover:underline font-medium w-full mb-5"
             >
               <ArrowDown className="h-4 w-4" />
               Show more

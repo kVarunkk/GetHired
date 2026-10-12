@@ -69,7 +69,7 @@ export function InterviewAnalysisReport({
 
       <header className="mt-1 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-[28px]">
             Interview analysis
           </h1>
           <p className="text-sm text-muted-foreground">{interviewName}</p>
@@ -94,7 +94,7 @@ export function InterviewAnalysisReport({
           {sessionStatus === "ineligible" ? (
             <Card aria-live="polite">
               <CardHeader>
-                <CardTitle className="text-xl">
+                <CardTitle className="text-lg">
                   Not enough interview content
                 </CardTitle>
               </CardHeader>
@@ -110,7 +110,7 @@ export function InterviewAnalysisReport({
             <Card aria-live="polite">
               <CardHeader className="flex flex-row items-center gap-3 space-y-0">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <CardTitle className="text-xl">Analysis in progress</CardTitle>
+                <CardTitle className="text-lg">Analysis in progress</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm leading-6 text-muted-foreground">
@@ -122,7 +122,7 @@ export function InterviewAnalysisReport({
           ) : analysisStatus === "failed" ? (
             <Card aria-live="polite">
               <CardHeader>
-                <CardTitle className="text-xl">
+                <CardTitle className="text-lg">
                   Analysis couldn’t be completed
                 </CardTitle>
               </CardHeader>
@@ -137,7 +137,7 @@ export function InterviewAnalysisReport({
             <>
               <Card>
                 <CardHeader className="flex flex-row items-center gap-3 space-y-0">
-                  <CardTitle className="text-xl">Overall feedback</CardTitle>
+                  <CardTitle className="text-lg">Overall feedback</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="whitespace-pre-line leading-7">
@@ -148,14 +148,14 @@ export function InterviewAnalysisReport({
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl">Your strengths</CardTitle>
+                  <CardTitle className="text-lg">Your strengths</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="grid gap-4 sm:grid-cols-2">
                     {result.strengths.map((item, index) => (
                       <li
                         key={`${item.title}-${index}`}
-                        className="rounded-lg  bg-background p-4"
+                        className="rounded-lg border bg-background p-4"
                       >
                         <h3 className="font-semibold">{item.title}</h3>
                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -169,14 +169,14 @@ export function InterviewAnalysisReport({
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl">Areas to improve</CardTitle>
+                  <CardTitle className="text-lg">Areas to improve</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="grid gap-4">
                     {result.improvement_areas.map((item, index) => (
                       <li
                         key={`${item.title}-${index}`}
-                        className="rounded-lg  bg-background p-4"
+                        className="rounded-lg border bg-background p-4"
                       >
                         <h3 className="font-semibold">{item.title}</h3>
                         <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -194,14 +194,14 @@ export function InterviewAnalysisReport({
 
               <Card>
                 <CardHeader className="flex flex-row items-center gap-3 space-y-0">
-                  <CardTitle className="text-xl">Practice tips</CardTitle>
+                  <CardTitle className="text-lg">Practice tips</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ol className="grid gap-3 sm:grid-cols-2">
                     {result.practice_tips.map((tip, index) => (
                       <li
                         key={`${tip}-${index}`}
-                        className="flex gap-3 rounded-lg  bg-background p-4"
+                        className="flex gap-3 rounded-lg border bg-background p-4"
                       >
                         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold">
                           {index + 1}
@@ -216,7 +216,7 @@ export function InterviewAnalysisReport({
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">
+                <CardTitle className="text-lg">
                   Analysis is not available
                 </CardTitle>
               </CardHeader>
@@ -230,7 +230,7 @@ export function InterviewAnalysisReport({
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Interview transcript</CardTitle>
+              <CardTitle className="text-lg">Interview transcript</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Full conversation from this session.
               </p>
@@ -282,19 +282,17 @@ export function InterviewAnalysisReport({
                       key={session.id}
                       href={`/interview/${interviewId}/analysis/${session.id}`}
                       aria-current={isCurrent ? "page" : undefined}
-                      className={`rounded-lg border p-3 transition-colors hover:bg-accent ${
+                      className={`rounded-lg border p-3 transition-colors ${
                         isCurrent
-                          ? "border-primary bg-accent/60"
-                          : "bg-background"
+                          ? "border-brand/30 bg-brandSoft"
+                          : "bg-background hover:bg-muted/60"
                       }`}
                     >
                       <span className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium">
                           Session {sessions.length - index}
                         </span>
-                        {isCurrent && (
-                          <Badge variant="secondary">Current</Badge>
-                        )}
+                        {isCurrent && <Badge variant="brand">Current</Badge>}
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">
                         <LocalDateTime value={session.startedAt} />
@@ -382,7 +380,15 @@ function Scorecard({
         <Sparkles className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-bold">
+        <p
+          className={`text-3xl font-semibold tracking-tight ${
+            score >= 4
+              ? "text-success"
+              : score >= 3
+                ? "text-warning"
+                : "text-destructive"
+          }`}
+        >
           {score}
           <span className="text-base font-medium text-muted-foreground">
             /5

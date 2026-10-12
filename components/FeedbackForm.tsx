@@ -94,7 +94,6 @@ export default function FeedbackForm({
             name="feedback_input"
             id="feedback"
             placeholder="How can we improve?"
-            className="bg-input"
             required
           />
           {/* <DialogClose asChild> */}

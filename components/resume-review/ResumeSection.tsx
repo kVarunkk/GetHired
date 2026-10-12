@@ -20,7 +20,6 @@ import { mutate } from "swr";
 
 export default function ResumeSection({
   isParsed,
-  isJdPaneOpen,
   existingResumes,
   linkedResume,
   activeHighlightId,
@@ -30,7 +29,6 @@ export default function ResumeSection({
   changeTriggerState,
 }: {
   isParsed: boolean;
-  isJdPaneOpen: boolean;
   existingResumes: TResumeReviewResume[];
   linkedResume: TResumeReviewServer["resumes"] | null;
   activeHighlightId: string | null;
@@ -196,23 +194,23 @@ export default function ResumeSection({
   return (
     <div
       className={cn(
-        "border-b border-t sm:border-t-0 overflow-hidden flex flex-col",
-        isJdPaneOpen ? "flex-[0.6]" : "flex-1",
+        // Always fills what the JD pane leaves, so it follows the JD pane's height animation.
+        "border-b border-t sm:border-t-0 overflow-hidden flex flex-col flex-1 min-h-0",
       )}
     >
       <div className="p-4  flex flex-wrap gap-4 items-center justify-between border-b bg-background/50 ">
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="text-lg font-bold">Resume</div>
+          <div className="text-lg font-semibold tracking-tight">Resume</div>
 
           {isResumeLinked && isParsed && (
-            <div className="flex items-center p-0.5 bg-zinc-100 dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800">
+            <div className="flex items-center p-0.5 bg-muted rounded-lg border">
               <button
                 onClick={() => setViewMode("mirror")}
                 className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider rounded-md transition-all",
+                  "flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors",
                   viewMode === "mirror"
-                    ? "bg-white dark:bg-zinc-800 text-primary shadow-sm"
-                    : "text-zinc-500 hover:text-muted-foreground",
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <Eye size={12} />
@@ -221,10 +219,10 @@ export default function ResumeSection({
               <button
                 onClick={() => setViewMode("original")}
                 className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1 text-xs  font-semibold uppercase tracking-wider rounded-md transition-all",
+                  "flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors",
                   viewMode === "original"
-                    ? "bg-white dark:bg-zinc-800 text-primary shadow-sm"
-                    : "text-zinc-500 hover:text-muted-foreground",
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <FileText size={12} />
@@ -236,7 +234,7 @@ export default function ResumeSection({
 
         {linkedResume && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <File className="w-4 h-4 " />
+            <File className="w-4 h-4" />
             {linkedResume?.name}
           </div>
         )}
@@ -254,7 +252,11 @@ export default function ResumeSection({
               Unfortunately, there was an error parsing your resume. Please try
               again.
             </h2>
-            <Button onClick={handleRetryParsing} disabled={isRetrying}>
+            <Button
+              variant="brand"
+              onClick={handleRetryParsing}
+              disabled={isRetrying}
+            >
               {isRetrying ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
@@ -267,8 +269,8 @@ export default function ResumeSection({
           <div className="max-w-md mx-auto py-10">
             {isUploading ? (
               <div className="flex flex-col items-center justify-center py-20 space-y-4 animate-in fade-in duration-300">
-                <Loader2 className="w-8 h-8 animate-spin" />
-                <p className="text-sm font-bold text-muted-foreground ">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                <p className="text-sm font-medium text-muted-foreground">
                   Processing Upload
                 </p>
               </div>
@@ -282,6 +284,7 @@ export default function ResumeSection({
                   onFileChange={setSelectedFile}
                 />
                 <Button
+                  variant="brand"
                   onClick={() => {
                     if (selectedResumeId) {
                       handleLinkResume(selectedResumeId);

@@ -248,7 +248,7 @@ export default function FilterComponent({
             placeholder={config.placeholder}
             value={filters[config.name]}
             onChange={inputFilterOnChange}
-            className="block w-full mt-1 bg-input"
+            className="block w-full mt-1"
             min={config.type === "number" ? 0 : undefined}
           />
         );

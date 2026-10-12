@@ -93,7 +93,7 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-4">
         <div>
           <div className="flex items-center gap-1">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white max-w-[400px]">
+            <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight max-w-[400px]">
               {jobData.job_name}
             </h1>
             {isLoading ? (
@@ -287,13 +287,13 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
         />
 
         <div className="grid gap-4">
-          <Card className="shadow-sm border">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Location</CardTitle>
               <MapPin className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2 text-2xl font-bold">
+              <div className="flex flex-wrap gap-2 text-2xl font-semibold">
                 {jobData.locations?.length > 0 ? (
                   [...new Set(jobData.locations)]
                     .filter((loc): loc is string => !!loc)
@@ -311,25 +311,25 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm border">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Salary</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-semibold tracking-tight">
                 {jobData.salary_range || "Not specified"}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm border">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Experience</CardTitle>
               <Briefcase className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-semibold tracking-tight">
                 {jobData.experience || "Not specified"}
               </div>
             </CardContent>

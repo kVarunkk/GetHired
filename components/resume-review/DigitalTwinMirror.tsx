@@ -25,18 +25,18 @@ export default function DigitalTwinMirror({
   if (!content?.sections) return null;
 
   return (
-    <div className="w-full max-w-3xl mx-auto bg-white dark:bg-zinc-900 shadow-2xl md:min-h-[1056px] p-6 md:p-12 text-zinc-800 dark:text-zinc-200 font-sans border border-zinc-200 dark:border-zinc-800 ">
+    <div className="w-full max-w-3xl mx-auto bg-card md:min-h-[1056px] p-6 md:p-12 text-foreground font-sans border rounded-xl">
       <div className="space-y-8">
         {content.sections.map((section, sIdx: number) => (
           <div key={sIdx} className="space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-brand border-b pb-1 border-indigo-100 dark:border-indigo-900/50">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground border-b pb-1">
               {section.type}
             </h3>
 
             {section?.items?.map((item, iIdx: number) => (
               <div key={iIdx} className="space-y-2">
                 {item.heading && (
-                  <p className="text-sm font-bold">{item.heading}</p>
+                  <p className="text-sm font-semibold">{item.heading}</p>
                 )}
                 {item.subheading && (
                   <p className="text-sm font-medium">{item.subheading}</p>
@@ -49,7 +49,7 @@ export default function DigitalTwinMirror({
                       className={cn(
                         "text-xs leading-relaxed transition-all duration-300 rounded px-1 -mx-1",
                         activeHighlightId === bullet.id
-                          ? "bg-brandSoft text-brand dark:text-primary  ring-1 ring-indigo-500/50 scale-[1.02] shadow-sm"
+                          ? "bg-brandSoft text-brandSoft-foreground ring-1 ring-brand/40"
                           : "text-muted-foreground",
                       )}
                     >

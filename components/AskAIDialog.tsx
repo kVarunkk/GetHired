@@ -12,7 +12,7 @@ import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { ArrowLeft, Copy, Loader2, Sparkle } from "lucide-react";
+import { AlertCircle, ArrowLeft, Copy, Loader2, Sparkle } from "lucide-react";
 import Link from "next/link";
 import { TAICredits } from "@/utils/types";
 import InfoTooltip from "./InfoTooltip";
@@ -123,7 +123,10 @@ export default function AskAIDialog({
           <DialogTitle>Ask AI to help you apply for this role</DialogTitle>
           <DialogDescription className="flex items-center gap-1">
             {creditsState} AI Credits available.{" "}
-            <Link href={"/dashboard/buy-credits"} className="text-blue-500">
+            <Link
+              href={"/dashboard/buy-credits"}
+              className="font-medium underline underline-offset-4"
+            >
               Recharge Credits
             </Link>
             <InfoTooltip
@@ -138,7 +141,7 @@ export default function AskAIDialog({
 
         {view === "resume" ? (
           <div className="flex flex-col gap-4">
-            <div className="text-sm font-semibold text-muted-foreground">
+            <div className="text-sm font-medium text-muted-foreground">
               <Button
                 type="button"
                 onClick={() => setView("form")}
@@ -163,13 +166,13 @@ export default function AskAIDialog({
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <div className="text-sm flex items-center font-semibold text-muted-foreground">
+            <div className="text-sm flex items-center font-medium text-muted-foreground">
               {selectedResume ? (
                 <div className="flex items-center gap-1">
                   Using
                   <span
                     title={selectedResume?.name ?? "Selected Resume"}
-                    className="font-bold inline-block w-[10rem] truncate"
+                    className="font-medium text-foreground inline-block w-[10rem] truncate"
                   >
                     {selectedResume?.name}
                   </span>
@@ -180,7 +183,7 @@ export default function AskAIDialog({
               <Button
                 variant={"link"}
                 onClick={() => setView("resume")}
-                className="text-muted-foreground font-semibold underline"
+                className="text-muted-foreground font-medium underline"
               >
                 Change
               </Button>
@@ -203,17 +206,21 @@ export default function AskAIDialog({
                     isLoading ||
                     creditsState < TAICredits.AI_SEARCH_ASK_AI_RESUME
                   }
-                  className="bg-input text-sm"
+                  className="text-sm"
                   ref={searchInputRef}
                 />
 
                 {error && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <p className="text-red-600 ">{error}</p>
+                  <div
+                    role="alert"
+                    className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+                  >
+                    <AlertCircle aria-hidden className="h-4 w-4 shrink-0" />
+                    <p>{error}</p>
                     {!isOnboardingComplete && (
                       <Link
                         href={"/get-started"}
-                        className="text-blue-400 underline"
+                        className="font-medium underline underline-offset-4"
                       >
                         Complete Profile
                       </Link>
@@ -221,6 +228,7 @@ export default function AskAIDialog({
                   </div>
                 )}
                 <Button
+                  variant="brand"
                   disabled={
                     isLoading ||
                     creditsState < TAICredits.AI_SEARCH_ASK_AI_RESUME
@@ -232,7 +240,9 @@ export default function AskAIDialog({
                   Submit
                 </Button>
               </form>
-              <div className="text-center text-muted-foreground">OR</div>
+              <div className="text-center text-xs font-medium text-muted-foreground">
+                OR
+              </div>
               <Button
                 type="button"
                 onClick={() => handleSubmit()}
@@ -248,9 +258,9 @@ export default function AskAIDialog({
         )}
 
         {answer && (
-          <div className="mt-4 p-4 border rounded-md">
+          <div className="mt-4 p-4 border rounded-lg">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold">Result</h3>
+              <h3 className="text-sm font-semibold">Result</h3>
               <Button
                 size={"icon"}
                 variant={"ghost"}
@@ -260,7 +270,7 @@ export default function AskAIDialog({
               </Button>
             </div>
             <p
-              className="whitespace-pre-wrap"
+              className="whitespace-pre-wrap text-[15px] leading-7"
               style={{ overflowWrap: "anywhere" }}
             >
               {answer}

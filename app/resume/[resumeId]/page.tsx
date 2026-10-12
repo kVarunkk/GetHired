@@ -51,8 +51,10 @@ export default async function ResumeIdPage({
         </div>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-2 flex-wrap min-w-0">
-            <h1 className="text-2xl font-medium truncate">{data.name}</h1>
-            {data.is_primary && <Badge>PRIMARY</Badge>}
+            <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight truncate">
+              {data.name}
+            </h1>
+            {data.is_primary && <Badge variant="brand">PRIMARY</Badge>}
             {data.is_primary && (
               <InfoTooltip
                 content={
@@ -80,7 +82,7 @@ export default async function ResumeIdPage({
                       credits per use.{" "}
                       <Link
                         href={"/dashboard/buy-credits"}
-                        className="text-blue-500"
+                        className="font-medium underline underline-offset-4"
                       >
                         Recharge Credits
                       </Link>

@@ -35,7 +35,8 @@ export default function FindSuitableProfilesForJobPost({
   if (job_post_id) {
     return (
       <Button
-        className="rounded-full bg-primary shadow-lg"
+        variant="brand"
+        className="rounded-full"
         onClick={() => handleAiSearch(job_post_id)}
       >
         <Search className="w-4 h-4" />

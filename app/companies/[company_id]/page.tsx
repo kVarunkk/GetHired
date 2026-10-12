@@ -127,7 +127,9 @@ export default async function CompanyIdPage({
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-1">
-                <h1 className="text-3xl font-medium">{companyData.name}</h1>
+                <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">
+                  {companyData.name}
+                </h1>
                 <JobFavoriteBtn
                   isCompanyUser={isCompanyUser}
                   userId={user?.id || null}
@@ -147,7 +149,7 @@ export default async function CompanyIdPage({
                 companyData.name ?? "",
               )}`}
             >
-              <Button>
+              <Button variant="brand">
                 See Active Jobs <ArrowRight />
               </Button>
             </Link>
@@ -160,29 +162,37 @@ export default async function CompanyIdPage({
               <CardContent>
                 <div className="space-y-4 pt-5">
                   <div>
-                    <p className="font-semibold text-sm">Website</p>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Website
+                    </p>
                     <Link
                       href={companyData.website ?? ""}
-                      className="text-sm  text-blue-600"
+                      className="text-sm underline-offset-4 transition-colors hover:text-brand hover:underline"
                     >
                       {companyData.website || "Not specified"}
                     </Link>
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">Headquarters</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Headquarters
+                    </p>
+                    <p className="text-sm">
                       {companyData.headquarters || "Not specified"}
                     </p>
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">Industry</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Industry
+                    </p>
+                    <p className="text-sm">
                       {companyData.industry || "Not specified"}
                     </p>
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">Company Size</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Company Size
+                    </p>
+                    <p className="text-sm">
                       {companyData.company_size || "Not specified"}
                     </p>
                   </div>
@@ -195,11 +205,11 @@ export default async function CompanyIdPage({
           <div className="md:col-span-2 space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">
+                <CardTitle className="text-lg">
                   About {companyData.name}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-6 text-[15px] leading-7">
                 {companyData.description}
               </CardContent>
             </Card>

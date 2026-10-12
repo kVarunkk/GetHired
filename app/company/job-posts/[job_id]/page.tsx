@@ -67,7 +67,7 @@ export default async function JobPostPage({
         {/* --- Header Section --- */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight">
               {job.title}
             </h1>
             <p className="text-lg text-muted-foreground">
@@ -101,13 +101,13 @@ export default async function JobPostPage({
 
           {/* Key Metrics/Details Sidebar */}
           <div className="grid gap-4">
-            <Card className="shadow-sm border">
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Location</CardTitle>
                 <MapPin className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-2 text-2xl font-bold">
+                <div className="flex flex-wrap gap-2 text-2xl font-semibold">
                   {job.location && job.location.length > 0 ? (
                     job.location.map((loc, index) => (
                       <Badge key={index} variant="secondary" className="p-2">
@@ -123,19 +123,19 @@ export default async function JobPostPage({
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm border">
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Salary</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-semibold tracking-tight">
                   {job.salary_range ? job.salary_range : "Not specified"}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm border">
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Experience
@@ -143,13 +143,13 @@ export default async function JobPostPage({
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-semibold tracking-tight">
                   {job.experience ? job.experience : "Not specified"}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm border">
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Applicants
@@ -157,7 +157,7 @@ export default async function JobPostPage({
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-semibold tracking-tight">
                   {job.applications?.length}
                 </div>
               </CardContent>
@@ -167,7 +167,7 @@ export default async function JobPostPage({
 
         {/* --- Applicants Section --- */}
         <div className="mt-8">
-          <h2 className="text-2xl font-medium mb-4">
+          <h2 className="text-lg font-semibold tracking-tight mb-4">
             Applicants ({job.applications?.length})
           </h2>
           {<ApplicantsTable data={job.applications || []} />}

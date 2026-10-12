@@ -132,7 +132,7 @@ export default function JobsBookmarkActions({
                   id="name"
                   name="name"
                   defaultValue={bookmark.name}
-                  className="bg-input text-sm"
+                  className="text-sm"
                   required
                 />
               </div>
@@ -144,7 +144,7 @@ export default function JobsBookmarkActions({
                   id="url"
                   name="url"
                   defaultValue={bookmark.url ?? undefined}
-                  className="bg-input text-sm"
+                  className="text-sm"
                   required
                 />
               </div>

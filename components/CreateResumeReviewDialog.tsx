@@ -80,7 +80,7 @@ export default function CreateResumeReviewDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button variant="brand">
           <Plus className="w-4 h-4" />
           Create CV Review
         </Button>
@@ -114,7 +114,6 @@ export default function CreateResumeReviewDialog() {
                 <Input
                   name="name"
                   placeholder="e.g., Lead Developer @ Stripe"
-                  className="bg-input"
                 />
               </div>
 
@@ -134,7 +133,8 @@ export default function CreateResumeReviewDialog() {
             <Button
               type="submit"
               disabled={isLoading || (!file && !selectedResumeId)}
-              className="w-full  "
+              variant="brand"
+              className="w-full"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">

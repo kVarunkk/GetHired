@@ -74,7 +74,7 @@ export default function CreateResumeDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button variant="brand">
           <Plus className="w-4 h-4" />
           Add Resume
         </Button>
@@ -91,7 +91,7 @@ export default function CreateResumeDialog() {
                   Credits. {creditsState} AI Credits available.{" "}
                   <Link
                     href={"/dashboard/buy-credits"}
-                    className="text-blue-500"
+                    className="font-medium underline underline-offset-4"
                   >
                     Recharge Credits
                   </Link>
@@ -108,7 +108,7 @@ export default function CreateResumeDialog() {
         <div className="space-y-6">
           {isUploading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-4 animate-in fade-in duration-300">
-              <Loader2 className="w-10 h-10 animate-spin " />
+              <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
 
               <p className="text-sm text-muted-foreground">Processing Upload</p>
             </div>
@@ -127,6 +127,7 @@ export default function CreateResumeDialog() {
               handleStartProcessing();
             }}
             disabled={!selectedFile || isUploading}
+            variant="brand"
             className="w-full"
           >
             {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}

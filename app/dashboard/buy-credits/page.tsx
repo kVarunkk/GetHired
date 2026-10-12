@@ -34,10 +34,10 @@ export default async function BuyCreditsPage() {
       </div>
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-medium text-start tracking-tight">
+          <h2 className="text-2xl sm:text-[28px] font-semibold text-start tracking-tight">
             Buy AI Credits
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-[15px] leading-7 text-muted-foreground">
             Instantly top up your account to continue using AI features.
           </p>
         </div>
@@ -54,19 +54,21 @@ export default async function BuyCreditsPage() {
         {plans.map((plan) => (
           <Card
             key={plan.id}
-            className="flex flex-col p-6 text-center shadow-lg hover:shadow-xl transition-shadow duration-300"
+            className="flex flex-col p-6 text-center transition-colors duration-300 hover:border-foreground/20"
           >
             <CardHeader className="p-0 mb-4">
-              <CardTitle className="text-3xl font-bold text-primary">
+              <CardTitle className="text-lg font-semibold tracking-tight">
                 {plan.name}
               </CardTitle>
-              <p className="text-muted-foreground">{plan.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {plan.description}
+              </p>
             </CardHeader>
             <CardContent className="p-0 space-y-4 flex-grow">
-              <div className="text-6xl font-extrabold tracking-tighter">
+              <div className="text-5xl font-semibold tracking-tight">
                 {plan.credit_amount}
               </div>
-              <p className="text-sm font-semibold text-muted-foreground">
+              <p className="text-sm font-medium text-muted-foreground">
                 AI Credits
               </p>
             </CardContent>

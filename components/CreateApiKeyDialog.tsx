@@ -80,7 +80,7 @@ export default function CreateApiKeyDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogTrigger asChild>
-        <Button>
+        <Button variant="brand">
           <Plus className="w-4 h-4" />
           Create API key
         </Button>
@@ -109,7 +109,6 @@ export default function CreateApiKeyDialog() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   maxLength={100}
-                  className="bg-input"
                 />
 
                 <p className="text-xs text-muted-foreground">
@@ -135,6 +134,7 @@ export default function CreateApiKeyDialog() {
               </div>
 
               <Button
+                variant="brand"
                 onClick={handleCreateApiKey}
                 disabled={isCreating}
                 className="w-full"
@@ -165,7 +165,7 @@ export default function CreateApiKeyDialog() {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
+              <div className="rounded-lg border border-warning/30 bg-warning/10 p-4">
                 <p className="text-sm font-medium">Save this API key now</p>
 
                 <p className="text-xs text-muted-foreground mt-1">

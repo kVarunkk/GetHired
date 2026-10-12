@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { ChevronDown, ChevronUp, Loader2, Save } from "lucide-react";
+import { ChevronDown, Loader2, Save } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "../../utils/utils";
 import { Textarea } from "../ui/textarea";
@@ -89,26 +89,30 @@ export default function JdSection({
   };
 
   return (
-    <div
-      className={cn(
-        "flex flex-col p-4 bg-background shadow-[0_-1px_0_rgba(0,0,0,0.05)] dark:shadow-[0_-1px_0_rgba(255,255,255,0.05)] transition-all duration-300",
-        isJdPaneOpen ? "h-[500px] sm:flex-[0.4] space-y-5" : "shrink",
-      )}
-    >
+    <div className="flex shrink-0 flex-col p-4 bg-background border-t">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <label className="font-bold text-lg">Target Job Description</label>
+            <label className="text-lg font-semibold tracking-tight">
+              Target Job Description
+            </label>
             <button
               type="button"
-              className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded-md transition-colors"
+              className="p-1 hover:bg-muted rounded-md transition-colors"
               onClick={() => setIsJdPaneOpen(!isJdPaneOpen)}
+              aria-expanded={isJdPaneOpen}
+              aria-label={
+                isJdPaneOpen
+                  ? "Collapse job description"
+                  : "Expand job description"
+              }
             >
-              {isJdPaneOpen ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronUp className="w-4 h-4 text-muted-foreground" />
-              )}
+              <ChevronDown
+                className={cn(
+                  "w-4 h-4 text-muted-foreground transition-transform duration-300",
+                  !isJdPaneOpen && "rotate-180",
+                )}
+              />
             </button>
 
             {localJd.trim() !== lastSavedJd.current.trim() && (
@@ -134,9 +138,10 @@ export default function JdSection({
 
         <Button
           size="sm"
+          variant="brand"
           onClick={handleRunAnalysis}
           disabled={!isParsed || !localJd.trim() || isAnalyzing || isSaving}
-          className=" disabled:opacity-30 disabled:grayscale"
+          className="disabled:opacity-40"
         >
           {isAnalyzing ? (
             <div className="flex items-center gap-2">
@@ -149,18 +154,30 @@ export default function JdSection({
         </Button>
       </div>
 
+      {/* Height animates via grid rows (1fr <-> 0fr); CSS can't transition to or from `auto`. */}
       <div
         className={cn(
-          "relative group transition-all duration-300",
-          isJdPaneOpen ? "h-[300px] sm:h-auto flex-1" : "h-0 overflow-hidden",
+          "grid transition-[grid-template-rows] duration-300 ease-out",
+          isJdPaneOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
         )}
       >
-        <Textarea
-          value={localJd}
-          onChange={(e) => setLocalJd(e.target.value)}
-          placeholder="Paste the Job Description (JD) here"
-          className="h-full w-full bg-input transition-all  text-sm p-4 rounded-xl resize-none"
-        />
+        <div
+          inert={!isJdPaneOpen}
+          className={cn(
+            "min-h-0 overflow-hidden transition-opacity duration-300",
+            isJdPaneOpen ? "opacity-100" : "opacity-0",
+          )}
+        >
+          {/* Padding sits inside the clipped box so the gap collapses with it, and the focus ring isn't cut off. */}
+          <div className="px-0.5 pb-0.5 pt-5">
+            <Textarea
+              value={localJd}
+              onChange={(e) => setLocalJd(e.target.value)}
+              placeholder="Paste the Job Description (JD) here"
+              className="h-[300px] sm:h-[35vh] w-full text-sm p-4 rounded-xl resize-none"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

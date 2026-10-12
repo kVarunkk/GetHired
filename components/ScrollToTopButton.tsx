@@ -38,7 +38,7 @@ export default function ScrollToTopButton({
         className,
       )}
     >
-      <ArrowUp className="h-5 w-5" />
+      <ArrowUp className="h-4 w-4" />
     </button>
   );
 }

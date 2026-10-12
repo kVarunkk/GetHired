@@ -228,7 +228,7 @@ export default function CreateJobPostingDialog({
             <Pencil className=" h-4 w-4" />
           </Button>
         ) : (
-          <Button>
+          <Button variant="brand">
             <PlusCircle /> Create New Job Post
           </Button>
         )}
@@ -261,11 +261,7 @@ export default function CreateJobPostingDialog({
                     <FormItem>
                       <FormLabel>Job Title</FormLabel>
                       <FormControl>
-                        <Input
-                          className="bg-input"
-                          placeholder="Software Engineer"
-                          {...field}
-                        />
+                        <Input placeholder="Software Engineer" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -280,7 +276,7 @@ export default function CreateJobPostingDialog({
                       <FormControl>
                         <Textarea
                           placeholder="Write a detailed job description..."
-                          className="resize-y bg-input h-[200px]"
+                          className="resize-y h-[200px]"
                           {...field}
                         />
                       </FormControl>
@@ -321,7 +317,7 @@ export default function CreateJobPostingDialog({
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger className="bg-input">
+                            <SelectTrigger>
                               <SelectValue placeholder="Select a job type" />
                             </SelectTrigger>
                           </FormControl>
@@ -349,7 +345,7 @@ export default function CreateJobPostingDialog({
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger className="bg-input">
+                            <SelectTrigger>
                               <SelectValue placeholder="Select an option" />
                             </SelectTrigger>
                           </FormControl>
@@ -378,7 +374,7 @@ export default function CreateJobPostingDialog({
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger className="bg-input">
+                            <SelectTrigger>
                               <SelectValue placeholder="USD" />
                             </SelectTrigger>
                           </FormControl>
@@ -403,7 +399,6 @@ export default function CreateJobPostingDialog({
                         <FormControl>
                           <Input
                             type="number"
-                            className="bg-input"
                             placeholder="80000"
                             {...field}
                             onChange={(e) =>
@@ -428,7 +423,6 @@ export default function CreateJobPostingDialog({
                         <FormControl>
                           <Input
                             type="number"
-                            className="bg-input"
                             placeholder="120000"
                             {...field}
                             onChange={(e) =>
@@ -455,7 +449,6 @@ export default function CreateJobPostingDialog({
                         <FormControl>
                           <Input
                             type="number"
-                            className="bg-input"
                             placeholder="2"
                             {...field}
                             onChange={(e) =>
@@ -480,7 +473,6 @@ export default function CreateJobPostingDialog({
                         <FormControl>
                           <Input
                             type="number"
-                            className="bg-input"
                             placeholder="5"
                             {...field}
                             onChange={(e) =>
@@ -507,7 +499,6 @@ export default function CreateJobPostingDialog({
                         <FormControl>
                           <Input
                             type="number"
-                            className="bg-input"
                             placeholder="0.1"
                             step="0.01"
                             {...field}
@@ -533,7 +524,6 @@ export default function CreateJobPostingDialog({
                         <FormControl>
                           <Input
                             type="number"
-                            className="bg-input"
                             placeholder="0.5"
                             step="0.01"
                             {...field}
@@ -569,7 +559,7 @@ export default function CreateJobPostingDialog({
                               <FormControl>
                                 <Textarea
                                   placeholder={`Question ${index + 1}`}
-                                  className="resize-y bg-input"
+                                  className="resize-y"
                                   {...field}
                                 />
                               </FormControl>
@@ -624,12 +614,17 @@ export default function CreateJobPostingDialog({
               </Button>
             )}
             {step === 1 && (
-              <Button type="button" onClick={handleNextStep}>
+              <Button type="button" variant="brand" onClick={handleNextStep}>
                 Next
               </Button>
             )}
             {step === 2 && (
-              <Button form="JobPostingForm" type="submit" disabled={loading}>
+              <Button
+                form="JobPostingForm"
+                type="submit"
+                variant="brand"
+                disabled={loading}
+              >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -1,4 +1,3 @@
-import { cn } from "@/utils/utils";
 import { StepProps } from "../OnboardingComponent";
 import { CardContent } from "../ui/card";
 import { Label } from "../ui/label";
@@ -28,13 +27,11 @@ export const Step5CareerGoals: React.FC<StepProps> = ({
         onChange={(e) =>
           setFormData({ ...formData, career_goals_short_term: e.target.value })
         }
-        className={cn(
-          "mt-2 bg-input",
-          errors.career_goals_short_term ? "border-red-500 " : "",
-        )}
+        aria-invalid={!!errors.career_goals_short_term}
+        className="mt-2"
       />
       {errors.career_goals_short_term && (
-        <p className="text-red-500 text-sm mt-1">
+        <p className="text-destructive text-sm mt-1">
           {errors.career_goals_short_term}
         </p>
       )}
@@ -51,13 +48,11 @@ export const Step5CareerGoals: React.FC<StepProps> = ({
         onChange={(e) =>
           setFormData({ ...formData, career_goals_long_term: e.target.value })
         }
-        className={cn(
-          "mt-2 bg-input",
-          errors.career_goals_long_term ? "border-red-500 " : "",
-        )}
+        aria-invalid={!!errors.career_goals_long_term}
+        className="mt-2"
       />
       {errors.career_goals_long_term && (
-        <p className="text-red-500 text-sm mt-1">
+        <p className="text-destructive text-sm mt-1">
           {errors.career_goals_long_term}
         </p>
       )}
@@ -73,13 +68,11 @@ export const Step5CareerGoals: React.FC<StepProps> = ({
         }
         value={formData.company_size_preference}
       >
-        <SelectTrigger className="mt-2 bg-input">
-          <SelectValue
-            placeholder="Select company size"
-            className={cn(
-              errors.company_size_preference ? "border-red-500 " : "",
-            )}
-          />
+        <SelectTrigger
+          className="mt-2"
+          aria-invalid={!!errors.company_size_preference}
+        >
+          <SelectValue placeholder="Select company size" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="Small (1-50)">Small (1-50 employees)</SelectItem>
@@ -91,7 +84,7 @@ export const Step5CareerGoals: React.FC<StepProps> = ({
         </SelectContent>
       </Select>
       {errors.company_size_preference && (
-        <p className="text-red-500 text-sm mt-1">
+        <p className="text-destructive text-sm mt-1">
           {errors.company_size_preference}
         </p>
       )}

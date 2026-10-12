@@ -27,13 +27,13 @@ export const Step3SkillsExperience: React.FC<StepProps> = ({
               e.target.value === "" ? "" : parseInt(e.target.value),
           })
         }
-        className={cn(
-          "mt-2 bg-input",
-          errors.experience_years ? "border-red-500 " : "",
-        )}
+        aria-invalid={!!errors.experience_years}
+        className="mt-2"
       />
       {errors.experience_years && (
-        <p className="text-red-500 text-sm mt-1">{errors.experience_years}</p>
+        <p className="text-destructive text-sm mt-1">
+          {errors.experience_years}
+        </p>
       )}
     </div>
 
@@ -51,12 +51,12 @@ export const Step3SkillsExperience: React.FC<StepProps> = ({
             setFormData((prev) => ({ ...prev, [name]: keywords }))
           }
           availableItems={commonSkills}
-          className={cn(errors.top_skills ? "border-red-500" : "")}
+          className={cn(errors.top_skills ? "border-destructive" : "")}
         />
       </div>
 
       {errors.top_skills && (
-        <p className="text-red-500 text-sm mt-1">{errors.top_skills}</p>
+        <p className="text-destructive text-sm mt-1">{errors.top_skills}</p>
       )}
     </div>
   </CardContent>

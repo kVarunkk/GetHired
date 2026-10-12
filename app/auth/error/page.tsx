@@ -29,12 +29,15 @@ export default async function Page({
                 </p>
               )}
               <div className="flex items-center gap-4 flex-wrap">
-                <Link href={"/auth/login"} className="text-sm underline ">
+                <Link
+                  href={"/auth/login"}
+                  className="text-sm font-medium underline underline-offset-4 transition-colors hover:text-brand"
+                >
                   Back to Login
                 </Link>
                 <Link
                   href={"mailto:varun@devhub.co.in"}
-                  className="text-sm underline "
+                  className="text-sm font-medium underline underline-offset-4 transition-colors hover:text-brand"
                 >
                   Contact Support
                 </Link>

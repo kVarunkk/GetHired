@@ -95,7 +95,7 @@ export default async function CompanyPage() {
     return (
       <div className="flex flex-col w-full gap-5 p-4 mb-20">
         <div className="flex items-center justify-between flex-wrap gap-5">
-          <h2 className="text-3xl font-medium text-start">
+          <h2 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-start">
             How are you doing today, {companyInfo.name}?
           </h2>
           <CreateJobPostingDialog companyId={companyInfo.id} />
@@ -103,35 +103,37 @@ export default async function CompanyPage() {
 
         {/* --- Metrics Section --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="flex flex-col items-center p-6 text-center shadow-none">
+          <Card className="flex flex-col items-center p-6 text-center">
             <CardHeader className="p-0"></CardHeader>
             <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-4xl font-extrabold">
+              <CardTitle className="text-3xl font-semibold tracking-tight">
                 {metrics.total_jobs || 0}
               </CardTitle>
-              <p className="text-muted-foreground font-medium">Job Posts</p>
+              <p className="text-sm text-muted-foreground font-medium">
+                Job Posts
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="flex flex-col items-center p-6 text-center shadow-none">
+          <Card className="flex flex-col items-center p-6 text-center">
             <CardHeader className="p-0"></CardHeader>
             <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-4xl font-extrabold">
+              <CardTitle className="text-3xl font-semibold tracking-tight">
                 {metrics.total_applicants || 0}
               </CardTitle>
-              <p className="text-muted-foreground font-semibold">
+              <p className="text-sm text-muted-foreground font-medium">
                 Total Applicants
               </p>
             </CardContent>
           </Card>
 
-          <Card className="flex flex-col items-center p-6 text-center shadow-none">
+          <Card className="flex flex-col items-center p-6 text-center">
             <CardHeader className="p-0"></CardHeader>
             <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-4xl font-extrabold">
+              <CardTitle className="text-3xl font-semibold tracking-tight">
                 {metrics.new_applicants_today || 0}
               </CardTitle>
-              <p className="text-muted-foreground font-semibold">
+              <p className="text-sm text-muted-foreground font-medium">
                 New Applicants Today
               </p>
             </CardContent>
@@ -141,7 +143,9 @@ export default async function CompanyPage() {
         {/* --- Active Job Posts Section --- */}
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-2xl font-medium">Your Job Posts</h3>
+            <h3 className="text-lg font-semibold tracking-tight">
+              Your Job Posts
+            </h3>
             <Link href={"/company/job-posts"}>
               <Button variant={"ghost"}>View all</Button>
             </Link>
@@ -152,7 +156,7 @@ export default async function CompanyPage() {
                 <CompanyJobPostingCard key={job.id} job={job} />
               ))
             ) : (
-              <p className="text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 You have no active job posts.
               </p>
             )}
@@ -162,52 +166,55 @@ export default async function CompanyPage() {
         {/* --- Recent Applicants Section --- */}
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-2xl font-medium">Recent Applicants</h3>
+            <h3 className="text-lg font-semibold tracking-tight">
+              Recent Applicants
+            </h3>
             <Link href={"/company/applicants"}>
               <Button variant={"ghost"}>View all</Button>
             </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recentApplicants.length > 0 ? (
-              recentApplicants.map((applicant) => (
-                <Card className="p-4 shadow-none" key={applicant.id}>
-                  <CardHeader className="p-0 mb-2 ">
-                    <CardTitle className="text-lg font-semibold">
+          {recentApplicants.length > 0 ? (
+            <ul className="divide-y rounded-xl border">
+              {recentApplicants.map((applicant) => (
+                <li
+                  key={applicant.id}
+                  className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/60 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                >
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <Link
+                      href={`/company/applicants/${applicant.id}`}
+                      className="font-medium underline underline-offset-4 transition-colors hover:text-brand sm:no-underline"
+                    >
+                      {applicant.user_info?.full_name || "New Applicant"}
+                    </Link>
+                    <div className="text-muted-foreground text-sm">
+                      Applied for{" "}
                       <Link
-                        href={`/company/applicants/${applicant.id}`}
-                        className="underline underline-offset-4 sm:no-underline hover:underline"
+                        href={`/company/job-posts/${applicant.job_postings?.id}`}
+                        className="underline underline-offset-4 sm:no-underline font-medium hover:underline"
                       >
-                        {applicant.user_info?.full_name || "New Applicant"}
+                        {applicant.job_postings?.title}
                       </Link>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0 flex flex-col gap-2">
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 text-sm text-muted-foreground">
                     <ApplicationStatusBadge
                       status={applicant.status as TApplicationStatus}
                     />
-                    <div className="flex items-center justify-between w-full">
-                      <div className="text-muted-foreground text-sm">
-                        Applied for{" "}
-                        <Link
-                          href={`/company/job-posts/${applicant.job_postings?.id}`}
-                          className="underline underline-offset-4 sm:no-underline font-semibold hover:underline"
-                        >
-                          {applicant.job_postings?.title}
-                        </Link>
-                      </div>
-                      <div className="text-muted-foreground text-sm">
-                        {formatDistanceToNow(new Date(applicant.created_at), {
-                          addSuffix: true,
-                        })}
-                      </div>
+                    <div>
+                      {formatDistanceToNow(new Date(applicant.created_at), {
+                        addSuffix: true,
+                      })}
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <p className="text-muted-foreground">No recent applications.</p>
-            )}
-          </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No recent applications.
+            </p>
+          )}
         </div>
       </div>
     );

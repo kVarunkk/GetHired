@@ -9,12 +9,12 @@ describe("ApplicationStatusBadge", () => {
 
     const badge = screen.getByText("selected");
     expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass("bg-green-500");
+    expect(badge).toHaveClass("text-success");
   });
 
-  it("uses the red style for rejected applications", () => {
+  it("uses the destructive style for rejected applications", () => {
     render(<ApplicationStatusBadge status={TApplicationStatus.REJECTED} />);
 
-    expect(screen.getByText("rejected")).toHaveClass("bg-red-500");
+    expect(screen.getByText("rejected")).toHaveClass("text-destructive");
   });
 });

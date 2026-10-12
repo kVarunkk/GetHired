@@ -169,7 +169,7 @@ export default function DynamicActions<T extends Item>({
               }}
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             >
               <Trash className="h-4 w-4" />
             </Button>
@@ -194,14 +194,16 @@ export default function DynamicActions<T extends Item>({
             <form className="flex flex-col gap-5" onSubmit={handleUpdate}>
               {fields.map((field) => (
                 <div key={field.name} className="flex flex-col gap-2">
-                  <label htmlFor={field.name}>{field.label}</label>
+                  <label htmlFor={field.name} className="text-sm font-medium">
+                    {field.label}
+                  </label>
                   <Input
                     id={field.name}
                     name={field.name}
                     type={field.type || "text"}
                     placeholder={field.placeholder}
                     defaultValue={getFieldValue(field.name)}
-                    className="bg-input text-sm h-10 border-zinc-200 dark:border-zinc-800"
+                    className="text-sm h-10"
                     required={field.required}
                   />
                 </div>
@@ -216,7 +218,7 @@ export default function DynamicActions<T extends Item>({
                 <Button disabled={formLoading} type="submit">
                   {formLoading ? (
                     <div className="flex items-center gap-2">
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       Saving
                     </div>
                   ) : (
@@ -239,7 +241,7 @@ export default function DynamicActions<T extends Item>({
               >
                 {deleteLoading ? (
                   <div className="flex items-center gap-2">
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Deleting
                   </div>
                 ) : (

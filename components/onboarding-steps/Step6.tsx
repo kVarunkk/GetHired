@@ -1,7 +1,7 @@
 import { StepProps } from "../OnboardingComponent";
 import { CardContent } from "../ui/card";
 import { Label } from "../ui/label";
-import { Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import ResumeSourceSelector from "../ResumeSourceSelector";
 import { TResumeReviewResume } from "@/utils/types/review.types";
 import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
@@ -28,8 +28,8 @@ export const Step6ResumeUpload: React.FC<StepProps> = ({
         </div>
 
         {isLoading ? (
-          <div className="h-32 flex items-center justify-center border-2 border-dashed rounded-xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/20">
-            <Loader2 className="animate-spin h-5 w-5 " />
+          <div className="h-32 flex items-center justify-center border-2 border-dashed rounded-xl bg-muted/40">
+            <Loader2 className="animate-spin h-5 w-5 text-muted-foreground" />
           </div>
         ) : (
           <ResumeSourceSelector
@@ -53,7 +53,11 @@ export const Step6ResumeUpload: React.FC<StepProps> = ({
         )}
 
         {errors.resume_file && (
-          <p className="text-red-500 text-xs font-medium bg-red-500/10 p-2 rounded-md border border-red-500/20">
+          <p
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+          >
+            <AlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
             {errors.resume_file}
           </p>
         )}

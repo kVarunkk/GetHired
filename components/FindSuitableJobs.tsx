@@ -182,12 +182,12 @@ export default function FindSuitableJobs({
         >
           <SelectTrigger
             disabled={isPending}
-            className="rounded-full bg-primary shadow-lg w-[200px]"
+            className="rounded-full border-brand bg-brand hover:bg-brand/90 hover:border-brand w-[200px]"
           >
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             <SelectValue
               placeholder={
-                <p className="flex items-center gap-2 text-primary-foreground">
+                <p className="flex items-center gap-2 text-brand-foreground">
                   <Search className="w-4 h-4" /> Find Suitable Profiles
                 </p>
               }
@@ -226,7 +226,10 @@ export default function FindSuitableJobs({
                   ? `${data.profile.ai_credits} AI Credits available.`
                   : ""
               }`}{" "}
-              <Link href={"/dashboard/buy-credits"} className="text-blue-500">
+              <Link
+                href={"/dashboard/buy-credits"}
+                className="font-medium underline underline-offset-4"
+              >
                 Recharge Credits
               </Link>
             </p>
@@ -240,9 +243,10 @@ export default function FindSuitableJobs({
     return (
       <div className="flex items-center ">
         <Button
+          variant="brand"
           disabled={isPending}
           onClick={() => handleAiSearch()}
-          className="rounded-full bg-primary shadow-lg "
+          className="rounded-full"
         >
           {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           <Search className="w-4 h-4" /> Find Suitable Companies
@@ -257,7 +261,10 @@ export default function FindSuitableJobs({
                   ? `${data.profile.ai_credits} AI Credits available.`
                   : ""
               }`}{" "}
-              <Link href={"/dashboard/buy-credits"} className="text-blue-500">
+              <Link
+                href={"/dashboard/buy-credits"}
+                className="font-medium underline underline-offset-4"
+              >
                 Recharge Credits
               </Link>
             </p>
@@ -284,7 +291,7 @@ export default function FindSuitableJobs({
       >
         <SelectTrigger
           disabled={isPending}
-          className="rounded-full bg-primary shadow-lg w-[180px] !text-primary-foreground"
+          className="rounded-full border-brand bg-brand hover:bg-brand/90 hover:border-brand w-[180px] !text-brand-foreground"
         >
           {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           <SelectValue
@@ -319,7 +326,10 @@ export default function FindSuitableJobs({
                 ? `${data.profile.ai_credits} AI Credits available.`
                 : ""
             }`}{" "}
-            <Link href={"/dashboard/buy-credits"} className="text-blue-500">
+            <Link
+              href={"/dashboard/buy-credits"}
+              className="font-medium underline underline-offset-4"
+            >
               Recharge Credits
             </Link>
           </p>

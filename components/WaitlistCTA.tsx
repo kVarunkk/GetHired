@@ -21,10 +21,9 @@ export default function WaitlistCTA({
       className={cn(
         "group inline-flex items-center justify-center gap-3 px-4 py-2  border transition-all ",
         // Background & Border: Using the soft brand tint with a slight transparency
-        "bg-brandSoft border-brand/10 ",
+        "bg-brandSoft border-brand/30 ",
         // Text Colors
-        "text-brand-soft-foreground",
-        // "shadow-sm hover:shadow-md ",
+        "text-brandSoft-foreground",
         className,
       )}
     >
@@ -32,7 +31,7 @@ export default function WaitlistCTA({
         <div className="flex items-center justify-center w-5 h-5 rounded-full bg-brand text-brand-foreground animate-pulse shrink-0">
           <Sparkles size={12} fill="currentColor" />
         </div>
-        <span className="text-xs sm:text-sm font-semibold tracking-tight">
+        <span className="text-xs sm:text-sm font-medium tracking-tight">
           {content}
         </span>
       </div>

@@ -18,7 +18,7 @@ export default function HeroRemotePage({
 
   return (
     <div className="flex flex-col gap-5 w-full items-center text-center px-4 py-3 lg:px-20 xl:px-40 2xl:px-80">
-      <h1 className="text-5xl sm:text-7xl font-black tracking-tight leading-[1.1]">
+      <h1 className="text-5xl sm:text-7xl font-semibold tracking-tight leading-[1.1]">
         Top Remote Jobs in {decodedLocation}
       </h1>
 
@@ -31,7 +31,7 @@ export default function HeroRemotePage({
         <Link
           href={`/jobs?location=${location.toLowerCase()}|remote&sortBy=created_at&sortOrder=desc`}
         >
-          <Button>Find Remote Jobs</Button>
+          <Button variant="brand">Find Remote Jobs</Button>
         </Link>
       </div>
 

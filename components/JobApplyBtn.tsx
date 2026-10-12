@@ -40,6 +40,8 @@ export default function JobApplyBtn({
   hasCredits: boolean;
 }) {
   const [showReturnDialog, setShowReturnDialog] = useState(false);
+  // Apply is the main action on the job page (brand); in a list every row has one, so it stays default there.
+  const applyVariant = isJobIdPage ? "brand" : "default";
 
   return (
     <>
@@ -64,7 +66,7 @@ export default function JobApplyBtn({
                         status via the{" "}
                         <Link
                           onClick={(e) => e.stopPropagation()}
-                          className="underline text-blue-500"
+                          className="font-medium underline underline-offset-4"
                           href={job.job_url}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -77,7 +79,7 @@ export default function JobApplyBtn({
                         {!isJobIdPage && (
                           <Link
                             onClick={(e) => e.stopPropagation()}
-                            className="underline text-blue-500"
+                            className="font-medium underline underline-offset-4"
                             href={`/jobs/${job.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -114,6 +116,7 @@ export default function JobApplyBtn({
               rel="noopener noreferrer"
             >
               <Button
+                variant={applyVariant}
                 onClick={async (e) => {
                   e.stopPropagation();
                   setShowReturnDialog(true);
@@ -140,7 +143,7 @@ export default function JobApplyBtn({
               target="_blank"
               rel="noopener noreferrer"
             >
-              <Button>
+              <Button variant={applyVariant}>
                 Recharge to Apply <ArrowRight />
               </Button>
             </Link>
@@ -152,7 +155,7 @@ export default function JobApplyBtn({
               href={"/jobs/" + job.id + "?apply=true"}
               target={"_blank"}
             >
-              <Button>Easy Apply</Button>
+              <Button variant={applyVariant}>Easy Apply</Button>
             </Link>
           ) : (
             <JobApplicationDialog
@@ -164,7 +167,7 @@ export default function JobApplyBtn({
           )
         ) : (
           <Link onClick={(e) => e.stopPropagation()} href={"/get-started"}>
-            <Button>Complete Onboarding to Apply</Button>
+            <Button variant={applyVariant}>Complete Onboarding to Apply</Button>
           </Link>
         )
       ) : (
@@ -173,7 +176,7 @@ export default function JobApplyBtn({
           href={"/auth/sign-up?returnTo=/jobs/" + job.id}
           rel="noopener noreferrer"
         >
-          <Button>
+          <Button variant={applyVariant}>
             Apply Now <ArrowRight />
           </Button>
         </Link>

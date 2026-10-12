@@ -114,6 +114,7 @@ export default function JobApplicationDialog({
           ) : (
             <DialogTrigger asChild>
               <Button
+                variant="brand"
                 onClick={(e) => e.stopPropagation()}
                 className="capitalize"
                 disabled={
@@ -140,15 +141,15 @@ export default function JobApplicationDialog({
       <DialogContent className="max-w-4xl h-screen sm:h-[85vh] flex flex-col p-0 overflow-hidden">
         <div className="flex flex-col md:flex-row h-full">
           {/* left pane */}
-          <div className="flex-[0.4] sm:flex-[0.6] overflow-y-auto p-6 bg-secondary">
+          <div className="flex-[0.4] sm:flex-[0.6] overflow-y-auto p-6 bg-muted/30 border-b md:border-b-0 md:border-r">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-bold">
+              <DialogTitle className="text-2xl font-semibold tracking-tight">
                 Apply for {jobPost.job_name}
               </DialogTitle>
               <DialogDescription>at {jobPost.company_name}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-5">
-              <Card className="shadow-none border">
+              <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Company Profile</CardTitle>
                   {jobPost.company_url && (
@@ -171,7 +172,7 @@ export default function JobApplicationDialog({
                   </p>
                 </CardContent>
               </Card>
-              <Card className="shadow-none border">
+              <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Job Details</CardTitle>
                   <CardDescription className="text-sm font-medium">
@@ -180,32 +181,42 @@ export default function JobApplicationDialog({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <p className="font-semibold text-sm">Description</p>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Description
+                    </p>
                     <p className="text-sm ">
                       {jobPost.description || "No description provided."}
                     </p>
                   </div>
                   {jobPost.salary_range && (
                     <div>
-                      <p className="font-semibold text-sm">Salary Range</p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Salary Range
+                      </p>
                       <p className="text-sm ">{jobPost.salary_range}</p>
                     </div>
                   )}
                   {jobPost.experience && (
                     <div>
-                      <p className="font-semibold text-sm">Experience</p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Experience
+                      </p>
                       <p className="text-sm ">{jobPost.experience}</p>
                     </div>
                   )}
                   {jobPost.visa_requirement && (
                     <div>
-                      <p className="font-semibold text-sm">Visa Requirement</p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Visa Requirement
+                      </p>
                       <p className="text-sm ">{jobPost.visa_requirement}</p>
                     </div>
                   )}
                   {jobPost.equity_range && (
                     <div>
-                      <p className="font-semibold text-sm">Equity</p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Equity
+                      </p>
                       <p className="text-sm ">{jobPost.equity_range}</p>
                     </div>
                   )}

@@ -19,9 +19,9 @@ export default function ThemeAwareToaster() {
   const isDark = resolvedTheme === "dark";
 
   const themeStyles: React.CSSProperties = {
-    background: isDark ? "#18181b" : "#ffffff", // zinc-900 / white
-    color: isDark ? "#f4f4f5" : "#18181b", // zinc-100 / zinc-900
-    border: isDark ? "1px solid #27272a" : "1px solid #e4e4e7", // zinc-800 / zinc-200
+    background: "hsl(var(--popover))",
+    color: "hsl(var(--popover-foreground))",
+    border: "1px solid hsl(var(--border))",
     borderRadius: "12px",
     padding: "12px 16px",
     fontSize: "14px",
@@ -52,22 +52,24 @@ export default function ThemeAwareToaster() {
             transform: t.visible ? "translateY(0)" : "translateY(-20px)",
             borderLeft: `3px solid ${
               t.type === "success"
-                ? "#10b981"
+                ? "hsl(var(--success))"
                 : t.type === "error"
-                  ? "#ef4444"
-                  : "#6b7280"
+                  ? "hsl(var(--destructive))"
+                  : "hsl(var(--muted-foreground))"
             }`,
           }}
           className="group relative"
         >
           <div className="shrink-0 ">
             {t.type === "loading" && (
-              <Loader2 className="w-5 h-5 text-zinc-500 animate-spin" />
+              <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
             )}
             {t.type === "success" && (
-              <CheckCircle className="w-5 h-5 text-emerald-500" />
+              <CheckCircle className="w-4 h-4 text-success" />
             )}
-            {t.type === "error" && <XCircle className="w-5 h-5 text-red-500" />}
+            {t.type === "error" && (
+              <XCircle className="w-4 h-4 text-destructive" />
+            )}
           </div>
 
           <div className="flex-1 pr-2 min-w-0">
@@ -79,7 +81,7 @@ export default function ThemeAwareToaster() {
               onClick={() => {
                 toast.dismiss(t.id);
               }}
-              className="shrink-0 p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+              className="shrink-0 p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
               aria-label="Dismiss"
             >
               <X size={16} />

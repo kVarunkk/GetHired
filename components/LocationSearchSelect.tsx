@@ -129,7 +129,7 @@ export default function LocationSearchSelect({
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="w-full justify-between bg-input text-muted-foreground"
+              className="w-full justify-between text-muted-foreground"
             >
               <span className="truncate">
                 {initialLocations.length > 0
@@ -153,7 +153,7 @@ export default function LocationSearchSelect({
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="w-full justify-between bg-input text-muted-foreground"
+              className="w-full justify-between text-muted-foreground"
             >
               <span className="truncate">{placeholder}</span>
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -176,15 +176,15 @@ export default function LocationSearchSelect({
           {initialLocations.map((loc) => (
             <span
               key={loc}
-              className="flex items-center border border-border px-2 py-1 rounded text-sm"
+              className="flex items-center gap-0.5 rounded-full border py-0.5 pl-2.5 pr-1 text-sm"
             >
               {loc}
               <button
                 type="button"
                 onClick={() => removeLocation(loc)}
-                className="p-1"
+                className="rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </span>
           ))}

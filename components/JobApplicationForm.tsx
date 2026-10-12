@@ -146,28 +146,28 @@ export default function JobApplicationForm({
             className={cn(
               "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border transition-colors",
               step === 1
-                ? "bg-brand border-brand"
-                : "bg-emerald-500 border-emerald-500 ",
+                ? "bg-brand border-brand text-brand-foreground"
+                : "bg-success border-success text-success-foreground",
             )}
           >
             {step === 2 ? <CheckCircle2 size={12} /> : "1"}
           </div>
           <span
             className={cn(
-              "text-[10px] font-bold uppercase tracking-widest",
+              "text-xs font-medium",
               step === 1 ? "text-brand" : "text-muted-foreground",
             )}
           >
             Resume
           </span>
         </div>
-        <div className="h-px w-8 bg-muted-foreground" />
+        <div className="h-px w-8 bg-border" />
         <div className="flex items-center gap-2">
           <div
             className={cn(
               "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border transition-colors",
               step === 2
-                ? "bg-brand border-brand"
+                ? "bg-brand border-brand text-brand-foreground"
                 : "border-border text-muted-foreground",
             )}
           >
@@ -175,7 +175,7 @@ export default function JobApplicationForm({
           </div>
           <span
             className={cn(
-              "text-[10px] font-bold uppercase tracking-widest",
+              "text-xs font-medium",
               step === 2 ? "text-brand" : "text-muted-foreground",
             )}
           >
@@ -188,7 +188,9 @@ export default function JobApplicationForm({
         {step === 1 ? (
           <div className="p-4 space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="space-y-1">
-              <h3 className="text-lg font-bold">Select Application Resume</h3>
+              <h3 className="text-lg font-semibold tracking-tight">
+                Select Application Resume
+              </h3>
               <p className="text-xs text-muted-foreground">
                 The recruiter will see this version of your resume.
               </p>
@@ -196,7 +198,7 @@ export default function JobApplicationForm({
 
             {isLoading ? (
               <div className="py-12 flex flex-col items-center gap-3">
-                <Loader2 className="h-6 w-6 animate-spin" />
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 <p className="text-xs text-muted-foreground ">
                   Loading your library...
                 </p>
@@ -217,7 +219,9 @@ export default function JobApplicationForm({
         ) : (
           <div className="p-4 space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="space-y-1">
-              <h3 className="text-lg font-bold">Additional Questions</h3>
+              <h3 className="text-lg font-semibold tracking-tight">
+                Additional Questions
+              </h3>
               <p className="text-xs text-muted-foreground">
                 Company specific requirements.
               </p>
@@ -237,14 +241,14 @@ export default function JobApplicationForm({
                       name={`question_${i}`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                          <FormLabel className="text-sm font-medium">
                             {q}
                           </FormLabel>
                           <FormControl>
                             <Textarea
                               {...field}
                               placeholder="Your response..."
-                              className="bg-input resize-none h-32 "
+                              className="resize-none h-32"
                             />
                           </FormControl>
                           <FormMessage />
@@ -253,7 +257,7 @@ export default function JobApplicationForm({
                     />
                   ))
                 ) : (
-                  <div className="py-10 text-center border-2 border-dashed rounded-2xl border-zinc-100 dark:border-zinc-900">
+                  <div className="py-10 text-center border-2 border-dashed rounded-xl">
                     <p className="text-sm text-muted-foreground ">
                       No extra questions for this role. You&apos;re good to go!
                     </p>
@@ -272,13 +276,14 @@ export default function JobApplicationForm({
           variant="ghost"
           onClick={() => (step === 2 ? setStep(1) : null)}
           disabled={step === 1 || loading}
-          className="gap-2 text-xs font-bold uppercase tracking-widest"
+          className="gap-2"
         >
           <ArrowLeft size={14} /> Back
         </Button>
 
         {step === 1 ? (
           <Button
+            variant="brand"
             disabled={!selectedResumeId && !newFile}
             onClick={(e) => {
               e.preventDefault();
@@ -290,6 +295,7 @@ export default function JobApplicationForm({
           </Button>
         ) : (
           <Button
+            variant="brand"
             type="submit"
             form="application-questions-form"
             disabled={loading}

@@ -7,7 +7,14 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { DollarSign, XCircle, CheckCircle, Headset, Clock } from "lucide-react";
+import {
+  AlertCircle,
+  DollarSign,
+  XCircle,
+  CheckCircle,
+  Headset,
+  Clock,
+} from "lucide-react";
 import { getDodoClient } from "@/lib/dodo/initialize";
 import { Payment } from "dodopayments/resources/payments.mjs";
 import { formatCurrency } from "@/utils/utils";
@@ -34,8 +41,8 @@ export default async function CreditsStatusPage({
       status !== "processing");
 
   let title = "Transaction Status";
-  let icon = <DollarSign className="w-8 h-8 text-gray-500" />;
-  let cardBorderClass = "border-gray-500";
+  let icon = <DollarSign className="w-8 h-8 text-muted-foreground" />;
+  let cardBorderClass = "border-t-muted-foreground";
 
   if (paymentId) {
     try {
@@ -45,16 +52,16 @@ export default async function CreditsStatusPage({
 
       if (isSuccess) {
         title = "Purchase Successful!";
-        icon = <CheckCircle className="w-12 h-12 text-green-500" />;
-        cardBorderClass = "border-green-500";
+        icon = <CheckCircle className="w-12 h-12 text-success" />;
+        cardBorderClass = "border-t-success";
       } else if (isPending) {
         title = "Transaction is Pending";
-        icon = <Clock className="w-12 h-12 text-yellow-500" />;
-        cardBorderClass = "border-yellow-500";
+        icon = <Clock className="w-12 h-12 text-warning" />;
+        cardBorderClass = "border-t-warning";
       } else {
         title = "Transaction Failed";
-        icon = <XCircle className="w-12 h-12 text-red-500" />;
-        cardBorderClass = "border-red-500";
+        icon = <XCircle className="w-12 h-12 text-destructive" />;
+        cardBorderClass = "border-t-destructive";
       }
     } catch {
       fetchError =
@@ -63,35 +70,37 @@ export default async function CreditsStatusPage({
       isSuccess = false;
       isPending = false;
       isFailed = true;
-      cardBorderClass = "border-red-500";
-      icon = <XCircle className="w-12 h-12 text-red-500" />;
+      cardBorderClass = "border-t-destructive";
+      icon = <XCircle className="w-12 h-12 text-destructive" />;
     }
   } else if (status === "cancelled") {
     title = "Purchase Cancelled";
-    cardBorderClass = "border-gray-300";
-    icon = <XCircle className="w-12 h-12 text-gray-400" />;
+    cardBorderClass = "border-t-border";
+    icon = <XCircle className="w-12 h-12 text-muted-foreground" />;
     isFailed = true; // Treat cancellation as a non-success/non-pending state for CTA
   }
 
   // Determine card border color based on final status
   let finalBorderClass = cardBorderClass;
   if (isSuccess) {
-    finalBorderClass = "border-green-500";
+    finalBorderClass = "border-t-success";
   } else if (isPending) {
-    finalBorderClass = "border-yellow-500";
+    finalBorderClass = "border-t-warning";
   } else if (isFailed) {
-    finalBorderClass = "border-red-500";
+    finalBorderClass = "border-t-destructive";
   }
 
   // --- Render Logic ---
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] sm:p-4">
       <Card
-        className={`w-full max-w-lg shadow-2xl ${finalBorderClass} border-t-8`}
+        className={`w-full max-w-lg rounded-2xl ${finalBorderClass} border-t-4`}
       >
         <CardHeader className="text-center pb-4 space-y-3">
           <div className="flex justify-center mb-4">{icon}</div>
-          <CardTitle className="text-3xl font-bold">{title}</CardTitle>
+          <CardTitle className="text-2xl sm:text-[28px] font-semibold tracking-tight">
+            {title}
+          </CardTitle>
           <CardDescription>
             {isSuccess
               ? "Thank you for your purchase! Your AI credits have been credited to your account. Check your email for the transaction receipt."
@@ -105,7 +114,11 @@ export default async function CreditsStatusPage({
         </CardHeader>
         <CardContent className="space-y-6">
           {fetchError && (
-            <div className="p-4 bg-red-100 text-red-700 rounded-lg">
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+            >
+              <AlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
               {fetchError}
             </div>
           )}
@@ -114,19 +127,21 @@ export default async function CreditsStatusPage({
             <>
               {/* Summary Box */}
               <div className="border rounded-lg p-4 space-y-2">
-                <h3 className="text-xl font-semibold mb-2">Order Summary</h3>
+                <h3 className="text-lg font-semibold tracking-tight mb-2">
+                  Order Summary
+                </h3>
 
                 <div className="flex justify-between flex-wrap items-center">
                   <span className="text-muted-foreground">
                     AI Credits Purchased:
                   </span>
-                  <span className="font-bold text-lg text-primary">
+                  <span className="font-semibold text-lg">
                     {paymentDetails.metadata.credit_amount}
                   </span>
                 </div>
                 <div className="flex justify-between flex-wrap items-center">
                   <span className="text-muted-foreground">Amount Charged:</span>
-                  <span className="font-bold text-lg">
+                  <span className="font-semibold text-lg">
                     {formatCurrency(
                       paymentDetails.total_amount,
                       paymentDetails.currency,
@@ -141,21 +156,23 @@ export default async function CreditsStatusPage({
 
               {/* Billing Details */}
               <div className="border rounded-lg p-4 space-y-2 text-sm">
-                <h3 className="text-lg font-semibold mb-2">
+                <h3 className="text-lg font-semibold tracking-tight mb-2">
                   Billing & Customer
                 </h3>
                 <p>
-                  <strong>Email:</strong> {paymentDetails.customer.email}
+                  <strong className="font-medium">Email:</strong>{" "}
+                  {paymentDetails.customer.email}
                 </p>
                 <p>
-                  <strong>Billing Country:</strong>{" "}
+                  <strong className="font-medium">Billing Country:</strong>{" "}
                   {paymentDetails.billing.country}
                 </p>
                 <p>
-                  <strong>Transaction ID:</strong> {paymentDetails.payment_id}
+                  <strong className="font-medium">Transaction ID:</strong>{" "}
+                  {paymentDetails.payment_id}
                 </p>
                 <p>
-                  <strong>Date:</strong>{" "}
+                  <strong className="font-medium">Date:</strong>{" "}
                   {new Date(paymentDetails.created_at).toLocaleDateString()}
                 </p>
               </div>
@@ -169,7 +186,7 @@ export default async function CreditsStatusPage({
                   />
                 ) : (
                   <Link href="/dashboard/buy-credits" className="w-full block">
-                    <Button variant={"outline"} className="w-full ">
+                    <Button variant="brand" className="w-full ">
                       Retry Purchase
                     </Button>
                   </Link>
@@ -205,7 +222,7 @@ export default async function CreditsStatusPage({
                 charged.
               </p>
               <Link href="/dashboard/buy-credits" className="w-full block mt-4">
-                <Button>Return to Credit Purchase</Button>
+                <Button variant="brand">Return to Credit Purchase</Button>
               </Link>
             </div>
           )}

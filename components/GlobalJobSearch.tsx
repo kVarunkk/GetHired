@@ -138,7 +138,10 @@ export default function GlobalJobSearch() {
             {data && data.profile
               ? `${data.profile.ai_credits} AI Credits available.`
               : ""}
-            <Link href={"/dashboard/buy-credits"} className="text-blue-500">
+            <Link
+              href={"/dashboard/buy-credits"}
+              className="font-medium underline underline-offset-4"
+            >
               Recharge Credits
             </Link>
             <InfoTooltip
@@ -165,11 +168,15 @@ export default function GlobalJobSearch() {
             placeholder="e.g., Senior Java jobs in London with visa sponsorship"
             name="searchQuery"
             disabled={isLoading}
-            className="bg-input text-sm"
+            className="text-sm"
             ref={searchInputRef}
           />
 
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
 
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1" className="border-0">
@@ -198,7 +205,7 @@ export default function GlobalJobSearch() {
             </AccordionItem>
           </Accordion>
 
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" variant="brand" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Search Jobs
           </Button>

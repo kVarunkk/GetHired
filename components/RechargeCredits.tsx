@@ -100,19 +100,24 @@ export default function RechargeCredits({
               name="user_email"
               type="email"
               placeholder="email@example.com"
-              className="bg-input"
               required
               disabled={loading}
             />
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
 
             <Button disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin " />}
               Invite
             </Button>
           </form>
-          <div className="text-center text-muted-foreground">OR</div>
-          <Button asChild type="button">
+          <div className="text-center text-xs font-medium text-muted-foreground">
+            OR
+          </div>
+          <Button asChild type="button" variant="brand">
             <Link href={"/dashboard/buy-credits"}>Buy AI Credits</Link>
           </Button>
         </div>

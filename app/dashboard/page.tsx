@@ -73,25 +73,25 @@ export default async function DashboardPage() {
     return (
       <div className="flex flex-col w-full gap-5 mb-20 p-4">
         <div className="flex items-center justify-between flex-wrap gap-5">
-          <h1 className="text-3xl font-medium text-start capitalize">
+          <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-start capitalize">
             How are you doing today,{" "}
             {userInfoData.full_name ?? userInfoData.email?.split("@")[0]}?
           </h1>
-          <Button asChild>
-            <Link href={"/jobs"}>
+          <Button asChild variant="brand">
+            <Link href={"/agent"}>
               Find your next Job <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
         </div>
         {/* --- Metrics Section --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="flex flex-col items-center p-6 text-center shadow-none hover:bg-secondary transition-colors">
+          <Card className="flex flex-col items-center p-6 text-center hover:bg-muted/60 transition-colors">
             <CardHeader className="p-0"></CardHeader>
             <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-4xl font-extrabold">
+              <CardTitle className="text-3xl font-semibold tracking-tight">
                 {metrics.applications_submitted_weekly || 0}
               </CardTitle>
-              <p className="text-muted-foreground font-medium flex items-center gap-1">
+              <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
                 Applications Submitted
                 <InfoTooltip
                   content="
@@ -102,52 +102,52 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="flex flex-col items-center p-6 text-center shadow-none hover:bg-secondary transition-colors">
+          <Card className="flex flex-col items-center p-6 text-center hover:bg-muted/60 transition-colors">
             <CardHeader className="p-0"></CardHeader>
             <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-4xl font-extrabold">
+              <CardTitle className="text-3xl font-semibold tracking-tight">
                 {metrics.status_updates_weekly || 0}
               </CardTitle>
-              <p className="text-muted-foreground font-semibold flex items-center gap-1">
+              <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
                 Status Updates Received
                 <InfoTooltip content="Number of application status updates you received from companies in the past week." />
               </p>
             </CardContent>
           </Card>
 
-          <Card className="flex flex-col items-center p-6 text-center shadow-none hover:bg-secondary transition-colors">
+          <Card className="flex flex-col items-center p-6 text-center hover:bg-muted/60 transition-colors">
             <CardHeader className="p-0"></CardHeader>
             <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-4xl font-extrabold">
+              <CardTitle className="text-3xl font-semibold tracking-tight">
                 {metrics.jobs_favorited_weekly || 0}
               </CardTitle>
-              <p className="text-muted-foreground font-semibold flex items-center gap-1">
+              <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
                 Jobs Favorited
                 <InfoTooltip content="Number of Jobs you favorited in the past week." />
               </p>
             </CardContent>
           </Card>
 
-          <Card className="flex flex-col items-center p-6 text-center shadow-none hover:bg-secondary transition-colors">
+          <Card className="flex flex-col items-center p-6 text-center hover:bg-muted/60 transition-colors">
             <CardHeader className="p-0"></CardHeader>
             <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-4xl font-extrabold">
+              <CardTitle className="text-3xl font-semibold tracking-tight">
                 {metrics.resumes_created_weekly || 0}
               </CardTitle>
-              <p className="text-muted-foreground font-semibold flex items-center gap-1">
+              <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
                 Resumes Created
                 <InfoTooltip content="Number of resumes you have created in the past week." />
               </p>
             </CardContent>
           </Card>
 
-          <Card className="flex flex-col items-center p-6 text-center shadow-none hover:bg-secondary transition-colors">
+          <Card className="flex flex-col items-center p-6 text-center hover:bg-muted/60 transition-colors">
             <CardHeader className="p-0"></CardHeader>
             <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-4xl font-extrabold">
+              <CardTitle className="text-3xl font-semibold tracking-tight">
                 {metrics.resume_reviews_created_weekly || 0}
               </CardTitle>
-              <p className="text-muted-foreground font-semibold flex items-center gap-1">
+              <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
                 Resumes Analyzed
                 <InfoTooltip content="Number of resumes you have analyzed in the past week." />
               </p>
@@ -158,14 +158,16 @@ export default async function DashboardPage() {
         {/* --- Active Job Posts Section --- */}
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-2xl font-medium">Recently Applied Jobs</h3>
+            <h3 className="text-lg font-semibold tracking-tight">
+              Recently Applied Jobs
+            </h3>
             <Link href={"/jobs?tab=applied"}>
               <Button variant={"ghost"}>View all</Button>
             </Link>
           </div>
 
           {jobPosts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <ul className="divide-y rounded-xl border">
               {(
                 jobPosts as unknown as {
                   id: string;
@@ -177,32 +179,36 @@ export default async function DashboardPage() {
                   company_name: string;
                 }[]
               ).map((job) => (
-                <Card key={job.id} className="p-4 shadow-none group">
-                  <CardContent className="flex flex-col gap-2 p-0 h-full">
+                <li
+                  key={job.id}
+                  className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/60 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                >
+                  <div className="flex min-w-0 flex-col gap-0.5">
                     <Link
-                      className="text-lg font-bold hover:underline underline underline-offset-4 sm:no-underline flex-1"
+                      className="font-medium underline underline-offset-4 transition-colors hover:text-brand sm:no-underline"
                       href={`/jobs/${job.id}`}
                       target="_blank"
                     >
                       {job.job_name}
                     </Link>
-                    <div className="flex flex-col gap-2 ">
-                      <ApplicationStatusBadge status={job.status} />
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <p>{job.company_name}</p>
-                        <p>
-                          Applied {simpleTimeAgo("variant1", job.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    <p className="text-sm text-muted-foreground">
+                      {job.company_name}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 text-sm text-muted-foreground">
+                    <ApplicationStatusBadge status={job.status} />
+                    <p>Applied {simpleTimeAgo("variant1", job.created_at)}</p>
+                  </div>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
-            <p className="text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               You have no recently applied Jobs.{" "}
-              <Link className="underline underline-offset-4" href={"/jobs"}>
+              <Link
+                className="font-medium text-foreground underline underline-offset-4 transition-colors hover:text-brand"
+                href={"/jobs"}
+              >
                 Find your next Job today
               </Link>
             </p>
@@ -212,18 +218,18 @@ export default async function DashboardPage() {
         {/* --- More Section --- */}
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-2xl font-medium">More</h3>
+            <h3 className="text-lg font-semibold tracking-tight">More</h3>
             <DashboardDropdown />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card className="flex flex-col  p-4 text-center shadow-none  transition-colors">
+            <Card className="flex flex-col p-4 text-center">
               <CardHeader className="p-0"></CardHeader>
               <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full">
                 <div className=" flex items-center gap-3 ">
-                  <span className="text-4xl font-extrabold">
+                  <span className="text-3xl font-semibold tracking-tight">
                     {userInfoData.ai_credits || 0}
                   </span>
-                  <span className="text-muted-foreground font-medium">
+                  <span className="text-sm text-muted-foreground font-medium">
                     AI Credits left
                   </span>
                 </div>
@@ -234,18 +240,18 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="flex flex-col  p-4 text-center shadow-none  transition-colors">
+            <Card className="flex flex-col p-4 text-center">
               {/* <CardHeader className="p-0"></CardHeader> */}
               <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full flex-1">
                 <div className=" flex items-center gap-3 ">
                   {userInfoData.filled ? (
-                    <span className="text-4xl font-extrabold">
+                    <span className="text-3xl font-semibold tracking-tight">
                       {simpleTimeAgo("variant2", userInfoData.updated_at) || 0}
                     </span>
                   ) : (
                     ""
                   )}
-                  <span className="text-muted-foreground font-medium">
+                  <span className="text-sm text-muted-foreground font-medium">
                     {userInfoData.filled
                       ? "Days since the last Profile Update"
                       : "You've not completed your Profile. Please complete to use AI features."}
@@ -262,15 +268,15 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="flex flex-col  p-4 text-center shadow-none  transition-colors">
+            <Card className="flex flex-col p-4 text-center">
               {/* <CardHeader className="p-0"></CardHeader> */}
               <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full flex-1">
                 <div className=" flex items-center gap-3 ">
-                  <span className="text-4xl font-extrabold">
+                  <span className="text-3xl font-semibold tracking-tight">
                     {userInfoData.payments.length}
                   </span>
 
-                  <span className="text-muted-foreground font-medium">
+                  <span className="text-sm text-muted-foreground font-medium">
                     AI Credits purchases made
                   </span>
                 </div>
@@ -283,15 +289,15 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="flex flex-col  p-4 text-center shadow-none  transition-colors">
+            <Card className="flex flex-col p-4 text-center">
               {/* <CardHeader className="p-0"></CardHeader> */}
               <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full flex-1">
                 <div className=" flex items-center gap-3 ">
-                  <span className="text-4xl font-extrabold">
+                  <span className="text-3xl font-semibold tracking-tight">
                     {userInfoData.user_api_tokens.length}
                   </span>
 
-                  <span className="text-muted-foreground font-medium">
+                  <span className="text-sm text-muted-foreground font-medium">
                     API Keys created
                   </span>
                 </div>
