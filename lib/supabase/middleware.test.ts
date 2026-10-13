@@ -142,6 +142,10 @@ describe("middleware: regressions", () => {
     );
   });
 
+  it("lets signed-out visitors reach /api/current-user, which answers with a 401", async () => {
+    expect(passesThrough(await updateSession(request("/api/current-user")))).toBe(true);
+  });
+
   it("keeps /jobs public", async () => {
     expect(passesThrough(await updateSession(request("/jobs")))).toBe(true);
   });
@@ -150,6 +154,20 @@ describe("middleware: regressions", () => {
     vi.mocked(getUserFromRequest).mockResolvedValue(company);
 
     expect(redirectTarget(await updateSession(request("/dashboard")))).toBe("/auth/login");
+  });
+
+  it("keeps interviews applicant-only", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(company);
+
+    expect(redirectTarget(await updateSession(request("/interview")))).toBe("/auth/login");
+    expect(redirectTarget(await updateSession(request("/interview/i1/analysis/s1")))).toBe(
+      "/auth/login",
+    );
+    expect(passesThrough(await updateSession(request("/ai-interview")))).toBe(true);
+
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+
+    expect(passesThrough(await updateSession(request("/interview/i1")))).toBe(true);
   });
 
   it("still allows gh_ tokens on their API routes", async () => {

@@ -65,6 +65,9 @@ export async function updateSession(request: NextRequest) {
     "/extension",
     "/ai-resume-checker",
     "/api/jobs",
+    // Answers signed-out callers itself with a 401 JSON body. Redirecting it to
+    // the login page hands SWR HTML, which fails to parse and is retried forever.
+    "/api/current-user",
     "/api/profiles",
     "/api/locations",
     "/api/health",
@@ -123,6 +126,10 @@ export async function updateSession(request: NextRequest) {
     pathname === "/get-started" && !(searchParams.get("company") === "true");
 
   const isResumeReviewPath = pathname.startsWith("/resume-review");
+
+  // Not /ai-interview, which is the public landing page.
+  const isInterviewPath =
+    pathname === "/interview" || pathname.startsWith("/interview/");
 
   const isAgentPath = pathname === "/agent" || pathname.startsWith("/agent/");
   const isAgentApiPath = pathname.startsWith("/api/agent/");
@@ -279,11 +286,12 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // --- Restrict Access to Applicant only routes(dashboard, get-started, agent) ---
+    // --- Restrict Access to Applicant only routes(dashboard, get-started, agent, interview) ---
     if (
       (pathname.startsWith("/dashboard") ||
         isApplicantOnboardingPath ||
         isResumeReviewPath ||
+        isInterviewPath ||
         isAgentPath) &&
       !isApplicant
     ) {
