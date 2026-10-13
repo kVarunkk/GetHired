@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import AgentShell from "@/components/agent/AgentShell";
@@ -30,21 +31,28 @@ export default async function AgentPage({
 
     const { session, prompt: promptParam } = await searchParams;
     const prompt = readPromptParam(promptParam);
-    const [{ sessions, activeSessionId, messages }, messagesUsedToday] = await Promise.all([
+    const [pageData, messagesUsedToday] = await Promise.all([
       loadAgentPageData(supabase, user.id, session, { newChat: prompt !== "" }),
       countUserMessagesToday(supabase, user.id, new Date()),
     ]);
 
-    return (
-      <AgentShell
-        initialSessions={sessions}
-        activeSessionId={activeSessionId}
-        initialMessages={messages}
-        initialDraft={prompt}
-        messagesUsedToday={messagesUsedToday}
-      />
-    );
+    if (pageData) {
+      const { sessions, activeSessionId, messages } = pageData;
+
+      return (
+        <AgentShell
+          initialSessions={sessions}
+          activeSessionId={activeSessionId}
+          initialMessages={messages}
+          initialDraft={prompt}
+          messagesUsedToday={messagesUsedToday}
+        />
+      );
+    }
   } catch {
     return <ErrorComponent />;
   }
+  // The requested session isn't the user's. notFound() throws, so it's
+  // called outside the try, which would catch it.
+  notFound();
 }

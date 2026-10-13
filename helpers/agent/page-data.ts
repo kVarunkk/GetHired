@@ -19,8 +19,12 @@ async function createSession(supabase: SupabaseClient<Database>, userId: string)
 
 /**
  * Data for the /agent page: the user's sessions (newest first), the session
- * to open (`requestedId` if it is theirs, otherwise the newest) and its
+ * to open (`requestedId`, or the newest when none is asked for) and its
  * messages. Creates a first session for users who have none.
+ *
+ * Returns null when `requestedId` isn't one of the user's sessions (another
+ * user's, deleted, or made up), so the page can 404 rather than show a
+ * different chat under that URL.
  *
  * `newChat` (a prompt to start with) opens an empty chat instead of the
  * newest one: the newest if it is still empty, else a new session.
@@ -30,7 +34,7 @@ export async function loadAgentPageData(
   userId: string,
   requestedId: string | undefined,
   { newChat = false }: { newChat?: boolean } = {},
-): Promise<{ sessions: SessionSummary[]; activeSessionId: string; messages: UIMessage[] }> {
+): Promise<{ sessions: SessionSummary[]; activeSessionId: string; messages: UIMessage[] } | null> {
   const { data, error } = await supabase
     .from("agent_sessions")
     .select(SESSION_COLUMNS)
@@ -39,9 +43,10 @@ export async function loadAgentPageData(
   if (error) throw error;
 
   let sessions = data ?? [];
-  if (sessions.length === 0) sessions = [await createSession(supabase, userId)];
+  const requested = requestedId ? sessions.find((s) => s.id === requestedId) : undefined;
+  if (requestedId && !requested) return null;
 
-  const requested = sessions.find((s) => s.id === requestedId);
+  if (sessions.length === 0) sessions = [await createSession(supabase, userId)];
   const active = requested ?? sessions[0];
   const messages = (await loadSession(supabase, userId, active.id))?.messages ?? [];
 

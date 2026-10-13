@@ -35,14 +35,29 @@ describe("loadAgentPageData", () => {
     ]);
   });
 
-  it("falls back to the newest session for an unknown or missing id", async () => {
+  it("opens the newest session when none is requested", async () => {
     supabase.queue("agent_sessions", { data: [S1, S2], error: null });
     supabase.queue("agent_sessions", { data: FULL(S1), error: null });
 
-    const data = await loadAgentPageData(supabase.client, "u1", "someone-elses");
+    const data = await loadAgentPageData(supabase.client, "u1", undefined);
 
-    expect(data.activeSessionId).toBe("s1");
-    expect(data.messages).toEqual([]);
+    expect(data?.activeSessionId).toBe("s1");
+    expect(data?.messages).toEqual([]);
+  });
+
+  it("returns null for a session that isn't the user's", async () => {
+    supabase.queue("agent_sessions", { data: [S1, S2], error: null });
+    supabase.queue("agent_sessions", { data: [S1, S2], error: null });
+
+    expect(await loadAgentPageData(supabase.client, "u1", "someone-elses")).toBeNull();
+    expect(await loadAgentPageData(supabase.client, "u1", "someone-elses", { newChat: true })).toBeNull();
+  });
+
+  it("returns null for a requested id without creating a first session", async () => {
+    supabase.queue("agent_sessions", { data: [], error: null });
+
+    expect(await loadAgentPageData(supabase.client, "u1", "s9")).toBeNull();
+    expect(supabase.callsFor("agent_sessions")).toHaveLength(1);
   });
 
   it("creates a first session for new users", async () => {
@@ -52,8 +67,8 @@ describe("loadAgentPageData", () => {
 
     const data = await loadAgentPageData(supabase.client, "u1", undefined);
 
-    expect(data.sessions).toEqual([{ id: "s9", title: "New chat", updated_at: "now" }]);
-    expect(data.activeSessionId).toBe("s9");
+    expect(data?.sessions).toEqual([{ id: "s9", title: "New chat", updated_at: "now" }]);
+    expect(data?.activeSessionId).toBe("s9");
     expect(supabase.callsFor("agent_sessions")[1].chain).toEqual([
       { method: "insert", args: [{ user_id: "u1" }] },
       { method: "select", args: ["id, title, updated_at"] },
@@ -96,7 +111,7 @@ describe("loadAgentPageData", () => {
 
     const data = await loadAgentPageData(supabase.client, "u1", "s2", { newChat: true });
 
-    expect(data.activeSessionId).toBe("s2");
+    expect(data?.activeSessionId).toBe("s2");
     expect(supabase.callsFor("agent_sessions")).toHaveLength(2);
   });
 
