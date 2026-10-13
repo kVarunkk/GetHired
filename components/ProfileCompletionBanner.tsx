@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { BriefcaseBusiness, Mail, Timer } from "lucide-react";
+import { BriefcaseBusiness, Mail, Sparkles, Timer } from "lucide-react";
+import {
+  agentPromptHref,
+  ONBOARDING_PROMPT,
+  savePendingPrompt,
+} from "@/helpers/agent/prompt-draft";
 
 export default function ProfileCompletionBanner() {
   return (
@@ -27,11 +32,16 @@ export default function ProfileCompletionBanner() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-6">
-        <Link className="w-full" href={"/get-started"} passHref>
-          <Button size="lg" variant="brand" className="w-full sm:w-auto px-8">
-            Complete Profile
-          </Button>
-        </Link>
+        <Button asChild size="lg" variant="brand" className="w-full sm:w-auto px-8">
+          {/* Saved too, so the prompt survives a detour through login. */}
+          <Link
+            href={agentPromptHref(ONBOARDING_PROMPT)}
+            onClick={() => savePendingPrompt(ONBOARDING_PROMPT)}
+          >
+            <Sparkles className="h-4 w-4" />
+            Complete Profile with the Agent
+          </Link>
+        </Button>
       </div>
     </div>
   );

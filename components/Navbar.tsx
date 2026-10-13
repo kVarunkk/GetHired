@@ -96,12 +96,9 @@ export default function NavbarComponent({
         {variant === "horizontal" && (
           <WaitlistCTA
             content={
-              <p>
-                Prepare for your next interview with our new AI Interview
-                feature
-              </p>
+              <p>Use the brand new GetHired Agent to automate your Job Hunt.</p>
             }
-            redirectTo="/ai-interview"
+            redirectTo="/agent"
           />
         )}
         <div
@@ -182,7 +179,8 @@ export default function NavbarComponent({
             ) : (
               <div className="flex items-center gap-2">
                 <Link
-                  className="hover:text-primary p-2"
+                  // Hidden on very small phones to leave room for the auth buttons.
+                  className="hover:text-primary p-2 max-[400px]:hidden"
                   href={"https://discord.gg/6xvKBqW5eW"}
                   target="_blank"
                   aria-label="Join Community"

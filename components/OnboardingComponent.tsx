@@ -31,7 +31,13 @@ import { Step5CareerGoals } from "./onboarding-steps/Step5";
 import { Step6ResumeUpload } from "./onboarding-steps/Step6";
 import { Step7ReviewSubmit } from "./onboarding-steps/Step7";
 import { isValidUrl } from "@/utils/utils";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, Sparkles } from "lucide-react";
+import Link from "next/link";
+import {
+  agentPromptHref,
+  ONBOARDING_PROMPT,
+  savePendingPrompt,
+} from "@/helpers/agent/prompt-draft";
 import { submitOnboardingAction } from "@/app/actions/submit-onboarding";
 import { useProgress } from "react-transition-progress";
 import { APPLICANT_HOME } from "@/helpers/user/home-path";
@@ -475,6 +481,20 @@ export const OnboardingForm: React.FC = () => {
         <p className="text-2xl sm:text-[28px] font-semibold tracking-tight">
           Let&apos;s get you Hired, quickly.
         </p>
+        <div className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Rather chat? The agent can set up your profile for you.
+          </p>
+          <Button asChild variant="brand" className="shrink-0">
+            <Link
+              href={agentPromptHref(ONBOARDING_PROMPT)}
+              onClick={() => savePendingPrompt(ONBOARDING_PROMPT)}
+            >
+              <Sparkles className="h-4 w-4" />
+              Complete with the Agent
+            </Link>
+          </Button>
+        </div>
         {preferences ? (
           <UserOnboardingPersonalization
             initialPreferences={preferences}

@@ -100,7 +100,7 @@ const MESSAGES: UIMessage[] = [
 ];
 
 const SUGGESTIONS = [
-  "Review my resume for the Lumen Labs role",
+  "Review my resume",
   "Save the top two",
   "Only show jobs posted this week",
 ];

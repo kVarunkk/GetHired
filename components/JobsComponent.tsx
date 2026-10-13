@@ -475,7 +475,7 @@ export default function JobsComponent({
                   <Search className="w-4 h-4" />
                   {current_page === "companies"
                     ? "Find Suitable Companies"
-                    : "Find Suitable Jobs"}
+                    : "AI Smart Search"}
                 </Link>
               </Button>
             </div>
@@ -495,7 +495,7 @@ export default function JobsComponent({
                 <Search className="w-4 h-4" />
                 {current_page === "companies"
                   ? "Find Suitable Companies"
-                  : "Find Suitable Jobs"}
+                  : "AI Smart Search"}
               </Link>
             </Button>
           )}
