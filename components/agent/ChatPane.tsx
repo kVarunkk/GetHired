@@ -329,7 +329,7 @@ export default function ChatPane({
                 className="relative pl-6 text-sm leading-6 text-muted-foreground"
               >
                 <StepNode tone="running" />
-                Thinking…
+                <span className="agent-shimmer">Thinking…</span>
               </div>
             )}
 

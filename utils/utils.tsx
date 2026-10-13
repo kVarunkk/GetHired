@@ -404,6 +404,10 @@ const verticalNavbarPaths = [
 
 export const noScrollToTop = ["/resume-review/"];
 
+// Pages that take exactly the viewport height (below the navbar on phones)
+// and scroll inside themselves instead of scrolling the page.
+export const fullHeightPaths = ["/agent"];
+
 export const getNavItemsByPath = (
   path: string,
   isCompanyUser: boolean,

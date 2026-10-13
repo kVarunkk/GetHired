@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UIMessage } from "ai";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AgentShell from "./AgentShell";
 
-vi.mock("next/navigation", () => ({ useRouter: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: vi.fn(), useSearchParams: vi.fn() }));
 vi.mock("./MemoriesPanel", () => ({ default: () => <div>memories panel</div> }));
 vi.mock("./ChatPane", () => ({
   default: ({
@@ -32,6 +32,7 @@ const MESSAGES: UIMessage[] = [{ id: "u1", role: "user", parts: [{ type: "text",
 
 let push: ReturnType<typeof vi.fn>;
 let refresh: ReturnType<typeof vi.fn>;
+let replace: ReturnType<typeof vi.fn>;
 let fetchMock: ReturnType<typeof vi.fn>;
 
 const json = (body: unknown, status = 200) =>
@@ -40,7 +41,9 @@ const json = (body: unknown, status = 200) =>
 beforeEach(() => {
   push = vi.fn();
   refresh = vi.fn();
-  vi.mocked(useRouter).mockReturnValue({ push, refresh } as never);
+  replace = vi.fn();
+  vi.mocked(useRouter).mockReturnValue({ push, refresh, replace } as never);
+  vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("session=s1") as never);
   fetchMock = vi.fn((url: string, init?: RequestInit) => {
     if (url === "/api/agent/sessions" && init?.method === "POST") {
       return json({ session: { id: "s3", title: "New chat", updated_at: "now" } }, 201);
@@ -155,5 +158,20 @@ describe("AgentShell", () => {
     await userEvent.click(screen.getByRole("button", { name: "finish reply" }));
 
     expect(refresh).toHaveBeenCalledTimes(1);
+    expect(replace).not.toHaveBeenCalled();
+  });
+});
+
+describe("AgentShell: a reply in a chat opened with a prompt", () => {
+  it("goes to the session's URL instead of refreshing ?prompt=, which would open another chat", async () => {
+    vi.mocked(useSearchParams).mockReturnValue(
+      new URLSearchParams("prompt=remote%20Go%20jobs") as never,
+    );
+    render(<AgentShell initialSessions={SESSIONS} activeSessionId="s2" initialMessages={[]} />);
+
+    await userEvent.click(screen.getAllByRole("button", { name: "finish reply" }).at(-1)!);
+
+    expect(replace).toHaveBeenCalledWith("/agent?session=s2", { scroll: false });
+    expect(refresh).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { UIMessage } from "ai";
 import { PanelLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import toast from "react-hot-toast";
@@ -34,6 +34,9 @@ export default function AgentShell({
   titleRefreshDelayMs?: number;
 }) {
   const router = useRouter();
+  // The router's view of the URL. It can still hold ?prompt= after the
+  // history.replaceState below, which bypasses the router.
+  const searchParams = useSearchParams();
   const [sessions, setSessions] = useState(initialSessions);
   const [creating, setCreating] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -117,8 +120,9 @@ export default function AgentShell({
     />
   );
 
+  // Fills what LayoutWrapper leaves below the navbar (see fullHeightPaths).
   return (
-    <div className="flex h-[calc(100dvh-4rem)] w-full md:h-dvh">
+    <div className="flex min-h-0 w-full flex-1">
       {/* Kept mounted so the width can animate; the inner box keeps a fixed width so items don't reflow mid-animation. */}
       <aside
         id="agent-sessions"
@@ -144,7 +148,7 @@ export default function AgentShell({
           <div className="flex min-w-0 items-center gap-1">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
-                <Button size="icon" variant="ghost" className="md:hidden" aria-label="Open chats">
+                <Button size="icon" variant="ghost" className="shrink-0 md:hidden" aria-label="Open chats">
                   <PanelLeft className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
@@ -159,7 +163,7 @@ export default function AgentShell({
             <Button
               size="icon"
               variant="ghost"
-              className="hidden md:inline-flex"
+              className="hidden shrink-0 md:inline-flex"
               aria-label={sidebarOpen ? "Hide chats" : "Show chats"}
               aria-controls="agent-sessions"
               aria-expanded={sidebarOpen}
@@ -188,7 +192,12 @@ export default function AgentShell({
             // The reply is saved before the stream closes. Drop the client
             // Router Cache so coming back to this page loads the new turn
             // instead of the payload from when the page was first opened.
-            router.refresh();
+            // While the router still thinks the URL is /agent?prompt=…, a
+            // refresh would open yet another chat, so go to this session's
+            // URL instead (which loads it fresh too).
+            const sessionHref = `/agent?session=${activeSessionId}`;
+            if (searchParams.get("session") === activeSessionId) router.refresh();
+            else router.replace(sessionHref, { scroll: false });
             setTimeout(refreshSessions, titleRefreshDelayMs);
           }}
         />

@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { savePendingPrompt } from "@/helpers/agent/prompt-draft";
 import AgentShell from "./AgentShell";
 
-vi.mock("next/navigation", () => ({ useRouter: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: vi.fn(), useSearchParams: vi.fn() }));
 vi.mock("./MemoriesPanel", () => ({ default: () => null }));
 vi.mock("./ChatPane", () => ({
   default: ({ initialDraft }: { initialDraft?: string }) => (
@@ -28,6 +28,7 @@ const renderShell = (initialDraft?: string) =>
 beforeEach(() => {
   replace = vi.fn();
   vi.mocked(useRouter).mockReturnValue({ push: vi.fn(), replace, refresh: vi.fn() } as never);
+  vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
   window.history.replaceState(null, "", "/agent?prompt=remote%20Go%20jobs");
 });
 

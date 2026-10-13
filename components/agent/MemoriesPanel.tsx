@@ -108,7 +108,7 @@ export default function MemoriesPanel() {
           Memories
         </Button>
       </SheetTrigger>
-      <SheetContent className="flex flex-col gap-4 overflow-y-auto">
+      <SheetContent className="flex w-full flex-col gap-4 overflow-y-auto">
         <SheetHeader>
           <SheetTitle>What the assistant remembers</SheetTitle>
           <SheetDescription>

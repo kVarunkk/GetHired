@@ -92,7 +92,7 @@ function Step({
           tone === "failed" ? "text-destructive" : "text-muted-foreground",
         )}
       >
-        {label}
+        {tone === "running" ? <span className="agent-shimmer">{label}</span> : label}
       </div>
       {children && <div className="mt-2">{children}</div>}
     </li>

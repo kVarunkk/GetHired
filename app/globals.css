@@ -165,6 +165,35 @@
     transform: translateY(calc(-100% - var(--gap)));
   }
 }
+/* Agent status text ("Thinking…", running tool steps): a highlight sweeps
+   left to right. The gradient is wider than the text so the highlight starts
+   and ends off-screen, and the loop has no visible jump. */
+.agent-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--muted-foreground)) 0%,
+    hsl(var(--muted-foreground)) 40%,
+    hsl(var(--foreground)) 50%,
+    hsl(var(--muted-foreground)) 60%,
+    hsl(var(--muted-foreground)) 100%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: agent-shimmer 2s linear infinite;
+}
+
+@keyframes agent-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: 0% 0;
+  }
+}
+
 /* Agent replies: each streamed word fades in (components/agent/animate-words.ts). */
 .agent-word {
   animation: agent-word-in 0.4s ease-out both;
