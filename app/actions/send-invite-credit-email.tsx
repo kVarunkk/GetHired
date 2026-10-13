@@ -5,10 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "react-email";
 import { v4 as uuidv4 } from "uuid";
-import { updateUserAppMetadata } from "./update-user-metadata";
+import { setUserAppMetadata } from "@/helpers/user/set-app-metadata";
 import { deploymentUrl } from "@/utils/formatters";
 import { sendEmail } from "@/utils/email";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
+import { APPLICANT_HOME } from "@/helpers/user/home-path";
 
 const URL = deploymentUrl();
 
@@ -44,7 +45,7 @@ export async function sendInviteEmail(
     }
     const referralCode = referrerData.referral_code;
 
-    const finalRedirectUrl = `/jobs?ref=${referralCode}`;
+    const finalRedirectUrl = `${APPLICANT_HOME}?ref=${referralCode}`;
 
     const { data, error } = await serviceRoleSupabase.auth.admin.generateLink({
       type: "signup",
@@ -57,7 +58,7 @@ export async function sendInviteEmail(
         error ? error.message : "Error occured while creating Invite link.",
       );
     } else {
-      const { error: updateAppMetaError } = await updateUserAppMetadata(
+      const { error: updateAppMetaError } = await setUserAppMetadata(
         data.user?.id,
         {
           type: "applicant",

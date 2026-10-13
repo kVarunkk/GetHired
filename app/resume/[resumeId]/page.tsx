@@ -9,6 +9,8 @@ import { TAICredits } from "@/utils/types";
 import CreateReviewForResume from "@/components/CreateReviewForResume";
 import { RetryResumeParsing } from "@/components/RetryResumeParsing";
 import ResumeStatusBadge from "@/components/ResumeStatusBadge";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { isUuid } from "@/helpers/agent/auth";
 
 export default async function ResumeIdPage({
   params,
@@ -16,6 +18,7 @@ export default async function ResumeIdPage({
   params: Promise<{ resumeId: string }>;
 }) {
   const { resumeId } = await params;
+  if (!isUuid(resumeId)) notFound();
   try {
     const supabase = await createClient();
 
@@ -27,11 +30,10 @@ export default async function ResumeIdPage({
       .from("resumes")
       .select("*")
       .eq("id", resumeId)
-      .single();
+      .maybeSingle();
 
-    if (!data || error) {
-      throw new Error("Resume not found");
-    }
+    if (error) throw error;
+    if (!data) notFound();
 
     const isParsingFailed = data.parsing_failed === true;
 
@@ -51,8 +53,10 @@ export default async function ResumeIdPage({
         </div>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-2 flex-wrap min-w-0">
-            <h1 className="text-2xl font-medium truncate">{data.name}</h1>
-            {data.is_primary && <Badge>PRIMARY</Badge>}
+            <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight truncate">
+              {data.name}
+            </h1>
+            {data.is_primary && <Badge variant="brand">PRIMARY</Badge>}
             {data.is_primary && (
               <InfoTooltip
                 content={
@@ -80,7 +84,7 @@ export default async function ResumeIdPage({
                       credits per use.{" "}
                       <Link
                         href={"/dashboard/buy-credits"}
-                        className="text-blue-500"
+                        className="font-medium underline underline-offset-4"
                       >
                         Recharge Credits
                       </Link>
@@ -94,7 +98,8 @@ export default async function ResumeIdPage({
         <OriginalResumeWrapper url={signedUrlData?.signedUrl} />
       </div>
     );
-  } catch {
+  } catch (err) {
+    unstable_rethrow(err);
     return <ErrorComponent />;
   }
 }

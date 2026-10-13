@@ -17,6 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import { TApplicationStatus } from "@/utils/types";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { isUuid } from "@/helpers/agent/auth";
 
 export default async function ApplicantPage({
   params,
@@ -25,6 +27,7 @@ export default async function ApplicantPage({
 }) {
   try {
     const { applicant_id } = await params;
+    if (!isUuid(applicant_id)) notFound();
     const supabase = await createClient();
     const {
       data: { user },
@@ -61,11 +64,10 @@ export default async function ApplicantPage({
       `,
       )
       .eq("id", applicant_id)
-      .single();
+      .maybeSingle();
 
-    if (error || !application) {
-      return <Error />;
-    }
+    if (error) throw error;
+    if (!application) notFound();
 
     let signedUrl: string | null = null;
 
@@ -333,8 +335,8 @@ export default async function ApplicantPage({
         </div>
       </div>
     );
-  } catch {
-    // console.error("Error in ApplicantPage:", err);
+  } catch (err) {
+    unstable_rethrow(err);
     return <Error />;
   }
 }

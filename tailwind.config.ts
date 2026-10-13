@@ -6,6 +6,7 @@ export default {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./helpers/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
@@ -41,6 +42,15 @@ export default {
         brandSoft: {
           DEFAULT: "hsl(var(--brand-soft)/0.2)",
           foreground: "hsl(var(--brand-soft-foreground))",
+        },
+        // Status colours (design-system.md §1)
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
         accent: {
           DEFAULT: "hsl(var(--accent))",

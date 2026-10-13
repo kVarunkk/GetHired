@@ -13,12 +13,12 @@ export default function HeroAiResumeChecker() {
     <div className="flex flex-col gap-5 w-full items-center text-center px-4 py-3 lg:px-20 xl:px-40 2xl:px-80">
       <div className="space-y-4 max-w-3xl">
         <div className="space-y-4 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brandSoft border border-brand/20 text-brand dark:text-primary text-[10px] font-bold uppercase tracking-widest mb-2 animate-in fade-in slide-in-from-top-2 duration-700">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brandSoft border border-brand/30 text-brandSoft-foreground text-xs font-medium mb-2 animate-in fade-in slide-in-from-top-2 duration-700">
             <Sparkles size={12} />
             Advanced AI Analysis
           </div>
 
-          <h1 className="text-5xl sm:text-7xl font-black tracking-tight leading-[1.1]">
+          <h1 className="text-5xl sm:text-7xl font-semibold tracking-tight leading-[1.1]">
             AI Resume Checker
           </h1>
 
@@ -31,7 +31,10 @@ export default function HeroAiResumeChecker() {
 
       <div>
         <Link href={"/resume-review"}>
-          <Button className="w-full sm:w-auto bg-brand hover:bg-brand/70 text-brand-foreground font-bold h-11 px-8 rounded-xl shadow-lg shadow-brand/20 transition-all active:scale-95 disabled:opacity-70">
+          <Button
+            variant="brand"
+            className="w-full sm:w-auto h-11 px-8 transition-all active:scale-95"
+          >
             Review My Resume
           </Button>
         </Link>

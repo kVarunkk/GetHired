@@ -120,13 +120,14 @@ export default function MultiKeywordSelect({
           <PopoverTrigger asChild>
             {name === "profile" ? (
               <Button
+                variant="brand"
                 role="combobox"
                 aria-expanded={open}
-                className="rounded-full bg-primary shadow-lg relative"
+                className="rounded-full relative"
                 disabled={loading}
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                <Badge className="absolute -top-2 -right-2 rounded-full bg-red-600 text-white">
+                <Badge className="absolute -top-2 -right-2 rounded-full border-background">
                   {initialKeywords.length}
                 </Badge>
                 <span className="truncate">{placeholder}</span>
@@ -138,8 +139,9 @@ export default function MultiKeywordSelect({
                 role="combobox"
                 aria-expanded={open}
                 className={cn(
-                  "w-full justify-between bg-input text-muted-foreground",
-                  !showKeywords && "rounded-l-none shadow-none",
+                  "w-full justify-between font-normal text-muted-foreground",
+                  !showKeywords &&
+                    "rounded-l-none border-y-0 border-r-0 bg-transparent shadow-none",
                 )}
               >
                 <span className="truncate">
@@ -173,11 +175,12 @@ export default function MultiKeywordSelect({
           <DrawerTrigger asChild>
             {name === "profile" ? (
               <Button
+                variant="brand"
                 role="combobox"
                 aria-expanded={open}
-                className="rounded-full bg-primary shadow-lg relative"
+                className="rounded-full relative"
               >
-                <Badge className="absolute -top-2 -right-2 rounded-full bg-red-600 text-white">
+                <Badge className="absolute -top-2 -right-2 rounded-full border-background">
                   {initialKeywords.length}
                 </Badge>
                 <span className="truncate">{placeholder}</span>
@@ -189,8 +192,9 @@ export default function MultiKeywordSelect({
                 role="combobox"
                 aria-expanded={open}
                 className={cn(
-                  "w-full justify-between bg-input text-muted-foreground",
-                  !showKeywords && "rounded-l-none shadow-none",
+                  "w-full justify-between font-normal text-muted-foreground",
+                  !showKeywords &&
+                    "rounded-l-none border-y-0 border-r-0 bg-transparent shadow-none",
                 )}
               >
                 <span className="truncate">{placeholder}</span>
@@ -254,15 +258,15 @@ export default function MultiKeywordSelect({
           {displayedKeywords.map(({ content, id }) => (
             <span
               key={id}
-              className="flex items-center border border-border px-2 py-1 rounded text-sm"
+              className="flex items-center gap-0.5 rounded-full border py-0.5 pl-2.5 pr-1 text-sm"
             >
               {content}
               <button
                 type="button"
                 onClick={() => removeKeyword(content)}
-                className="p-1"
+                className="rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </span>
           ))}

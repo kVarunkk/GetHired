@@ -18,15 +18,15 @@ const tools = [
 
 export default function BlogSidebarCTA() {
   return (
-    <div className="rounded-xl border bg-card p-5 shadow-sm">
-      <h2 className="text-xl font-bold leading-snug">
+    <div className="rounded-xl border bg-card p-5">
+      <h2 className="text-lg font-semibold tracking-tight leading-snug">
         Find your next role faster
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
         Browse jobs from {platforms.length} ATS platforms like Greenhouse,
         Workday and Ashby, matched to your resume with AI.
       </p>
-      <Button asChild className="mt-4 w-full">
+      <Button asChild variant="brand" className="mt-4 w-full">
         <Link href="/jobs">
           Browse jobs
           <ArrowRight className="ms-2 h-4 w-4" />
@@ -40,7 +40,7 @@ export default function BlogSidebarCTA() {
               href={href}
               className="flex items-center gap-3 rounded-md px-2 py-2 text-sm underline underline-offset-4 transition-colors hover:bg-muted"
             >
-              <Icon className="h-4 w-4 shrink-0" />
+              <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
               {label}
             </Link>
           </li>

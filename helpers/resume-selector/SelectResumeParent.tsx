@@ -29,7 +29,7 @@ export const SelectResumeParent = ({
               onSelectExisting(resume.id);
             }}
             className={cn(
-              "w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left",
+              "w-full flex items-center justify-between gap-2 p-3 rounded-xl border transition-all text-left",
               selectedId === resume.id
                 ? "border-brand bg-brandSoft "
                 : "border-border group text-muted-foreground hover:border-zinc-400 hover:text-primary",
@@ -38,18 +38,21 @@ export const SelectResumeParent = ({
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <FileCheck
                 size={18}
-                className={
+                className={cn(
+                  "shrink-0",
                   selectedId === resume.id
                     ? "text-brand"
-                    : "text-muted-foreground group-hover:text-primary"
-                }
+                    : "text-muted-foreground group-hover:text-primary",
+                )}
               />
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-1 min-w-0">
-                  <p className="text-sm font-bold truncate w-[100px] sm:w-[150px]">
+                  <p className="min-w-0 truncate text-sm font-semibold">
                     {resume.name}
                   </p>
-                  {resume.is_primary && <Badge>PRIMARY</Badge>}
+                  {resume.is_primary && (
+                    <Badge className="shrink-0">PRIMARY</Badge>
+                  )}
                 </div>
                 <p className="text-[10px] opacity-50">
                   {new Date(resume.created_at || "").toLocaleDateString()}
@@ -57,7 +60,7 @@ export const SelectResumeParent = ({
               </div>
             </div>
             {selectedId === resume.id && (
-              <CheckCircle2 size={16} className="text-brand" />
+              <CheckCircle2 size={16} className="shrink-0 text-brand" />
             )}
           </button>
         ))

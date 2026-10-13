@@ -155,36 +155,51 @@ export default function InterviewComponent({
   };
 
   return (
-    <div className="flex flex-col h-screen max-h-screen bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col h-dvh max-h-dvh bg-background text-foreground overflow-hidden">
       {/* Top Header Bar */}
-      <header className="flex-none border-b border-border bg-card px-4 py-3 sm:px-6 flex items-center justify-between z-10 shadow-sm">
-        <div className="flex items-center space-x-3">
+      <header className="flex-none border-b border-border bg-card px-4 py-3 sm:px-6 flex items-center justify-between gap-3 z-10">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <BackButton />
-          <div>
-            <h1 className="text-base sm:text-lg font-semibold tracking-tight leading-tight truncate">
+          <div className="min-w-0 flex-1">
+            <h1
+              className="text-base sm:text-lg font-semibold tracking-tight leading-tight truncate"
+              title={interview.name || "AI Interview"}
+            >
               {interview.name || "AI Interview"}
             </h1>
-            <div className="flex items-center flex-wrap gap-1">
-              <Link
-                className="text-xs text-muted-foreground underline underline-offset-4 flex items-center gap-1"
-                href={"/jobs/" + interview.job_id}
-                target="_blank"
-              >
-                <Briefcase size={14} /> {interview.all_jobs?.job_name}
-              </Link>
-              <Link
-                className="text-xs text-muted-foreground underline underline-offset-4 flex items-center gap-1"
-                href={"/resume/" + interview.resume_id}
-                target="_blank"
-              >
-                <FileUser size={14} /> {interview.resumes?.name}
-              </Link>
+            <div className="mt-0.5 flex items-center flex-wrap gap-x-3 gap-y-0.5 min-w-0">
+              {interview.all_jobs?.job_name && (
+                <Link
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 min-w-0 max-w-full"
+                  href={"/jobs/" + interview.job_id}
+                  target="_blank"
+                  title={interview.all_jobs.job_name}
+                >
+                  <Briefcase size={14} className="shrink-0" />
+                  <span className="truncate underline underline-offset-4">
+                    {interview.all_jobs.job_name}
+                  </span>
+                </Link>
+              )}
+              {interview.resumes?.name && (
+                <Link
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 min-w-0 max-w-full"
+                  href={"/resume/" + interview.resume_id}
+                  target="_blank"
+                  title={interview.resumes.name}
+                >
+                  <FileUser size={14} className="shrink-0" />
+                  <span className="truncate underline underline-offset-4">
+                    {interview.resumes.name}
+                  </span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
 
         {/* Status Badge */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {latestAnalysisSessionId && (
             <ModifiedLink
               href={`/interview/${interviewId}/analysis/${latestAnalysisSessionId}`}
@@ -197,108 +212,111 @@ export default function InterviewComponent({
       </header>
 
       {/* Main Container - Split View for Desktop / Stacked for Mobile */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden bg-background">
+      <main className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-12 overflow-hidden bg-background">
         {/* Left Column: AI Stage & Visualizer */}
-        <section className="lg:col-span-5 flex flex-col justify-between items-center p-6 bg-secondary/30 border-b lg:border-b-0 lg:border-r border-border relative overflow-hidden">
+        <section className="flex-none max-h-[45%] md:max-h-none md:h-full md:col-span-5 flex flex-col min-h-0 bg-secondary/30 border-b md:border-b-0 md:border-r border-border relative overflow-hidden">
           {/* Decorative ambient background blur */}
-          <div className="absolute -top-24 -left-24 w-72 h-72 bg-[hsl(var(--brand))]/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-[hsl(var(--brand-soft))]/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-24 -left-24 w-72 h-72 bg-brand/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-brandSoft rounded-full blur-3xl pointer-events-none" />
 
-          {/* Top Info Tag */}
-          <div className="w-full flex justify-between items-center text-xs text-muted-foreground z-10">
-            <span className="flex items-center gap-1.5 font-medium">
-              <Radio
-                className={`w-3.5 h-3.5 ${status === "live" ? "text-emerald-500 animate-pulse" : ""}`}
-              />
-              {status === "live" ? "Voice Session Active" : "Session Offline"}
-            </span>
-            <span>16 kHz / Mono PCM</span>
-          </div>
-
-          {/* Center Stage: AI Avatar & Audio Visualizer */}
-          <div className="my-auto flex flex-col items-center justify-center text-center z-10 py-8">
-            <div className="relative flex items-center justify-center">
-              {/* Pulsing Aura when AI is speaking / live */}
-              {status === "live" && (
-                <>
-                  <div className="absolute w-44 h-44 sm:w-56 sm:h-56 rounded-full bg-[hsl(var(--brand))]/15 animate-ping opacity-75" />
-                  <div className="absolute w-36 h-36 sm:w-48 sm:h-48 rounded-full bg-[hsl(var(--brand))]/25 animate-pulse" />
-                </>
-              )}
-
-              {/* Connecting Spinner Background */}
-              {status === "connecting" && (
-                <div className="absolute w-36 h-36 sm:w-48 sm:h-48 rounded-full border-2 border-dashed border-[hsl(var(--brand))] animate-spin" />
-              )}
-
-              {/* Central Avatar Box */}
-              <div
-                className={`relative w-24 h-24 sm:w-36 sm:h-36 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 border-2 ${
-                  status === "live"
-                    ? "bg-[hsl(var(--brand))] text-white border-white/20 scale-105"
-                    : status === "connecting"
-                      ? "bg-card text-[hsl(var(--brand))] border-[hsl(var(--brand))]"
-                      : "bg-muted text-muted-foreground border-border"
-                }`}
-              >
-                {status === "connecting" ? (
-                  <Loader2 className="w-12 h-12 sm:w-16 sm:h-16 animate-spin text-[hsl(var(--brand))]" />
-                ) : (
-                  <Bot className="w-12 h-12 sm:w-16 sm:h-16" />
-                )}
-              </div>
+          {/* Scrolls on short screens (or when zoomed in) instead of clipping */}
+          <div className="relative z-10 flex-1 min-h-0 overflow-y-auto flex flex-col justify-between items-center gap-4 p-4 sm:p-6">
+            {/* Top Info Tag */}
+            <div className="w-full flex flex-wrap justify-between items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5 font-medium">
+                <Radio
+                  className={`w-3.5 h-3.5 shrink-0 ${status === "live" ? "text-success animate-pulse" : ""}`}
+                />
+                {status === "live" ? "Voice Session Active" : "Session Offline"}
+              </span>
+              <span>16 kHz / Mono PCM</span>
             </div>
 
-            {/* AI Status Text */}
-            <h2 className="mt-6 text-xl sm:text-2xl font-semibold tracking-tight">
-              {status === "idle" && "Ready to start interview"}
-              {status === "connecting" && "Establishing connection..."}
-              {status === "live" && "AI Interviewer is active"}
-              {status === "stopped" && "Interview Concluded"}
-              {status === "error" && "Connection Error"}
-            </h2>
-
-            <p className="mt-1 text-sm text-muted-foreground max-w-xs">
-              {status === "idle" &&
-                "Click 'Start Interview' below when you are ready to begin."}
-              {status === "connecting" &&
-                "Initializing microphone and WebSockets..."}
-              {status === "live" && "Speak clearly into your microphone."}
-              {status === "stopped" &&
-                "Thank you! Your transcript has been saved."}
-              {status === "error" &&
-                (errorMessage ??
-                  "Failed to connect. Please check mic permissions and try again.")}
-            </p>
-
-            {/* Waveform Visualization Placeholder (Live feedback) */}
-            {status === "live" && (
-              <div className="mt-6 flex items-center gap-1 h-8">
-                {[40, 70, 30, 90, 60, 100, 50, 80, 40, 70, 30].map(
-                  (height, i) => (
-                    <span
-                      key={i}
-                      style={{ height: `${height}%` }}
-                      className="w-1 bg-[hsl(var(--brand))] rounded-full animate-pulse"
-                    />
-                  ),
+            {/* Center Stage: AI Avatar & Audio Visualizer */}
+            <div className="my-auto w-full flex flex-col items-center justify-center text-center py-2 sm:py-8">
+              <div className="relative flex items-center justify-center">
+                {/* Pulsing Aura when AI is speaking / live */}
+                {status === "live" && (
+                  <>
+                    <div className="absolute w-32 h-32 sm:w-56 sm:h-56 rounded-full bg-brand/15 animate-ping opacity-75" />
+                    <div className="absolute w-28 h-28 sm:w-48 sm:h-48 rounded-full bg-brand/25 animate-pulse" />
+                  </>
                 )}
-              </div>
-            )}
-          </div>
 
-          {/* Bottom Stage Instructions */}
-          <div className="w-full text-center text-xs text-muted-foreground z-10 border-t border-border/50 pt-4">
-            <p>
-              Ensure your microphone is enabled and ambient noise is minimal.
-            </p>
+                {/* Connecting Spinner Background */}
+                {status === "connecting" && (
+                  <div className="absolute w-28 h-28 sm:w-48 sm:h-48 rounded-full border-2 border-dashed border-brand animate-spin" />
+                )}
+
+                {/* Central Avatar Box */}
+                <div
+                  className={`relative w-20 h-20 sm:w-36 sm:h-36 rounded-full flex items-center justify-center transition-all duration-300 border-2 ${
+                    status === "live"
+                      ? "bg-brand text-brand-foreground border-white/20 scale-105"
+                      : status === "connecting"
+                        ? "bg-card text-brand border-brand"
+                        : "bg-muted text-muted-foreground border-border"
+                  }`}
+                >
+                  {status === "connecting" ? (
+                    <Loader2 className="w-10 h-10 sm:w-16 sm:h-16 animate-spin text-brand" />
+                  ) : (
+                    <Bot className="w-10 h-10 sm:w-16 sm:h-16" />
+                  )}
+                </div>
+              </div>
+
+              {/* AI Status Text */}
+              <h2 className="mt-4 sm:mt-6 text-lg sm:text-2xl font-semibold tracking-tight text-balance">
+                {status === "idle" && "Ready to start interview"}
+                {status === "connecting" && "Establishing connection..."}
+                {status === "live" && "AI Interviewer is active"}
+                {status === "stopped" && "Interview Concluded"}
+                {status === "error" && "Connection Error"}
+              </h2>
+
+              <p className="mt-1 text-sm text-muted-foreground max-w-xs text-pretty break-words">
+                {status === "idle" &&
+                  "Click 'Start Interview' below when you are ready to begin."}
+                {status === "connecting" &&
+                  "Initializing microphone and WebSockets..."}
+                {status === "live" && "Speak clearly into your microphone."}
+                {status === "stopped" &&
+                  "Thank you! Your transcript has been saved."}
+                {status === "error" &&
+                  (errorMessage ??
+                    "Failed to connect. Please check mic permissions and try again.")}
+              </p>
+
+              {/* Waveform Visualization Placeholder (Live feedback) */}
+              {status === "live" && (
+                <div className="mt-4 sm:mt-6 flex items-center gap-1 h-8">
+                  {[40, 70, 30, 90, 60, 100, 50, 80, 40, 70, 30].map(
+                    (height, i) => (
+                      <span
+                        key={i}
+                        style={{ height: `${height}%` }}
+                        className="w-1 bg-brand rounded-full animate-pulse"
+                      />
+                    ),
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Stage Instructions */}
+            <div className="w-full text-center text-xs text-muted-foreground border-t border-border/50 pt-3 sm:pt-4">
+              <p>
+                Ensure your microphone is enabled and ambient noise is minimal.
+              </p>
+            </div>
           </div>
         </section>
 
         {/* Right Column: Live Transcript Panel */}
-        <section className="lg:col-span-7 flex flex-col h-full overflow-hidden bg-card">
+        <section className="flex-1 min-h-0 md:h-full md:col-span-7 flex flex-col overflow-hidden bg-card">
           {/* Transcript Header */}
-          <div className="flex-none px-6 py-4 border-b border-border flex items-center justify-between bg-card">
+          <div className="flex-none px-4 py-3 sm:px-6 sm:py-4 border-b border-border flex items-center justify-between bg-card">
             <div className="flex items-center gap-2">
               <Volume2 className="w-4 h-4 text-muted-foreground" />
               <h3 className="font-semibold text-sm tracking-tight">
@@ -358,16 +376,17 @@ export default function InterviewComponent({
           </div>
 
           {/* Controls Dock Bar */}
-          <div className="flex-none p-4 sm:p-6 border-t border-border bg-card">
+          <div className="flex-none p-3 sm:p-6 border-t border-border bg-card">
             <div className="flex items-center justify-center gap-3 max-w-md mx-auto">
               {!isActive ? (
                 /* START INTERVIEW BUTTON */
                 <Button
+                  variant="brand"
                   onClick={start}
                   // disabled={status === "connecting"}
-                  className="w-full flex items-center justify-center gap-2  font-semibold py-3.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-11 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Play className="w-5 h-5 " />
+                  <Play className="w-4 h-4" />
                   {status === "stopped" || status === "error"
                     ? "Restart Interview"
                     : "Start Interview"}
@@ -378,9 +397,9 @@ export default function InterviewComponent({
                   <button
                     type="button"
                     onClick={stop}
-                    className="flex-1 flex items-center justify-center gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 active:scale-[0.99] font-medium py-3.5 px-6 rounded-xl shadow-md transition-all"
+                    className="flex-1 flex items-center justify-center gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 active:scale-[0.99] font-medium h-11 px-6 rounded-lg transition-all"
                   >
-                    <PhoneOff className="w-5 h-5" />
+                    <PhoneOff className="w-4 h-4" />
                     End Conversation
                   </button>
                 </div>
@@ -410,23 +429,23 @@ function TranscriptBubble({
       >
         {/* User/AI Avatar */}
         <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold shadow-sm ${"bg-secondary text-secondary-foreground border border-border"}`}
+          className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold ${"bg-secondary text-secondary-foreground border border-border"}`}
         >
           {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
         </div>
 
         {/* Bubble Container */}
         <div
-          className={`flex flex-col max-w-[82%] sm:max-w-[75%] ${isUser ? "items-end" : "items-start"}`}
+          className={`flex flex-col min-w-0 max-w-[82%] sm:max-w-[75%] ${isUser ? "items-end" : "items-start"}`}
         >
           <span className="text-[10px] text-muted-foreground mb-1 px-1">
             {isUser ? "You" : "AI Interviewer"}
           </span>
           <div
-            className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
+            className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed break-words ${
               isUser
-                ? "bg-[hsl(var(--brand))] text-white rounded-tr-none"
-                : "bg-secondary text-secondary-foreground border border-border/80 rounded-tl-none"
+                ? "bg-secondary text-secondary-foreground rounded-tr-md"
+                : "bg-background border rounded-tl-md"
             }`}
           >
             {line.text}

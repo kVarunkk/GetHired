@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useState } from "react";
+import { AlertCircle } from "lucide-react";
 import { sendResetPasswordEmail } from "@/app/actions/reset-password-email";
 
 export function ForgotPasswordForm({
@@ -79,11 +80,27 @@ export function ForgotPasswordForm({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="bg-input"
+                    aria-invalid={!!error}
                   />
                 </div>
-                {error && <p className="text-sm text-red-500">{error}</p>}
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                {error && (
+                  <p
+                    role="alert"
+                    className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+                  >
+                    <AlertCircle
+                      aria-hidden
+                      className="mt-0.5 h-4 w-4 shrink-0"
+                    />
+                    {error}
+                  </p>
+                )}
+                <Button
+                  type="submit"
+                  variant="brand"
+                  className="w-full"
+                  disabled={isLoading}
+                >
                   {isLoading ? "Sending..." : "Send reset email"}
                 </Button>
               </div>
@@ -91,7 +108,7 @@ export function ForgotPasswordForm({
                 Already have an account?{" "}
                 <Link
                   href="/auth/login"
-                  className="underline underline-offset-4"
+                  className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
                 >
                   Login
                 </Link>

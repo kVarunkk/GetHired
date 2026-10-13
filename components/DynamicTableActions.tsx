@@ -4,14 +4,16 @@ import { createClient } from "@/lib/supabase/client";
 import { SubmitEvent, useState } from "react";
 import toast from "react-hot-toast";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogClose,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "./ui/button";
 import { Loader2, Pencil, Trash } from "lucide-react";
 import { Input } from "./ui/input";
@@ -143,10 +145,10 @@ export default function DynamicActions<T extends Item>({
 
   return (
     <div className="flex items-center gap-1">
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+      <ResponsiveDialog open={openDialog} onOpenChange={setOpenDialog}>
         <div className="flex items-center gap-2">
           {/* Edit Trigger */}
-          <DialogTrigger asChild>
+          <ResponsiveDialogTrigger asChild>
             <Button
               onClick={() => {
                 setDialogView("edit");
@@ -158,10 +160,10 @@ export default function DynamicActions<T extends Item>({
             >
               <Pencil className="h-4 w-4 text-muted-foreground" />
             </Button>
-          </DialogTrigger>
+          </ResponsiveDialogTrigger>
 
           {/* Delete Trigger */}
-          <DialogTrigger asChild>
+          <ResponsiveDialogTrigger asChild>
             <Button
               onClick={() => {
                 setDialogView("delete");
@@ -169,69 +171,76 @@ export default function DynamicActions<T extends Item>({
               }}
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             >
               <Trash className="h-4 w-4" />
             </Button>
-          </DialogTrigger>
+          </ResponsiveDialogTrigger>
         </div>
 
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-wrap text-start">
+        <ResponsiveDialogContent className="sm:max-w-[425px]">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="text-wrap text-start">
               {dialogView === "edit" ? "Edit" : "Delete"} &quot;{displayName}
               &quot;
-            </DialogTitle>
+            </ResponsiveDialogTitle>
             {dialogView === "delete" && (
-              <DialogDescription className="text-start">
+              <ResponsiveDialogDescription className="text-start">
                 Are you sure you want to remove this {entityName.toLowerCase()}?
                 This action is permanent and cannot be undone.
-              </DialogDescription>
+              </ResponsiveDialogDescription>
             )}
-          </DialogHeader>
+          </ResponsiveDialogHeader>
 
           {dialogView === "edit" ? (
-            <form className="flex flex-col gap-5" onSubmit={handleUpdate}>
-              {fields.map((field) => (
-                <div key={field.name} className="flex flex-col gap-2">
-                  <label htmlFor={field.name}>{field.label}</label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    type={field.type || "text"}
-                    placeholder={field.placeholder}
-                    defaultValue={getFieldValue(field.name)}
-                    className="bg-input text-sm h-10 border-zinc-200 dark:border-zinc-800"
-                    required={field.required}
-                  />
-                </div>
-              ))}
+            <form
+              className="flex min-h-0 flex-col gap-4"
+              onSubmit={handleUpdate}
+            >
+              <ResponsiveDialogBody className="flex flex-col gap-5">
+                {fields.map((field) => (
+                  <div key={field.name} className="flex flex-col gap-2">
+                    <label htmlFor={field.name} className="text-sm font-medium">
+                      {field.label}
+                    </label>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      type={field.type || "text"}
+                      placeholder={field.placeholder}
+                      defaultValue={getFieldValue(field.name)}
+                      className="text-sm h-10"
+                      required={field.required}
+                    />
+                  </div>
+                ))}
+              </ResponsiveDialogBody>
 
-              <div className="flex justify-end gap-3 mt-4">
-                <DialogClose asChild>
+              <ResponsiveDialogFooter className="gap-2 sm:space-x-0">
+                <ResponsiveDialogClose asChild>
                   <Button variant="outline" disabled={formLoading}>
                     Cancel
                   </Button>
-                </DialogClose>
+                </ResponsiveDialogClose>
                 <Button disabled={formLoading} type="submit">
                   {formLoading ? (
                     <div className="flex items-center gap-2">
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       Saving
                     </div>
                   ) : (
                     "Save Changes"
                   )}
                 </Button>
-              </div>
+              </ResponsiveDialogFooter>
             </form>
           ) : (
-            <div className="flex justify-end gap-3 mt-6">
-              <DialogClose asChild>
+            <ResponsiveDialogFooter className="gap-2 sm:space-x-0">
+              <ResponsiveDialogClose asChild>
                 <Button variant="outline" disabled={deleteLoading}>
                   Cancel
                 </Button>
-              </DialogClose>
+              </ResponsiveDialogClose>
               <Button
                 onClick={handleDelete}
                 disabled={deleteLoading}
@@ -239,17 +248,17 @@ export default function DynamicActions<T extends Item>({
               >
                 {deleteLoading ? (
                   <div className="flex items-center gap-2">
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Deleting
                   </div>
                 ) : (
                   "Delete Permanently"
                 )}
               </Button>
-            </div>
+            </ResponsiveDialogFooter>
           )}
-        </DialogContent>
-      </Dialog>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </div>
   );
 }

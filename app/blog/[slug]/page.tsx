@@ -143,7 +143,7 @@ export default async function Post({
               />
             </div>
           )}
-          <h1 className="text-5xl leading-[3.5rem] font-bold mt-4 text-center">
+          <h1 className="text-5xl leading-[3.5rem] font-semibold tracking-tight mt-4 text-center">
             {post.title}
           </h1>
 

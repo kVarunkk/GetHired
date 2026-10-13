@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { startTransition, useState } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { Loader2, Sparkle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useProgress } from "react-transition-progress";
 
 export default function CreateReviewForResume({
@@ -54,9 +54,8 @@ export default function CreateReviewForResume({
   };
 
   return (
-    <Button onClick={createReview} disabled={isLoading}>
+    <Button variant="brand" onClick={createReview} disabled={isLoading}>
       {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-      <Sparkle className="h-4 w-4" />
       Review this Resume
     </Button>
   );

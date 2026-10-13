@@ -46,10 +46,8 @@ export default function AnalysisPane({
       {!isParsed && isResumeLinked && !isParsingFailed && (
         <div className="flex flex-col items-center justify-center h-64 text-center space-y-4 animate-in fade-in duration-500">
           <div className="flex flex-col items-center justify-center py-20 space-y-4 animate-in fade-in duration-300">
-            <Loader2 className="w-8 h-8 animate-spin" />
-            <p className="font-bold text-zinc-800 dark:text-zinc-200">
-              Indexing your Resume
-            </p>
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <p className="font-medium">Indexing your Resume</p>
             <p className="text-xs text-muted-foreground leading-relaxed">
               This might take a moment. You will be notified via email once the
               indexing is complete.
@@ -61,9 +59,7 @@ export default function AnalysisPane({
       {/* Missing Resume State */}
       {!isResumeLinked && (
         <div className="space-y-2 text-center p-4">
-          <h3 className="font-bold text-zinc-800 dark:text-zinc-200">
-            Missing Resume Asset
-          </h3>
+          <h3 className="font-medium">Missing Resume Asset</h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Select a resume from your profile library to initiate the tailoring
             process for this role.
@@ -74,9 +70,7 @@ export default function AnalysisPane({
       {/* Empty Analysis State */}
       {isParsed && !currentReview.ai_response && !isAnalyzing && (
         <div className="space-y-2 text-center p-4">
-          <p className="font-bold text-zinc-800 dark:text-zinc-200">
-            Awaiting Analysis
-          </p>
+          <p className="font-medium">Awaiting Analysis</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Paste a Job Description on the right to begin.
           </p>
@@ -85,8 +79,8 @@ export default function AnalysisPane({
 
       {isAnalyzing && (
         <div className="flex flex-col items-center justify-center py-20 space-y-4 animate-in fade-in duration-300">
-          <Loader2 className="w-8 h-8 animate-spin" />
-          <p className="text-xs font-bold text-muted-foreground max-w-[240px] leading-relaxed">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          <p className="text-xs font-medium text-muted-foreground max-w-[240px] leading-relaxed">
             Analyzing your Resume
           </p>
           <p className="text-xs text-muted-foreground leading-relaxed text-center">
@@ -97,16 +91,16 @@ export default function AnalysisPane({
       )}
 
       {currentReview?.ai_response?.overall_feedback && (
-        <div className="rounded-2xl border border-brand/20 bg-brandSoft overflow-hidden transition-all duration-300 shadow-sm">
+        <div className="rounded-xl border border-brand/30 bg-brandSoft overflow-hidden transition-all duration-300">
           <button
             onClick={() => setIsOverallOpen(!isOverallOpen)}
             className="w-full flex items-center justify-between p-4 text-start group hover:bg-brandSoft/10 transition-colors"
           >
             <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-brand text-brand-foreground shadow-sm">
+              <div className="p-1.5 rounded-lg bg-brand text-brand-foreground">
                 <Target size={14} />
               </div>
-              <span className="text-xs font-black uppercase tracking-widest text-brand dark:text-primary">
+              <span className="text-xs font-medium text-brandSoft-foreground">
                 Overall Strategy
               </span>
             </div>
@@ -128,7 +122,7 @@ export default function AnalysisPane({
             )}
           >
             <div className="relative ">
-              <p className="text-xs leading-relaxed text-brand-soft-foreground font-medium ">
+              <p className="text-sm leading-6">
                 {currentReview?.ai_response?.overall_feedback}
               </p>
             </div>
@@ -156,10 +150,10 @@ export default function AnalysisPane({
             }
           }}
           className={cn(
-            "w-full text-start group space-y-4 p-5 rounded-2xl border transition-all ",
+            "w-full text-start group space-y-4 p-5 rounded-xl border transition-colors",
             activeHighlightId === bp.bullet_id
-              ? "border-indigo-500 bg-white dark:bg-zinc-900 shadow-xl"
-              : "bg-white/50 dark:bg-zinc-900/40 border-zinc-200 dark:border-zinc-800",
+              ? "border-brand/40 bg-brandSoft"
+              : "bg-background",
           )}
           onClick={() => {
             // Only trigger card-wide click on devices that can hover (laptops)
@@ -172,16 +166,25 @@ export default function AnalysisPane({
           }}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase text-brand">
+            <span className="text-xs font-medium text-muted-foreground">
               {bp.section}
             </span>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase">
+            <span
+              className={cn(
+                "text-xs font-medium capitalize",
+                bp.priority === "high"
+                  ? "text-destructive"
+                  : bp.priority === "medium"
+                    ? "text-warning"
+                    : "text-muted-foreground",
+              )}
+            >
               {bp.priority}
             </span>
           </div>
           <div className="space-y-2">
             <p className="text-xs line-through opacity-40 ">{bp.original}</p>
-            <p className=" text-sm font-semibold leading-relaxed">
+            <p className="text-sm font-medium leading-relaxed">
               {bp.suggested}
               <Copy className="h-4 w-4 hidden group-hover:inline ml-2 transition-all" />
             </p>
@@ -201,7 +204,7 @@ export default function AnalysisPane({
                   e.stopPropagation(); // Prevent duplicate trigger from card click
                   copyToClipboard(bp.suggested, "Suggestion copied!");
                 }}
-                className="flex-1 gap-2 text-[10px] font-bold uppercase tracking-tighter border-zinc-200 dark:border-zinc-800 rounded-lg h-9 active:bg-brandSoft"
+                className="flex-1 gap-2 text-xs h-9 active:bg-brandSoft"
               >
                 <Copy size={12} />
                 Copy
@@ -214,9 +217,9 @@ export default function AnalysisPane({
                   setActiveHighlightId(bp.bullet_id);
                 }}
                 className={cn(
-                  "flex-1 gap-2 text-[10px] font-bold uppercase tracking-tighter border-zinc-200 dark:border-zinc-800 rounded-lg h-9 transition-all",
+                  "flex-1 gap-2 text-xs h-9 transition-colors",
                   activeHighlightId === bp.bullet_id
-                    ? "bg-brand border-brand text-white"
+                    ? "border-brand/30 bg-brandSoft text-brandSoft-foreground"
                     : "active:bg-brandSoft",
                 )}
               >
@@ -226,7 +229,7 @@ export default function AnalysisPane({
             </div>
           )}
 
-          <p className="text-[11px] text-muted-foreground border-t border-zinc-100 dark:border-zinc-800 pt-3 leading-relaxed flex items-center gap-2">
+          <p className="text-[11px] text-muted-foreground border-t pt-3 leading-relaxed flex items-center gap-2">
             <Info className="w-3 h-3  text-muted-foreground shrink-0" />
             {bp.reason}
           </p>

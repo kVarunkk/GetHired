@@ -64,15 +64,17 @@ export function ClientTabs({
         {user ? (
           <div className="flex items-center justify-between flex-wrap gap-4 py-6">
             {!isCompanyUser && !isAISearch && page === "jobs" && (
-              <div className="flex items-center gap-2">
-                <TabsList className="!my-0">
+              <div className="flex min-w-0 max-w-full items-center gap-2">
+                <TabsList className="!my-0 max-w-full">
                   {!applicationStatusFilter && (
                     <TabsTrigger
                       value="all"
                       className="p-0"
                       onClick={() => handleTabChange("all")}
                     >
-                      <span className="py-1 px-2">All Jobs</span>
+                      <span className="py-1 px-2">
+                        All<span className="max-[400px]:hidden"> Jobs</span>
+                      </span>
                     </TabsTrigger>
                   )}
                   {!applicationStatusFilter && (
@@ -81,7 +83,9 @@ export function ClientTabs({
                       className="p-0"
                       onClick={() => handleTabChange("saved")}
                     >
-                      <span className="py-1 px-2">Saved Jobs</span>
+                      <span className="py-1 px-2">
+                        Saved<span className="max-[400px]:hidden"> Jobs</span>
+                      </span>
                     </TabsTrigger>
                   )}
                   <TabsTrigger
@@ -89,7 +93,9 @@ export function ClientTabs({
                     className="p-0"
                     onClick={() => handleTabChange("applied")}
                   >
-                    <span className="py-1 px-2">Applied Jobs</span>
+                    <span className="py-1 px-2">
+                      Applied<span className="max-[400px]:hidden"> Jobs</span>
+                    </span>
                   </TabsTrigger>
                 </TabsList>
                 {isPending && (
@@ -99,15 +105,18 @@ export function ClientTabs({
             )}
 
             {!isCompanyUser && !isAISearch && page === "companies" && (
-              <div className="flex items-center gap-2">
-                <TabsList className="!my-0">
+              <div className="flex min-w-0 max-w-full items-center gap-2">
+                <TabsList className="!my-0 max-w-full">
                   {
                     <TabsTrigger
                       value="all"
                       className="p-0"
                       onClick={() => handleTabChange("all")}
                     >
-                      <span className="py-1 px-2">All Companies</span>
+                      <span className="py-1 px-2">
+                        All
+                        <span className="max-[400px]:hidden"> Companies</span>
+                      </span>
                     </TabsTrigger>
                   }
                   {
@@ -116,7 +125,10 @@ export function ClientTabs({
                       className="p-0"
                       onClick={() => handleTabChange("saved")}
                     >
-                      <span className="py-1 px-2">Saved Companies</span>
+                      <span className="py-1 px-2">
+                        Saved
+                        <span className="max-[400px]:hidden"> Companies</span>
+                      </span>
                     </TabsTrigger>
                   }
                 </TabsList>
@@ -127,21 +139,25 @@ export function ClientTabs({
             )}
 
             {!isAISearch && page === "profiles" && (
-              <div className="flex items-center gap-2">
-                <TabsList>
+              <div className="flex min-w-0 max-w-full items-center gap-2">
+                <TabsList className="max-w-full">
                   <TabsTrigger
                     value="all"
                     className="p-0"
                     onClick={() => handleTabChange("all")}
                   >
-                    <span className="py-1 px-2">All Profiles</span>
+                    <span className="py-1 px-2">
+                      All<span className="max-[400px]:hidden"> Profiles</span>
+                    </span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="saved"
                     className="p-0"
                     onClick={() => handleTabChange("saved")}
                   >
-                    <span className="py-1 px-2">Saved Profiles</span>
+                    <span className="py-1 px-2">
+                      Saved<span className="max-[400px]:hidden"> Profiles</span>
+                    </span>
                   </TabsTrigger>
                 </TabsList>
                 {isPending && (
@@ -151,7 +167,8 @@ export function ClientTabs({
             )}
 
             {page === "jobs" && !isCompanyUser && (
-              <div className="flex items-center gap-2">
+              <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+                {/* On a phone the search pill takes the row and truncates; the icon buttons keep their size. */}
                 <GlobalJobSearch />
                 <BookmarkJobSearch user={user} />
                 <JobsPageDropdown user={user} />

@@ -3,13 +3,13 @@
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "./ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "./ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogTrigger,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog";
 
 import {
   Card,
@@ -92,7 +92,7 @@ export default function JobApplicationDialog({
   };
 
   return (
-    <Dialog
+    <ResponsiveDialog
       open={isDialogOpen}
       onOpenChange={(open) => {
         if (!open) handleCloseDialog();
@@ -112,8 +112,9 @@ export default function JobApplicationDialog({
               {applicationStatus}
             </Button>
           ) : (
-            <DialogTrigger asChild>
+            <ResponsiveDialogTrigger asChild>
               <Button
+                variant="brand"
                 onClick={(e) => e.stopPropagation()}
                 className="capitalize"
                 disabled={
@@ -122,7 +123,7 @@ export default function JobApplicationDialog({
               >
                 Easy Apply <ArrowRight className=" h-4 w-4" />
               </Button>
-            </DialogTrigger>
+            </ResponsiveDialogTrigger>
           )}
 
           {applicationStatus && (
@@ -137,18 +138,24 @@ export default function JobApplicationDialog({
           )}
         </div>
       </PropagationStopper>
-      <DialogContent className="max-w-4xl h-screen sm:h-[85vh] flex flex-col p-0 overflow-hidden">
+      {/* The panes scroll themselves, so the drawer column gets a fixed height and no padding. */}
+      <ResponsiveDialogContent
+        className="max-w-4xl h-[85vh] flex flex-col p-0 overflow-hidden"
+        drawerClassName="h-[85dvh] gap-0 overflow-hidden p-0"
+      >
         <div className="flex flex-col md:flex-row h-full">
           {/* left pane */}
-          <div className="flex-[0.4] sm:flex-[0.6] overflow-y-auto p-6 bg-secondary">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold">
+          <div className="flex-[0.4] sm:flex-[0.6] overflow-y-auto p-4 sm:p-6 bg-muted/30 border-b md:border-b-0 md:border-r">
+            <ResponsiveDialogHeader className="-mt-4 sm:-mt-6">
+              <ResponsiveDialogTitle className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]">
                 Apply for {jobPost.job_name}
-              </DialogTitle>
-              <DialogDescription>at {jobPost.company_name}</DialogDescription>
-            </DialogHeader>
+              </ResponsiveDialogTitle>
+              <ResponsiveDialogDescription>
+                at {jobPost.company_name}
+              </ResponsiveDialogDescription>
+            </ResponsiveDialogHeader>
             <div className="space-y-4 mt-5">
-              <Card className="shadow-none border">
+              <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Company Profile</CardTitle>
                   {jobPost.company_url && (
@@ -171,7 +178,7 @@ export default function JobApplicationDialog({
                   </p>
                 </CardContent>
               </Card>
-              <Card className="shadow-none border">
+              <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Job Details</CardTitle>
                   <CardDescription className="text-sm font-medium">
@@ -180,32 +187,42 @@ export default function JobApplicationDialog({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <p className="font-semibold text-sm">Description</p>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Description
+                    </p>
                     <p className="text-sm ">
                       {jobPost.description || "No description provided."}
                     </p>
                   </div>
                   {jobPost.salary_range && (
                     <div>
-                      <p className="font-semibold text-sm">Salary Range</p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Salary Range
+                      </p>
                       <p className="text-sm ">{jobPost.salary_range}</p>
                     </div>
                   )}
                   {jobPost.experience && (
                     <div>
-                      <p className="font-semibold text-sm">Experience</p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Experience
+                      </p>
                       <p className="text-sm ">{jobPost.experience}</p>
                     </div>
                   )}
                   {jobPost.visa_requirement && (
                     <div>
-                      <p className="font-semibold text-sm">Visa Requirement</p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Visa Requirement
+                      </p>
                       <p className="text-sm ">{jobPost.visa_requirement}</p>
                     </div>
                   )}
                   {jobPost.equity_range && (
                     <div>
-                      <p className="font-semibold text-sm">Equity</p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Equity
+                      </p>
                       <p className="text-sm ">{jobPost.equity_range}</p>
                     </div>
                   )}
@@ -214,7 +231,7 @@ export default function JobApplicationDialog({
             </div>
           </div>
           {/* right pane */}
-          <div className="flex-1  overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {userId && (
               <JobApplicationForm
                 jobPost={jobPost}
@@ -224,7 +241,7 @@ export default function JobApplicationDialog({
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

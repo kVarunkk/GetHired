@@ -2,12 +2,12 @@ import FootComponent from "@/components/FootComponent";
 import AIFeatures from "@/components/landing-page/AIFeatures";
 import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
+import AgentHeroDemo from "@/components/landing-page/AgentHeroDemo";
 import Hero from "@/components/landing-page/Hero";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
 import { getPlatformStats } from "@/utils/platform-stats";
-import { JOB_SEEKER_DARK, JOB_SEEKER_LIGHT } from "@/utils/utils";
 
 export const revalidate = 86400;
 export const dynamic = "force-static";
@@ -19,14 +19,13 @@ export default async function Home() {
   return (
     <div className="flex-1 flex flex-col gap-32 w-full">
       <Hero
-        heading="Find Your Next Tech Job"
-        subheading={`Explore ${jobCount.toLocaleString()} developer and tech job listings, including remote opportunities, and use AI to focus your search.`}
-        ctaText="Get Hired"
+        heading="Your AI Agent for the Job Hunt"
+        subheading={`Tell it what you're after. It searches ${jobCount.toLocaleString()} tech jobs, matches them to your resume, reviews your CV and preps you for interviews, all in one chat.`}
+        ctaText="Chat with the agent"
         ctaText2="Hire Talent"
-        ctaLink="/jobs"
+        ctaLink="/agent"
         ctaLink2="/hire"
-        imgLight={JOB_SEEKER_LIGHT}
-        imgDark={JOB_SEEKER_DARK}
+        preview={<AgentHeroDemo />}
       />
       <HowWeHelp jobCount={jobCount} />
       <AIFeatures />

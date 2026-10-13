@@ -31,10 +31,16 @@ import { Step5CareerGoals } from "./onboarding-steps/Step5";
 import { Step6ResumeUpload } from "./onboarding-steps/Step6";
 import { Step7ReviewSubmit } from "./onboarding-steps/Step7";
 import { isValidUrl } from "@/utils/utils";
-import { Loader2 } from "lucide-react";
-import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
+import { AlertCircle, Loader2, Sparkles } from "lucide-react";
+import Link from "next/link";
+import {
+  agentPromptHref,
+  ONBOARDING_PROMPT,
+  savePendingPrompt,
+} from "@/helpers/agent/prompt-draft";
 import { submitOnboardingAction } from "@/app/actions/submit-onboarding";
 import { useProgress } from "react-transition-progress";
+import { APPLICANT_HOME } from "@/helpers/user/home-path";
 
 type IFormData = {
   email: string | null;
@@ -402,16 +408,12 @@ export const OnboardingForm: React.FC = () => {
         throw new Error(result.error);
       }
 
-      await updateUserAppMetadata(user.id, {
-        type: "applicant",
-        onboarding_complete: true,
-      });
-
+      // submitOnboardingAction also marks onboarding complete on the server.
       toast.success("Profile complete! Welcome to GetHired.", { id: toastId });
 
       startTransition(() => {
         startProgress();
-        router.push(`/jobs`);
+        router.push(APPLICANT_HOME);
       });
     } catch (error) {
       toast.error(
@@ -476,9 +478,23 @@ export const OnboardingForm: React.FC = () => {
   return (
     <div className="flex flex-col gap-10 items-center justify-center  mb-20 p-4">
       <div className="flex flex-col gap-5 max-w-2xl w-full">
-        <p className="text-6xl font-bold ">
+        <p className="text-2xl sm:text-[28px] font-semibold tracking-tight">
           Let&apos;s get you Hired, quickly.
         </p>
+        <div className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Rather chat? The agent can set up your profile for you.
+          </p>
+          <Button asChild variant="brand" className="shrink-0">
+            <Link
+              href={agentPromptHref(ONBOARDING_PROMPT)}
+              onClick={() => savePendingPrompt(ONBOARDING_PROMPT)}
+            >
+              <Sparkles className="h-4 w-4" />
+              Complete with the Agent
+            </Link>
+          </Button>
+        </div>
         {preferences ? (
           <UserOnboardingPersonalization
             initialPreferences={preferences}
@@ -489,7 +505,7 @@ export const OnboardingForm: React.FC = () => {
 
       {stepLoading ? (
         <div className="h-20 flex items-center justify-center">
-          <Loader2 className="animate-spin h-5 w-5" />
+          <Loader2 className="animate-spin h-5 w-5 text-muted-foreground" />
         </div>
       ) : (
         <Card className="w-full max-w-2xl !border-none !p-0 shadow-none">
@@ -503,17 +519,25 @@ export const OnboardingForm: React.FC = () => {
             setErrors={setFormErrors}
             // loadingLocations={isLoadingLocations}
           />
-          {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
+          {error && (
+            <p
+              role="alert"
+              className="mt-2 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+            >
+              <AlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+              {error}
+            </p>
+          )}
 
           <CardFooter className="flex items-center justify-between !p-0 mt-5">
             <Button
-              variant={"secondary"}
+              variant={"outline"}
               onClick={handleBack}
               disabled={currentStep === 0 || isLoading}
             >
               Back
             </Button>
-            <Button onClick={handleNext} disabled={isLoading}>
+            <Button variant="brand" onClick={handleNext} disabled={isLoading}>
               {isLoading
                 ? "Processing..."
                 : currentStep === totalSteps - 1

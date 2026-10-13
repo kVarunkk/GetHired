@@ -2,13 +2,15 @@
 
 import { Loader2, Plus } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "./ui/button";
 import ResumeSourceSelector from "./ResumeSourceSelector";
 import { startTransition, useState } from "react";
@@ -72,17 +74,17 @@ export default function CreateResumeDialog() {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button>
+    <ResponsiveDialog open={isOpen} onOpenChange={setIsOpen}>
+      <ResponsiveDialogTrigger asChild>
+        <Button variant="brand" className="max-w-full">
           <Plus className="w-4 h-4" />
-          Add Resume
+          <span className="truncate">Add Resume</span>
         </Button>
-      </DialogTrigger>
+      </ResponsiveDialogTrigger>
 
-      <DialogContent className="sm:max-w-[440px] ">
-        <DialogHeader>
-          <DialogTitle>
+      <ResponsiveDialogContent className="sm:max-w-[440px] ">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>
             Add New Resume{" "}
             <InfoTooltip
               content={
@@ -91,24 +93,24 @@ export default function CreateResumeDialog() {
                   Credits. {creditsState} AI Credits available.{" "}
                   <Link
                     href={"/dashboard/buy-credits"}
-                    className="text-blue-500"
+                    className="font-medium underline underline-offset-4"
                   >
                     Recharge Credits
                   </Link>
                 </p>
               }
             />
-          </DialogTitle>
-          <DialogDescription>
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             Upload a PDF version of your resume. Our AI will index it for
             further analysis.
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
-        <div className="space-y-6">
+        <ResponsiveDialogBody>
           {isUploading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-4 animate-in fade-in duration-300">
-              <Loader2 className="w-10 h-10 animate-spin " />
+              <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
 
               <p className="text-sm text-muted-foreground">Processing Upload</p>
             </div>
@@ -122,18 +124,21 @@ export default function CreateResumeDialog() {
               view="upload"
             />
           )}
+        </ResponsiveDialogBody>
+        <ResponsiveDialogFooter>
           <Button
             onClick={() => {
               handleStartProcessing();
             }}
             disabled={!selectedFile || isUploading}
+            variant="brand"
             className="w-full"
           >
             {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
             Upload Resume
           </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

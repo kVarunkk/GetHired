@@ -25,10 +25,10 @@ const MetricCard: React.FC<MetricCardProps> = ({
 }) => (
   <Card className="text-center bg-card transition-transform duration-300 hover:scale-[1.02] !border border-border">
     <CardHeader>
-      <CardTitle className="text-4xl sm:text-5xl font-extrabold text-primary mb-2">
+      <CardTitle className="text-4xl sm:text-5xl font-semibold tracking-tight mb-2">
         {value}
       </CardTitle>
-      <CardDescription className=" font-semibold">{title}</CardDescription>
+      <CardDescription className="font-medium">{title}</CardDescription>
     </CardHeader>
     <CardContent>
       <p className="text-muted-foreground">{description}</p>
@@ -60,7 +60,7 @@ export default function TheGetHiredAdvantageSection({
       {/* Using bg-muted for a subtle contrast */}
       <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
             The{" "}
             <span className="underline underline-offset-4 decoration-4">
               GetHired
@@ -70,7 +70,7 @@ export default function TheGetHiredAdvantageSection({
           <p className="text-muted-foreground max-w-2xl mx-auto">
             {isHirePage
               ? "Simplifying your entire recruitment process, from drafting to placement, to ensure effortless, high-quality hiring"
-              : "Revolutionizing your job search with efficiency and precision."}
+              : "An agent that handles the busywork, so you can spend your time on interviews."}
           </p>
         </div>
 

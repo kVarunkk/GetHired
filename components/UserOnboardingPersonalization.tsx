@@ -97,7 +97,10 @@ export default function UserOnboardingPersonalization({
                 content={
                   <p>
                     Primary Resume is used to build Job Digest.{" "}
-                    <Link href={"/resume"} className="text-blue-500">
+                    <Link
+                      href={"/resume"}
+                      className="font-medium underline underline-offset-4"
+                    >
                       Change Primary Resume
                     </Link>
                   </p>
@@ -140,7 +143,7 @@ export default function UserOnboardingPersonalization({
             </div>
 
             {isLoading && (
-              <p className="text-xs text-blue-500 mt-4">
+              <p className="text-xs text-muted-foreground mt-4">
                 Saving preferences...
               </p>
             )}

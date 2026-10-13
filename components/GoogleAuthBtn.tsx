@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { APPLICANT_HOME } from "@/helpers/user/home-path";
 
 export default function GoogleAuthBtn() {
   const [loading, setLoading] = useState(false);
@@ -20,7 +21,7 @@ export default function GoogleAuthBtn() {
 
       if (returnToPath) {
         callbackUrl += `?next=${encodeURIComponent(returnToPath)}`;
-      } else callbackUrl += `?next=/jobs`;
+      } else callbackUrl += `?next=${APPLICANT_HOME}`;
       await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AlertCircle } from "lucide-react";
+import { homePathFor } from "@/helpers/user/home-path";
 
 export function UpdatePasswordForm({
   className,
@@ -31,10 +33,10 @@ export function UpdatePasswordForm({
     setError(null);
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { data, error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push("/jobs");
+      // The user already has an active session, so send them to their home page.
+      router.push(homePathFor(data.user?.app_metadata));
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -63,11 +65,24 @@ export function UpdatePasswordForm({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-input"
+                  aria-invalid={!!error}
                 />
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              {error && (
+                <p
+                  role="alert"
+                  className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+                >
+                  <AlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+                  {error}
+                </p>
+              )}
+              <Button
+                type="submit"
+                variant="brand"
+                className="w-full"
+                disabled={isLoading}
+              >
                 {isLoading ? "Saving..." : "Save new password"}
               </Button>
             </div>

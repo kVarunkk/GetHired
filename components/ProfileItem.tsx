@@ -25,7 +25,7 @@ const ProfileItem = React.memo(
     return (
       <div
         className={cn(
-          "flex flex-col gap-3 p-4 group rounded-lg transition  hover:bg-secondary",
+          "flex flex-col gap-3 p-4 group rounded-lg transition-colors hover:bg-muted/60",
         )}
       >
         <div className="flex-col sm:flex-row sm:flex items-center justify-between gap-4">
@@ -134,11 +134,7 @@ function ProfileDetailBadges({
         ))}
 
       {isSuitable && (
-        <Badge
-          className={cn(
-            "text-xs sm:text-sm font-medium bg-green-200 text-green-700 !border-green-200 hover:bg-green-100 group-hover:border-secondary-foreground",
-          )}
-        >
+        <Badge variant="success" className="text-xs sm:text-sm font-medium">
           Profile Match
         </Badge>
       )}

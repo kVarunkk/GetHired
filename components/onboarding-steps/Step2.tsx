@@ -38,7 +38,7 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
           availableItems={formData.default_locations}
           isVirtualized={true}
           loading={loadingLocations}
-          className={cn(errors.preferred_locations ? "border-red-500" : "")}
+          className={cn(errors.preferred_locations ? "border-destructive" : "")}
         /> */}
 
         <LocationSearchSelect
@@ -49,12 +49,12 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
           }
           placeholder={"Select preferred locations"}
           isSingleSelect={false}
-          className={cn(errors.preferred_locations ? "border-red-500" : "")}
+          className={cn(errors.preferred_locations ? "border-destructive" : "")}
         />
       </div>
 
       {errors.preferred_locations && (
-        <p className="text-red-500 text-sm mt-1">
+        <p className="text-destructive text-sm mt-1">
           {errors.preferred_locations}
         </p>
       )}
@@ -71,7 +71,7 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
             setFormData({ ...formData, salary_currency: value })
           }
         >
-          <SelectTrigger className="bg-input mt-2 w-[80px]">
+          <SelectTrigger className="mt-2 w-[80px]">
             <SelectValue placeholder="Currency" />
           </SelectTrigger>
           <SelectContent>
@@ -94,14 +94,12 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
               min_salary: e.target.value === "" ? "" : parseInt(e.target.value),
             })
           }
-          className={cn(
-            "mt-2 bg-input",
-            errors.min_salary ? "border-red-500 " : "",
-          )}
+          aria-invalid={!!errors.min_salary}
+          className="mt-2"
         />
       </div>
       {errors.min_salary && (
-        <p className="text-red-500 text-sm mt-1">{errors.min_salary}</p>
+        <p className="text-destructive text-sm mt-1">{errors.min_salary}</p>
       )}
     </div>
 
@@ -116,7 +114,7 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
             setFormData({ ...formData, salary_currency: value })
           }
         >
-          <SelectTrigger className="bg-input mt-2  w-[80px]">
+          <SelectTrigger className="mt-2 w-[80px]">
             <SelectValue placeholder="Currency" />
           </SelectTrigger>
           <SelectContent>
@@ -139,15 +137,13 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
               max_salary: e.target.value === "" ? "" : parseInt(e.target.value),
             })
           }
-          className={cn(
-            "mt-2 bg-input",
-            errors.max_salary ? "border-red-500 " : "",
-          )}
+          aria-invalid={!!errors.max_salary}
+          className="mt-2"
         />
       </div>
 
       {errors.max_salary && (
-        <p className="text-red-500 text-sm mt-1">{errors.max_salary}</p>
+        <p className="text-destructive text-sm mt-1">{errors.max_salary}</p>
       )}
     </div>
   </CardContent>

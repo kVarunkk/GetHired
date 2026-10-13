@@ -70,10 +70,7 @@ export default function ApplicationStatusSelect({
         disabled={isUpdating}
       >
         <SelectTrigger
-          className={cn(
-            "w-[180px] capitalize bg-input",
-            isUpdating && "opacity-50",
-          )}
+          className={cn("w-[180px] capitalize", isUpdating && "opacity-50")}
         >
           <SelectValue placeholder="Update Status" />
         </SelectTrigger>

@@ -3,24 +3,26 @@
 import { MessageCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import { Textarea } from "./ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { User } from "@supabase/supabase-js";
-import { cn } from "@/utils/utils";
 import { useState } from "react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import SidebarLabel from "./SidebarLabel";
 
 export default function FeedbackForm({
   user,
@@ -53,62 +55,58 @@ export default function FeedbackForm({
     toast.success("Feedback submitted succesfully!");
   };
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <ResponsiveDialog open={isOpen} onOpenChange={setIsOpen}>
       {isVertical ? (
         <Tooltip delayDuration={100}>
           <TooltipTrigger asChild>
-            <DialogTrigger
-              className={cn(
-                "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-                isMenuOpen ? "justify-start" : "justify-center",
-              )}
-            >
-              <MessageCircle className="h-4 w-4" />
-              {isMenuOpen ? <span className=" text-sm">Feedback</span> : ""}
-            </DialogTrigger>
+            <ResponsiveDialogTrigger className="flex items-center w-full px-4 py-2 gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden">
+              <MessageCircle className="h-4 w-4 shrink-0" />
+              <SidebarLabel open={isMenuOpen}>Feedback</SidebarLabel>
+            </ResponsiveDialogTrigger>
           </TooltipTrigger>
           <TooltipContent side="right" hidden={isMenuOpen}>
             <p>Feedback</p>
           </TooltipContent>
         </Tooltip>
       ) : (
-        <DialogTrigger
-          className={cn(
-            "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-            isMenuOpen ? "justify-start" : "justify-center",
-          )}
+        // Horizontal navbar: an icon button the same size as the profile button.
+        <ResponsiveDialogTrigger
+          aria-label="Feedback"
+          className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-secondary transition-colors"
         >
           <MessageCircle className="h-4 w-4" />
-          {isMenuOpen ? <span className=" text-sm">Feedback</span> : ""}
-        </DialogTrigger>
+        </ResponsiveDialogTrigger>
       )}
 
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Feedback</DialogTitle>
-          <DialogDescription>
+      <ResponsiveDialogContent>
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Feedback</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             We would love to hear your suggestions
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
         <form
           action={(formData) => {
             setIsOpen(false);
             submitFeedback(formData);
           }}
-          className="flex flex-col gap-4"
+          className="flex min-h-0 flex-col gap-4"
         >
-          <Textarea
-            name="feedback_input"
-            id="feedback"
-            placeholder="How can we improve?"
-            className="bg-input"
-            required
-          />
-          {/* <DialogClose asChild> */}
-          <Button type="submit">Submit</Button>
-          {/* </DialogClose> */}
+          <ResponsiveDialogBody>
+            <Textarea
+              name="feedback_input"
+              id="feedback"
+              placeholder="How can we improve?"
+              required
+            />
+          </ResponsiveDialogBody>
+          <ResponsiveDialogFooter>
+            <Button type="submit" className="w-full">
+              Submit
+            </Button>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

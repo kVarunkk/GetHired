@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import {
+  Bot,
   FileUser,
   Headset,
   Info,
@@ -265,6 +266,13 @@ export function getDaysFromDate(encodedDateStr: string): number {
 
 export const applicantNavbarItems: INavItem[] = [
   {
+    id: "agent",
+    label: "Agent",
+    href: "/agent",
+    type: "startswith",
+    icon: <Bot className="h-4 w-4" />,
+  },
+  {
     id: "dashboard",
     label: "Dashboard",
     href: "/dashboard",
@@ -299,13 +307,13 @@ export const applicantNavbarItems: INavItem[] = [
     type: "startswith",
     icon: <FileUser className="h-4 w-4" />,
   },
-  {
-    id: "companies",
-    label: "Companies",
-    href: "/companies",
-    type: "startswith",
-    icon: <Building2 className="h-4 w-4" />,
-  },
+  // {
+  //   id: "companies",
+  //   label: "Companies",
+  //   href: "/companies",
+  //   type: "startswith",
+  //   icon: <Building2 className="h-4 w-4" />,
+  // },
 ];
 
 export const companyNavbarItems: INavItem[] = [
@@ -341,6 +349,12 @@ export const companyNavbarItems: INavItem[] = [
 
 export const homePageNavItems: INavItem[] = [
   {
+    id: "agent",
+    label: "Agent",
+    href: "/agent",
+    type: "startswith",
+  },
+  {
     id: "jobs",
     label: "Jobs",
     href: "/jobs",
@@ -353,27 +367,15 @@ export const homePageNavItems: INavItem[] = [
     type: "startswith",
   },
   {
-    id: "features",
-    label: "Features",
-    href: "/#howwehelp",
-    type: "includes",
-  },
-  {
-    id: "blog",
-    label: "Blog",
-    href: "/blog",
+    id: "cvreview",
+    label: "CV Review",
+    href: "/ai-resume-checker",
     type: "includes",
   },
   {
     id: "hire",
     label: "Hire",
     href: "/hire",
-    type: "includes",
-  },
-  {
-    id: "cvreview",
-    label: "CV Review",
-    href: "/ai-resume-checker",
     type: "includes",
   },
 ];
@@ -397,9 +399,14 @@ const verticalNavbarPaths = [
   "/resume-review",
   "/resume",
   "/interview",
+  "/agent",
 ];
 
 export const noScrollToTop = ["/resume-review/"];
+
+// Pages that take exactly the viewport height (below the navbar on phones)
+// and scroll inside themselves instead of scrolling the page.
+export const fullHeightPaths = ["/agent"];
 
 export const getNavItemsByPath = (
   path: string,

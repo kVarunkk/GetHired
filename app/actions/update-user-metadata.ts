@@ -1,43 +1,34 @@
 "use server";
 
-import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { createClient } from "@/lib/supabase/server";
+import { setUserAppMetadata } from "@/helpers/user/set-app-metadata";
 
-export async function updateUserAppMetadata(
-  userId: string,
-  dataToUpdate: Record<string, string | boolean>,
-) {
-  try {
-    if (!userId || !dataToUpdate)
-      throw new Error("User id or updation data not found.");
-    const serviceRoleSupabase = createServiceRoleClient();
-    const { data, error } =
-      await serviceRoleSupabase.auth.admin.getUserById(userId);
-    if (!data.user || error) throw new Error("Error retrieving User.");
-    const { error: updateAppMetaError } =
-      await serviceRoleSupabase.auth.admin.updateUserById(userId, {
-        app_metadata: {
-          ...data.user.app_metadata,
-          ...dataToUpdate,
-        },
-      });
-    if (updateAppMetaError) throw new Error("Error updating user metadata.");
-    return {
-      error: null,
-    };
-  } catch (err) {
-    const error =
-      err instanceof Error
-        ? err.message
-        : "An unexpected error occurred while updating user metadata.";
-    await eventCaptureServerException({
-      error: err,
-      distinctId: userId,
-      properties: { flow: "update_user_metadata" },
-    });
+const ACCOUNT_TYPES = ["applicant", "company"] as const;
+type AccountType = (typeof ACCOUNT_TYPES)[number];
 
-    return {
-      error,
-    };
+/**
+ * Marks the signed-in user's onboarding complete (SEC-008).
+ *
+ * Server actions are public endpoints, and this one is imported by client
+ * components, so it acts only on the session user and can only set
+ * `onboarding_complete: true`. `type` can be chosen once, by a user who has
+ * none yet; an existing type can't be changed.
+ */
+export async function markMyOnboardingComplete(
+  type: AccountType,
+): Promise<{ error: string | null }> {
+  if (!ACCOUNT_TYPES.includes(type)) return { error: "Invalid account type." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Authentication required." };
+
+  const currentType = user.app_metadata?.type;
+  if (currentType && currentType !== type) {
+    return { error: "You can't change your account type." };
   }
+
+  return setUserAppMetadata(user.id, { type, onboarding_complete: true });
 }

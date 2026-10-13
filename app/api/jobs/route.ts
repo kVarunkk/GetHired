@@ -1,186 +1,44 @@
-import { buildQuery } from "@/helpers/jobs/filterQueryBuilder";
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { rerankJobsIfApplicable } from "@/helpers/jobs/ai-rerank-jobs";
-import { TAICredits } from "@/utils/types";
-import { getCutOffDate } from "@/utils/date";
-import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
+import {
+  parseJobSearchParams,
+  searchJobs,
+  SearchJobsTrace,
+} from "@/helpers/jobs/search-jobs";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 
 export async function GET(request: NextRequest) {
   const internalSecret = request.headers.get("X-Internal-Secret");
   const isInternalCall = internalSecret === process.env.INTERNAL_API_SECRET;
 
-  const searchParams = request.nextUrl.searchParams;
-  const jobType = searchParams.get("jobType");
-  const location = searchParams.get("location");
-  const visaRequirement = searchParams.get("visaRequirement");
-  const minSalary = searchParams.get("minSalary");
-  const minExperience = searchParams.get("minExperience");
-  const platform = searchParams.get("platform");
-  const companyName = searchParams.get("companyName");
-  const sortBy = searchParams.get("sortBy") ?? "created_at";
-  const sortOrder = searchParams.get("sortOrder") ?? "desc";
-  const jobTitleKeywords = searchParams.get("jobTitleKeywords");
-  const isFavoriteTabActive = searchParams.get("tab") === "saved";
-  const isAppliedJobsTabActive = searchParams.get("tab") === "applied";
-  const applicationStatus = searchParams.get("applicationStatus");
-  const createdAfter = searchParams.get("createdAfter");
-  const createdAfterDate = createdAfter
-    ? getCutOffDate(Number(createdAfter))
-    : null;
-  const applicantUserId = searchParams.get("userId");
-  const jobId = searchParams.get("jobId");
-  const cursor = searchParams.get("cursor");
-  const limit = parseInt(searchParams.get("limit") || "20");
-  // only used for job digest endpoint to include AI suggestions, not for relevant job feed
-  const type = searchParams.get("type");
+  const params = parseJobSearchParams(request.nextUrl.searchParams, {
+    isInternalCall,
+  });
 
-  let failureStage = "initialize";
-  let distinctId = applicantUserId || "unknown";
+  const trace: SearchJobsTrace = {
+    stage: "initialize",
+    distinctId: params.applicantUserId || "unknown",
+  };
 
   try {
     const supabase = isInternalCall
       ? createServiceRoleClient()
       : await createClient();
 
-    failureStage = "resolve_relevance_profile";
-    let userEmbedding = null;
-    let jobEmbedding = null;
-    let userId;
-    let aiCredits = 0;
+    const result = await searchJobs(supabase, params, trace);
 
-    let relevanceSearchType:
-      | "standard"
-      | "job_digest"
-      | "job_digest_with_suggestions"
-      | "similar_jobs"
-      | null = null;
-
-    if (sortBy === "relevance") {
-      if (applicantUserId) {
-        userId = applicantUserId;
-        distinctId = applicantUserId;
-        relevanceSearchType =
-          type === "digest" ? "job_digest_with_suggestions" : "job_digest";
-      } else {
-        relevanceSearchType = jobId ? "similar_jobs" : "standard";
-
-        failureStage = "authenticate_request";
-        const user = await getUserFromRequest();
-        userId = user?.id;
-        if (!userId) {
-          relevanceSearchType = null;
-          return NextResponse.json(
-            { error: "User not found." },
-            { status: 401 },
-          );
-        }
-        distinctId = userId;
-
-        if (jobId) {
-          failureStage = "fetch_similar_job_embedding";
-          const { data: jobData, error: jobDataError } = await supabase
-            .from("all_jobs")
-            .select("embedding_new")
-            .eq("id", jobId)
-            .single();
-          if (jobDataError && jobDataError.code !== "PGRST116") {
-            throw jobDataError;
-          }
-          if (jobDataError || !jobData) {
-            relevanceSearchType = null;
-            return NextResponse.json(
-              { error: "Some error occured. Please try again later." },
-              { status: 404 },
-            );
-          }
-          jobEmbedding = jobData.embedding_new;
-        }
-      }
-
-      failureStage = "fetch_user_embedding_and_credits";
-      const { data: userData, error: userDataError } = await supabase
-        .from("user_info")
-        .select("embedding_new, ai_credits")
-        .eq("user_id", userId)
-        .single();
-
-      if (userDataError && userDataError.code !== "PGRST116") {
-        throw userDataError;
-      }
-      if (userDataError || !userData) {
-        relevanceSearchType = null;
-        return NextResponse.json(
-          { error: "User profile not found." },
-          { status: 404 },
-        );
-      }
-      aiCredits = userData.ai_credits;
-      userEmbedding = userData.embedding_new;
-    }
-
-    if (
-      relevanceSearchType === "standard" &&
-      aiCredits < TAICredits.AI_SEARCH_ASK_AI_RESUME
-    ) {
+    if (!result.ok) {
       return NextResponse.json(
-        {
-          error:
-            "Insufficient AI credits. Please navigate to dashboard to top up.",
-        },
-        { status: 402 },
+        { error: result.error },
+        { status: result.status },
       );
     }
 
-    failureStage = "build_jobs_query";
-    const { data, error, nextCursor, count, matchedJobIds } = await buildQuery({
-      jobType,
-      location,
-      visaRequirement,
-      minSalary,
-      minExperience,
-      platform,
-      companyName,
-      cursor,
-      limit,
-      sortBy,
-      sortOrder,
-      jobTitleKeywords,
-      isFavoriteTabActive: isFavoriteTabActive,
-      isAppliedJobsTabActive: isAppliedJobsTabActive,
-      userEmbedding,
-      applicationStatus,
-      createdAfter: createdAfterDate,
-      isInternalCall,
-      jobEmbedding,
-      relevanceSearchType,
-      userId: applicantUserId,
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    // only used if relevanceSearchType is job_digest, similar_jobs or job_digest_with_suggestions.
-    failureStage = "rerank_jobs";
-    const { initialJobs, totalCount } = await rerankJobsIfApplicable({
-      initialJobs: data,
-      initialCount: count,
-      userId,
-      jobId,
-      aiCredits,
-      matchedJobIds,
-      relevanceSearchType,
-      cursor,
-      isInternalCall,
-    });
-
     return NextResponse.json({
-      data: initialJobs,
-      totalCount,
-      nextCursor,
+      data: result.data,
+      totalCount: result.totalCount,
+      nextCursor: result.nextCursor,
     });
   } catch (err: unknown) {
     const errorRecord =
@@ -196,13 +54,13 @@ export async function GET(request: NextRequest) {
     const errorForPostHog =
       err instanceof Error ? err : new Error(errorMessage);
 
-    console.error(`[JOBS API] Failed during ${failureStage}:`, err);
+    console.error(`[JOBS API] Failed during ${trace.stage}:`, err);
     await eventCaptureServerException({
       error: errorForPostHog,
-      distinctId,
+      distinctId: trace.distinctId,
       properties: {
         flow: "jobs_api",
-        failure_stage: failureStage,
+        failure_stage: trace.stage,
         error_message: errorMessage,
         error_name:
           err instanceof Error
@@ -214,8 +72,8 @@ export async function GET(request: NextRequest) {
         error_details: errorRecord?.details,
         error_hint: errorRecord?.hint,
         request_path: request.nextUrl.pathname,
-        sort_by: sortBy,
-        created_after_days: createdAfter,
+        sort_by: params.sortBy,
+        created_after_days: params.createdAfterDays,
         internal_call: isInternalCall,
       },
     });

@@ -3,13 +3,14 @@
 import AuthConfirmationEmail from "@/emails/AuthConfirmationEmail";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "react-email";
-import { updateUserAppMetadata } from "./update-user-metadata";
+import { setUserAppMetadata } from "@/helpers/user/set-app-metadata";
 import { sendEmail } from "@/utils/email";
 import { deploymentUrl } from "@/utils/formatters";
 import { PostHogEvent } from "@/utils/types";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { after } from "next/server";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
+import { APPLICANT_HOME } from "@/helpers/user/home-path";
 
 const URL = deploymentUrl();
 
@@ -20,7 +21,7 @@ export async function sendSignupEmail(
 ) {
   const serviceRoleSupabase = createServiceRoleClient();
 
-  const finalRedirectUrl = isCompany ? "/get-started?company=true" : "/jobs";
+  const finalRedirectUrl = isCompany ? "/get-started?company=true" : APPLICANT_HOME;
 
   const { data, error } = await serviceRoleSupabase.auth.admin.generateLink({
     type: "signup",
@@ -35,7 +36,7 @@ export async function sendSignupEmail(
       );
     }
 
-    const { error: updateAppMetaError } = await updateUserAppMetadata(
+    const { error: updateAppMetaError } = await setUserAppMetadata(
       data.user?.id,
       {
         type: isCompany ? "company" : "applicant",

@@ -29,7 +29,7 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { commonIndustries } from "@/utils/utils";
-import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
+import { markMyOnboardingComplete } from "@/app/actions/update-user-metadata";
 import LocationSearchSelect from "./LocationSearchSelect";
 
 const formSchema = z.object({
@@ -216,13 +216,8 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
 
       if (error) throw error;
 
-      const { error: updateAppMetaError } = await updateUserAppMetadata(
-        user.id,
-        {
-          type: "company",
-          onboarding_complete: true,
-        },
-      );
+      const { error: updateAppMetaError } =
+        await markMyOnboardingComplete("company");
 
       if (updateAppMetaError) throw new Error(updateAppMetaError);
 
@@ -255,10 +250,12 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
   return (
     <div className="flex flex-col gap-10 items-center justify-center p-4 mb-20">
       <div className="flex flex-col gap-5 max-w-2xl w-full">
-        <p className="text-6xl font-bold  ">Let&apos;s Hire, quickly.</p>
+        <p className="text-2xl sm:text-[28px] font-semibold tracking-tight">
+          Let&apos;s Hire, quickly.
+        </p>
         <Link
           href={`/companies/${companyId}`}
-          className="underline flex items-center gap-1"
+          className="text-sm font-medium underline underline-offset-4 flex items-center gap-1 transition-colors hover:text-brand"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -276,14 +273,10 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Company Name <span className="text-red-500">*</span>
+                  Company Name <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input
-                    className="bg-input"
-                    placeholder="Acme Inc."
-                    {...field}
-                  />
+                  <Input placeholder="Acme Inc." {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -326,7 +319,7 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
                       setDeletePending(false);
                     }
                   }}
-                  className="bg-input h-10 p-2"
+                  className="h-10 p-2"
                   disabled={loading}
                   style={{
                     display:
@@ -355,7 +348,6 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
                 <FormLabel>Tagline</FormLabel>
                 <FormControl>
                   <Input
-                    className="bg-input"
                     placeholder="Eg. Your Smartest Path to the perfect job"
                     {...field}
                   />
@@ -371,12 +363,13 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Company Description <span className="text-red-500">*</span>
+                  Company Description{" "}
+                  <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
                   <Textarea
                     placeholder="Tell us a little bit about your company..."
-                    className="resize-y bg-input h-[200px]"
+                    className="resize-y h-[200px]"
                     {...field}
                   />
                 </FormControl>
@@ -392,14 +385,10 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Company Website <span className="text-red-500">*</span>
+                    Company Website <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      className="bg-input"
-                      placeholder="https://www.acme.com"
-                      {...field}
-                    />
+                    <Input placeholder="https://www.acme.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -411,12 +400,12 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Industry <span className="text-red-500">*</span>
+                    Industry <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="bg-input">
+                        <SelectTrigger>
                           <SelectValue placeholder="Select Industry" />
                         </SelectTrigger>
                       </FormControl>
@@ -443,7 +432,7 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
                 <FormItem>
                   <FormLabel>
                     Headquarters Location{" "}
-                    <span className="text-red-500">*</span>
+                    <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
                     <LocationSearchSelect
@@ -466,11 +455,11 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Company Size <span className="text-red-500">*</span>
+                    Company Size <span className="text-destructive">*</span>
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="bg-input">
+                      <SelectTrigger>
                         <SelectValue placeholder="Select size" />
                       </SelectTrigger>
                     </FormControl>
@@ -488,7 +477,12 @@ export default function CompanyOnboardingForm({ user }: { user: User | null }) {
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            variant="brand"
+            className="w-full"
+            disabled={loading}
+          >
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

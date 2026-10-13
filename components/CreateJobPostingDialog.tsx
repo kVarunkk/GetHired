@@ -6,14 +6,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import {
   Form,
   FormControl,
@@ -218,8 +219,8 @@ export default function CreateJobPostingDialog({
   const visaOptions = ["Will Sponsor", "Not Required", "Required"];
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger
+    <ResponsiveDialog open={isOpen} onOpenChange={setIsOpen}>
+      <ResponsiveDialogTrigger
         title={existingValues ? "Edit Job Post" : "Create Job Post"}
         asChild
       >
@@ -228,392 +229,388 @@ export default function CreateJobPostingDialog({
             <Pencil className=" h-4 w-4" />
           </Button>
         ) : (
-          <Button>
-            <PlusCircle /> Create New Job Post
+          <Button variant="brand" className="max-w-full">
+            <PlusCircle />
+            <span className="truncate">Create New Job Post</span>
           </Button>
         )}
-      </DialogTrigger>
-      <DialogContent className="flex h-[85vh] max-w-xl flex-col overflow-y-hidden">
-        <DialogHeader className="h-fit">
-          <DialogTitle>
+      </ResponsiveDialogTrigger>
+      <ResponsiveDialogContent
+        className="h-[85vh] max-w-xl"
+        drawerClassName="h-[85dvh]"
+      >
+        <ResponsiveDialogHeader className="h-fit">
+          <ResponsiveDialogTitle>
             {existingValues
               ? `Update ${existingValues.title} job post`
               : "Create New Job Post"}
-          </DialogTitle>
-          <DialogDescription>
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             {existingValues
               ? `Fill in the details for ${existingValues.title} job opening`
               : "Fill in the details for your new job opening."}
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
         <Form {...form}>
-          <form
-            id="JobPostingForm"
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4 h-full overflow-y-auto px-1"
-          >
-            {step === 1 ? (
-              <>
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Job Title</FormLabel>
-                      <FormControl>
-                        <Input
-                          className="bg-input"
-                          placeholder="Software Engineer"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Job Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Write a detailed job description..."
-                          className="resize-y bg-input h-[200px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Locations</FormLabel>
-                      <FormControl>
-                        <LocationSearchSelect
-                          name={field.name}
-                          initialLocations={field.value ?? []}
-                          onChange={(name, selectedLocations) =>
-                            field.onChange(selectedLocations)
-                          }
-                          placeholder="Select preferred locations"
-                          isSingleSelect={false}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ResponsiveDialogBody>
+            <form
+              id="JobPostingForm"
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-4"
+            >
+              {step === 1 ? (
+                <>
                   <FormField
                     control={form.control}
-                    name="job_type"
+                    name="title"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Job Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="bg-input">
-                              <SelectValue placeholder="Select a job type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {jobTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Job Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Software Engineer" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Job Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Write a detailed job description..."
+                            className="resize-y h-[200px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Locations</FormLabel>
+                        <FormControl>
+                          <LocationSearchSelect
+                            name={field.name}
+                            initialLocations={field.value ?? []}
+                            onChange={(name, selectedLocations) =>
+                              field.onChange(selectedLocations)
+                            }
+                            placeholder="Select preferred locations"
+                            isSingleSelect={false}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="job_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Job Type</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a job type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {jobTypes.map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="visa_sponsorship"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Visa Sponsorship</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                    <FormField
+                      control={form.control}
+                      name="visa_sponsorship"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Visa Sponsorship</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select an option" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {visaOptions.map((option) => (
+                                <SelectItem key={option} value={option}>
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="salary_currency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Currency</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="USD" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {salaryCurrencies.map((currency) => (
+                                <SelectItem key={currency} value={currency}>
+                                  {currency}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="min_salary"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Min Salary(pa)</FormLabel>
                           <FormControl>
-                            <SelectTrigger className="bg-input">
-                              <SelectValue placeholder="Select an option" />
-                            </SelectTrigger>
+                            <Input
+                              type="number"
+                              placeholder="80000"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? parseFloat(e.target.value)
+                                    : undefined,
+                                )
+                              }
+                            />
                           </FormControl>
-                          <SelectContent>
-                            {visaOptions.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="salary_currency"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Currency</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="max_salary"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Max Salary(pa)</FormLabel>
                           <FormControl>
-                            <SelectTrigger className="bg-input">
-                              <SelectValue placeholder="USD" />
-                            </SelectTrigger>
+                            <Input
+                              type="number"
+                              placeholder="120000"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? parseFloat(e.target.value)
+                                    : undefined,
+                                )
+                              }
+                            />
                           </FormControl>
-                          <SelectContent>
-                            {salaryCurrencies.map((currency) => (
-                              <SelectItem key={currency} value={currency}>
-                                {currency}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="min_salary"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Min Salary(pa)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            className="bg-input"
-                            placeholder="80000"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseFloat(e.target.value)
-                                  : undefined,
-                              )
-                            }
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="min_experience"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Min Experience (Years)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="2"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? parseInt(e.target.value)
+                                    : undefined,
+                                )
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="max_experience"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Max Experience (Years)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="5"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? parseInt(e.target.value)
+                                    : undefined,
+                                )
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="min_equity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Min Equity (%)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="0.1"
+                              step="0.01"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? parseFloat(e.target.value)
+                                    : undefined,
+                                )
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="max_equity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Max Equity (%)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="0.5"
+                              step="0.01"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? parseFloat(e.target.value)
+                                    : undefined,
+                                )
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <FormLabel>
+                    Add up to 3 custom questions for applicants:
+                  </FormLabel>
+                  <div className="space-y-4">
+                    {currentQuestions &&
+                      currentQuestions.map((q, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <FormField
+                            control={form.control}
+                            name={`questions.${index}`}
+                            render={({ field }) => (
+                              <FormItem className="flex-grow">
+                                <FormControl>
+                                  <Textarea
+                                    placeholder={`Question ${index + 1}`}
+                                    className="resize-y"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="max_salary"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Max Salary(pa)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            className="bg-input"
-                            placeholder="120000"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseFloat(e.target.value)
-                                  : undefined,
-                              )
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="min_experience"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Min Experience (Years)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            className="bg-input"
-                            placeholder="2"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseInt(e.target.value)
-                                  : undefined,
-                              )
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="max_experience"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Max Experience (Years)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            className="bg-input"
-                            placeholder="5"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseInt(e.target.value)
-                                  : undefined,
-                              )
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="min_equity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Min Equity (%)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            className="bg-input"
-                            placeholder="0.1"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseFloat(e.target.value)
-                                  : undefined,
-                              )
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="max_equity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Max Equity (%)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            className="bg-input"
-                            placeholder="0.5"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? parseFloat(e.target.value)
-                                  : undefined,
-                              )
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <FormLabel>
-                  Add up to 3 custom questions for applicants:
-                </FormLabel>
-                <div className="space-y-4">
-                  {currentQuestions &&
-                    currentQuestions.map((q, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <FormField
-                          control={form.control}
-                          name={`questions.${index}`}
-                          render={({ field }) => (
-                            <FormItem className="flex-grow">
-                              <FormControl>
-                                <Textarea
-                                  placeholder={`Question ${index + 1}`}
-                                  className="resize-y bg-input"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const newQuestions = currentQuestions.filter(
+                                (_, i) => i !== index,
+                              );
+                              form.setValue("questions", newQuestions);
+                            }}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    {canAddQuestion && (
+                      <div className="flex justify-end">
                         <Button
                           type="button"
-                          variant="ghost"
-                          size="sm"
+                          variant="outline"
                           onClick={() => {
-                            const newQuestions = currentQuestions.filter(
-                              (_, i) => i !== index,
-                            );
-                            form.setValue("questions", newQuestions);
+                            form.setValue("questions", [
+                              ...(currentQuestions || []),
+                              "",
+                            ]);
                           }}
                         >
-                          <Trash className="h-4 w-4" />
+                          Add Another Question
                         </Button>
                       </div>
-                    ))}
-                  {canAddQuestion && (
-                    <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          form.setValue("questions", [
-                            ...(currentQuestions || []),
-                            "",
-                          ]);
-                        }}
-                      >
-                        Add Another Question
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </form>
+                    )}
+                  </div>
+                </>
+              )}
+            </form>
+          </ResponsiveDialogBody>
 
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             {step === 2 && (
               <Button
                 type="button"
@@ -624,12 +621,17 @@ export default function CreateJobPostingDialog({
               </Button>
             )}
             {step === 1 && (
-              <Button type="button" onClick={handleNextStep}>
+              <Button type="button" variant="brand" onClick={handleNextStep}>
                 Next
               </Button>
             )}
             {step === 2 && (
-              <Button form="JobPostingForm" type="submit" disabled={loading}>
+              <Button
+                form="JobPostingForm"
+                type="submit"
+                variant="brand"
+                disabled={loading}
+              >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -642,9 +644,9 @@ export default function CreateJobPostingDialog({
                 )}
               </Button>
             )}
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

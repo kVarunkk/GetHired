@@ -414,7 +414,7 @@ export default function JobsComponent({
                 <Link
                   href={`/jobs/${jobId}`}
                   target="_blank"
-                  className="underline text-blue-500"
+                  className="font-medium text-foreground underline underline-offset-4 hover:text-brand"
                 >
                   this job
                 </Link>
@@ -425,7 +425,10 @@ export default function JobsComponent({
                 content={
                   <p>
                     Primary Resume is used to find jobs relevant to you.{" "}
-                    <Link href={"/resume"} className="text-blue-500">
+                    <Link
+                      href={"/resume"}
+                      className="font-medium underline underline-offset-4"
+                    >
                       Change Primary Resume
                     </Link>
                   </p>
@@ -465,13 +468,14 @@ export default function JobsComponent({
             <div className="flex items-center gap-2">
               <Button
                 asChild
+                variant="brand"
                 className="flex items-center gap-2 rounded-full text-sm"
               >
                 <Link href={"/get-started"}>
                   <Search className="w-4 h-4" />
                   {current_page === "companies"
                     ? "Find Suitable Companies"
-                    : "Find Suitable Jobs"}
+                    : "AI Smart Search"}
                 </Link>
               </Button>
             </div>
@@ -480,6 +484,7 @@ export default function JobsComponent({
           {!user && (
             <Button
               asChild
+              variant="brand"
               className="flex items-center gap-2 rounded-full text-sm"
             >
               <Link
@@ -490,7 +495,7 @@ export default function JobsComponent({
                 <Search className="w-4 h-4" />
                 {current_page === "companies"
                   ? "Find Suitable Companies"
-                  : "Find Suitable Jobs"}
+                  : "AI Smart Search"}
               </Link>
             </Button>
           )}
@@ -547,6 +552,7 @@ export default function JobsComponent({
               once your feed is ready.
             </p>
             <Button
+              variant="brand"
               onClick={() => {
                 generateAIFeed(isRelevantProfileSearch ? "profile" : "job");
               }}
@@ -569,6 +575,7 @@ export default function JobsComponent({
               You will be notified via email once your feed is ready.
             </p>
             <Button
+              variant="brand"
               onClick={() => {
                 generateAIFeed(isRelevantProfileSearch ? "profile" : "job");
               }}

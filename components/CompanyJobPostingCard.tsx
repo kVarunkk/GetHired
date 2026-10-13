@@ -14,9 +14,9 @@ export default function CompanyJobPostingCard({
   job: TCompanyIdPageData;
 }) {
   return (
-    <Card className="p-4 shadow-none group">
+    <Card className="p-4 group transition-colors hover:bg-muted/60">
       <CardHeader className="p-0 mb-2">
-        <CardTitle className="text-lg font-bold flex items-center justify-between min-h-10">
+        <CardTitle className="text-base font-semibold flex items-center justify-between min-h-10">
           <Link
             className="hover:underline underline underline-offset-4 sm:no-underline truncate"
             href={`/company/job-posts/${job.id}`}
@@ -54,7 +54,7 @@ export default function CompanyJobPostingCard({
       </CardHeader>
       <CardContent className="p-0 flex items-center justify-between w-full">
         <div className="text-muted-foreground text-sm">
-          <span className="font-semibold text-gray-900 dark:text-white">
+          <span className="font-medium text-foreground">
             {job.applications?.length || 0}
           </span>{" "}
           Applicant{job.applications?.length !== 1 ? "s" : ""}

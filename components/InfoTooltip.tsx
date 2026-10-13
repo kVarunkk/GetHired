@@ -24,12 +24,12 @@ export default function InfoTooltip({ content }: InfoTooltipProps) {
                      rounded-full transition-colors 
                      hover:text-primary focus-visible:ring-2 focus-visible:ring-offset-2 p-2"
         >
-          <Info className="h-3 w-3 text-muted-foreground" />
+          <Info className="h-3.5 w-3.5 text-muted-foreground" />
         </span>
       </PopoverTrigger>
 
       <PopoverContent
-        className="border border-border w-fit max-w-60 text-sm p-3 z-50 shadow-lg bg-muted text-popover-foreground break-words "
+        className="w-fit max-w-60 text-sm p-3 z-50 break-words"
         align="start"
       >
         {content}

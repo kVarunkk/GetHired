@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import InfoTooltip from "./InfoTooltip";
 import { useProgress } from "react-transition-progress";
 import GoogleAuthBtn from "./GoogleAuthBtn";
@@ -159,7 +159,7 @@ export function SignUpForm({
                         type="email"
                         placeholder="m@example.com"
                         required
-                        className="bg-input"
+                        aria-invalid={!!form.formState.errors.email}
                         {...field}
                       />
                       <FormMessage />
@@ -176,7 +176,7 @@ export function SignUpForm({
                         id="password"
                         type="password"
                         required
-                        className="bg-input"
+                        aria-invalid={!!form.formState.errors.password}
                         {...field}
                       />
                       <FormMessage />
@@ -193,7 +193,7 @@ export function SignUpForm({
                         id="repeat-password"
                         type="password"
                         required
-                        className="bg-input"
+                        aria-invalid={!!form.formState.errors.repeatPassword}
                         {...field}
                       />
                       <FormMessage />
@@ -201,11 +201,23 @@ export function SignUpForm({
                   )}
                 />
                 {form.formState.errors.root && (
-                  <p className="text-sm text-red-500">
+                  <p
+                    role="alert"
+                    className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+                  >
+                    <AlertCircle
+                      aria-hidden
+                      className="mt-0.5 h-4 w-4 shrink-0"
+                    />
                     {form.formState.errors.root.message}
                   </p>
                 )}
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  variant="brand"
+                  className="w-full"
+                  disabled={isLoading}
+                >
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -218,7 +230,7 @@ export function SignUpForm({
               </div>
               {!isCompany && (
                 <div className="flex flex-col gap-5 mt-5">
-                  <div className="text-center text-muted-foreground text-sm">
+                  <div className="text-center text-xs font-medium text-muted-foreground">
                     OR
                   </div>
                   <GoogleAuthBtn />
@@ -234,7 +246,7 @@ export function SignUpForm({
                         ? "/auth/login?returnTo=" + returnToPath
                         : "/auth/login"
                   }
-                  className="underline underline-offset-4"
+                  className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
                 >
                   Login
                 </Link>
@@ -245,7 +257,7 @@ export function SignUpForm({
                   Are you a company looking to hire candidates?{" "}
                   <Link
                     href={"/auth/sign-up?company=true"}
-                    className="underline underline-offset-4"
+                    className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
                   >
                     Sign up here
                   </Link>
@@ -255,7 +267,7 @@ export function SignUpForm({
                   Are you looking for jobs?{" "}
                   <Link
                     href={"/auth/sign-up"}
-                    className="underline underline-offset-4"
+                    className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
                   >
                     Sign up here
                   </Link>

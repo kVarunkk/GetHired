@@ -19,14 +19,12 @@ export const Step1JobRole = ({ formData, setFormData, errors }: StepProps) => {
           onChange={(e) =>
             setFormData({ ...formData, full_name: e.target.value })
           }
-          className={cn(
-            "mt-2 bg-input",
-            errors.full_name ? "border-red-500" : "",
-          )}
+          aria-invalid={!!errors.full_name}
+          className="mt-2"
         />
 
         {errors.full_name && (
-          <p className="text-red-500 text-sm mt-1">{errors.full_name}</p>
+          <p className="text-destructive text-sm mt-1">{errors.full_name}</p>
         )}
       </div>
 
@@ -40,14 +38,12 @@ export const Step1JobRole = ({ formData, setFormData, errors }: StepProps) => {
           onChange={(e) =>
             setFormData({ ...formData, linkedin_url: e.target.value })
           }
-          className={cn(
-            "mt-2 bg-input",
-            errors.linkedin_url ? "border-red-500" : "",
-          )}
+          aria-invalid={!!errors.linkedin_url}
+          className="mt-2"
         />
 
         {errors.linkedin_url && (
-          <p className="text-red-500 text-sm mt-1">{errors.linkedin_url}</p>
+          <p className="text-destructive text-sm mt-1">{errors.linkedin_url}</p>
         )}
       </div>
 
@@ -61,14 +57,12 @@ export const Step1JobRole = ({ formData, setFormData, errors }: StepProps) => {
           onChange={(e) =>
             setFormData({ ...formData, github_url: e.target.value })
           }
-          className={cn(
-            "mt-2 bg-input",
-            errors.github_url ? "border-red-500" : "",
-          )}
+          aria-invalid={!!errors.github_url}
+          className="mt-2"
         />
 
         {errors.github_url && (
-          <p className="text-red-500 text-sm mt-1">{errors.github_url}</p>
+          <p className="text-destructive text-sm mt-1">{errors.github_url}</p>
         )}
       </div>
 
@@ -85,12 +79,14 @@ export const Step1JobRole = ({ formData, setFormData, errors }: StepProps) => {
               setFormData((prev) => ({ ...prev, [name]: keywords }))
             }
             availableItems={commonJobTitles}
-            className={cn(errors.desired_roles ? "border-red-500" : "")}
+            className={cn(errors.desired_roles ? "border-destructive" : "")}
           />
         </div>
 
         {errors.desired_roles && (
-          <p className="text-red-500 text-sm mt-1">{errors.desired_roles}</p>
+          <p className="text-destructive text-sm mt-1">
+            {errors.desired_roles}
+          </p>
         )}
       </div>
 
@@ -107,12 +103,12 @@ export const Step1JobRole = ({ formData, setFormData, errors }: StepProps) => {
               [name]: keywords,
             });
           }}
-          className={cn("mt-2 ", errors.job_type ? "border-red-500" : "")}
+          className={cn("mt-2 ", errors.job_type ? "border-destructive" : "")}
           availableItems={["Fulltime", "Intern", "Contract"]}
         />
 
         {errors.job_type && (
-          <p className="text-red-500 text-sm mt-1">{errors.job_type}</p>
+          <p className="text-destructive text-sm mt-1">{errors.job_type}</p>
         )}
       </div>
     </CardContent>

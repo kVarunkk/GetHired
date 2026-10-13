@@ -5,13 +5,15 @@ import { Loader2, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import toast from "react-hot-toast";
 import {
   Accordion,
@@ -26,6 +28,7 @@ import InfoTooltip from "./InfoTooltip";
 import useSWR, { mutate } from "swr";
 import { fetcher, premadePrompts, PROFILE_API_KEY } from "@/utils/utils";
 import Link from "next/link";
+import ScrollFade from "./ScrollFade";
 
 interface ParsedFilters {
   [key: string]: string | string[] | undefined;
@@ -115,41 +118,47 @@ export default function GlobalJobSearch() {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
+    <ResponsiveDialog open={isOpen} onOpenChange={setIsOpen}>
+      <ResponsiveDialogTrigger asChild>
         <Button
           title="AI Search"
           variant="link"
           // size="link"
           aria-label="Open global job search"
-          className="rounded-full text-xs bg-secondary text-muted-foreground  !no-underline hover:text-primary transition-colors"
+          className="min-w-0 flex-1 justify-start rounded-full text-xs bg-secondary text-muted-foreground !no-underline hover:text-primary transition-colors sm:flex-none"
         >
           <Search className="h-5 w-5" />
-          Search Jobs with AI...
+          <span className="truncate">Search Jobs with AI...</span>
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="text-start">
+      </ResponsiveDialogTrigger>
+      <ResponsiveDialogContent className="sm:max-w-xl">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="text-start">
             What kind of job are you looking for?
-          </DialogTitle>
-          <DialogDescription className="text-start flex items-center gap-1">
+          </ResponsiveDialogTitle>
+          {/* Inline text, not flex, so a narrow screen wraps it like a sentence. */}
+          <ResponsiveDialogDescription className="text-start">
             {/* NEED TO SHOW USER THE AI CREDITS LEFT */}
             {data && data.profile
-              ? `${data.profile.ai_credits} AI Credits available.`
+              ? `${data.profile.ai_credits} AI Credits available. `
               : ""}
-            <Link href={"/dashboard/buy-credits"} className="text-blue-500">
+            <Link
+              href={"/dashboard/buy-credits"}
+              className="whitespace-nowrap font-medium underline underline-offset-4"
+            >
               Recharge Credits
             </Link>
-            <InfoTooltip
-              content={
-                "This feature uses " +
-                TAICredits.AI_SEARCH_ASK_AI_RESUME +
-                " AI credits per search."
-              }
-            />
-          </DialogDescription>
-        </DialogHeader>
+            <span className="-my-2 inline-block align-middle">
+              <InfoTooltip
+                content={
+                  "This feature uses " +
+                  TAICredits.AI_SEARCH_ASK_AI_RESUME +
+                  " AI credits per search."
+                }
+              />
+            </span>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
         <form
           onSubmit={(e) => {
@@ -157,30 +166,38 @@ export default function GlobalJobSearch() {
             const formData = new FormData(e.currentTarget);
             handleSubmit(formData);
           }}
-          className="flex flex-col space-y-4"
+          className="flex min-h-0 flex-col gap-4"
         >
-          <Textarea
-            // type="text"
-            required
-            placeholder="e.g., Senior Java jobs in London with visa sponsorship"
-            name="searchQuery"
-            disabled={isLoading}
-            className="bg-input text-sm"
-            ref={searchInputRef}
-          />
+          <ResponsiveDialogBody className="flex flex-col space-y-4">
+            <Textarea
+              // type="text"
+              required
+              placeholder="e.g., Senior Java jobs in London with visa sponsorship"
+              name="searchQuery"
+              disabled={isLoading}
+              className="text-sm"
+              ref={searchInputRef}
+            />
 
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
 
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1" className="border-0">
-              <AccordionTrigger className="text-sm">
-                Need inspiration? Try these prompts:
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="max-h-[150px] overflow-y-auto pr-2">
-                  {" "}
-                  {/* Fixed height and scrollable */}
-                  <div className="flex flex-col space-y-2">
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="item-1" className="border-0">
+                <AccordionTrigger className="text-sm">
+                  Need inspiration? Try these prompts:
+                </AccordionTrigger>
+                <AccordionContent>
+                  {/* A fixed-height list with a fade instead of a scrollbar. On
+                    short screens it shrinks (20dvh) so the open drawer still
+                    fits without scrolling. */}
+                  <ScrollFade
+                    className="h-[min(150px,20dvh)]"
+                    contentClassName="flex flex-col space-y-2"
+                  >
                     {premadePrompts.map((prompt, index) => (
                       <Button
                         key={index}
@@ -192,18 +209,27 @@ export default function GlobalJobSearch() {
                         {prompt}
                       </Button>
                     ))}
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+                  </ScrollFade>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </ResponsiveDialogBody>
 
-          <Button type="submit" disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Search Jobs
-          </Button>
+          {/* In the fixed footer, so opening the prompts never pushes it out
+              of view. */}
+          <ResponsiveDialogFooter>
+            <Button
+              type="submit"
+              variant="brand"
+              disabled={isLoading}
+              className="w-full"
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Search Jobs
+            </Button>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

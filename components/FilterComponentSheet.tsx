@@ -56,7 +56,7 @@ export default function FilterComponentSheet({
             } Applied`
           : "Apply Filters"}
       </SheetTrigger>
-      <SheetContent side={"left"} className="h-full w-full">
+      <SheetContent side={"left"} className="flex h-full w-full flex-col">
         <SheetHeader>
           <SheetTitle>
             <span className="capitalize">{currentPage}</span> Search Filters

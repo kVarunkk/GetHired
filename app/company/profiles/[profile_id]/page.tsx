@@ -5,6 +5,8 @@ import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import ProfileClientHydrator from "@/components/ProfileClientHydrator";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { isUuid } from "@/helpers/agent/auth";
 
 // CACHE 1: Core profile data, scoped strictly by profile_id
 const getCachedApplicantProfile = (profile_id: string) =>
@@ -37,7 +39,7 @@ const getCachedApplicantProfile = (profile_id: string) =>
         )
         .eq("user_id", profile_id)
         .eq("resumes.is_primary", true)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -87,6 +89,7 @@ export default async function ProfilePage({
 }) {
   try {
     const { profile_id } = await params;
+    if (!isUuid(profile_id)) notFound();
 
     const supabase = await createClient();
 
@@ -113,6 +116,8 @@ export default async function ProfilePage({
       getCompanyScopedApplications(profile_id, companyData.id),
     ]);
 
+    if (!profile) notFound();
+
     const { data: signedUrlData } = await supabase.storage
       .from("resumes")
       .createSignedUrl(profile.resumes?.[0]?.resume_path || "", 3600);
@@ -137,7 +142,8 @@ export default async function ProfilePage({
         <ProfileClientHydrator applicantProfile={completeProfileData} />
       </div>
     );
-  } catch {
+  } catch (err) {
+    unstable_rethrow(err);
     return <ErrorComponent />;
   }
 }

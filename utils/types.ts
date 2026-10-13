@@ -303,6 +303,9 @@ export enum PostHogEvent {
 
   ApplicationClicked = "application_clicked",
   InHouseApplicationSubmitted = "in_house_application_submitted",
+
+  AgentChatTurn = "agent_chat_turn",
+  AgentLocationNoResults = "agent_location_no_results",
 }
 
 export type JobUrlPatch = {

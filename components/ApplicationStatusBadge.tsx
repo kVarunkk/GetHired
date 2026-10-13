@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "./ui/badge";
+import { Badge, BadgeProps } from "./ui/badge";
 import { useMemo } from "react";
 import { cn } from "@/utils/utils";
 import {
@@ -14,33 +14,39 @@ export default function ApplicationStatusBadge({
 }: {
   status: TApplicationStatus | TPaymentStatus | TResumeReviewStatus;
 }) {
-  const badgeColorClass = useMemo(() => {
+  const style = useMemo((): {
+    variant: BadgeProps["variant"];
+    className?: string;
+  } => {
     switch (status) {
       case "submitted":
       case "pending":
       case "draft":
-        return "bg-slate-500 hover:bg-slate-500/80 text-white";
+        return { variant: "secondary" };
       case "reviewed":
       case "cancelled":
-        return "bg-amber-500 hover:bg-amber-500/80 text-white";
+        return { variant: "warning" };
       case "selected":
       case "complete":
       case "completed":
-        return "bg-green-500 hover:bg-green-500/80 text-white";
+        return { variant: "success" };
       case "stand_by":
-        return "bg-blue-500 hover:bg-blue-500/80 text-white";
+        return { variant: "outline", className: "text-muted-foreground" };
       case "rejected":
       case "failed":
-        return "bg-red-500 hover:bg-red-500/80 text-white";
+        return {
+          variant: "outline",
+          className: "border-destructive/30 bg-destructive/10 text-destructive",
+        };
       default:
-        return "bg-gray-500 hover:bg-gray-500/80 text-white";
+        return { variant: "secondary" };
     }
   }, [status]);
 
   return (
     <Badge
-      variant="secondary"
-      className={cn("capitalize w-fit", badgeColorClass)}
+      variant={style.variant}
+      className={cn("capitalize w-fit", style.className)}
     >
       {status}
     </Badge>

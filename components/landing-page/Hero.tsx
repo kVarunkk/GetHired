@@ -12,8 +12,10 @@ type HeroProps = {
   ctaLink: string;
   ctaText2?: string;
   ctaLink2?: string;
-  imgLight: string;
-  imgDark: string;
+  imgLight?: string;
+  imgDark?: string;
+  /** Shown instead of the screenshots, e.g. a live product demo. */
+  preview?: React.ReactNode;
 };
 
 export default function Hero({
@@ -25,47 +27,57 @@ export default function Hero({
   ctaLink2,
   imgLight,
   imgDark,
+  preview,
 }: HeroProps) {
   return (
     <div className="flex flex-col gap-5 w-full items-center text-center px-4 py-3 lg:px-20 xl:px-40 2xl:px-80">
-      <h1 className="text-5xl sm:text-7xl font-black tracking-tight leading-[1.1]">
+      <h1 className="text-5xl sm:text-7xl font-semibold tracking-tight leading-[1.1]">
         {heading}
       </h1>
       <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
         {subheading}
       </p>
-      <div className="flex items-center gap-5">
-        <Link href={ctaLink}>
-          <Button>{ctaText}</Button>
-        </Link>
+      {/* fit-content width: on one line the buttons keep their size; once they
+          wrap, the row is full width and each button grows to fill it. */}
+      <div className="flex w-fit max-w-full flex-wrap items-center justify-center gap-3 sm:gap-5">
+        <Button asChild variant="brand" className="flex-auto">
+          <Link href={ctaLink}>{ctaText}</Link>
+        </Button>
 
         {ctaLink2 && (
-          <Link href={ctaLink2}>
-            <Button variant="outline">{ctaText2}</Button>
-          </Link>
+          <Button asChild variant="outline" className="flex-auto">
+            <Link href={ctaLink2}>{ctaText2}</Link>
+          </Button>
         )}
       </div>
 
-      <div>
-        <Image
-          className="rounded-xl border border-border drop-shadow-xl mt-8 dark:hidden"
-          src={imgLight}
-          style={HeroMaskStyle}
-          height={1200}
-          width={1200}
-          alt="Snapshot of the GetHired Job Board"
-          priority
-        />
-        <Image
-          className="rounded-xl border border-border drop-shadow-xl mt-8 hidden dark:block"
-          src={imgDark}
-          style={HeroMaskStyle}
-          height={1200}
-          width={1200}
-          alt="Snapshot of the GetHired Job Board"
-          priority
-        />
-      </div>
+      {preview ? (
+        <div className="mt-8 w-full max-w-5xl">{preview}</div>
+      ) : (
+        imgLight &&
+        imgDark && (
+          <div>
+            <Image
+              className="rounded-xl border border-border drop-shadow-xl mt-8 dark:hidden"
+              src={imgLight}
+              style={HeroMaskStyle}
+              height={1200}
+              width={1200}
+              alt="Snapshot of the GetHired Job Board"
+              priority
+            />
+            <Image
+              className="rounded-xl border border-border drop-shadow-xl mt-8 hidden dark:block"
+              src={imgDark}
+              style={HeroMaskStyle}
+              height={1200}
+              width={1200}
+              alt="Snapshot of the GetHired Job Board"
+              priority
+            />
+          </div>
+        )
+      )}
     </div>
   );
 }

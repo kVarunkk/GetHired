@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import ResumeReviewClient from "@/components/ResumeReviewClient";
+import { notFound } from "next/navigation";
+import { isUuid } from "@/helpers/agent/auth";
 /**
  * SERVER COMPONENT: Resume Review Detail Page
  * Path: /resume-review/[reviewId]?job_id=xxx
@@ -13,6 +15,7 @@ export default async function ResumeReviewPage({
   params: Promise<{ reviewId: string }>;
 }) {
   const { reviewId } = await params;
+  if (!isUuid(reviewId)) notFound();
 
   const supabase = await createClient();
   const {
@@ -37,9 +40,10 @@ export default async function ResumeReviewPage({
     `,
     )
     .eq("id", reviewId)
-    .single();
+    .maybeSingle();
 
-  if (reviewError || !review) return <ErrorComponent />;
+  if (reviewError) return <ErrorComponent />;
+  if (!review) notFound();
 
   // 2. Hydrate Job Description
   let initialJd = review.target_jd || "";

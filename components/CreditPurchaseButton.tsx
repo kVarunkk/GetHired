@@ -49,7 +49,8 @@ const CreditPurchaseButton: React.FC<CreditPurchaseButtonProps> = ({
     <Button
       onClick={handlePurchase}
       disabled={isLoading}
-      className="w-full text-lg h-12 "
+      variant="brand"
+      className="w-full h-11"
     >
       {isLoading ? "Processing..." : `Buy for ${displayPrice}`}
     </Button>

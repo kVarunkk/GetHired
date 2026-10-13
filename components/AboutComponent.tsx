@@ -12,19 +12,19 @@ export default function AboutComponent() {
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <Card>
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center mb-2">
+          <CardTitle className="text-2xl sm:text-[28px] font-semibold tracking-tight text-center mb-2">
             About Us
           </CardTitle>
-          <CardDescription className="text-center text-gray-600">
+          <CardDescription className="text-center">
             Last updated: October 9, 2026
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6 text-lg leading-relaxed">
+        <CardContent className="space-y-6 text-[15px] leading-7">
           <section>
             <p>
               Hi, I&apos;m{" "}
               <Link
-                className="underline text-blue-600"
+                className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
                 href={"https://varun.devhub.co.in"}
                 target="_blank"
               >

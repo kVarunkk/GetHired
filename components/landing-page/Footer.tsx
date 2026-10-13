@@ -153,12 +153,12 @@ export default function Footer() {
         {/* 2. Quick Links (Col 2) */}
         {/* ==================================== */}
         <div className="col-span-2 md:col-span-1">
-          <h3 className="text-lg font-bold mb-3">Quick Links</h3>
+          <h3 className="text-sm font-semibold mb-3">Quick Links</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>
               <Link
                 href="/ai-interview"
-                className="hover:underline hover:opacity-100 transition-opacity"
+                className="transition-colors hover:text-foreground hover:underline"
               >
                 AI Interview
               </Link>
@@ -166,7 +166,7 @@ export default function Footer() {
             <li>
               <Link
                 href="/ai-resume-checker"
-                className="hover:underline hover:opacity-100 transition-opacity"
+                className="transition-colors hover:text-foreground hover:underline"
               >
                 AI Resume Checker
               </Link>
@@ -174,7 +174,7 @@ export default function Footer() {
             <li>
               <Link
                 href="/jobs"
-                className="hover:underline hover:opacity-100 transition-opacity"
+                className="transition-colors hover:text-foreground hover:underline"
               >
                 Jobs
               </Link>
@@ -182,7 +182,7 @@ export default function Footer() {
             <li>
               <Link
                 href="/companies"
-                className="hover:underline hover:opacity-100 transition-opacity"
+                className="transition-colors hover:text-foreground hover:underline"
               >
                 Companies
               </Link>
@@ -190,7 +190,7 @@ export default function Footer() {
             <li>
               <Link
                 href="/blog"
-                className="hover:underline hover:opacity-100 transition-opacity"
+                className="transition-colors hover:text-foreground hover:underline"
               >
                 Blog
               </Link>
@@ -198,7 +198,7 @@ export default function Footer() {
             <li>
               <Link
                 href="/hire"
-                className="hover:underline hover:opacity-100 transition-opacity"
+                className="transition-colors hover:text-foreground hover:underline"
               >
                 For Companies
               </Link>
@@ -206,7 +206,7 @@ export default function Footer() {
             <li>
               <Link
                 href="/mcp-server"
-                className="hover:underline hover:opacity-100 transition-opacity"
+                className="transition-colors hover:text-foreground hover:underline"
               >
                 MCP Server
               </Link>
@@ -214,7 +214,7 @@ export default function Footer() {
             <li>
               <Link
                 href="/extension"
-                className="hover:underline hover:opacity-100 transition-opacity"
+                className="transition-colors hover:text-foreground hover:underline"
               >
                 Chrome Extension
               </Link>
@@ -222,7 +222,7 @@ export default function Footer() {
             <li>
               <Link
                 href="/privacy-policy"
-                className="hover:underline hover:opacity-100 transition-opacity"
+                className="transition-colors hover:text-foreground hover:underline"
               >
                 Privacy Policy
               </Link>
@@ -230,7 +230,7 @@ export default function Footer() {
             <li>
               <Link
                 href="/terms-of-service"
-                className="hover:underline hover:opacity-100 transition-opacity"
+                className="transition-colors hover:text-foreground hover:underline"
               >
                 Terms of Service
               </Link>
@@ -238,7 +238,7 @@ export default function Footer() {
             <li>
               <Link
                 href="/about"
-                className="hover:underline hover:opacity-100 transition-opacity"
+                className="transition-colors hover:text-foreground hover:underline"
               >
                 About Us
               </Link>
@@ -246,7 +246,7 @@ export default function Footer() {
             <li>
               <Link
                 href="/contact"
-                className="hover:underline hover:opacity-100 transition-opacity"
+                className="transition-colors hover:text-foreground hover:underline"
               >
                 Contact
               </Link>
@@ -258,13 +258,13 @@ export default function Footer() {
         {/* 3. Popular Searches (NEW Col 3) */}
         {/* ==================================== */}
         <div className="col-span-2 md:col-span-1">
-          <h3 className="text-lg font-bold mb-3">Popular Searches</h3>
+          <h3 className="text-sm font-semibold mb-3">Popular Searches</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">
             {popularSearches.map((item) => (
               <li key={item.name}>
                 <Link
                   href={item.href}
-                  className="hover:underline hover:opacity-100 transition-opacity"
+                  className="transition-colors hover:text-foreground hover:underline"
                   prefetch={false}
                 >
                   {item.name}
@@ -278,13 +278,13 @@ export default function Footer() {
         {/* 4. Remote Jobs */}
         {/* ==================================== */}
         <div className="col-span-2 md:col-span-1">
-          <h3 className="text-lg font-bold mb-3">Remote Jobs</h3>
+          <h3 className="text-sm font-semibold mb-3">Remote Jobs</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">
             {remoteJobs.map((item) => (
               <li key={item.name}>
                 <Link
                   href={item.href}
-                  className="hover:underline hover:opacity-100 transition-opacity"
+                  className="transition-colors hover:text-foreground hover:underline"
                   prefetch={false}
                 >
                   {item.name}
@@ -296,7 +296,7 @@ export default function Footer() {
       </div>
       <div className="m-0 px-1 pt-16 md:pt-24">
         <p
-          className="m-0 whitespace-nowrap bg-foreground bg-clip-text text-center text-[clamp(2.5rem,14vw,16rem)] font-extrabold leading-[0.85] tracking-[-0.06em] text-transparent [mask-image:linear-gradient(to_bottom,#000_25%,transparent_100%)]"
+          className="m-0 whitespace-nowrap bg-foreground bg-clip-text text-center text-[clamp(2.5rem,14vw,16rem)] font-semibold leading-[0.85] tracking-[-0.06em] text-transparent [mask-image:linear-gradient(to_bottom,#000_25%,transparent_100%)]"
           aria-hidden="true"
         >
           GetHired

@@ -11,16 +11,18 @@ export default function PrivacyPolicy() {
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <Card>
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center mb-2">
+          <CardTitle className="text-2xl sm:text-[28px] font-semibold tracking-tight text-center mb-2">
             Privacy Policy
           </CardTitle>
-          <CardDescription className="text-center text-gray-600">
+          <CardDescription className="text-center">
             Last updated: July 30, 2025
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6 text-lg leading-relaxed">
+        <CardContent className="space-y-6 text-[15px] leading-7">
           <section>
-            <h2 className="text-2xl font-semibold mb-3">1. Introduction</h2>
+            <h2 className="text-lg font-semibold tracking-tight mb-3">
+              1. Introduction
+            </h2>
             <p>
               Welcome to GetHired&apos;s Privacy Policy. We are committed to
               protecting your personal data and your right to privacy. If you
@@ -37,10 +39,10 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-3">
+            <h2 className="text-lg font-semibold tracking-tight mb-3">
               2. What Information Do We Collect?
             </h2>
-            <h3 className="text-xl font-medium mb-2">
+            <h3 className="text-base font-medium mb-2">
               Personal Information You Disclose to Us
             </h3>
             <p>
@@ -65,7 +67,7 @@ export default function PrivacyPolicy() {
               and the products and features you use.
             </p>
 
-            <h3 className="text-xl font-medium mb-2 mt-4">
+            <h3 className="text-base font-medium mb-2 mt-4">
               Information Automatically Collected
             </h3>
             <p>
@@ -85,7 +87,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-3">
+            <h2 className="text-lg font-semibold tracking-tight mb-3">
               3. How Do We Use Your Information?
             </h2>
             <p>

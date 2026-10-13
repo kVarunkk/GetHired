@@ -8,12 +8,18 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { Metadata } from "next";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { buildJobPostingJsonLd } from "@/helpers/jobs/jobId/jsonld";
+import { isUuid } from "@/helpers/agent/auth";
 
 export const revalidate = 86400;
 export const dynamic = "force-static";
 
-const getStaticJobDetails = (jobId: string): Promise<TJobIdPageData | null> =>
-  unstable_cache(
+const getStaticJobDetails = async (
+  jobId: string,
+): Promise<TJobIdPageData | null> => {
+  // A malformed id (e.g. a truncated link) makes Postgres reject the uuid
+  // cast, so treat it as a missing job instead of a server error.
+  if (!isUuid(jobId)) return null;
+  return unstable_cache(
     async (id: string) => {
       const supabase = createServiceRoleClient();
       const selectString = `
@@ -43,6 +49,7 @@ const getStaticJobDetails = (jobId: string): Promise<TJobIdPageData | null> =>
     [`job-detail-${jobId}`],
     { revalidate: 86400, tags: [`job-${jobId}`] },
   )(jobId);
+};
 
 export async function generateMetadata({
   params,

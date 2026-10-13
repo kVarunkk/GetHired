@@ -1,4 +1,4 @@
-import { updateUserAppMetadata } from "@/app/actions/update-user-metadata";
+import { setUserAppMetadata } from "@/helpers/user/set-app-metadata";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { User } from "@supabase/supabase-js";
@@ -25,7 +25,7 @@ export async function handleUserUpsert(user: User) {
     if (!userData || userData.length === 0) {
       console.log(`OAuth: Inserting new user_info row for ID: ${user.id}`);
 
-      const { error: updateAppMetaError } = await updateUserAppMetadata(
+      const { error: updateAppMetaError } = await setUserAppMetadata(
         user.id,
         {
           type: "applicant",

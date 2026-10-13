@@ -22,13 +22,15 @@ export const Step4VisaWorkStyle: React.FC<StepProps> = ({
               visa_sponsorship_required: checked as boolean,
             })
           }
-          className={errors.visa_sponsorship_required ? "border-red-500" : ""}
+          className={
+            errors.visa_sponsorship_required ? "border-destructive" : ""
+          }
         />
         <Label>Do you require Visa Sponsorship?</Label>
       </div>
 
       {errors.visa_sponsorship_required && (
-        <p className="text-red-500 text-sm mt-1">
+        <p className="text-destructive text-sm mt-1">
           {errors.visa_sponsorship_required}
         </p>
       )}
@@ -48,12 +50,14 @@ export const Step4VisaWorkStyle: React.FC<StepProps> = ({
             setFormData((prev) => ({ ...prev, [name]: keywords }))
           }
           availableItems={commonIndustries}
-          className={cn(errors.industry_preferences ? "border-red-500" : "")}
+          className={cn(
+            errors.industry_preferences ? "border-destructive" : "",
+          )}
         />
       </div>
 
       {errors.industry_preferences && (
-        <p className="text-red-500 text-sm mt-1">
+        <p className="text-destructive text-sm mt-1">
           {errors.industry_preferences}
         </p>
       )}
@@ -73,12 +77,14 @@ export const Step4VisaWorkStyle: React.FC<StepProps> = ({
             setFormData((prev) => ({ ...prev, [name]: keywords }))
           }
           availableItems={commonWorkStyles}
-          className={cn(errors.work_style_preferences ? "border-red-500" : "")}
+          className={cn(
+            errors.work_style_preferences ? "border-destructive" : "",
+          )}
         />
       </div>
 
       {errors.work_style_preferences && (
-        <p className="text-red-500 text-sm mt-1">
+        <p className="text-destructive text-sm mt-1">
           {errors.work_style_preferences}
         </p>
       )}

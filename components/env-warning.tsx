@@ -6,12 +6,12 @@ export default function EnvWarning({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${geistClassname} flex items-center justify-center min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-neutral-900 via-neutral-950 to-neutral-950 text-neutral-100 p-6 font-sans antialiased`}
+        className={`${geistClassname} flex items-center justify-center min-h-screen bg-background text-foreground p-6 font-sans antialiased`}
       >
-        <div className="max-w-md w-full border border-neutral-800/80 rounded-2xl p-8 bg-neutral-900/50 backdrop-blur-xl shadow-2xl relative overflow-hidden transition-all duration-300 hover:border-neutral-700/80">
-          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500" />
+        <div className="max-w-md w-full border rounded-2xl p-8 bg-card relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-warning" />
 
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-6 text-amber-500">
+          <div className="w-12 h-12 rounded-xl bg-warning/10 border border-warning/30 flex items-center justify-center mb-6 text-warning">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -28,25 +28,25 @@ export default function EnvWarning({
             </svg>
           </div>
 
-          <h1 className="text-xl font-bold mb-3 tracking-tight text-neutral-50">
+          <h1 className="text-xl font-semibold mb-3 tracking-tight">
             Configuration Required
           </h1>
-          <p className="mb-6 text-neutral-400 leading-relaxed text-sm">
+          <p className="mb-6 text-muted-foreground leading-relaxed text-sm">
             You do not have the required environment variables. Please add all
             required environment variables in your{" "}
-            <code className="bg-neutral-800/60 px-1.5 py-0.5 rounded text-xs font-mono text-neutral-300">
+            <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono text-foreground">
               .env.local
             </code>{" "}
             file to run the project.
           </p>
 
-          <p className="text-xs text-neutral-500 leading-relaxed">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             Once you have configured the{" "}
-            <code className="bg-neutral-850 px-1 py-0.5 rounded text-neutral-400">
+            <code className="bg-muted px-1 py-0.5 rounded text-foreground">
               .env.local
             </code>{" "}
             file, restart your development server (
-            <code className="bg-neutral-850 px-1 py-0.5 rounded text-neutral-400">
+            <code className="bg-muted px-1 py-0.5 rounded text-foreground">
               npm run dev
             </code>
             ).

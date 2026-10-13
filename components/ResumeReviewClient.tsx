@@ -12,7 +12,16 @@ import {
 import AnalysisPane from "./resume-review/AnalysisPane";
 import { markAnalysisAsFailedAction } from "@/app/actions/mark-review-analysis-failed";
 import useSWR, { mutate } from "swr";
-import { fetcher } from "@/utils/utils";
+import { cn, fetcher } from "@/utils/utils";
+
+/** Match score colour: green when strong, amber when middling, red when weak. */
+function scoreColorClass(score: string | number) {
+  const value = parseFloat(String(score));
+  if (Number.isNaN(value)) return "text-foreground";
+  if (value >= 75) return "text-success";
+  if (value >= 50) return "text-warning";
+  return "text-destructive";
+}
 
 interface ReviewWorkspaceProps {
   initialReview: TResumeReviewServer;
@@ -113,16 +122,23 @@ export default function ResumeReviewClient({
           <div className="flex items-center gap-3">
             <BackButton />
             <div className="flex flex-col ">
-              <h2 className="text-lg font-bold">Analysis Pane</h2>
+              <h2 className="text-lg font-semibold tracking-tight">
+                Analysis Pane
+              </h2>
               <p className=" text-muted-foreground text-sm">{review?.name}</p>
             </div>
           </div>
           {review?.score && (
             <div className="text-right">
-              <div className="text-2xl font-black text-brand">
+              <div
+                className={cn(
+                  "text-2xl font-semibold tracking-tight",
+                  scoreColorClass(review.score),
+                )}
+              >
                 {review.score}
               </div>
-              <div className=" text-muted-foreground font-bold  tracking-tighter">
+              <div className="text-xs font-medium text-muted-foreground">
                 Match Score
               </div>
             </div>
@@ -144,7 +160,6 @@ export default function ResumeReviewClient({
       <div className="flex-1 flex flex-col min-w-0 ">
         <ResumeSection
           isParsed={isParsed}
-          isJdPaneOpen={isJdPaneOpen}
           existingResumes={existingResumes}
           linkedResume={linkedResume}
           activeHighlightId={activeHighlightId}

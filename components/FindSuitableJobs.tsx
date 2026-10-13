@@ -10,16 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import {
-  FolderSearch,
-  Loader2,
-  PlusCircle,
-  Search,
-  Sparkle,
-} from "lucide-react";
+import { Loader2, PlusCircle, Search, Sparkle } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import toast from "react-hot-toast";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { SelectGroup } from "@radix-ui/react-select";
 import Link from "next/link";
@@ -53,8 +47,6 @@ export default function FindSuitableJobs({
 }) {
   const [suitableJobsSelectValue, setSuitableJobsSelectValue] = useState("");
   const router = useRouter();
-  const supabase = createClient();
-  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const startProgress = useProgress();
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
@@ -72,74 +64,6 @@ export default function FindSuitableJobs({
       staleTime: 10 * 60 * 1000,
     },
   );
-
-  const handleFindSuitableJobs = async () => {
-    try {
-      if (!user) throw new Error("User not found");
-      const { data: userInfo, error: userInfoError } = await supabase
-        .from("user_info")
-        .select(
-          "desired_roles, preferred_locations, job_type, visa_sponsorship_required, min_salary, experience_years",
-        )
-        .eq("user_id", user.id)
-        .single();
-
-      if (userInfoError && userInfoError.code !== "PGRST116") {
-        toast.error("Failed to load your profile. Please try again.");
-        return;
-      }
-
-      if (!userInfo) {
-        toast.error("Please complete your profile first.");
-        router.push("/get-started");
-        return;
-      }
-
-      const params = new URLSearchParams();
-
-      const currentSortBy = searchParams.get("sortBy");
-      const currentSortOrder = searchParams.get("sortOrder");
-      if (currentSortBy && currentSortBy !== "relevance")
-        params.set("sortBy", currentSortBy);
-      if (currentSortOrder) params.set("sortOrder", currentSortOrder);
-
-      const addMultiParam = (paramName: string, values: string[] | null) => {
-        if (values && values.length > 0) {
-          params.set(paramName, values.join("|"));
-        }
-      };
-
-      addMultiParam("jobTitleKeywords", userInfo.desired_roles);
-      addMultiParam("location", userInfo.preferred_locations);
-      addMultiParam("jobType", userInfo.job_type);
-      addMultiParam(
-        "visaRequirement",
-        userInfo.visa_sponsorship_required
-          ? ["US Citizenship/Visa Not Required", "Will Sponsor"]
-          : ["US Citizenship/Visa Not Required", "US Citizen/Visa Only"],
-      );
-
-      if (userInfo.min_salary) {
-        params.set("minSalary", userInfo.min_salary.toString());
-      }
-      if (userInfo.experience_years) {
-        params.set("minExperience", userInfo.experience_years.toString());
-      }
-
-      posthog.capture(PostHogEvent.FindSuitableJobsMatchingProfileUsed);
-
-      startTransition(() => {
-        startProgress();
-        router.push(`/jobs?${params.toString()}`);
-      });
-    } catch (error: unknown) {
-      toast.error(
-        `An unexpected error occurred: ${
-          error instanceof Error ? error.message : "Please try again."
-        }`,
-      );
-    }
-  };
 
   const handleAiSearch = async (value?: string) => {
     try {
@@ -182,12 +106,12 @@ export default function FindSuitableJobs({
         >
           <SelectTrigger
             disabled={isPending}
-            className="rounded-full bg-primary shadow-lg w-[200px]"
+            className="rounded-full border-brand bg-brand hover:bg-brand/90 hover:border-brand w-[200px]"
           >
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             <SelectValue
               placeholder={
-                <p className="flex items-center gap-2 text-primary-foreground">
+                <p className="flex items-center gap-2 text-brand-foreground">
                   <Search className="w-4 h-4" /> Find Suitable Profiles
                 </p>
               }
@@ -226,7 +150,10 @@ export default function FindSuitableJobs({
                   ? `${data.profile.ai_credits} AI Credits available.`
                   : ""
               }`}{" "}
-              <Link href={"/dashboard/buy-credits"} className="text-blue-500">
+              <Link
+                href={"/dashboard/buy-credits"}
+                className="font-medium underline underline-offset-4"
+              >
                 Recharge Credits
               </Link>
             </p>
@@ -240,9 +167,10 @@ export default function FindSuitableJobs({
     return (
       <div className="flex items-center ">
         <Button
+          variant="brand"
           disabled={isPending}
           onClick={() => handleAiSearch()}
-          className="rounded-full bg-primary shadow-lg "
+          className="rounded-full"
         >
           {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           <Search className="w-4 h-4" /> Find Suitable Companies
@@ -257,7 +185,10 @@ export default function FindSuitableJobs({
                   ? `${data.profile.ai_credits} AI Credits available.`
                   : ""
               }`}{" "}
-              <Link href={"/dashboard/buy-credits"} className="text-blue-500">
+              <Link
+                href={"/dashboard/buy-credits"}
+                className="font-medium underline underline-offset-4"
+              >
                 Recharge Credits
               </Link>
             </p>
@@ -269,46 +200,19 @@ export default function FindSuitableJobs({
 
   return (
     <div className="flex items-center ">
-      <Select
-        value={suitableJobsSelectValue}
-        onValueChange={(value) => {
-          setSuitableJobsSelectValue(value);
-          if (value === "find-suitable") {
-            handleFindSuitableJobs();
-          }
-          if (value === "ai-job-search") {
-            handleAiSearch();
-          }
-          setTimeout(() => setSuitableJobsSelectValue(""), 100);
-        }}
+      <Button
+        variant="brand"
+        disabled={isPending}
+        onClick={() => handleAiSearch()}
+        className="rounded-full"
       >
-        <SelectTrigger
-          disabled={isPending}
-          className="rounded-full bg-primary shadow-lg w-[180px] !text-primary-foreground"
-        >
-          {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-          <SelectValue
-            placeholder={
-              <p className="flex items-center gap-2 ">Find Suitable Jobs</p>
-            }
-          />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="find-suitable">
-            <div className="w-full flex items-center gap-2">
-              {" "}
-              <FolderSearch className="h-4 w-4" />
-              Find Jobs Matching My Profile
-            </div>
-          </SelectItem>
-          <SelectItem value="ai-job-search">
-            <div className="w-full flex items-center gap-2">
-              <Sparkle className="h-4 w-4" />
-              AI Smart Search
-            </div>
-          </SelectItem>
-        </SelectContent>
-      </Select>
+        {isPending ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Sparkle className="h-4 w-4" />
+        )}
+        AI Smart Search
+      </Button>
 
       <InfoTooltip
         content={
@@ -319,7 +223,10 @@ export default function FindSuitableJobs({
                 ? `${data.profile.ai_credits} AI Credits available.`
                 : ""
             }`}{" "}
-            <Link href={"/dashboard/buy-credits"} className="text-blue-500">
+            <Link
+              href={"/dashboard/buy-credits"}
+              className="font-medium underline underline-offset-4"
+            >
               Recharge Credits
             </Link>
           </p>

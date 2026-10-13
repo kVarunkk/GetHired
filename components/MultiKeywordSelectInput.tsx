@@ -31,8 +31,6 @@ export default memo(function MultiKeywordSelectInput({
 }: MultiKeywordSelectInputProps) {
   const [input, setInput] = useState("");
 
-  const [isFocused, setIsFocused] = useState(false);
-
   const displayedKeywords = useMemo(() => {
     return initialKeywords.map((content) => ({ id: uuidv4(), content }));
   }, [initialKeywords]);
@@ -82,18 +80,13 @@ export default memo(function MultiKeywordSelectInput({
     );
   }, [availableItems, input]);
 
-  const handleFocus = useCallback(() => setIsFocused(true), []);
-  const handleBlur = useCallback(() => setIsFocused(false), []);
-
   return (
     <div className={cn("flex flex-col gap-2 relative", className)}>
       <div className="flex gap-2">
         <div
           id={`${name}-container`}
-          className={cn(
-            "flex items-center w-full rounded-md",
-            isFocused ? "ring-1 ring-primary" : "",
-          )}
+          // The wrapper is the field: one border around the input and the picker, with the Input primitive's focus style.
+          className="flex items-center w-full rounded-lg border border-input bg-background transition-colors hover:border-foreground/20 focus-within:border-foreground/30 focus-within:ring-2 focus-within:ring-foreground/5"
         >
           <Input
             name={String(name)}
@@ -101,9 +94,7 @@ export default memo(function MultiKeywordSelectInput({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="!rounded-r-none !border-0 bg-input !ring-0 text-sm"
-            onFocus={handleFocus}
-            onBlur={handleBlur}
+            className="!rounded-r-none !border-0 bg-transparent !ring-0 text-sm"
           />
           {filteredAvailableItems.length > 0 && (
             <MultiKeywordSelect
@@ -143,15 +134,15 @@ export default memo(function MultiKeywordSelectInput({
           {displayedKeywords.map(({ content, id }) => (
             <span
               key={id}
-              className="flex items-center border border-border px-2 py-1 rounded text-sm"
+              className="flex items-center gap-0.5 rounded-full border py-0.5 pl-2.5 pr-1 text-sm"
             >
               {content}
               <button
                 type="button"
                 onClick={() => removeKeyword(content)}
-                className="p-1"
+                className="rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </span>
           ))}

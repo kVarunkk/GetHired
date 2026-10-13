@@ -4,17 +4,34 @@ import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
 import React from "react";
 import AvatarComponent from "./AvatarComponent";
+import SidebarLabel from "@/components/SidebarLabel";
 
-const MenuTrigger = React.forwardRef<HTMLButtonElement, any>(
-  ({ user, open, isMenuOpen, isCompanyUser, ...props }, ref) => {
+type MenuTriggerProps = React.ComponentPropsWithoutRef<"button"> & {
+  user: React.ComponentProps<typeof AvatarComponent>["user"];
+  open?: boolean;
+  isMenuOpen: boolean;
+  isCompanyUser: boolean;
+  /** In the vertical sidebar the trigger is a full-width row with a label. */
+  isVertical?: boolean;
+};
+
+const MenuTrigger = React.forwardRef<HTMLButtonElement, MenuTriggerProps>(
+  (
+    { user, open, isMenuOpen, isCompanyUser, isVertical = false, ...props },
+    ref,
+  ) => {
     return (
       <DropdownMenuTrigger asChild>
         <button
           ref={ref}
+          aria-label="Profile"
           {...props}
           className={cn(
-            "flex items-center w-full p-2 gap-2 hover:bg-secondary transition-all rounded-lg",
-            isMenuOpen ? "justify-start" : "justify-center",
+            "flex items-center rounded-lg hover:bg-secondary transition-colors",
+            isVertical
+              ? // px-2 centres the 32px avatar in the collapsed rail.
+                "w-full px-2 py-2 gap-2 overflow-hidden"
+              : "h-9 w-9 justify-center",
           )}
         >
           <AvatarComponent
@@ -22,7 +39,7 @@ const MenuTrigger = React.forwardRef<HTMLButtonElement, any>(
             open={open}
             isCompanyUser={isCompanyUser}
           />
-          {isMenuOpen && <span className="text-sm">Profile</span>}
+          {isVertical && <SidebarLabel open={isMenuOpen}>Profile</SidebarLabel>}
         </button>
       </DropdownMenuTrigger>
     );
