@@ -12,6 +12,8 @@ import { DownloadInvoiceButton } from "@/components/DownloadInvoiceBtn";
 import CopyBtn from "@/components/CopyBtn";
 import { TPaymentStatus } from "@/utils/types";
 import { TPaymentIdRecord } from "@/utils/types/payments.types";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { isUuid } from "@/helpers/agent/auth";
 
 export default async function PaymentIdPage({
   params,
@@ -20,6 +22,7 @@ export default async function PaymentIdPage({
 }) {
   try {
     const { payment_id } = await params;
+    if (!isUuid(payment_id)) notFound();
     const supabase = await createClient();
     const {
       data: { user },
@@ -33,11 +36,12 @@ export default async function PaymentIdPage({
       .from("payments")
       .select("*, price_plan(*)")
       .eq("id", payment_id)
-      .single();
+      .maybeSingle();
 
     if (paymentsError) {
       throw paymentsError;
     }
+    if (!payment) notFound();
 
     const paymentData = payment as unknown as TPaymentIdRecord;
 
@@ -272,7 +276,8 @@ export default async function PaymentIdPage({
         </div>
       </div>
     );
-  } catch {
+  } catch (err) {
+    unstable_rethrow(err);
     return <Error />;
   }
 }

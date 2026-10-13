@@ -21,6 +21,7 @@ import { useFilterOptions } from "@/hooks/useFilterOptions";
 import { filterConfigBuilder } from "@/helpers/filter-component/filterConfigBuilder";
 import { getInitialState } from "@/helpers/filter-component/getInitialState";
 import LocationSearchSelect from "./LocationSearchSelect";
+import ScrollFade from "./ScrollFade";
 import posthog from "posthog-js";
 
 export default function FilterComponent({
@@ -259,10 +260,11 @@ export default function FilterComponent({
 
   return (
     <form
-      className="flex flex-col h-full md:h-screen items-start"
+      className="flex min-h-0 flex-col h-full md:h-screen items-start"
       onSubmit={handleSubmit}
     >
-      <div className="w-full flex-1 overflow-y-auto p-4 pl-0">
+      {/* No scrollbar: a fade at the bottom (and at the top once scrolled) shows there are more filters. */}
+      <ScrollFade className="w-full flex-1" contentClassName="py-4 md:pr-4">
         {FILTER_CONFIG.filter((each) => !each.hidden).map((config) => (
           <label
             key={config.name}
@@ -273,8 +275,8 @@ export default function FilterComponent({
             {renderInput(config)}
           </label>
         ))}
-      </div>
-      <div className="w-full  p-4 pl-0 shrink-0">
+      </ScrollFade>
+      <div className="w-full shrink-0 py-4 md:pr-4">
         <FilterActions
           currentPage={currentPage}
           setOpenSheet={setOpenSheet}

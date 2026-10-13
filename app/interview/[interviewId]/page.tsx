@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import InterviewComponent from "@/components/InterviewComponent";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { isUuid } from "@/helpers/agent/auth";
 
 type SessionSummary = {
   id: string;
@@ -15,6 +17,7 @@ export default async function InterviewIdPage({
   params: Promise<{ interviewId: string }>;
 }) {
   const { interviewId } = await params;
+  if (!isUuid(interviewId)) notFound();
   try {
     const supabase = await createClient();
 
@@ -22,11 +25,10 @@ export default async function InterviewIdPage({
       .from("interviews")
       .select("*, all_jobs(job_name), resumes(name), interview_sessions(id, turns)")
       .eq("id", interviewId)
-      .single();
+      .maybeSingle();
 
-    if (!data || error) {
-      throw new Error("Interview not found");
-    }
+    if (error) throw error;
+    if (!data) notFound();
 
     const { data: sessions, error: sessionsError } = await supabase
       .from("interview_sessions")
@@ -65,7 +67,8 @@ export default async function InterviewIdPage({
         sessionHistory={sessionHistory}
       />
     );
-  } catch {
+  } catch (err) {
+    unstable_rethrow(err);
     return <ErrorComponent />;
   }
 }

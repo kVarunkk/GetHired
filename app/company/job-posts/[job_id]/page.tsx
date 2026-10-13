@@ -12,6 +12,8 @@ import ApplicantsTable from "@/components/ApplicantsTable";
 import JobDescriptionCard from "@/components/JobDetailsCard";
 import FindSuitableProfilesForJobPost from "@/components/FindSuitableProfilesForJobPost";
 import ShareJobPosting from "@/components/ShareJobPosting";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { isUuid } from "@/helpers/agent/auth";
 
 export default async function JobPostPage({
   params,
@@ -20,6 +22,7 @@ export default async function JobPostPage({
 }) {
   try {
     const { job_id } = await params;
+    if (!isUuid(job_id)) notFound();
     const supabase = await createClient();
     const {
       data: { user },
@@ -34,11 +37,10 @@ export default async function JobPostPage({
         `,
       )
       .eq("id", job_id)
-      .single();
+      .maybeSingle();
 
-    if (error || !job) {
-      return <Error />;
-    }
+    if (error) throw error;
+    if (!job) notFound();
 
     // Prepare data for the Edit dialog
     const existingValues = {
@@ -67,7 +69,7 @@ export default async function JobPostPage({
         {/* --- Header Section --- */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight">
+            <h1 className="min-w-0 text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[28px]">
               {job.title}
             </h1>
             <p className="text-lg text-muted-foreground">
@@ -174,8 +176,8 @@ export default async function JobPostPage({
         </div>
       </div>
     );
-  } catch {
-    // console.error("Error in JobPostPage:", err);
+  } catch (err) {
+    unstable_rethrow(err);
     return <Error />;
   }
 }

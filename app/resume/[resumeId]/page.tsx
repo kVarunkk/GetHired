@@ -9,6 +9,8 @@ import { TAICredits } from "@/utils/types";
 import CreateReviewForResume from "@/components/CreateReviewForResume";
 import { RetryResumeParsing } from "@/components/RetryResumeParsing";
 import ResumeStatusBadge from "@/components/ResumeStatusBadge";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { isUuid } from "@/helpers/agent/auth";
 
 export default async function ResumeIdPage({
   params,
@@ -16,6 +18,7 @@ export default async function ResumeIdPage({
   params: Promise<{ resumeId: string }>;
 }) {
   const { resumeId } = await params;
+  if (!isUuid(resumeId)) notFound();
   try {
     const supabase = await createClient();
 
@@ -27,11 +30,10 @@ export default async function ResumeIdPage({
       .from("resumes")
       .select("*")
       .eq("id", resumeId)
-      .single();
+      .maybeSingle();
 
-    if (!data || error) {
-      throw new Error("Resume not found");
-    }
+    if (error) throw error;
+    if (!data) notFound();
 
     const isParsingFailed = data.parsing_failed === true;
 
@@ -96,7 +98,8 @@ export default async function ResumeIdPage({
         <OriginalResumeWrapper url={signedUrlData?.signedUrl} />
       </div>
     );
-  } catch {
+  } catch (err) {
+    unstable_rethrow(err);
     return <ErrorComponent />;
   }
 }

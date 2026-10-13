@@ -1,14 +1,16 @@
 "use client";
 
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogClose,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "./ui/button";
 import { Pencil, Trash } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -81,9 +83,9 @@ export default function JobsBookmarkActions({
 
   return (
     <div className="flex items-center gap-1">
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+      <ResponsiveDialog open={openDialog} onOpenChange={setOpenDialog}>
         <div className="flex items-center gap-2">
-          <DialogTrigger asChild>
+          <ResponsiveDialogTrigger asChild>
             <Button
               onClick={() => {
                 setOpenDialog(true);
@@ -94,8 +96,8 @@ export default function JobsBookmarkActions({
             >
               <Pencil className="h-4 w-4" />
             </Button>
-          </DialogTrigger>
-          <DialogTrigger asChild>
+          </ResponsiveDialogTrigger>
+          <ResponsiveDialogTrigger asChild>
             <Button
               onClick={() => {
                 setOpenDialog(true);
@@ -106,67 +108,69 @@ export default function JobsBookmarkActions({
             >
               <Trash />
             </Button>
-          </DialogTrigger>
+          </ResponsiveDialogTrigger>
         </div>
 
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="max-w-[200px] truncate text-start">
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="max-w-[200px] truncate text-start">
               {dialogView === "edit" ? "Edit" : "Delete"} &quot;{bookmark.name}
               &quot;
-            </DialogTitle>
+            </ResponsiveDialogTitle>
             {dialogView === "delete" && (
-              <DialogDescription className="text-start">
+              <ResponsiveDialogDescription className="text-start">
                 Are you sure you want to remove this bookmark? This action
                 cannot be undone.
-              </DialogDescription>
+              </ResponsiveDialogDescription>
             )}
-          </DialogHeader>
+          </ResponsiveDialogHeader>
           {dialogView === "edit" ? (
-            <form className="flex flex-col gap-4" onSubmit={updateItem}>
-              <div className="flex flex-col gap-2">
-                <label htmlFor="name" className="font-medium">
-                  Name
-                </label>
-                <Input
-                  id="name"
-                  name="name"
-                  defaultValue={bookmark.name}
-                  className="text-sm"
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label htmlFor="url" className="font-medium">
-                  URL
-                </label>
-                <Input
-                  id="url"
-                  name="url"
-                  defaultValue={bookmark.url ?? undefined}
-                  className="text-sm"
-                  required
-                />
-              </div>
-              <div className="flex justify-start gap-2 mt-4">
-                <DialogClose asChild>
+            <form className="flex min-h-0 flex-col gap-4" onSubmit={updateItem}>
+              <ResponsiveDialogBody className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="name" className="font-medium">
+                    Name
+                  </label>
+                  <Input
+                    id="name"
+                    name="name"
+                    defaultValue={bookmark.name}
+                    className="text-sm"
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="url" className="font-medium">
+                    URL
+                  </label>
+                  <Input
+                    id="url"
+                    name="url"
+                    defaultValue={bookmark.url ?? undefined}
+                    className="text-sm"
+                    required
+                  />
+                </div>
+              </ResponsiveDialogBody>
+              <ResponsiveDialogFooter className="gap-2 sm:space-x-0">
+                <ResponsiveDialogClose asChild>
                   <Button disabled={formLoading} variant="outline">
                     Cancel
                   </Button>
-                </DialogClose>
+                </ResponsiveDialogClose>
                 <Button disabled={formLoading} type="submit">
                   Save
                   {formLoading && <AppLoader color="secondary" size="sm" />}
                 </Button>
-              </div>
+              </ResponsiveDialogFooter>
             </form>
           ) : (
-            <div className="flex justify-start gap-2 mt-4">
-              <DialogClose asChild>
+            <ResponsiveDialogFooter className="gap-2 sm:space-x-0">
+              <ResponsiveDialogClose asChild>
                 <Button disabled={deleteLoading} variant="outline">
                   Cancel
                 </Button>
-              </DialogClose>
+              </ResponsiveDialogClose>
 
               <Button
                 onClick={deleteItem}
@@ -177,10 +181,10 @@ export default function JobsBookmarkActions({
                 Delete
                 {deleteLoading && <AppLoader color="secondary" size="sm" />}
               </Button>
-            </div>
+            </ResponsiveDialogFooter>
           )}
-        </DialogContent>
-      </Dialog>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </div>
   );
 }

@@ -274,31 +274,35 @@ export default function ResumesTable({ data }: ResumesTableProps) {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-between my-2 text-xs sm:text-sm text-muted-foreground">
+      <div className="my-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-muted-foreground sm:text-sm">
         <div>
           Showing {paginatedRows.length ? (page - 1) * pageSize + 1 : 0}-
           {(page - 1) * pageSize + paginatedRows.length} of {totalRecords}{" "}
           resumes
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex min-w-0 max-w-full items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
+            className="min-w-0"
           >
-            Previous
+            <span className="truncate">Previous</span>
           </Button>
-          <span>
-            Page {page} of {totalPages}
+          <span className="whitespace-nowrap">
+            {/* "Page" is dropped on the narrowest phones so the footer fits. */}
+            <span className="max-[400px]:hidden">Page </span>
+            {page} of {totalPages}
           </span>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
+            className="min-w-0"
           >
-            Next
+            <span className="truncate">Next</span>
           </Button>
         </div>
       </div>

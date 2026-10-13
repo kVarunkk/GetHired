@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Metadata } from "next";
 import JobFavoriteBtn from "@/components/JobFavoriteBtn";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { isUuid } from "@/helpers/agent/auth";
 
 async function fetchCompanyData(company_id: string) {
+  if (!isUuid(company_id)) notFound();
   const supabase = await createClient();
 
   const {
@@ -32,9 +35,10 @@ async function fetchCompanyData(company_id: string) {
     .from("company_info")
     .select("*, user_favorites_companies(*)")
     .eq("id", company_id)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
+  if (!data) notFound();
 
   return {
     data,
@@ -89,7 +93,8 @@ export async function generateMetadata({
         "developer careers",
       ],
     };
-  } catch {
+  } catch (err) {
+    unstable_rethrow(err);
     return {
       title: "Company Profile | GetHired",
       description: "View profiles of companies hiring top tech talent.",
@@ -217,7 +222,8 @@ export default async function CompanyIdPage({
         </div>
       </div>
     );
-  } catch {
+  } catch (err) {
+    unstable_rethrow(err);
     return <ErrorComponent />;
   }
 }

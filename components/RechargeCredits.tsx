@@ -3,13 +3,14 @@
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import { Input } from "./ui/input";
 import InfoTooltip from "./InfoTooltip";
 import { useState } from "react";
@@ -68,26 +69,26 @@ export default function RechargeCredits({
   };
 
   return (
-    <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-      <DialogTrigger asChild>
+    <ResponsiveDialog open={openDialog} onOpenChange={setOpenDialog}>
+      <ResponsiveDialogTrigger asChild>
         <Button>
           Recharge Credits <ArrowRight className="w-4 h-4" />
         </Button>
-      </DialogTrigger>
+      </ResponsiveDialogTrigger>
 
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Recharge AI Credits</DialogTitle>
-          <DialogDescription>
+      <ResponsiveDialogContent>
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Recharge AI Credits</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             <span className="inline-flex  items-center">
               Invite Friends{" "}
               <InfoTooltip content={"Earn 10 credits per Invite"} />
             </span>
             or Buy AI Credits for uninterrupted use of AI features.{" "}
             {5 - invitationsCount} invitations remaining.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogBody className="flex flex-col gap-4">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -120,8 +121,8 @@ export default function RechargeCredits({
           <Button asChild type="button" variant="brand">
             <Link href={"/dashboard/buy-credits"}>Buy AI Credits</Link>
           </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogBody>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

@@ -59,7 +59,9 @@ const DialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-1.5 text-center sm:text-left",
+      // A secondary-coloured band across the top of the dialog. The negative
+      // margins cancel DialogContent's p-6.
+      "-mx-6 -mt-6 flex shrink-0 flex-col space-y-1.5 border-b bg-secondary px-6 py-4 pr-12 text-center sm:rounded-t-2xl sm:text-left",
       className,
     )}
     {...props}

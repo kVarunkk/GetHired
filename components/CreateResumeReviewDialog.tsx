@@ -3,14 +3,15 @@
 import React, { useState, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-} from "../components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogBody,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import { toast } from "react-hot-toast";
 import { Loader2, Plus } from "lucide-react";
 import ResumeSourceSelector from "./ResumeSourceSelector";
@@ -78,58 +79,51 @@ export default function CreateResumeReviewDialog() {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="brand">
+    <ResponsiveDialog open={isOpen} onOpenChange={setIsOpen}>
+      <ResponsiveDialogTrigger asChild>
+        <Button variant="brand" className="max-w-full">
           <Plus className="w-4 h-4" />
-          Create CV Review
+          <span className="truncate">Create CV Review</span>
         </Button>
-      </DialogTrigger>
+      </ResponsiveDialogTrigger>
 
-      <DialogContent className="sm:max-w-[450px] max-h-[90vh] flex flex-col overflow-hidden">
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col flex-1 overflow-hidden"
-        >
-          <div className="flex-1 overflow-y-auto p-2 space-y-6">
-            <DialogHeader className="space-y-3">
-              <DialogTitle>Create AI Review</DialogTitle>
-              <DialogDescription className=" ">
-                Tailor your experience by choosing an existing asset or
-                uploading a new PDF.{" "}
-                <InfoTooltip
-                  content={
-                    <p>
-                      This analysis consumes{" "}
-                      {TAICredits.AI_SEARCH_ASK_AI_RESUME} Credits.
-                    </p>
-                  }
-                />
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-6 ">
-              <div className="grid gap-2">
-                <Label>Review Label (Optional)</Label>
-                <Input
-                  name="name"
-                  placeholder="e.g., Lead Developer @ Stripe"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Source Document</Label>
-                <ResumeSourceSelector
-                  existingResumes={existingResumes}
-                  selectedId={selectedResumeId}
-                  onSelectExisting={setSelectedResumeId}
-                  file={file}
-                  onFileChange={setFile}
-                />
-              </div>
+      <ResponsiveDialogContent className="sm:max-w-[450px]">
+        <ResponsiveDialogHeader className="space-y-3">
+          <ResponsiveDialogTitle>Create AI Review</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
+            Tailor your experience by choosing an existing asset or uploading a
+            new PDF.{" "}
+            <InfoTooltip
+              content={
+                <p>
+                  This analysis consumes {TAICredits.AI_SEARCH_ASK_AI_RESUME}{" "}
+                  Credits.
+                </p>
+              }
+            />
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-4">
+          {/* Flex columns, not grids: an auto grid track grows to fit a long
+              resume name and pushes the list wider than the drawer. */}
+          <ResponsiveDialogBody className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <Label>Review Label (Optional)</Label>
+              <Input name="name" placeholder="e.g., Lead Developer @ Stripe" />
             </div>
-          </div>
-          <DialogFooter className="mt-auto shrink-0 flex flex-col gap-4 sm:flex-col sm:space-x-0 pt-4">
+
+            <div className="flex flex-col gap-2">
+              <Label>Source Document</Label>
+              <ResumeSourceSelector
+                existingResumes={existingResumes}
+                selectedId={selectedResumeId}
+                onSelectExisting={setSelectedResumeId}
+                file={file}
+                onFileChange={setFile}
+              />
+            </div>
+          </ResponsiveDialogBody>
+          <ResponsiveDialogFooter>
             <Button
               type="submit"
               disabled={isLoading || (!file && !selectedResumeId)}
@@ -145,9 +139,9 @@ export default function CreateResumeReviewDialog() {
                 "Create CV Review"
               )}
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

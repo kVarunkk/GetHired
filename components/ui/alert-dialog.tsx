@@ -51,7 +51,8 @@ const AlertDialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left",
+      // Same band as DialogHeader. The negative margins cancel the p-6.
+      "-mx-6 -mt-6 flex shrink-0 flex-col space-y-2 border-b bg-secondary px-6 py-4 pr-12 text-center sm:rounded-t-2xl sm:text-left",
       className,
     )}
     {...props}

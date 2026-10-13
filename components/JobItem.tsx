@@ -41,8 +41,9 @@ const JobItem = React.memo(
         )}
       >
         <div className=" flex-col sm:flex-row sm:flex items-center justify-between gap-4">
-          <div className="flex-1 flex flex-col gap-2 mb-6 sm:mb-0">
-            <div className="flex flex-col ">
+          <div className="flex min-w-0 flex-1 flex-col gap-2 mb-6 sm:mb-0">
+            {/* Long titles with no spaces (e.g. "Engineer/Backend/Node.js") break anywhere instead of widening the card. */}
+            <div className="flex flex-col [overflow-wrap:anywhere]">
               <div>
                 <Link
                   href={`/jobs/${job.id}`}
@@ -158,20 +159,17 @@ function JobDetailBadges({
           </Badge>
         ))}
       {job.platform && (
-          <Badge
-            variant={"secondary"}
-            className={cn(
-              "text-xs sm:text-sm font-medium hover:!text-secondary-foreground group-hover:border-secondary-foreground ",
-            )}
-          >
-            {job.platform}
-          </Badge>
+        <Badge
+          variant={"secondary"}
+          className={cn(
+            "text-xs sm:text-sm font-medium hover:!text-secondary-foreground group-hover:border-secondary-foreground ",
+          )}
+        >
+          {job.platform}
+        </Badge>
       )}
       {isSuitable && (
-        <Badge
-          variant="success"
-          className="text-xs sm:text-sm font-medium"
-        >
+        <Badge variant="success" className="text-xs sm:text-sm font-medium">
           Job Match
         </Badge>
       )}

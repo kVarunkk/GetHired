@@ -1,11 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "./ui/button";
-import {
-  HeroMaskStyle,
-  JOB_SEEKER_DARK,
-  JOB_SEEKER_LIGHT,
-} from "@/utils/utils";
+import AgentHeroDemo from "./landing-page/AgentHeroDemo";
 
 export default function HeroRemotePage({
   location,
@@ -35,25 +30,8 @@ export default function HeroRemotePage({
         </Link>
       </div>
 
-      <div>
-        <Image
-          className="rounded-xl border border-border drop-shadow-xl mt-8 dark:hidden"
-          src={JOB_SEEKER_LIGHT}
-          style={HeroMaskStyle}
-          height={1200}
-          width={1200}
-          alt="Snapshot of the GetHired Job Board"
-          priority
-        />
-        <Image
-          className="rounded-xl border border-border drop-shadow-xl mt-8 hidden dark:block"
-          src={JOB_SEEKER_DARK}
-          style={HeroMaskStyle}
-          height={1200}
-          width={1200}
-          alt="Snapshot of the GetHired Job Board"
-          priority
-        />
+      <div className="mt-8 w-full max-w-5xl">
+        <AgentHeroDemo />
       </div>
     </div>
   );

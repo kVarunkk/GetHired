@@ -2,13 +2,15 @@
 
 import { Loader2, Plus, Copy, KeyRound } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "./ui/button";
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -78,29 +80,29 @@ export default function CreateApiKeyDialog() {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogTrigger asChild>
-        <Button variant="brand">
+    <ResponsiveDialog open={isOpen} onOpenChange={handleClose}>
+      <ResponsiveDialogTrigger asChild>
+        <Button variant="brand" className="max-w-full">
           <Plus className="w-4 h-4" />
-          Create API key
+          <span className="truncate">Create API key</span>
         </Button>
-      </DialogTrigger>
+      </ResponsiveDialogTrigger>
 
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>
+      <ResponsiveDialogContent className="sm:max-w-[500px]">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>
             {generatedToken ? "API key created" : "Create API key"}
-          </DialogTitle>
+          </ResponsiveDialogTitle>
 
-          <DialogDescription>
+          <ResponsiveDialogDescription>
             Create API keys for MCP clients, CLI tools, and external
             integrations.
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
-        <div className="space-y-5">
-          {!generatedToken ? (
-            <>
+        {!generatedToken ? (
+          <>
+            <ResponsiveDialogBody className="space-y-5">
               <div className="space-y-2">
                 <Label>Name</Label>
 
@@ -132,7 +134,9 @@ export default function CreateApiKeyDialog() {
                   </div>
                 </div>
               </div>
+            </ResponsiveDialogBody>
 
+            <ResponsiveDialogFooter>
               <Button
                 variant="brand"
                 onClick={handleCreateApiKey}
@@ -142,9 +146,11 @@ export default function CreateApiKeyDialog() {
                 {isCreating && <Loader2 className="h-4 w-4 animate-spin" />}
                 Create API key
               </Button>
-            </>
-          ) : (
-            <div className="space-y-4 animate-in fade-in duration-300">
+            </ResponsiveDialogFooter>
+          </>
+        ) : (
+          <>
+            <ResponsiveDialogBody className="space-y-4 animate-in fade-in duration-300">
               <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium">Your new API key</p>
@@ -173,14 +179,14 @@ export default function CreateApiKeyDialog() {
                   again after closing this dialog.
                 </p>
               </div>
+            </ResponsiveDialogBody>
 
-              <div className="flex justify-end">
-                <Button onClick={() => setIsOpen(false)}>Done</Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+            <ResponsiveDialogFooter>
+              <Button onClick={() => setIsOpen(false)}>Done</Button>
+            </ResponsiveDialogFooter>
+          </>
+        )}
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

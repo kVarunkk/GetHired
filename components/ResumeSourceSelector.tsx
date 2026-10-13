@@ -76,8 +76,10 @@ export default function ResumeSourceSelector({
     handlePreviewUrl();
   }, [file, selectedId]);
 
+  // min-w-0 so a grid or flex-row parent can't size it to its longest
+  // (truncated) resume name.
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       {view === "upload" ? (
         <UploadResumeParent
           file={file}
@@ -96,9 +98,13 @@ export default function ResumeSourceSelector({
       ) : (
         <Tabs defaultValue="upload" className="w-full">
           <TabsList className="grid w-full grid-cols-2 ">
-            <TabsTrigger value="upload">Upload New</TabsTrigger>
-            <TabsTrigger value="existing">
-              Select Existing ({existingResumes.length})
+            {/* The verbs are dropped on the narrowest phones so both tabs fit. */}
+            <TabsTrigger value="upload" className="min-w-0">
+              <span className="max-[400px]:hidden">Upload&nbsp;</span>New
+            </TabsTrigger>
+            <TabsTrigger value="existing" className="min-w-0">
+              <span className="max-[400px]:hidden">Select&nbsp;</span>Existing (
+              {existingResumes.length})
             </TabsTrigger>
           </TabsList>
           <TabsContent value="upload">

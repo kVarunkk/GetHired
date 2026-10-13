@@ -3,13 +3,15 @@
 import { MessageCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import { Textarea } from "./ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
@@ -53,14 +55,14 @@ export default function FeedbackForm({
     toast.success("Feedback submitted succesfully!");
   };
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <ResponsiveDialog open={isOpen} onOpenChange={setIsOpen}>
       {isVertical ? (
         <Tooltip delayDuration={100}>
           <TooltipTrigger asChild>
-            <DialogTrigger className="flex items-center w-full px-4 py-2 gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden">
+            <ResponsiveDialogTrigger className="flex items-center w-full px-4 py-2 gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden">
               <MessageCircle className="h-4 w-4 shrink-0" />
               <SidebarLabel open={isMenuOpen}>Feedback</SidebarLabel>
-            </DialogTrigger>
+            </ResponsiveDialogTrigger>
           </TooltipTrigger>
           <TooltipContent side="right" hidden={isMenuOpen}>
             <p>Feedback</p>
@@ -68,39 +70,43 @@ export default function FeedbackForm({
         </Tooltip>
       ) : (
         // Horizontal navbar: an icon button the same size as the profile button.
-        <DialogTrigger
+        <ResponsiveDialogTrigger
           aria-label="Feedback"
           className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-secondary transition-colors"
         >
           <MessageCircle className="h-4 w-4" />
-        </DialogTrigger>
+        </ResponsiveDialogTrigger>
       )}
 
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Feedback</DialogTitle>
-          <DialogDescription>
+      <ResponsiveDialogContent>
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Feedback</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             We would love to hear your suggestions
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
         <form
           action={(formData) => {
             setIsOpen(false);
             submitFeedback(formData);
           }}
-          className="flex flex-col gap-4"
+          className="flex min-h-0 flex-col gap-4"
         >
-          <Textarea
-            name="feedback_input"
-            id="feedback"
-            placeholder="How can we improve?"
-            required
-          />
-          {/* <DialogClose asChild> */}
-          <Button type="submit">Submit</Button>
-          {/* </DialogClose> */}
+          <ResponsiveDialogBody>
+            <Textarea
+              name="feedback_input"
+              id="feedback"
+              placeholder="How can we improve?"
+              required
+            />
+          </ResponsiveDialogBody>
+          <ResponsiveDialogFooter>
+            <Button type="submit" className="w-full">
+              Submit
+            </Button>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

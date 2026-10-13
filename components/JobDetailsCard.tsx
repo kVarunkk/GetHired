@@ -99,15 +99,17 @@ export default function JobDescriptionCard({
   }
 
   return (
-    <div className="md:col-span-2 ">
+    <div className="min-w-0 md:col-span-2">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="text-lg font-semibold tracking-tight">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <CardTitle className="flex min-w-0 items-center gap-1 text-lg font-semibold tracking-tight">
               Job Description
               <Button
                 size={"icon"}
                 variant={"ghost"}
+                className="shrink-0"
+                aria-label="Copy job description"
                 onClick={() =>
                   copyToClipboard(displayedContent || "", "Copied to Clipboard")
                 }
@@ -120,10 +122,10 @@ export default function JobDescriptionCard({
             ) : (
               page === "all-jobs" &&
               !isCompanyUser && (
-                <div className="flex items-center">
+                <div className="flex min-w-0 max-w-full items-center">
                   <Button
                     variant={"link"}
-                    className="underline pl-0 sm:pl-3"
+                    className="h-auto min-w-0 whitespace-normal px-0 py-1 text-left underline"
                     onClick={handleAISummary}
                     disabled={isLoading || !job.description}
                   >

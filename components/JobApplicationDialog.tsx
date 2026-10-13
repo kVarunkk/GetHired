@@ -3,13 +3,13 @@
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "./ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "./ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogTrigger,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog";
 
 import {
   Card,
@@ -92,7 +92,7 @@ export default function JobApplicationDialog({
   };
 
   return (
-    <Dialog
+    <ResponsiveDialog
       open={isDialogOpen}
       onOpenChange={(open) => {
         if (!open) handleCloseDialog();
@@ -112,7 +112,7 @@ export default function JobApplicationDialog({
               {applicationStatus}
             </Button>
           ) : (
-            <DialogTrigger asChild>
+            <ResponsiveDialogTrigger asChild>
               <Button
                 variant="brand"
                 onClick={(e) => e.stopPropagation()}
@@ -123,7 +123,7 @@ export default function JobApplicationDialog({
               >
                 Easy Apply <ArrowRight className=" h-4 w-4" />
               </Button>
-            </DialogTrigger>
+            </ResponsiveDialogTrigger>
           )}
 
           {applicationStatus && (
@@ -138,16 +138,22 @@ export default function JobApplicationDialog({
           )}
         </div>
       </PropagationStopper>
-      <DialogContent className="max-w-4xl h-screen sm:h-[85vh] flex flex-col p-0 overflow-hidden">
+      {/* The panes scroll themselves, so the drawer column gets a fixed height and no padding. */}
+      <ResponsiveDialogContent
+        className="max-w-4xl h-[85vh] flex flex-col p-0 overflow-hidden"
+        drawerClassName="h-[85dvh] gap-0 overflow-hidden p-0"
+      >
         <div className="flex flex-col md:flex-row h-full">
           {/* left pane */}
-          <div className="flex-[0.4] sm:flex-[0.6] overflow-y-auto p-6 bg-muted/30 border-b md:border-b-0 md:border-r">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-semibold tracking-tight">
+          <div className="flex-[0.4] sm:flex-[0.6] overflow-y-auto p-4 sm:p-6 bg-muted/30 border-b md:border-b-0 md:border-r">
+            <ResponsiveDialogHeader className="-mt-4 sm:-mt-6">
+              <ResponsiveDialogTitle className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]">
                 Apply for {jobPost.job_name}
-              </DialogTitle>
-              <DialogDescription>at {jobPost.company_name}</DialogDescription>
-            </DialogHeader>
+              </ResponsiveDialogTitle>
+              <ResponsiveDialogDescription>
+                at {jobPost.company_name}
+              </ResponsiveDialogDescription>
+            </ResponsiveDialogHeader>
             <div className="space-y-4 mt-5">
               <Card>
                 <CardHeader>
@@ -225,7 +231,7 @@ export default function JobApplicationDialog({
             </div>
           </div>
           {/* right pane */}
-          <div className="flex-1  overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {userId && (
               <JobApplicationForm
                 jobPost={jobPost}
@@ -235,7 +241,7 @@ export default function JobApplicationDialog({
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

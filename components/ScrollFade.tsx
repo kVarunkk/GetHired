@@ -15,12 +15,18 @@ export default function ScrollFade({
   children,
   className,
   contentClassName,
+  scrollerClassName,
 }: {
   children: React.ReactNode;
   /** Classes for the outer box; give it a height (e.g. `flex-1 min-h-0`). */
   className?: string;
   /** Classes for the wrapper around the children. */
   contentClassName?: string;
+  /**
+   * Classes for the scrolling box. Use it to size the area by its content up
+   * to a cap (`h-auto max-h-…`) when the outer box has no definite height.
+   */
+  scrollerClassName?: string;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -56,7 +62,10 @@ export default function ScrollFade({
       <div
         ref={scrollerRef}
         onScroll={update}
-        className="h-full overflow-y-auto overflow-x-hidden scrollbar-none"
+        className={cn(
+          "h-full overflow-y-auto overflow-x-hidden scrollbar-none",
+          scrollerClassName,
+        )}
       >
         <div ref={contentRef} className={contentClassName}>
           {children}
