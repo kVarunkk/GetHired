@@ -5,8 +5,7 @@ FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY patches ./patches
-RUN npm install
-# RUN npm ci
+RUN npm ci
 
 # Build
 FROM base AS builder
