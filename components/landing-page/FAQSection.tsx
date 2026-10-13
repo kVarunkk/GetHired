@@ -104,6 +104,33 @@ const FAQs = {
         "Open a job listing to review its requirements and application instructions. Some employers accept applications on their own career sites.",
     },
   ],
+  extension: [
+    {
+      question: "What does the GetHired Chrome Extension do?",
+      answer:
+        "It fills in job application forms for you on company career sites and hiring platforms, using the details from your GetHired profile and primary resume.",
+    },
+    {
+      question: "Can it answer open-ended application questions?",
+      answer:
+        "Yes. For questions like \"Why do you want to work here?\", it writes a plain-text answer in your voice, based on your resume, your profile and the job you're applying to. It only uses facts from your background and won't invent links or details.",
+    },
+    {
+      question: "Do I need a GetHired account to use it?",
+      answer:
+        "Yes. Sign in with your GetHired account so the extension can use your profile and primary resume. Set the resume you want to use as primary in your dashboard.",
+    },
+    {
+      question: "Does the extension use AI credits?",
+      answer:
+        "Filling in standard fields doesn't. Each AI-written answer to an application question uses credits, as shown in your account. If you run out, you can buy more from your dashboard.",
+    },
+    {
+      question: "Does it submit applications for me?",
+      answer:
+        "No. The extension fills in the form, and you review the answers and submit the application yourself.",
+    },
+  ],
   mcp: [
     {
       question: "What does the GetHired MCP Server do?",

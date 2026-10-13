@@ -54,7 +54,7 @@ export default async function MCPServerPage() {
             userCount={userCount}
           />
           <TheGetHiredAdvantageSection jobCount={jobCount} />
-          <FAQSection topic="job-search" />
+          <FAQSection topic="extension" />
           <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
             <FootComponent />
           </div>
