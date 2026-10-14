@@ -13,7 +13,7 @@ import {
 } from "./ui/dialog";
 import { DialogTrigger } from "@radix-ui/react-dialog";
 import toast from "react-hot-toast";
-import { createClient } from "@/lib/supabase/client";
+import { deleteJobPostingAction } from "@/app/actions/delete-job-posting";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -27,39 +27,14 @@ export default function DeleteJobPosting({
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const handleDelete = async () => {
-    const supabase = createClient();
+    setLoading(true);
     try {
-      setLoading(true);
-      const { data: jobPosting, error: fetchError } = await supabase
-        .from("job_postings")
-        .select("job_id")
-        .eq("id", job_posting_id)
-        .single();
-
-      if (fetchError || !jobPosting) {
-        throw new Error("Failed to fetch job posting details.");
-      }
-
-      // If a job_id exists, delete the corresponding record from 'all_jobs' first
-      if (jobPosting.job_id) {
-        const { error: allJobsDeleteError } = await supabase
-          .from("all_jobs")
-          .delete()
-          .eq("id", jobPosting.job_id);
-
-        if (allJobsDeleteError) {
-          throw new Error("Failed to delete record from 'all_jobs' table.");
-        }
-      }
-
-      // Now, delete the record from 'job_postings'
-      const { error: jobPostingsDeleteError } = await supabase
-        .from("job_postings")
-        .delete()
-        .eq("id", job_posting_id);
-
-      if (jobPostingsDeleteError) {
-        throw new Error("Failed to delete record from 'job_postings' table.");
+      const result = await deleteJobPostingAction({
+        jobPostingId: job_posting_id,
+      });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
       }
 
       toast.success("Job posting deleted successfully.");
@@ -69,10 +44,8 @@ export default function DeleteJobPosting({
       } else {
         router.refresh();
       }
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete job posting."
-      );
+    } catch {
+      toast.error("Failed to delete job posting.");
     } finally {
       setLoading(false);
     }

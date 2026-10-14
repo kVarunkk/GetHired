@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendEmailForStatusUpdate } from "@/utils/email";
 import { parseResume } from "@/helpers/resume/parse-resume";
-import { revalidateCacheAction } from "@/app/actions/revalidate-tag";
+import { revalidateTag } from "next/cache";
 import { processUserRelevance } from "@/helpers/jobs/relevant-jobs-utils";
 import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
@@ -93,7 +93,7 @@ export async function GET() {
                 .single();
               if (!resume?.content) {
                 await parseResume(userId, resumeId);
-                await revalidateCacheAction(`profile-${userId}`);
+                revalidateTag(`profile-${userId}`);
               }
             } catch {
               throw new Error("Resume Parsing Failed");

@@ -4,9 +4,12 @@ import { render } from "react-email";
 import { PromotionEmail } from "@/emails/PromotionEmail";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendEmail } from "@/utils/email";
+import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
+import { isAdmin } from "@/helpers/user/is-admin";
 
 /**
  * Sends a promotional email to all users who have 'is_promotion_active' set to true.
+ * Admin-only (RS-F12): it emails users arbitrary content from our domain.
  * @param promoDetails Object containing the content for the email.
  * @returns Object indicating success or failure.
  */
@@ -17,6 +20,11 @@ export async function sendPromotionEmails(promoDetails: {
   ctaLabel: string;
   imageLink?: string;
 }): Promise<{ success: boolean; count: number; error?: string }> {
+  const user = await getUserFromRequest();
+  if (!isAdmin(user)) {
+    return { success: false, count: 0, error: "Unauthorized" };
+  }
+
   const supabase = createServiceRoleClient();
 
   const { data: users, error: fetchError } = await supabase

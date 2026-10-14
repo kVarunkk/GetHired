@@ -30,6 +30,7 @@ import {
 } from "@/utils/utils";
 import useSWR, { mutate } from "swr";
 import { createClient } from "@/lib/supabase/client";
+import toast from "react-hot-toast";
 import { triggerRelevanceUpdate } from "@/app/actions/relevant-jobs-update";
 import ModifiedLink from "./ModifiedLink";
 import FootComponent from "./FootComponent";
@@ -233,16 +234,10 @@ export default function JobsComponent({
       triggerRelevanceUpdate(currentUserData.profile.user_id);
     } else if (type === "profile" && jobPostingId) {
       const key = `${JOB_POSTING_API_KEY}?jobId=${jobPostingId}`;
-      await supabase
-        .from("job_postings")
-        .update({
-          matching_status: "progress",
-          matching_error: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", jobPostingId);
+      // The action marks the posting in progress after checking ownership.
+      const result = await triggerJobPostingRelevanceUpdate(jobPostingId);
+      if (!result.success) toast.error(result.error);
       await mutate(key);
-      triggerJobPostingRelevanceUpdate(jobPostingId);
     }
     setAiGenBtnLoading(false);
   };

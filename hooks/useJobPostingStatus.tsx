@@ -40,17 +40,9 @@ export const useJobPostingStatus = (
       }
 
       // if the job posting is activated, trigger profile relevance update
+      // The action marks the posting in progress after checking ownership.
       if (value) {
-        await supabase
-          .from("job_postings")
-          .update({
-            matching_status: "progress",
-            matching_error: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", job.id);
-
-        triggerJobPostingRelevanceUpdate(job.id);
+        await triggerJobPostingRelevanceUpdate(job.id);
       }
 
       toast.success(
