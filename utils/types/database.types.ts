@@ -426,6 +426,33 @@ export type Database = {
           },
         ]
       }
+      billing_webhook_events: {
+        Row: {
+          error: string | null
+          event_type: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          webhook_id: string
+        }
+        Insert: {
+          error?: string | null
+          event_type: string
+          payload: Json
+          processed_at?: string | null
+          received_at?: string
+          webhook_id: string
+        }
+        Update: {
+          error?: string | null
+          event_type?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          webhook_id?: string
+        }
+        Relationships: []
+      }
       bookmarks: {
         Row: {
           created_at: string
@@ -461,6 +488,145 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      company_billing_audit: {
+        Row: {
+          action: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          details: Json
+          id: string
+        }
+        Insert: {
+          action: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          details?: Json
+          id?: string
+        }
+        Update: {
+          action?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          details?: Json
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_billing_audit_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_credit_ledger: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          delta: number
+          expires_at: string | null
+          id: string
+          key: string | null
+          note: string | null
+          payment_id: string | null
+          reason: string
+          ref_id: string | null
+          ref_type: string | null
+          remaining: number | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          delta: number
+          expires_at?: string | null
+          id?: string
+          key?: string | null
+          note?: string | null
+          payment_id?: string | null
+          reason: string
+          ref_id?: string | null
+          ref_type?: string | null
+          remaining?: number | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          delta?: number
+          expires_at?: string | null
+          id?: string
+          key?: string | null
+          note?: string | null
+          payment_id?: string | null
+          reason?: string
+          ref_id?: string | null
+          ref_type?: string | null
+          remaining?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_credit_ledger_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_credit_ledger_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_entitlement_holds: {
+        Row: {
+          company_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          key: string
+          qty: number
+          ref_id: string
+          ref_type: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          key: string
+          qty: number
+          ref_id: string
+          ref_type: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          key?: string
+          qty?: number
+          ref_id?: string
+          ref_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_entitlement_holds_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -586,32 +752,123 @@ export type Database = {
           },
         ]
       }
+      company_subscriptions: {
+        Row: {
+          billing_interval: string | null
+          cancel_at_period_end: boolean
+          company_id: string
+          currency: string | null
+          current_period_end: string
+          current_period_start: string
+          dodo_customer_id: string | null
+          dodo_subscription_id: string | null
+          grace_until: string | null
+          manual_until: string | null
+          scheduled_tier_id: string | null
+          status: string
+          tier_id: string
+          updated_at: string
+        }
+        Insert: {
+          billing_interval?: string | null
+          cancel_at_period_end?: boolean
+          company_id: string
+          currency?: string | null
+          current_period_end?: string
+          current_period_start?: string
+          dodo_customer_id?: string | null
+          dodo_subscription_id?: string | null
+          grace_until?: string | null
+          manual_until?: string | null
+          scheduled_tier_id?: string | null
+          status?: string
+          tier_id: string
+          updated_at?: string
+        }
+        Update: {
+          billing_interval?: string | null
+          cancel_at_period_end?: boolean
+          company_id?: string
+          currency?: string | null
+          current_period_end?: string
+          current_period_start?: string
+          dodo_customer_id?: string | null
+          dodo_subscription_id?: string | null
+          grace_until?: string | null
+          manual_until?: string | null
+          scheduled_tier_id?: string | null
+          status?: string
+          tier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_subscriptions_scheduled_tier_id_fkey"
+            columns: ["scheduled_tier_id"]
+            isOneToOne: false
+            referencedRelation: "company_tiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_subscriptions_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "company_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_tiers: {
         Row: {
           allowed_job_posts: number | null
           allowed_profiles: number | null
           created_at: string
+          description: string | null
+          features: string[]
           id: string
+          is_public: boolean
           name: string | null
           price_plan_id: string | null
+          prices: Json
+          slug: string | null
+          sort: number
           updated_at: string | null
         }
         Insert: {
           allowed_job_posts?: number | null
           allowed_profiles?: number | null
           created_at?: string
+          description?: string | null
+          features?: string[]
           id?: string
+          is_public?: boolean
           name?: string | null
           price_plan_id?: string | null
+          prices?: Json
+          slug?: string | null
+          sort?: number
           updated_at?: string | null
         }
         Update: {
           allowed_job_posts?: number | null
           allowed_profiles?: number | null
           created_at?: string
+          description?: string | null
+          features?: string[]
           id?: string
+          is_public?: boolean
           name?: string | null
           price_plan_id?: string | null
+          prices?: Json
+          slug?: string | null
+          sort?: number
           updated_at?: string | null
         }
         Relationships: [
@@ -620,6 +877,88 @@ export type Database = {
             columns: ["price_plan_id"]
             isOneToOne: false
             referencedRelation: "price_plan"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_usage: {
+        Row: {
+          company_id: string
+          key: string
+          notified_100: boolean
+          notified_80: boolean
+          period_start: string
+          used: number
+        }
+        Insert: {
+          company_id: string
+          key: string
+          notified_100?: boolean
+          notified_80?: boolean
+          period_start: string
+          used?: number
+        }
+        Update: {
+          company_id?: string
+          key?: string
+          notified_100?: boolean
+          notified_80?: boolean
+          period_start?: string
+          used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_usage_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_usage_events: {
+        Row: {
+          actor_user_id: string | null
+          company_id: string
+          created_at: string
+          credits_spent: number
+          id: string
+          key: string
+          qty: number
+          ref_id: string
+          ref_type: string
+          source: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          company_id: string
+          created_at?: string
+          credits_spent?: number
+          id?: string
+          key: string
+          qty: number
+          ref_id: string
+          ref_type: string
+          source: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          company_id?: string
+          created_at?: string
+          credits_spent?: number
+          id?: string
+          key?: string
+          qty?: number
+          ref_id?: string
+          ref_type?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_usage_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
             referencedColumns: ["id"]
           },
         ]
@@ -1099,6 +1438,7 @@ export type Database = {
       payments: {
         Row: {
           billing: Json | null
+          company_id: string | null
           created_at: string
           credit_amount: number | null
           credits_fulfilled: boolean | null
@@ -1108,17 +1448,20 @@ export type Database = {
           failure_reason: string | null
           fulfillment_date: string | null
           id: string
+          kind: string
           payment_id: string | null
           price_plan_id: string | null
           product_id: string | null
           session_id: string | null
           status: Database["public"]["Enums"]["payment_status"]
+          tier_id: string | null
           total_amount: number | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
           billing?: Json | null
+          company_id?: string | null
           created_at?: string
           credit_amount?: number | null
           credits_fulfilled?: boolean | null
@@ -1128,17 +1471,20 @@ export type Database = {
           failure_reason?: string | null
           fulfillment_date?: string | null
           id?: string
+          kind?: string
           payment_id?: string | null
           price_plan_id?: string | null
           product_id?: string | null
           session_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
+          tier_id?: string | null
           total_amount?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           billing?: Json | null
+          company_id?: string | null
           created_at?: string
           credit_amount?: number | null
           credits_fulfilled?: boolean | null
@@ -1148,21 +1494,37 @@ export type Database = {
           failure_reason?: string | null
           fulfillment_date?: string | null
           id?: string
+          kind?: string
           payment_id?: string | null
           price_plan_id?: string | null
           product_id?: string | null
           session_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
+          tier_id?: string | null
           total_amount?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "payments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "payments_price_plan_id_fkey"
             columns: ["price_plan_id"]
             isOneToOne: false
             referencedRelation: "price_plan"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "company_tiers"
             referencedColumns: ["id"]
           },
           {
@@ -1177,6 +1539,7 @@ export type Database = {
       price_plan: {
         Row: {
           amount: number | null
+          audience: string
           created_at: string
           credit_amount: number | null
           currency: string | null
@@ -1188,6 +1551,7 @@ export type Database = {
         }
         Insert: {
           amount?: number | null
+          audience?: string
           created_at?: string
           credit_amount?: number | null
           currency?: string | null
@@ -1199,6 +1563,7 @@ export type Database = {
         }
         Update: {
           amount?: number | null
+          audience?: string
           created_at?: string
           credit_amount?: number | null
           currency?: string | null
@@ -1350,6 +1715,38 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      tier_entitlements: {
+        Row: {
+          amount: number | null
+          key: string
+          kind: string
+          overage_credits: number | null
+          tier_id: string
+        }
+        Insert: {
+          amount?: number | null
+          key: string
+          kind: string
+          overage_credits?: number | null
+          tier_id: string
+        }
+        Update: {
+          amount?: number | null
+          key?: string
+          kind?: string
+          overage_credits?: number | null
+          tier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tier_entitlements_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "company_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_api_tokens: {
         Row: {
@@ -1662,9 +2059,90 @@ export type Database = {
         Args: { algorithm: string; secret: string; signables: string }
         Returns: string
       }
+      apply_subscription_event: {
+        Args: { p_company_id: string; p_event: Json }
+        Returns: Json
+      }
+      billing_allowance_used: {
+        Args: { p_company_id: string; p_key: string }
+        Returns: number
+      }
+      billing_assert_key: { Args: { p_key: string }; Returns: undefined }
+      billing_can_activate_job_post: {
+        Args: { p_company_id: string }
+        Returns: boolean
+      }
+      billing_credit_balance: {
+        Args: { p_company_id: string }
+        Returns: number
+      }
+      billing_free_tier_id: { Args: never; Returns: string }
+      billing_held: {
+        Args: { p_company_id: string; p_key: string }
+        Returns: number
+      }
+      billing_is_limit_key: { Args: { p_key: string }; Returns: boolean }
+      billing_limit_used: {
+        Args: { p_company_id: string; p_key: string }
+        Returns: number
+      }
+      billing_period_start: { Args: { p_company_id: string }; Returns: string }
+      billing_refresh_credit_cache: {
+        Args: { p_company_id: string }
+        Returns: number
+      }
+      billing_spend_credits: {
+        Args: {
+          p_actor: string
+          p_amount: number
+          p_company_id: string
+          p_key: string
+          p_ref_id: string
+          p_ref_type: string
+        }
+        Returns: undefined
+      }
+      billing_tier_for_product: {
+        Args: { p_product_id: string }
+        Returns: {
+          billing_interval: string
+          currency: string
+          tier_id: string
+        }[]
+      }
+      billing_usage_alerts: {
+        Args: never
+        Returns: {
+          amount: number
+          company_id: string
+          key: string
+          period_start: string
+          threshold: number
+          used: number
+        }[]
+      }
+      check_entitlement: {
+        Args: { p_company_id: string; p_key: string; p_qty?: number }
+        Returns: Json
+      }
       company_can_view_candidate: {
         Args: { p_user_id: string }
         Returns: boolean
+      }
+      company_effective_tier: {
+        Args: { p_company_id: string }
+        Returns: string
+      }
+      consume_entitlement: {
+        Args: {
+          p_actor?: string
+          p_company_id: string
+          p_key: string
+          p_qty: number
+          p_ref_id: string
+          p_ref_type: string
+        }
+        Returns: Json
       }
       deduct_interview_session_credits: {
         Args: { p_interview_id: string; p_session_id: string }
@@ -1682,6 +2160,14 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: Json
       }
+      fulfil_payment: {
+        Args: {
+          p_dodo_payment_id: string
+          p_payment_row_id: string
+          p_webhook_id: string
+        }
+        Returns: Json
+      }
       get_applicant_weekly_metrics: {
         Args: { p_user_id: string }
         Returns: {
@@ -1692,6 +2178,10 @@ export type Database = {
           status_updates_weekly: number
           user_id: string
         }[]
+      }
+      get_company_entitlements: {
+        Args: { p_company_id: string }
+        Returns: Json
       }
       get_company_metrics: {
         Args: { company_id: string }
@@ -1757,13 +2247,45 @@ export type Database = {
           user_id: string
         }[]
       }
+      grant_company_credits: {
+        Args: {
+          p_actor?: string
+          p_amount: number
+          p_company_id: string
+          p_expires_at: string
+          p_note?: string
+          p_payment_id?: string
+          p_reason: string
+        }
+        Returns: string
+      }
       has_ai_credits_for: { Args: { p_user_id: string }; Returns: boolean }
       has_ai_credits_for_test: { Args: { p_user_id: string }; Returns: boolean }
       heartbeat_interview_session: {
         Args: { p_interview_id: string; p_session_id: string }
         Returns: boolean
       }
+      hold_entitlement: {
+        Args: {
+          p_company_id: string
+          p_expires_at?: string
+          p_key: string
+          p_qty: number
+          p_ref_id: string
+          p_ref_type: string
+        }
+        Returns: Json
+      }
       is_company_member: { Args: { p_company_id: string }; Returns: boolean }
+      mark_usage_notified: {
+        Args: {
+          p_company_id: string
+          p_key: string
+          p_period_start: string
+          p_threshold: number
+        }
+        Returns: undefined
+      }
       match_all_companies: {
         Args: {
           match_count: number
@@ -1811,6 +2333,15 @@ export type Database = {
         Args: { target_ids?: string[] }
         Returns: undefined
       }
+      release_hold: {
+        Args: {
+          p_company_id: string
+          p_key: string
+          p_ref_id: string
+          p_ref_type: string
+        }
+        Returns: boolean
+      }
       release_interview_session: {
         Args: { p_interview_id: string; p_session_id: string }
         Returns: boolean
@@ -1819,9 +2350,28 @@ export type Database = {
         Args: { p_interview_id: string; p_reservation_id: string }
         Returns: string
       }
+      rollover_free_periods: { Args: never; Returns: Json }
+      schedule_company_plan_change: {
+        Args: { p_company_id: string; p_tier_slug: string }
+        Returns: undefined
+      }
       send_job_embedding: {
         Args: { job_row: Database["public"]["Tables"]["all_jobs"]["Row"] }
         Returns: Json
+      }
+      set_company_cancel_at_period_end: {
+        Args: { p_cancel: boolean; p_company_id: string }
+        Returns: undefined
+      }
+      set_company_plan: {
+        Args: {
+          p_actor?: string
+          p_company_id: string
+          p_note?: string
+          p_tier_slug: string
+          p_until: string
+        }
+        Returns: undefined
       }
       sign: {
         Args: { algorithm?: string; payload: Json; secret: string }
