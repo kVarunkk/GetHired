@@ -1,43 +1,51 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { WebhookPayload } from "dodopayments/resources/webhook-events.mjs";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getDodoClient } from "@/lib/dodo/initialize";
-import { WebhookPayload } from "dodopayments/resources/webhook-events.mjs";
 import { SendPaymentUpdateEmail } from "@/lib/dodo/utils";
-import { JsonCompatible, TPaymentStatus } from "@/utils/types";
+import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
+import { getTierNames as tierNames } from "@/helpers/billing/entitlements";
+import { billingContactsFor, sendPlanChangedEmail } from "@/helpers/billing/emails";
+import type { Database, Json } from "@/utils/types/database.types";
+import { JsonCompatible, PostHogEvent, TPaymentStatus } from "@/utils/types";
 
-// LISTENING FOR THE FOLLOWING EVENTS:
-// 1) payment.failed
-// 2) payment.cancelled
-// 3) payment.processing
-// 4) payment.succeeded
+// The Dodo webhook, as a dispatcher (plan/feature-recruiter-billing-spec.md §4.1):
+//   1. verify the signature, before parsing anything;
+//   2. store the delivery in billing_webhook_events (a duplicate is a no-op);
+//   3. route by event type (payments by the kind on our payments row);
+//   4. fulfil in one SQL function (fulfil_payment / apply_subscription_event),
+//      never from payload amounts or metadata alone;
+//   5. mark the event processed, or store the error;
+//   6. answer 200 unless the delivery couldn't be stored, so Dodo doesn't retry
+//      a payload we can't handle. Errors are alerted through PostHog instead.
 
-// BUT ACCORDING TO DISCORD DISCUSSION, ONLY:
-// 1) payment.succeeded
-// 2) payment.failed
-// EVENTS ARE TRIGGERED FOR ONE TIME PAYMENT.
+type ServiceClient = SupabaseClient<Database>;
+type PaymentRow = Database["public"]["Tables"]["payments"]["Row"];
+type WebhookStatus = "processed" | "duplicate" | "ignored" | "error_logged";
+type DodoEvent = { type: string; data: unknown };
+
+const UNIQUE_VIOLATION = "23505";
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** An event we stored but can't act on: logged and acknowledged, not retried. */
+class WebhookPayloadError extends Error {}
+
+const reply = (status: WebhookStatus) => NextResponse.json({ received: true, status });
 
 export async function POST(req: NextRequest) {
-  const serviceRoleSupabase = createServiceRoleClient();
+  const body = await req.text();
+  const webhookId = req.headers.get("webhook-id") ?? "";
 
-  const webhookSignature = req.headers.get("webhook-signature");
-  const webhookTimestamp = req.headers.get("webhook-timestamp");
-  const webhookId = req.headers.get("webhook-id");
-  const reqText = await req.text();
-  const body = JSON.parse(reqText);
-  const eventType = body.type;
-  const webhookPayload = body.data as WebhookPayload.Payment;
-  let userName = "";
-  let email = "";
-  const client = getDodoClient();
-
+  let event: DodoEvent;
   try {
-    client.webhooks.unwrap(reqText, {
+    event = getDodoClient().webhooks.unwrap(body, {
       headers: {
-        "webhook-id": webhookId as string,
-        "webhook-signature": webhookSignature as string,
-        "webhook-timestamp": webhookTimestamp as string,
+        "webhook-id": webhookId,
+        "webhook-signature": req.headers.get("webhook-signature") ?? "",
+        "webhook-timestamp": req.headers.get("webhook-timestamp") ?? "",
       },
-    });
+    }) as DodoEvent;
   } catch (err) {
     console.error("⚠️ Webhook signature verification failed.", err);
     return NextResponse.json(
@@ -46,304 +54,333 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { data, error } = await serviceRoleSupabase
+  const supabase = createServiceRoleClient();
+
+  const { error: insertError } = await supabase.from("billing_webhook_events").insert({
+    webhook_id: webhookId,
+    event_type: event.type,
+    payload: event as unknown as Json,
+  });
+
+  if (insertError?.code === UNIQUE_VIOLATION) return reply("duplicate");
+  if (insertError) {
+    // Nothing is stored yet, so let Dodo retry.
+    console.error("Failed to store webhook event:", insertError);
+    return NextResponse.json({ error: "Couldn't store the event." }, { status: 500 });
+  }
+
+  try {
+    const status = await dispatch(supabase, event, webhookId);
+    if (status === "processed") {
+      await supabase
+        .from("billing_webhook_events")
+        .update({ processed_at: new Date().toISOString() })
+        .eq("webhook_id", webhookId);
+    }
+    return reply(status);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`Webhook ${webhookId} (${event.type}) failed:`, err);
+    await supabase
+      .from("billing_webhook_events")
+      .update({ error: message })
+      .eq("webhook_id", webhookId);
+    await eventCaptureServer({
+      event: PostHogEvent.BillingWebhookError,
+      distinctId: "dodo-webhook",
+      properties: { webhookId, eventType: event.type, error: message },
+    });
+    return reply("error_logged");
+  }
+}
+
+const PAYMENT_STATUS: Record<string, TPaymentStatus> = {
+  "payment.failed": TPaymentStatus.FAILED,
+  "payment.cancelled": TPaymentStatus.CANCELLED,
+  "payment.processing": TPaymentStatus.PENDING,
+};
+
+async function dispatch(
+  supabase: ServiceClient,
+  event: DodoEvent,
+  webhookId: string,
+): Promise<WebhookStatus> {
+  if (event.type.startsWith("subscription.")) {
+    return applySubscriptionEvent(supabase, event.type, event.data as WebhookPayload.Subscription);
+  }
+  if (!event.type.startsWith("payment.")) return "ignored";
+
+  const payment = event.data as WebhookPayload.Payment;
+  if (event.type === "payment.succeeded") {
+    return fulfil(supabase, payment, webhookId);
+  }
+  const status = PAYMENT_STATUS[event.type];
+  if (status) {
+    return updateStatus(supabase, payment, status);
+  }
+  return "ignored";
+}
+
+const SUBSCRIPTION_EVENTS = new Set([
+  "subscription.active",
+  "subscription.renewed",
+  "subscription.plan_changed",
+  "subscription.on_hold",
+  "subscription.failed",
+  "subscription.cancelled",
+  "subscription.expired",
+  "subscription.updated",
+]);
+
+/**
+ * §4.2: the company comes from our rows, never from metadata alone: the
+ * subscription we've linked, or the payments row the checkout created.
+ * `needsLink` is set when the subscription isn't linked yet: Dodo sends
+ * subscription.renewed / .updated alongside .active at checkout, in any order.
+ */
+async function companyForSubscription(
+  supabase: ServiceClient,
+  type: string,
+  sub: WebhookPayload.Subscription,
+): Promise<{ companyId: string; tierId: string | null; needsLink: boolean }> {
+  let fromCheckout: { companyId: string; tierId: string | null } | null = null;
+  const rowId = sub.metadata?.payment_row_id;
+  if (typeof rowId === "string" && UUID_RE.test(rowId)) {
+    const { data: row } = await supabase
+      .from("payments")
+      .select("company_id, tier_id, kind")
+      .eq("id", rowId)
+      .maybeSingle();
+    if (row?.company_id && row.kind === "company_subscription") {
+      fromCheckout = { companyId: row.company_id, tierId: row.tier_id };
+    }
+  }
+  if (type === "subscription.active" && fromCheckout) return { ...fromCheckout, needsLink: false };
+
+  const { data: linked } = await supabase
+    .from("company_subscriptions")
+    .select("company_id")
+    .eq("dodo_subscription_id", sub.subscription_id)
+    .maybeSingle();
+  if (linked) return { companyId: linked.company_id, tierId: null, needsLink: false };
+  if (fromCheckout) return { ...fromCheckout, needsLink: true };
+
+  throw new WebhookPayloadError(`No company for subscription ${sub.subscription_id}`);
+}
+
+async function applySubscriptionEvent(
+  supabase: ServiceClient,
+  type: string,
+  sub: WebhookPayload.Subscription,
+): Promise<WebhookStatus> {
+  if (!SUBSCRIPTION_EVENTS.has(type)) return "ignored";
+
+  const { companyId, tierId, needsLink } = await companyForSubscription(supabase, type, sub);
+
+  const eventOf = (eventType: string) => ({
+    type: eventType,
+    subscription_id: sub.subscription_id,
+    customer_id: sub.customer?.customer_id ?? null,
+    product_id: sub.product_id,
+    period_start: sub.previous_billing_date ?? null,
+    period_end: sub.next_billing_date ?? null,
+    cancel_at_next_billing_date: sub.cancel_at_next_billing_date ?? null,
+    tier_id: tierId,
+  });
+
+  if (needsLink) {
+    // Arrived before subscription.active: link it now (active is idempotent).
+    const { error } = await supabase.rpc("apply_subscription_event", {
+      p_company_id: companyId,
+      p_event: eventOf("subscription.active"),
+    });
+    if (error) throw new Error(`apply_subscription_event (link): ${error.message}`);
+  }
+
+  const { data, error } = await supabase.rpc("apply_subscription_event", {
+    p_company_id: companyId,
+    p_event: eventOf(type),
+  });
+  if (error) throw new Error(`apply_subscription_event: ${error.message}`);
+
+  const event = SUBSCRIPTION_ANALYTICS[type];
+  if (event) {
+    await eventCaptureServer({
+      event,
+      distinctId: companyId,
+      properties: { companyId, subscriptionId: sub.subscription_id, productId: sub.product_id },
+    });
+  }
+
+  if (type === "subscription.plan_changed") {
+    const result = data as { previous_tier_id: string | null; tier_id: string } | null;
+    if (result && result.previous_tier_id !== result.tier_id) {
+      // after(): the email shouldn't hold up (or fail) the webhook.
+      after(() => notifyPlanChanged(companyId, result.previous_tier_id, result.tier_id));
+    }
+  }
+  return "processed";
+}
+
+const SUBSCRIPTION_ANALYTICS: Record<string, PostHogEvent> = {
+  "subscription.active": PostHogEvent.BillingSubscriptionActivated,
+  "subscription.plan_changed": PostHogEvent.BillingPlanChanged,
+  "subscription.cancelled": PostHogEvent.BillingCancelled,
+};
+
+async function notifyPlanChanged(companyId: string, fromTierId: string | null, toTierId: string) {
+  try {
+    const [{ companyName, emails }, names] = await Promise.all([
+      billingContactsFor(companyId),
+      tierNames([fromTierId, toTierId].filter((t): t is string => !!t)),
+    ]);
+    await sendPlanChangedEmail(emails, {
+      companyName,
+      fromPlan: (fromTierId && names.get(fromTierId)) || "your previous plan",
+      toPlan: names.get(toTierId) ?? "your new plan",
+      effectiveAt: new Date().toISOString(),
+      scheduled: false,
+    });
+  } catch (err) {
+    console.error("[billing] plan changed email failed", err);
+  }
+}
+
+/** The payment row the event is about: by the id we put in metadata, else by checkout session (legacy checkouts). */
+async function findPaymentRow(
+  supabase: ServiceClient,
+  payment: WebhookPayload.Payment,
+): Promise<PaymentRow> {
+  const rowId = payment.metadata?.payment_row_id;
+  if (typeof rowId === "string" && UUID_RE.test(rowId)) {
+    const { data } = await supabase.from("payments").select("*").eq("id", rowId).maybeSingle();
+    if (data) return data;
+  }
+  if (payment.checkout_session_id) {
+    const { data } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("session_id", payment.checkout_session_id)
+      .maybeSingle();
+    if (data) return data;
+  }
+  throw new WebhookPayloadError(
+    `No payment row for payment ${payment.payment_id} (session ${payment.checkout_session_id ?? "none"})`,
+  );
+}
+
+/** Dodo's details for the payment row. Never credit amounts. */
+function paymentDetails(payment: WebhookPayload.Payment) {
+  return {
+    payment_id: payment.payment_id,
+    currency: payment.currency,
+    total_amount: payment.total_amount,
+    billing: payment.billing as JsonCompatible<typeof payment.billing>,
+    customer: payment.customer as JsonCompatible<typeof payment.customer>,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function fulfil(
+  supabase: ServiceClient,
+  payment: WebhookPayload.Payment,
+  webhookId: string,
+): Promise<WebhookStatus> {
+  let row: PaymentRow;
+  try {
+    row = await findPaymentRow(supabase, payment);
+  } catch (err) {
+    // A subscription renewal: no checkout row; the subscription events drive state.
+    if (err instanceof WebhookPayloadError && payment.subscription_id) return "ignored";
+    throw err;
+  }
+
+  const { data, error } = await supabase.rpc("fulfil_payment", {
+    p_payment_row_id: row.id,
+    p_webhook_id: webhookId,
+    p_dodo_payment_id: payment.payment_id,
+  });
+  if (error) throw new Error(`fulfil_payment: ${error.message}`);
+
+  const result = data as {
+    status: "fulfilled" | "already_fulfilled" | "recorded";
+    kind: PaymentRow["kind"];
+    credit_amount: number;
+  };
+  if (result.status !== "already_fulfilled") {
+    await supabase.from("payments").update(paymentDetails(payment)).eq("id", row.id);
+  }
+  if (result.status !== "fulfilled") return "processed";
+
+  if (row.kind === "company_credits" && row.company_id) {
+    await eventCaptureServer({
+      event: PostHogEvent.BillingCreditsPurchased,
+      distinctId: row.company_id,
+      properties: { companyId: row.company_id, credits: result.credit_amount },
+    });
+    return "processed";
+  }
+
+  await emailUser(supabase, row, payment, TPaymentStatus.COMPLETE, result.credit_amount);
+  return "processed";
+}
+
+async function updateStatus(
+  supabase: ServiceClient,
+  payment: WebhookPayload.Payment,
+  status: TPaymentStatus,
+): Promise<WebhookStatus> {
+  const row = await findPaymentRow(supabase, payment);
+
+  const { error } = await supabase
+    .from("payments")
+    .update({
+      ...paymentDetails(payment),
+      status,
+      credits_fulfilled: false,
+      ...(status === TPaymentStatus.PENDING
+        ? {}
+        : { failure_reason: payment.error_message ?? "unknown" }),
+    })
+    .eq("id", row.id)
+    // Events can arrive out of order: a late "processing" mustn't undo a success.
+    .neq("status", "complete");
+  if (error) throw new Error(`payments update: ${error.message}`);
+
+  await emailUser(supabase, row, payment, status, row.credit_amount ?? 0);
+  return "processed";
+}
+
+async function emailUser(
+  supabase: ServiceClient,
+  row: PaymentRow,
+  payment: WebhookPayload.Payment,
+  status: TPaymentStatus,
+  creditAmount: number,
+) {
+  if (!row.user_id) return;
+
+  const { data: user } = await supabase
     .from("user_info")
     .select("full_name, email")
-    .eq("user_id", String(webhookPayload.metadata.user_id))
-    .single();
+    .eq("user_id", row.user_id)
+    .maybeSingle();
+  if (!user?.email) return;
 
-  if (data && !error) {
-    userName = data.full_name || (data.email ? data.email.split("@")[0] : "");
-    email = data.email || "";
-  }
-
-  // FAILED
-  if (eventType === "payment.failed") {
-    const { error: paymentUpdateError } = await serviceRoleSupabase
-      .from("payments")
-      .update({
-        status: "failed",
-        credits_fulfilled: false,
-        payment_id: webhookPayload.payment_id,
-        failure_reason: webhookPayload.error_message ?? "unknown",
-        updated_at: new Date().toISOString(),
-        currency: webhookPayload.currency,
-        total_amount: webhookPayload.total_amount,
-        billing: webhookPayload.billing as JsonCompatible<
-          typeof webhookPayload.billing
-        >,
-        customer: webhookPayload.customer as JsonCompatible<
-          typeof webhookPayload.customer
-        >,
-      })
-      .eq("user_id", String(webhookPayload.metadata?.user_id || ""))
-      .eq("session_id", webhookPayload.checkout_session_id!);
-
-    if (paymentUpdateError) {
-      return NextResponse.json(
-        { error: "Failed to update payment record inside payment.failed" },
-        { status: 500 },
-      );
-    }
-
-    const { error, success } = await SendPaymentUpdateEmail({
-      userName,
-      email,
-      paymentDetails: {
-        status: "failed" as TPaymentStatus,
-        total_amount: webhookPayload.total_amount,
-        currency: webhookPayload.currency,
-        credit_amount: Number(webhookPayload.metadata.credit_amount),
-        payment_method: webhookPayload.payment_method ?? "",
-        payment_id: webhookPayload.payment_id,
-      },
-    });
-
-    if (!error && success) {
-      await serviceRoleSupabase
-        .from("payments")
-        .update({ email_sent: true })
-        .eq("payment_id", webhookPayload.payment_id);
-    }
-
-    return NextResponse.json({
-      received: true,
-      message:
-        error && !success
-          ? "Payment failed. Email not sent."
-          : "Payment failed.",
-    });
-  }
-
-  // CANCELLED
-  if (eventType === "payment.cancelled") {
-    const { error: paymentUpdateError } = await serviceRoleSupabase
-      .from("payments")
-      .update({
-        status: "cancelled",
-        credits_fulfilled: false,
-        payment_id: webhookPayload.payment_id,
-        failure_reason: webhookPayload.error_message ?? "unknown",
-        updated_at: new Date().toISOString(),
-        currency: webhookPayload.currency,
-        total_amount: webhookPayload.total_amount,
-        billing: webhookPayload.billing as JsonCompatible<
-          typeof webhookPayload.billing
-        >,
-        customer: webhookPayload.customer as JsonCompatible<
-          typeof webhookPayload.customer
-        >,
-      })
-      .eq("user_id", String(webhookPayload.metadata?.user_id || ""))
-      .eq("session_id", webhookPayload.checkout_session_id!);
-
-    if (paymentUpdateError) {
-      return NextResponse.json(
-        { error: "Failed to update payment record inside payment.cancelled" },
-        { status: 500 },
-      );
-    }
-
-    const { error, success } = await SendPaymentUpdateEmail({
-      userName,
-      email,
-      paymentDetails: {
-        status: "cancelled" as TPaymentStatus,
-        total_amount: webhookPayload.total_amount,
-        currency: webhookPayload.currency,
-        credit_amount: Number(webhookPayload.metadata.credit_amount),
-        payment_method: webhookPayload.payment_method ?? "",
-        payment_id: webhookPayload.payment_id,
-      },
-    });
-
-    if (!error && success) {
-      await serviceRoleSupabase
-        .from("payments")
-        .update({ email_sent: true })
-        .eq("payment_id", webhookPayload.payment_id);
-    }
-
-    return NextResponse.json({
-      received: true,
-      message:
-        error && !success
-          ? "Payment cancelled. Email not sent."
-          : "Payment cancelled.",
-    });
-  }
-
-  // PROCESSING
-  if (eventType === "payment.processing") {
-    const { error: paymentUpdateError } = await serviceRoleSupabase
-      .from("payments")
-      .update({
-        status: "pending",
-        credits_fulfilled: false,
-        payment_id: webhookPayload.payment_id,
-        // failure_reason: webhookPayload.error_message ?? "unknown",
-        updated_at: new Date().toISOString(),
-        currency: webhookPayload.currency,
-        total_amount: webhookPayload.total_amount,
-        billing: webhookPayload.billing as JsonCompatible<
-          typeof webhookPayload.billing
-        >,
-        customer: webhookPayload.customer as JsonCompatible<
-          typeof webhookPayload.customer
-        >,
-      })
-      .eq("user_id", String(webhookPayload.metadata?.user_id || ""))
-      .eq("session_id", webhookPayload.checkout_session_id!);
-
-    if (paymentUpdateError) {
-      return NextResponse.json(
-        {
-          error:
-            "Failed to update payment record inside payment.failed. " +
-            paymentUpdateError.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    const { error, success } = await SendPaymentUpdateEmail({
-      userName,
-      email,
-      paymentDetails: {
-        status: "pending" as TPaymentStatus,
-        total_amount: webhookPayload.total_amount,
-        currency: webhookPayload.currency,
-        credit_amount: Number(webhookPayload.metadata.credit_amount),
-        payment_method: webhookPayload.payment_method ?? "",
-        payment_id: webhookPayload.payment_id,
-      },
-    });
-
-    return NextResponse.json({
-      received: true,
-      message:
-        error && !success
-          ? "Payment processing. Email not sent."
-          : "Payment processing.",
-    });
-  }
-
-  // SUCCEEDED
-  if (eventType === "payment.succeeded") {
-    const payment_id = webhookPayload.payment_id;
-    const { credit_amount, user_id } = webhookPayload.metadata || {};
-
-    if (!user_id || !payment_id || !credit_amount) {
-      console.error(
-        "Webhook Error: Missing required fulfillment data in session metadata.",
-        { user_id, payment_id, credit_amount },
-      );
-      return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
-    }
-
-    const credits = parseInt(String(credit_amount), 10);
-
-    try {
-      // Idempotency Check: Ensure we haven't already fulfilled this payment
-      const { data: payment } = await serviceRoleSupabase
-        .from("payments")
-        .select("credits_fulfilled")
-        .eq("user_id", String(user_id))
-        .eq("session_id", webhookPayload.checkout_session_id!)
-        .single();
-
-      if (payment?.credits_fulfilled) {
-        return NextResponse.json({
-          received: true,
-          message: "Credit payment already fulfilled.",
-        });
-      }
-
-      const { data: userInfoData, error: userInfoError } =
-        await serviceRoleSupabase
-          .from("user_info")
-          .select("ai_credits")
-          .eq("user_id", String(user_id))
-          .single();
-
-      if (userInfoError || !userInfoData) {
-        throw new Error(`User retrieval failed: ${userInfoError?.message}`);
-      }
-      // A. Fulfill the order: Increment User Credits
-      const { error: creditError } = await serviceRoleSupabase
-        .from("user_info")
-        .update({
-          ai_credits: (userInfoData.ai_credits || 0) + credits,
-        })
-        .eq("user_id", String(user_id));
-
-      if (creditError)
-        throw new Error(`Credit update failed: ${creditError.message}`);
-
-      // B. Mark payment record as fulfilled
-      const { error: updateError } = await serviceRoleSupabase
-        .from("payments")
-        .update({
-          status: "complete",
-          credits_fulfilled: true,
-          payment_id: webhookPayload.payment_id,
-          fulfillment_date: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          currency: webhookPayload.currency,
-          total_amount: webhookPayload.total_amount,
-          billing: webhookPayload.billing as JsonCompatible<
-            typeof webhookPayload.billing
-          >,
-          customer: webhookPayload.customer as JsonCompatible<
-            typeof webhookPayload.customer
-          >,
-        })
-        .eq("user_id", String(user_id))
-        .eq("session_id", webhookPayload.checkout_session_id!);
-
-      if (updateError)
-        throw new Error(`Payment record update failed: ${updateError.message}`);
-
-      const { error, success } = await SendPaymentUpdateEmail({
-        userName,
-        email,
-        paymentDetails: {
-          status: "complete" as TPaymentStatus,
-          total_amount: webhookPayload.total_amount,
-          currency: webhookPayload.currency,
-          credit_amount: Number(webhookPayload.metadata.credit_amount),
-          payment_method: webhookPayload.payment_method ?? "",
-          payment_id: webhookPayload.payment_id,
-        },
-      });
-
-      if (!error && success) {
-        await serviceRoleSupabase
-          .from("payments")
-          .update({ email_sent: true })
-          .eq("payment_id", webhookPayload.payment_id);
-      }
-
-      return NextResponse.json({
-        received: true,
-        message:
-          error && !success
-            ? "Payment fulfilled. Email not sent."
-            : "Payment fulfilled.",
-      });
-    } catch (err) {
-      console.error("Fulfillment Error:", err);
-      return NextResponse.json(
-        {
-          error: `Fulfillment Error: ${err instanceof Error ? err.message : String(err)}`,
-        },
-        { status: 500 },
-      );
-    }
-  }
-
-  return NextResponse.json({
-    received: true,
-    message: `Unhandled event type: ${eventType}`,
+  const { error, success } = await SendPaymentUpdateEmail({
+    userName: user.full_name || user.email.split("@")[0],
+    email: user.email,
+    paymentDetails: {
+      status,
+      total_amount: payment.total_amount,
+      currency: payment.currency,
+      credit_amount: creditAmount,
+      payment_method: payment.payment_method ?? "",
+      payment_id: payment.payment_id,
+    },
   });
+
+  if (!error && success) {
+    await supabase.from("payments").update({ email_sent: true }).eq("id", row.id);
+  }
 }
