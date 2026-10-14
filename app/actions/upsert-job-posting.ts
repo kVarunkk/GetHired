@@ -1,10 +1,14 @@
 "use server";
 
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
-
-import { ICreateJobPostingFormData } from "@/utils/types";
-import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
 import { revalidateTag } from "next/cache";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { requireCompanyForAction } from "@/helpers/companies/require-company";
+import { isUuid } from "@/helpers/agent/auth";
+import {
+  jobPostingInputSchema,
+  type JobPostingInput,
+} from "@/helpers/jobs/job-posting-schema";
+import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
 import {
   buildEquityRange,
@@ -13,95 +17,137 @@ import {
   INTERNAL_API_SECRET,
 } from "@/utils/formatters";
 
+type UpsertResult =
+  | { success: true; isUpdate: boolean }
+  | { success: false; error: string };
+
 /**
- * SERVER ACTION: upsertJobPostingAction
- * Orchestrates the database logic across 'job_postings' and 'all_jobs' tables.
+ * SERVER ACTION: creates or edits one of the session company's job postings and
+ * keeps its public `all_jobs` row in sync (RS-SEC-001, RS-SEC-002). The company
+ * always comes from the session; an existing posting is looked up within that
+ * company, and its `job_id` comes from the database. New postings are inactive.
  */
-
-// status for new job posting is INACTIVE
-
 export async function upsertJobPostingAction(params: {
-  values: ICreateJobPostingFormData;
-  companyId: string;
+  values: JobPostingInput;
   existingPostingId?: string;
-  existingJobId?: string | null;
-}) {
-  const baseUrl = deploymentUrl();
+}): Promise<UpsertResult> {
+  const auth = await requireCompanyForAction();
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { supabase, company } = auth;
 
-  const { values, companyId, existingPostingId, existingJobId } = params;
-  const supabase = createServiceRoleClient();
+  const parsed = jobPostingInputSchema.safeParse(params.values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid job posting.",
+    };
+  }
+  const values = parsed.data;
 
-  const salary_range = buildSalaryRange(
-    values.min_salary,
-    values.max_salary,
-    values.salary_currency,
-  );
-  const equity_range = buildEquityRange(values.min_equity, values.max_equity);
-  const experience = buildExperience(
-    values.min_experience,
-    values.max_experience,
-  );
-
-  let embedding = null;
+  const { existingPostingId } = params;
+  const isUpdate = existingPostingId !== undefined;
 
   try {
-    const { data: companyData, error: companyError } = await supabase
-      .from("company_info")
-      .select("job_posts_created, company_tiers(allowed_job_posts)")
-      .eq("id", companyId)
-      .single();
-
-    if (!companyData || companyError)
-      throw new Error(companyError.message || "Error fetching company data.");
-
-    if (
-      companyData?.company_tiers?.allowed_job_posts !== null &&
-      companyData?.job_posts_created >=
-        (companyData?.company_tiers?.allowed_job_posts || 0)
-    ) {
-      throw new Error(
-        "You are not allowed to create more than " +
-          companyData?.company_tiers?.allowed_job_posts +
-          " job posts in your current plan. Please contact support for an upgrade.",
-      );
+    let existing: { id: string; job_id: string | null } | null = null;
+    if (isUpdate) {
+      if (!isUuid(existingPostingId)) {
+        return { success: false, error: "Job posting not found." };
+      }
+      const { data, error } = await supabase
+        .from("job_postings")
+        .select("id, job_id")
+        .eq("id", existingPostingId)
+        .eq("company_id", company.id)
+        .maybeSingle();
+      if (error) throw new Error("Failed to load the job posting.");
+      if (!data) return { success: false, error: "Job posting not found." };
+      existing = data;
     }
 
+    let postsCreated = 0;
+    if (!existing) {
+      const { data: companyData, error: companyError } = await supabase
+        .from("company_info")
+        .select("job_posts_created, company_tiers(allowed_job_posts)")
+        .eq("id", company.id)
+        .single();
+
+      if (companyError || !companyData) {
+        throw new Error("Error fetching company data.");
+      }
+
+      postsCreated = companyData.job_posts_created ?? 0;
+      const allowed = companyData.company_tiers?.allowed_job_posts ?? null;
+      if (allowed !== null && postsCreated >= allowed) {
+        return {
+          success: false,
+          error: `You are not allowed to create more than ${allowed} job posts in your current plan. Please contact support for an upgrade.`,
+        };
+      }
+    }
+
+    const salary_range = buildSalaryRange(
+      values.min_salary,
+      values.max_salary,
+      values.salary_currency,
+    );
+    const equity_range = buildEquityRange(values.min_equity, values.max_equity);
+    const experience = buildExperience(
+      values.min_experience,
+      values.max_experience,
+    );
+
+    // Built field by field from the parsed input: nothing from the client is spread.
     const payload = {
-      company_id: companyId,
-      ...values,
+      company_id: company.id,
+      title: values.title,
+      description: values.description,
+      location: values.location,
+      job_type: values.job_type,
+      salary_currency: values.salary_currency,
+      min_salary: values.min_salary,
+      max_salary: values.max_salary,
+      min_experience: values.min_experience,
+      max_experience: values.max_experience,
+      visa_sponsorship: values.visa_sponsorship,
+      min_equity: values.min_equity,
+      max_equity: values.max_equity,
+      questions: values.questions,
+      ...(values.skills ? { skills: values.skills } : {}),
       salary_range,
       equity_range,
       experience,
-      questions: values.questions?.filter((q: string) => q.trim() !== "") || [],
       updated_at: new Date().toISOString(),
     };
 
-    if (existingPostingId) {
-      payload.id = existingPostingId;
-    }
+    // Ownership is settled above; the service role is only used from here on.
+    const service = createServiceRoleClient();
 
-    // 1. Update the primary job_postings record
-    const { data: new_posting, error: postingError } = await supabase
-      .from("job_postings")
-      .upsert(payload, { onConflict: "id" })
+    const write = existing
+      ? service
+          .from("job_postings")
+          .update(payload)
+          .eq("id", existing.id)
+          .eq("company_id", company.id)
+      : service.from("job_postings").insert(payload);
+    const { data: posting, error: postingError } = await write
       .select("*, company_info(website, name, id)")
       .single();
 
-    if (postingError || !new_posting) throw postingError;
+    if (postingError || !posting) throw new Error("Failed to save the job posting.");
 
-    // record already exists in the job_postings table
-    if (existingPostingId) {
-      // updates embedding of job_postings record
+    let embedding = null;
+    if (existing) {
       const embeddingResult = await fetch(
-        `${baseUrl}/api/update-embedding/gemini/job`,
+        `${deploymentUrl()}/api/update-embedding/gemini/job`,
         {
           method: "POST",
           headers: {
             "X-Internal-Secret": INTERNAL_API_SECRET,
           },
           body: JSON.stringify({
-            id: existingPostingId,
-            job_name: values.title.trim(),
+            id: existing.id,
+            job_name: values.title,
             locations: values.location,
             description: values.description,
             job_type: values.job_type,
@@ -113,22 +159,17 @@ export async function upsertJobPostingAction(params: {
 
       if (!embeddingResult.ok) {
         const errorData = await embeddingResult.json();
-        return {
-          success: false,
-          error: errorData.error,
-        };
+        return { success: false, error: errorData.error };
       }
 
       embedding = (await embeddingResult.json()).data;
     }
 
-    // 2. Sync changes to the public 'all_jobs' aggregate table
-    if (existingJobId) {
-      // Handle Updates for existing listings
-      const { error: updateError } = await supabase
+    if (existing?.job_id) {
+      const { error: updateError } = await service
         .from("all_jobs")
         .update({
-          job_name: values.title.trim(),
+          job_name: values.title,
           job_type: values.job_type,
           salary_range,
           salary_min: values.min_salary,
@@ -140,73 +181,65 @@ export async function upsertJobPostingAction(params: {
           equity_min: values.min_equity,
           equity_max: values.max_equity,
           visa_requirement: values.visa_sponsorship,
-          description: values.description.trim(),
+          description: values.description,
           locations: values.location,
           updated_at: new Date().toISOString(),
           embedding_new: embedding,
         })
-        .eq("id", existingJobId);
+        .eq("id", existing.job_id);
 
       if (updateError) throw new Error("Failed to update public job feed.");
 
-      revalidateTag(`job-${existingJobId}`);
-    } else {
-      if (!new_posting.job_id) {
-        // Create the public entry for the first time
-        const { data: insertedJob, error: insertError } = await supabase
-          .from("all_jobs")
-          .insert({
-            locations: new_posting.location,
-            job_type: new_posting.job_type,
-            job_name: new_posting.title,
-            description: new_posting.description,
-            visa_requirement: new_posting.visa_sponsorship,
-            salary_range: new_posting.salary_range,
-            salary_min: new_posting.min_salary,
-            salary_max: new_posting.max_salary,
-            experience_min: new_posting.min_experience ?? undefined,
-            experience_max: new_posting.max_experience,
-            equity_range: new_posting.equity_range,
-            equity_min: new_posting.min_equity,
-            equity_max: new_posting.max_equity,
-            experience: new_posting.experience,
-            company_url: "/companies/" + new_posting.company_info?.id,
-            company_name: new_posting.company_info?.name,
-            platform: "gethired",
-            status: "inactive",
-            is_platform_job: true,
-          })
-          .select("id")
-          .single();
+      revalidateTag(`job-${existing.job_id}`);
+    } else if (!posting.job_id) {
+      // Create the public entry for the first time.
+      const { data: insertedJob, error: insertError } = await service
+        .from("all_jobs")
+        .insert({
+          locations: posting.location,
+          job_type: posting.job_type,
+          job_name: posting.title,
+          description: posting.description,
+          visa_requirement: posting.visa_sponsorship,
+          salary_range: posting.salary_range,
+          salary_min: posting.min_salary,
+          salary_max: posting.max_salary,
+          experience_min: posting.min_experience ?? undefined,
+          experience_max: posting.max_experience,
+          equity_range: posting.equity_range,
+          equity_min: posting.min_equity,
+          equity_max: posting.max_equity,
+          experience: posting.experience,
+          company_url: "/companies/" + company.id,
+          company_name: posting.company_info?.name ?? company.name,
+          platform: "gethired",
+          status: "inactive",
+          is_platform_job: true,
+        })
+        .select("id")
+        .single();
 
-        if (insertError) throw insertError;
+      if (insertError || !insertedJob) throw new Error("Failed to publish the job posting.");
 
-        // Map the new public job_id back to our internal posting
-        await supabase
-          .from("job_postings")
-          .update({ job_id: insertedJob.id })
-          .eq("id", new_posting.id);
+      // Map the new public job_id back to our internal posting.
+      await service
+        .from("job_postings")
+        .update({ job_id: insertedJob.id })
+        .eq("id", posting.id);
 
-        await supabase.from("company_info").update({
-          job_posts_created: (companyData?.job_posts_created || 0) + 1,
-        });
+      if (!existing) {
+        await service
+          .from("company_info")
+          .update({ job_posts_created: postsCreated + 1 })
+          .eq("id", company.id);
       }
     }
 
-    // if the job posting is updated and the status is active then trigger profile relevance update
-    if (new_posting.status === "active") {
-      await supabase
-        .from("job_postings")
-        .update({
-          matching_status: "progress",
-          matching_error: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", new_posting.id);
-      triggerJobPostingRelevanceUpdate(new_posting.id);
+    if (posting.status === "active") {
+      await triggerJobPostingRelevanceUpdate(posting.id);
     }
 
-    return { success: true, isUpdate: !!existingPostingId };
+    return { success: true, isUpdate };
   } catch (error: unknown) {
     return {
       success: false,

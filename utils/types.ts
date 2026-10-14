@@ -1,4 +1,5 @@
 import { Enums, Json, Tables } from "./types/database.types";
+import type { JobPostingInput } from "@/helpers/jobs/job-posting-schema";
 
 type AllJobsRow = Tables<"all_jobs">;
 type UserRelevantJobsRow = Tables<"user_relevant_jobs">;
@@ -105,22 +106,8 @@ export interface ICountry {
   iso: string;
 }
 
-export interface ICreateJobPostingFormData {
-  id?: string;
-  title: string;
-  description: string;
-  job_type: TJobTypeEnum;
-  salary_currency: string;
-  min_salary: number;
-  max_salary: number;
-  min_experience: number;
-  visa_sponsorship: "Not Required" | "Required" | "Will Sponsor";
-  location: string[];
-  max_experience?: number;
-  min_equity?: number;
-  max_equity?: number;
-  questions?: string[];
-}
+/** The job posting form's values, derived from the server schema so they can't drift. */
+export type ICreateJobPostingFormData = JobPostingInput & { id?: string };
 
 export interface INavItem {
   id: string;

@@ -122,9 +122,7 @@ export default function CreateJobPostingDialog({
   existingValues,
 }: {
   companyId: string;
-  existingValues?: ICreateJobPostingFormData & {
-    job_id: string | null;
-  };
+  existingValues?: ICreateJobPostingFormData;
 }) {
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -156,9 +154,7 @@ export default function CreateJobPostingDialog({
     try {
       const result = await upsertJobPostingAction({
         values,
-        companyId,
         existingPostingId: existingValues?.id,
-        existingJobId: existingValues?.job_id,
       });
 
       if (!result.success) {
