@@ -13,6 +13,11 @@ import { createClient } from "@/lib/supabase/client";
 import InfoTooltip from "./InfoTooltip";
 import Link from "next/link";
 import { Database } from "@/utils/types/database.types";
+import toast from "react-hot-toast";
+import {
+  PROFILE_VISIBILITY_DETAILS,
+  PROFILE_VISIBILITY_LABEL,
+} from "./profile-visibility-copy";
 
 interface IinitialPreferences {
   id: string;
@@ -61,6 +66,7 @@ export default function UserOnboardingPersonalization({
     } catch {
       // Rollback on failure
       setPrefs((prev) => ({ ...prev, [key]: originalValue }));
+      toast.error("Couldn't save your preference. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -124,22 +130,31 @@ export default function UserOnboardingPersonalization({
               </Label>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-start space-x-2">
               <Checkbox
                 id="profile_visibility"
+                className="mt-0.5"
+                aria-describedby="profile_visibility_details"
                 checked={prefs.is_public}
                 disabled={isLoading}
                 onCheckedChange={(checked: boolean) =>
                   handlePreferenceChange("is_public", checked)
                 }
               />
-              <Label
-                htmlFor="profile_visibility"
-                className="text-sm cursor-pointer"
-              >
-                Public Profile: Allow technical recruiters to find your profile
-                on their candidate feed.
-              </Label>
+              <div className="flex flex-col gap-1">
+                <Label
+                  htmlFor="profile_visibility"
+                  className="text-sm cursor-pointer"
+                >
+                  {PROFILE_VISIBILITY_LABEL}
+                </Label>
+                <p
+                  id="profile_visibility_details"
+                  className="text-xs text-muted-foreground"
+                >
+                  {PROFILE_VISIBILITY_DETAILS}
+                </p>
+              </div>
             </div>
 
             {isLoading && (

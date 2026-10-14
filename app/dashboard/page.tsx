@@ -11,6 +11,7 @@ import { ArrowRight } from "lucide-react";
 import RechargeCredits from "@/components/RechargeCredits";
 import DashboardDropdown from "@/components/DashboardDropdown";
 import CreditDepositDialog from "@/components/CreditDepositDialog";
+import ProfileVisibilitySetting from "@/components/ProfileVisibilitySetting";
 
 export default async function DashboardPage() {
   try {
@@ -26,7 +27,7 @@ export default async function DashboardPage() {
     const { data: userInfoData, error: userInfoError } = await supabase
       .from("user_info")
       .select(
-        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id), user_api_tokens(id)",
+        "full_name, email, ai_credits, updated_at, filled, is_public, invitations(*), invitations_count, payments(id), user_api_tokens(id)",
       )
       .eq("user_id", user.id)
       .single();
@@ -307,6 +308,15 @@ export default async function DashboardPage() {
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="flex flex-col p-4">
+              <CardContent className="p-0 h-full flex-1">
+                <ProfileVisibilitySetting
+                  userId={user.id}
+                  initialIsPublic={userInfoData.is_public}
+                />
               </CardContent>
             </Card>
           </div>
