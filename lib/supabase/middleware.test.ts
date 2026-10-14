@@ -178,3 +178,18 @@ describe("middleware: regressions", () => {
     expect(passesThrough(res)).toBe(true);
   });
 });
+
+describe("middleware: billing routes", () => {
+  it("lets the billing cron and the grant route through without a session", async () => {
+    expect(passesThrough(await updateSession(request("/api/updates/billing")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/api/internal/billing/grant")))).toBe(true);
+  });
+
+  it("keeps the company pricing page public", async () => {
+    expect(passesThrough(await updateSession(request("/pricing/companies")))).toBe(true);
+  });
+
+  it("keeps the billing page company-only", async () => {
+    expect(redirectTarget(await updateSession(request("/company/billing")))).toMatch(/^\/auth\/login/);
+  });
+});

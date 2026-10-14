@@ -94,6 +94,11 @@ export async function updateSession(request: NextRequest) {
     "/api/dodo/webhook",
     "/api/internal/jobs/bulk-upsert",
     "/api/internal/scraper-state",
+    // Billing: the public pricing page, the daily cron (X-Internal-Secret) and
+    // the admin grant route (x-api-key). Each route checks its own secret.
+    "/pricing/companies",
+    "/api/updates/billing",
+    "/api/internal/billing/grant",
     "/privacy-policy",
     "/terms-of-service",
     "/sitemap.xml",
