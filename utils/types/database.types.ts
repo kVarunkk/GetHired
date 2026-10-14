@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "12.2.3"
   }
   pgmq_public: {
     Tables: {
@@ -1662,6 +1662,10 @@ export type Database = {
         Args: { algorithm: string; secret: string; signables: string }
         Returns: string
       }
+      company_can_view_candidate: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       deduct_interview_session_credits: {
         Args: { p_interview_id: string; p_session_id: string }
         Returns: string
@@ -1759,6 +1763,7 @@ export type Database = {
         Args: { p_interview_id: string; p_session_id: string }
         Returns: boolean
       }
+      is_company_member: { Args: { p_company_id: string }; Returns: boolean }
       match_all_companies: {
         Args: {
           match_count: number
@@ -1801,6 +1806,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      my_company_id: { Args: never; Returns: string }
       normalize_all_job_locations_test: {
         Args: { target_ids?: string[] }
         Returns: undefined
