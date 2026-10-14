@@ -8,11 +8,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/utils/utils";
 import { TApplicationStatus } from "@/utils/types";
-import { sendStatusUpdateEmail } from "@/app/actions/send-email";
+import { updateApplicationStatusAction } from "@/app/actions/update-application-status";
+import toast from "react-hot-toast";
 import { TApplication1 } from "@/utils/types/jobs.types";
 
 // Define the available application statuses
@@ -25,40 +25,31 @@ export default function ApplicationStatusSelect({
 }) {
   const [currentStatus, setCurrentStatus] = useState(application.status);
   const [isUpdating, setIsUpdating] = useState(false);
-  const supabase = createClient();
 
   const handleStatusUpdate = useCallback(
     async (newStatus: TApplicationStatus) => {
+      const previous = currentStatus;
+      setCurrentStatus(newStatus);
       setIsUpdating(true);
       try {
-        const { error } = await supabase
-          .from("applications")
-          .update({ status: newStatus })
-          .eq("id", application.id);
-
-        if (error) throw error;
-
-        if (
-          application.user_info &&
-          application.job_postings &&
-          application.job_postings.company_info?.name &&
-          application.user_info.email
-        ) {
-          sendStatusUpdateEmail(
-            application.user_info.email,
-            newStatus,
-            application.job_postings?.title,
-            application.job_postings.company_info.name,
-          );
+        const result = await updateApplicationStatusAction({
+          applicationId: application.id,
+          status: newStatus,
+        });
+        if (result.ok) {
+          toast.success("Status updated.");
+        } else {
+          setCurrentStatus(previous);
+          toast.error(result.error);
         }
-
-        setCurrentStatus(newStatus);
       } catch {
+        setCurrentStatus(previous);
+        toast.error("Couldn't update the status. Please try again.");
       } finally {
         setIsUpdating(false);
       }
     },
-    [application.id, supabase],
+    [application.id, currentStatus],
   );
 
   return (
