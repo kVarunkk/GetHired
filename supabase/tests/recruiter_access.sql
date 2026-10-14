@@ -68,10 +68,10 @@ begin
   -- Billing columns can't be raised; ordinary columns can change.
   update public.company_info
      set tier_id = (select id from public.company_tiers where name = 'paid-2'),
-         ai_credits = 9999, job_posts_created = -5, ai_search_uses = -5, name = 'Acme 2'
+         ai_credits = 9999, job_posts_created = -5, name = 'Acme 2'
    where id = 'c0000000-0000-4000-8000-000000000001';
-  assert (select (t.name, c.ai_credits, c.job_posts_created, c.ai_search_uses, c.name)
-            = ('free'::text, 50::smallint, 0::bigint, 0::bigint, 'Acme 2'::text)
+  assert (select (t.slug, c.ai_credits, c.job_posts_created, c.name)
+            = ('free'::text, 50::smallint, 0::bigint, 'Acme 2'::text)
           from public.company_info c join public.company_tiers t on t.id = c.tier_id
           where c.id = 'c0000000-0000-4000-8000-000000000001'),
     'company A changed its own billing columns';

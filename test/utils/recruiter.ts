@@ -34,9 +34,6 @@ export const FREE_TIER: CompanyTierRow = {
   description: null,
   features: [],
   prices: [],
-  // Dropped by 20261014170000_billing_drop_legacy_limits; remove with it.
-  allowed_job_posts: 2,
-  allowed_profiles: 20,
   price_plan_id: null,
   created_at: CREATED_AT,
   updated_at: null,
@@ -64,7 +61,6 @@ function company(n: number, name: string): CompanyFixture {
     tier_id: FREE_TIER.id,
     ai_credits: 0,
     job_posts_created: 0,
-    ai_search_uses: 0,
     company_size: null,
     description: null,
     embedding: null,
