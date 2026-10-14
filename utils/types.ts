@@ -293,6 +293,18 @@ export enum PostHogEvent {
 
   AgentChatTurn = "agent_chat_turn",
   AgentLocationNoResults = "agent_location_no_results",
+
+  BillingWebhookError = "billing_webhook_error",
+  BillingPricingViewed = "billing_pricing_viewed",
+  BillingUpgradeDialogShown = "billing_upgrade_dialog_shown",
+  BillingCheckoutStarted = "billing_checkout_started",
+  BillingSubscriptionActivated = "billing_subscription_activated",
+  BillingPlanChanged = "billing_plan_changed",
+  BillingCancelled = "billing_cancelled",
+  BillingResumed = "billing_resumed",
+  BillingPortalOpened = "billing_portal_opened",
+  BillingCreditsPurchased = "billing_credits_purchased",
+  BillingLimitHit = "billing_limit_hit",
 }
 
 export type JobUrlPatch = {
