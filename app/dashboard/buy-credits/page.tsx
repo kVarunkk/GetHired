@@ -21,6 +21,7 @@ export default async function BuyCreditsPage() {
     .select(
       "id, product_id, credit_amount, amount, currency, name, description",
     )
+    .eq("audience", "applicant")
     .order("credit_amount", { ascending: true });
 
   if (error || !plans || plans.length === 0) {
@@ -75,7 +76,6 @@ export default async function BuyCreditsPage() {
             <CardFooter className="p-0 mt-6">
               {plan.product_id && plan.credit_amount && (
                 <CreditPurchaseButton
-                  productId={plan.product_id}
                   creditAmount={plan.credit_amount}
                   displayPrice={`${plan.currency} ${plan.amount}`}
                   planId={plan.id}

@@ -5,14 +5,13 @@ import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 
 interface CreditPurchaseButtonProps {
-  productId: string;
+  /** Display only: the server reads the amount from the plan. */
   creditAmount: number;
   displayPrice: string;
   planId: string;
 }
 
 const CreditPurchaseButton: React.FC<CreditPurchaseButtonProps> = ({
-  productId,
   creditAmount,
   displayPrice,
   planId,
@@ -27,7 +26,7 @@ const CreditPurchaseButton: React.FC<CreditPurchaseButtonProps> = ({
       const response = await fetch("/api/dodo/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, creditAmount, planId }),
+        body: JSON.stringify({ planId }),
       });
 
       const data = await response.json();

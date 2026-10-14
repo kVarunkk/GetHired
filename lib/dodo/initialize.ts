@@ -15,6 +15,9 @@ export function getDodoClient() {
     dodoClient = new DodoPayments({
       bearerToken: process.env.DODO_PAYMENTS_API_KEY,
       webhookKey: process.env.DODO_WEBHOOK_SECRET as string,
+      // Set DODO_PAYMENTS_ENVIRONMENT=test_mode with test credentials; live otherwise.
+      environment:
+        process.env.DODO_PAYMENTS_ENVIRONMENT === "test_mode" ? "test_mode" : "live_mode",
     });
   }
   return dodoClient;
