@@ -672,7 +672,6 @@ export type Database = {
       company_info: {
         Row: {
           ai_credits: number
-          ai_search_uses: number
           company_size: string | null
           created_at: string
           description: string | null
@@ -696,7 +695,6 @@ export type Database = {
         }
         Insert: {
           ai_credits?: number
-          ai_search_uses?: number
           company_size?: string | null
           created_at?: string
           description?: string | null
@@ -720,7 +718,6 @@ export type Database = {
         }
         Update: {
           ai_credits?: number
-          ai_search_uses?: number
           company_size?: string | null
           created_at?: string
           description?: string | null
@@ -827,8 +824,6 @@ export type Database = {
       }
       company_tiers: {
         Row: {
-          allowed_job_posts: number | null
-          allowed_profiles: number | null
           created_at: string
           description: string | null
           features: string[]
@@ -842,8 +837,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          allowed_job_posts?: number | null
-          allowed_profiles?: number | null
           created_at?: string
           description?: string | null
           features?: string[]
@@ -857,8 +850,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          allowed_job_posts?: number | null
-          allowed_profiles?: number | null
           created_at?: string
           description?: string | null
           features?: string[]
@@ -1381,25 +1372,49 @@ export type Database = {
       job_relevant_profiles: {
         Row: {
           created_at: string
+          experience_score: number | null
+          explained_at: string | null
+          explanation: Json | null
+          explanation_error: string | null
+          explanation_status: string
           id: string
           job_posting_id: string | null
+          match_score: number | null
+          preference_conflict: number | null
           relevance_rank: number | null
+          skills_score: number | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
           created_at?: string
+          experience_score?: number | null
+          explained_at?: string | null
+          explanation?: Json | null
+          explanation_error?: string | null
+          explanation_status?: string
           id?: string
           job_posting_id?: string | null
+          match_score?: number | null
+          preference_conflict?: number | null
           relevance_rank?: number | null
+          skills_score?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           created_at?: string
+          experience_score?: number | null
+          explained_at?: string | null
+          explanation?: Json | null
+          explanation_error?: string | null
+          explanation_status?: string
           id?: string
           job_posting_id?: string | null
+          match_score?: number | null
+          preference_conflict?: number | null
           relevance_rank?: number | null
+          skills_score?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
