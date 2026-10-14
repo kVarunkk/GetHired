@@ -1,0 +1,16 @@
+{
+  "skillsMatch": {
+    "type": "score",
+    "score": 2.85,
+    "probabilities": { "0": 0, "1": 0.05, "2": 0.25, "3": 0.5, "4": 0.2 }
+  },
+  "experienceMatch": {
+    "type": "score",
+    "score": 2.5,
+    "probabilities": { "0": 0, "1": 0.1, "2": 0.4, "3": 0.4, "4": 0.1 }
+  },
+  "preferenceMismatch": {
+    "type": "boolean",
+    "probability": 0.12
+  }
+}

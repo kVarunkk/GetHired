@@ -10,6 +10,9 @@ import { isUuid } from "@/helpers/agent/auth";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
+import { parseStoredExplanation } from "@/helpers/matching/schemas";
+import MatchScoreBadge from "@/components/matching/MatchScoreBadge";
+import MatchExplanationCard from "@/components/matching/MatchExplanationCard";
 
 // CACHE 1: Core profile data, scoped strictly by profile_id. The cache is shared
 // across companies, so callers MUST check company_can_view_candidate first.
@@ -65,13 +68,49 @@ const getCompanyScopedApplications = async (
   return data;
 };
 
+// MT-REQ-004: the candidate's match for one of this company's jobs, or null.
+const getJobMatch = async (
+  profile_id: string,
+  company_id: string,
+  job_post_id: string,
+) => {
+  const supabase = await createClient();
+
+  const { data: job } = await supabase
+    .from("job_postings")
+    .select("id, title")
+    .eq("id", job_post_id)
+    .eq("company_id", company_id)
+    .maybeSingle();
+  if (!job) return null;
+
+  const { data: match } = await supabase
+    .from("job_relevant_profiles")
+    .select("match_score, explanation, explanation_status")
+    .eq("job_posting_id", job.id)
+    .eq("user_id", profile_id)
+    .maybeSingle();
+
+  return {
+    job,
+    matchScore: match?.match_score ?? null,
+    explanation:
+      match?.explanation_status === "completed"
+        ? parseStoredExplanation(match.explanation)
+        : null,
+  };
+};
+
 export default async function ProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ profile_id: string }>;
+  searchParams?: Promise<{ job_post?: string }>;
 }) {
   try {
     const { profile_id } = await params;
+    const jobPostId = (await searchParams)?.job_post;
     if (!isUuid(profile_id)) notFound();
 
     const user = await getUserFromRequest();
@@ -93,9 +132,12 @@ export default async function ProfilePage({
     );
     if (canViewError || canView !== true) notFound();
 
-    const [profile, applications] = await Promise.all([
+    const [profile, applications, jobMatch] = await Promise.all([
       getCachedApplicantProfile(profile_id),
       getCompanyScopedApplications(profile_id, company.id),
+      jobPostId && isUuid(jobPostId)
+        ? getJobMatch(profile_id, company.id, jobPostId)
+        : null,
     ]);
 
     if (!profile) notFound();
@@ -120,6 +162,20 @@ export default async function ProfilePage({
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
+
+        {jobMatch && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
+              <span>Match for {jobMatch.job.title}</span>
+              <MatchScoreBadge score={jobMatch.matchScore} />
+            </div>
+            <MatchExplanationCard
+              jobPostId={jobMatch.job.id}
+              candidateId={profile_id}
+              explanation={jobMatch.explanation}
+            />
+          </div>
+        )}
 
         <ProfileClientHydrator applicantProfile={completeProfileData} />
       </div>

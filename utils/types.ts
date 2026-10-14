@@ -258,10 +258,24 @@ export type JobListing = {
   locations: string | string[];
 };
 
+/** One candidate's jev scores in `relevant_profiles` mode (MT-REQ-001). */
+export type ProfileMatchScores = {
+  /** 0–4 */
+  skills: number;
+  /** 0–4 */
+  experience: number;
+  /** P(preference conflict), 0–1 */
+  preferenceConflict: number;
+  /** 0.6·skills + 0.4·experience, 0–4 */
+  aggregate: number;
+};
+
 export type RerankResult = {
   reranked_jobs?: Array<{ id: string; reason: string }>;
   reranked_job_ids?: string[];
   filtered_out_ids: string[];
+  /** Kept ids only; set in `relevant_profiles` mode. */
+  scores?: Record<string, ProfileMatchScores>;
 };
 
 export type RerankMode =

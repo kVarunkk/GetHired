@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       rerankedProfiles: object.reranked_job_ids,
       filteredOutProfiles: object.filtered_out_ids,
+      scores: object.scores ?? {},
     });
   } catch {
     return NextResponse.json(

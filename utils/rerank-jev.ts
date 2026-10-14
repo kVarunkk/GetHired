@@ -7,6 +7,7 @@ import {
   ScoreReturnType,
   RerankResult,
   JobPostingsRow,
+  ProfileMatchScores,
 } from "./types";
 import { typeSafeAi } from "@ai-sdk/typesafe-ai";
 
@@ -101,6 +102,7 @@ export async function rerankWithJev<
     id: string;
     aggregateScore: number;
   }> = [];
+  const scoresById: Record<string, ProfileMatchScores> = {};
 
   // 2. Process scores programmatically
   for (const evaluated of evaluatedItems) {
@@ -131,6 +133,12 @@ export async function rerankWithJev<
         id: evaluated.itemId,
         aggregateScore,
       });
+      scoresById[evaluated.itemId] = {
+        skills: skillsMatch.score,
+        experience: experienceMatch.score,
+        preferenceConflict: preferenceMismatch?.probability ?? 0,
+        aggregate: aggregateScore,
+      };
     } else if (isSimilarJobs) {
       const {
         techStackOverlap,
@@ -193,6 +201,7 @@ export async function rerankWithJev<
   return {
     reranked_job_ids: validEvaluations.map((item) => item.id),
     filtered_out_ids,
+    ...(isProfileRerank ? { scores: scoresById } : {}),
   };
 }
 

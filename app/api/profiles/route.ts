@@ -123,7 +123,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error }, { status: 500 });
     }
 
-    const { initialProfiles, totalCount } = await rerankProfilesIfApplicable({
+    const { initialProfiles, totalCount, matchScores } =
+      await rerankProfilesIfApplicable({
       initialProfiles: data,
       initialCount: count,
       userId: user.id,
@@ -156,6 +157,8 @@ export async function GET(request: NextRequest) {
       profilesPerSearch,
       // Matches beyond the cap, for "N more matching candidates on Startup".
       ...(isLimitOnProfiles ? { hiddenCount, upgradePlan } : {}),
+      // MT-REQ-001: the digest stores these in job_relevant_profiles.
+      ...(relevanceSearchType === "digest" && matchScores ? { matchScores } : {}),
     });
   } catch (err: unknown) {
     return NextResponse.json(

@@ -4,7 +4,6 @@ export type AiSearchProfileBody = {
   companyId: string;
   profiles: {
     user_id: string;
-    full_name: string | null;
     desired_roles: string[] | null;
     experience_years: number | null;
     preferred_locations: string[] | null;

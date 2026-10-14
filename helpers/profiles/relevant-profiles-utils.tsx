@@ -3,11 +3,18 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendEmail, sendEmailForStatusUpdate } from "@/utils/email";
 import { deploymentUrl, INTERNAL_API_SECRET } from "@/utils/formatters";
-import { AllProfileWithRelations } from "@/utils/types";
+import { AllProfileWithRelations, ProfileMatchScores } from "@/utils/types";
 import { render } from "react-email";
 import { headers } from "next/headers";
+import { enqueueTopExplanations } from "@/helpers/matching/enqueue-explanations";
 
 const URL = deploymentUrl();
+
+/** jev's 0–4 aggregate as a 0–100 match score (MT-ASSUMPTION-001). */
+const toMatchScore = (aggregate: number) =>
+  Math.min(100, Math.max(0, Math.round((aggregate / 4) * 100)));
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export const sendEmailForRelevantProfilesStatusUpdate = async (
   email: string,
@@ -105,27 +112,83 @@ export async function processJobPostingRelevance(
 
     const json = await response.json();
     const profiles: AllProfileWithRelations[] = json.data || [];
+    const matchScores: Record<string, ProfileMatchScores> =
+      json.matchScores || {};
 
-    const rowsToInsert = profiles.map((profile, index) => ({
-      job_posting_id: jobPostingId,
-      user_id: profile.user_id,
-      relevance_rank: index + 1,
-      updated_at: new Date().toISOString(),
-    }));
+    // The caller has checked the job is this company's. Rows are written with
+    // the service role: company users have no UPDATE policy here, so they
+    // can't set scores or explanations themselves (MT-REQ-001).
+    const admin = createServiceRoleClient();
 
-    const { error: deleteError } = await supabase
+    const { data: existingRows, error: existingError } = await admin
+      .from("job_relevant_profiles")
+      .select("user_id, match_score, explanation_status")
+      .eq("job_posting_id", jobPostingId);
+
+    if (existingError)
+      throw new Error(`Load failed: ${existingError.message}`);
+
+    const existing = new Map(
+      (existingRows ?? []).map((row) => [row.user_id, row]),
+    );
+    const now = new Date().toISOString();
+
+    // Upsert rather than delete-and-insert, so cached explanations survive a
+    // re-run (MT-REQ-003). `explanation` is never in the payload.
+    const rowsToUpsert = profiles.map((profile, index) => {
+      const score = matchScores[profile.user_id];
+      const matchScore = score ? toMatchScore(score.aggregate) : null;
+      const previous = existing.get(profile.user_id);
+      const explanationStatus = !previous
+        ? "none"
+        : previous.explanation_status === "completed" &&
+            previous.match_score !== matchScore
+          ? "stale"
+          : previous.explanation_status;
+
+      return {
+        job_posting_id: jobPostingId,
+        user_id: profile.user_id,
+        relevance_rank: index + 1,
+        match_score: matchScore,
+        skills_score: score ? round2(score.skills) : null,
+        experience_score: score ? round2(score.experience) : null,
+        preference_conflict: score ? round2(score.preferenceConflict) : null,
+        explanation_status: explanationStatus,
+        updated_at: now,
+      };
+    });
+
+    if (rowsToUpsert.length > 0) {
+      const { error: upsertError } = await admin
+        .from("job_relevant_profiles")
+        .upsert(rowsToUpsert, { onConflict: "job_posting_id,user_id" });
+
+      if (upsertError) throw new Error(`Upsert failed: ${upsertError.message}`);
+    }
+
+    // Remove candidates who no longer match.
+    let staleQuery = admin
       .from("job_relevant_profiles")
       .delete()
       .eq("job_posting_id", jobPostingId);
+    if (rowsToUpsert.length > 0) {
+      staleQuery = staleQuery.not(
+        "user_id",
+        "in",
+        `(${rowsToUpsert.map((row) => row.user_id).join(",")})`,
+      );
+    }
+    const { error: deleteError } = await staleQuery;
 
     if (deleteError) throw new Error(`Delete failed: ${deleteError.message}`);
 
-    if (rowsToInsert.length > 0) {
-      const { error: insertError } = await supabase
-        .from("job_relevant_profiles")
-        .insert(rowsToInsert);
-
-      if (insertError) throw new Error(`Insert failed: ${insertError.message}`);
+    // Background "why" for the top candidates. Never fails the digest:
+    // anything not queued can still be explained on demand.
+    try {
+      await enqueueTopExplanations(admin, jobPostingId, rowsToUpsert);
+    } catch (err) {
+      console.error("[relevant profiles] couldn't queue explanations", err);
     }
 
     const { error: updateError } = await supabase

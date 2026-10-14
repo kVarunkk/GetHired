@@ -193,3 +193,15 @@ describe("middleware: billing routes", () => {
     expect(redirectTarget(await updateSession(request("/company/billing")))).toMatch(/^\/auth\/login/);
   });
 });
+
+describe("middleware: matching workers", () => {
+  it("lets the match explanations worker through without a session", async () => {
+    expect(
+      passesThrough(await updateSession(request("/api/updates/company/match-explanations/worker"))),
+    ).toBe(true);
+  });
+
+  it("keeps the explain route behind a login", async () => {
+    expect(passesThrough(await updateSession(request("/api/company/matches/explain")))).toBe(false);
+  });
+});

@@ -109,3 +109,37 @@ describe("GET /api/profiles (BL-REQ-023, BL-TEST-006)", () => {
     expect(body).not.toHaveProperty("hiddenCount");
   });
 });
+
+describe("GET /api/profiles matchScores (MT-TASK-001)", () => {
+  const scores = { u0: { skills: 3, experience: 3, preferenceConflict: 0, aggregate: 3 } };
+  const JOB_ID = "b0000000-0000-4000-8000-000000000001";
+
+  beforeEach(() => {
+    vi.mocked(rerankProfilesIfApplicable).mockImplementation(async ({ initialProfiles, initialCount }) => ({
+      initialProfiles,
+      totalCount: initialCount,
+      matchScores: scores,
+    }) as never);
+  });
+
+  it("returns the rerank's scores on a digest", async () => {
+    await signIn(TIER_STARTUP);
+
+    const body = await (
+      await get({ sortBy: "relevance", job_post: JOB_ID, type: "digest", userId: COMPANY_A.user.id })
+    ).json();
+
+    expect(body.matchScores).toEqual(scores);
+  });
+
+  it.each([
+    ["a normal search", {}],
+    ["a standard relevance read", { sortBy: "relevance", job_post: JOB_ID }],
+  ])("leaves them out of %s", async (_label, params) => {
+    await signIn(TIER_STARTUP);
+
+    const body = await (await get(params)).json();
+
+    expect(body).not.toHaveProperty("matchScores");
+  });
+});

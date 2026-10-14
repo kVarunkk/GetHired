@@ -9,6 +9,15 @@ import { Badge } from "./ui/badge";
 import ProfileFavoriteStar from "./ProfileFavoriteStar";
 import { AllProfileWithRelations } from "@/utils/types";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
+import MatchScoreBadge from "./matching/MatchScoreBadge";
+import MatchExplanationCard from "./matching/MatchExplanationCard";
+
+/** The explanation's one-line summary, if the stored JSON has one. */
+function summaryOf(explanation: unknown): string | null {
+  if (!explanation || typeof explanation !== "object") return null;
+  const summary = (explanation as { summary?: unknown }).summary;
+  return typeof summary === "string" && summary.trim() ? summary : null;
+}
 
 const ProfileItem = React.memo(
   ({
@@ -16,12 +25,21 @@ const ProfileItem = React.memo(
     isSuitable,
     companyId,
     isFavorite,
+    jobPostId,
   }: {
     profile: AllProfileWithRelations;
     isSuitable: boolean;
     companyId?: string;
     isFavorite: boolean;
+    /** Set in job context (`?job_post=`): shows the match score and summary. */
+    jobPostId?: string | null;
   }) => {
+    const match = jobPostId ? profile.job_relevant_profiles?.[0] : undefined;
+    const summary = summaryOf(match?.explanation);
+    const profileHref = `/company/profiles/${profile.user_id}${
+      jobPostId ? `?job_post=${encodeURIComponent(jobPostId)}` : ""
+    }`;
+
     return (
       <div
         className={cn(
@@ -32,7 +50,7 @@ const ProfileItem = React.memo(
           <div className="flex flex-col gap-2 mb-6 sm:mb-0">
             <div className="flex items-center flex-wrap">
               <Link
-                href={`/company/profiles/${profile.user_id}`}
+                href={profileHref}
                 target="_blank"
                 className="inline hover:underline group-hover:underline underline sm:no-underline underline-offset-[4px]"
                 prefetch={false}
@@ -52,13 +70,29 @@ const ProfileItem = React.memo(
                 companyId={companyId}
                 isFavorite={isFavorite}
               />
+
+              <MatchScoreBadge
+                score={match?.match_score}
+                className="ml-2 text-xs sm:text-sm"
+              />
             </div>
+            {summary && (
+              <p className="text-sm text-muted-foreground">{summary}</p>
+            )}
             <ProfileDetailBadges profile={profile} isSuitable={isSuitable} />
+            {jobPostId && match && match.explanation_status !== "completed" && (
+              <MatchExplanationCard
+                compact
+                jobPostId={jobPostId}
+                candidateId={profile.user_id}
+                explanation={null}
+              />
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             <Link
-              href={`/company/profiles/${profile.user_id}`}
+              href={profileHref}
               prefetch={false}
               target="_blank"
             >

@@ -11,6 +11,10 @@ import { RECRUITER_CANDIDATE_COLUMNS } from "./candidate-columns";
 // RS-SEC-004: only recruiter-safe columns, never `*` or credits/referral data.
 const userInfoSelectString = RECRUITER_CANDIDATE_COLUMNS;
 
+// MT-REQ-004: what a card needs in job context (rank, score, explanation).
+const JOB_MATCH_COLUMNS =
+  "relevance_rank, match_score, explanation, explanation_status";
+
 export async function buildProfileQuery({
   searchQuery,
   jobRoles,
@@ -79,7 +83,7 @@ export async function buildProfileQuery({
         .from("user_info")
         .select(
           `
-          ${userInfoSelectString}, job_relevant_profiles!inner(*)
+          ${userInfoSelectString}, job_relevant_profiles!inner(${JOB_MATCH_COLUMNS})
         `,
         )
         .eq("job_relevant_profiles.job_posting_id", jobId!)

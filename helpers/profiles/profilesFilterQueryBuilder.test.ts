@@ -85,3 +85,30 @@ describe("buildProfileQuery column exposure (RS-SEC-004)", () => {
     expect(chain).toContainEqual({ method: "eq", args: ["filled", true] });
   });
 });
+
+describe("buildProfileQuery match columns (MT-TASK-002)", () => {
+  const selectOf = (call: RecordedCall) =>
+    String(call.chain.find((c) => c.method === "select")?.args[0] ?? "");
+
+  it("selects the match score and explanation in job context", async () => {
+    await buildProfileQuery({ ...BASE, relevanceSearchType: "standard", jobId: JOB_POSTING_ID });
+
+    const select = selectOf(dataQuery()!);
+    expect(select).toMatch(/job_relevant_profiles!inner\([^)]*match_score[^)]*\)/);
+    expect(select).toMatch(/job_relevant_profiles!inner\([^)]*explanation[^)]*\)/);
+    expect(select).toMatch(/job_relevant_profiles!inner\([^)]*relevance_rank[^)]*\)/);
+    expect(select).not.toContain("job_relevant_profiles!inner(*)");
+  });
+
+  it.each([
+    ["the default listing", {}],
+    ["favorites", { isFavoriteTabActive: true }],
+    ["AI relevance (digest)", { relevanceSearchType: "digest" as const, jobEmbedding: "[0.1]" }],
+  ])("doesn't select them for %s", async (_, overrides) => {
+    await buildProfileQuery({ ...BASE, ...overrides });
+
+    const select = selectOf(dataQuery()!);
+    expect(select).not.toContain("match_score");
+    expect(select).not.toContain("explanation");
+  });
+});

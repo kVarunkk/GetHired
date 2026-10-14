@@ -304,6 +304,7 @@ export default function JobsComponent({
             isFavorite={
               !!favoriteProfiles?.some((fav) => fav.user_id === profile.user_id)
             }
+            jobPostId={jobPostingId}
           />
         ));
     }
@@ -390,6 +391,7 @@ export default function JobsComponent({
     currentUserData,
     initialJobUrlMap,
     isInitialJobUrlsLoading,
+    jobPostingId,
   ]);
 
   return (

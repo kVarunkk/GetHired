@@ -1,5 +1,9 @@
 import { headers } from "next/headers";
-import { AllProfileWithRelations, TResumeRowContent } from "../../utils/types";
+import {
+  AllProfileWithRelations,
+  ProfileMatchScores,
+  TResumeRowContent,
+} from "../../utils/types";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
 import { getBaseUrl } from "@/utils/get-base-url";
 import { extractSectionText } from "@/utils/extract-resume-content";
@@ -7,6 +11,8 @@ import { extractSectionText } from "@/utils/extract-resume-content";
 interface RerankResult {
   initialProfiles: AllProfileWithRelations[];
   totalCount: number;
+  /** Per-candidate rerank scores, only when the rerank succeeded. */
+  matchScores?: Record<string, ProfileMatchScores>;
 }
 
 export async function rerankProfilesIfApplicable({
@@ -33,6 +39,7 @@ export async function rerankProfilesIfApplicable({
   let finalProfiles = initialProfiles;
   let finalCount = initialCount;
   let removedProfiles: AllProfileWithRelations[] = [];
+  let matchScores: Record<string, ProfileMatchScores> | undefined;
 
   const headersList = await headers();
 
@@ -80,7 +87,6 @@ export async function rerankProfilesIfApplicable({
 
           return {
             user_id: profile.user_id,
-            full_name: profile.full_name,
             desired_roles: profile.desired_roles,
             experience_years: profile.experience_years,
             preferred_locations: profile.preferred_locations,
@@ -105,6 +111,7 @@ export async function rerankProfilesIfApplicable({
     const aiRerankResult: {
       rerankedProfiles: string[];
       filteredOutProfiles: string[];
+      scores?: Record<string, ProfileMatchScores>;
     } = await aiRerankRes.json();
 
     if (aiRerankRes.ok && aiRerankResult.rerankedProfiles) {
@@ -127,10 +134,11 @@ export async function rerankProfilesIfApplicable({
 
       finalProfiles = reorderedJobs;
       finalCount = reorderedJobs.length;
+      matchScores = aiRerankResult.scores ?? {};
     }
   } catch (e) {
     console.error("Error during AI Rerank fetch:", e);
   }
 
-  return { initialProfiles: finalProfiles, totalCount: finalCount };
+  return { initialProfiles: finalProfiles, totalCount: finalCount, matchScores };
 }

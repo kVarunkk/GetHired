@@ -4,6 +4,8 @@ import { setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, PRIVATE_NOT_APPLIED, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
+import { render, screen } from "@testing-library/react";
+import { JOB_POST, explanationOf } from "@/test/utils/matching";
 import ProfilePage from "./page";
 
 const NOT_FOUND = new Error("NEXT_NOT_FOUND");
@@ -21,12 +23,16 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
 vi.mock("@/components/ProfileClientHydrator", () => ({ default: () => null }));
 vi.mock("@/components/Error", () => ({ default: () => null }));
+vi.mock("@/hooks/useEntitlementError", () => ({
+  useEntitlementError: () => ({ handle: vi.fn(), show: vi.fn(), dialog: null }),
+}));
 
 let rls: SupabaseMock;
 let service: SupabaseMock;
 let createSignedUrl: ReturnType<typeof vi.fn>;
 
-const visit = (profile_id: string) => ProfilePage({ params: Promise.resolve({ profile_id }) });
+const visit = (profile_id: string, searchParams: Record<string, string> = {}) =>
+  ProfilePage({ params: Promise.resolve({ profile_id }), searchParams: Promise.resolve(searchParams) });
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -83,5 +89,70 @@ describe("company profile page (RS-TEST-004)", () => {
     );
     expect(load.chain).toContainEqual({ method: "eq", args: ["user_id", PUBLIC_APPLICANT.id] });
     expect(createSignedUrl).toHaveBeenCalledWith("resumes/a/cv.pdf", 3600);
+  });
+});
+
+describe("company profile page match card (MT-REQ-004)", () => {
+  const inJob = () => visit(PUBLIC_APPLICANT.id, { job_post: JOB_POST.id });
+
+  it("shows the score and the stored explanation for the company's job", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+    rls.queue("job_postings", { data: { id: JOB_POST.id, title: JOB_POST.title }, error: null });
+    rls.queue("job_relevant_profiles", {
+      data: { match_score: 82, explanation: explanationOf(), explanation_status: "completed" },
+      error: null,
+    });
+
+    render(await inJob());
+
+    expect(screen.getByText("Why this candidate")).toBeInTheDocument();
+    expect(screen.getByText(explanationOf().summary)).toBeInTheDocument();
+    expect(screen.getByText("82 · Strong")).toBeInTheDocument();
+    const jobQuery = rls.callsFor("job_postings")[0];
+    expect(jobQuery.chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
+    expect(rls.callsFor("job_relevant_profiles")[0].chain).toContainEqual({
+      method: "eq",
+      args: ["user_id", PUBLIC_APPLICANT.id],
+    });
+  });
+
+  it("offers 'Why this match?' when there's no completed explanation", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+    rls.queue("job_postings", { data: { id: JOB_POST.id, title: JOB_POST.title }, error: null });
+    rls.queue("job_relevant_profiles", {
+      data: { match_score: 70, explanation: explanationOf(), explanation_status: "stale" },
+      error: null,
+    });
+
+    render(await inJob());
+
+    expect(screen.getByRole("button", { name: "Why this match?" })).toBeInTheDocument();
+  });
+
+  it("shows no card for another company's job", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+    rls.queue("job_postings", { data: null, error: null });
+
+    render(await inJob());
+
+    expect(screen.queryByText("Why this candidate")).not.toBeInTheDocument();
+    expect(rls.callsFor("job_relevant_profiles")).toHaveLength(0);
+  });
+
+  it("ignores a non-UUID job_post", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+
+    render(await visit(PUBLIC_APPLICANT.id, { job_post: "nope" }));
+
+    expect(rls.callsFor("job_postings")).toHaveLength(0);
+    expect(screen.queryByText("Why this candidate")).not.toBeInTheDocument();
+  });
+
+  it("shows no card outside job context", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+
+    render(await visit(PUBLIC_APPLICANT.id));
+
+    expect(rls.callsFor("job_postings")).toHaveLength(0);
   });
 });
