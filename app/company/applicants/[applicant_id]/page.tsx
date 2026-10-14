@@ -19,6 +19,7 @@ import { TApplicationStatus } from "@/utils/types";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
+import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 
 export default async function ApplicantPage({
   params,
@@ -48,9 +49,7 @@ export default async function ApplicantPage({
         resumes(resume_path),
         answers,
         job_post_id,
-        user_info(
-          *
-        ),
+        user_info(${RECRUITER_CANDIDATE_COLUMNS}),
         job_postings(
           id,
           title,
@@ -61,7 +60,7 @@ export default async function ApplicantPage({
           location,
           company_info(name)
         )
-      `,
+      ` as const,
       )
       .eq("id", applicant_id)
       .maybeSingle();

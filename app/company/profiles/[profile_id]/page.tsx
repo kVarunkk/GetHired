@@ -7,36 +7,19 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import ProfileClientHydrator from "@/components/ProfileClientHydrator";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
+import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 
-// CACHE 1: Core profile data, scoped strictly by profile_id
+// CACHE 1: Core profile data, scoped strictly by profile_id. The cache is shared
+// across companies, so callers MUST check company_can_view_candidate first.
 const getCachedApplicantProfile = (profile_id: string) =>
   unstable_cache(
     async () => {
       const supabase = createServiceRoleClient();
       const { data, error } = await supabase
         .from("user_info")
-        .select(
-          `
-          full_name,
-          user_id,
-          linkedin_url,
-          github_url,
-          email,
-          min_salary,
-          max_salary,
-          experience_years,
-          work_style_preferences,
-          company_size_preference,
-          career_goals_long_term,
-          career_goals_short_term,
-          visa_sponsorship_required,
-          preferred_locations,
-          desired_roles,
-          salary_currency,
-          top_skills,
-          resumes(resume_path)
-        `,
-        )
+        .select(`${RECRUITER_CANDIDATE_COLUMNS}, resumes(resume_path)` as const)
         .eq("user_id", profile_id)
         .eq("resumes.is_primary", true)
         .maybeSingle();
@@ -91,29 +74,28 @@ export default async function ProfilePage({
     const { profile_id } = await params;
     if (!isUuid(profile_id)) notFound();
 
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
+    const user = await getUserFromRequest();
     if (!user) {
       throw new Error("User not authenticated.");
     }
 
-    const { data: companyData, error: companyError } = await supabase
-      .from("company_info")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (companyError || !companyData) {
+    const supabase = await createClient();
+    const company = await getMyCompany(supabase, user);
+    if (!company) {
       throw new Error("Logged-in user does not have a company profile.");
     }
 
+    // RS-SEC-003: public candidates, or ones who applied to this company. Runs
+    // outside the cache, and fails closed on an error.
+    const { data: canView, error: canViewError } = await supabase.rpc(
+      "company_can_view_candidate",
+      { p_user_id: profile_id },
+    );
+    if (canViewError || canView !== true) notFound();
+
     const [profile, applications] = await Promise.all([
       getCachedApplicantProfile(profile_id),
-      getCompanyScopedApplications(profile_id, companyData.id),
+      getCompanyScopedApplications(profile_id, company.id),
     ]);
 
     if (!profile) notFound();

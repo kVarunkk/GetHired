@@ -14,6 +14,7 @@ import FindSuitableProfilesForJobPost from "@/components/FindSuitableProfilesFor
 import ShareJobPosting from "@/components/ShareJobPosting";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
+import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 
 export default async function JobPostPage({
   params,
@@ -32,9 +33,9 @@ export default async function JobPostPage({
       .select(
         `
           *,
-          applications(*, user_info(*), job_postings(*)),
+          applications(*, user_info(${RECRUITER_CANDIDATE_COLUMNS}), job_postings(*)),
           company_info(name, website)
-        `,
+        ` as const,
       )
       .eq("id", job_id)
       .maybeSingle();
@@ -58,7 +59,6 @@ export default async function JobPostPage({
       min_equity: job.min_equity ?? 0,
       max_equity: job.max_equity ?? 0,
       questions: job.questions ?? [],
-      job_id: job.job_id,
     };
 
     return (

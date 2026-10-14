@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import CompanyJobPostingCard from "@/components/CompanyJobPostingCard";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import { TApplicationStatus } from "@/utils/types";
+import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 
 export default async function CompanyPage() {
   try {
@@ -71,9 +72,9 @@ export default async function CompanyPage() {
           id,
           status,
           created_at,
-          user_info(*),
+          user_info(${RECRUITER_CANDIDATE_COLUMNS}),
           job_postings(id, title)
-        `,
+        ` as const,
         )
         .eq("job_postings.company_id", companyInfo.id)
         .order("created_at", { ascending: false })
