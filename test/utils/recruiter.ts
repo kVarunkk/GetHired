@@ -27,7 +27,14 @@ export const FORBIDDEN_CANDIDATE_COLUMNS = [
 
 export const FREE_TIER: CompanyTierRow = {
   id: "7e000000-0000-4000-8000-000000000001",
-  name: "free",
+  name: "Free",
+  slug: "free",
+  is_public: true,
+  sort: 0,
+  description: null,
+  features: [],
+  prices: [],
+  // Dropped by 20261014170000_billing_drop_legacy_limits; remove with it.
   allowed_job_posts: 2,
   allowed_profiles: 20,
   price_plan_id: null,
@@ -56,8 +63,8 @@ function company(n: number, name: string): CompanyFixture {
     email,
     tier_id: FREE_TIER.id,
     ai_credits: 0,
-    ai_search_uses: 0,
     job_posts_created: 0,
+    ai_search_uses: 0,
     company_size: null,
     description: null,
     embedding: null,
