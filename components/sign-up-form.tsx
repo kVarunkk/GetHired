@@ -263,15 +263,26 @@ export function SignUpForm({
                   </Link>
                 </div>
               ) : (
-                <div className="mt-4 text-center text-xs">
-                  Are you looking for jobs?{" "}
-                  <Link
-                    href={"/auth/sign-up"}
-                    className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
-                  >
-                    Sign up here
-                  </Link>
-                </div>
+                <>
+                  <div className="mt-4 text-center text-xs">
+                    Free to start.{" "}
+                    <Link
+                      href={"/pricing/companies"}
+                      className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
+                    >
+                      See plans
+                    </Link>
+                  </div>
+                  <div className="mt-2 text-center text-xs">
+                    Are you looking for jobs?{" "}
+                    <Link
+                      href={"/auth/sign-up"}
+                      className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
+                    >
+                      Sign up here
+                    </Link>
+                  </div>
+                </>
               )}
             </form>
           </Form>
