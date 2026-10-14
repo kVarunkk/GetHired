@@ -43,10 +43,8 @@ export const JobStatusSwitch = ({
 }: {
   job: IJobPost | TCompanyIdPageData;
 }) => {
-  const { checkedState, handleUpdateStatus } = useJobPostingStatus(
-    job.status,
-    job,
-  );
+  const { checkedState, handleUpdateStatus, upgradeDialog } =
+    useJobPostingStatus(job.status, job);
 
   return (
     <div className="flex items-center">
@@ -55,6 +53,7 @@ export const JobStatusSwitch = ({
         checked={checkedState}
         onCheckedChange={handleUpdateStatus}
       />
+      {upgradeDialog}
     </div>
   );
 };

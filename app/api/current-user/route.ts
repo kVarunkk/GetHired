@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getPlanSummary } from "@/helpers/billing/entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export async function GET() {
   } else if (userRole === "company") {
     tableName = "company_info";
     selectString =
-      "id, user_id, company_favorites(user_id), company_tiers(name, allowed_profiles), job_postings(id, title, job_id)";
+      "id, user_id, company_favorites(user_id), job_postings(id, title, job_id)";
   } else {
     return NextResponse.json(
       { profile: null, role: null, message: "Profile role not set." },
@@ -58,6 +59,16 @@ export async function GET() {
     }
 
     profileData = data;
+
+    if (userRole === "company") {
+      // "Plan: Startup · 1,240 credits" in the profile menu.
+      const companyId = (data as unknown as { id: string }).id;
+      const plan = await getPlanSummary(companyId).catch((err) => {
+        console.error("[current-user] couldn't load the plan", err);
+        return null;
+      });
+      profileData = { ...(data as object), plan };
+    }
   } catch {
     return NextResponse.json(
       { error: "Server error fetching profile data." },

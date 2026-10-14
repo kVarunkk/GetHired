@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
 import JobsComponent from "@/components/JobsComponent";
 import { getBaseUrl } from "@/utils/get-base-url";
+import type { SuggestedTier } from "@/helpers/billing/errors";
 
 export default async function ProfilesPage({
   searchParams,
@@ -43,6 +44,9 @@ export default async function ProfilesPage({
   let totalCount: number = 0;
   let initialCursor: string | null = null;
   let error: string | null = null;
+  let profilesPerSearch: number | null = null;
+  let hiddenCount = 0;
+  let upgradePlan: SuggestedTier | null = null;
 
   const params = new URLSearchParams(
     searchParameters as Record<string, string>,
@@ -61,11 +65,15 @@ export default async function ProfilesPage({
       count,
       nextCursor,
       error,
+      ...plan
     }: {
       data?: AllProfileWithRelations[];
       count?: number;
       nextCursor?: string;
       error?: string;
+      profilesPerSearch?: number | null;
+      hiddenCount?: number;
+      upgradePlan?: SuggestedTier | null;
     } = await res.json();
 
     if (!res.ok) throw new Error(error || "Failed to fetch profiles");
@@ -73,6 +81,9 @@ export default async function ProfilesPage({
     initialProfiles = data || [];
     totalCount = count || 0;
     initialCursor = nextCursor || null;
+    profilesPerSearch = plan.profilesPerSearch ?? null;
+    hiddenCount = plan.hiddenCount ?? 0;
+    upgradePlan = plan.upgradePlan ?? null;
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
@@ -107,6 +118,9 @@ export default async function ProfilesPage({
               totalCount={totalCount}
               initialCursor={initialCursor}
               error={error}
+              profilesPerSearch={profilesPerSearch}
+              hiddenCount={hiddenCount}
+              upgradePlan={upgradePlan}
             />
           </TabsContent>
           {user && !isAISearch && (
@@ -124,6 +138,7 @@ export default async function ProfilesPage({
                 totalCount={totalCount}
                 initialCursor={initialCursor}
                 error={error}
+                profilesPerSearch={profilesPerSearch}
               />
             </TabsContent>
           )}

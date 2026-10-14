@@ -37,6 +37,7 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { ICreateJobPostingFormData } from "@/utils/types";
 import { upsertJobPostingAction } from "@/app/actions/upsert-job-posting";
+import { useEntitlementError } from "@/hooks/useEntitlementError";
 import { mutate } from "swr";
 import LocationSearchSelect from "./LocationSearchSelect";
 
@@ -129,6 +130,8 @@ export default function CreateJobPostingDialog({
   const [step, setStep] = useState(1);
 
   const router = useRouter();
+  const { handle: handleEntitlement, dialog: upgradeDialog } =
+    useEntitlementError();
   const form = useForm({
     resolver: zodResolver(jobFormSchema),
     defaultValues: existingValues || {
@@ -158,7 +161,16 @@ export default function CreateJobPostingDialog({
       });
 
       if (!result.success) {
-        throw new Error(result.error || "Failed to save job posting");
+        // At the plan's limit: the upgrade dialog explains it.
+        if (await handleEntitlement(result)) {
+          setIsOpen(false);
+          return;
+        }
+        throw new Error(
+          typeof result.error === "string"
+            ? result.error
+            : "Failed to save job posting",
+        );
       }
 
       await mutate(`company-jobs-${companyId}`);
@@ -216,6 +228,8 @@ export default function CreateJobPostingDialog({
 
   return (
     <ResponsiveDialog open={isOpen} onOpenChange={setIsOpen}>
+      {/* Its own dialog, portalled; it stays mounted when this one closes. */}
+      {upgradeDialog}
       <ResponsiveDialogTrigger
         title={existingValues ? "Edit Job Post" : "Create Job Post"}
         asChild

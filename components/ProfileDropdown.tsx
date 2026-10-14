@@ -21,6 +21,7 @@ import { Laptop, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Badge } from "./ui/badge";
+import CompanyPlanLink from "./billing/CompanyPlanLink";
 import SocialsComponent from "./SocialsComponent";
 import {
   Tooltip,
@@ -112,15 +113,10 @@ export default function ProfileDropdown({
                 </span>
               </Link>
             ) : (
-              <Link
-                href="mailto:varun@devhub.co.in"
+              <CompanyPlanLink
+                plan={data.profile?.plan ?? null}
                 className="w-full text-left"
-              >
-                Active Plan: {data.profile?.company_tiers?.name}.{" "}
-                <span className="underline font-medium text-foreground">
-                  Upgrade
-                </span>
-              </Link>
+              />
             )}
           </DropdownMenuItem>
         )}

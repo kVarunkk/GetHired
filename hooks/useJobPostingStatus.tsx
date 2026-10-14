@@ -1,42 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "../lib/supabase/client";
 import toast from "react-hot-toast";
 import { IJobPost } from "@/utils/types";
 import { TCompanyIdPageData } from "@/utils/types/jobs.types";
 import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
-import { revalidateCacheAction } from "@/app/actions/revalidate-tag";
-import { revalidatePathAction } from "@/app/actions/revalidate-path";
+import { setJobPostingStatusAction } from "@/app/actions/set-job-posting-status";
+import { useEntitlementError } from "@/hooks/useEntitlementError";
 
 export const useJobPostingStatus = (
   initialStatus: "active" | "inactive",
   job: IJobPost | TCompanyIdPageData,
 ) => {
   const [checkedState, setCheckedState] = useState(initialStatus === "active");
-  const supabase = createClient();
+  const { handle: handleEntitlement, dialog: upgradeDialog } = useEntitlementError();
+
   const handleUpdateStatus = async (value: boolean) => {
     setCheckedState(value);
 
     try {
-      // 1. Update the status in the main job_postings table
-      const { error: updateError } = await supabase
-        .from("job_postings")
-        .update({ status: value ? "active" : "inactive" })
-        .eq("id", job.id);
+      // Checks ownership and, when activating, the plan's active post limit.
+      const result = await setJobPostingStatusAction({
+        jobPostingId: job.id,
+        status: value ? "active" : "inactive",
+      });
 
-      if (updateError) throw updateError;
-
-      if (job.job_id) {
-        const { error: updateAllJobsError } = await supabase
-          .from("all_jobs")
-          .update({ status: value ? "active" : "inactive" })
-          .eq("id", job.job_id);
-
-        if (updateAllJobsError) throw updateAllJobsError;
-
-        await revalidateCacheAction(`job-${job.job_id}`);
-        await revalidatePathAction(`/jobs/${job.job_id}`);
+      if (!result.ok) {
+        setCheckedState(!value);
+        if (await handleEntitlement(result)) return;
+        toast.error(
+          typeof result.error === "string"
+            ? result.error
+            : "Some error occured while updating the status of Job Posting",
+        );
+        return;
       }
 
       // if the job posting is activated, trigger profile relevance update
@@ -59,5 +56,6 @@ export const useJobPostingStatus = (
   return {
     checkedState,
     handleUpdateStatus,
+    upgradeDialog,
   };
 };

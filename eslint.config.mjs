@@ -9,8 +9,28 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
+// BL-CON-002: features never read plan columns directly. Limits and allowances
+// go through helpers/billing/entitlements.ts (or the SQL functions).
+const BILLING_MESSAGE =
+  "Read plans and limits through helpers/billing (checkEntitlement, assertLimit, getEntitlements), not company_tiers (BL-CON-002).";
+
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    files: ["app/**/*.{ts,tsx}", "helpers/**/*.{ts,tsx}"],
+    ignores: ["helpers/billing/**"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        { selector: "Literal[value=/company_tiers\\s*\\(/]", message: BILLING_MESSAGE },
+        { selector: "TemplateElement[value.raw=/company_tiers\\s*\\(/]", message: BILLING_MESSAGE },
+        {
+          selector: "CallExpression[callee.property.name='from'][arguments.0.value='company_tiers']",
+          message: BILLING_MESSAGE,
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

@@ -6,12 +6,28 @@ import { createSupabaseMock, type RecordedCall, type SupabaseMock } from "@/test
 import { COMPANY_A, COMPANY_B, jobPostingOf } from "@/test/utils/recruiter";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
 import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
+import { assertLimit } from "@/helpers/billing/entitlements";
+import { EntitlementError, type EntitlementPayload } from "@/helpers/billing/errors";
 import { upsertJobPostingAction } from "./upsert-job-posting";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
 vi.mock("./relevant-profiles-update", () => ({ triggerJobPostingRelevanceUpdate: vi.fn() }));
+vi.mock("@/helpers/billing/entitlements", () => ({ assertLimit: vi.fn() }));
+
+const AT_LIMIT: EntitlementPayload = {
+  key: "active_job_posts",
+  kind: "limit",
+  qty: 1,
+  used: 2,
+  amount: 2,
+  overageCredits: null,
+  creditBalance: 0,
+  creditsNeeded: 0,
+  reason: "limit_reached",
+  suggestedTier: { slug: "startup", name: "Startup" },
+};
 
 const VALUES = {
   title: " Frontend Engineer ",
@@ -39,8 +55,6 @@ let rls: SupabaseMock;
 let service: SupabaseMock;
 let fetchMock: ReturnType<typeof vi.fn>;
 let state: {
-  postsCreated: number;
-  allowedPosts: number | null;
   savedStatus: "active" | "inactive";
   allJobsUpdateError: unknown;
 };
@@ -71,13 +85,6 @@ function route(mock: SupabaseMock) {
   for (let i = 0; i < 20; i++) {
     mock.queue("company_info", (call) => {
       if (has(call, "update")) return { data: null, error: null };
-      const select = String(argsOf(call, "select")?.[0] ?? "");
-      if (select.includes("job_posts_created")) {
-        return {
-          data: { job_posts_created: state.postsCreated, company_tiers: { allowed_job_posts: state.allowedPosts } },
-          error: null,
-        };
-      }
       return { data: COMPANY_A.infoWithTier, error: null };
     });
     mock.queue("job_postings", (call) => {
@@ -106,7 +113,7 @@ const writes = (table: string) =>
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  state = { postsCreated: 0, allowedPosts: 2, savedStatus: "inactive", allJobsUpdateError: null };
+  state = { savedStatus: "inactive", allJobsUpdateError: null };
   rls = createSupabaseMock({ user: COMPANY_A.user });
   service = createSupabaseMock();
   route(rls);
@@ -118,19 +125,20 @@ beforeEach(async () => {
 });
 
 describe("upsertJobPostingAction: behaviour that must survive", () => {
-  it("refuses a new posting once the tier's job post limit is reached", async () => {
-    state.postsCreated = 2;
+  it("refuses a new posting at the plan's active job post limit (BL-TEST-006)", async () => {
+    vi.mocked(assertLimit).mockRejectedValue(new EntitlementError(AT_LIMIT));
 
     const result = await upsertJobPostingAction({ values: VALUES });
 
-    expect(result).toEqual({ success: false, error: expect.stringContaining("2 job posts") });
+    expect(result).toEqual({
+      success: false,
+      error: expect.objectContaining({ code: "entitlement", key: "active_job_posts", used: 2, amount: 2 }),
+    });
     expect(writes("job_postings")).toHaveLength(0);
+    expect(writes("all_jobs")).toHaveLength(0);
   });
 
-  it("has no limit when the tier allows unlimited posts", async () => {
-    state.postsCreated = 500;
-    state.allowedPosts = null;
-
+  it("creates the posting when the limit allows it", async () => {
     expect(await upsertJobPostingAction({ values: VALUES })).toEqual({ success: true, isUpdate: false });
   });
 
@@ -237,24 +245,21 @@ describe("upsertJobPostingAction: access control (RS-TEST-001)", () => {
     expect(payload).toMatchObject({ company_id: COMPANY_A.id });
   });
 
-  it("checks the tier limit of the session company and counts the new post there", async () => {
+  it("checks the session company's limit and no longer counts posts created", async () => {
     await upsertJobPostingAction({ values: VALUES, companyId: COMPANY_B.id } as never);
 
-    const tierRead = [...rls.callsFor("company_info"), ...service.callsFor("company_info")].find((c) =>
-      String(argsOf(c, "select")?.[0]).includes("job_posts_created"),
-    );
-    expect(eqs(tierRead!)).toEqual([["id", COMPANY_A.id]]);
-    const [counter] = writes("company_info");
-    expect(argsOf(counter, "update")?.[0]).toEqual({ job_posts_created: 1 });
-    expect(eqs(counter)).toEqual([["id", COMPANY_A.id]]);
+    expect(assertLimit).toHaveBeenCalledWith(COMPANY_A.id, "active_job_posts");
+    expect(assertLimit).not.toHaveBeenCalledWith(COMPANY_B.id, expect.anything());
+    expect(writes("company_info")).toHaveLength(0);
   });
 
-  it("lets a company edit a posting even at the tier limit", async () => {
-    state.postsCreated = 2;
+  it("lets a company edit a posting even at the limit", async () => {
+    vi.mocked(assertLimit).mockRejectedValue(new EntitlementError(AT_LIMIT));
 
     expect(await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id })).toEqual({
       success: true,
       isUpdate: true,
     });
+    expect(assertLimit).not.toHaveBeenCalled();
   });
 });

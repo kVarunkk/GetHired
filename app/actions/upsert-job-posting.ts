@@ -9,6 +9,12 @@ import {
   type JobPostingInput,
 } from "@/helpers/jobs/job-posting-schema";
 import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
+import { assertLimit } from "@/helpers/billing/entitlements";
+import {
+  EntitlementError,
+  toEntitlementActionError,
+  type EntitlementActionError,
+} from "@/helpers/billing/errors";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
 import {
   buildEquityRange,
@@ -19,7 +25,8 @@ import {
 
 type UpsertResult =
   | { success: true; isUpdate: boolean }
-  | { success: false; error: string };
+  | { success: false; error: string }
+  | ({ success: false } & EntitlementActionError);
 
 /**
  * SERVER ACTION: creates or edits one of the session company's job postings and
@@ -64,25 +71,15 @@ export async function upsertJobPostingAction(params: {
       existing = data;
     }
 
-    let postsCreated = 0;
+    // BL-DEC-007: the limit counts active posts. Edits never need a slot.
     if (!existing) {
-      const { data: companyData, error: companyError } = await supabase
-        .from("company_info")
-        .select("job_posts_created, company_tiers(allowed_job_posts)")
-        .eq("id", company.id)
-        .single();
-
-      if (companyError || !companyData) {
-        throw new Error("Error fetching company data.");
-      }
-
-      postsCreated = companyData.job_posts_created ?? 0;
-      const allowed = companyData.company_tiers?.allowed_job_posts ?? null;
-      if (allowed !== null && postsCreated >= allowed) {
-        return {
-          success: false,
-          error: `You are not allowed to create more than ${allowed} job posts in your current plan. Please contact support for an upgrade.`,
-        };
+      try {
+        await assertLimit(company.id, "active_job_posts");
+      } catch (err) {
+        if (err instanceof EntitlementError) {
+          return { success: false, ...toEntitlementActionError(err) };
+        }
+        throw err;
       }
     }
 
@@ -226,13 +223,6 @@ export async function upsertJobPostingAction(params: {
         .from("job_postings")
         .update({ job_id: insertedJob.id })
         .eq("id", posting.id);
-
-      if (!existing) {
-        await service
-          .from("company_info")
-          .update({ job_posts_created: postsCreated + 1 })
-          .eq("id", company.id);
-      }
     }
 
     if (posting.status === "active") {

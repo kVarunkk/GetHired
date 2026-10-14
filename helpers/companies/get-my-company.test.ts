@@ -5,7 +5,7 @@ import { COMPANY_A, COMPANY_B } from "@/test/utils/recruiter";
 import { getMyCompany } from "./get-my-company";
 
 describe("getMyCompany", () => {
-  it("returns the session user's company with its tier", async () => {
+  it("returns the session user's company", async () => {
     const supabase = createSupabaseMock();
     supabase.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
 
@@ -13,12 +13,17 @@ describe("getMyCompany", () => {
       id: COMPANY_A.id,
       name: COMPANY_A.info.name,
       email: COMPANY_A.info.email,
-      tier: {
-        name: COMPANY_A.tier.name,
-        allowed_profiles: COMPANY_A.tier.allowed_profiles,
-        allowed_job_posts: COMPANY_A.tier.allowed_job_posts,
-      },
     });
+  });
+
+  it("doesn't read plan columns (BL-CON-002)", async () => {
+    const supabase = createSupabaseMock();
+    supabase.queue("company_info", { data: COMPANY_A.info, error: null });
+
+    await getMyCompany(supabase.client, COMPANY_A.user);
+
+    const select = supabase.callsFor("company_info")[0].chain.find((c) => c.method === "select");
+    expect(String(select?.args[0])).not.toMatch(/company_tiers|allowed_/);
   });
 
   it("filters company_info by the user's id, never by a company id", async () => {

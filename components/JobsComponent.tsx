@@ -34,6 +34,8 @@ import toast from "react-hot-toast";
 import { triggerRelevanceUpdate } from "@/app/actions/relevant-jobs-update";
 import ModifiedLink from "./ModifiedLink";
 import FootComponent from "./FootComponent";
+import HiddenCandidatesNotice from "./billing/HiddenCandidatesNotice";
+import type { SuggestedTier } from "@/helpers/billing/errors";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useRelevantJobPoller } from "@/hooks/useRelevantJobPoller";
 import ProfileCompletionBanner from "./ProfileCompletionBanner";
@@ -52,6 +54,9 @@ export default function JobsComponent({
   initialCursor,
   error,
   dynamicKey,
+  profilesPerSearch = null,
+  hiddenCount = 0,
+  upgradePlan = null,
 }: {
   initialJobs:
     AllJobWithRelations[] | AllProfileWithRelations[] | TCompanyInfo[];
@@ -66,6 +71,11 @@ export default function JobsComponent({
   initialCursor: string | null;
   error: string | null;
   dynamicKey: string;
+  /** Talent search: the plan's cap per search (null = none), from /api/profiles. */
+  profilesPerSearch?: number | null;
+  /** Talent search: matches beyond the cap (BL-REQ-023). */
+  hiddenCount?: number;
+  upgradePlan?: SuggestedTier | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -136,8 +146,7 @@ export default function JobsComponent({
   );
 
   // for companyUsers
-  const isLimitOnProfiles =
-    currentUserData?.profile?.company_tiers?.allowed_profiles !== null;
+  const isLimitOnProfiles = profilesPerSearch !== null;
 
   const isGenerated = isRelevantProfileSearch
     ? data?.data?.matching_status === "completed"
@@ -632,7 +641,13 @@ export default function JobsComponent({
       jobs.length !== 0 &&
       !error &&
       isLimitOnProfiles ? (
-        <FootComponent />
+        <>
+          <HiddenCandidatesNotice
+            hiddenCount={hiddenCount}
+            upgradePlan={upgradePlan}
+          />
+          <FootComponent />
+        </>
       ) : (
         ""
       )}

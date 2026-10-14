@@ -5,11 +5,6 @@ export type MyCompany = {
   id: string;
   name: string | null;
   email: string | null;
-  tier: {
-    name: string | null;
-    allowed_profiles: number | null;
-    allowed_job_posts: number | null;
-  };
 };
 
 /**
@@ -26,7 +21,8 @@ export async function getMyCompany(
 
   const { data, error } = await supabase
     .from("company_info")
-    .select("id, name, email, company_tiers(name, allowed_profiles, allowed_job_posts)")
+    // Plans and limits come from helpers/billing/entitlements (BL-CON-002).
+    .select("id, name, email")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -37,10 +33,5 @@ export async function getMyCompany(
     id: data.id,
     name: data.name,
     email: data.email,
-    tier: {
-      name: data.company_tiers?.name ?? null,
-      allowed_profiles: data.company_tiers?.allowed_profiles ?? null,
-      allowed_job_posts: data.company_tiers?.allowed_job_posts ?? null,
-    },
   };
 }

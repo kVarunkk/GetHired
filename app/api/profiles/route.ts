@@ -1,4 +1,6 @@
 import { rerankProfilesIfApplicable } from "@/helpers/profiles/ai-rerank-profiles";
+import { getEntitlements, suggestedTierFor } from "@/helpers/billing/entitlements";
+import { listPublicPlans } from "@/helpers/billing/plans";
 import { buildProfileQuery } from "@/helpers/profiles/profilesFilterQueryBuilder";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
@@ -28,7 +30,7 @@ export async function GET(request: NextRequest) {
   const { data: companyData, error: companyError } = await supabase
     .from("company_info")
     .select(
-      "id, ai_credits, filled, job_postings(id, embedding_new), company_tiers(name, allowed_profiles)",
+      "id, ai_credits, filled, job_postings(id, embedding_new)",
     )
     .eq("user_id", user.id)
     .single();
@@ -39,9 +41,22 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const companyTier = companyData.company_tiers;
-  const isLimitOnProfiles = companyTier?.allowed_profiles !== null;
-  const allowedProfiles = companyTier?.allowed_profiles || 0;
+  // BL-REQ-023: the plan's profiles_per_search caps one search (null = no cap).
+  let profilesPerSearch: number | null;
+  let tierSlug: string;
+  try {
+    const entitlements = await getEntitlements(companyData.id);
+    profilesPerSearch = entitlements.entitlements.profiles_per_search.amount;
+    tierSlug = entitlements.tier.slug;
+  } catch (err) {
+    console.error("[profiles] couldn't load entitlements", err);
+    return NextResponse.json(
+      { error: "Couldn't load your plan. Please try again." },
+      { status: 500 },
+    );
+  }
+  const isLimitOnProfiles = profilesPerSearch !== null;
+  const allowedProfiles = profilesPerSearch ?? 0;
 
   const searchQuery = searchParams.get("search");
   const jobRoles = searchParams.get("jobRole");
@@ -121,10 +136,26 @@ export async function GET(request: NextRequest) {
       isInternalCall,
     });
 
+    const hiddenCount = isLimitOnProfiles
+      ? Math.max(0, (totalCount ?? 0) - allowedProfiles)
+      : 0;
+    const upgradePlan =
+      hiddenCount > 0
+        ? suggestedTierFor(
+            await listPublicPlans().catch(() => []),
+            tierSlug,
+            "profiles_per_search",
+            totalCount ?? 0,
+          )
+        : null;
+
     return NextResponse.json({
       data: initialProfiles,
       count: totalCount,
       nextCursor: isLimitOnProfiles ? null : nextCursor,
+      profilesPerSearch,
+      // Matches beyond the cap, for "N more matching candidates on Startup".
+      ...(isLimitOnProfiles ? { hiddenCount, upgradePlan } : {}),
     });
   } catch (err: unknown) {
     return NextResponse.json(
