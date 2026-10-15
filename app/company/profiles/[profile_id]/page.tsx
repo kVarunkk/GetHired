@@ -10,9 +10,8 @@ import { isUuid } from "@/helpers/agent/auth";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
-import { parseStoredExplanation } from "@/helpers/matching/schemas";
-import MatchScoreBadge from "@/components/matching/MatchScoreBadge";
-import MatchExplanationCard from "@/components/matching/MatchExplanationCard";
+import { getCandidateMatches } from "@/helpers/matching/candidate-matches";
+import ProfileMatches from "@/components/matching/ProfileMatches";
 
 // CACHE 1: Core profile data, scoped strictly by profile_id. The cache is shared
 // across companies, so callers MUST check company_can_view_candidate first.
@@ -68,39 +67,6 @@ const getCompanyScopedApplications = async (
   return data;
 };
 
-// MT-REQ-004: the candidate's match for one of this company's jobs, or null.
-const getJobMatch = async (
-  profile_id: string,
-  company_id: string,
-  job_post_id: string,
-) => {
-  const supabase = await createClient();
-
-  const { data: job } = await supabase
-    .from("job_postings")
-    .select("id, title")
-    .eq("id", job_post_id)
-    .eq("company_id", company_id)
-    .maybeSingle();
-  if (!job) return null;
-
-  const { data: match } = await supabase
-    .from("job_relevant_profiles")
-    .select("match_score, explanation, explanation_status")
-    .eq("job_posting_id", job.id)
-    .eq("user_id", profile_id)
-    .maybeSingle();
-
-  return {
-    job,
-    matchScore: match?.match_score ?? null,
-    explanation:
-      match?.explanation_status === "completed"
-        ? parseStoredExplanation(match.explanation)
-        : null,
-  };
-};
-
 export default async function ProfilePage({
   params,
   searchParams,
@@ -110,7 +76,8 @@ export default async function ProfilePage({
 }) {
   try {
     const { profile_id } = await params;
-    const jobPostId = (await searchParams)?.job_post;
+    const jobPostParam = (await searchParams)?.job_post;
+    const jobPostId = jobPostParam && isUuid(jobPostParam) ? jobPostParam : undefined;
     if (!isUuid(profile_id)) notFound();
 
     const user = await getUserFromRequest();
@@ -132,12 +99,10 @@ export default async function ProfilePage({
     );
     if (canViewError || canView !== true) notFound();
 
-    const [profile, applications, jobMatch] = await Promise.all([
+    const [profile, applications, matches] = await Promise.all([
       getCachedApplicantProfile(profile_id),
       getCompanyScopedApplications(profile_id, company.id),
-      jobPostId && isUuid(jobPostId)
-        ? getJobMatch(profile_id, company.id, jobPostId)
-        : null,
+      getCandidateMatches(supabase, profile_id, company.id, jobPostId),
     ]);
 
     if (!profile) notFound();
@@ -163,19 +128,11 @@ export default async function ProfilePage({
           <ArrowLeft className="h-4 w-4" />
         </Link>
 
-        {jobMatch && (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
-              <span>Match for {jobMatch.job.title}</span>
-              <MatchScoreBadge score={jobMatch.matchScore} />
-            </div>
-            <MatchExplanationCard
-              jobPostId={jobMatch.job.id}
-              candidateId={profile_id}
-              explanation={jobMatch.explanation}
-            />
-          </div>
-        )}
+        <ProfileMatches
+          candidateId={profile_id}
+          matches={matches}
+          expandedJobPostId={matches[0]?.jobPostId === jobPostId ? jobPostId : undefined}
+        />
 
         <ProfileClientHydrator applicantProfile={completeProfileData} />
       </div>

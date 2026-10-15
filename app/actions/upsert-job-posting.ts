@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidateTag } from "next/cache";
-import { after } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import { isUuid } from "@/helpers/agent/auth";
@@ -145,15 +144,15 @@ export async function upsertJobPostingAction(params: {
     if (postingError || !posting) throw new Error("Failed to save the job posting.");
 
     // MT-REQ-008: an edit to what screening reads makes old results stale.
+    // Done inline, before the relevance re-run below starts: the digest writes
+    // each row's explanation_status back, so marking stale in the background
+    // could race it and leave an explanation of the old job "completed".
     if (existing && jobSnapshotHash(existing) !== jobSnapshotHash(posting)) {
-      const jobPostId = posting.id;
-      after(async () => {
-        try {
-          await markJobResultsStale(service, jobPostId);
-        } catch (err) {
-          console.error(`[job posting] couldn't re-screen ${jobPostId}`, err);
-        }
-      });
+      try {
+        await markJobResultsStale(service, posting.id);
+      } catch (err) {
+        console.error(`[job posting] couldn't re-screen ${posting.id}`, err);
+      }
     }
 
     let embedding = null;

@@ -8,7 +8,6 @@ import { INTERNAL_API_SECRET } from "@/utils/formatters";
 import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
 import { assertLimit } from "@/helpers/billing/entitlements";
 import { EntitlementError, type EntitlementPayload } from "@/helpers/billing/errors";
-import { flushAfter } from "@/test/utils/after";
 import { upsertJobPostingAction } from "./upsert-job-posting";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
@@ -281,17 +280,13 @@ describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)
     service.queue("application_screenings", { data: [{ application_id: STALE_APP }], error: null });
   });
 
-  it("marks completed screenings and explanations stale and re-queues the screenings, after the response", async () => {
+  it("marks completed screenings and explanations stale and re-queues the screenings", async () => {
     const result = await upsertJobPostingAction({
       values: { ...VALUES, description: "Own our design system end to end." },
       existingPostingId: OWN.id,
     });
 
     expect(result).toEqual({ success: true, isUpdate: true });
-    expect(writesTo("application_screenings")).toHaveLength(0);
-
-    await flushAfter();
-
     const [screenings] = writesTo("application_screenings");
     expect(argsOf(screenings, "update")?.[0]).toEqual(
       expect.objectContaining({ status: "stale", attempts: 0 }),
@@ -309,13 +304,28 @@ describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)
     expect(sentIds()).toEqual([STALE_APP]);
   });
 
+  it("marks explanations stale before the relevance re-run starts, so the digest can't revert them", async () => {
+    state.savedStatus = "active";
+    let staleWritesWhenTriggered = -1;
+    vi.mocked(triggerJobPostingRelevanceUpdate).mockImplementation(async () => {
+      staleWritesWhenTriggered = writesTo("job_relevant_profiles").length;
+      return { success: true, message: "processing started" };
+    });
+
+    await upsertJobPostingAction({
+      values: { ...VALUES, description: "Own our design system end to end." },
+      existingPostingId: OWN.id,
+    });
+
+    expect(triggerJobPostingRelevanceUpdate).toHaveBeenCalledWith(OWN.id);
+    expect(staleWritesWhenTriggered).toBe(1);
+  });
+
   it("does nothing for a salary-only edit", async () => {
     await upsertJobPostingAction({
       values: { ...VALUES, min_salary: 2000000, max_salary: 3000000 },
       existingPostingId: OWN.id,
     });
-    await flushAfter();
-
     expect(writesTo("application_screenings")).toHaveLength(0);
     expect(writesTo("job_relevant_profiles")).toHaveLength(0);
     expect(service.callsFor("send_batch")).toHaveLength(0);
@@ -323,7 +333,6 @@ describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)
 
   it("does nothing when a posting is created", async () => {
     await upsertJobPostingAction({ values: VALUES });
-    await flushAfter();
 
     expect(writesTo("application_screenings")).toHaveLength(0);
     expect(service.callsFor("send_batch")).toHaveLength(0);
@@ -338,7 +347,6 @@ describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)
     });
 
     expect(result).toEqual({ success: true, isUpdate: true });
-    await expect(flushAfter()).resolves.toBeUndefined();
     expect(service.callsFor("send_batch")).toHaveLength(1);
   });
 });

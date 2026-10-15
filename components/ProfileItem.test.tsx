@@ -71,13 +71,14 @@ describe("ProfileItem 'Why?' (MT-TASK-011)", () => {
     expect(screen.getByRole("button", { name: "Why?" })).toBeInTheDocument();
   });
 
-  it("offers it for a stale explanation too", () => {
+  it("offers it for a stale explanation too, and hides the stale summary", () => {
     renderItem(
       profileWith({ match_score: 82, explanation: explanationOf(), explanation_status: "stale" }),
       JOB_POST.id,
     );
 
     expect(screen.getByRole("button", { name: "Why?" })).toBeInTheDocument();
+    expect(screen.queryByText(explanationOf().summary)).not.toBeInTheDocument();
   });
 
   it("doesn't offer it once there's a completed explanation", () => {

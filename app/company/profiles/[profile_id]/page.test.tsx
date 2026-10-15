@@ -92,67 +92,114 @@ describe("company profile page (RS-TEST-004)", () => {
   });
 });
 
-describe("company profile page match card (MT-REQ-004)", () => {
-  const inJob = () => visit(PUBLIC_APPLICANT.id, { job_post: JOB_POST.id });
+describe("company profile page matches (MT-REQ-004)", () => {
+  const OTHER_JOB = { id: "b0000000-0000-4000-8000-0000000000b2", title: "Backend Engineer" };
+  const THIRD_JOB = { id: "b0000000-0000-4000-8000-0000000000b3", title: "Site Reliability Engineer" };
+  const row = (job: { id: string; title: string }, score: number | null, status = "none", explanation: unknown = null) => ({
+    match_score: score,
+    explanation,
+    explanation_status: status,
+    job_postings: job,
+  });
+  const matched = (rows: unknown[]) => rls.queue("job_relevant_profiles", { data: rows, error: null });
+  const order = () =>
+    screen.getAllByRole("listitem").map((li) => li.querySelector("button")?.textContent ?? "");
 
-  it("shows the score and the stored explanation for the company's job", async () => {
+  beforeEach(() => {
     rls.queueRpc("company_can_view_candidate", { data: true, error: null });
-    rls.queue("job_postings", { data: { id: JOB_POST.id, title: JOB_POST.title }, error: null });
-    rls.queue("job_relevant_profiles", {
-      data: { match_score: 82, explanation: explanationOf(), explanation_status: "completed" },
-      error: null,
-    });
-
-    render(await inJob());
-
-    expect(screen.getByText("Why this candidate")).toBeInTheDocument();
-    expect(screen.getByText(explanationOf().summary)).toBeInTheDocument();
-    expect(screen.getByText("82 · Strong")).toBeInTheDocument();
-    const jobQuery = rls.callsFor("job_postings")[0];
-    expect(jobQuery.chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
-    expect(rls.callsFor("job_relevant_profiles")[0].chain).toContainEqual({
-      method: "eq",
-      args: ["user_id", PUBLIC_APPLICANT.id],
-    });
   });
 
-  it("offers 'Why this match?' when there's no completed explanation", async () => {
-    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
-    rls.queue("job_postings", { data: { id: JOB_POST.id, title: JOB_POST.title }, error: null });
-    rls.queue("job_relevant_profiles", {
-      data: { match_score: 70, explanation: explanationOf(), explanation_status: "stale" },
-      error: null,
-    });
+  it("lists every one of the company's jobs the candidate matches, highest score first", async () => {
+    matched([
+      row(OTHER_JOB, 71),
+      row({ id: JOB_POST.id, title: JOB_POST.title }, 82, "completed", explanationOf()),
+      row(THIRD_JOB, null),
+    ]);
 
-    render(await inJob());
+    render(await visit(PUBLIC_APPLICANT.id));
+
+    expect(screen.getByRole("heading", { name: /Matches for your jobs/ })).toBeInTheDocument();
+    const [first, second, third] = order();
+    expect(first).toContain(JOB_POST.title);
+    expect(second).toContain("Backend Engineer");
+    expect(third).toContain("Site Reliability Engineer");
+    const query = rls.callsFor("job_relevant_profiles")[0].chain;
+    expect(query).toContainEqual({ method: "eq", args: ["user_id", PUBLIC_APPLICANT.id] });
+    expect(query).toContainEqual({ method: "eq", args: ["job_postings.company_id", COMPANY_A.id] });
+    expect(order()).toHaveLength(3);
+  });
+
+  it("puts the job in context first and opens it", async () => {
+    matched([
+      row(OTHER_JOB, 90, "completed", explanationOf({ summary: "Backend summary." })),
+      row({ id: JOB_POST.id, title: JOB_POST.title }, 82, "completed", explanationOf()),
+    ]);
+
+    render(await visit(PUBLIC_APPLICANT.id, { job_post: JOB_POST.id }));
+
+    expect(order()[0]).toContain(JOB_POST.title);
+    expect(screen.getByRole("button", { name: new RegExp(JOB_POST.title) })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Why this candidate")).toBeInTheDocument();
+    expect(screen.getAllByText(explanationOf().summary).length).toBeGreaterThan(0);
+    expect(rls.callsFor("job_postings")).toHaveLength(0);
+  });
+
+  it("treats a stale explanation as missing, so it can be regenerated", async () => {
+    matched([row({ id: JOB_POST.id, title: JOB_POST.title }, 70, "stale", explanationOf())]);
+
+    render(await visit(PUBLIC_APPLICANT.id, { job_post: JOB_POST.id }));
 
     expect(screen.getByRole("button", { name: "Why this match?" })).toBeInTheDocument();
+    expect(screen.queryByText(explanationOf().summary)).not.toBeInTheDocument();
   });
 
-  it("shows no card for another company's job", async () => {
-    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+  it("adds the company's job in context when the candidate wasn't matched to it", async () => {
+    matched([row(OTHER_JOB, 71)]);
+    rls.queue("job_postings", { data: { id: JOB_POST.id, title: JOB_POST.title }, error: null });
+
+    render(await visit(PUBLIC_APPLICANT.id, { job_post: JOB_POST.id }));
+
+    expect(order()[0]).toContain(JOB_POST.title);
+    expect(order()[0]).toContain("Not scored");
+    expect(screen.getByRole("button", { name: "Why this match?" })).toBeInTheDocument();
+    expect(rls.callsFor("job_postings")[0].chain).toContainEqual({
+      method: "eq",
+      args: ["company_id", COMPANY_A.id],
+    });
+  });
+
+  it("doesn't add another company's job in context", async () => {
+    matched([row(OTHER_JOB, 71)]);
     rls.queue("job_postings", { data: null, error: null });
 
-    render(await inJob());
+    render(await visit(PUBLIC_APPLICANT.id, { job_post: JOB_POST.id }));
 
-    expect(screen.queryByText("Why this candidate")).not.toBeInTheDocument();
-    expect(rls.callsFor("job_relevant_profiles")).toHaveLength(0);
+    expect(order()).toHaveLength(1);
+    expect(screen.queryByText(JOB_POST.title)).not.toBeInTheDocument();
   });
 
   it("ignores a non-UUID job_post", async () => {
-    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+    matched([]);
 
     render(await visit(PUBLIC_APPLICANT.id, { job_post: "nope" }));
 
     expect(rls.callsFor("job_postings")).toHaveLength(0);
-    expect(screen.queryByText("Why this candidate")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Matches for your jobs/ })).not.toBeInTheDocument();
   });
 
-  it("shows no card outside job context", async () => {
-    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+  it("shows no section when the candidate matches none of the company's jobs", async () => {
+    matched([]);
 
     render(await visit(PUBLIC_APPLICANT.id));
 
-    expect(rls.callsFor("job_postings")).toHaveLength(0);
+    expect(screen.queryByRole("heading", { name: /Matches for your jobs/ })).not.toBeInTheDocument();
+  });
+
+  it("still renders the profile when the matches query fails", async () => {
+    rls.queue("job_relevant_profiles", { data: null, error: { message: "boom" } });
+
+    render(await visit(PUBLIC_APPLICANT.id));
+
+    expect(screen.queryByRole("heading", { name: /Matches for your jobs/ })).not.toBeInTheDocument();
   });
 });

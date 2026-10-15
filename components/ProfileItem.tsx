@@ -35,7 +35,9 @@ const ProfileItem = React.memo(
     jobPostId?: string | null;
   }) => {
     const match = jobPostId ? profile.job_relevant_profiles?.[0] : undefined;
-    const summary = summaryOf(match?.explanation);
+    // A stale explanation describes an older version of the job.
+    const summary =
+      match?.explanation_status === "completed" ? summaryOf(match.explanation) : null;
     const profileHref = `/company/profiles/${profile.user_id}${
       jobPostId ? `?job_post=${encodeURIComponent(jobPostId)}` : ""
     }`;

@@ -35,6 +35,7 @@ export default function MatchExplanationCard({
   candidateId,
   explanation: initial,
   compact = false,
+  onExplained,
   className,
 }: {
   jobPostId: string;
@@ -42,6 +43,8 @@ export default function MatchExplanationCard({
   explanation: MatchExplanation | null | undefined;
   /** A small "Why?" button for list cards; the full card otherwise. */
   compact?: boolean;
+  /** Called with a newly generated explanation. */
+  onExplained?: (explanation: MatchExplanation) => void;
   className?: string;
 }) {
   const [explanation, setExplanation] = useState(initial ?? null);
@@ -63,6 +66,7 @@ export default function MatchExplanationCard({
         return;
       }
       setExplanation(body.explanation);
+      onExplained?.(body.explanation);
     } catch {
       toast.error("Couldn't explain this match. Please try again.");
     } finally {
