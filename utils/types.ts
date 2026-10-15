@@ -170,6 +170,7 @@ export type FiltersState = {
   companyName: string[];
   jobTitleKeywords: string[];
   jobRole: string[];
+  search?: string;
   industryPreference: string[];
   workStylePreference: string[];
   skills: string[];

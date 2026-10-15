@@ -15,6 +15,41 @@ const userInfoSelectString = RECRUITER_CANDIDATE_COLUMNS;
 const JOB_MATCH_COLUMNS =
   "relevance_rank, match_score, explanation, explanation_status";
 
+// The free-text columns the "Search" filter matches (case-insensitive substring).
+const PROFILE_SEARCH_COLUMNS = [
+  "full_name",
+  "career_goals_short_term",
+  "career_goals_long_term",
+] as const;
+
+const SEARCH_MAX_LENGTH = 100;
+
+/**
+ * Array filters that match by substring when `matchText` is on: the param, the
+ * text[] column it otherwise overlaps, and the computed field (see migration
+ * 20261015180000_profile_text_filters) that substring matching reads.
+ */
+const TEXT_MATCH_FILTERS = [
+  { param: "jobRoles", column: "desired_roles", searchField: "desired_roles_search" },
+  { param: "skills", column: "top_skills", searchField: "top_skills_search" },
+  { param: "workStyle", column: "work_style_preferences", searchField: "work_style_preferences_search" },
+  { param: "industry", column: "industry_preferences", searchField: "industry_preferences_search" },
+] as const;
+
+/**
+ * Makes a search box value safe inside a PostgREST `or()` filter: drops the
+ * characters that would end the quoted value or change the filter (`,()"\`)
+ * and the ilike wildcards (`%`, `*`, `_`), collapses whitespace and caps it.
+ */
+export function sanitizeSearchTerm(raw: string | null): string {
+  if (!raw) return "";
+  return raw
+    .replace(/[,()"\\%*_]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, SEARCH_MAX_LENGTH);
+}
+
 export async function buildProfileQuery({
   searchQuery,
   jobRoles,
@@ -38,6 +73,8 @@ export async function buildProfileQuery({
   jobId,
   companyId,
   isInternalCall,
+  budget = null,
+  matchText = false,
 }: {
   searchQuery: string | null;
   jobRoles: string | null;
@@ -61,6 +98,14 @@ export async function buildProfileQuery({
   jobId: string | null;
   companyId: string;
   isInternalCall: boolean;
+  /** Keeps candidates whose minimum salary is at most this (the agent's "who'd take X"). */
+  budget?: number | null;
+  /**
+   * Match roles, skills, work styles and industries by case-insensitive
+   * substring (any of the terms) instead of exact values. The filter UI turns
+   * this on; the agent keeps exact matching.
+   */
+  matchText?: boolean;
 }): Promise<ProfilesBuildQueryResult> {
   try {
     const supabase = isInternalCall
@@ -157,12 +202,28 @@ export async function buildProfileQuery({
     // --- END NEW LOGIC ---
 
     // Apply filters
-    if (searchQuery) {
-      query = query.ilike("full_name", `%${searchQuery}%`);
+    const searchTerm = sanitizeSearchTerm(searchQuery);
+    if (searchTerm) {
+      query = query.or(
+        PROFILE_SEARCH_COLUMNS.map(
+          (column) => `${column}.ilike."%${searchTerm}%"`,
+        ).join(","),
+      );
     }
-    const jobRolesArray = parseMultiSelectParam(jobRoles);
-    if (jobRolesArray.length > 0) {
-      query = query.overlaps("desired_roles", jobRolesArray);
+    const textFilterValues = { jobRoles, skills, workStyle, industry };
+    for (const { param, column, searchField } of TEXT_MATCH_FILTERS) {
+      const values = parseMultiSelectParam(textFilterValues[param]);
+      if (values.length === 0) continue;
+      if (!matchText) {
+        query = query.overlaps(column, values);
+        continue;
+      }
+      const terms = [
+        ...new Set(values.map((v) => sanitizeSearchTerm(v).toLowerCase()).filter(Boolean)),
+      ];
+      if (terms.length > 0) {
+        query = query.or(terms.map((term) => `${searchField}.ilike."%${term}%"`).join(","));
+      }
     }
     const jobTypesArray = parseMultiSelectParam(jobTypes);
     if (jobTypesArray.length > 0) {
@@ -184,20 +245,11 @@ export async function buildProfileQuery({
     if (maxSalary) {
       query = query.lte("max_salary", parseInt(maxSalary));
     }
-    const skillsArray = parseMultiSelectParam(skills);
-    if (skillsArray.length > 0) {
-      query = query.overlaps("top_skills", skillsArray);
-    }
-    const workStyleArray = parseMultiSelectParam(workStyle);
-    if (workStyleArray.length > 0) {
-      query = query.overlaps("work_style_preferences", workStyleArray);
+    if (budget !== null && budget !== undefined) {
+      query = query.lte("min_salary", budget);
     }
     if (companySize) {
       query = query.eq("company_size_preference", companySize);
-    }
-    const industryArray = parseMultiSelectParam(industry);
-    if (industryArray.length > 0) {
-      query = query.overlaps("industry_preferences", industryArray);
     }
 
     // Apply sorting

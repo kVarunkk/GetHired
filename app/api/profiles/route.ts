@@ -2,6 +2,8 @@ import { rerankProfilesIfApplicable } from "@/helpers/profiles/ai-rerank-profile
 import { getEntitlements, suggestedTierFor } from "@/helpers/billing/entitlements";
 import { listPublicPlans } from "@/helpers/billing/plans";
 import { buildProfileQuery } from "@/helpers/profiles/profilesFilterQueryBuilder";
+import { expandProfileLocations } from "@/helpers/locations/aliases";
+import { parseMultiSelectParam } from "@/utils/formatters";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -61,7 +63,12 @@ export async function GET(request: NextRequest) {
   const searchQuery = searchParams.get("search");
   const jobRoles = searchParams.get("jobRole");
   const jobTypes = searchParams.get("jobType");
-  const locations = searchParams.get("location");
+  // Same place, every spelling: the picker offers canonical names, profiles mix aliases.
+  const requestedLocations = parseMultiSelectParam(searchParams.get("location"));
+  const locations =
+    requestedLocations.length > 0
+      ? (await expandProfileLocations(requestedLocations)).join("|")
+      : null;
   const minExperience = searchParams.get("minExperience");
   const maxExperience = searchParams.get("maxExperience");
   const minSalary = searchParams.get("minSalary");
@@ -117,6 +124,7 @@ export async function GET(request: NextRequest) {
         jobId,
         isInternalCall,
         companyId: companyData.id,
+        matchText: true,
       });
 
     if (error) {

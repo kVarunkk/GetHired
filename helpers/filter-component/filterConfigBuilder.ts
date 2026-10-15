@@ -113,6 +113,12 @@ export const filterConfigBuilder = (
     case "profiles":
       config = [
         {
+          name: "search",
+          label: "Search",
+          type: "text",
+          placeholder: "Name or career goals",
+        },
+        {
           name: "jobType",
           label: "Job Type",
           type: "multi-select",
@@ -126,8 +132,8 @@ export const filterConfigBuilder = (
         {
           name: "jobRole",
           label: "Job Role",
-          type: "multi-select",
-          placeholder: "Select the Job Role",
+          type: "multi-select-input",
+          placeholder: "Type or select from dropdown",
           options: uniqueJobRoles?.map((each) => ({
             value: each.job_role,
             label: each.job_role,
@@ -137,8 +143,8 @@ export const filterConfigBuilder = (
         {
           name: "industryPreference",
           label: "Industry Preference",
-          type: "multi-select",
-          placeholder: "Select the Industry Preference",
+          type: "multi-select-input",
+          placeholder: "Type or select from dropdown",
           options: uniqueIndustryPreferences?.map((each) => ({
             value: each.industry_preference,
             label: each.industry_preference,
@@ -148,8 +154,8 @@ export const filterConfigBuilder = (
         {
           name: "workStylePreference",
           label: "Work Style Preference",
-          type: "multi-select",
-          placeholder: "Select the Work Style Preference",
+          type: "multi-select-input",
+          placeholder: "Type or select from dropdown",
           options: uniqueWorkStylePreferences?.map((each) => ({
             value: each.work_style_preference,
             label: each.work_style_preference,
@@ -159,8 +165,8 @@ export const filterConfigBuilder = (
         {
           name: "skills",
           label: "Skills",
-          type: "multi-select",
-          placeholder: "Select the Skills",
+          type: "multi-select-input",
+          placeholder: "Type or select from dropdown",
           options: uniqueSkills?.map((each) => ({
             value: each.skill,
             label: each.skill,
@@ -170,12 +176,9 @@ export const filterConfigBuilder = (
         {
           name: "location",
           label: "Location",
-          type: "multi-select",
-          placeholder: "Select the location of Job",
-          options: uniqueLocations?.map((each) => ({
-            value: each.location,
-            label: each.location,
-          })),
+          type: "location-search-select",
+          placeholder: "Select the preferred location",
+          options: [],
           isVirtualized: true,
         },
 

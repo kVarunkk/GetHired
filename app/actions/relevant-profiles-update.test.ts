@@ -1,17 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { processJobPostingRelevance } from "@/helpers/profiles/relevant-profiles-utils";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
-import { afterCallbacks, flushAfter } from "@/test/utils/after";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, jobPostingOf } from "@/test/utils/recruiter";
 import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/helpers/profiles/relevant-profiles-utils", () => ({
-  processJobPostingRelevance: vi.fn(),
-}));
+vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
@@ -19,6 +16,14 @@ vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
 const OWN = jobPostingOf(COMPANY_A);
 
 let supabase: SupabaseMock;
+let service: SupabaseMock;
+
+/** Messages sent to the relevance_profiles queue. */
+const sent = () =>
+  service
+    .callsFor("send")
+    .filter((c) => c.schema === "pgmq_public")
+    .map((c) => c.chain[0].args[1]);
 
 const updatesOf = (status: string) =>
   supabase
@@ -38,7 +43,8 @@ async function signIn(user = COMPANY_A.user) {
 beforeEach(async () => {
   vi.clearAllMocks();
   await signIn();
-  vi.mocked(processJobPostingRelevance).mockResolvedValue({ success: true });
+  service = createSupabaseMock();
+  vi.mocked(createServiceRoleClient).mockReturnValue(service.client);
 });
 
 describe("triggerJobPostingRelevanceUpdate", () => {
@@ -46,25 +52,24 @@ describe("triggerJobPostingRelevanceUpdate", () => {
     await setRequestUser(null, supabase.client);
 
     expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toMatchObject({ success: false });
-    expect(afterCallbacks).toHaveLength(0);
+    expect(sent()).toHaveLength(0);
   });
 
   it("refuses an applicant", async () => {
     await signIn(mockUser({ type: "applicant" }));
 
     expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toMatchObject({ success: false });
-    expect(afterCallbacks).toHaveLength(0);
+    expect(sent()).toHaveLength(0);
   });
 
   it("refuses a posting outside the session company and schedules nothing", async () => {
     supabase.queue("job_postings", { data: null, error: null });
 
     expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toMatchObject({ success: false });
-    await flushAfter();
 
     const [lookup] = supabase.callsFor("job_postings");
     expect(lookup.chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
-    expect(processJobPostingRelevance).not.toHaveBeenCalled();
+    expect(sent()).toHaveLength(0);
     expect(updatesOf("progress")).toHaveLength(0);
   });
 
@@ -75,9 +80,8 @@ describe("triggerJobPostingRelevanceUpdate", () => {
     });
 
     expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toMatchObject({ success: false });
-    await flushAfter();
 
-    expect(processJobPostingRelevance).not.toHaveBeenCalled();
+    expect(sent()).toHaveLength(0);
   });
 
   it("restarts a run that has been stuck in progress for too long", async () => {
@@ -89,7 +93,7 @@ describe("triggerJobPostingRelevanceUpdate", () => {
     expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toMatchObject({ success: true });
   });
 
-  it("marks the posting in progress and schedules processing once", async () => {
+  it("marks the posting in progress and queues one message for the worker", async () => {
     supabase.queue("job_postings", {
       data: { id: OWN.id, matching_status: "completed", updated_at: OWN.updated_at },
       error: null,
@@ -100,23 +104,35 @@ describe("triggerJobPostingRelevanceUpdate", () => {
       message: "processing started",
     });
     expect(updatesOf("progress")).toHaveLength(1);
-    await flushAfter();
-
-    expect(processJobPostingRelevance).toHaveBeenCalledTimes(1);
-    expect(processJobPostingRelevance).toHaveBeenCalledWith(COMPANY_A.user.id, OWN.id);
+    expect(sent()).toEqual([
+      {
+        queue_name: "relevance_profiles",
+        message: { userId: COMPANY_A.user.id, jobId: OWN.id },
+        sleep_seconds: 0,
+      },
+    ]);
   });
 
-  it("marks the posting failed when processing rejects", async () => {
+  it("marks the posting failed and reports it when the message can't be queued", async () => {
     supabase.queue("job_postings", {
       data: { id: OWN.id, matching_status: "pending", updated_at: OWN.updated_at },
       error: null,
     });
-    vi.mocked(processJobPostingRelevance).mockRejectedValue(new Error("rerank down"));
+    service.queueRpc("send", { data: null, error: { message: "queue down" } }, "pgmq_public");
 
-    await triggerJobPostingRelevanceUpdate(OWN.id);
-    await flushAfter();
-
+    expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toEqual({
+      success: false,
+      error: "Failed to start matching.",
+    });
     expect(updatesOf("failed")).toHaveLength(1);
     expect(eventCaptureServerException).toHaveBeenCalled();
+  });
+
+  it("no longer does the matching inside the request", async () => {
+    const source = await import("node:fs").then((fs) =>
+      fs.readFileSync(new URL("./relevant-profiles-update.ts", import.meta.url), "utf8"),
+    );
+    expect(source).not.toMatch(/\bafter\(/);
+    expect(source).not.toContain("processJobPostingRelevance");
   });
 });

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "@/lib/supabase/server";
 import { createSupabaseMock, type RecordedCall, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, FORBIDDEN_CANDIDATE_COLUMNS } from "@/test/utils/recruiter";
-import { buildProfileQuery } from "./profilesFilterQueryBuilder";
+import { buildProfileQuery, sanitizeSearchTerm } from "./profilesFilterQueryBuilder";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
@@ -110,5 +110,95 @@ describe("buildProfileQuery match columns (MT-TASK-002)", () => {
     const select = selectOf(dataQuery()!);
     expect(select).not.toContain("match_score");
     expect(select).not.toContain("explanation");
+  });
+});
+
+describe("buildProfileQuery budget (RAT-022)", () => {
+  it("keeps candidates whose minimum salary fits the budget", async () => {
+    await buildProfileQuery({ ...BASE, budget: 4000000 });
+
+    expect(dataQuery()!.chain).toContainEqual({ method: "lte", args: ["min_salary", 4000000] });
+  });
+
+  it("adds no salary filter without a budget", async () => {
+    await buildProfileQuery(BASE);
+
+    expect(dataQuery()!.chain.some((c) => c.args[0] === "min_salary")).toBe(false);
+  });
+});
+
+describe("buildProfileQuery search", () => {
+  it("matches the term against name and career goals", async () => {
+    await buildProfileQuery({ ...BASE, searchQuery: "  Priya  Sharma " });
+
+    expect(dataQuery()!.chain).toContainEqual({
+      method: "or",
+      args: [
+        'full_name.ilike."%Priya Sharma%",career_goals_short_term.ilike."%Priya Sharma%",career_goals_long_term.ilike."%Priya Sharma%"',
+      ],
+    });
+  });
+
+  it("adds no search filter for a blank or symbols-only term", async () => {
+    await buildProfileQuery({ ...BASE, searchQuery: ' ,()"% ' });
+
+    expect(dataQuery()!.chain.some((c) => c.method === "or")).toBe(false);
+  });
+});
+
+describe("buildProfileQuery array filters", () => {
+  const FILTERS = {
+    jobRoles: "Backend|Data Engineer",
+    skills: "react",
+    workStyle: "Remote",
+    industry: "FinTech",
+  };
+
+  it("overlaps exact values by default", async () => {
+    await buildProfileQuery({ ...BASE, ...FILTERS });
+
+    const { chain } = dataQuery()!;
+    expect(chain).toContainEqual({ method: "overlaps", args: ["desired_roles", ["Backend", "Data Engineer"]] });
+    expect(chain).toContainEqual({ method: "overlaps", args: ["top_skills", ["react"]] });
+    expect(chain).toContainEqual({ method: "overlaps", args: ["work_style_preferences", ["Remote"]] });
+    expect(chain).toContainEqual({ method: "overlaps", args: ["industry_preferences", ["FinTech"]] });
+    expect(chain.some((c) => c.method === "or")).toBe(false);
+  });
+
+  it("matches any term by lowercased substring with matchText", async () => {
+    await buildProfileQuery({ ...BASE, ...FILTERS, matchText: true });
+
+    const { chain } = dataQuery()!;
+    expect(chain).toContainEqual({
+      method: "or",
+      args: ['desired_roles_search.ilike."%backend%",desired_roles_search.ilike."%data engineer%"'],
+    });
+    expect(chain).toContainEqual({ method: "or", args: ['top_skills_search.ilike."%react%"'] });
+    expect(chain).toContainEqual({ method: "or", args: ['work_style_preferences_search.ilike."%remote%"'] });
+    expect(chain).toContainEqual({ method: "or", args: ['industry_preferences_search.ilike."%fintech%"'] });
+    expect(chain.some((c) => c.method === "overlaps")).toBe(false);
+  });
+
+  it("sanitizes terms and skips ones left empty", async () => {
+    await buildProfileQuery({ ...BASE, skills: 'C++),id.eq.(x|%|Node', matchText: true });
+
+    expect(dataQuery()!.chain.filter((c) => c.method === "or")).toEqual([
+      { method: "or", args: ['top_skills_search.ilike."%c++ id.eq. x%",top_skills_search.ilike."%node%"'] },
+    ]);
+  });
+});
+
+describe("sanitizeSearchTerm", () => {
+  it("strips characters that would break out of the or() filter", () => {
+    expect(sanitizeSearchTerm('a"),user_id.eq.(x')).toBe("a user id.eq. x");
+  });
+
+  it("strips ilike wildcards and caps the length", () => {
+    expect(sanitizeSearchTerm("50%_off*")).toBe("50 off");
+    expect(sanitizeSearchTerm("x".repeat(500))).toHaveLength(100);
+  });
+
+  it("returns an empty string for null", () => {
+    expect(sanitizeSearchTerm(null)).toBe("");
   });
 });

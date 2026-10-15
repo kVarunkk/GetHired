@@ -8,6 +8,7 @@ import { TIER_FREE, TIER_STARTUP, entitlementsOf } from "@/test/utils/billing";
 import { buildRequest } from "@/test/utils/request";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
+import { expandProfileLocations } from "@/helpers/locations/aliases";
 import { GET } from "./route";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
@@ -20,6 +21,7 @@ vi.mock("@/helpers/billing/entitlements", async (importOriginal) => {
   return { getEntitlements: vi.fn(), suggestedTierFor: actual.suggestedTierFor };
 });
 vi.mock("@/helpers/billing/plans", () => ({ listPublicPlans: vi.fn() }));
+vi.mock("@/helpers/locations/aliases", () => ({ expandProfileLocations: vi.fn() }));
 vi.mock("server-only", () => ({}));
 
 /** getEntitlements' shape, from the fixture's raw RPC result. */
@@ -141,5 +143,29 @@ describe("GET /api/profiles matchScores (MT-TASK-001)", () => {
     const body = await (await get(params)).json();
 
     expect(body).not.toHaveProperty("matchScores");
+  });
+});
+
+describe("GET /api/profiles filters", () => {
+  it("matches text filters by substring and every spelling of a location", async () => {
+    await signIn(TIER_STARTUP);
+    vi.mocked(expandProfileLocations).mockResolvedValue(["bangalore", "bengaluru", "Bengaluru"]);
+
+    await get({ location: "Bengaluru", skills: "react|node" });
+
+    expect(expandProfileLocations).toHaveBeenCalledWith(["Bengaluru"]);
+    expect(vi.mocked(buildProfileQuery).mock.calls[0][0]).toMatchObject({
+      locations: "bangalore|bengaluru|Bengaluru",
+      skills: "react|node",
+      matchText: true,
+    });
+  });
+
+  it("skips location expansion without a location filter", async () => {
+    await signIn(TIER_STARTUP);
+    await get();
+
+    expect(expandProfileLocations).not.toHaveBeenCalled();
+    expect(vi.mocked(buildProfileQuery).mock.calls[0][0]).toMatchObject({ locations: null });
   });
 });
