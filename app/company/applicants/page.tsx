@@ -40,6 +40,11 @@ export default async function CompanyApplicantsPage() {
         ),
         user_info(
           full_name
+        ),
+        application_screenings(
+          status,
+          fit_score,
+          recommendation
         )
       `,
       )

@@ -8,6 +8,7 @@ import { INTERNAL_API_SECRET } from "@/utils/formatters";
 import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
 import { assertLimit } from "@/helpers/billing/entitlements";
 import { EntitlementError, type EntitlementPayload } from "@/helpers/billing/errors";
+import { flushAfter } from "@/test/utils/after";
 import { upsertJobPostingAction } from "./upsert-job-posting";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
@@ -261,5 +262,83 @@ describe("upsertJobPostingAction: access control (RS-TEST-001)", () => {
       isUpdate: true,
     });
     expect(assertLimit).not.toHaveBeenCalled();
+  });
+});
+
+describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)", () => {
+  const STALE_APP = "e2000000-0000-4000-8000-000000000001";
+
+  const writesTo = (table: string) =>
+    service.callsFor(table).filter((c) => has(c, "update"));
+  const sentIds = () =>
+    service
+      .callsFor("send_batch")
+      .flatMap((c) =>
+        (c.chain[0].args[1] as { messages: { application_id: string }[] }).messages.map((m) => m.application_id),
+      );
+
+  beforeEach(() => {
+    service.queue("application_screenings", { data: [{ application_id: STALE_APP }], error: null });
+  });
+
+  it("marks completed screenings and explanations stale and re-queues the screenings, after the response", async () => {
+    const result = await upsertJobPostingAction({
+      values: { ...VALUES, description: "Own our design system end to end." },
+      existingPostingId: OWN.id,
+    });
+
+    expect(result).toEqual({ success: true, isUpdate: true });
+    expect(writesTo("application_screenings")).toHaveLength(0);
+
+    await flushAfter();
+
+    const [screenings] = writesTo("application_screenings");
+    expect(argsOf(screenings, "update")?.[0]).toEqual(
+      expect.objectContaining({ status: "stale", attempts: 0 }),
+    );
+    expect(eqs(screenings)).toEqual([
+      ["job_post_id", OWN.id],
+      ["status", "completed"],
+    ]);
+    const [explanations] = writesTo("job_relevant_profiles");
+    expect(argsOf(explanations, "update")?.[0]).toEqual({ explanation_status: "stale" });
+    expect(eqs(explanations)).toEqual([
+      ["job_posting_id", OWN.id],
+      ["explanation_status", "completed"],
+    ]);
+    expect(sentIds()).toEqual([STALE_APP]);
+  });
+
+  it("does nothing for a salary-only edit", async () => {
+    await upsertJobPostingAction({
+      values: { ...VALUES, min_salary: 2000000, max_salary: 3000000 },
+      existingPostingId: OWN.id,
+    });
+    await flushAfter();
+
+    expect(writesTo("application_screenings")).toHaveLength(0);
+    expect(writesTo("job_relevant_profiles")).toHaveLength(0);
+    expect(service.callsFor("send_batch")).toHaveLength(0);
+  });
+
+  it("does nothing when a posting is created", async () => {
+    await upsertJobPostingAction({ values: VALUES });
+    await flushAfter();
+
+    expect(writesTo("application_screenings")).toHaveLength(0);
+    expect(service.callsFor("send_batch")).toHaveLength(0);
+  });
+
+  it("doesn't fail the action when the re-queue fails", async () => {
+    service.queueRpc("send_batch", { data: null, error: { message: "queue down" } }, "pgmq_public");
+
+    const result = await upsertJobPostingAction({
+      values: { ...VALUES, title: "Staff Frontend Engineer" },
+      existingPostingId: OWN.id,
+    });
+
+    expect(result).toEqual({ success: true, isUpdate: true });
+    await expect(flushAfter()).resolves.toBeUndefined();
+    expect(service.callsFor("send_batch")).toHaveLength(1);
   });
 });

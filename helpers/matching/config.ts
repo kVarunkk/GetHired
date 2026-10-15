@@ -49,3 +49,49 @@ export const MATCH_EXPLANATION_LIMITS = {
   items: 3,
   itemChars: 200,
 } as const;
+
+export type ScreeningRecommendation = "strong_yes" | "yes" | "maybe" | "no";
+
+/**
+ * MT-GUD-001: the recommendation each score band implies, highest first. A
+ * screening's recommendation is always replaced by the one for its score.
+ */
+export const RECOMMENDATION_BANDS: readonly { min: number; recommendation: ScreeningRecommendation }[] = [
+  { min: 90, recommendation: "strong_yes" },
+  { min: 75, recommendation: "yes" },
+  { min: 60, recommendation: "maybe" },
+  { min: 0, recommendation: "no" },
+];
+
+export function recommendationFor(score: number): ScreeningRecommendation {
+  return (RECOMMENDATION_BANDS.find((band) => score >= band.min) ?? RECOMMENDATION_BANDS[RECOMMENDATION_BANDS.length - 1])
+    .recommendation;
+}
+
+/** How a recommendation reads in the UI. */
+export const RECOMMENDATION_LABELS: Record<ScreeningRecommendation, string> = {
+  strong_yes: "Strong yes",
+  yes: "Yes",
+  maybe: "Maybe",
+  no: "No",
+};
+
+/** MT-REQ-006 caps for a screening. */
+export const SCREENING_LIMITS = {
+  summaryChars: 300,
+  strengths: 4,
+  gaps: 4,
+  itemChars: 200,
+  mustHaves: 8,
+  requirementChars: 120,
+  evidenceChars: 120,
+  noteChars: 160,
+  flags: 3,
+} as const;
+
+/** A queued screening's model call gives up after this. */
+export const SCREENING_TIMEOUT_MS = 60_000;
+
+/** The UI polls a queued or processing screening this often, for at most SCREENING_POLL_MAX_MS. */
+export const SCREENING_POLL_MS = 5_000;
+export const SCREENING_POLL_MAX_MS = 120_000;

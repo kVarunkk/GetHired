@@ -1,8 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import {
   ColumnDef,
+  ColumnFiltersState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -21,8 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { format } from "date-fns";
-// import { IApplication } from "@/utils/types";
-import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
+import { ChevronRight, ArrowUpDown, Loader2, XCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -32,12 +34,22 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
+import MatchScoreBadge from "./matching/MatchScoreBadge";
 import { TApplicationServer } from "@/utils/types/application.types";
 import { TApplicationStatus } from "@/utils/types";
+import { RECOMMENDATION_LABELS, type ScreeningRecommendation } from "@/helpers/matching/config";
+import { isScreeningInProgress, type ScreeningStatus } from "@/helpers/matching/screening-view";
+import { useEntitlementError } from "@/hooks/useEntitlementError";
 
 interface ApplicantsTableProps {
   data: TApplicationServer[];
+  /** In one job's context: enables "Screen N unscreened". */
+  jobPostId?: string;
+  /** "fit" sorts by fit score, highest first. */
+  defaultSort?: "fit";
 }
+
+type Row = TApplicationServer & { applicantName: string; jobTitle: string };
 
 const applicationStatuses = [
   "All Statuses",
@@ -48,12 +60,22 @@ const applicationStatuses = [
   "rejected",
 ];
 
-export default function ApplicantsTable({ data }: ApplicantsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<
-    import("@tanstack/react-table").ColumnFiltersState
-  >([]);
+const ALL_RECOMMENDATIONS = "All recommendations";
+const recommendations = Object.keys(RECOMMENDATION_LABELS) as ScreeningRecommendation[];
+
+/** Screenings the backfill route queues again: none, stale, failed, skipped. */
+const needsScreening = (status: string | undefined) =>
+  status === undefined || status === "stale" || status === "failed" || status === "skipped_quota";
+
+export default function ApplicantsTable({ data, jobPostId, defaultSort }: ApplicantsTableProps) {
+  const router = useRouter();
+  const { handle: handleEntitlement, dialog } = useEntitlementError();
+  const [sorting, setSorting] = useState<SortingState>(
+    defaultSort === "fit" ? [{ id: "fit", desc: true }] : [],
+  );
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [page, setPage] = useState(1);
+  const [screening, setScreening] = useState(false);
   const pageSize = 10;
 
   const jobTitles = useMemo(() => {
@@ -74,9 +96,12 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
     }));
   }, [data]);
 
-  const columns: ColumnDef<
-    TApplicationServer & { applicantName: string; jobTitle: string }
-  >[] = useMemo(
+  const unscreened = useMemo(
+    () => data.filter((item) => needsScreening(item.application_screenings?.status)).length,
+    [data],
+  );
+
+  const columns: ColumnDef<Row>[] = useMemo(
     () => [
       {
         accessorKey: "applicantName",
@@ -118,6 +143,40 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
           </div>
         ),
         filterFn: "equals",
+      },
+      {
+        id: "fit",
+        // Unscored rows stay last in both directions.
+        accessorFn: (row) => row.application_screenings?.fit_score ?? undefined,
+        sortUndefined: "last",
+        sortDescFirst: true,
+        header: ({ column }) => (
+          <Button variant="ghost" onClick={() => column.toggleSorting()}>
+            Fit
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const s = row.original.application_screenings;
+          if (isScreeningInProgress(s?.status as ScreeningStatus | undefined)) {
+            return (
+              <span className="flex items-center gap-1.5 text-sm text-muted-foreground whitespace-nowrap">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Screening…
+              </span>
+            );
+          }
+          if (s?.fit_score !== null && s?.fit_score !== undefined) {
+            return <MatchScoreBadge score={s.fit_score} className="whitespace-nowrap" />;
+          }
+          return <span className="text-muted-foreground">—</span>;
+        },
+      },
+      {
+        id: "recommendation",
+        accessorFn: (row) => row.application_screenings?.recommendation ?? undefined,
+        filterFn: "equals",
+        enableHiding: true,
       },
       {
         accessorKey: "status",
@@ -191,10 +250,9 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
     state: {
       sorting,
       columnFilters,
+      columnVisibility: { recommendation: false },
     },
   });
-
-  // const getRowModelRows = table.getRowModel().rows;
 
   const paginatedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -209,11 +267,33 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
     table.getColumn("applicantName")?.setFilterValue("");
     table.getColumn("jobTitle")?.setFilterValue(undefined);
     table.getColumn("status")?.setFilterValue(undefined);
+    table.getColumn("recommendation")?.setFilterValue(undefined);
   };
 
   const hasFilters = useMemo(() => {
     return columnFilters.length > 0;
   }, [columnFilters]);
+
+  const screenUnscreened = async () => {
+    if (!jobPostId) return;
+    setScreening(true);
+    try {
+      const res = await fetch(`/api/company/job-posts/${jobPostId}/screen`, { method: "POST" });
+      if (await handleEntitlement(res)) return;
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(body?.error ?? "Couldn't queue the screenings. Please try again.");
+        return;
+      }
+      const queued: number = body?.queued ?? 0;
+      toast.success(`Queued ${queued} screening${queued === 1 ? "" : "s"}.`);
+      router.refresh();
+    } catch {
+      toast.error("Couldn't queue the screenings. Please try again.");
+    } finally {
+      setScreening(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -245,7 +325,7 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
               "All Titles"
             }
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px]" aria-label="Filter by job title">
               <SelectValue placeholder="Filter by Job Title" />
             </SelectTrigger>
             <SelectContent>
@@ -268,7 +348,7 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
               "All Statuses"
             }
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px]" aria-label="Filter by status">
               <SelectValue placeholder="Filter by Status" />
             </SelectTrigger>
             <SelectContent>
@@ -279,17 +359,49 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        {hasFilters && (
-          <Button
-            variant="ghost"
-            onClick={clearFilters}
-            className="text-muted-foreground"
+
+          <Select
+            onValueChange={(value) =>
+              table
+                .getColumn("recommendation")
+                ?.setFilterValue(value === ALL_RECOMMENDATIONS ? undefined : value)
+            }
+            value={
+              (table.getColumn("recommendation")?.getFilterValue() as string) ??
+              ALL_RECOMMENDATIONS
+            }
           >
-            <XCircle className="w-4 h-4 mr-2" />
-            Clear Filters
-          </Button>
-        )}
+            <SelectTrigger className="w-[190px]" aria-label="Filter by recommendation">
+              <SelectValue placeholder="Filter by recommendation" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_RECOMMENDATIONS}>{ALL_RECOMMENDATIONS}</SelectItem>
+              {recommendations.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {RECOMMENDATION_LABELS[r]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              onClick={clearFilters}
+              className="text-muted-foreground"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Clear Filters
+            </Button>
+          )}
+          {jobPostId && unscreened > 0 && (
+            <Button variant="brand" onClick={screenUnscreened} disabled={screening}>
+              {screening && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Screen {unscreened} unscreened
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Table Section */}
@@ -331,7 +443,7 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={table.getVisibleLeafColumns().length}
                   className="h-24 text-center"
                 >
                   No applicants found.
@@ -373,6 +485,7 @@ export default function ApplicantsTable({ data }: ApplicantsTableProps) {
           </Button>
         </div>
       </div>
+      {dialog}
     </div>
   );
 }

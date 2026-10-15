@@ -90,6 +90,7 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/interview-analysis/worker",
     "/api/updates/company/match-explanations/worker",
     "/api/worker/user/onboarding",
+    "/api/worker/application-screening",
     "/api/ai-search/jobs",
     "/api/ai-search/profiles",
     "/api/dodo/webhook",

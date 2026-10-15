@@ -20,6 +20,11 @@ import { buildSalaryRange } from "@/utils/buildSalaryRange";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
+import ScreeningCard from "@/components/matching/ScreeningCard";
+import {
+  SCREENING_VIEW_COLUMNS,
+  toScreeningView,
+} from "@/helpers/matching/screening-view";
 
 export default async function ApplicantPage({
   params,
@@ -67,6 +72,16 @@ export default async function ApplicantPage({
 
     if (error) throw error;
     if (!application) notFound();
+
+    // RLS: only the job's company members can read it (MT-SEC-004).
+    const { data: screeningRow } = application.job_post_id
+      ? await supabase
+          .from("application_screenings")
+          .select(SCREENING_VIEW_COLUMNS)
+          .eq("application_id", application.id)
+          .maybeSingle()
+      : { data: null };
+    const screening = screeningRow ? toScreeningView(screeningRow) : null;
 
     let signedUrl: string | null = null;
 
@@ -303,8 +318,16 @@ export default async function ApplicantPage({
             </Card>
           </div>
 
-          {/* Right Panel: Questions and Answers */}
+          {/* Right Panel: Screening, Questions and Answers */}
           <div className="md:col-span-2 space-y-4">
+            {application.job_post_id && (
+              <ScreeningCard
+                applicationId={application.id}
+                jobPostId={application.job_post_id}
+                questions={application.job_postings?.questions ?? []}
+                screening={screening}
+              />
+            )}
             <Card>
               <CardHeader>
                 <CardTitle>Application Answers</CardTitle>

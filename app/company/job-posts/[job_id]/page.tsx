@@ -33,7 +33,7 @@ export default async function JobPostPage({
       .select(
         `
           *,
-          applications(*, user_info(${RECRUITER_CANDIDATE_COLUMNS}), job_postings(*)),
+          applications(*, user_info(${RECRUITER_CANDIDATE_COLUMNS}), job_postings(*), application_screenings(status, fit_score, recommendation)),
           company_info(name, website)
         ` as const,
       )
@@ -172,7 +172,11 @@ export default async function JobPostPage({
           <h2 className="text-lg font-semibold tracking-tight mb-4">
             Applicants ({job.applications?.length})
           </h2>
-          {<ApplicantsTable data={job.applications || []} />}
+          <ApplicantsTable
+            data={job.applications || []}
+            jobPostId={job.id}
+            defaultSort="fit"
+          />
         </div>
       </div>
     );

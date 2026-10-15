@@ -201,6 +201,15 @@ describe("middleware: matching workers", () => {
     ).toBe(true);
   });
 
+  it("lets the application screening worker through without a session", async () => {
+    expect(passesThrough(await updateSession(request("/api/worker/application-screening")))).toBe(true);
+  });
+
+  it("keeps the screening routes behind a login", async () => {
+    expect(passesThrough(await updateSession(request("/api/company/job-posts/j1/screen")))).toBe(false);
+    expect(passesThrough(await updateSession(request("/api/company/applications/a1/screening")))).toBe(false);
+  });
+
   it("keeps the explain route behind a login", async () => {
     expect(passesThrough(await updateSession(request("/api/company/matches/explain")))).toBe(false);
   });

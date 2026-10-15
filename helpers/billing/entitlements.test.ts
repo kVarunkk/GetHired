@@ -13,6 +13,7 @@ import { COMPANY_A } from "@/test/utils/recruiter";
 import { EntitlementError } from "./errors";
 import type { Plan } from "./plans";
 import {
+  assertAllowance,
   assertLimit,
   checkEntitlement,
   consumeEntitlement,
@@ -202,6 +203,38 @@ describe("assertLimit", () => {
   it("only takes limit keys", () => {
     // @ts-expect-error screenings is an allowance, not a limit
     void (() => assertLimit(COMPANY_A.id, "screenings"));
+  });
+});
+
+describe("assertAllowance", () => {
+  it("throws with the check's reason when the allowance is used up, and charges nothing", async () => {
+    db.queueRpc("check_entitlement", {
+      data: { allowed: false, source: null, credits_needed: 3, reason: "insufficient_credits" },
+      error: null,
+    });
+    db.queueRpc("get_company_entitlements", { data: entitlementsOf(TIER_FREE), error: null });
+
+    const err = await assertAllowance(COMPANY_A.id, "screenings").catch((e) => e);
+
+    expect(err).toBeInstanceOf(EntitlementError);
+    expect(err.payload).toMatchObject({
+      key: "screenings",
+      kind: "allowance",
+      reason: "insufficient_credits",
+      creditsNeeded: 3,
+    });
+    expect(db.callsFor("consume_entitlement")).toHaveLength(0);
+  });
+
+  it("resolves when allowed", async () => {
+    db.queueRpc("check_entitlement", { data: { allowed: true, source: "allowance", credits_needed: 0, reason: null }, error: null });
+
+    await expect(assertAllowance(COMPANY_A.id, "screenings")).resolves.toBeUndefined();
+  });
+
+  it("only takes allowance keys", () => {
+    // @ts-expect-error active_job_posts is a limit, not an allowance
+    void (() => assertAllowance(COMPANY_A.id, "active_job_posts"));
   });
 });
 

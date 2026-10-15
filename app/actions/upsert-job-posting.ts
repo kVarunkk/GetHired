@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidateTag } from "next/cache";
+import { after } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import { isUuid } from "@/helpers/agent/auth";
@@ -15,6 +16,8 @@ import {
   toEntitlementActionError,
   type EntitlementActionError,
 } from "@/helpers/billing/errors";
+import { jobSnapshotHash, JOB_SNAPSHOT_COLUMNS } from "@/helpers/matching/job-snapshot";
+import { markJobResultsStale } from "@/helpers/matching/mark-stale";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
 import {
   buildEquityRange,
@@ -55,14 +58,22 @@ export async function upsertJobPostingAction(params: {
   const isUpdate = existingPostingId !== undefined;
 
   try {
-    let existing: { id: string; job_id: string | null } | null = null;
+    let existing: {
+      id: string;
+      job_id: string | null;
+      title: string;
+      description: string | null;
+      skills: string[] | null;
+      min_experience: number | null;
+      max_experience: number | null;
+    } | null = null;
     if (isUpdate) {
       if (!isUuid(existingPostingId)) {
         return { success: false, error: "Job posting not found." };
       }
       const { data, error } = await supabase
         .from("job_postings")
-        .select("id, job_id")
+        .select(`id, job_id, ${JOB_SNAPSHOT_COLUMNS}`)
         .eq("id", existingPostingId)
         .eq("company_id", company.id)
         .maybeSingle();
@@ -132,6 +143,18 @@ export async function upsertJobPostingAction(params: {
       .single();
 
     if (postingError || !posting) throw new Error("Failed to save the job posting.");
+
+    // MT-REQ-008: an edit to what screening reads makes old results stale.
+    if (existing && jobSnapshotHash(existing) !== jobSnapshotHash(posting)) {
+      const jobPostId = posting.id;
+      after(async () => {
+        try {
+          await markJobResultsStale(service, jobPostId);
+        } catch (err) {
+          console.error(`[job posting] couldn't re-screen ${jobPostId}`, err);
+        }
+      });
+    }
 
     let embedding = null;
     if (existing) {

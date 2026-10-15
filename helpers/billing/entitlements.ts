@@ -294,6 +294,18 @@ export async function assertLimit(companyId: string, key: LimitKey, qty = 1): Pr
   }
 }
 
+/**
+ * Throws EntitlementError when `qty` more of an allowance (or its credit
+ * overage) can't be used right now. Charges nothing: for a preflight before
+ * queueing work that `consumeEntitlement` charges later.
+ */
+export async function assertAllowance(companyId: string, key: AllowanceKey, qty = 1): Promise<void> {
+  const result = await checkEntitlement(companyId, key, qty);
+  if (!result.allowed) {
+    throw await entitlementError(companyId, key, qty, result.reason ?? "limit_reached", result.creditsNeeded);
+  }
+}
+
 /** "Plan: Startup · 1,240 credits" (navbar and profile menu). */
 export async function getPlanSummary(companyId: string) {
   const e = await getEntitlements(companyId);
