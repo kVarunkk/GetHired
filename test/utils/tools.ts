@@ -2,7 +2,9 @@ import { asSchema, type Tool } from "ai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import type { AgentToolContext } from "@/helpers/agent/tools/shared";
+import type { RecruiterToolContext } from "@/helpers/agent/roles/recruiter/tools/shared";
 import { mockUser } from "./auth";
+import { COMPANY_A } from "./recruiter";
 
 export function toolContext(
   supabase: SupabaseClient<Database>,
@@ -12,6 +14,20 @@ export function toolContext(
     supabase,
     user: mockUser({ id: "u1", email: "ada@example.com" }),
     sessionId: "s1",
+    ...overrides,
+  };
+}
+
+/** A company user's tool context: COMPANY_A, from the session. */
+export function recruiterToolContext(
+  supabase: SupabaseClient<Database>,
+  overrides: Partial<RecruiterToolContext> = {},
+): RecruiterToolContext {
+  return {
+    supabase,
+    user: COMPANY_A.user,
+    sessionId: "s1",
+    company: { id: COMPANY_A.id, name: COMPANY_A.info.name, email: COMPANY_A.info.email },
     ...overrides,
   };
 }

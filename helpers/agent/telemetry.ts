@@ -54,7 +54,10 @@ function getProvider(): NodeTracerProvider | null {
   return provider;
 }
 
-export type AgentTraceContext = { sessionId: string; userId: string };
+export type AgentTraceContext = { sessionId: string; userId: string; companyId?: string };
+
+/** The span attribute for the recruiter's company (RA spec §4.9). */
+const COMPANY_ID_ATTRIBUTE = "gethired.company_id";
 
 /**
  * Per-call `telemetry` options for an agent model call (REQ-025). Each call
@@ -64,7 +67,7 @@ export type AgentTraceContext = { sessionId: string; userId: string };
  */
 export function agentTelemetry(
   functionId: string,
-  { sessionId, userId }: AgentTraceContext,
+  { sessionId, userId, companyId }: AgentTraceContext,
 ): TelemetryOptions {
   const tracerProvider = getProvider();
   if (!tracerProvider) return { isEnabled: false };
@@ -81,6 +84,7 @@ export function agentTelemetry(
           ...enrichSpanWithOpenInference(options),
           [SemanticConventions.SESSION_ID]: sessionId,
           [SemanticConventions.USER_ID]: userId,
+          ...(companyId ? { [COMPANY_ID_ATTRIBUTE]: companyId } : {}),
         }),
       }),
     ],

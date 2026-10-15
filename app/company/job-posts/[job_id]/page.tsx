@@ -15,6 +15,7 @@ import ShareJobPosting from "@/components/ShareJobPosting";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
+import AskAgentAboutJobPost from "@/components/agent/recruiter/AskAgentAboutJobPost";
 
 export default async function JobPostPage({
   params,
@@ -91,6 +92,8 @@ export default async function JobPostPage({
             <FindSuitableProfilesForJobPost job_post_id={job_id} />
           </div>
         </div>
+
+        <AskAgentAboutJobPost job={{ id: job.id, title: job.title }} />
 
         {/* --- Job Details Section --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

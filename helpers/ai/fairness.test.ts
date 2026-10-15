@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CANDIDATE_PROFILE, PII } from "@/test/utils/matching";
-import { scrubPII, stripProtected } from "./fairness";
+import { screenFairnessText, scrubPII, stripProtected } from "./fairness";
 
 describe("stripProtected (MT-SEC-002)", () => {
   it.each([
@@ -111,5 +111,86 @@ describe("scrubPII (MT-SEC-002)", () => {
       expect(scrubbed).not.toContain(value);
     }
     expect(scrubbed).toBe("Reach me at [removed] or [removed], portfolio [removed]");
+  });
+});
+
+describe("screenFairnessText (RA-TEST-006)", () => {
+  it.each([
+    "freshers only under 25",
+    "candidates aged 22-28",
+    "below 30 years old",
+    "young and energetic",
+    "male candidates",
+    "Female only",
+    "women",
+    "unmarried",
+    "no kids",
+    "not pregnant",
+    "Hindu",
+    "muslim candidates",
+    "Brahmin",
+    "upper caste",
+    "SC/ST",
+    "no disabled people",
+    "able-bodied",
+    "graduated in 2020",
+    "2022 batch",
+    "class of 2019",
+    "nationality: Indian",
+    "with a photo",
+    "fair complexion",
+    "gay",
+    "Caucasian",
+    "ladki chahiye",
+    "jaati",
+  ])("rejects %j", (text) => {
+    expect(screenFairnessText(text, { context: "candidate_filter" }).ok).toBe(false);
+  });
+
+  it.each([
+    "Java",
+    "senior",
+    "Go",
+    "React Native",
+    "5+ years of experience",
+    "over 20 years of experience",
+    "under 30 LPA",
+    "fresher",
+    "Bachelor's in Computer Science",
+    "single page apps",
+    "race conditions",
+    "black-box testing",
+    "white-label products",
+    "whiteboard interviews",
+    "Engineering Manager",
+    "Bengaluru",
+    "work authorization in India",
+    "image processing",
+    "managed a team of 6",
+  ])("allows %j", (text) => {
+    expect(screenFairnessText(text, { context: "candidate_filter" })).toEqual({ ok: true });
+  });
+
+  it("normalises case and spacing", () => {
+    expect(screenFairnessText("  FEMALE   ONLY ", { context: "candidate_filter" }).ok).toBe(false);
+    expect(screenFairnessText("Upper	Caste", { context: "candidate_filter" }).ok).toBe(false);
+  });
+
+  it("returns the term it matched", () => {
+    expect(screenFairnessText("hire young people", { context: "candidate_filter" })).toEqual({
+      ok: false,
+      term: "young",
+    });
+  });
+
+  it("allows company descriptions in job posts but not exclusionary requirements", () => {
+    expect(
+      screenFairnessText("We are a female-founded company", { context: "job_post" }),
+    ).toEqual({ ok: true });
+    expect(
+      screenFairnessText("We are a female-founded company", { context: "candidate_filter" }).ok,
+    ).toBe(false);
+    expect(screenFairnessText("Women only", { context: "job_post" }).ok).toBe(false);
+    expect(screenFairnessText("Age below 30", { context: "job_post" }).ok).toBe(false);
   });
 });

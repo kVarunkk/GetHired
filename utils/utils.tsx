@@ -325,6 +325,13 @@ export const companyNavbarItems: INavItem[] = [
     icon: <Home className="h-4 w-4" />,
   },
   {
+    id: "agent",
+    label: "Agent",
+    href: "/company/agent",
+    type: "startswith",
+    icon: <Bot className="h-4 w-4" />,
+  },
+  {
     id: "job_posts",
     label: "Job Posts",
     href: "/company/job-posts",
@@ -406,7 +413,7 @@ export const noScrollToTop = ["/resume-review/"];
 
 // Pages that take exactly the viewport height (below the navbar on phones)
 // and scroll inside themselves instead of scrolling the page.
-export const fullHeightPaths = ["/agent"];
+export const fullHeightPaths = ["/agent", "/company/agent"];
 
 export const getNavItemsByPath = (
   path: string,

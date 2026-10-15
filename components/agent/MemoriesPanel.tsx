@@ -13,6 +13,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { AGENT_MEMORY_MAX_CHARS } from "@/helpers/agent/config";
+import { AGENT_ROLE_UI, type AgentRoleId } from "./roles";
 
 type Memory = { id: string; content: string; category: string };
 
@@ -49,7 +50,8 @@ function MemoriesSkeleton() {
 }
 
 /** Lets the user review, edit and delete what the agent remembers (REQ-012). */
-export default function MemoriesPanel() {
+export default function MemoriesPanel({ role = "applicant" }: { role?: AgentRoleId } = {}) {
+  const ui = AGENT_ROLE_UI[role];
   const [memories, setMemories] = useState<Memory[] | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -110,11 +112,8 @@ export default function MemoriesPanel() {
       </SheetTrigger>
       <SheetContent className="flex w-full flex-col gap-4 overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>What the assistant remembers</SheetTitle>
-          <SheetDescription>
-            Facts the assistant saved about you across chats. Your job preferences live on your
-            profile.
-          </SheetDescription>
+          <SheetTitle>{ui.memoriesTitle}</SheetTitle>
+          <SheetDescription>{ui.memoriesDescription}</SheetDescription>
         </SheetHeader>
 
         {error && (

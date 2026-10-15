@@ -9,6 +9,10 @@ vi.mock("next/cache", () => ({
   unstable_cache: <T extends (...args: never[]) => unknown>(fn: T) => fn,
 }));
 
+// `server-only` throws outside a React Server environment. The agent route
+// imports every role, so even applicant tests load server-only billing code.
+vi.mock("server-only", () => ({}));
+
 // `after()` throws outside a Next request scope. Collect callbacks instead so
 // tests can assert on scheduled background work via flushAfter().
 vi.mock("next/server", async (importOriginal) => {

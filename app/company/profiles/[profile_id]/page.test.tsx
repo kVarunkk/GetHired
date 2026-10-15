@@ -129,7 +129,7 @@ describe("company profile page matches (MT-REQ-004)", () => {
     expect(order()).toHaveLength(3);
   });
 
-  it("puts the job in context first and opens it", async () => {
+  it("shows only the job in context, opened", async () => {
     matched([
       row(OTHER_JOB, 90, "completed", explanationOf({ summary: "Backend summary." })),
       row({ id: JOB_POST.id, title: JOB_POST.title }, 82, "completed", explanationOf()),
@@ -138,6 +138,7 @@ describe("company profile page matches (MT-REQ-004)", () => {
     render(await visit(PUBLIC_APPLICANT.id, { job_post: JOB_POST.id }));
 
     expect(order()[0]).toContain(JOB_POST.title);
+    expect(screen.queryByText("Backend Engineer")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: new RegExp(JOB_POST.title) })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("Why this candidate")).toBeInTheDocument();
     expect(screen.getAllByText(explanationOf().summary).length).toBeGreaterThan(0);
@@ -159,6 +160,7 @@ describe("company profile page matches (MT-REQ-004)", () => {
 
     render(await visit(PUBLIC_APPLICANT.id, { job_post: JOB_POST.id }));
 
+    expect(order()).toHaveLength(1);
     expect(order()[0]).toContain(JOB_POST.title);
     expect(order()[0]).toContain("Not scored");
     expect(screen.getByRole("button", { name: "Why this match?" })).toBeInTheDocument();
@@ -168,13 +170,13 @@ describe("company profile page matches (MT-REQ-004)", () => {
     });
   });
 
-  it("doesn't add another company's job in context", async () => {
+  it("shows no section for another company's job in context", async () => {
     matched([row(OTHER_JOB, 71)]);
     rls.queue("job_postings", { data: null, error: null });
 
     render(await visit(PUBLIC_APPLICANT.id, { job_post: JOB_POST.id }));
 
-    expect(order()).toHaveLength(1);
+    expect(screen.queryByRole("heading", { name: /Matches for your jobs/ })).not.toBeInTheDocument();
     expect(screen.queryByText(JOB_POST.title)).not.toBeInTheDocument();
   });
 

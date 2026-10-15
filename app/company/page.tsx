@@ -9,6 +9,7 @@ import CompanyJobPostingCard from "@/components/CompanyJobPostingCard";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import { TApplicationStatus } from "@/utils/types";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
+import AskRecruiterAgent from "@/components/agent/recruiter/AskRecruiterAgent";
 
 export default async function CompanyPage() {
   try {
@@ -101,6 +102,8 @@ export default async function CompanyPage() {
           </h2>
           <CreateJobPostingDialog companyId={companyInfo.id} />
         </div>
+
+        <AskRecruiterAgent />
 
         {/* --- Metrics Section --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

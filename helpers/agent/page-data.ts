@@ -1,16 +1,21 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import type { UIMessage } from "ai";
 import { Database } from "@/utils/types/database.types";
-import { loadSession } from "./persistence";
+import { loadSession, sessionRoleFields } from "./persistence";
+import type { AgentRoleId } from "./roles/types";
 
 type SessionSummary = { id: string; title: string; updated_at: string };
 
 const SESSION_COLUMNS = "id, title, updated_at";
 
-async function createSession(supabase: SupabaseClient<Database>, userId: string) {
+async function createSession(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  role: AgentRoleId | undefined,
+) {
   const { data, error } = await supabase
     .from("agent_sessions")
-    .insert({ user_id: userId })
+    .insert({ user_id: userId, ...sessionRoleFields(role) })
     .select(SESSION_COLUMNS)
     .single();
   if (error) throw error;
@@ -33,25 +38,23 @@ export async function loadAgentPageData(
   supabase: SupabaseClient<Database>,
   userId: string,
   requestedId: string | undefined,
-  { newChat = false }: { newChat?: boolean } = {},
+  { newChat = false, role }: { newChat?: boolean; role?: AgentRoleId } = {},
 ): Promise<{ sessions: SessionSummary[]; activeSessionId: string; messages: UIMessage[] } | null> {
-  const { data, error } = await supabase
-    .from("agent_sessions")
-    .select(SESSION_COLUMNS)
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false });
+  let query = supabase.from("agent_sessions").select(SESSION_COLUMNS).eq("user_id", userId);
+  if (role === "company") query = query.eq("role", role);
+  const { data, error } = await query.order("updated_at", { ascending: false });
   if (error) throw error;
 
   let sessions = data ?? [];
   const requested = requestedId ? sessions.find((s) => s.id === requestedId) : undefined;
   if (requestedId && !requested) return null;
 
-  if (sessions.length === 0) sessions = [await createSession(supabase, userId)];
+  if (sessions.length === 0) sessions = [await createSession(supabase, userId, role)];
   const active = requested ?? sessions[0];
-  const messages = (await loadSession(supabase, userId, active.id))?.messages ?? [];
+  const messages = (await loadSession(supabase, userId, active.id, { role }))?.messages ?? [];
 
   if (newChat && !requested && messages.length > 0) {
-    const created = await createSession(supabase, userId);
+    const created = await createSession(supabase, userId, role);
     return { sessions: [created, ...sessions], activeSessionId: created.id, messages: [] };
   }
 

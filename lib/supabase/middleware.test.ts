@@ -1,5 +1,5 @@
 /**
- * Access rules for /agent (TASK-070), plus regression cases pinning the
+ * Access rules for /agent (TASK-070, RA-TEST-008), plus regression cases pinning the
  * existing behaviour of nearby routes.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -57,33 +57,55 @@ describe("middleware: /agent", () => {
     expect(passesThrough(await updateSession(request("/agent")))).toBe(true);
   });
 
-  it("sends company users straight to their dashboard", async () => {
+  it("lets onboarded company users reach /company/agent and the agent API (RA-TEST-008)", async () => {
     vi.mocked(getUserFromRequest).mockResolvedValue(company);
 
-    expect(redirectTarget(await updateSession(request("/agent")))).toBe("/company");
-    expect(redirectTarget(await updateSession(request("/agent/abc?x=1")))).toBe("/company");
+    expect(passesThrough(await updateSession(request("/company/agent")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/company/agent?session=abc")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/api/agent/chat")))).toBe(true);
   });
 
-  it("sends companies that haven't onboarded to the dashboard too, which then routes them to onboarding", async () => {
+  it("sends company users from /agent to /company/agent, keeping the query", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(company);
+
+    expect(redirectTarget(await updateSession(request("/agent")))).toBe("/company/agent");
+    expect(redirectTarget(await updateSession(request("/agent?prompt=Find%20Go%20devs")))).toBe(
+      "/company/agent?prompt=Find%20Go%20devs",
+    );
+  });
+
+  it("keeps applicants out of /company/agent", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+
+    expect(redirectTarget(await updateSession(request("/company/agent")))).toBe("/agent");
+  });
+
+  it("sends companies that haven't onboarded from the agent to company onboarding", async () => {
     vi.mocked(getUserFromRequest).mockResolvedValue(
       mockUser({ type: "company", onboardingComplete: false }),
     );
 
-    expect(redirectTarget(await updateSession(request("/agent")))).toBe("/company");
-    expect(redirectTarget(await updateSession(request("/company")))).toBe("/get-started?company=true");
+    expect(redirectTarget(await updateSession(request("/company/agent")))).toBe("/get-started?company=true");
+    expect(redirectTarget(await updateSession(request("/agent")))).toBe("/get-started?company=true");
   });
 
-  it.each([true, false])(
-    "rejects company users on the agent API with 403 (onboarded: %s)",
-    async (onboardingComplete) => {
-      vi.mocked(getUserFromRequest).mockResolvedValue(
-        mockUser({ type: "company", onboardingComplete }),
-      );
+  it("answers the agent API with 403 for companies that haven't onboarded", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(
+      mockUser({ type: "company", onboardingComplete: false }),
+    );
 
-      const res = await updateSession(request("/api/agent/chat"));
+    const res = await updateSession(request("/api/agent/chat"));
 
-      expect(res.status).toBe(403);
-      expect(await res.json()).toEqual({ error: "The agent is only available to job seekers." });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "Finish setting up your company first." });
+  });
+
+  it.each(["/dashboard", "/resume-review", "/interview/abc"])(
+    "keeps %s applicant-only for onboarded companies",
+    async (path) => {
+      vi.mocked(getUserFromRequest).mockResolvedValue(company);
+
+      expect(redirectTarget(await updateSession(request(path)))).toBe("/auth/login");
     },
   );
 

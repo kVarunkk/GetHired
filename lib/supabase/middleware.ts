@@ -4,7 +4,8 @@ import { hasEnvVars } from "../../utils/utils";
 import { UserAppMetadata } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { getUserFromRequest } from "./get-user-from-request";
-import { APPLICANT_HOME, COMPANY_HOME } from "@/helpers/user/home-path";
+import { APPLICANT_HOME } from "@/helpers/user/home-path";
+import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 
 export async function updateSession(request: NextRequest) {
   const supabaseResponse = NextResponse.next({
@@ -238,20 +239,22 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    // --- The agent is for job seekers only (SEC-001) ---
+    // --- The agent API serves applicants and onboarded companies (RA-SEC-001) ---
     // Checked before company onboarding, so the API answers 403 rather than
-    // redirecting a company that hasn't onboarded yet.
-    if (isCompany && isAgentApiPath) {
+    // redirecting a company that hasn't onboarded yet. The page itself goes
+    // through the onboarding redirect below.
+    if (isCompany && !isCompanyOnboarded && isAgentApiPath) {
       return NextResponse.json(
-        { error: "The agent is only available to job seekers." },
+        { error: "Finish setting up your company first." },
         { status: 403 },
       );
     }
-    if (isCompany && isAgentPath) {
+    // Companies use the agent at /company/agent; /agent is the applicants'.
+    // The query (?prompt=, ?session=) carries over. A company that hasn't
+    // onboarded goes straight to onboarding (below) instead.
+    if (isCompanyOnboarded && isAgentPath) {
       const url = request.nextUrl.clone();
-      url.pathname = COMPANY_HOME;
-      deleteSearchParams(url);
-
+      url.pathname = COMPANY_AGENT_PATH;
       return NextResponse.redirect(url);
     }
 

@@ -9,6 +9,16 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 import ResumeUploadWidget, { type ResumeUploadOutput } from "./ResumeUploadWidget";
 import { rehypeAnimateWords } from "./animate-words";
+import { inlineLink, isInAppHref, NEW_TAB } from "./links";
+import {
+  ApplicantResults,
+  type ApplicantRowData,
+  CandidateResults,
+  type CandidateRowData,
+  statusLabel,
+} from "./recruiter/RecruiterResults";
+
+export { isInAppHref };
 
 type MessagePart = UIMessage["parts"][number];
 type ToolPart = Extract<MessagePart, { toolCallId: string }>;
@@ -40,6 +50,25 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   completeOnboarding: { running: "Setting up your profile…", done: "Profile set up", action: "set up your profile" },
   saveMemory: { running: "Remembering…", done: "Saved to memory", action: "save a memory" },
   deleteMemory: { running: "Forgetting…", done: "Removed from memory", action: "remove a memory" },
+  // Recruiter tools (RA spec §4.7).
+  getMyCompany: { running: "Checking your plan…", done: "Checked your plan", action: "check your plan" },
+  listMyJobs: { running: "Loading your job posts…", done: "Loaded your job posts", action: "load your job posts" },
+  getJobPost: { running: "Reading the job post…", done: "Read the job post", action: "read the job post" },
+  createJobPost: { running: "Saving the job post…", done: "Saved the job post", action: "create the job post" },
+  updateJobPost: { running: "Updating the job post…", done: "Updated the job post", action: "update the job post" },
+  setJobPostStatus: { running: "Updating the job post…", done: "Updated the job post", action: "change the job post's status" },
+  searchCandidates: { running: "Searching candidates…", done: "Searched candidates", action: "search candidates" },
+  findMatchesForJob: { running: "Finding matched candidates…", done: "Found matched candidates", action: "find matched candidates" },
+  runMatchingForJob: { running: "Starting matching…", done: "Started matching", action: "start matching" },
+  getCandidateProfile: { running: "Reading the profile…", done: "Read the profile", action: "read the profile" },
+  compareCandidates: { running: "Comparing candidates…", done: "Compared candidates", action: "compare candidates" },
+  explainMatch: { running: "Explaining the match…", done: "Explained the match", action: "explain the match" },
+  saveCandidate: { running: "Saving the candidate…", done: "Saved the candidate", action: "save the candidate" },
+  unsaveCandidate: { running: "Removing the candidate…", done: "Removed the saved candidate", action: "remove the saved candidate" },
+  listApplicants: { running: "Loading applicants…", done: "Loaded applicants", action: "load applicants" },
+  getApplication: { running: "Reading the application…", done: "Read the application", action: "read the application" },
+  screenApplicants: { running: "Queueing screenings…", done: "Queued screenings", action: "screen applicants" },
+  getHiringFunnel: { running: "Counting applications…", done: "Counted applications", action: "count applications" },
 };
 
 const labelsFor = (name: string) =>
@@ -226,6 +255,17 @@ const FIELD_LABELS: Record<string, string> = {
   visaSponsorshipRequired: "Needs visa sponsorship",
   jobDescription: "Job description",
   name: "Name",
+  // Recruiter job posts.
+  title: "Title",
+  description: "Description",
+  locations: "Locations",
+  jobType: "Job type",
+  minExperience: "Min experience (years)",
+  maxExperience: "Max experience (years)",
+  visaSponsorship: "Visa sponsorship",
+  skills: "Skills",
+  questions: "Screening questions",
+  status: "Status",
 };
 
 const formatValue = (value: unknown) =>
@@ -240,7 +280,7 @@ const formatValue = (value: unknown) =>
 /** Label and value pairs for an approval card. Ids mean nothing to the user, so they're left out. */
 const describeInput = (input: unknown) =>
   Object.entries((input ?? {}) as Record<string, unknown>)
-    .filter(([key]) => !key.endsWith("Id"))
+    .filter(([key]) => !/Ids?$/.test(key))
     .map(([key, value]) => [FIELD_LABELS[key] ?? key, formatValue(value)] as const);
 
 /** Indigo: the agent is waiting on the user. */
@@ -305,6 +345,46 @@ function OnboardingResume({ resumeId }: { resumeId?: string }) {
   }
 }
 
+/** What the approval card asks: exactly what will happen (RA-REQ-005). */
+function approvalTitle(name: string, input: unknown) {
+  const values = (input ?? {}) as Record<string, unknown>;
+  switch (name) {
+    case "startResumeReview":
+      return "Start a resume review? This uses 5 AI credits once the analysis succeeds.";
+    case "updateMyPreferences":
+      return "Update your job preferences?";
+    case "completeOnboarding":
+      return "Set up your profile with these details?";
+    case "createJobPost":
+      return "Create this job post as a draft?";
+    case "updateJobPost":
+      return "Update this job post?";
+    case "setJobPostStatus":
+      return values.status === "active" ? "Publish this job post?" : "Unpublish this job post?";
+    case "runMatchingForJob":
+      return "Start matching candidates to this job? It runs in the background, and you'll get an email when it's done.";
+    case "screenApplicants":
+      return "Screen this job's unscreened applicants? Each new screening uses one from your plan.";
+    case "updateApplicationStatus":
+      if (Array.isArray(values.applicationIds)) {
+        const count = values.applicationIds.length;
+        return `Move ${count} ${count === 1 ? "application" : "applications"} to ${statusLabel(String(values.status))}?`;
+      }
+      return `Allow the assistant to ${labelsFor(name).action}?`;
+    default:
+      return `Allow the assistant to ${labelsFor(name).action}?`;
+  }
+}
+
+function approvalDetails(name: string, input: unknown) {
+  const values = (input ?? {}) as Record<string, unknown>;
+  if (name === "updateApplicationStatus" && Array.isArray(values.applicationIds)) {
+    return [["Email the applicants", values.notify ? "Yes" : "No"] as const];
+  }
+  if (name === "setJobPostStatus") return [];
+  return describeInput(input);
+}
+
 function ApprovalCard({
   name,
   part,
@@ -314,15 +394,8 @@ function ApprovalCard({
   part: ToolPart & { approval: { id: string } };
   onApprove: ApprovalHandler;
 }) {
-  const title =
-    name === "startResumeReview"
-      ? "Start a resume review? This uses 5 AI credits once the analysis succeeds."
-      : name === "updateMyPreferences"
-        ? "Update your job preferences?"
-        : name === "completeOnboarding"
-          ? "Set up your profile with these details?"
-          : `Allow the assistant to ${labelsFor(name).action}?`;
-  const details = describeInput(part.input);
+  const title = approvalTitle(name, part.input);
+  const details = approvalDetails(name, part.input);
   const isOnboarding = name === "completeOnboarding";
   const reason = (part.approval as { requestReason?: string }).requestReason;
 
@@ -371,22 +444,6 @@ function ApprovalCard({
   );
 }
 
-/** Links in agent replies open in a new tab, so the chat stays put. */
-const NEW_TAB = { target: "_blank", rel: "noopener noreferrer" } as const;
-
-const APP_ORIGIN = "https://gethired.devhub.co.in";
-
-/** A link into the app: a relative path, or the app's own origin (SEC-014). */
-export function isInAppHref(href: string | undefined) {
-  if (!href) return false;
-  if (href.startsWith("/")) return !href.startsWith("//") && !href.startsWith("/\\");
-  try {
-    return new URL(href).origin === APP_ORIGIN;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Markdown links get the same treatment as the app's own links. Replies only
  * link into the app, so a link planted in a job posting can't be clicked,
@@ -408,7 +465,6 @@ const MARKDOWN_COMPONENTS: Components = {
 /** Plugins for a reply that is still streaming: new words fade in. */
 const STREAMING_REHYPE_PLUGINS = [rehypeAnimateWords];
 
-const inlineLink = "font-medium text-foreground underline underline-offset-4 hover:text-brand";
 
 /** A finished tool call: its label, plus any results worth showing. */
 function OutputStep({ name, output }: { name: string; output: unknown }) {
@@ -435,6 +491,24 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
     );
   }
 
+  if (result.error === "PLAN_LIMIT") {
+    return (
+      <Step
+        tone="yours"
+        label={
+          <span className="flex flex-wrap items-center gap-x-2">
+            <span>{String(result.message ?? "Your plan's limit is reached.")}</span>
+            {isInAppHref(String(result.upgradeUrl)) && (
+              <Link {...NEW_TAB} href={String(result.upgradeUrl)} className={inlineLink}>
+                See plans
+              </Link>
+            )}
+          </span>
+        }
+      />
+    );
+  }
+
   if (typeof result.error === "string") {
     return (
       <Step
@@ -452,6 +526,82 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
           totalCount={typeof result.totalCount === "number" ? result.totalCount : undefined}
         />
       </Step>
+    );
+  }
+
+  if (Array.isArray(result.candidates)) {
+    // A comparison can include candidates it couldn't load; they have no URL.
+    const rows = (result.candidates as Partial<CandidateRowData>[]).filter(
+      (c): c is CandidateRowData => typeof c.url === "string",
+    );
+    return (
+      <Step tone="done" label={labelsFor(name).done}>
+        <CandidateResults candidates={rows} />
+      </Step>
+    );
+  }
+
+  if (Array.isArray(result.applicants)) {
+    return (
+      <Step tone="done" label={labelsFor(name).done}>
+        <ApplicantResults applicants={result.applicants as ApplicantRowData[]} />
+      </Step>
+    );
+  }
+
+  if (
+    ["createJobPost", "updateJobPost", "setJobPostStatus"].includes(name) &&
+    typeof result.url === "string" &&
+    isInAppHref(result.url)
+  ) {
+    const what =
+      name === "createJobPost"
+        ? `Saved “${String(result.title ?? "the job post")}” as a draft.`
+        : name === "setJobPostStatus"
+          ? result.status === "active"
+            ? "Published the job post."
+            : "Unpublished the job post."
+          : "Updated the job post.";
+    return (
+      <Step
+        tone="done"
+        label={
+          <>
+            {what}{" "}
+            <Link {...NEW_TAB} href={result.url} className={inlineLink}>
+              Open the job post
+            </Link>
+          </>
+        }
+      />
+    );
+  }
+
+  if (name === "findMatchesForJob" && typeof result.status === "string") {
+    const label =
+      result.status === "processing"
+        ? "Matching is still running for this job"
+        : result.status === "failed"
+          ? "Matching failed for this job"
+          : "Matching hasn't run for this job yet";
+    return <Step tone="declined" label={label} />;
+  }
+
+  if (name === "runMatchingForJob" && result.status === "processing") {
+    return <Step tone="done" label="Matching started. You'll get an email when it's done." />;
+  }
+
+  if (name === "screenApplicants" && typeof result.queued === "number") {
+    const count = result.queued;
+    return (
+      <Step
+        tone="done"
+        label={
+          count === 0
+            ? "Every application is already screened or in the queue"
+            : `Queued ${count} ${count === 1 ? "screening" : "screenings"}`
+        }
+      />
     );
   }
 

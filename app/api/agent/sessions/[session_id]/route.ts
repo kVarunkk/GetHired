@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { internalError, isUuid, readJson, requireApplicant } from "@/helpers/agent/auth";
+import { internalError, isUuid, readJson, requireAgentUser } from "@/helpers/agent/auth";
 import { loadSession } from "@/helpers/agent/persistence";
 
 type Params = { params: Promise<{ session_id: string }> };
@@ -10,15 +10,15 @@ const notFound = () => NextResponse.json({ error: "Session not found." }, { stat
 const renameSchema = z.object({ title: z.string().trim().min(1).max(80) });
 
 export async function GET(_request: NextRequest, { params }: Params) {
-  const auth = await requireApplicant();
+  const auth = await requireAgentUser();
   if (!auth.ok) return auth.response;
-  const { user, supabase } = auth;
+  const { user, supabase, role } = auth;
 
   const { session_id: sessionId } = await params;
   if (!isUuid(sessionId)) return notFound();
 
   try {
-    const loaded = await loadSession(supabase, user.id, sessionId);
+    const loaded = await loadSession(supabase, user.id, sessionId, { role });
     if (!loaded) return notFound();
     return NextResponse.json(loaded);
   } catch (error) {
@@ -27,7 +27,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 export async function PATCH(request: NextRequest, { params }: Params) {
-  const auth = await requireApplicant();
+  const auth = await requireAgentUser();
   if (!auth.ok) return auth.response;
   const { user, supabase } = auth;
 
@@ -53,7 +53,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
-  const auth = await requireApplicant();
+  const auth = await requireAgentUser();
   if (!auth.ok) return auth.response;
   const { user, supabase } = auth;
 

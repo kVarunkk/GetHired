@@ -8,6 +8,10 @@
  */
 
 export const PROMPT_PARAM = "prompt";
+
+/** Where each role's agent lives: applicants at /agent, companies under /company. */
+export const AGENT_PATH = "/agent";
+export const COMPANY_AGENT_PATH = "/company/agent";
 export const MAX_PROMPT_CHARS = 2000;
 
 const STORAGE_KEY = "gethired:agent-prompt";
@@ -20,10 +24,10 @@ export function readPromptParam(value: unknown): string {
   return typeof text === "string" ? text.trim().slice(0, MAX_PROMPT_CHARS) : "";
 }
 
-/** The /agent link that opens a new chat with `text` in the message box. */
-export function agentPromptHref(text: string) {
+/** The agent link (`base`, /agent by default) that opens a new chat with `text` in the message box. */
+export function agentPromptHref(text: string, base: string = AGENT_PATH) {
   const prompt = readPromptParam(text);
-  return prompt ? `/agent?${PROMPT_PARAM}=${encodeURIComponent(prompt)}` : "/agent";
+  return prompt ? `${base}?${PROMPT_PARAM}=${encodeURIComponent(prompt)}` : base;
 }
 
 export function savePendingPrompt(text: string) {

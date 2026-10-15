@@ -12,6 +12,7 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 import { getCandidateMatches } from "@/helpers/matching/candidate-matches";
 import ProfileMatches from "@/components/matching/ProfileMatches";
+import FindSimilarCandidates from "@/components/agent/recruiter/FindSimilarCandidates";
 
 // CACHE 1: Core profile data, scoped strictly by profile_id. The cache is shared
 // across companies, so callers MUST check company_can_view_candidate first.
@@ -107,6 +108,9 @@ export default async function ProfilePage({
 
     if (!profile) notFound();
 
+    // With a job in context, show only that job's match.
+    const shownMatches = jobPostId ? matches.filter((m) => m.jobPostId === jobPostId) : matches;
+
     const { data: signedUrlData } = await supabase.storage
       .from("resumes")
       .createSignedUrl(profile.resumes?.[0]?.resume_path || "", 3600);
@@ -121,17 +125,20 @@ export default async function ProfilePage({
 
     return (
       <div className="flex flex-col gap-4 w-full p-4 mb-20">
-        <Link
-          href="/company/profiles"
-          className="text-muted-foreground hover:text-primary transition-colors w-fit p-2 pl-0"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
+        <div className="flex items-center justify-between gap-2">
+          <Link
+            href="/company/profiles"
+            className="text-muted-foreground hover:text-primary transition-colors w-fit p-2 pl-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <FindSimilarCandidates candidateId={profile_id} />
+        </div>
 
         <ProfileMatches
           candidateId={profile_id}
-          matches={matches}
-          expandedJobPostId={matches[0]?.jobPostId === jobPostId ? jobPostId : undefined}
+          matches={shownMatches}
+          expandedJobPostId={jobPostId}
         />
 
         <ProfileClientHydrator applicantProfile={completeProfileData} />

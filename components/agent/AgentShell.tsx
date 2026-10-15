@@ -12,11 +12,13 @@ import { cn } from "@/utils/utils";
 import ChatPane from "./ChatPane";
 import MemoriesPanel from "./MemoriesPanel";
 import SessionSidebar, { type AgentSessionSummary } from "./SessionSidebar";
+import { AGENT_ROLE_UI, type AgentRoleId } from "./roles";
 
 /** Session titles are generated after the reply; wait before refreshing. */
 const TITLE_REFRESH_DELAY_MS = 2500;
 
 export default function AgentShell({
+  role = "applicant",
   initialSessions,
   activeSessionId,
   initialMessages,
@@ -24,6 +26,7 @@ export default function AgentShell({
   messagesUsedToday = 0,
   titleRefreshDelayMs = TITLE_REFRESH_DELAY_MS,
 }: {
+  role?: AgentRoleId;
   initialSessions: AgentSessionSummary[];
   activeSessionId: string;
   initialMessages: UIMessage[];
@@ -34,6 +37,7 @@ export default function AgentShell({
   titleRefreshDelayMs?: number;
 }) {
   const router = useRouter();
+  const basePath = AGENT_ROLE_UI[role].basePath;
   // The router's view of the URL. It can still hold ?prompt= after the
   // history.replaceState below, which bypasses the router.
   const searchParams = useSearchParams();
@@ -48,9 +52,9 @@ export default function AgentShell({
   useEffect(() => {
     const pending = takePendingPrompt();
     if (initialDraft) {
-      window.history.replaceState(null, "", `/agent?session=${activeSessionId}`);
+      window.history.replaceState(null, "", `${basePath}?session=${activeSessionId}`);
     } else if (pending) {
-      router.replace(agentPromptHref(pending));
+      router.replace(agentPromptHref(pending, basePath));
     }
     // Only on arrival, not when switching chats.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,7 +62,7 @@ export default function AgentShell({
 
   const openSession = (id: string) => {
     setMobileOpen(false);
-    router.push(`/agent?session=${id}`);
+    router.push(`${basePath}?session=${id}`);
   };
 
   const refreshSessions = async () => {
@@ -105,7 +109,7 @@ export default function AgentShell({
       return;
     }
     setSessions((current) => current.filter((s) => s.id !== id));
-    if (id === activeSessionId) router.push("/agent");
+    if (id === activeSessionId) router.push(basePath);
   };
 
   const sidebar = (
@@ -179,11 +183,12 @@ export default function AgentShell({
               {sessions.find((s) => s.id === activeSessionId)?.title ?? "Agent"}
             </h1>
           </div>
-          <MemoriesPanel />
+          <MemoriesPanel role={role} />
         </header>
 
         <ChatPane
           key={activeSessionId}
+          role={role}
           sessionId={activeSessionId}
           initialMessages={initialMessages}
           initialDraft={initialDraft}
@@ -192,10 +197,10 @@ export default function AgentShell({
             // The reply is saved before the stream closes. Drop the client
             // Router Cache so coming back to this page loads the new turn
             // instead of the payload from when the page was first opened.
-            // While the router still thinks the URL is /agent?prompt=…, a
+            // While the router still thinks the URL is ?prompt=…, a
             // refresh would open yet another chat, so go to this session's
             // URL instead (which loads it fresh too).
-            const sessionHref = `/agent?session=${activeSessionId}`;
+            const sessionHref = `${basePath}?session=${activeSessionId}`;
             if (searchParams.get("session") === activeSessionId) router.refresh();
             else router.replace(sessionHref, { scroll: false });
             setTimeout(refreshSessions, titleRefreshDelayMs);

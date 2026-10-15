@@ -4,6 +4,8 @@ import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
 import { Database } from "@/utils/types/database.types";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
+import { getMyCompany, type MyCompany } from "@/helpers/companies/get-my-company";
+import type { AgentRoleId } from "./roles/types";
 
 /** Reports an unexpected error and returns a generic 500 (SEC-006). */
 export async function internalError(error: unknown, userId: string, flow: string) {
@@ -58,4 +60,49 @@ export async function requireApplicant(): Promise<ApplicantAuth> {
   }
 
   return { ok: true, user, supabase: await createClient() };
+}
+
+export type { AgentRoleId };
+
+export type AgentUserAuth =
+  | {
+      ok: true;
+      user: User;
+      supabase: SupabaseClient<Database>;
+      role: AgentRoleId;
+      /** The company a company user acts for, from the session (RA-SEC-002). */
+      company: MyCompany | null;
+    }
+  | { ok: false; response: NextResponse };
+
+const forbidden = (error: string) =>
+  ({ ok: false, response: NextResponse.json({ error }, { status: 403 }) }) as const;
+
+/**
+ * Authenticates an /api/agent/* request for either role (RA-SEC-001): 401
+ * without a user; 403 for users without a role, and for company users who
+ * haven't finished onboarding or have no company yet. The role comes from
+ * `app_metadata` on the server, never from the request.
+ */
+export async function requireAgentUser(): Promise<AgentUserAuth> {
+  const user = await getUserFromRequest();
+  if (!user) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  const type = user.app_metadata?.type;
+  if (type === "applicant") {
+    return { ok: true, user, supabase: await createClient(), role: "applicant", company: null };
+  }
+  if (type !== "company") return forbidden("The agent isn't available for this account.");
+
+  const supabase = await createClient();
+  const company =
+    user.app_metadata?.onboarding_complete === true ? await getMyCompany(supabase, user) : null;
+  if (!company) return forbidden("Finish setting up your company first.");
+
+  return { ok: true, user, supabase, role: "company", company };
 }

@@ -92,3 +92,63 @@ export function scrubPII(text: string): string {
       return digits >= 10 && digits <= 15 ? REMOVED : match;
     });
 }
+
+export type FairnessContext = "candidate_filter" | "memory" | "job_post";
+
+/**
+ * A protected characteristic (or a proxy for one) that candidates must never
+ * be filtered, ranked or described by (RA-SEC-004). `exclusionary` patterns
+ * apply to job posts too; the rest only to candidate filters and memories,
+ * where any mention is out of place.
+ */
+type FairnessRule = { term: string; pattern: RegExp; exclusionary?: boolean };
+
+const GROUP = String.raw`(?:men|women|males?|females?|boys?|girls?|ladies|gents)`;
+// An age bound: "under 25", "below 30 years old". Not "over 20 years of experience" or "under 30 LPA".
+const AGE_BOUND = String.raw`\b(?:under|below|above|over|younger than|older than|less than|max(?:imum)?(?: age)?)\s+(?:1[89]|[2-6]\d)\b(?!\s*(?:\+|%|lpa|lakhs?|l\b|k\b|cr\b|(?:years?|yrs?)\s+(?:of\s+)?(?:exp|experience|work)))`;
+
+const RULES: FairnessRule[] = [
+  // Age and its proxies.
+  { term: "age", pattern: new RegExp(AGE_BOUND), exclusionary: true },
+  { term: "age", pattern: /\bage(?:d|s)?\b\s*(?:\d|of|limit|between|group|bar)|\bage\s*:|\bage\b$/, exclusionary: true },
+  { term: "age", pattern: /\b\d{2}\s*(?:-|to)\s*\d{2}\s*(?:years? old|yrs? old|age)\b|\byears? old\b|\byrs? old\b/, exclusionary: true },
+  { term: "young", pattern: /\b(?:young|younger|youthful|old|older|elderly|aged|middle-aged)\b(?!-?(?:er)?\s*(?:codebase|code|systems?|stack))/ },
+  { term: "graduation year", pattern: /\bgraduat(?:ed|ion|ing)\s+(?:in|year|before|after|from)\s+(?:19|20)\d{2}\b|\b(?:19|20)\d{2}\s+(?:batch|pass\s?-?outs?|graduates?)\b|\b(?:batch|class)\s+of\s+(?:19|20)\d{2}\b|\bpass\s?-?out\s+(?:year|in)\b/, exclusionary: true },
+  // Gender.
+  { term: "gender", pattern: new RegExp(String.raw`\b(?:only\s+${GROUP}|${GROUP}\s+(?:candidates?\s+)?only)\b`), exclusionary: true },
+  { term: "gender", pattern: /\b(?:male|female|men|women|man|woman|boys?|girls?|ladies|lady|gentlemen|gender|transgender|non-binary)\b/ },
+  { term: "gender", pattern: /\b(?:ladka|ladki|ladke|ladkiyan|mahila|aurat)\b/, exclusionary: true },
+  // Marital and family status, pregnancy.
+  { term: "marital status", pattern: /\b(?:married|unmarried|marital|spouse|divorced|widow(?:ed)?|shaadi|shadi)\b/, exclusionary: true },
+  { term: "family status", pattern: /\b(?:kids|children|pregnan\w*|maternity|family planning)\b/, exclusionary: true },
+  // Religion and caste.
+  { term: "religion", pattern: /\b(?:religion|religious|hindus?|muslims?|christians?|sikhs?|jains?|buddhists?|jews?|jewish|parsis?|dharm|dharma)\b/, exclusionary: true },
+  { term: "caste", pattern: /\b(?:castes?|jaati|jati|brahmins?|dalits?|kshatriyas?|vaishyas?|shudras?|rajputs?|obc|sc\s*\/\s*st|scheduled (?:caste|tribe)s?)\b/, exclusionary: true },
+  // Race, ethnicity, national origin.
+  { term: "race", pattern: /\b(?:race(?!\s*conditions?)|racial|ethnic\w*|caucasian|hispanic|latin[oa]s?|african american|skin colou?r|fair skin|fair complexion|complexion)\b/, exclusionary: true },
+  { term: "national origin", pattern: /\b(?:nationality|national origin|ethnic origin)\b/, exclusionary: true },
+  // Disability and sexual orientation.
+  { term: "disability", pattern: /\b(?:disabled|disabilit(?:y|ies)|handicap\w*|able-bodied|wheelchair)\b/, exclusionary: true },
+  { term: "sexual orientation", pattern: /\b(?:gay|lesbian|lgbt\w*|queer|homosexual|heterosexual|sexual orientation)\b/, exclusionary: true },
+  // Appearance.
+  { term: "photo", pattern: /\b(?:photo|photos|photograph|good-looking|attractive|looks)\b/, exclusionary: true },
+];
+
+/**
+ * A deterministic deny-list check for text the agent would filter, rank or
+ * remember candidates by (RA-SEC-004). The prompt rule is the first defence;
+ * this catches the clear cases. Whole words only, so "Java", "Go" or "race
+ * conditions" pass. `job_post` only rejects exclusionary requirements, so a
+ * job post may describe a "female-founded company".
+ */
+export function screenFairnessText(
+  text: string,
+  { context }: { context: FairnessContext },
+): { ok: true } | { ok: false; term: string } {
+  const normalised = text.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+  for (const rule of RULES) {
+    if (context === "job_post" && !rule.exclusionary) continue;
+    if (rule.pattern.test(normalised)) return { ok: false, term: rule.term };
+  }
+  return { ok: true };
+}

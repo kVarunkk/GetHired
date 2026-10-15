@@ -8,33 +8,18 @@ import {
   lastAssistantMessageIsCompleteWithToolCalls,
   type UIMessage,
 } from "ai";
-import {
-  AlertCircle,
-  FileSearch,
-  ListChecks,
-  RotateCcw,
-  Search,
-  Target,
-  type LucideIcon,
-} from "lucide-react";
+import { AlertCircle, RotateCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AGENT_DAILY_MESSAGE_CAP } from "@/helpers/agent/config";
 import { canRegenerate, withRegeneration } from "@/helpers/agent/regenerations";
 import { isStopped, stoppedReply } from "@/helpers/agent/stopped";
 import type { ResumeUploadOutput } from "./ResumeUploadWidget";
 import Composer from "./Composer";
 import ScrollToBottomButton from "./ScrollToBottomButton";
 import MessageParts, { StepNode } from "./MessageParts";
+import { AGENT_ROLE_UI, APPLICANT_STARTERS, type AgentRoleId } from "./roles";
 
-export const SUGGESTED_PROMPTS = [
-  "Find remote frontend jobs posted this week",
-  "Show jobs that match my profile",
-  "Review my resume against a job I like",
-  "What's the status of my applications?",
-];
-
-/** One icon per starter prompt, in the same order: search, match, review, track. */
-const STARTER_ICONS: LucideIcon[] = [Search, Target, FileSearch, ListChecks];
+/** The applicant's starter prompts. */
+export const SUGGESTED_PROMPTS = APPLICANT_STARTERS;
 
 /** Within this many px of the bottom counts as "at the latest message". */
 const NEAR_BOTTOM_PX = 80;
@@ -82,12 +67,14 @@ export function chatErrorMessage(error: Error) {
 }
 
 export default function ChatPane({
+  role = "applicant",
   sessionId,
   initialMessages,
   initialDraft,
   messagesUsedToday = 0,
   onFinish,
 }: {
+  role?: AgentRoleId;
   sessionId: string;
   initialMessages: UIMessage[];
   initialDraft?: string;
@@ -104,7 +91,8 @@ export default function ChatPane({
   // it after each reply, which starts this count again.
   const [usage, setUsage] = useState({ loaded: messagesUsedToday, sent: 0 });
   if (usage.loaded !== messagesUsedToday) setUsage({ loaded: messagesUsedToday, sent: 0 });
-  const dailyCapReached = usage.loaded + usage.sent >= AGENT_DAILY_MESSAGE_CAP;
+  const ui = AGENT_ROLE_UI[role];
+  const dailyCapReached = usage.loaded + usage.sent >= ui.dailyCap;
 
   const transport = useMemo(
     () =>
@@ -226,16 +214,15 @@ export default function ChatPane({
               <div className="flex flex-col gap-8 pt-6 sm:pt-16">
                 <div className="flex flex-col gap-2">
                   <h2 className="text-2xl font-semibold tracking-tight sm:text-[28px] sm:leading-9">
-                    What do you need help with?
+                    {ui.heading}
                   </h2>
                   <p className="max-w-prose text-[15px] leading-7 text-muted-foreground">
-                    I can find jobs that fit your profile, review your resume
-                    against a role, and keep your applications up to date.
+                    {ui.intro}
                   </p>
                 </div>
                 <ul className="divide-y overflow-hidden rounded-xl border">
-                  {SUGGESTED_PROMPTS.map((prompt, index) => {
-                    const Icon = STARTER_ICONS[index] ?? Search;
+                  {ui.starters.map((prompt, index) => {
+                    const Icon = ui.icons[index] ?? Search;
                     return (
                       <li key={prompt}>
                         <button
