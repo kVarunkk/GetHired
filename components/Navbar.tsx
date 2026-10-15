@@ -11,7 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ChevronRight, Menu, Wallet } from "lucide-react";
+import { ChevronRight, CreditCard, Menu, Wallet } from "lucide-react";
 import Brand from "./Brand";
 import { cn, getNavItemsByPath } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -118,7 +118,12 @@ export default function NavbarComponent({
         >
           <div className="flex min-w-0 items-center gap-1 justify-start">
             {authResolved ? (
-              <NavbarSheet items={navbarItems} />
+              <NavbarSheet
+                items={navbarItems}
+                signedIn={user !== null}
+                isCompanyUser={isCompanyUser}
+                billingActive={pathname.startsWith("/company/billing")}
+              />
             ) : (
               // Same 40px footprint as the menu button, so the logo doesn't shift.
               <LoadingNav className="lg:hidden p-2">
@@ -295,24 +300,36 @@ export default function NavbarComponent({
               />
             ) : user ? (
               <div className="flex flex-col items-center gap-5">
-                {!isCompanyUser && (
-                  <Tooltip delayDuration={100}>
-                    <TooltipTrigger asChild>
-                      <Link
-                        href="/dashboard/buy-credits"
-                        className={cn(
-                          "text-brand flex px-4 py-2 items-center w-full gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden",
-                        )}
-                      >
+                {/* Applicants top up credits; companies manage their plan. */}
+                <Tooltip delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={
+                        isCompanyUser
+                          ? "/company/billing"
+                          : "/dashboard/buy-credits"
+                      }
+                      className={cn(
+                        "text-brand flex px-4 py-2 items-center w-full gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden",
+                        isCompanyUser &&
+                          pathname.startsWith("/company/billing") &&
+                          "bg-secondary",
+                      )}
+                    >
+                      {isCompanyUser ? (
+                        <CreditCard className="h-4 w-4 shrink-0" />
+                      ) : (
                         <Wallet className="h-4 w-4 shrink-0" />
-                        <SidebarLabel open={isMenuOpen}>Recharge</SidebarLabel>
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" hidden={isMenuOpen}>
-                      <p>{isMenuOpen ? "" : "Recharge"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
+                      )}
+                      <SidebarLabel open={isMenuOpen}>
+                        {isCompanyUser ? "Billing" : "Recharge"}
+                      </SidebarLabel>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" hidden={isMenuOpen}>
+                    <p>{isCompanyUser ? "Billing" : "Recharge"}</p>
+                  </TooltipContent>
+                </Tooltip>
                 <FeedbackForm
                   isMenuOpen={isMenuOpen}
                   user={user}
@@ -390,7 +407,17 @@ function SkeletonBar({ className }: { className?: string }) {
   return <div aria-hidden className={cn("rounded-md bg-muted", className)} />;
 }
 
-const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
+const NavbarSheet = ({
+  items,
+  signedIn,
+  isCompanyUser,
+  billingActive,
+}: {
+  items: INavItemWithActive[];
+  signedIn: boolean;
+  isCompanyUser: boolean;
+  billingActive: boolean;
+}) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -430,6 +457,19 @@ const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
               </ModifiedLink>
             );
           })}
+          {/* Same as the sidebar: applicants top up credits; companies manage their plan. */}
+          {signedIn && (
+            <Link
+              href={isCompanyUser ? "/company/billing" : "/dashboard/buy-credits"}
+              className={cn(
+                "text-brand hover:underline underline-offset-2 p-2 w-full",
+                isCompanyUser && billingActive && "underline underline-offset-2",
+              )}
+              onClick={() => setOpen(false)}
+            >
+              {isCompanyUser ? "Billing" : "Recharge"}
+            </Link>
+          )}
         </div>
 
         <SheetFooter className="mt-4">

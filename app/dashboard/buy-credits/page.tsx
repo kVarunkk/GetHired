@@ -12,6 +12,8 @@ import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import CreditCostList from "@/components/CreditCostList";
+import { APPLICANT_CREDIT_COSTS } from "@/utils/credit-costs";
 
 export default async function BuyCreditsPage() {
   const supabase = await createClient();
@@ -85,6 +87,17 @@ export default async function BuyCreditsPage() {
           </Card>
         ))}
       </div>
+
+      <section id="costs" className="flex flex-col gap-3">
+        <h3 className="text-lg font-semibold tracking-tight">
+          What uses credits
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Credits are only used when an AI feature runs. Everything else on
+          GetHired is free.
+        </p>
+        <CreditCostList costs={APPLICANT_CREDIT_COSTS} />
+      </section>
     </div>
   );
 }

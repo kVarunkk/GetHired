@@ -4,12 +4,10 @@ import { useState } from "react";
 import { ArrowDown, Copy, Loader2, Sparkle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, copyToClipboard } from "@/utils/utils";
-import { JobPostingsRow, TAICredits } from "@/utils/types";
+import { JobPostingsRow } from "@/utils/types";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import InfoTooltip from "./InfoTooltip";
-import Link from "next/link";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { Skeleton } from "./ui/skeleton";
 import { SummarizeJobAction } from "@/app/actions/summarize-job";
@@ -143,20 +141,6 @@ export default function JobDescriptionCard({
                     )}
                   </Button>
 
-                  <InfoTooltip
-                    content={
-                      <p>
-                        This feature uses {TAICredits.AI_SUMMARY} AI credits per
-                        use.{" "}
-                        <Link
-                          href={"/dashboard/buy-credits"}
-                          className="font-medium underline underline-offset-4"
-                        >
-                          Recharge Credits
-                        </Link>
-                      </p>
-                    }
-                  />
                 </div>
               )
             )}

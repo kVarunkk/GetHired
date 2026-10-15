@@ -17,8 +17,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ENTITLEMENT_KEYS, KEY_LABELS, type EntitlementKey } from "@/helpers/billing/keys";
+import { ALLOWANCE_KEYS, ENTITLEMENT_KEYS, KEY_LABELS, type EntitlementKey } from "@/helpers/billing/keys";
 import type { CompanyEntitlements } from "@/helpers/billing/entitlements";
+import CreditCostList from "@/components/CreditCostList";
+import { companyCreditCosts } from "@/utils/credit-costs";
 import {
   formatPrice,
   priceFor,
@@ -348,6 +350,13 @@ export default function BillingOverview({
           Credits pay for usage beyond your monthly allowances. They&apos;re used oldest first and expire 12 months after
           purchase.
         </p>
+        <h4 className="text-sm font-semibold">What uses your allowances and credits</h4>
+        <CreditCostList
+          label="What uses your allowances and credits"
+          costs={companyCreditCosts(
+            Object.fromEntries(ALLOWANCE_KEYS.map((key) => [key, billing.entitlements[key]?.overageCredits])),
+          )}
+        />
         {billing.creditLots.length > 0 && (
           <ul className="divide-y rounded-xl border" aria-label="Credit lots">
             {billing.creditLots.map((lot) => (

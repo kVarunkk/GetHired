@@ -156,15 +156,6 @@ export default function CreateInterviewDialog({
             >
               Recharge Credits
             </Link>
-            <span className="-my-2 inline-block align-middle">
-              <InfoTooltip
-                content={
-                  "This feature uses " +
-                  TAICredits.AI_INTERVIEW +
-                  " AI credits per use."
-                }
-              />
-            </span>
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 

@@ -19,10 +19,8 @@ import { SelectGroup } from "@radix-ui/react-select";
 import Link from "next/link";
 import { useProgress } from "react-transition-progress";
 import { Button } from "./ui/button";
-import InfoTooltip from "./InfoTooltip";
-import { PostHogEvent, TAICredits } from "@/utils/types";
+import { PostHogEvent } from "@/utils/types";
 import useSWR from "swr";
-import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import posthog from "posthog-js";
 
 const fetchCompanyJobs = async (companyId: string) => {
@@ -49,11 +47,6 @@ export default function FindSuitableJobs({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const startProgress = useProgress();
-  const { data } = useSWR(PROFILE_API_KEY, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    staleTime: 5 * 60 * 1000,
-  });
   const shouldFetch = currentPage === "profiles" && !!companyId;
   const { data: jobPostings } = useSWR(
     shouldFetch ? `company-jobs-${companyId}` : null,
@@ -140,25 +133,6 @@ export default function FindSuitableJobs({
             </SelectContent>
           </SelectGroup>
         </Select>
-
-        <InfoTooltip
-          content={
-            <p>
-              <Sparkle className="h-3 w-3 inline-block mr-1" />
-              {`AI Smart Search uses ${TAICredits.AI_SEARCH_ASK_AI_RESUME} AI credits per use. ${
-                data && data.profile
-                  ? `${data.profile.ai_credits} AI Credits available.`
-                  : ""
-              }`}{" "}
-              <Link
-                href={"/dashboard/buy-credits"}
-                className="font-medium underline underline-offset-4"
-              >
-                Recharge Credits
-              </Link>
-            </p>
-          }
-        />
       </div>
     );
   }
@@ -175,25 +149,6 @@ export default function FindSuitableJobs({
           {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           <Search className="w-4 h-4" /> Find Suitable Companies
         </Button>
-
-        <InfoTooltip
-          content={
-            <p>
-              <Sparkle className="h-3 w-3 inline-block mr-1" />
-              {`AI Smart Search uses ${TAICredits.AI_SEARCH_ASK_AI_RESUME} AI credits per use. ${
-                data && data.profile
-                  ? `${data.profile.ai_credits} AI Credits available.`
-                  : ""
-              }`}{" "}
-              <Link
-                href={"/dashboard/buy-credits"}
-                className="font-medium underline underline-offset-4"
-              >
-                Recharge Credits
-              </Link>
-            </p>
-          }
-        />
       </div>
     );
   }
@@ -213,25 +168,6 @@ export default function FindSuitableJobs({
         )}
         AI Smart Search
       </Button>
-
-      <InfoTooltip
-        content={
-          <p>
-            <Sparkle className="h-3 w-3 inline-block mr-1" />
-            {`AI Smart Search uses ${TAICredits.AI_SEARCH_ASK_AI_RESUME} AI credits per use. ${
-              data && data.profile
-                ? `${data.profile.ai_credits} AI Credits available.`
-                : ""
-            }`}{" "}
-            <Link
-              href={"/dashboard/buy-credits"}
-              className="font-medium underline underline-offset-4"
-            >
-              Recharge Credits
-            </Link>
-          </p>
-        }
-      />
     </div>
   );
 }

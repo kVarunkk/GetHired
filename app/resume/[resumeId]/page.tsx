@@ -4,8 +4,6 @@ import BackButton from "@/components/BackButton";
 import { Badge } from "@/components/ui/badge";
 import OriginalResumeWrapper from "@/components/OriginalResumeWrapper";
 import InfoTooltip from "@/components/InfoTooltip";
-import Link from "next/link";
-import { TAICredits } from "@/utils/types";
 import CreateReviewForResume from "@/components/CreateReviewForResume";
 import { RetryResumeParsing } from "@/components/RetryResumeParsing";
 import ResumeStatusBadge from "@/components/ResumeStatusBadge";
@@ -77,20 +75,6 @@ export default async function ResumeIdPage({
               {isParsingFailed && <RetryResumeParsing resumeId={resumeId} />}
               <div className="flex items-center gap-1">
                 <CreateReviewForResume userId={user.id} resumeId={resumeId} />
-                <InfoTooltip
-                  content={
-                    <p>
-                      This feature uses {TAICredits.AI_SEARCH_ASK_AI_RESUME} AI
-                      credits per use.{" "}
-                      <Link
-                        href={"/dashboard/buy-credits"}
-                        className="font-medium underline underline-offset-4"
-                      >
-                        Recharge Credits
-                      </Link>
-                    </p>
-                  }
-                />
               </div>
             </div>
           )}

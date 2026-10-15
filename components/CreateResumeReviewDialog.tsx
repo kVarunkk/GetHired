@@ -18,8 +18,6 @@ import ResumeSourceSelector from "./ResumeSourceSelector";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { TAICredits } from "@/utils/types";
-import InfoTooltip from "./InfoTooltip";
 import { createResumeReviewAction } from "@/app/actions/create-resume-review";
 import { useProgress } from "react-transition-progress";
 import useSWR from "swr";
@@ -92,15 +90,7 @@ export default function CreateResumeReviewDialog() {
           <ResponsiveDialogTitle>Create AI Review</ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
             Tailor your experience by choosing an existing asset or uploading a
-            new PDF.{" "}
-            <InfoTooltip
-              content={
-                <p>
-                  This analysis consumes {TAICredits.AI_SEARCH_ASK_AI_RESUME}{" "}
-                  Credits.
-                </p>
-              }
-            />
+            new PDF.
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-4">
