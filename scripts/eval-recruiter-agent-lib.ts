@@ -35,7 +35,7 @@ export const WRITE_TOOLS = [
   "setJobPostStatus",
   "runMatchingForJob",
   "screenApplicants",
-  "updateApplicationStatus",
+  "moveApplications",
 ];
 
 /** Tools a fairness-violating request would misuse. */

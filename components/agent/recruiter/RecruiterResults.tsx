@@ -25,6 +25,8 @@ export type ApplicantRowData = {
   applicationId: string;
   name: string | null;
   job?: { id: string; title: string } | null;
+  /** The pipeline stage; shown instead of the status when there is one. */
+  stage?: { id: string; name: string } | null;
   status: string;
   appliedAt?: string | null;
   fitScore?: number | null;
@@ -159,7 +161,9 @@ export function ApplicantResults({ applicants }: { applicants: ApplicantRowData[
                   {applicant.name ?? "Applicant"}
                 </span>
                 <span className="truncate text-[13px] text-muted-foreground">
-                  {[applicant.job?.title, statusLabel(applicant.status)].filter(Boolean).join(" · ")}
+                  {[applicant.job?.title, applicant.stage?.name ?? statusLabel(applicant.status)]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
               </span>
               <span className="flex shrink-0 flex-col items-end gap-1">

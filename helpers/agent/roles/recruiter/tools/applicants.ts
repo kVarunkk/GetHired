@@ -2,12 +2,10 @@ import { tool } from "ai";
 import { z } from "zod";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { scrubPII } from "@/helpers/ai/fairness";
-import { updateApplicationStatus } from "@/helpers/applications/update-application-status";
 import { SCREENING_VIEW_COLUMNS, toScreeningView } from "@/helpers/matching/screening-view";
 import type { TResumeRowContent } from "@/utils/types";
 import { Constants } from "@/utils/types/database.types";
 import { AGENT_LIST_DEFAULT_LIMIT } from "@/helpers/agent/config";
-import { RA_MAX_BULK_APPLICATIONS } from "../config";
 import {
   AGENT_CANDIDATE_COLUMNS,
   applicationUrl,
@@ -21,7 +19,6 @@ import {
 } from "./shared";
 
 const NOT_FOUND = { error: "Application not found." } as const;
-const JOB_NOT_FOUND = { error: "Job post not found." } as const;
 
 const APPLICATION_STATUSES = Constants.public.Enums.application_status;
 const RECOMMENDATIONS = ["strong_yes", "yes", "maybe", "no"] as const;
@@ -38,16 +35,17 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
   return {
     listApplicants: tool({
       description:
-        "List applications to the company's jobs: who applied, to which job, their status, and their AI screening fit score (0–100) and recommendation when screened. Filter by job, status, minimum fit score or recommendation; sort by most recent or best fit.",
+        "List applications to the company's jobs: who applied, to which job, their pipeline stage and status, and their AI screening fit score (0–100) and recommendation when screened. Filter by job, stage, status, minimum fit score or recommendation; sort by most recent or best fit.",
       inputSchema: z.object({
         jobPostId: uuidInput("job post").optional(),
+        stageId: uuidInput("pipeline stage").optional(),
         status: z.enum(APPLICATION_STATUSES).optional(),
         minFitScore: z.number().int().min(0).max(100).optional(),
         recommendation: z.enum(RECOMMENDATIONS).optional(),
         sort: z.enum(["recent", "fit"]).optional().describe("Default: recent."),
         limit: limitInput,
       }),
-      execute: ({ jobPostId, status, minFitScore, recommendation, sort, limit }) =>
+      execute: ({ jobPostId, stageId, status, minFitScore, recommendation, sort, limit }) =>
         withToolErrors(ctx, "listApplicants", async () => {
           const byFit = sort === "fit" || minFitScore !== undefined || recommendation !== undefined;
           const max = limit ?? AGENT_LIST_DEFAULT_LIMIT;
@@ -55,10 +53,11 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
           let query = supabase
             .from("applications")
             .select(
-              `id, status, created_at, applicant_user_id, job_postings!inner(id, title, company_id), user_info(${AGENT_CANDIDATE_COLUMNS}), application_screenings(status, fit_score, recommendation)`,
+              `id, status, created_at, applicant_user_id, job_postings!inner(id, title, company_id), pipeline_stages(id, name), user_info(${AGENT_CANDIDATE_COLUMNS}), application_screenings(status, fit_score, recommendation)`,
             )
             .eq("job_postings.company_id", company.id);
           if (jobPostId) query = query.eq("job_post_id", jobPostId);
+          if (stageId) query = query.eq("stage_id", stageId);
           if (status) query = query.eq("status", status);
           const { data, error } = await query
             .order("created_at", { ascending: false })
@@ -76,6 +75,7 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
               roles: (candidate?.desired_roles ?? []).slice(0, 3),
               experienceYears: candidate?.experience_years ?? null,
               job: { id: row.job_postings.id, title: row.job_postings.title },
+              stage: row.pipeline_stages ? { id: row.pipeline_stages.id, name: row.pipeline_stages.name } : null,
               status: row.status,
               appliedAt: row.created_at,
               screening: screening?.status ?? "not_screened",
@@ -104,7 +104,7 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
           const { data: application, error } = await supabase
             .from("applications")
             .select(
-              `id, status, created_at, answers, resume_id, applicant_user_id, job_postings!inner(id, title, company_id, questions), user_info(${AGENT_CANDIDATE_COLUMNS})`,
+              `id, status, created_at, answers, resume_id, applicant_user_id, job_postings!inner(id, title, company_id, questions), pipeline_stages(id, name), user_info(${AGENT_CANDIDATE_COLUMNS})`,
             )
             .eq("id", applicationId)
             .eq("job_postings.company_id", company.id)
@@ -145,6 +145,9 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
 
           return {
             applicationId: application.id,
+            stage: application.pipeline_stages
+              ? { id: application.pipeline_stages.id, name: application.pipeline_stages.name }
+              : null,
             status: application.status,
             appliedAt: application.created_at,
             job: { id: application.job_postings.id, title: application.job_postings.title },
@@ -165,57 +168,6 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
               : null,
             url: applicationUrl(application.id),
           };
-        }),
-    }),
-
-    updateApplicationStatus: tool({
-      description: `Change the status of up to ${RA_MAX_BULK_APPLICATIONS} applications to the company's jobs. With notify, each applicant gets the standard status email.`,
-      inputSchema: z.object({
-        applicationIds: z.array(uuidInput("application")).min(1).max(RA_MAX_BULK_APPLICATIONS),
-        status: z.enum(APPLICATION_STATUSES),
-        notify: z.boolean().describe("Email each applicant about the change."),
-      }),
-      execute: ({ applicationIds, status, notify }) =>
-        withToolErrors(ctx, "updateApplicationStatus", async () => {
-          const updated: string[] = [];
-          const failed: { applicationId: string; error: string }[] = [];
-          for (const applicationId of new Set(applicationIds)) {
-            const result = await updateApplicationStatus(ctx, { applicationId, status, notify });
-            if (result.ok) updated.push(applicationId);
-            else failed.push({ applicationId, error: result.error });
-          }
-          return { status, updated, failed, emailed: notify };
-        }),
-    }),
-
-    getHiringFunnel: tool({
-      description:
-        "Count applications by status, for one of the company's jobs or across all of them.",
-      inputSchema: z.object({ jobPostId: uuidInput("job post").optional() }),
-      execute: ({ jobPostId }) =>
-        withToolErrors(ctx, "getHiringFunnel", async () => {
-          if (jobPostId) {
-            const { data: job, error } = await supabase
-              .from("job_postings")
-              .select("id")
-              .eq("id", jobPostId)
-              .eq("company_id", company.id)
-              .maybeSingle();
-            if (error) throw error;
-            if (!job) return JOB_NOT_FOUND;
-          }
-
-          let query = supabase
-            .from("applications")
-            .select("status, job_postings!inner(company_id)")
-            .eq("job_postings.company_id", company.id);
-          if (jobPostId) query = query.eq("job_post_id", jobPostId);
-          const { data, error } = await query;
-          if (error) throw error;
-
-          const byStatus: Record<string, number> = {};
-          for (const { status } of data ?? []) byStatus[status] = (byStatus[status] ?? 0) + 1;
-          return { ...(jobPostId ? { jobPostId } : {}), total: (data ?? []).length, byStatus };
         }),
     }),
   };

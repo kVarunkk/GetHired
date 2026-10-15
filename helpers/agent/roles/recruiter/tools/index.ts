@@ -4,13 +4,14 @@ import { createCompanyTools } from "./company";
 import { createJobTools } from "./jobs";
 import { createMatchingTools } from "./matching";
 import { createRecruiterMemoryTools } from "./memory";
+import { createPipelineTools } from "./pipeline";
 import type { RecruiterToolContext } from "./shared";
 
 export type { RecruiterToolContext } from "./shared";
 
 /**
  * The recruiter agent's tools, bound to the session's company (RA spec §4.3).
- * Phases 4–6 (pipeline, outreach, screening interviews) add theirs here.
+ * Phases 5–6 (outreach, screening interviews) add theirs here.
  */
 export function createRecruiterTools(ctx: RecruiterToolContext) {
   return {
@@ -19,6 +20,7 @@ export function createRecruiterTools(ctx: RecruiterToolContext) {
     ...createCandidateTools(ctx),
     ...createApplicantTools(ctx),
     ...createMatchingTools(ctx),
+    ...createPipelineTools(ctx),
     ...createRecruiterMemoryTools(ctx),
   };
 }

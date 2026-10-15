@@ -2,12 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApplicantTools } from "./applicants";
 import { createMatchingTools } from "./matching";
 import { createRecruiterMemoryTools } from "./memory";
-import { updateApplicationStatus } from "@/helpers/applications/update-application-status";
 import { explainCandidateMatch } from "@/helpers/matching/explain-candidate-match";
 import { queueJobScreenings } from "@/helpers/matching/queue-screenings";
 import { upsertMemory } from "@/helpers/agent/memory";
 import { EntitlementError } from "@/helpers/billing/errors";
-import { execTool, inputJsonSchema, recruiterToolContext, validateInput } from "@/test/utils/tools";
+import { execTool, inputJsonSchema, recruiterToolContext } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
 import { APPLICATION, CANDIDATE_PROFILE, INJECTION_LINE, JOB_POST, PII, RESUME_CONTENT } from "@/test/utils/matching";
@@ -15,9 +14,6 @@ import { APPLICATION, CANDIDATE_PROFILE, INJECTION_LINE, JOB_POST, PII, RESUME_C
 vi.mock("server-only", () => ({}));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
-}));
-vi.mock("@/helpers/applications/update-application-status", () => ({
-  updateApplicationStatus: vi.fn(),
 }));
 vi.mock("@/helpers/matching/explain-candidate-match", () => ({ explainCandidateMatch: vi.fn() }));
 vi.mock("@/helpers/matching/queue-screenings", () => ({ queueJobScreenings: vi.fn() }));
@@ -51,12 +47,15 @@ const PAYLOAD = {
   suggestedTier: null,
 };
 
+const STAGE = { id: "90000000-0000-4000-8000-000000000001", name: "Screening" };
+
 const row = (id: string, created_at: string, screening: unknown) => ({
   id,
   status: "submitted",
   created_at,
   applicant_user_id: CANDIDATE_PROFILE.user_id,
   job_postings: { id: JOB_POST.id, title: JOB_POST.title, company_id: COMPANY_A.id },
+  pipeline_stages: STAGE,
   user_info: CANDIDATE_PROFILE,
   application_screenings: screening,
 });
@@ -79,14 +78,6 @@ describe("applicant tool schemas", () => {
       expect(JSON.stringify(await inputJsonSchema(tool)), name).not.toMatch(/company_?id|user_?id/i);
     }
   });
-
-  it("changes the status of 1 to 20 applications (RA-SEC-006)", async () => {
-    const ids = (n: number) => Array.from({ length: n }, () => APP_ID);
-    const input = (n: number) => ({ applicationIds: ids(n), status: "reviewed", notify: true });
-    expect((await validateInput(tools.updateApplicationStatus, input(0))).success).toBe(false);
-    expect((await validateInput(tools.updateApplicationStatus, input(21))).success).toBe(false);
-    expect((await validateInput(tools.updateApplicationStatus, input(20))).success).toBe(true);
-  });
 });
 
 describe("listApplicants tool", () => {
@@ -96,9 +87,14 @@ describe("listApplicants tool", () => {
       error: null,
     });
 
-    const result = await execTool(tools.listApplicants, { jobPostId: JOB_POST.id, status: "submitted" });
+    const result = await execTool(tools.listApplicants, {
+      jobPostId: JOB_POST.id,
+      stageId: STAGE.id,
+      status: "submitted",
+    });
 
     const chain = supabase.callsFor("applications")[0].chain;
+    expect(chain).toContainEqual({ method: "eq", args: ["stage_id", STAGE.id] });
     expect(chain).toContainEqual({ method: "eq", args: ["job_postings.company_id", COMPANY_A.id] });
     expect(chain).toContainEqual({ method: "eq", args: ["job_post_id", JOB_POST.id] });
     expect(chain).toContainEqual({ method: "eq", args: ["status", "submitted"] });
@@ -111,6 +107,7 @@ describe("listApplicants tool", () => {
           roles: ["Frontend Engineer", "UI Engineer"],
           experienceYears: 5,
           job: { id: JOB_POST.id, title: JOB_POST.title },
+          stage: STAGE,
           status: "submitted",
           appliedAt: "2026-10-02",
           screening: "completed",
@@ -214,58 +211,6 @@ describe("getApplication tool", () => {
 
     expect(await execTool(tools.getApplication, { applicationId: OTHER_APP })).toEqual({
       error: "Application not found.",
-    });
-  });
-});
-
-describe("updateApplicationStatus tool", () => {
-  it("changes each application through the shared helper and reports per id", async () => {
-    vi.mocked(updateApplicationStatus)
-      .mockResolvedValueOnce({ ok: true, status: "reviewed" })
-      .mockResolvedValueOnce({ ok: false, error: "Application not found." });
-
-    const result = await execTool(tools.updateApplicationStatus, {
-      applicationIds: [APP_ID, OTHER_APP, APP_ID],
-      status: "reviewed",
-      notify: false,
-    });
-
-    expect(updateApplicationStatus).toHaveBeenCalledTimes(2);
-    const [deps, params] = vi.mocked(updateApplicationStatus).mock.calls[0];
-    expect(deps.company.id).toBe(COMPANY_A.id);
-    expect(deps.user.id).toBe(COMPANY_A.user.id);
-    expect(params).toEqual({ applicationId: APP_ID, status: "reviewed", notify: false });
-    expect(result).toEqual({
-      status: "reviewed",
-      updated: [APP_ID],
-      failed: [{ applicationId: OTHER_APP, error: "Application not found." }],
-      emailed: false,
-    });
-  });
-});
-
-describe("getHiringFunnel tool", () => {
-  it("counts the company's applications by status", async () => {
-    supabase.queue("applications", {
-      data: [{ status: "submitted" }, { status: "submitted" }, { status: "selected" }],
-      error: null,
-    });
-
-    expect(await execTool(tools.getHiringFunnel, {})).toEqual({
-      total: 3,
-      byStatus: { submitted: 2, selected: 1 },
-    });
-    expect(supabase.callsFor("applications")[0].chain).toContainEqual({
-      method: "eq",
-      args: ["job_postings.company_id", COMPANY_A.id],
-    });
-  });
-
-  it("checks the job belongs to the company", async () => {
-    supabase.queue("job_postings", { data: null, error: null });
-
-    expect(await execTool(tools.getHiringFunnel, { jobPostId: JOB_POST.id })).toEqual({
-      error: "Job post not found.",
     });
   });
 });

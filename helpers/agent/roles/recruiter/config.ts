@@ -7,8 +7,17 @@ export const RA_DAILY_MESSAGE_CAP = 40;
 export const RA_PROMPT_JOBS = 15;
 /** Approved email-sending calls per turn; more are denied (RA-SEC-006). */
 export const RA_MAX_EMAIL_ACTIONS_PER_TURN = 3;
-/** Applications one status change can cover (RA-SEC-006). */
+/** Applications one stage move can cover (RA-SEC-006). */
 export const RA_MAX_BULK_APPLICATIONS = 20;
+/** A note the agent writes (RA spec §4.3). */
+export const RA_MAX_NOTE_CHARS = 2000;
+/** Notes listNotes returns, newest first, and the length each is trimmed to. */
+export const RA_NOTES_LISTED = 20;
+export const RA_NOTE_EXCERPT_MAX_CHARS = 1000;
+/** Talent lists addToTalentList may create up to. */
+export const RA_MAX_TALENT_LISTS = 20;
+/** Jobs listed in the company-wide funnel. */
+export const RA_FUNNEL_MAX_JOBS = 15;
 /** Candidates one comparison can cover. */
 export const RA_MAX_COMPARE = 5;
 /** Job descriptions returned by getJobPost are trimmed to this length. */

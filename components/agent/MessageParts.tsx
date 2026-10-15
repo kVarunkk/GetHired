@@ -15,8 +15,9 @@ import {
   type ApplicantRowData,
   CandidateResults,
   type CandidateRowData,
-  statusLabel,
 } from "./recruiter/RecruiterResults";
+import { FunnelResult, type FunnelResultData } from "./recruiter/FunnelResult";
+import { MoveApprovalDetails } from "./recruiter/MoveApprovalCard";
 
 export { isInAppHref };
 
@@ -68,7 +69,12 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   listApplicants: { running: "Loading applicants…", done: "Loaded applicants", action: "load applicants" },
   getApplication: { running: "Reading the application…", done: "Read the application", action: "read the application" },
   screenApplicants: { running: "Queueing screenings…", done: "Queued screenings", action: "screen applicants" },
-  getHiringFunnel: { running: "Counting applications…", done: "Counted applications", action: "count applications" },
+  listStages: { running: "Loading your pipeline…", done: "Loaded your pipeline", action: "load your pipeline" },
+  moveApplications: { running: "Moving applications…", done: "Moved applications", action: "move applications" },
+  addNote: { running: "Saving the note…", done: "Saved the note", action: "add a note" },
+  listNotes: { running: "Reading notes…", done: "Read the notes", action: "read the notes" },
+  addToTalentList: { running: "Adding to the list…", done: "Added to the list", action: "add the candidate to a list" },
+  getHiringFunnel: { running: "Loading the funnel…", done: "Loaded the hiring funnel", action: "load the hiring funnel" },
 };
 
 const labelsFor = (name: string) =>
@@ -365,10 +371,11 @@ function approvalTitle(name: string, input: unknown) {
       return "Start matching candidates to this job? It runs in the background, and you'll get an email when it's done.";
     case "screenApplicants":
       return "Screen this job's unscreened applicants? Each new screening uses one from your plan.";
-    case "updateApplicationStatus":
+    case "moveApplications":
       if (Array.isArray(values.applicationIds)) {
         const count = values.applicationIds.length;
-        return `Move ${count} ${count === 1 ? "application" : "applications"} to ${statusLabel(String(values.status))}?`;
+        const what = `${count} ${count === 1 ? "application" : "applications"}`;
+        return values.email ? `Move ${what} and email the candidates?` : `Move ${what}?`;
       }
       return `Allow the assistant to ${labelsFor(name).action}?`;
     default:
@@ -377,11 +384,8 @@ function approvalTitle(name: string, input: unknown) {
 }
 
 function approvalDetails(name: string, input: unknown) {
-  const values = (input ?? {}) as Record<string, unknown>;
-  if (name === "updateApplicationStatus" && Array.isArray(values.applicationIds)) {
-    return [["Email the applicants", values.notify ? "Yes" : "No"] as const];
-  }
-  if (name === "setJobPostStatus") return [];
+  // The move's details come from the server preview (MoveApprovalDetails).
+  if (name === "setJobPostStatus" || name === "moveApplications") return [];
   return describeInput(input);
 }
 
@@ -403,6 +407,7 @@ function ApprovalCard({
     <ActionCard>
       <p className="text-sm font-medium text-foreground">{title}</p>
       {reason && <p className="text-xs text-muted-foreground">{reason}</p>}
+      {name === "moveApplications" && <MoveApprovalDetails input={part.input} />}
       {(details.length > 0 || isOnboarding) && (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
           {details.map(([key, value]) => (
@@ -518,6 +523,15 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
     );
   }
 
+  // Before the generic lists: the company funnel also has `jobs`.
+  if (name === "getHiringFunnel" && Array.isArray(result.stages)) {
+    return (
+      <Step tone="done" label={labelsFor(name).done}>
+        <FunnelResult funnel={result as unknown as FunnelResultData} />
+      </Step>
+    );
+  }
+
   if (Array.isArray(result.jobs)) {
     return (
       <Step tone="done" label={labelsFor(name).done}>
@@ -570,6 +584,38 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
             {what}{" "}
             <Link {...NEW_TAB} href={result.url} className={inlineLink}>
               Open the job post
+            </Link>
+          </>
+        }
+      />
+    );
+  }
+
+  if (name === "moveApplications" && typeof result.moved === "number") {
+    const stage = (result.stage as { name?: string } | undefined)?.name ?? "the stage";
+    const moved = result.moved;
+    const emailed = typeof result.emailed === "number" ? result.emailed : 0;
+    const skipped = Array.isArray(result.skipped) ? result.skipped.length : 0;
+    const parts = [
+      moved === 0
+        ? `No applications moved to ${stage}`
+        : `Moved ${moved} ${moved === 1 ? "application" : "applications"} to ${stage}`,
+      emailed > 0 && `emailed ${emailed}`,
+      skipped > 0 && `${skipped} skipped`,
+    ].filter(Boolean);
+    return <Step tone="done" label={parts.join(", ")} />;
+  }
+
+  if (name === "addToTalentList" && typeof result.url === "string" && isInAppHref(result.url)) {
+    const list = (result.list as { name?: string } | undefined)?.name ?? "the list";
+    return (
+      <Step
+        tone="done"
+        label={
+          <>
+            {result.added ? `Added to “${list}”.` : `Already in “${list}”.`}{" "}
+            <Link {...NEW_TAB} href={result.url} className={inlineLink}>
+              Open the list
             </Link>
           </>
         }

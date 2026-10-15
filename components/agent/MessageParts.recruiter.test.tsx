@@ -3,8 +3,10 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UIMessage } from "ai";
 import MessageParts from "./MessageParts";
+import { previewAgentMoveAction } from "@/app/actions/pipeline/preview-agent-move";
 
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
+vi.mock("@/app/actions/pipeline/preview-agent-move", () => ({ previewAgentMoveAction: vi.fn() }));
 
 const assistant = (parts: unknown[]): UIMessage =>
   ({ id: "a1", role: "assistant", parts }) as UIMessage;
@@ -151,6 +153,63 @@ describe("MessageParts: recruiter results (RA-TEST-009)", () => {
     expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/company/billing");
   });
 
+  it("renders the hiring funnel as a stage strip, with who's waiting in Applied", () => {
+    renderParts(
+      assistant([
+        output("getHiringFunnel", {
+          stages: [
+            { name: "Applied", kind: "applied", count: 4 },
+            { name: "Interview", kind: "interview", count: 2 },
+          ],
+          jobs: [],
+          needsAttention: [
+            { applicationId: "e1", name: "Ada", jobTitle: "Backend Engineer", daysInApplied: 5, url: "/company/applicants/e1" },
+          ],
+        }),
+      ]),
+    );
+
+    const strip = screen.getByRole("list", { name: "Pipeline funnel" });
+    expect(within(strip).getByText("Applied")).toBeInTheDocument();
+    expect(within(strip).getByText("4")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ada" })).toHaveAttribute("href", "/company/applicants/e1");
+    expect(screen.getByText("Backend Engineer · 5d")).toBeInTheDocument();
+  });
+
+  it("summarises a finished move", () => {
+    renderParts(
+      assistant([
+        output("moveApplications", {
+          stage: { id: "s1", name: "Interview" },
+          moved: 3,
+          emailed: 2,
+          skipped: [{ id: "e9", reason: "not_found" }],
+        }),
+      ]),
+    );
+
+    expect(screen.getByText("Moved 3 applications to Interview, emailed 2, 1 skipped")).toBeInTheDocument();
+  });
+
+  it("links to the talent list a candidate was added to", () => {
+    renderParts(
+      assistant([
+        output("addToTalentList", {
+          list: { id: "l1", name: "Backend bench" },
+          created: false,
+          added: true,
+          url: "/company/profiles?tab=backend-bench",
+        }),
+      ]),
+    );
+
+    expect(screen.getByText(/Added to “Backend bench”/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open the list" })).toHaveAttribute(
+      "href",
+      "/company/profiles?tab=backend-bench",
+    );
+  });
+
   it("explains when matching hasn't run for a job", () => {
     renderParts(assistant([output("findMatchesForJob", { status: "not_run", jobPostId: "b1" })]));
 
@@ -167,23 +226,55 @@ describe("MessageParts: recruiter approvals (RA-REQ-005)", () => {
     approval: { id: "ap1" },
   });
 
-  it("lists a status change's count, status and whether applicants get an email", async () => {
-    const { onApprove } = renderParts(
-      assistant([
-        approval("updateApplicationStatus", {
-          applicationIds: ["e1", "e2", "e3"],
-          status: "rejected",
-          notify: true,
-        }),
-      ]),
-    );
+  const MOVE_INPUT = {
+    applicationIds: ["e1", "e2", "e3", "e4", "e5", "e6", "e7"],
+    stageId: "s-rej",
+    email: { templateId: "t1" },
+  };
+  const moving = (n: number) => ({
+    id: `e${n}`,
+    name: `Person ${n}`,
+    jobTitle: "Backend Engineer",
+    moves: n !== 7,
+    emailed: n !== 7,
+  });
 
-    expect(screen.getByText("Move 3 applications to Rejected?")).toBeInTheDocument();
-    expect(screen.getByText("Email the applicants")).toBeInTheDocument();
-    expect(screen.queryByText(/e1/)).not.toBeInTheDocument();
+  it("shows a move's stage, names, skips and the exact email before approval (RA-REQ-005)", async () => {
+    vi.mocked(previewAgentMoveAction).mockResolvedValue({
+      ok: true,
+      stage: { id: "s-rej", name: "Rejected", kind: "rejected" },
+      applications: [1, 2, 3, 4, 5, 6, 7].map(moving),
+      notFound: 1,
+      email: { subject: "Your application to Backend Engineer", body: "Hi Person,\n\nThank you.", recipients: 6 },
+    });
+    const { onApprove } = renderParts(assistant([approval("moveApplications", MOVE_INPUT)]));
+
+    expect(screen.getByText("Move 7 applications and email the candidates?")).toBeInTheDocument();
+    // The stage, and the status candidates see.
+    expect(await screen.findAllByText("Rejected")).toHaveLength(2);
+    expect(previewAgentMoveAction).toHaveBeenCalledWith(MOVE_INPUT);
+    expect(screen.getByText("Person 5")).toBeInTheDocument();
+    expect(screen.queryByText("Person 6")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "and 1 more" }));
+    expect(screen.getByText("Person 6")).toBeInTheDocument();
+    expect(screen.getByText("1 already in this stage, 1 not found")).toBeInTheDocument();
+    expect(screen.getByText("6 candidates")).toBeInTheDocument();
+    expect(screen.getByText("Your application to Backend Engineer")).toBeInTheDocument();
+    expect(screen.getByText(/Thank you./)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));
     expect(onApprove).toHaveBeenCalledWith({ id: "ap1", approved: true });
+  });
+
+  it("warns when the move would be refused", async () => {
+    vi.mocked(previewAgentMoveAction).mockResolvedValue({
+      ok: false,
+      error: "Add a scheduling link in Settings, or remove {{scheduling_link}}.",
+    });
+    renderParts(assistant([approval("moveApplications", { applicationIds: ["e1"], stageId: "s1" })]));
+
+    expect(screen.getByText("Move 1 application?")).toBeInTheDocument();
+    expect(await screen.findByText(/won.t go through: Add a scheduling link/)).toBeInTheDocument();
   });
 
   it("shows a job post draft's fields with readable labels", () => {
