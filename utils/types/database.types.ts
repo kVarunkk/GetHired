@@ -355,6 +355,91 @@ export type Database = {
         }
         Relationships: []
       }
+      application_screenings: {
+        Row: {
+          application_id: string
+          attempts: number
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          error_code: string | null
+          fit_score: number | null
+          id: string
+          job_post_id: string
+          job_snapshot_hash: string | null
+          model: string | null
+          previous_result: Json | null
+          recommendation:
+            | Database["public"]["Enums"]["screening_recommendation"]
+            | null
+          result: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          attempts?: number
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          error_code?: string | null
+          fit_score?: number | null
+          id?: string
+          job_post_id: string
+          job_snapshot_hash?: string | null
+          model?: string | null
+          previous_result?: Json | null
+          recommendation?:
+            | Database["public"]["Enums"]["screening_recommendation"]
+            | null
+          result?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          attempts?: number
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error_code?: string | null
+          fit_score?: number | null
+          id?: string
+          job_post_id?: string
+          job_snapshot_hash?: string | null
+          model?: string | null
+          previous_result?: Json | null
+          recommendation?:
+            | Database["public"]["Enums"]["screening_recommendation"]
+            | null
+          result?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_screenings_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_screenings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_screenings_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           all_jobs_id: string | null
@@ -2420,6 +2505,7 @@ export type Database = {
       job_posting_status: "active" | "inactive"
       job_type_enum: "Fulltime" | "Intern" | "Contract"
       payment_status: "complete" | "failed" | "pending" | "cancelled"
+      screening_recommendation: "strong_yes" | "yes" | "maybe" | "no"
       visa_job_postings: "Will Sponsor" | "Not Required" | "Required"
     }
     CompositeTypes: {
@@ -2568,6 +2654,7 @@ export const Constants = {
       job_posting_status: ["active", "inactive"],
       job_type_enum: ["Fulltime", "Intern", "Contract"],
       payment_status: ["complete", "failed", "pending", "cancelled"],
+      screening_recommendation: ["strong_yes", "yes", "maybe", "no"],
       visa_job_postings: ["Will Sponsor", "Not Required", "Required"],
     },
   },
