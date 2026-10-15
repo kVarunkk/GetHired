@@ -87,6 +87,9 @@ export const buildQuery = async ({
 
     let query;
     let selectString;
+    // The total of this query, with the tab and every filter applied, on the
+    // first page only (later pages keep the first page's total).
+    const countOption = cursor ? undefined : { count: "exact" as const };
 
     if (isFavoriteTabActive) {
       if (!user) {
@@ -105,7 +108,7 @@ export const buildQuery = async ({
     `;
       query = supabase
         .from("all_jobs")
-        .select(selectString)
+        .select(selectString, countOption)
         .eq("user_favorites.user_id", user.id);
     } else if (isAppliedJobsTabActive) {
       if (!user) {
@@ -123,7 +126,7 @@ export const buildQuery = async ({
     `;
       query = supabase
         .from("all_jobs")
-        .select(selectString)
+        .select(selectString, countOption)
         .eq("applications.applicant_user_id", user.id);
     } else if (relevanceSearchType === "standard") {
       if (!user) {
@@ -142,7 +145,7 @@ export const buildQuery = async ({
     `;
       query = supabase
         .from("all_jobs")
-        .select(selectString)
+        .select(selectString, countOption)
         .eq("user_relevant_jobs.user_id", user.id);
     } else {
       selectString = `
@@ -151,7 +154,7 @@ export const buildQuery = async ({
     `;
       query = supabase
         .from("all_jobs")
-        .select(selectString)
+        .select(selectString, countOption)
         .eq("status", "active");
     }
 
@@ -274,9 +277,10 @@ export const buildQuery = async ({
       query = query.limit(limit);
     }
 
-    const { data, error } = (await query) as unknown as {
+    const { data, error, count } = (await query) as unknown as {
       data: AllJobWithRelations[] | null;
       error: PostgrestError | null;
+      count: number | null;
     };
 
     if (relevanceSearchType === "standard" && data) {
@@ -287,14 +291,7 @@ export const buildQuery = async ({
       });
     }
 
-    let totalCount = 0;
-    if (!cursor) {
-      const { count } = await supabase
-        .from("all_jobs")
-        .select("id", { count: "exact", head: true });
-
-      totalCount = count || 0;
-    }
+    const totalCount = count ?? 0;
 
     let nextCursor = null;
     if (data && data.length === limit && !relevanceSearchType) {

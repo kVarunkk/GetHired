@@ -2,12 +2,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "@/lib/supabase/server";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { expandLocations } from "@/helpers/locations/aliases";
-import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import {
+  createSupabaseMock,
+  type SupabaseMock,
+} from "@/test/utils/supabase-mock";
 import { buildQuery } from "./filterQueryBuilder";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
-vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
+vi.mock("@/lib/supabase/service-role", () => ({
+  createServiceRoleClient: vi.fn(),
+}));
+vi.mock("@/lib/supabase/get-user-from-request", () => ({
+  getUserFromRequest: vi.fn(),
+}));
 vi.mock("@/helpers/locations/aliases", () => ({ expandLocations: vi.fn() }));
 
 const BASE_ARGS = {
@@ -50,7 +57,11 @@ beforeEach(() => {
 
 describe("buildQuery: location filter", () => {
   it("filters on the expanded alias group, so every spelling of a place matches", async () => {
-    vi.mocked(expandLocations).mockResolvedValue(["bangalore", "bengaluru", "remote"]);
+    vi.mocked(expandLocations).mockResolvedValue([
+      "bangalore",
+      "bengaluru",
+      "remote",
+    ]);
 
     await buildQuery({ ...BASE_ARGS, location: "Bengaluru|Remote" });
 
@@ -66,5 +77,33 @@ describe("buildQuery: location filter", () => {
 
     expect(expandLocations).not.toHaveBeenCalled();
     expect(overlapsCall()).toBeUndefined();
+  });
+});
+
+describe("buildQuery: total", () => {
+  const selectOf = () =>
+    supabase
+      .callsFor("all_jobs")[0]
+      .chain.find((step) => step.method === "select")!;
+
+  it("counts the filtered query itself, not every job", async () => {
+    supabase = createSupabaseMock();
+    supabase.queue("all_jobs", { data: [], error: null, count: 12 });
+    vi.mocked(createClient).mockResolvedValue(supabase.client);
+
+    const result = await buildQuery({ ...BASE_ARGS, jobType: "Fulltime" });
+
+    expect(supabase.callsFor("all_jobs")).toHaveLength(1);
+    expect(selectOf().args[1]).toEqual({ count: "exact" });
+    expect(result.count).toBe(12);
+  });
+
+  it("doesn't count again on later pages", async () => {
+    await buildQuery({
+      ...BASE_ARGS,
+      cursor: Buffer.from("2026-10-01_j1").toString("base64"),
+    });
+
+    expect(selectOf().args[1]).toBeUndefined();
   });
 });
