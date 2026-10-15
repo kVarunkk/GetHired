@@ -149,6 +149,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          role: string
           summary: string | null
           summary_upto_message_id: string | null
           title: string
@@ -158,6 +159,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          role?: string
           summary?: string | null
           summary_upto_message_id?: string | null
           title?: string
@@ -167,6 +169,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          role?: string
           summary?: string | null
           summary_upto_message_id?: string | null
           title?: string
@@ -2314,6 +2317,23 @@ export type Database = {
           job_count: number
           resume_count: number
           user_count: number
+        }[]
+      }
+      get_recruiter_job_summaries: {
+        Args: {
+          p_company_id: string
+          p_limit?: number
+          p_status?: Database["public"]["Enums"]["job_posting_status"]
+        }
+        Returns: {
+          applicants: number
+          created_at: string
+          id: string
+          matching_status: Database["public"]["Enums"]["job_posting_matching_status"]
+          new_24h: number
+          status: Database["public"]["Enums"]["job_posting_status"]
+          title: string
+          updated_at: string
         }[]
       }
       get_unique_companies: {
