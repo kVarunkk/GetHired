@@ -166,6 +166,46 @@ describe("GET /api/worker/application-screening (MT-TEST-004)", () => {
     expect(sendEmailForStatusUpdate).not.toHaveBeenCalled();
   });
 
+  it("writes one screened event for a completed screening (PLT-055)", async () => {
+    queueMessages(message(7));
+    screeningData(screeningRow({ result: screeningResultOf({ fit_score: 61 }) }));
+
+    await run();
+
+    const events = db
+      .callsFor("application_events")
+      .map((c) => c.chain.find((m) => m.method === "insert")!.args[0]);
+    expect(events).toEqual([
+      {
+        company_id: COMPANY_A.id,
+        application_id: APPLICATION.id,
+        candidate_user_id: APPLICATION.applicant_user_id,
+        type: "screened",
+        payload: { fit_score: 82, recommendation: "yes", previous_fit_score: 61 },
+      },
+    ]);
+  });
+
+  it("writes no screened event when the screening fails", async () => {
+    queueMessages(message(7, MATCH_MAX_ATTEMPTS));
+    screeningData(screeningRow({ attempts: MATCH_MAX_ATTEMPTS - 1 }));
+    vi.mocked(screenApplication).mockResolvedValue({ ok: false, errorCode: "model_error" });
+
+    await run();
+
+    expect(db.callsFor("application_events")).toHaveLength(0);
+  });
+
+  it("keeps the completed screening when the event insert fails", async () => {
+    queueMessages(message(7));
+    screeningData();
+    db.queue("application_events", { data: null, error: { message: "boom" } });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(await (await run()).json()).toEqual({ processed: 1, failed: 0 });
+    expect(archived()).toEqual([7]);
+  });
+
   it("uses the application's own resume", async () => {
     const application = { ...APPLICATION, resume_id: "r0000000-0000-4000-8000-000000000001" };
     queueMessages(message(7));

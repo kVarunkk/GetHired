@@ -11,6 +11,7 @@ import {
   getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
+  RowSelectionState,
   SortingState,
 } from "@tanstack/react-table";
 import {
@@ -33,6 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import type { StageOption } from "@/components/pipeline/StagePicker";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
 import MatchScoreBadge from "./matching/MatchScoreBadge";
 import { TApplicationServer } from "@/utils/types/application.types";
@@ -42,14 +45,27 @@ import { isScreeningInProgress, type ScreeningStatus } from "@/helpers/matching/
 import { useEntitlementError } from "@/hooks/useEntitlementError";
 
 interface ApplicantsTableProps {
-  data: TApplicationServer[];
+  data: (TApplicationServer & { stage_id?: string | null })[];
   /** In one job's context: enables "Screen N unscreened". */
   jobPostId?: string;
   /** "fit" sorts by fit score, highest first. */
   defaultSort?: "fit";
+  /**
+   * The pipeline list (PL-TASK-004): the company's active stages. Adds a
+   * selection checkbox per row, a Stage column and a stage filter.
+   */
+  stages?: StageOption[];
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: (selection: RowSelectionState) => void;
 }
 
-type Row = TApplicationServer & { applicantName: string; jobTitle: string };
+type Row = TApplicationServer & {
+  stage_id?: string | null;
+  applicantName: string;
+  jobTitle: string;
+};
+
+const ALL_STAGES = "All stages";
 
 const applicationStatuses = [
   "All Statuses",
@@ -67,7 +83,14 @@ const recommendations = Object.keys(RECOMMENDATION_LABELS) as ScreeningRecommend
 const needsScreening = (status: string | undefined) =>
   status === undefined || status === "stale" || status === "failed" || status === "skipped_quota";
 
-export default function ApplicantsTable({ data, jobPostId, defaultSort }: ApplicantsTableProps) {
+export default function ApplicantsTable({
+  data,
+  jobPostId,
+  defaultSort,
+  stages,
+  rowSelection = {},
+  onRowSelectionChange,
+}: ApplicantsTableProps) {
   const router = useRouter();
   const { handle: handleEntitlement, dialog } = useEntitlementError();
   const [sorting, setSorting] = useState<SortingState>(
@@ -101,8 +124,41 @@ export default function ApplicantsTable({ data, jobPostId, defaultSort }: Applic
     [data],
   );
 
-  const columns: ColumnDef<Row>[] = useMemo(
-    () => [
+  const columns: ColumnDef<Row>[] = useMemo(() => {
+    const stageName = new Map((stages ?? []).map((s) => [s.id, s.name]));
+    const selectColumn: ColumnDef<Row> = {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          aria-label="Select all"
+          checked={
+            table.getIsAllRowsSelected() || (table.getIsSomeRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          aria-label={`Select ${row.original.applicantName || "applicant"}`}
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+        />
+      ),
+      enableSorting: false,
+    };
+    const stageColumn: ColumnDef<Row> = {
+      id: "stage",
+      accessorFn: (row) => row.stage_id ?? undefined,
+      header: "Stage",
+      cell: ({ row }) => (
+        <span className="text-sm whitespace-nowrap">
+          {(row.original.stage_id && stageName.get(row.original.stage_id)) ?? "—"}
+        </span>
+      ),
+      filterFn: "equals",
+    };
+    return [
+      ...(stages ? [selectColumn] : []),
       {
         accessorKey: "applicantName",
         header: ({ column }) => (
@@ -196,6 +252,7 @@ export default function ApplicantsTable({ data, jobPostId, defaultSort }: Applic
         ),
         filterFn: "equals",
       },
+      ...(stages ? [stageColumn] : []),
       {
         accessorKey: "created_at",
         header: ({ column }) => (
@@ -225,9 +282,8 @@ export default function ApplicantsTable({ data, jobPostId, defaultSort }: Applic
           </Link>
         ),
       },
-    ],
-    [],
-  );
+    ];
+  }, [stages]);
 
   const table = useReactTable({
     data: flatData,
@@ -235,6 +291,10 @@ export default function ApplicantsTable({ data, jobPostId, defaultSort }: Applic
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getRowId: (row) => row.id,
+    enableRowSelection: !!stages,
+    onRowSelectionChange: (updater) =>
+      onRowSelectionChange?.(updater instanceof Function ? updater(rowSelection) : updater),
     onSortingChange: (updater) => {
       setSorting((old) =>
         updater instanceof Function ? updater(old) : updater,
@@ -251,6 +311,7 @@ export default function ApplicantsTable({ data, jobPostId, defaultSort }: Applic
       sorting,
       columnFilters,
       columnVisibility: { recommendation: false },
+      rowSelection,
     },
   });
 
@@ -268,6 +329,7 @@ export default function ApplicantsTable({ data, jobPostId, defaultSort }: Applic
     table.getColumn("jobTitle")?.setFilterValue(undefined);
     table.getColumn("status")?.setFilterValue(undefined);
     table.getColumn("recommendation")?.setFilterValue(undefined);
+    table.getColumn("stage")?.setFilterValue(undefined);
   };
 
   const hasFilters = useMemo(() => {
@@ -383,6 +445,29 @@ export default function ApplicantsTable({ data, jobPostId, defaultSort }: Applic
               ))}
             </SelectContent>
           </Select>
+
+          {stages && (
+            <Select
+              onValueChange={(value) =>
+                table
+                  .getColumn("stage")
+                  ?.setFilterValue(value === ALL_STAGES ? undefined : value)
+              }
+              value={(table.getColumn("stage")?.getFilterValue() as string) ?? ALL_STAGES}
+            >
+              <SelectTrigger className="w-[160px]" aria-label="Filter by stage">
+                <SelectValue placeholder="Filter by stage" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_STAGES}>{ALL_STAGES}</SelectItem>
+                {stages.map((stage) => (
+                  <SelectItem key={stage.id} value={stage.id}>
+                    {stage.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {hasFilters && (

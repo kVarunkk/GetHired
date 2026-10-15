@@ -181,6 +181,22 @@ export async function GET(request: NextRequest) {
       .eq("id", screening.id);
     if (saveError) throw new Error(`Save failed: ${saveError.message}`);
 
+    // The re-screen audit trail (pipeline tasks, difference 6). A system event:
+    // no actor. A failed insert doesn't undo the screening.
+    const previousFitScore = (screening.result as { fit_score?: unknown } | null)?.fit_score;
+    const { error: eventError } = await admin.from("application_events").insert({
+      company_id: screening.company_id,
+      application_id: applicationId,
+      candidate_user_id: application.applicant_user_id,
+      type: "screened",
+      payload: {
+        fit_score: result.result.fit_score,
+        recommendation: result.result.recommendation,
+        previous_fit_score: typeof previousFitScore === "number" ? previousFitScore : null,
+      },
+    });
+    if (eventError) console.error("[screening worker] screened event failed", eventError.message);
+
     await archive(msg_id);
     return "done";
   };

@@ -5,6 +5,7 @@ import {
   Headset,
   Info,
   ScanSearch,
+  Settings,
   Sparkle,
   UserIcon,
 } from "lucide-react";
@@ -351,6 +352,13 @@ export const companyNavbarItems: INavItem[] = [
     href: "/company/profiles",
     type: "startswith",
     icon: <UserIcon className="h-4 w-4" />,
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    href: "/company/settings",
+    type: "startswith",
+    icon: <Settings className="h-4 w-4" />,
   },
 ];
 

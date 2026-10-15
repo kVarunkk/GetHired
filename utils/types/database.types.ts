@@ -358,6 +358,57 @@ export type Database = {
         }
         Relationships: []
       }
+      application_events: {
+        Row: {
+          actor_name: string | null
+          actor_user_id: string | null
+          application_id: string | null
+          candidate_user_id: string | null
+          company_id: string
+          created_at: string
+          id: string
+          payload: Json
+          type: string
+        }
+        Insert: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          application_id?: string | null
+          candidate_user_id?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          type: string
+        }
+        Update: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          application_id?: string | null
+          candidate_user_id?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_events_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_screenings: {
         Row: {
           application_id: string
@@ -454,6 +505,9 @@ export type Database = {
           resume_id: string | null
           resume_path: string | null
           resume_url: string | null
+          source: string
+          stage_entered_at: string
+          stage_id: string | null
           status: Database["public"]["Enums"]["application_status"]
           updated_at: string
         }
@@ -467,6 +521,9 @@ export type Database = {
           resume_id?: string | null
           resume_path?: string | null
           resume_url?: string | null
+          source?: string
+          stage_entered_at?: string
+          stage_id?: string | null
           status?: Database["public"]["Enums"]["application_status"]
           updated_at?: string
         }
@@ -480,6 +537,9 @@ export type Database = {
           resume_id?: string | null
           resume_path?: string | null
           resume_url?: string | null
+          source?: string
+          stage_entered_at?: string
+          stage_id?: string | null
           status?: Database["public"]["Enums"]["application_status"]
           updated_at?: string
         }
@@ -510,6 +570,13 @@ export type Database = {
             columns: ["resume_id"]
             isOneToOne: false
             referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
             referencedColumns: ["id"]
           },
         ]
@@ -576,6 +643,60 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      candidate_notes: {
+        Row: {
+          application_id: string | null
+          author_name: string | null
+          author_user_id: string
+          body: string
+          candidate_user_id: string
+          company_id: string
+          created_at: string
+          id: string
+          rating: Database["public"]["Enums"]["candidate_rating"] | null
+          updated_at: string
+        }
+        Insert: {
+          application_id?: string | null
+          author_name?: string | null
+          author_user_id: string
+          body: string
+          candidate_user_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          rating?: Database["public"]["Enums"]["candidate_rating"] | null
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string | null
+          author_name?: string | null
+          author_user_id?: string
+          body?: string
+          candidate_user_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          rating?: Database["public"]["Enums"]["candidate_rating"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_notes_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -677,6 +798,47 @@ export type Database = {
           },
         ]
       }
+      company_email_templates: {
+        Row: {
+          body_md: string
+          company_id: string
+          id: string
+          is_default: boolean
+          name: string
+          purpose: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          body_md: string
+          company_id: string
+          id?: string
+          is_default?: boolean
+          name: string
+          purpose: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          body_md?: string
+          company_id?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          purpose?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_email_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_entitlement_holds: {
         Row: {
           company_id: string
@@ -773,8 +935,12 @@ export type Database = {
           industry: string | null
           is_relevant_profiles_generated: boolean
           job_posts_created: number
+          last_applicant_digest_at: string | null
           logo_url: string | null
           name: string | null
+          notify_new_applicants: string
+          notify_weekly_matches: boolean
+          scheduling_url: string | null
           tag_line: string | null
           tier_id: string
           updated_at: string
@@ -796,8 +962,12 @@ export type Database = {
           industry?: string | null
           is_relevant_profiles_generated?: boolean
           job_posts_created?: number
+          last_applicant_digest_at?: string | null
           logo_url?: string | null
           name?: string | null
+          notify_new_applicants?: string
+          notify_weekly_matches?: boolean
+          scheduling_url?: string | null
           tag_line?: string | null
           tier_id?: string
           updated_at?: string
@@ -819,8 +989,12 @@ export type Database = {
           industry?: string | null
           is_relevant_profiles_generated?: boolean
           job_posts_created?: number
+          last_applicant_digest_at?: string | null
           logo_url?: string | null
           name?: string | null
+          notify_new_applicants?: string
+          notify_weekly_matches?: boolean
+          scheduling_url?: string | null
           tag_line?: string | null
           tier_id?: string
           updated_at?: string
@@ -1359,6 +1533,7 @@ export type Database = {
           id: string
           job_id: string | null
           job_type: Database["public"]["Enums"]["job_type_enum"]
+          last_applicant_notified_at: string | null
           location: string[]
           matched_at: string | null
           matching_error: string | null
@@ -1390,6 +1565,7 @@ export type Database = {
           id?: string
           job_id?: string | null
           job_type?: Database["public"]["Enums"]["job_type_enum"]
+          last_applicant_notified_at?: string | null
           location?: string[]
           matched_at?: string | null
           matching_error?: string | null
@@ -1421,6 +1597,7 @@ export type Database = {
           id?: string
           job_id?: string | null
           job_type?: Database["public"]["Enums"]["job_type_enum"]
+          last_applicant_notified_at?: string | null
           location?: string[]
           matched_at?: string | null
           matching_error?: string | null
@@ -1639,6 +1816,44 @@ export type Database = {
           },
         ]
       }
+      pipeline_stages: {
+        Row: {
+          archived: boolean
+          company_id: string
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["pipeline_stage_kind"]
+          name: string
+          position: number
+        }
+        Insert: {
+          archived?: boolean
+          company_id: string
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["pipeline_stage_kind"]
+          name: string
+          position: number
+        }
+        Update: {
+          archived?: boolean
+          company_id?: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["pipeline_stage_kind"]
+          name?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_stages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_plan: {
         Row: {
           amount: number | null
@@ -1818,6 +2033,71 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      talent_list_members: {
+        Row: {
+          added_at: string
+          candidate_user_id: string
+          list_id: string
+        }
+        Insert: {
+          added_at?: string
+          candidate_user_id: string
+          list_id: string
+        }
+        Update: {
+          added_at?: string
+          candidate_user_id?: string
+          list_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_list_members_candidate_user_id_fkey"
+            columns: ["candidate_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_info"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "talent_list_members_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "talent_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      talent_lists: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "talent_lists_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tier_entitlements: {
         Row: {
@@ -2162,10 +2442,15 @@ export type Database = {
         Args: { algorithm: string; secret: string; signables: string }
         Returns: string
       }
+      application_status_for_kind: {
+        Args: { p_kind: Database["public"]["Enums"]["pipeline_stage_kind"] }
+        Returns: Database["public"]["Enums"]["application_status"]
+      }
       apply_subscription_event: {
         Args: { p_company_id: string; p_event: Json }
         Returns: Json
       }
+      backfill_recruiter_pipeline: { Args: never; Returns: undefined }
       billing_allowance_used: {
         Args: { p_company_id: string; p_key: string }
         Returns: number
@@ -2263,6 +2548,13 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: Json
       }
+      first_pipeline_stage: {
+        Args: {
+          p_company_id: string
+          p_kind: Database["public"]["Enums"]["pipeline_stage_kind"]
+        }
+        Returns: string
+      }
       fulfil_payment: {
         Args: {
           p_dodo_payment_id: string
@@ -2294,6 +2586,7 @@ export type Database = {
           total_jobs: number
         }[]
       }
+      get_job_funnel: { Args: { p_job_post_id: string }; Returns: Json }
       get_masked_job_urls: {
         Args: { p_job_ids: string[]; p_user_id: string }
         Returns: {
@@ -2453,6 +2746,10 @@ export type Database = {
         Args: { target_ids?: string[] }
         Returns: undefined
       }
+      pipeline_kind_for_status: {
+        Args: { p_status: Database["public"]["Enums"]["application_status"] }
+        Returns: Database["public"]["Enums"]["pipeline_stage_kind"]
+      }
       release_hold: {
         Args: {
           p_company_id: string
@@ -2466,6 +2763,7 @@ export type Database = {
         Args: { p_interview_id: string; p_session_id: string }
         Returns: boolean
       }
+      reorder_pipeline_stages: { Args: { p_ids: string[] }; Returns: undefined }
       reserve_interview_session: {
         Args: { p_interview_id: string; p_reservation_id: string }
         Returns: string
@@ -2473,6 +2771,14 @@ export type Database = {
       rollover_free_periods: { Args: never; Returns: Json }
       schedule_company_plan_change: {
         Args: { p_company_id: string; p_tier_slug: string }
+        Returns: undefined
+      }
+      seed_default_pipeline: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
+      seed_default_templates: {
+        Args: { p_company_id: string }
         Returns: undefined
       }
       send_job_embedding: {
@@ -2497,6 +2803,7 @@ export type Database = {
         Args: { algorithm?: string; payload: Json; secret: string }
         Returns: string
       }
+      talent_list_company: { Args: { p_list_id: string }; Returns: string }
       try_cast_double: { Args: { inp: string }; Returns: number }
       url_decode: { Args: { data: string }; Returns: string }
       url_encode: { Args: { data: string }; Returns: string }
@@ -2516,6 +2823,7 @@ export type Database = {
         | "selected"
         | "stand_by"
         | "rejected"
+      candidate_rating: "strong_no" | "no" | "yes" | "strong_yes"
       job_feedback_vote: "upvote" | "downvote"
       job_posting_matching_status:
         | "pending"
@@ -2525,6 +2833,14 @@ export type Database = {
       job_posting_status: "active" | "inactive"
       job_type_enum: "Fulltime" | "Intern" | "Contract"
       payment_status: "complete" | "failed" | "pending" | "cancelled"
+      pipeline_stage_kind:
+        | "applied"
+        | "screening"
+        | "interview"
+        | "offer"
+        | "hired"
+        | "rejected"
+        | "on_hold"
       screening_recommendation: "strong_yes" | "yes" | "maybe" | "no"
       visa_job_postings: "Will Sponsor" | "Not Required" | "Required"
     }
@@ -2664,6 +2980,7 @@ export const Constants = {
         "stand_by",
         "rejected",
       ],
+      candidate_rating: ["strong_no", "no", "yes", "strong_yes"],
       job_feedback_vote: ["upvote", "downvote"],
       job_posting_matching_status: [
         "pending",
@@ -2674,6 +2991,15 @@ export const Constants = {
       job_posting_status: ["active", "inactive"],
       job_type_enum: ["Fulltime", "Intern", "Contract"],
       payment_status: ["complete", "failed", "pending", "cancelled"],
+      pipeline_stage_kind: [
+        "applied",
+        "screening",
+        "interview",
+        "offer",
+        "hired",
+        "rejected",
+        "on_hold",
+      ],
       screening_recommendation: ["strong_yes", "yes", "maybe", "no"],
       visa_job_postings: ["Will Sponsor", "Not Required", "Required"],
     },

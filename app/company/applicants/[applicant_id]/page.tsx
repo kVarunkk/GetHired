@@ -12,7 +12,11 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import ApplicationStatusSelect from "@/components/ApplicationStatusSelector";
+import StagePicker from "@/components/pipeline/StagePicker";
+import NotesPanel from "@/components/pipeline/NotesPanel";
+import ActivityTimeline from "@/components/pipeline/ActivityTimeline";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { listNotes } from "@/helpers/pipeline/notes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import { TApplicationStatus } from "@/utils/types";
@@ -51,6 +55,7 @@ export default async function ApplicantPage({
         applicant_user_id,
         created_at,
         status,
+        stage_id,
         resumes(resume_path),
         answers,
         job_post_id,
@@ -83,6 +88,31 @@ export default async function ApplicantPage({
       : { data: null };
     const screening = screeningRow ? toScreeningView(screeningRow) : null;
 
+    // RLS: only the company's members can read its stages, notes and events.
+    // Archived stages are kept for the timeline's names.
+    const companyId = application.job_postings?.company_id;
+    const { data: allStages } = companyId
+      ? await supabase
+          .from("pipeline_stages")
+          .select("id, name, kind, archived")
+          .eq("company_id", companyId)
+          .order("position", { ascending: true })
+      : { data: null };
+    const stages = allStages?.filter((s) => !s.archived) ?? null;
+
+    const company = await getMyCompany(supabase, user);
+    const [notes, { data: events }] = await Promise.all([
+      company
+        ? listNotes({ supabase, company }, { applicationId: application.id })
+        : [],
+      supabase
+        .from("application_events")
+        .select("*")
+        .eq("application_id", application.id)
+        .order("created_at", { ascending: false })
+        .limit(200),
+    ]);
+
     let signedUrl: string | null = null;
 
     const { data: signedUrlData } = await supabase.storage
@@ -101,7 +131,13 @@ export default async function ApplicantPage({
 
         <div className="flex items-center justify-between flex-wrap gap-5">
           <h1 className="text-3xl font-medium">Applicant Details</h1>
-          <ApplicationStatusSelect application={application} />
+          {stages && stages.length > 0 && (
+            <StagePicker
+              applicationId={application.id}
+              stages={stages}
+              currentStageId={application.stage_id}
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -318,42 +354,62 @@ export default async function ApplicantPage({
             </Card>
           </div>
 
-          {/* Right Panel: Screening, Questions and Answers */}
-          <div className="md:col-span-2 space-y-4">
-            {application.job_post_id && (
-              <ScreeningCard
+          {/* Right Panel: Overview (screening, answers), Notes, Activity */}
+          <Tabs defaultValue="overview" className="md:col-span-2">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="notes">Notes ({notes.length})</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
+            </TabsList>
+            <TabsContent value="notes" className="mt-4">
+              <NotesPanel
                 applicationId={application.id}
-                jobPostId={application.job_post_id}
-                questions={application.job_postings?.questions ?? []}
-                screening={screening}
+                notes={notes}
+                currentUserId={user.id}
               />
-            )}
-            <Card>
-              <CardHeader>
-                <CardTitle>Application Answers</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {application.answers && application.answers.length > 0 ? (
-                  application.answers.map((answer, index) => (
-                    <div key={index}>
-                      <p className="font-semibold text-sm">
-                        Q:{" "}
-                        {application.job_postings?.questions?.[index] ||
-                          `Question ${index + 1}`}
-                      </p>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        A: {answer}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground">
-                    No custom questions were asked for this job.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+            </TabsContent>
+            <TabsContent value="activity" className="mt-4">
+              <ActivityTimeline
+                events={events ?? []}
+                stages={allStages ?? []}
+              />
+            </TabsContent>
+            <TabsContent value="overview" className="mt-4 space-y-4">
+              {application.job_post_id && (
+                <ScreeningCard
+                  applicationId={application.id}
+                  jobPostId={application.job_post_id}
+                  questions={application.job_postings?.questions ?? []}
+                  screening={screening}
+                />
+              )}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Application Answers</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {application.answers && application.answers.length > 0 ? (
+                    application.answers.map((answer, index) => (
+                      <div key={index}>
+                        <p className="font-semibold text-sm">
+                          Q:{" "}
+                          {application.job_postings?.questions?.[index] ||
+                            `Question ${index + 1}`}
+                        </p>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                          A: {answer}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground">
+                      No custom questions were asked for this job.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     );

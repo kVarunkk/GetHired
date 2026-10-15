@@ -458,11 +458,11 @@ export default function JobsComponent({
                 companyId={companyId}
               />
             )}
+          {/* On every tab (All, Saved, each talent list), like the applicant's button. */}
           {user &&
             isOnboardingComplete &&
             isCompanyUser &&
-            current_page === "profiles" &&
-            isAllJobsTab && (
+            current_page === "profiles" && (
               <FindSuitableJobs
                 user={user}
                 currentPage={current_page}

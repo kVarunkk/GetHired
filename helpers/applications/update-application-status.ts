@@ -3,6 +3,9 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
 import { isUuid } from "@/helpers/agent/auth";
 import { sendApplicationStatusEmail } from "@/helpers/email/send-application-status-email";
+import { moveApplications } from "@/helpers/pipeline/move";
+import { listStages, type PipelineStage } from "@/helpers/pipeline/stages";
+import { inverseKind, statusForKind } from "@/helpers/pipeline/status-map";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { TApplicationStatus } from "@/utils/types";
 import type { Database, Enums } from "@/utils/types/database.types";
@@ -16,17 +19,29 @@ export type UpdateApplicationStatusResult =
 const STATUSES = new Set<string>(Object.values(TApplicationStatus));
 
 /**
+ * The stage a status-only caller lands in: the first active stage of the
+ * inverse kind (`reviewed` → Screening), or, if the company archived that
+ * one, the first active stage that shows the same status.
+ */
+function stageForStatus(stages: PipelineStage[], status: ApplicationStatus) {
+  return (
+    stages.find((s) => s.kind === inverseKind(status)) ??
+    stages.find((s) => statusForKind(s.kind) === status)
+  );
+}
+
+/**
  * Changes the status of an application to one of `company`'s postings and, by
- * default, emails the applicant (RS-SEC-005). The recipient, job title and
- * company name always come from the database. Shared by the server action and
- * the recruiter agent; `company` and `user` must come from the session.
+ * default, emails the applicant (RS-SEC-005). Since the pipeline spec this is
+ * a thin wrapper (PLT-031): it moves the application to the stage that shows
+ * `status` through `moveApplications`, so the move is logged like any other.
+ * An application already in a stage with that status stays where it is. The
+ * recipient, job title and company name always come from the database.
+ * Shared by the server action and the recruiter agent; `company` and `user`
+ * must come from the session.
  */
 export async function updateApplicationStatus(
-  {
-    supabase,
-    company,
-    user,
-  }: { supabase: SupabaseClient<Database>; company: MyCompany; user: User },
+  ctx: { supabase: SupabaseClient<Database>; company: MyCompany; user: User },
   {
     applicationId,
     status,
@@ -42,26 +57,28 @@ export async function updateApplicationStatus(
   }
   if (!STATUSES.has(status)) return { ok: false, error: "Invalid status." };
 
-  const { data: application, error: loadError } = await supabase
-    .from("applications")
-    .select("id, user_info(email), job_postings!inner(company_id, title, company_info(name))")
-    .eq("id", applicationId)
-    .eq("job_postings.company_id", company.id)
-    .maybeSingle();
+  let stages: PipelineStage[];
+  try {
+    stages = await listStages(ctx);
+  } catch {
+    return { ok: false, error: "Failed to load the pipeline stages." };
+  }
+  const stage = stageForStatus(stages, status);
+  if (!stage) return { ok: false, error: "No active pipeline stage shows that status." };
 
-  if (loadError) return { ok: false, error: "Failed to load the application." };
+  const moved = await moveApplications(ctx, {
+    applicationIds: [applicationId],
+    stageId: stage.id,
+    sameStatusIsNoop: true,
+  });
+  if (!moved.ok) return { ok: false, error: "Failed to update the status." };
+
+  const application = moved.applications[0];
   if (!application) return { ok: false, error: "Application not found." };
 
-  const { error: updateError } = await supabase
-    .from("applications")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", applicationId);
-
-  if (updateError) return { ok: false, error: "Failed to update the status." };
-
-  const toEmail = application.user_info?.email;
-  const jobTitle = application.job_postings.title;
-  const companyName = application.job_postings.company_info?.name ?? company.name;
+  const toEmail = application.email;
+  const jobTitle = application.jobTitle;
+  const companyName = application.companyName;
 
   if (notify && toEmail && companyName) {
     after(async () => {
@@ -69,7 +86,7 @@ export async function updateApplicationStatus(
       if (!sent.ok) {
         await eventCaptureServerException({
           error: new Error(sent.error),
-          distinctId: user.id,
+          distinctId: ctx.user.id,
           properties: { flow: "application_status_email", applicationId },
         });
       }

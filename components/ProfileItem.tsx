@@ -11,6 +11,7 @@ import { AllProfileWithRelations } from "@/utils/types";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
 import MatchScoreBadge from "./matching/MatchScoreBadge";
 import MatchExplanationCard from "./matching/MatchExplanationCard";
+import AddToListMenu from "./pipeline/AddToListMenu";
 
 /** The explanation's one-line summary, if the stored JSON has one. */
 function summaryOf(explanation: unknown): string | null {
@@ -93,6 +94,7 @@ const ProfileItem = React.memo(
           </div>
 
           <div className="flex items-center gap-2">
+            {companyId && <AddToListMenu candidateUserId={profile.user_id} />}
             <Link
               href={profileHref}
               prefetch={false}

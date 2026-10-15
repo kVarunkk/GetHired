@@ -6,6 +6,9 @@ import { JOB_POST, explanationOf } from "@/test/utils/matching";
 import ProfileItem from "./ProfileItem";
 
 vi.mock("./ProfileFavoriteStar", () => ({ default: () => null }));
+vi.mock("./pipeline/AddToListMenu", () => ({
+  default: ({ candidateUserId }: { candidateUserId: string }) => <button>Add to list {candidateUserId}</button>,
+}));
 vi.mock("@/hooks/useEntitlementError", () => ({
   useEntitlementError: () => ({ handle: vi.fn(), show: vi.fn(), dialog: null }),
 }));
@@ -112,5 +115,20 @@ describe("ProfileItem profile link", () => {
     for (const link of screen.getAllByRole("link")) {
       expect(link).toHaveAttribute("href", `/company/profiles/${PUBLIC_APPLICANT.id}`);
     }
+  });
+});
+
+describe("ProfileItem talent lists (PLT-090)", () => {
+  it("offers Add to list to a company, for this candidate", () => {
+    const profile = profileWith();
+    render(<ProfileItem profile={profile} isSuitable={false} isFavorite={false} companyId="c1" />);
+
+    expect(screen.getByRole("button", { name: `Add to list ${profile.user_id}` })).toBeInTheDocument();
+  });
+
+  it("hides it without a company", () => {
+    renderItem(profileWith(), null);
+
+    expect(screen.queryByRole("button", { name: /Add to list/ })).not.toBeInTheDocument();
   });
 });

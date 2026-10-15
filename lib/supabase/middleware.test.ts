@@ -227,6 +227,21 @@ describe("middleware: matching workers", () => {
     expect(passesThrough(await updateSession(request("/api/worker/application-screening")))).toBe(true);
   });
 
+  it.each([
+    "/api/worker/company-notifications",
+    "/api/updates/company/applicant-digest/enqueue",
+    "/api/updates/company/applicant-digest/worker",
+    "/api/updates/company/weekly-matches/enqueue",
+    "/api/updates/company/weekly-matches/worker",
+  ])("lets the pipeline notification route %s through without a session (PLT-072)", async (path) => {
+    expect(passesThrough(await updateSession(request(path)))).toBe(true);
+  });
+
+  it("keeps the pipeline board route and the settings page behind a login", async () => {
+    expect(passesThrough(await updateSession(request("/api/company/job-posts/j1/pipeline")))).toBe(false);
+    expect(redirectTarget(await updateSession(request("/company/settings")))).toMatch(/^\/auth\/login/);
+  });
+
   it("keeps the screening routes behind a login", async () => {
     expect(passesThrough(await updateSession(request("/api/company/job-posts/j1/screen")))).toBe(false);
     expect(passesThrough(await updateSession(request("/api/company/applications/a1/screening")))).toBe(false);

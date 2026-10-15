@@ -168,4 +168,36 @@ describe("GET /api/profiles filters", () => {
     expect(expandProfileLocations).not.toHaveBeenCalled();
     expect(vi.mocked(buildProfileQuery).mock.calls[0][0]).toMatchObject({ locations: null });
   });
+
+  it("resolves a talent list's tab from its slug, within the company (PL-TASK-051)", async () => {
+    await signIn(TIER_STARTUP);
+    rls.queue("talent_lists", { data: { id: "a1000000-0000-4000-8000-00000000000a" }, error: null });
+    await get({ tab: "backend-shortlist" });
+
+    expect(vi.mocked(buildProfileQuery).mock.calls[0][0]).toMatchObject({
+      isFavoriteTabActive: false,
+      talentListId: "a1000000-0000-4000-8000-00000000000a",
+    });
+    const [lookup] = rls.callsFor("talent_lists");
+    expect(lookup.chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
+    expect(lookup.chain).toContainEqual({ method: "eq", args: ["slug", "backend-shortlist"] });
+  });
+
+  it("shows everyone for an unknown list, and never looks up the built-in tabs", async () => {
+    await signIn(TIER_STARTUP);
+    rls.queue("talent_lists", { data: null, error: null });
+    await get({ tab: "deleted-list" });
+    expect(vi.mocked(buildProfileQuery).mock.calls[0][0]).toMatchObject({
+      isFavoriteTabActive: false,
+      talentListId: null,
+    });
+
+    await signIn(TIER_STARTUP);
+    await get({ tab: "saved" });
+    expect(vi.mocked(buildProfileQuery).mock.calls[1][0]).toMatchObject({
+      isFavoriteTabActive: true,
+      talentListId: null,
+    });
+    expect(rls.callsFor("talent_lists")).toHaveLength(0);
+  });
 });

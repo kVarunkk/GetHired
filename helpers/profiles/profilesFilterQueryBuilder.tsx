@@ -75,6 +75,7 @@ export async function buildProfileQuery({
   isInternalCall,
   budget = null,
   matchText = false,
+  talentListId = null,
 }: {
   searchQuery: string | null;
   jobRoles: string | null;
@@ -106,6 +107,8 @@ export async function buildProfileQuery({
    * this on; the agent keeps exact matching.
    */
   matchText?: boolean;
+  /** Show this talent list's members (its tab) instead of everyone or the favorites. */
+  talentListId?: string | null;
 }): Promise<ProfilesBuildQueryResult> {
   try {
     const supabase = isInternalCall
@@ -114,12 +117,25 @@ export async function buildProfileQuery({
 
     let query;
     let selectString;
+    // The total of this query, with the tab and every filter applied, on the
+    // first page only (later pages keep the first page's total).
+    const countOption = cursor ? undefined : { count: "exact" as const };
 
-    if (isFavoriteTabActive) {
+    if (talentListId) {
+      // A talent list's members (PL-TASK-051). RLS limits the join to the
+      // company's own lists.
+      selectString = `${userInfoSelectString}, talent_list_members!inner(list_id)`;
+      query = supabase
+        .from("user_info")
+        .select(selectString, countOption)
+        .eq("talent_list_members.list_id", talentListId)
+        .eq("filled", true)
+        .eq("is_public", true);
+    } else if (isFavoriteTabActive) {
       selectString = `${userInfoSelectString}, company_favorites!inner(company_id)`;
       query = supabase
         .from("user_info")
-        .select(selectString)
+        .select(selectString, countOption)
         .eq("company_favorites.company_id", companyId)
         .eq("filled", true)
         .eq("is_public", true);
@@ -130,6 +146,7 @@ export async function buildProfileQuery({
           `
           ${userInfoSelectString}, job_relevant_profiles!inner(${JOB_MATCH_COLUMNS})
         `,
+          countOption,
         )
         .eq("job_relevant_profiles.job_posting_id", jobId!)
         .eq("filled", true)
@@ -143,6 +160,7 @@ export async function buildProfileQuery({
           `
           ${userInfoSelectString} ${relevanceSearchType === "digest" ? ",resumes(content, is_primary)" : ""}
         `,
+          countOption,
         )
         .eq("filled", true)
         .eq("is_public", true);
@@ -265,9 +283,10 @@ export async function buildProfileQuery({
       query = query.limit(limit);
     }
 
-    const { data, error } = (await query) as unknown as {
+    const { data, error, count } = (await query) as unknown as {
       data: AllProfileWithRelations[] | null;
       error: PostgrestError | null;
+      count: number | null;
     };
 
     if (relevanceSearchType === "standard" && data) {
@@ -278,16 +297,7 @@ export async function buildProfileQuery({
       });
     }
 
-    let totalCount = 0;
-    if (!cursor) {
-      const { count } = await supabase
-        .from("user_info")
-        .select("user_id", { count: "exact", head: true })
-        .eq("filled", true)
-        .eq("is_public", true);
-
-      totalCount = count || 0;
-    }
+    const totalCount = count ?? 0;
 
     let nextCursor = null;
     if (data && data.length === limit && !relevanceSearchType) {

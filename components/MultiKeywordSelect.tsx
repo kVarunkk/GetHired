@@ -144,11 +144,16 @@ export default function MultiKeywordSelect({
                     "rounded-l-none border-y-0 border-r-0 bg-transparent shadow-none",
                 )}
               >
-                <span className="truncate">
-                  {initialKeywords.length > 0
-                    ? `${initialKeywords.length} items selected`
-                    : placeholder}
-                </span>
+                {/* Next to an input, the chips under it already show what's selected. */}
+                {showKeywords ? (
+                  <span className="truncate">
+                    {initialKeywords.length > 0
+                      ? `${initialKeywords.length} items selected`
+                      : placeholder}
+                  </span>
+                ) : (
+                  <span className="sr-only">Choose from the list</span>
+                )}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             )}
@@ -197,7 +202,11 @@ export default function MultiKeywordSelect({
                     "rounded-l-none border-y-0 border-r-0 bg-transparent shadow-none",
                 )}
               >
-                <span className="truncate">{placeholder}</span>
+                {showKeywords ? (
+                  <span className="truncate">{placeholder}</span>
+                ) : (
+                  <span className="sr-only">Choose from the list</span>
+                )}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             )}
@@ -206,7 +215,7 @@ export default function MultiKeywordSelect({
             <DrawerContent className="p-0 ">
               <DrawerHeader>
                 <DrawerTitle></DrawerTitle>
-                <DrawerDescription>
+                <DrawerDescription className={cn(!showKeywords && "sr-only")}>
                   {initialKeywords.length} items selected
                 </DrawerDescription>
               </DrawerHeader>

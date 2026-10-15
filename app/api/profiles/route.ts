@@ -1,7 +1,11 @@
 import { rerankProfilesIfApplicable } from "@/helpers/profiles/ai-rerank-profiles";
-import { getEntitlements, suggestedTierFor } from "@/helpers/billing/entitlements";
+import {
+  getEntitlements,
+  suggestedTierFor,
+} from "@/helpers/billing/entitlements";
 import { listPublicPlans } from "@/helpers/billing/plans";
 import { buildProfileQuery } from "@/helpers/profiles/profilesFilterQueryBuilder";
+import { findTalentListIdBySlug } from "@/helpers/pipeline/talent-lists";
 import { expandProfileLocations } from "@/helpers/locations/aliases";
 import { parseMultiSelectParam } from "@/utils/formatters";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
@@ -31,9 +35,7 @@ export async function GET(request: NextRequest) {
   }
   const { data: companyData, error: companyError } = await supabase
     .from("company_info")
-    .select(
-      "id, ai_credits, filled, job_postings(id, embedding_new)",
-    )
+    .select("id, ai_credits, filled, job_postings(id, embedding_new)")
     .eq("user_id", user.id)
     .single();
   if (companyError || !companyData) {
@@ -64,7 +66,9 @@ export async function GET(request: NextRequest) {
   const jobRoles = searchParams.get("jobRole");
   const jobTypes = searchParams.get("jobType");
   // Same place, every spelling: the picker offers canonical names, profiles mix aliases.
-  const requestedLocations = parseMultiSelectParam(searchParams.get("location"));
+  const requestedLocations = parseMultiSelectParam(
+    searchParams.get("location"),
+  );
   const locations =
     requestedLocations.length > 0
       ? (await expandProfileLocations(requestedLocations)).join("|")
@@ -79,7 +83,20 @@ export async function GET(request: NextRequest) {
   const industry = searchParams.get("industryPreference");
   const sortBy = searchParams.get("sortBy") ?? "created_at";
   const sortOrder = searchParams.get("sortOrder") ?? "desc";
-  const isFavoriteTabActive = searchParams.get("tab") === "saved";
+  const tab = searchParams.get("tab");
+  const isFavoriteTabActive = tab === "saved";
+  // A talent list's tab is its slug (PL-TASK-051). An unknown one shows
+  // everyone, like the page's All tab.
+  const talentListId =
+    tab && !isFavoriteTabActive && tab !== "all"
+      ? await findTalentListIdBySlug(
+          {
+            supabase,
+            company: { id: companyData.id, name: null, email: null },
+          },
+          tab,
+        )
+      : null;
   const jobId = searchParams.get("job_post");
   const limit = isLimitOnProfiles
     ? allowedProfiles
@@ -119,6 +136,7 @@ export async function GET(request: NextRequest) {
         cursor,
         limit,
         isFavoriteTabActive,
+        talentListId,
         jobEmbedding,
         relevanceSearchType,
         jobId,
@@ -133,17 +151,17 @@ export async function GET(request: NextRequest) {
 
     const { initialProfiles, totalCount, matchScores } =
       await rerankProfilesIfApplicable({
-      initialProfiles: data,
-      initialCount: count,
-      userId: user.id,
-      jobId: jobId,
-      aiCredits: companyData.ai_credits,
-      matchedProfileIds,
-      relevanceSearchType,
-      cursor,
-      companyId: companyData.id,
-      isInternalCall,
-    });
+        initialProfiles: data,
+        initialCount: count,
+        userId: user.id,
+        jobId: jobId,
+        aiCredits: companyData.ai_credits,
+        matchedProfileIds,
+        relevanceSearchType,
+        cursor,
+        companyId: companyData.id,
+        isInternalCall,
+      });
 
     const hiddenCount = isLimitOnProfiles
       ? Math.max(0, (totalCount ?? 0) - allowedProfiles)
@@ -166,7 +184,9 @@ export async function GET(request: NextRequest) {
       // Matches beyond the cap, for "N more matching candidates on Startup".
       ...(isLimitOnProfiles ? { hiddenCount, upgradePlan } : {}),
       // MT-REQ-001: the digest stores these in job_relevant_profiles.
-      ...(relevanceSearchType === "digest" && matchScores ? { matchScores } : {}),
+      ...(relevanceSearchType === "digest" && matchScores
+        ? { matchScores }
+        : {}),
     });
   } catch (err: unknown) {
     return NextResponse.json(

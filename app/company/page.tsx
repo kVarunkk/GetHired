@@ -10,6 +10,12 @@ import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import { TApplicationStatus } from "@/utils/types";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 import AskRecruiterAgent from "@/components/agent/recruiter/AskRecruiterAgent";
+import FunnelStrip from "@/components/pipeline/FunnelStrip";
+import {
+  NEEDS_ATTENTION_DAYS,
+  getCompanyFunnel,
+  type CompanyFunnel,
+} from "@/helpers/pipeline/funnel";
 
 export default async function CompanyPage() {
   try {
@@ -94,6 +100,18 @@ export default async function CompanyPage() {
     const jobPosts = jobsData || [];
     const recentApplicants = applicantsData || [];
 
+    // The pipeline section (PL-TASK-050). It's extra: a failure hides it
+    // instead of the whole dashboard.
+    let funnel: CompanyFunnel | null = null;
+    try {
+      funnel = await getCompanyFunnel({
+        supabase,
+        company: { id: companyInfo.id, name: companyInfo.name, email: null },
+      });
+    } catch (err) {
+      console.error("Failed to load the company funnel:", err);
+    }
+
     return (
       <div className="flex flex-col w-full gap-5 p-4 mb-20">
         <div className="flex items-center justify-between flex-wrap gap-5">
@@ -143,6 +161,57 @@ export default async function CompanyPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* --- Pipeline Section --- */}
+        {funnel && funnel.jobs.length > 0 && (
+          <div className="mt-8 flex flex-col gap-4">
+            <h3 className="text-lg font-semibold tracking-tight">
+              Pipeline across active jobs
+            </h3>
+            <FunnelStrip stages={funnel.stages} />
+            {funnel.needsAttention.length > 0 && (
+              <section
+                aria-label="Needs attention"
+                className="flex flex-col gap-2"
+              >
+                <h4 className="text-sm font-semibold">Needs attention</h4>
+                <p className="text-sm text-muted-foreground">
+                  In Applied for more than {NEEDS_ATTENTION_DAYS} days with
+                  nothing logged since.
+                </p>
+                <ul className="divide-y rounded-xl border">
+                  {funnel.needsAttention.map((item) => (
+                    <li
+                      key={item.applicationId}
+                      className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
+                    >
+                      <span>
+                        <Link
+                          href={`/company/applicants/${item.applicationId}`}
+                          className="font-medium hover:underline"
+                        >
+                          {item.name}
+                        </Link>
+                        <span className="text-muted-foreground">
+                          {" for "}
+                          <Link
+                            href={`/company/job-posts/${item.jobPostId}/applicants`}
+                            className="hover:underline"
+                          >
+                            {item.jobTitle}
+                          </Link>
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        {item.daysInApplied} days in Applied
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
+        )}
 
         {/* --- Active Job Posts Section --- */}
         <div className="mt-8">

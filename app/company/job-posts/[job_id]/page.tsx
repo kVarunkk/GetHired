@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Error from "@/components/Error";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
 import DeleteJobPosting from "@/components/DeleteJobPosting";
@@ -8,7 +9,7 @@ import { Briefcase, DollarSign, Users, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import BackButton from "@/components/BackButton";
 import { JobStatusSwitch } from "@/components/JobPostingsTable";
-import ApplicantsTable from "@/components/ApplicantsTable";
+import Link from "next/link";
 import JobDescriptionCard from "@/components/JobDetailsCard";
 import FindSuitableProfilesForJobPost from "@/components/FindSuitableProfilesForJobPost";
 import ShareJobPosting from "@/components/ShareJobPosting";
@@ -90,6 +91,12 @@ export default async function JobPostPage({
             <DeleteJobPosting job_posting_id={job.id} is_job_posting_page />
             <ShareJobPosting job_id={job.job_id} />
             <FindSuitableProfilesForJobPost job_post_id={job_id} />
+            <Button asChild variant="outline" className="rounded-full">
+              <Link href={`/company/job-posts/${job.id}/applicants`}>
+                <Users className="w-4 h-4" />
+                View applicants ({job.applications?.length ?? 0})
+              </Link>
+            </Button>
           </div>
         </div>
 
@@ -154,32 +161,25 @@ export default async function JobPostPage({
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Applicants
-                </CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold tracking-tight">
-                  {job.applications?.length}
-                </div>
-              </CardContent>
-            </Card>
+            <Link
+              href={`/company/job-posts/${job.id}/applicants`}
+              className="rounded-xl transition-colors hover:bg-muted/60"
+            >
+              <Card className="h-full bg-transparent">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Applicants
+                  </CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-semibold tracking-tight">
+                    {job.applications?.length}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
-        </div>
-
-        {/* --- Applicants Section --- */}
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold tracking-tight mb-4">
-            Applicants ({job.applications?.length})
-          </h2>
-          <ApplicantsTable
-            data={job.applications || []}
-            jobPostId={job.id}
-            defaultSort="fit"
-          />
         </div>
       </div>
     );

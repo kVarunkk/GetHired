@@ -320,6 +320,11 @@ export enum PostHogEvent {
   BillingPortalOpened = "billing_portal_opened",
   BillingCreditsPurchased = "billing_credits_purchased",
   BillingLimitHit = "billing_limit_hit",
+  // Recruiter pipeline (pipeline spec §4.6)
+  PipelineStageMoved = "pipeline_stage_moved",
+  PipelineNoteAdded = "pipeline_note_added",
+  PipelineTemplateSaved = "pipeline_template_saved",
+  PipelineBoardViewed = "pipeline_board_viewed",
 }
 
 export type JobUrlPatch = {

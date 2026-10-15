@@ -52,8 +52,8 @@ function topLevelColumns(call: RecordedCall) {
     .filter(Boolean);
 }
 
-const dataQuery = () =>
-  supabase.callsFor("user_info").find((c) => !c.chain.some((m) => m.method === "select" && m.args[1]));
+/** The one profiles query (it also returns the total). */
+const dataQuery = () => supabase.callsFor("user_info")[0];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -83,6 +83,53 @@ describe("buildProfileQuery column exposure (RS-SEC-004)", () => {
     const { chain } = dataQuery()!;
     expect(chain).toContainEqual({ method: "eq", args: ["is_public", true] });
     expect(chain).toContainEqual({ method: "eq", args: ["filled", true] });
+  });
+});
+
+describe("buildProfileQuery talent list filter (PLT-090)", () => {
+  const LIST_ID = "a1000000-0000-4000-8000-00000000000a";
+
+  it("shows a list's members instead of everyone or the favorites", async () => {
+    await buildProfileQuery({ ...BASE, talentListId: LIST_ID });
+
+    const { chain } = dataQuery()!;
+    const select = String(chain.find((c) => c.method === "select")?.args[0]);
+    expect(select).toContain("talent_list_members!inner(list_id)");
+    expect(select).not.toContain("company_favorites");
+    expect(chain).toContainEqual({ method: "eq", args: ["talent_list_members.list_id", LIST_ID] });
+    expect(chain).toContainEqual({ method: "eq", args: ["is_public", true] });
+    for (const forbidden of FORBIDDEN_CANDIDATE_COLUMNS) expect(topLevelColumns(dataQuery()!)).not.toContain(forbidden);
+  });
+
+  it("shows everyone without a list", async () => {
+    await buildProfileQuery({ ...BASE });
+
+    const select = String(dataQuery()!.chain.find((c) => c.method === "select")?.args[0]);
+    expect(select).not.toContain("talent_list_members");
+  });
+});
+
+describe("buildProfileQuery total", () => {
+  it("counts the filtered tab itself, not every profile", async () => {
+    supabase.queue("user_info", { data: [], error: null, count: 3 });
+
+    const result = await buildProfileQuery({
+      ...BASE,
+      talentListId: "a1000000-0000-4000-8000-00000000000a",
+      skills: "react",
+    });
+
+    expect(supabase.callsFor("user_info")).toHaveLength(1);
+    const select = dataQuery()!.chain.find((c) => c.method === "select")!;
+    expect(select.args[1]).toEqual({ count: "exact" });
+    expect(result.count).toBe(3);
+  });
+
+  it("doesn't count again on later pages", async () => {
+    await buildProfileQuery({ ...BASE, cursor: Buffer.from("2026-10-01_u1").toString("base64") });
+
+    const select = dataQuery()!.chain.find((c) => c.method === "select")!;
+    expect(select.args[1]).toBeUndefined();
   });
 });
 

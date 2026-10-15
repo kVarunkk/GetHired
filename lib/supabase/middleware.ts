@@ -92,6 +92,12 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/company/match-explanations/worker",
     "/api/worker/user/onboarding",
     "/api/worker/application-screening",
+    // Pipeline notifications (X-Internal-Secret).
+    "/api/worker/company-notifications",
+    "/api/updates/company/applicant-digest/enqueue",
+    "/api/updates/company/applicant-digest/worker",
+    "/api/updates/company/weekly-matches/enqueue",
+    "/api/updates/company/weekly-matches/worker",
     "/api/ai-search/jobs",
     "/api/ai-search/profiles",
     "/api/dodo/webhook",

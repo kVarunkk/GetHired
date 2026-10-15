@@ -238,3 +238,67 @@ describe("ApplicantsTable: fit (MT-REQ-007, MT-TEST-006)", () => {
     expect(toast.success).not.toHaveBeenCalled();
   });
 });
+
+describe("ApplicantsTable: pipeline list (PLT-033)", () => {
+  const STAGES = [
+    { id: "5a000000-0000-4000-8000-000000000001", name: "Applied", kind: "applied" as const },
+    { id: "5a000000-0000-4000-8000-000000000002", name: "Screening", kind: "screening" as const },
+    { id: "5a000000-0000-4000-8000-000000000003", name: "Interview", kind: "interview" as const },
+  ];
+  const rows = () => [
+    applicationRow("Grace", null, { stage_id: STAGES[0].id } as Partial<TApplicationServer>),
+    applicationRow("Ada", null, { stage_id: STAGES[2].id } as Partial<TApplicationServer>),
+    applicationRow("Alan", null, { stage_id: STAGES[0].id } as Partial<TApplicationServer>),
+  ];
+  const pipelineNames = () =>
+    screen
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getAllByRole("cell")[1].textContent);
+
+  it("shows a Stage column with each application's stage", () => {
+    render(<ApplicantsTable data={rows()} stages={STAGES} />);
+
+    expect(screen.getByRole("columnheader", { name: /Stage/ })).toBeInTheDocument();
+    const ada = screen.getAllByRole("row").find((r) => r.textContent?.includes("Ada"))!;
+    expect(within(ada).getByText("Interview")).toBeInTheDocument();
+  });
+
+  it("filters by stage", () => {
+    render(<ApplicantsTable data={rows()} stages={STAGES} />);
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by stage" }), {
+      target: { value: STAGES[0].id },
+    });
+
+    expect(pipelineNames()).toEqual(["Grace", "Alan"]);
+  });
+
+  it("selects rows one by one and all at once", async () => {
+    const data = rows();
+    const onRowSelectionChange = vi.fn();
+    render(
+      <ApplicantsTable
+        data={data}
+        stages={STAGES}
+        rowSelection={{}}
+        onRowSelectionChange={onRowSelectionChange}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Ada" }));
+    expect(onRowSelectionChange).toHaveBeenLastCalledWith({ [data[1].id]: true });
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
+    expect(onRowSelectionChange).toHaveBeenLastCalledWith(
+      Object.fromEntries(data.map((d) => [d.id, true])),
+    );
+  });
+
+  it("has no selection or stage column outside the pipeline", () => {
+    render(<ApplicantsTable data={rows()} />);
+
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Filter by stage" })).not.toBeInTheDocument();
+  });
+});

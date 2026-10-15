@@ -8,6 +8,7 @@ import { ClientTabs } from "@/components/ClientTabs";
 import JobsComponent from "@/components/JobsComponent";
 import { getBaseUrl } from "@/utils/get-base-url";
 import type { SuggestedTier } from "@/helpers/billing/errors";
+import { listTalentLists } from "@/helpers/pipeline/talent-lists";
 
 export default async function ProfilesPage({
   searchParams,
@@ -36,6 +37,12 @@ export default async function ProfilesPage({
     redirect("/get-started?company=true");
   }
   const onboarding_complete = companyData.filled;
+
+  // Talent lists, shown as tabs after Saved (PL-TASK-051). Extra: a failure hides them.
+  const talentLists = await listTalentLists({
+    supabase,
+    company: { id: companyData.id, name: null, email: null },
+  }).catch(() => []);
 
   const headersList = await headers();
   const url = await getBaseUrl();
@@ -103,6 +110,7 @@ export default async function ProfilesPage({
           isCompanyUser={true}
           isAISearch={isAISearch}
           page={"profiles"}
+          talentLists={talentLists}
         >
           <TabsContent value="all">
             <JobsComponent
@@ -123,25 +131,30 @@ export default async function ProfilesPage({
               upgradePlan={upgradePlan}
             />
           </TabsContent>
-          {user && !isAISearch && (
-            <TabsContent value="saved">
-              <JobsComponent
-                dynamicKey={dynamicKey}
-                initialJobs={initialProfiles || []}
-                user={user}
-                isCompanyUser={true}
-                current_page={"profiles"}
-                companyId={companyData.id}
-                isOnboardingComplete={onboarding_complete}
-                isAllJobsTab={false}
-                isAppliedJobsTabActive={false}
-                totalCount={totalCount}
-                initialCursor={initialCursor}
-                error={error}
-                profilesPerSearch={profilesPerSearch}
-              />
-            </TabsContent>
-          )}
+          {user &&
+            !isAISearch &&
+            // Saved and each talent list get their own panel, like All, so the
+            // tab you switch to keeps showing results while the new ones
+            // load. Only the active panel renders.
+            ["saved", ...talentLists.map((list) => list.slug)].map((tab) => (
+              <TabsContent key={tab} value={tab}>
+                <JobsComponent
+                  dynamicKey={dynamicKey}
+                  initialJobs={initialProfiles || []}
+                  user={user}
+                  isCompanyUser={true}
+                  current_page={"profiles"}
+                  companyId={companyData.id}
+                  isOnboardingComplete={onboarding_complete}
+                  isAllJobsTab={false}
+                  isAppliedJobsTabActive={false}
+                  totalCount={totalCount}
+                  initialCursor={initialCursor}
+                  error={error}
+                  profilesPerSearch={profilesPerSearch}
+                />
+              </TabsContent>
+            ))}
         </ClientTabs>
       </div>
     </div>
