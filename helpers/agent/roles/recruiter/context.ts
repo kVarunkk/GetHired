@@ -43,6 +43,7 @@ export async function loadRecruiterPromptContext(
           profilesPerSearch: entitlements.profiles_per_search?.amount ?? null,
           screenings: entitlements.screenings?.remaining ?? null,
           agentMessages: entitlements.agent_messages?.remaining ?? null,
+          outreach: entitlements.outreach?.remaining ?? null,
         },
       }),
       () => null,

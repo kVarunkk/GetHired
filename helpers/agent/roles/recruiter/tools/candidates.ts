@@ -8,6 +8,7 @@ import { loadVisibleCandidates } from "@/helpers/profiles/visible-candidates";
 import { getCandidateMatches } from "@/helpers/matching/candidate-matches";
 import { parseStoredExplanation, type MatchExplanation } from "@/helpers/matching/schemas";
 import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
+import { outreachStatusFor, type OutreachBadge } from "@/helpers/outreach/list";
 import type { TResumeRowContent } from "@/utils/types";
 import { AGENT_LIST_DEFAULT_LIMIT } from "@/helpers/agent/config";
 import { RA_MAX_COMPARE, RA_UPGRADE_URL } from "../config";
@@ -18,6 +19,7 @@ import {
   compactCandidate,
   fairnessError,
   limitInput,
+  OUTREACH_URL,
   type RecruiterToolContext,
   resumeExcerpt,
   textListInput,
@@ -189,7 +191,7 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
 
     getCandidateProfile: tool({
       description:
-        "Read a candidate's profile: roles, experience, skills, preferences, a resume excerpt, their matches to the company's jobs, their applications to them, and whether they're saved. Contact details are included only once the candidate applied to one of the company's jobs or answered Interested to its outreach.",
+        "Read a candidate's profile: roles, experience, skills, preferences, a resume excerpt, their matches to the company's jobs, their applications to them, the company's latest outreach to them, and whether they're saved. Contact details are included only once the candidate applied to one of the company's jobs or answered Interested to its outreach.",
       inputSchema: z.object({
         candidateId: uuidInput("candidate"),
         jobPostId: uuidInput("job post").optional().describe("A job to show the match for first."),
@@ -248,7 +250,7 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
             if (error) console.error("[agent] couldn't record the profile view", error.message);
           });
 
-          const [matches, { data: applications, error: applicationsError }, { data: saved }] =
+          const [matches, { data: applications, error: applicationsError }, { data: saved }, outreach] =
             await Promise.all([
               getCandidateMatches(supabase, candidateId, company.id, jobPostId),
               supabase
@@ -262,8 +264,14 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
                 .eq("company_id", company.id)
                 .eq("user_id", candidateId)
                 .limit(1),
+              // The latest outreach, so the model doesn't propose a second open one.
+              // Optional context: a failed read leaves it out.
+              outreachStatusFor({ supabase, company }, [candidateId]).catch(
+                () => ({}) as Record<string, OutreachBadge>,
+              ),
             ]);
           if (applicationsError) throw applicationsError;
+          const latestOutreach = outreach[candidateId];
 
           const goals = [profile.career_goals_short_term, profile.career_goals_long_term]
             .filter((goal): goal is string => typeof goal === "string" && !!goal.trim())
@@ -291,6 +299,9 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
               url: applicationUrl(application.id),
             })),
             saved: (saved ?? []).length > 0,
+            outreach: latestOutreach
+              ? { status: latestOutreach.status, sentAt: latestOutreach.sentAt.slice(0, 10), url: OUTREACH_URL }
+              : null,
           };
         }),
     }),

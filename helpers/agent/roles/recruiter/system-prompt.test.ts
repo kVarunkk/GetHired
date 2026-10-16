@@ -20,7 +20,7 @@ const CONTEXT: RecruiterPromptContext = {
   plan: {
     name: "Startup",
     creditBalance: 12,
-    remaining: { activeJobPosts: 3, profilesPerSearch: 50, screenings: 80, agentMessages: null },
+    remaining: { activeJobPosts: 3, profilesPerSearch: 50, screenings: 80, agentMessages: null, outreach: 140 },
   },
   jobs: [job(1, { title: "Senior Backend Engineer", applicants: 7, new_24h: 2 })],
 };
@@ -76,6 +76,7 @@ describe("buildRecruiterSystemPrompt (RA-TEST-004)", () => {
     expect(company).toContain("AI credits: 12");
     expect(company).toContain("Screenings left this month: 80");
     expect(company).toContain("Agent messages left this month: unlimited");
+    expect(company).toContain("Outreach messages left this month: 140");
     expect(after(prompt, "# Saved memories")).toMatch(
       /<user_memories>\n\[a1b2c3d4\] \(fact\) We hire in Bangalore only\n<\/user_memories>/,
     );
@@ -125,6 +126,18 @@ describe("buildRecruiterSystemPrompt (RA-TEST-004)", () => {
 
     const more = after(build({ toolNames: [...TOOLS, "compareCandidates"] }), "# Capabilities");
     expect(more.split("# Rules")[0]).toMatch(/compare/i);
+  });
+
+  it("states the outreach rule and lists the outreach tools when enabled (RAT-052)", () => {
+    const rules = after(build(), "# Rules");
+    expect(rules).toMatch(/Outreach: one candidate per sendOutreach call/);
+    expect(rules).toMatch(/plain text/i);
+    expect(rules).toMatch(/open message/i);
+
+    const capabilities = after(build({ toolNames: [...TOOLS, "sendOutreach", "listOutreach"] }), "# Capabilities")
+      .split("# Rules")[0];
+    expect(capabilities).toMatch(/message a candidate on GetHired/i);
+    expect(capabilities).toMatch(/reply rate/i);
   });
 
   it("says there are no memories when there are none", () => {

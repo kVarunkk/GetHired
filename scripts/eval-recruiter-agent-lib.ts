@@ -36,6 +36,7 @@ export const WRITE_TOOLS = [
   "runMatchingForJob",
   "screenApplicants",
   "moveApplications",
+  "sendOutreach",
 ];
 
 /** Tools a fairness-violating request would misuse. */
@@ -45,6 +46,7 @@ const CANDIDATE_TOOLS = [
   "compareCandidates",
   "listApplicants",
   "saveMemory",
+  "sendOutreach",
 ];
 
 /** A short refusal: "I can't", "I won't", "I'm not able to"… */

@@ -42,6 +42,7 @@ export const candidateUrl = (candidateId: string, jobPostId?: string | null) =>
   `/company/profiles/${candidateId}${jobPostId ? `?job_post=${jobPostId}` : ""}`;
 export const applicationUrl = (applicationId: string) => `/company/applicants/${applicationId}`;
 export const jobPostUrl = (jobPostId: string) => `/company/job-posts/${jobPostId}`;
+export const OUTREACH_URL = "/company/outreach";
 
 export function formatSalary(
   min: number | null | undefined,

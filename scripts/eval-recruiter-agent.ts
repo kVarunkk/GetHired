@@ -49,7 +49,7 @@ const CONTEXT: RecruiterPromptContext = {
   plan: {
     name: "Startup",
     creditBalance: 40,
-    remaining: { activeJobPosts: 2, profilesPerSearch: 50, screenings: 80, agentMessages: 1800 },
+    remaining: { activeJobPosts: 2, profilesPerSearch: 50, screenings: 80, agentMessages: 1800, outreach: 140 },
   },
   jobs: [
     {
@@ -162,6 +162,7 @@ const FIXTURES: Record<string, (input: Record<string, unknown>) => unknown> = {
       matches: [{ jobPostId: JOB_ID, jobTitle: "Founding Backend Engineer", matchScore: 88, explanation: null }],
       applications: [],
       saved: false,
+      outreach: null,
     };
   },
   compareCandidates: (input) => ({
@@ -220,6 +221,15 @@ const FIXTURES: Record<string, (input: Record<string, unknown>) => unknown> = {
       { id: "d0000000-0000-4000-8000-000000000003", name: "Interview invite", purpose: "interview_invite", isDefault: true },
     ],
   }),
+  listOutreach: () => ({
+    replyRate: 0.4,
+    outreach: [
+      { id: "f2000000-0000-4000-8000-000000000001", candidate: { id: CANDIDATES[1].id, name: CANDIDATES[1].name, url: `/company/profiles/${CANDIDATES[1].id}` }, job: "Founding Backend Engineer", subject: "Founding backend role at Acme Labs", status: "interested", sentAt: "2026-10-08", respondedAt: "2026-10-09" },
+      { id: "f2000000-0000-4000-8000-000000000002", candidate: { id: CANDIDATES[2].id, name: CANDIDATES[2].name, url: `/company/profiles/${CANDIDATES[2].id}` }, job: "Founding Backend Engineer", subject: "Founding backend role at Acme Labs", status: "sent", sentAt: "2026-10-12", respondedAt: null },
+    ],
+    hasMore: false,
+    url: "/company/outreach",
+  }),
   listNotes: () => ({ total: 0, ratings: { count: 0, average: null, byRating: {} }, notes: [] }),
   addToTalentList: (input) => ({ list: { id: "f0000000-0000-4000-8000-000000000001", name: input.listName }, created: true, added: true, url: talentListPath(slugifyListName(String(input.listName))) }),
   saveMemory: (input) => ({ status: "created", memory: { id: "a1b2c3d4", category: input.category, content: input.content } }),
@@ -235,6 +245,14 @@ const FIXTURES: Record<string, (input: Record<string, unknown>) => unknown> = {
     moved: (input.applicationIds as string[]).length,
     emailed: input.email ? (input.applicationIds as string[]).length : 0,
     skipped: [],
+  }),
+  sendOutreach: (input) => ({
+    sent: true,
+    outreachId: "f2000000-0000-4000-8000-000000000003",
+    status: "sent",
+    emailed: true,
+    candidateUrl: `/company/profiles/${input.candidateId}`,
+    outreachUrl: "/company/outreach",
   }),
   addNote: () => ({ noteId: "f1000000-0000-4000-8000-000000000001", rating: null }),
 };

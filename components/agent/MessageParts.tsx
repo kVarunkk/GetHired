@@ -18,6 +18,7 @@ import {
 } from "./recruiter/RecruiterResults";
 import { FunnelResult, type FunnelResultData } from "./recruiter/FunnelResult";
 import { MoveApprovalDetails } from "./recruiter/MoveApprovalCard";
+import { OutreachApprovalDetails } from "./recruiter/OutreachApprovalCard";
 
 export { isInAppHref };
 
@@ -75,6 +76,8 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   listNotes: { running: "Reading notes…", done: "Read the notes", action: "read the notes" },
   addToTalentList: { running: "Adding to the list…", done: "Added to the list", action: "add the candidate to a list" },
   getHiringFunnel: { running: "Loading the funnel…", done: "Loaded the hiring funnel", action: "load the hiring funnel" },
+  sendOutreach: { running: "Sending the message…", done: "Sent the message", action: "message the candidate" },
+  listOutreach: { running: "Loading your outreach…", done: "Loaded your outreach", action: "load your outreach" },
 };
 
 const labelsFor = (name: string) =>
@@ -378,14 +381,16 @@ function approvalTitle(name: string, input: unknown) {
         return values.email ? `Move ${what} and email the candidates?` : `Move ${what}?`;
       }
       return `Allow the assistant to ${labelsFor(name).action}?`;
+    case "sendOutreach":
+      return "Send this message on GetHired?";
     default:
       return `Allow the assistant to ${labelsFor(name).action}?`;
   }
 }
 
 function approvalDetails(name: string, input: unknown) {
-  // The move's details come from the server preview (MoveApprovalDetails).
-  if (name === "setJobPostStatus" || name === "moveApplications") return [];
+  // Moves and outreach show a server preview (MoveApprovalDetails, OutreachApprovalDetails).
+  if (name === "setJobPostStatus" || name === "moveApplications" || name === "sendOutreach") return [];
   return describeInput(input);
 }
 
@@ -408,6 +413,7 @@ function ApprovalCard({
       <p className="text-sm font-medium text-foreground">{title}</p>
       {reason && <p className="text-xs text-muted-foreground">{reason}</p>}
       {name === "moveApplications" && <MoveApprovalDetails input={part.input} />}
+      {name === "sendOutreach" && <OutreachApprovalDetails input={part.input} />}
       {(details.length > 0 || isOnboarding) && (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
           {details.map(([key, value]) => (
@@ -604,6 +610,25 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
       skipped > 0 && `${skipped} skipped`,
     ].filter(Boolean);
     return <Step tone="done" label={parts.join(", ")} />;
+  }
+
+  if (name === "sendOutreach" && result.sent === true) {
+    const href = typeof result.outreachUrl === "string" && isInAppHref(result.outreachUrl) ? result.outreachUrl : null;
+    return (
+      <Step
+        tone="done"
+        label={
+          <>
+            {result.emailed ? "Message sent and emailed." : "Message sent. They'll see it on GetHired."}{" "}
+            {href && (
+              <Link {...NEW_TAB} href={href} className={inlineLink}>
+                Open Outreach
+              </Link>
+            )}
+          </>
+        }
+      />
+    );
   }
 
   if (name === "addToTalentList" && typeof result.url === "string" && isInAppHref(result.url)) {

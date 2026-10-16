@@ -4,9 +4,11 @@ import userEvent from "@testing-library/user-event";
 import type { UIMessage } from "ai";
 import MessageParts from "./MessageParts";
 import { previewAgentMoveAction } from "@/app/actions/pipeline/preview-agent-move";
+import { previewAgentOutreachAction } from "@/app/actions/outreach/preview-agent-outreach";
 
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
 vi.mock("@/app/actions/pipeline/preview-agent-move", () => ({ previewAgentMoveAction: vi.fn() }));
+vi.mock("@/app/actions/outreach/preview-agent-outreach", () => ({ previewAgentOutreachAction: vi.fn() }));
 
 const assistant = (parts: unknown[]): UIMessage =>
   ({ id: "a1", role: "assistant", parts }) as UIMessage;
@@ -210,6 +212,24 @@ describe("MessageParts: recruiter results (RA-TEST-009)", () => {
     );
   });
 
+  it("confirms a sent outreach with a link to Outreach", () => {
+    renderParts(
+      assistant([
+        output("sendOutreach", {
+          sent: true,
+          outreachId: "o1",
+          status: "sent",
+          emailed: true,
+          candidateUrl: "/company/profiles/a1",
+          outreachUrl: "/company/outreach",
+        }),
+      ]),
+    );
+
+    expect(screen.getByText(/Message sent and emailed/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Outreach" })).toHaveAttribute("href", "/company/outreach");
+  });
+
   it("explains when matching hasn't run for a job", () => {
     renderParts(assistant([output("findMatchesForJob", { status: "not_run", jobPostId: "b1" })]));
 
@@ -275,6 +295,63 @@ describe("MessageParts: recruiter approvals (RA-REQ-005)", () => {
 
     expect(screen.getByText("Move 1 application?")).toBeInTheDocument();
     expect(await screen.findByText(/won.t go through: Add a scheduling link/)).toBeInTheDocument();
+  });
+
+  const OUTREACH_INPUT = {
+    candidateId: "a0000000-0000-4000-8000-000000000001",
+    jobPostId: "b0000000-0000-4000-8000-000000000001",
+    subject: "Backend role at Acme",
+    message: "Hi Ada,\n\nYour Go work stood out. <b>Open</b> to a chat?",
+  };
+  const OUTREACH_PREVIEW = {
+    ok: true as const,
+    candidateName: "Ada Lovelace",
+    acceptsOutreach: true,
+    jobTitle: "Backend Engineer",
+    jobFound: true,
+    openSince: null,
+    quota: { remaining: 12, amount: 150 },
+  };
+
+  it("shows the outreach's recipient, job, quota and full plain-text message before approval (RAT-053)", async () => {
+    vi.mocked(previewAgentOutreachAction).mockResolvedValue(OUTREACH_PREVIEW);
+    const { onApprove } = renderParts(assistant([approval("sendOutreach", OUTREACH_INPUT)]));
+
+    expect(screen.getByText("Send this message on GetHired?")).toBeInTheDocument();
+    expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument();
+    expect(previewAgentOutreachAction).toHaveBeenCalledWith(OUTREACH_INPUT);
+    expect(screen.getByText("Backend Engineer")).toBeInTheDocument();
+    expect(screen.getByText("12 of 150 left this month")).toBeInTheDocument();
+    expect(screen.getByText("Backend role at Acme")).toBeInTheDocument();
+    // Plain text: markup in the message isn't rendered.
+    expect(screen.getByText(/<b>Open<\/b> to a chat\?/)).toBeInTheDocument();
+    // Ids aren't shown as fields.
+    expect(screen.queryByText(OUTREACH_INPUT.candidateId)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
+    expect(onApprove).toHaveBeenCalledWith({ id: "ap1", approved: true });
+  });
+
+  it.each([
+    [{ acceptsOutreach: false }, /won.t go through: Ada Lovelace isn.t accepting outreach/],
+    [{ jobFound: false, jobTitle: null }, /won.t go through: That job wasn.t found/],
+    [{ quota: { remaining: 0, amount: 10 } }, /won.t go through: You.ve used this month.s outreach/],
+    [{ openSince: "2026-10-10T09:00:00.000Z" }, /Ada Lovelace hasn.t answered your message from 10 Oct yet/],
+  ])("warns before a send that would be refused or repeat (%o)", async (overrides, text) => {
+    vi.mocked(previewAgentOutreachAction).mockResolvedValue({ ...OUTREACH_PREVIEW, ...overrides });
+    renderParts(assistant([approval("sendOutreach", OUTREACH_INPUT)]));
+
+    expect(await screen.findByText(text)).toBeInTheDocument();
+  });
+
+  it("says when the candidate can't be contacted", async () => {
+    vi.mocked(previewAgentOutreachAction).mockResolvedValue({
+      ok: false,
+      error: "This candidate isn't available to contact.",
+    });
+    renderParts(assistant([approval("sendOutreach", OUTREACH_INPUT)]));
+
+    expect(await screen.findByText(/won.t go through: This candidate isn.t available/)).toBeInTheDocument();
   });
 
   it("shows a job post draft's fields with readable labels", () => {

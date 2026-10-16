@@ -34,6 +34,7 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
         "runMatchingForJob",
         "screenApplicants",
         "moveApplications",
+        "sendOutreach",
       ].sort(),
     );
   });
@@ -49,6 +50,7 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
     "getJobPost",
     "listNotes",
     "getHiringFunnel",
+    "listOutreach",
   ])("gates memory and note writes after %s in the same turn (RA-SEC-003)", (reader) => {
     for (const write of ["saveMemory", "deleteMemory", "addNote"]) {
       expect(typeOf(decide(write, [user("x"), ...ran(reader, "c1")])), write).toBe("user-approval");
@@ -71,6 +73,15 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
     expect((status as { reason: string }).reason).toMatch(/email/i);
 
     expect(typeOf(decide("moveApplications", messages.slice(0, -2)))).toBe("user-approval");
+  });
+
+  it("counts outreach and moves toward the same email cap (RA-SEC-006)", () => {
+    const messages = [user("x"), ...ran("sendOutreach", "c1"), ...ran("moveApplications", "c2")];
+    expect(typeOf(decide("sendOutreach", messages))).toBe("user-approval");
+
+    messages.push(...ran("sendOutreach", "c3"));
+    expect(typeOf(decide("sendOutreach", messages))).toBe("denied");
+    expect(typeOf(decide("moveApplications", messages))).toBe("denied");
   });
 
   it("caps credit-spending calls per turn (RA-SEC-007)", () => {

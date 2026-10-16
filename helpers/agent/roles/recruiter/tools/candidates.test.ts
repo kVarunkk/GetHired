@@ -306,6 +306,29 @@ describe("getCandidateProfile tool", () => {
     expect(result.contactNote).toMatch(/answers Interested/);
   });
 
+  it("includes the company's latest outreach to the candidate, or null (RAT-051)", async () => {
+    queueProfile();
+    supabase.queue("candidate_outreach", {
+      data: [
+        { id: "o2", candidate_user_id: CANDIDATE_ID, status: "sent", sent_at: "2026-10-10T09:00:00.000Z" },
+        { id: "o1", candidate_user_id: CANDIDATE_ID, status: "expired", sent_at: "2026-08-01T09:00:00.000Z" },
+      ],
+      error: null,
+    });
+
+    const result = (await execTool(tools.getCandidateProfile, { candidateId: CANDIDATE_ID })) as Record<string, unknown>;
+
+    expect(result.outreach).toEqual({ status: "sent", sentAt: "2026-10-10", url: "/company/outreach" });
+    const chain = supabase.callsFor("candidate_outreach")[0].chain;
+    expect(chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
+    expect(chain).toContainEqual({ method: "in", args: ["candidate_user_id", [CANDIDATE_ID]] });
+
+    queueProfile();
+    supabase.queue("candidate_outreach", { data: null, error: { message: "boom" } });
+    const none = (await execTool(tools.getCandidateProfile, { candidateId: CANDIDATE_ID })) as Record<string, unknown>;
+    expect(none.outreach).toBeNull();
+  });
+
   it("adds contact details once the candidate applied or answered Interested", async () => {
     supabase.queueRpc("company_can_view_candidate", { data: true, error: null });
     supabase.queueRpc("company_has_candidate_access", { data: true, error: null });

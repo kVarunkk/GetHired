@@ -41,6 +41,7 @@ beforeEach(() => {
       profiles_per_search: state(50),
       screenings: state(100, 20),
       agent_messages: state(null),
+      outreach: state(150, 10),
     },
   } as never);
 });
@@ -61,7 +62,7 @@ describe("loadRecruiterPromptContext", () => {
       plan: {
         name: "Startup",
         creditBalance: 9,
-        remaining: { activeJobPosts: 3, profilesPerSearch: 50, screenings: 80, agentMessages: null },
+        remaining: { activeJobPosts: 3, profilesPerSearch: 50, screenings: 80, agentMessages: null, outreach: 140 },
       },
       jobs: [JOB],
     });
