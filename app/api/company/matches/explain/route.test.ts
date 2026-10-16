@@ -9,6 +9,7 @@ import { buildRequest } from "@/test/utils/request";
 import { createSupabaseMock, type RecordedCall, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import { CANDIDATE_PROFILE, JOB_POST, RESUME_CONTENT, explanationOf } from "@/test/utils/matching";
+import { directoryRowOf } from "@/test/utils/outreach";
 import { POST } from "./route";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
@@ -200,6 +201,29 @@ describe("POST /api/company/matches/explain (MT-TEST-005)", () => {
     const resumeQuery = admin.callsFor("resumes")[0];
     expect(resumeQuery.chain).toContainEqual({ method: "eq", args: ["user_id", CANDIDATE_ID] });
     expect(resumeQuery.chain).toContainEqual({ method: "eq", args: ["is_primary", true] });
+  });
+
+  it("reads a talent-pool candidate from candidate_directory, never user_info (ORT-045)", async () => {
+    await signInCompany();
+    const row = directoryRowOf();
+    rls.queue("job_postings", { data: JOB_POST, error: null });
+    rls.queue("job_relevant_profiles", { data: { id: ROW_ID, explanation: null, explanation_status: "none" }, error: null });
+    rls.queue("candidate_directory", { data: row, error: null });
+
+    const res = await post();
+
+    expect(res.status).toBe(200);
+    const { resume_sections, ...profile } = row;
+    expect(explainMatch).toHaveBeenCalledWith(
+      { job: JOB_POST, profile, resume: { sections: resume_sections } },
+      expect.anything(),
+    );
+    expect(rls.callsFor("candidate_directory")[0].chain).toContainEqual({
+      method: "eq",
+      args: ["user_id", CANDIDATE_ID],
+    });
+    expect(admin.callsFor("user_info")).toEqual([]);
+    expect(admin.callsFor("resumes")).toEqual([]);
   });
 
   it("402s with nothing stored when the allowance is used up", async () => {

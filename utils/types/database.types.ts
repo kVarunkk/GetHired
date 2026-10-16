@@ -358,6 +358,58 @@ export type Database = {
         }
         Relationships: []
       }
+      application_attachments: {
+        Row: {
+          application_id: string
+          created_at: string
+          first_viewed_at: string | null
+          id: string
+          interview_session_id: string | null
+          kind: string
+          resume_review_id: string | null
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          first_viewed_at?: string | null
+          id?: string
+          interview_session_id?: string | null
+          kind: string
+          resume_review_id?: string | null
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          first_viewed_at?: string | null
+          id?: string
+          interview_session_id?: string | null
+          kind?: string
+          resume_review_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_attachments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_attachments_interview_session_id_fkey"
+            columns: ["interview_session_id"]
+            isOneToOne: false
+            referencedRelation: "interview_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_attachments_resume_review_id_fkey"
+            columns: ["resume_review_id"]
+            isOneToOne: false
+            referencedRelation: "resume_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_events: {
         Row: {
           actor_name: string | null
@@ -555,6 +607,13 @@ export type Database = {
             foreignKeyName: "applications_applicant_user_id_fkey"
             columns: ["applicant_user_id"]
             isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "applications_applicant_user_id_fkey"
+            columns: ["applicant_user_id"]
+            isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
           },
@@ -641,8 +700,41 @@ export type Database = {
             foreignKeyName: "bookmarks_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "bookmarks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      candidate_company_blocks: {
+        Row: {
+          candidate_user_id: string
+          company_id: string
+          created_at: string
+        }
+        Insert: {
+          candidate_user_id: string
+          company_id: string
+          created_at?: string
+        }
+        Update: {
+          candidate_user_id?: string
+          company_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_company_blocks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -693,6 +785,104 @@ export type Database = {
           },
           {
             foreignKeyName: "candidate_notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_outreach: {
+        Row: {
+          candidate_contact: string | null
+          candidate_note: string | null
+          candidate_user_id: string
+          company_id: string
+          decline_reason: string | null
+          expires_at: string
+          id: string
+          job_post_id: string | null
+          message: string
+          responded_at: string | null
+          sender_user_id: string | null
+          sent_at: string
+          source: string
+          status: string
+          subject: string
+        }
+        Insert: {
+          candidate_contact?: string | null
+          candidate_note?: string | null
+          candidate_user_id: string
+          company_id: string
+          decline_reason?: string | null
+          expires_at?: string
+          id?: string
+          job_post_id?: string | null
+          message: string
+          responded_at?: string | null
+          sender_user_id?: string | null
+          sent_at?: string
+          source?: string
+          status?: string
+          subject: string
+        }
+        Update: {
+          candidate_contact?: string | null
+          candidate_note?: string | null
+          candidate_user_id?: string
+          company_id?: string
+          decline_reason?: string | null
+          expires_at?: string
+          id?: string
+          job_post_id?: string | null
+          message?: string
+          responded_at?: string | null
+          sender_user_id?: string | null
+          sent_at?: string
+          source?: string
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_outreach_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_outreach_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_profile_views: {
+        Row: {
+          candidate_user_id: string
+          company_id: string
+          viewed_on: string
+          views: number
+        }
+        Insert: {
+          candidate_user_id: string
+          company_id: string
+          viewed_on?: string
+          views?: number
+        }
+        Update: {
+          candidate_user_id?: string
+          company_id?: string
+          viewed_on?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_profile_views_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "company_info"
@@ -909,6 +1099,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "company_info"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_favorites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "company_favorites_user_id_fkey"
@@ -1280,6 +1477,13 @@ export type Database = {
             foreignKeyName: "feedbacks_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "feedbacks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
           },
@@ -1435,6 +1639,13 @@ export type Database = {
             foreignKeyName: "interviews_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "interviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
           },
@@ -1469,6 +1680,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invitations_referrer_user_id_fkey"
+            columns: ["referrer_user_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "invitations_referrer_user_id_fkey"
             columns: ["referrer_user_id"]
@@ -1510,6 +1728,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "all_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "job_feedback_user_id_fkey"
@@ -1695,6 +1920,13 @@ export type Database = {
             foreignKeyName: "job_relevant_users_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "job_relevant_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
           },
@@ -1714,6 +1946,32 @@ export type Database = {
           canonical_name?: string
         }
         Relationships: []
+      }
+      outreach_draft_usage: {
+        Row: {
+          company_id: string
+          count: number
+          day: string
+        }
+        Insert: {
+          company_id: string
+          count?: number
+          day?: string
+        }
+        Update: {
+          company_id?: string
+          count?: number
+          day?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_draft_usage_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
@@ -1811,6 +2069,13 @@ export type Database = {
             foreignKeyName: "payments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
           },
@@ -1893,6 +2158,32 @@ export type Database = {
         }
         Relationships: []
       }
+      resume_public_sections: {
+        Row: {
+          resume_id: string
+          sections: Json
+          updated_at: string
+        }
+        Insert: {
+          resume_id: string
+          sections?: Json
+          updated_at?: string
+        }
+        Update: {
+          resume_id?: string
+          sections?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resume_public_sections_resume_id_fkey"
+            columns: ["resume_id"]
+            isOneToOne: true
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resume_reviews: {
         Row: {
           ai_response: Json | null
@@ -1955,6 +2246,13 @@ export type Database = {
             foreignKeyName: "resume_reviews_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "resume_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
           },
@@ -1995,6 +2293,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "resumes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "resumes_user_id_fkey"
             columns: ["user_id"]
@@ -2051,6 +2356,13 @@ export type Database = {
           list_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "talent_list_members_candidate_user_id_fkey"
+            columns: ["candidate_user_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "talent_list_members_candidate_user_id_fkey"
             columns: ["candidate_user_id"]
@@ -2161,6 +2473,13 @@ export type Database = {
             foreignKeyName: "user_api_tokens_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_api_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
           },
@@ -2195,6 +2514,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "all_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_favorites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "user_favorites_user_id_fkey"
@@ -2239,6 +2565,13 @@ export type Database = {
             foreignKeyName: "user_favorites_companies_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_favorites_companies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
           },
@@ -2246,6 +2579,7 @@ export type Database = {
       }
       user_info: {
         Row: {
+          accepts_outreach: boolean
           ai_credits: number
           career_goals_long_term: string | null
           career_goals_short_term: string | null
@@ -2279,8 +2613,13 @@ export type Database = {
           user_id: string
           visa_sponsorship_required: boolean | null
           work_style_preferences: string[] | null
+          desired_roles_search: string | null
+          industry_preferences_search: string | null
+          top_skills_search: string | null
+          work_style_preferences_search: string | null
         }
         Insert: {
+          accepts_outreach?: boolean
           ai_credits?: number
           career_goals_long_term?: string | null
           career_goals_short_term?: string | null
@@ -2316,6 +2655,7 @@ export type Database = {
           work_style_preferences?: string[] | null
         }
         Update: {
+          accepts_outreach?: boolean
           ai_credits?: number
           career_goals_long_term?: string | null
           career_goals_short_term?: string | null
@@ -2389,6 +2729,13 @@ export type Database = {
             foreignKeyName: "user_relevant_jobs_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_relevant_jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
           },
@@ -2420,6 +2767,93 @@ export type Database = {
       }
     }
     Views: {
+      candidate_directory: {
+        Row: {
+          accepts_outreach: boolean | null
+          career_goals_long_term: string | null
+          career_goals_short_term: string | null
+          company_size_preference: string | null
+          created_at: string | null
+          desired_roles: string[] | null
+          desired_roles_search: string | null
+          experience_years: number | null
+          filled: boolean | null
+          full_name: string | null
+          industry_preferences: string[] | null
+          industry_preferences_search: string | null
+          is_public: boolean | null
+          job_type: string[] | null
+          max_salary: number | null
+          min_salary: number | null
+          preferred_locations: string[] | null
+          resume_sections: Json | null
+          salary_currency: string | null
+          top_skills: string[] | null
+          top_skills_search: string | null
+          updated_at: string | null
+          user_id: string | null
+          visa_sponsorship_required: boolean | null
+          work_style_preferences: string[] | null
+          work_style_preferences_search: string | null
+        }
+        Insert: {
+          accepts_outreach?: boolean | null
+          career_goals_long_term?: string | null
+          career_goals_short_term?: string | null
+          company_size_preference?: string | null
+          created_at?: string | null
+          desired_roles?: string[] | null
+          desired_roles_search?: never
+          experience_years?: number | null
+          filled?: boolean | null
+          full_name?: string | null
+          industry_preferences?: string[] | null
+          industry_preferences_search?: never
+          is_public?: boolean | null
+          job_type?: string[] | null
+          max_salary?: number | null
+          min_salary?: number | null
+          preferred_locations?: string[] | null
+          resume_sections?: never
+          salary_currency?: string | null
+          top_skills?: string[] | null
+          top_skills_search?: never
+          updated_at?: string | null
+          user_id?: string | null
+          visa_sponsorship_required?: boolean | null
+          work_style_preferences?: string[] | null
+          work_style_preferences_search?: never
+        }
+        Update: {
+          accepts_outreach?: boolean | null
+          career_goals_long_term?: string | null
+          career_goals_short_term?: string | null
+          company_size_preference?: string | null
+          created_at?: string | null
+          desired_roles?: string[] | null
+          desired_roles_search?: never
+          experience_years?: number | null
+          filled?: boolean | null
+          full_name?: string | null
+          industry_preferences?: string[] | null
+          industry_preferences_search?: never
+          is_public?: boolean | null
+          job_type?: string[] | null
+          max_salary?: number | null
+          min_salary?: number | null
+          preferred_locations?: string[] | null
+          resume_sections?: never
+          salary_currency?: string | null
+          top_skills?: string[] | null
+          top_skills_search?: never
+          updated_at?: string | null
+          user_id?: string | null
+          visa_sponsorship_required?: boolean | null
+          work_style_preferences?: string[] | null
+          work_style_preferences_search?: never
+        }
+        Relationships: []
+      }
       flat_locations: {
         Row: {
           city: string | null
@@ -2521,6 +2955,10 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: string
       }
+      company_has_candidate_access: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       consume_entitlement: {
         Args: {
           p_actor?: string
@@ -2540,10 +2978,21 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: undefined
       }
+      desired_roles_search: {
+        Args: { "": Database["public"]["Tables"]["user_info"]["Row"] }
+        Returns: {
+          error: true
+        } & "the function public.desired_roles_search with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
+      }
+      enqueue_company_interview_analysis: {
+        Args: { p_session: string }
+        Returns: Json
+      }
       enqueue_missing_job_embeddings: {
         Args: { p_batch_size?: number }
         Returns: number
       }
+      expire_outreach: { Args: never; Returns: number }
       finalize_interview_analysis_session: {
         Args: { p_session_id: string }
         Returns: Json
@@ -2603,6 +3052,7 @@ export type Database = {
           job_url: string
         }[]
       }
+      get_my_profile_view_count: { Args: { p_days?: number }; Returns: number }
       get_platform_stats: {
         Args: never
         Returns: {
@@ -2689,6 +3139,13 @@ export type Database = {
         }
         Returns: Json
       }
+      increment_outreach_drafts: { Args: never; Returns: number }
+      industry_preferences_search: {
+        Args: { "": Database["public"]["Tables"]["user_info"]["Row"] }
+        Returns: {
+          error: true
+        } & "the function public.industry_preferences_search with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
+      }
       is_company_member: { Args: { p_company_id: string }; Returns: boolean }
       mark_usage_notified: {
         Args: {
@@ -2750,6 +3207,8 @@ export type Database = {
         Args: { p_status: Database["public"]["Enums"]["application_status"] }
         Returns: Database["public"]["Enums"]["pipeline_stage_kind"]
       }
+      record_profile_view: { Args: { p_candidate: string }; Returns: undefined }
+      redact_pii: { Args: { p_text: string }; Returns: string }
       release_hold: {
         Args: {
           p_company_id: string
@@ -2768,6 +3227,40 @@ export type Database = {
         Args: { p_interview_id: string; p_reservation_id: string }
         Returns: string
       }
+      respond_to_outreach: {
+        Args: {
+          p_block?: boolean
+          p_contact?: string
+          p_id: string
+          p_note?: string
+          p_reason?: string
+          p_status: string
+        }
+        Returns: {
+          candidate_contact: string | null
+          candidate_note: string | null
+          candidate_user_id: string
+          company_id: string
+          decline_reason: string | null
+          expires_at: string
+          id: string
+          job_post_id: string | null
+          message: string
+          responded_at: string | null
+          sender_user_id: string | null
+          sent_at: string
+          source: string
+          status: string
+          subject: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "candidate_outreach"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resume_sections_public: { Args: { p_content: Json }; Returns: Json }
       rollover_free_periods: { Args: never; Returns: Json }
       schedule_company_plan_change: {
         Args: { p_company_id: string; p_tier_slug: string }
@@ -2780,6 +3273,39 @@ export type Database = {
       seed_default_templates: {
         Args: { p_company_id: string }
         Returns: undefined
+      }
+      send_candidate_outreach: {
+        Args: {
+          p_candidate: string
+          p_id: string
+          p_job_post: string
+          p_message: string
+          p_source?: string
+          p_subject: string
+        }
+        Returns: {
+          candidate_contact: string | null
+          candidate_note: string | null
+          candidate_user_id: string
+          company_id: string
+          decline_reason: string | null
+          expires_at: string
+          id: string
+          job_post_id: string | null
+          message: string
+          responded_at: string | null
+          sender_user_id: string | null
+          sent_at: string
+          source: string
+          status: string
+          subject: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "candidate_outreach"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       send_job_embedding: {
         Args: { job_row: Database["public"]["Tables"]["all_jobs"]["Row"] }
@@ -2804,6 +3330,12 @@ export type Database = {
         Returns: string
       }
       talent_list_company: { Args: { p_list_id: string }; Returns: string }
+      top_skills_search: {
+        Args: { "": Database["public"]["Tables"]["user_info"]["Row"] }
+        Returns: {
+          error: true
+        } & "the function public.top_skills_search with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
+      }
       try_cast_double: { Args: { inp: string }; Returns: number }
       url_decode: { Args: { data: string }; Returns: string }
       url_encode: { Args: { data: string }; Returns: string }
@@ -2814,6 +3346,12 @@ export type Database = {
           payload: Json
           valid: boolean
         }[]
+      }
+      work_style_preferences_search: {
+        Args: { "": Database["public"]["Tables"]["user_info"]["Row"] }
+        Returns: {
+          error: true
+        } & "the function public.work_style_preferences_search with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
     }
     Enums: {

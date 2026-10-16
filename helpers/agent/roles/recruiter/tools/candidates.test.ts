@@ -6,7 +6,9 @@ import { execTool, inputJsonSchema, recruiterToolContext, validateInput } from "
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
 import { CANDIDATE_PROFILE, INJECTION_LINE, JOB_POST, PII, RESUME_CONTENT } from "@/test/utils/matching";
+import { scrubPII } from "@/helpers/ai/fairness";
 import { RA_RESUME_EXCERPT_MAX_CHARS } from "../config";
+import { flushAfter } from "@/test/utils/after";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
@@ -33,6 +35,17 @@ const expectNoContact = (output: unknown) => {
   for (const value of CONTACT) expect(text).not.toContain(value);
   expect(text).not.toMatch(/"email"|"linkedin|"github/);
 };
+
+/** RESUME_CONTENT as candidate_directory returns it: four section types, PII redacted. */
+const DIRECTORY_SECTIONS = (RESUME_CONTENT.sections ?? [])
+  .filter((section) => ["experience", "skills", "projects", "education"].includes(section.type ?? ""))
+  .map((section) => ({
+    ...section,
+    items: section.items?.map((item) => ({
+      ...item,
+      bullets: item.bullets?.map((b) => ({ text: scrubPII(b.text ?? "") })),
+    })),
+  }));
 
 let supabase: SupabaseMock;
 let tools: ReturnType<typeof createCandidateTools>;
@@ -150,13 +163,18 @@ describe("findMatchesForJob tool", () => {
     supabase.queue("job_postings", { data: job("completed"), error: null });
     supabase.queue("job_relevant_profiles", {
       data: [
-        { relevance_rank: 1, match_score: 88, explanation: EXPLANATION, explanation_status: "completed", user_info: CANDIDATE_PROFILE },
-        // Hidden by RLS since matching (now private): no user_info.
-        { relevance_rank: 2, match_score: 80, explanation: null, explanation_status: "none", user_info: null },
-        { relevance_rank: 3, match_score: 70, explanation: EXPLANATION, explanation_status: "stale", user_info: { ...CANDIDATE_PROFILE, user_id: OTHER_ID } },
+        { user_id: CANDIDATE_ID, relevance_rank: 1, match_score: 88, explanation: EXPLANATION, explanation_status: "completed" },
+        // Went private since matching: neither the directory nor RLS returns them.
+        { user_id: "a0000000-0000-4000-8000-0000000000aa", relevance_rank: 2, match_score: 80, explanation: null, explanation_status: "none" },
+        { user_id: OTHER_ID, relevance_rank: 3, match_score: 70, explanation: EXPLANATION, explanation_status: "stale" },
       ],
       error: null,
     });
+    supabase.queue("candidate_directory", {
+      data: [CANDIDATE_PROFILE, { ...CANDIDATE_PROFILE, user_id: OTHER_ID }],
+      error: null,
+    });
+    supabase.queue("user_info", { data: [], error: null });
 
     const result = (await execTool(tools.findMatchesForJob, { jobPostId: JOB_POST.id, limit: 5 })) as {
       candidates: Record<string, unknown>[];
@@ -218,8 +236,11 @@ describe("runMatchingForJob tool", () => {
 describe("getCandidateProfile tool", () => {
   function queueProfile() {
     supabase.queueRpc("company_can_view_candidate", { data: true, error: null });
-    supabase.queue("user_info", { data: CANDIDATE_PROFILE, error: null });
-    supabase.queue("resumes", { data: { content: RESUME_CONTENT }, error: null });
+    supabase.queueRpc("company_has_candidate_access", { data: false, error: null });
+    supabase.queue("candidate_directory", {
+      data: { ...CANDIDATE_PROFILE, resume_sections: DIRECTORY_SECTIONS },
+      error: null,
+    });
     supabase.queue("job_relevant_profiles", {
       data: [
         {
@@ -279,6 +300,40 @@ describe("getCandidateProfile tool", () => {
     expect(String(result.resumeExcerpt).length).toBeLessThan(RA_RESUME_EXCERPT_MAX_CHARS + 60);
     expect(JSON.stringify(result.matches)).toContain("<match_explanation>");
     expectNoContact(result);
+    // Without access: the directory profile only (ORT-045, RA-SEC-005).
+    expect(supabase.callsFor("user_info")).toHaveLength(0);
+    expect(supabase.callsFor("resumes")).toHaveLength(0);
+    expect(result.contactNote).toMatch(/answers Interested/);
+  });
+
+  it("adds contact details once the candidate applied or answered Interested", async () => {
+    supabase.queueRpc("company_can_view_candidate", { data: true, error: null });
+    supabase.queueRpc("company_has_candidate_access", { data: true, error: null });
+    supabase.queue("user_info", { data: CANDIDATE_PROFILE, error: null });
+    supabase.queue("resumes", { data: { content: RESUME_CONTENT }, error: null });
+
+    const result = (await execTool(tools.getCandidateProfile, { candidateId: CANDIDATE_ID })) as Record<string, unknown>;
+
+    expect(result.contact).toEqual({ email: PII.email, linkedin: PII.linkedin, github: PII.github });
+    expect(result).not.toHaveProperty("contactNote");
+    expect(supabase.callsFor("candidate_directory")).toHaveLength(0);
+  });
+
+  it("records one profile view after the read, and a failed record doesn't fail the tool (OR-REQ-020)", async () => {
+    queueProfile();
+    supabase.queueRpc("record_profile_view", { data: null, error: { message: "boom" } });
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = (await execTool(tools.getCandidateProfile, { candidateId: CANDIDATE_ID })) as Record<string, unknown>;
+    expect(result.id).toBe(CANDIDATE_ID);
+    expect(supabase.callsFor("record_profile_view")).toHaveLength(0);
+
+    await flushAfter();
+
+    const calls = supabase.callsFor("record_profile_view");
+    expect(calls).toHaveLength(1);
+    expect(calls[0].chain[0].args[1]).toEqual({ p_candidate: CANDIDATE_ID });
+    spy.mockRestore();
   });
 
   it("treats a candidate the company can't see as not found", async () => {
@@ -287,14 +342,18 @@ describe("getCandidateProfile tool", () => {
     expect(await execTool(tools.getCandidateProfile, { candidateId: OTHER_ID })).toEqual({
       error: "Candidate not found.",
     });
+    await flushAfter();
+    expect(supabase.callsFor("record_profile_view")).toHaveLength(0);
     expect(supabase.callsFor("user_info")).toHaveLength(0);
+    expect(supabase.callsFor("candidate_directory")).toHaveLength(0);
   });
 });
 
 describe("compareCandidates tool", () => {
   it("lines candidates up for one of the company's jobs, with match and fit scores", async () => {
     supabase.queue("job_postings", { data: { id: JOB_POST.id, title: JOB_POST.title }, error: null });
-    supabase.queue("user_info", { data: [CANDIDATE_PROFILE], error: null });
+    supabase.queue("candidate_directory", { data: [CANDIDATE_PROFILE], error: null });
+    supabase.queue("user_info", { data: [], error: null });
     supabase.queue("job_relevant_profiles", {
       data: [{ user_id: CANDIDATE_ID, match_score: 88, explanation: EXPLANATION, explanation_status: "completed" }],
       error: null,

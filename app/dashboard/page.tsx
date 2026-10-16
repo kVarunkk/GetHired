@@ -12,6 +12,9 @@ import RechargeCredits from "@/components/RechargeCredits";
 import DashboardDropdown from "@/components/DashboardDropdown";
 import CreditDepositDialog from "@/components/CreditDepositDialog";
 import ProfileVisibilitySetting from "@/components/ProfileVisibilitySetting";
+import OutreachPreferences from "@/components/OutreachPreferences";
+import ProfileViewsCard from "@/components/ProfileViewsCard";
+import { PROFILE_VIEW_WINDOW_DAYS } from "@/helpers/outreach/config";
 
 export default async function DashboardPage() {
   try {
@@ -27,7 +30,7 @@ export default async function DashboardPage() {
     const { data: userInfoData, error: userInfoError } = await supabase
       .from("user_info")
       .select(
-        "full_name, email, ai_credits, updated_at, filled, is_public, invitations(*), invitations_count, payments(id), user_api_tokens(id)",
+        "full_name, email, ai_credits, updated_at, filled, is_public, accepts_outreach, invitations(*), invitations_count, payments(id), user_api_tokens(id)",
       )
       .eq("user_id", user.id)
       .single();
@@ -43,7 +46,7 @@ export default async function DashboardPage() {
       .map((each) => each.invited_email)
       .filter((email): email is string => email !== null);
 
-    const [metricsRes, appliedJobsRes] = await Promise.all([
+    const [metricsRes, appliedJobsRes, viewsRes, blocksRes] = await Promise.all([
       supabase.rpc("get_applicant_weekly_metrics", { p_user_id: user.id }),
       supabase
         .from("applications")
@@ -53,6 +56,12 @@ export default async function DashboardPage() {
         .eq("applicant_user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(3),
+      supabase.rpc("get_my_profile_view_count", { p_days: PROFILE_VIEW_WINDOW_DAYS }),
+      supabase
+        .from("candidate_company_blocks")
+        .select("company_id, company_info(name)")
+        .eq("candidate_user_id", user.id)
+        .order("created_at", { ascending: false }),
     ]);
 
     const { data: metricsData, error: metricsError } = metricsRes;
@@ -60,6 +69,13 @@ export default async function DashboardPage() {
 
     if (metricsError) throw metricsError;
     if (appliedJobsError) throw appliedJobsError;
+
+    // The view count and blocks are extras: a failure hides them, not the page.
+    const profileViews = viewsRes.error ? 0 : (viewsRes.data ?? 0);
+    const blockedCompanies = (blocksRes.data ?? []).map((block) => ({
+      id: block.company_id,
+      name: block.company_info?.name ?? null,
+    }));
 
     const metrics = metricsData?.[0] || {};
     const jobPosts =
@@ -319,6 +335,18 @@ export default async function DashboardPage() {
                 />
               </CardContent>
             </Card>
+
+            <Card className="flex flex-col p-4">
+              <CardContent className="p-0 h-full flex-1">
+                <OutreachPreferences
+                  initialAcceptsOutreach={userInfoData.accepts_outreach}
+                  isPublic={userInfoData.is_public}
+                  initialBlocked={blockedCompanies}
+                />
+              </CardContent>
+            </Card>
+
+            <ProfileViewsCard count={profileViews} />
           </div>
         </div>
 

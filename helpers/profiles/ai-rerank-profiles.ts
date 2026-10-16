@@ -78,8 +78,7 @@ export async function rerankProfilesIfApplicable({
         jobId,
         companyId,
         profiles: initialProfiles.map((profile) => {
-          const resumeContent = profile.resumes?.[0]
-            ?.content as TResumeRowContent;
+          const resumeContent = publicResumeContent(profile);
           const { experience, skills, projects } = extractSectionText(
             ["experience", "skills", "projects"],
             resumeContent,
@@ -141,4 +140,18 @@ export async function rerankProfilesIfApplicable({
   }
 
   return { initialProfiles: finalProfiles, totalCount: finalCount, matchScores };
+}
+
+/**
+ * The scrubbed resume sections of a profile (OR-REQ-010), as resume content:
+ * `resume_sections` from candidate_directory, or the primary resume's stored
+ * public sections. Never the raw resume, which can hold contact details.
+ */
+export function publicResumeContent(profile: AllProfileWithRelations): TResumeRowContent {
+  const fromView = profile.resume_sections;
+  if (Array.isArray(fromView)) return { sections: fromView } as TResumeRowContent;
+
+  const stored = profile.resumes?.find((r) => r.is_primary !== false)?.resume_public_sections;
+  const row = Array.isArray(stored) ? stored[0] : stored;
+  return { sections: Array.isArray(row?.sections) ? row.sections : [] } as TResumeRowContent;
 }

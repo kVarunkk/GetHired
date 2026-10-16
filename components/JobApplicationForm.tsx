@@ -27,6 +27,8 @@ import useSWR, { mutate } from "swr";
 import { TResumeReviewResume } from "@/utils/types/review.types";
 import { revalidateCacheAction } from "@/app/actions/revalidate-tag";
 import { deductApplicationCreditsAction } from "@/app/actions/deduct-application-credits";
+import { attachToApplicationAction } from "@/app/actions/applications/attachments";
+import ShareWithCompanyStep, { type ShareSelection } from "./ShareWithCompanyStep";
 
 const createFormSchema = (questions: string[]) => {
   const schemaFields = questions.reduce<Record<string, z.ZodTypeAny>>(
@@ -54,6 +56,7 @@ export default function JobApplicationForm({
   const [loading, setLoading] = useState(false);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [newFile, setNewFile] = useState<File | null>(null);
+  const [share, setShare] = useState<ShareSelection>({ sessionId: null, reviewId: null });
 
   const questions = useMemo(
     () => jobPost.job_postings?.[0]?.questions || [],
@@ -104,16 +107,45 @@ export default function JobApplicationForm({
         throw new Error("Resume processing failed. Please try again.");
       }
 
-      const { error } = await supabase.from("applications").insert({
-        job_post_id: jobPost.job_postings![0].id,
-        all_jobs_id: jobPost.id,
-        applicant_user_id: userId,
-        answers: Object.values(values),
-        resume_id: finalResumeId,
-        status: "submitted",
-      });
+      const { data: application, error } = await supabase
+        .from("applications")
+        .insert({
+          job_post_id: jobPost.job_postings![0].id,
+          all_jobs_id: jobPost.id,
+          applicant_user_id: userId,
+          answers: Object.values(values),
+          resume_id: finalResumeId,
+          status: "submitted",
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
+
+      // Shared only after the application exists; a failed share never
+      // fails the application (OR-REQ-030).
+      if (application && (share.sessionId || share.reviewId)) {
+        const shares = await Promise.allSettled([
+          share.sessionId
+            ? attachToApplicationAction({
+                applicationId: application.id,
+                kind: "interview_session",
+                interviewSessionId: share.sessionId,
+              })
+            : null,
+          share.reviewId
+            ? attachToApplicationAction({
+                applicationId: application.id,
+                kind: "resume_review",
+                resumeReviewId: share.reviewId,
+              })
+            : null,
+        ]);
+        const failed = shares.some(
+          (r) => r.status === "rejected" || (r.value !== null && !r.value.ok),
+        );
+        if (failed) toast.error("Your application was sent, but we couldn't share everything you picked.");
+      }
 
       const result = await deductApplicationCreditsAction(
         jobPost.id,
@@ -265,6 +297,8 @@ export default function JobApplicationForm({
                 )}
               </form>
             </Form>
+
+            <ShareWithCompanyStep allJobsId={jobPost.id} value={share} onChange={setShare} />
           </div>
         )}
       </div>

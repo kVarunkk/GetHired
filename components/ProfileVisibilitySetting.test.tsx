@@ -32,7 +32,7 @@ describe("ProfileVisibilitySetting (spec §3.6)", () => {
 
     expect(toggle()).toHaveAttribute("aria-checked", String(isPublic));
     expect(screen.getByText(status)).toBeInTheDocument();
-    expect(toggle()).toHaveAccessibleDescription(expect.stringMatching(/primary resume/));
+    expect(toggle()).toHaveAccessibleDescription(expect.stringMatching(/from your resume/));
   });
 
   it("saves the change and refreshes the cached profile", async () => {

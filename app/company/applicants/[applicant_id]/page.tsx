@@ -22,6 +22,12 @@ import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import { TApplicationStatus } from "@/utils/types";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
 import { notFound, unstable_rethrow } from "next/navigation";
+import { after } from "next/server";
+import CandidateSharedSection from "@/components/CandidateSharedSection";
+import {
+  loadSharedSignals,
+  markSharedSignalsViewed,
+} from "@/helpers/applications/shared-signals";
 import { isUuid } from "@/helpers/agent/auth";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 import ScreeningCard from "@/components/matching/ScreeningCard";
@@ -112,6 +118,19 @@ export default async function ApplicantPage({
         .order("created_at", { ascending: false })
         .limit(200),
     ]);
+
+    // What the candidate shared (OR-REQ-032). A failure hides the section,
+    // not the page. Opening the page ends the candidate's right to un-share.
+    const shared = await loadSharedSignals(supabase, application.id).catch(
+      (err) => {
+        console.error("[applicant] couldn't load shared items", err);
+        return null;
+      },
+    );
+    if (shared?.unviewedIds.length) {
+      const ids = shared.unviewedIds;
+      after(() => markSharedSignalsViewed(application.id, ids));
+    }
 
     let signedUrl: string | null = null;
 
@@ -381,6 +400,12 @@ export default async function ApplicantPage({
                   jobPostId={application.job_post_id}
                   questions={application.job_postings?.questions ?? []}
                   screening={screening}
+                />
+              )}
+              {shared && (
+                <CandidateSharedSection
+                  interview={shared.interview}
+                  review={shared.review}
                 />
               )}
               <Card>

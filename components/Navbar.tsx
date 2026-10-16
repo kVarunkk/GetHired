@@ -30,6 +30,20 @@ import WaitlistCTA from "./WaitlistCTA";
 import ModifiedLink from "./ModifiedLink";
 import SidebarLabel from "./SidebarLabel";
 import ScrollFade from "./ScrollFade";
+import { useOpenOutreachCount } from "./outreach/useOpenOutreachCount";
+
+/** The count next to a nav label (open outreach), hidden at 0. */
+function NavCount({ count }: { count?: number }) {
+  if (!count) return null;
+  return (
+    <span
+      aria-label={`${count} open`}
+      className="ml-1 inline-flex min-w-5 items-center justify-center rounded-full border border-brand/30 bg-brandSoft px-1.5 text-[11px] font-medium text-brandSoft-foreground"
+    >
+      {count}
+    </span>
+  );
+}
 
 export default function NavbarComponent({
   variant = "vertical",
@@ -47,9 +61,12 @@ export default function NavbarComponent({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const isCompanyUser = user?.app_metadata?.type === "company";
+  const openOutreach = useOpenOutreachCount(user);
   const navItems = useMemo(() => {
-    return getNavItemsByPath(pathname, isCompanyUser, user);
-  }, [pathname, user, isCompanyUser]);
+    return getNavItemsByPath(pathname, isCompanyUser, user).map((item) =>
+      item.id === "opportunities" ? { ...item, count: openOutreach } : item,
+    );
+  }, [pathname, user, isCompanyUser, openOutreach]);
 
   const navbarItems = navItems.map((each) => {
     let isActive = false;
@@ -112,7 +129,8 @@ export default function NavbarComponent({
               pathname.startsWith("/company") ||
               pathname.startsWith("/interview") ||
               pathname.startsWith("/agent") ||
-              pathname.startsWith("/dashboard")) &&
+              pathname.startsWith("/dashboard") ||
+              pathname.startsWith("/opportunities")) &&
               "mb-0",
           )}
         >
@@ -165,6 +183,7 @@ export default function NavbarComponent({
                     )}
                   >
                     {item.label}
+                    <NavCount count={item.count} />
                   </ModifiedLink>
                 ))}
             </nav>
@@ -236,9 +255,15 @@ export default function NavbarComponent({
                           item.active && "bg-secondary",
                         )}
                       >
-                        <span className="shrink-0">{item.icon}</span>
+                        <span className="relative shrink-0">
+                          {item.icon}
+                          {!!item.count && !isMenuOpen && (
+                            <span aria-hidden className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-brand" />
+                          )}
+                        </span>
                         <SidebarLabel open={isMenuOpen}>
                           {item.label}
+                          <NavCount count={item.count} />
                         </SidebarLabel>
                       </ModifiedLink>
                     </TooltipTrigger>
@@ -454,6 +479,7 @@ const NavbarSheet = ({
                 onClick={() => setOpen(false)}
               >
                 {item.label}
+                <NavCount count={item.count} />
               </ModifiedLink>
             );
           })}

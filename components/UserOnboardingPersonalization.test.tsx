@@ -41,10 +41,10 @@ describe("UserOnboardingPersonalization profile visibility (spec §3.6)", () => 
 
     expect(checkbox).toHaveAccessibleDescription(
       expect.stringMatching(
-        /name, desired roles, skills, experience, location and salary preferences, primary resume/,
+        /name, desired roles, skills, experience, location and salary preferences, and the experience, skills, projects and education from your resume/,
       ),
     );
-    expect(checkbox).toHaveAccessibleDescription(expect.stringMatching(/email, LinkedIn and GitHub/));
+    expect(checkbox).toHaveAccessibleDescription(expect.stringMatching(/email, LinkedIn, GitHub and resume file are shared only with companies you apply to/));
     expect(checkbox).toHaveAccessibleDescription(expect.stringMatching(/companies you apply to/i));
     expect(checkbox).toHaveAccessibleDescription(expect.stringMatching(/hide your profile at any time/));
   });

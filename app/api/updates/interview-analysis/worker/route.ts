@@ -11,6 +11,7 @@ import {
   interviewAnalysisExcerpt,
   InterviewAnalysisSchema,
 } from "@/helpers/interview/interview-analysis";
+import { CompanyInterviewAnalysisSchema } from "@/helpers/interview/company-analysis-prompt";
 import { InterviewAnalysisStatusEmail } from "@/emails/InterviewAnalysisStatusEmail";
 
 type AnalysisMessage = {
@@ -22,6 +23,27 @@ type AnalysisMessage = {
 const BATCH_SIZE = 2;
 const VISIBILITY_TIMEOUT = 300;
 const MAX_RETRIES = 3;
+
+/**
+ * The job a company report is scored against (difference 10): the posting of
+ * the earliest application the session is attached to.
+ */
+async function sharedJobFor(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  sessionId: string,
+): Promise<{ title: string; description: string } | null> {
+  const { data, error } = await supabase
+    .from("application_attachments")
+    .select("created_at, applications!inner(job_postings!inner(title, description))")
+    .eq("interview_session_id", sessionId)
+    .eq("kind", "interview_session")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  const job = data?.applications?.job_postings;
+  return job ? { title: job.title, description: job.description ?? "" } : null;
+}
 
 function formatTranscript(turns: unknown): string {
   if (!Array.isArray(turns)) return "";
@@ -102,7 +124,7 @@ export async function GET() {
       try {
         const { data: analysis, error: analysisError } = await supabase
           .from("interview_analyses")
-          .select("id, interview_session_id, status, result, notification_sent_at")
+          .select("id, interview_session_id, perspective, status, result, notification_sent_at")
           .eq("id", message.message.analysisId)
           .single();
 
@@ -131,30 +153,46 @@ export async function GET() {
           throw new Error("Interview has no candidate owner.");
         }
 
-        const { data: candidate, error: candidateError } = await supabase
-          .from("user_info")
-          .select("email, full_name")
-          .eq("user_id", interview.user_id)
-          .single();
-        const candidateEmail = candidate?.email;
-        if (candidateError) throw candidateError;
-        if (!candidateEmail) throw new Error("Candidate email not found.");
+        // A company report (OR-REQ-031) is for the hiring team the
+        // candidate shared the session with: scored against that job, and
+        // no email to anyone in v1 (the applicant page shows it).
+        const isCompany = analysis.perspective === "company";
 
-        let result = InterviewAnalysisSchema.safeParse(analysis.result);
+        let candidate: { email: string | null; full_name: string | null } | null = null;
+        if (!isCompany) {
+          const { data, error: candidateError } = await supabase
+            .from("user_info")
+            .select("email, full_name")
+            .eq("user_id", interview.user_id)
+            .single();
+          if (candidateError) throw candidateError;
+          if (!data?.email) throw new Error("Candidate email not found.");
+          candidate = data;
+        }
+
+        const schema = isCompany ? CompanyInterviewAnalysisSchema : InterviewAnalysisSchema;
+        let result = schema.safeParse(analysis.result);
         if (analysis.status !== "completed" || !result.success) {
           const transcript = formatTranscript(session.turns);
           if (!transcript) {
             throw new Error("Interview session has no transcript to analyze.");
           }
 
-          const { data: job, error: jobError } = interview.job_id
-            ? await supabase
-                .from("all_jobs")
-                .select("job_name, description")
-                .eq("id", interview.job_id)
-                .maybeSingle()
-            : { data: null, error: null };
-          if (jobError) throw jobError;
+          let job: { title: string; description: string } | null;
+          if (isCompany) {
+            job = await sharedJobFor(supabase, session.id);
+            if (!job) throw new Error("No application shares this interview session.");
+          } else {
+            const { data, error: jobError } = interview.job_id
+              ? await supabase
+                  .from("all_jobs")
+                  .select("job_name, description")
+                  .eq("id", interview.job_id)
+                  .maybeSingle()
+              : { data: null, error: null };
+            if (jobError) throw jobError;
+            job = data ? { title: data.job_name ?? "", description: data.description ?? "" } : null;
+          }
 
           const { error: processingError } = await supabase
             .from("interview_analyses")
@@ -163,9 +201,9 @@ export async function GET() {
           if (processingError) throw processingError;
 
           const generated = await generateInterviewAnalysis({
-            perspective: "candidate",
-            candidateName: candidate.full_name || "Candidate",
-            jobTitle: job?.job_name || "Role not specified",
+            perspective: isCompany ? "company" : "candidate",
+            candidateName: candidate?.full_name || "Candidate",
+            jobTitle: job?.title || "Role not specified",
             jobDescription: job?.description || "",
             transcript,
           });
@@ -180,7 +218,7 @@ export async function GET() {
             })
             .eq("id", analysis.id);
           if (saveError) throw saveError;
-          result = { success: true, data: generated };
+          result = schema.safeParse(generated);
         }
 
         if (!result.success) {
@@ -188,13 +226,17 @@ export async function GET() {
         }
 
         if (!analysis.notification_sent_at) {
-          await sendAnalysisEmail(
-            candidateEmail,
-            candidate.full_name || "",
-            interview.id,
-            session.id,
-            result.data,
-          );
+          // The candidate already got their own report's email; a company
+          // report sends none, and is marked so it's never retried for one.
+          if (!isCompany && candidate?.email) {
+            await sendAnalysisEmail(
+              candidate.email,
+              candidate.full_name || "",
+              interview.id,
+              session.id,
+              InterviewAnalysisSchema.parse(result.data),
+            );
+          }
 
           const { error: notificationError } = await supabase
             .from("interview_analyses")

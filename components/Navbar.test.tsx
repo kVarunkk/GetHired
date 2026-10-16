@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { User } from "@supabase/supabase-js";
 import { usePathname } from "next/navigation";
@@ -132,5 +132,50 @@ describe("NavbarComponent: horizontal links", () => {
     const [short, long] = Array.from(home.children);
     expect(short).toHaveClass("min-[400px]:hidden");
     expect(long).toHaveClass("hidden", "min-[400px]:block");
+  });
+});
+
+describe("NavbarComponent: open outreach badge (ORT-034)", () => {
+  function withOpenOutreach(count: number) {
+    const eq = vi.fn();
+    const chain = { select: vi.fn(() => chain), eq: vi.fn((...args: unknown[]) => (eq(...args), chain)), gt: vi.fn(() => Promise.resolve({ count, error: null })) };
+    vi.mocked(createClient).mockReturnValue({
+      auth: {
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: vi.fn() } } }),
+      },
+      from: vi.fn(() => chain),
+    } as never);
+    return eq;
+  }
+
+  it("shows the applicant's open outreach count next to Opportunities", async () => {
+    const eq = withOpenOutreach(2);
+    vi.mocked(usePathname).mockReturnValue("/jobs");
+
+    renderNavbar(applicant);
+
+    expect((await screen.findAllByLabelText("2 open")).length).toBeGreaterThan(0);
+    expect(eq).toHaveBeenCalledWith("candidate_user_id", "u1");
+    expect(eq).toHaveBeenCalledWith("status", "sent");
+  });
+
+  it("shows nothing at 0", async () => {
+    withOpenOutreach(0);
+    vi.mocked(usePathname).mockReturnValue("/jobs");
+
+    renderNavbar(applicant);
+
+    await waitFor(() => expect(screen.getAllByText("Opportunities").length).toBeGreaterThan(0));
+    expect(screen.queryByLabelText(/open$/)).not.toBeInTheDocument();
+  });
+
+  it("never queries outreach for a company user", () => {
+    withOpenOutreach(3);
+    const company = { id: "c1", app_metadata: { type: "company" }, user_metadata: {} } as unknown as User;
+    vi.mocked(usePathname).mockReturnValue("/company");
+
+    renderNavbar(company);
+
+    expect(vi.mocked(createClient).mock.results.some((r) => (r.value as { from: ReturnType<typeof vi.fn> }).from.mock.calls.length > 0)).toBe(false);
   });
 });

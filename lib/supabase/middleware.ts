@@ -98,6 +98,8 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/company/applicant-digest/worker",
     "/api/updates/company/weekly-matches/enqueue",
     "/api/updates/company/weekly-matches/worker",
+    // Outreach expiry (X-Internal-Secret).
+    "/api/updates/outreach/expire",
     "/api/ai-search/jobs",
     "/api/ai-search/profiles",
     "/api/dodo/webhook",
@@ -302,9 +304,10 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // --- Restrict Access to Applicant only routes(dashboard, get-started, agent, interview) ---
+    // --- Restrict Access to Applicant only routes(dashboard, opportunities, get-started, agent, interview) ---
     if (
       (pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/opportunities") ||
         isApplicantOnboardingPath ||
         isResumeReviewPath ||
         isInterviewPath ||

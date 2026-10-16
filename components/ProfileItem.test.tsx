@@ -9,6 +9,7 @@ vi.mock("./ProfileFavoriteStar", () => ({ default: () => null }));
 vi.mock("./pipeline/AddToListMenu", () => ({
   default: ({ candidateUserId }: { candidateUserId: string }) => <button>Add to list {candidateUserId}</button>,
 }));
+vi.mock("./outreach/OutreachComposer", () => ({ default: () => null }));
 vi.mock("@/hooks/useEntitlementError", () => ({
   useEntitlementError: () => ({ handle: vi.fn(), show: vi.fn(), dialog: null }),
 }));

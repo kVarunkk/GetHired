@@ -51,19 +51,23 @@ declare seen text[];
 begin
   select array_agg(full_name order by full_name) into seen from public.user_info
    where user_id::text like 'a0000000-0000-4000-8000-00000000000_';
-  assert seen = array['Applied', 'Public'], format('company A user_info: %s', seen);
+  -- OR-SEC-001 (20261016130000_outreach_contact_gating): a talent-pool
+  -- candidate's row is read through candidate_directory, not user_info.
+  assert seen = array['Applied'], format('company A user_info: %s', seen);
+  assert exists (select 1 from public.candidate_directory where full_name = 'Public'),
+    'company A cannot find the public candidate in the directory';
 
   select array_agg(r.user_id::text order by r.user_id) into seen from public.resumes r
    where r.user_id::text like 'a0000000-0000-4000-8000-00000000000_';
-  assert seen = array['a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002'],
+  assert seen = array['a0000000-0000-4000-8000-000000000002'],
     format('company A resumes: %s', seen);
 
   assert not exists (select 1 from storage.objects
     where bucket_id = 'resumes' and name = 'resumes/a0000000-0000-4000-8000-000000000003/cv.pdf'),
     'company A can see a private non-applicant''s resume file';
-  assert exists (select 1 from storage.objects
+  assert not exists (select 1 from storage.objects
     where bucket_id = 'resumes' and name = 'resumes/a0000000-0000-4000-8000-000000000001/cv.pdf'),
-    'company A cannot see a public applicant''s resume file';
+    'company A can download a talent-pool candidate''s resume file';
 
   -- Billing columns can't be raised; ordinary columns can change.
   update public.company_info
@@ -102,7 +106,10 @@ declare seen text[];
 begin
   select array_agg(full_name order by full_name) into seen from public.user_info
    where user_id::text like 'a0000000-0000-4000-8000-00000000000_';
-  assert seen = array['Public'], format('company B user_info: %s', seen);
+  assert seen is null, format('company B user_info: %s', seen);
+  select array_agg(full_name order by full_name) into seen from public.candidate_directory
+   where user_id::text like 'a0000000-0000-4000-8000-00000000000_';
+  assert seen = array['Public'], format('company B directory: %s', seen);
 end $$;
 
 -- ------------------------------------------- applicant (RS-CON-003: own rows)

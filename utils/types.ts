@@ -25,8 +25,15 @@ export type TCompanyInfo = CompanyInfoRow & {
 
 export type AllProfileWithRelations = UserInfoRow & {
   company_favorites?: UserFavoritesCompanyInfoRow[];
-  resumes?: ResumesRow[];
+  resumes?: (Partial<ResumesRow> & {
+    /** The scrubbed sections (OR-REQ-010); one-to-one, so PostgREST may return an object. */
+    resume_public_sections?: { sections: unknown } | { sections: unknown }[] | null;
+  })[];
   job_relevant_profiles?: JobRelevantProfilesRow[];
+  /** From candidate_directory: the scrubbed resume sections. */
+  resume_sections?: unknown;
+  /** The session company's latest outreach to this candidate (OR-REQ-007). */
+  outreach_status?: import("@/utils/types/outreach.types").OutreachStatus | null;
 };
 
 export type ProfilesBuildQueryResult = {
@@ -115,6 +122,8 @@ export interface INavItem {
   href: string;
   type: "equals" | "includes" | "startswith";
   icon?: React.ReactNode;
+  /** A count shown next to the label, e.g. open outreach. */
+  count?: number;
 }
 
 export interface INavItemWithActive extends INavItem {
@@ -325,6 +334,12 @@ export enum PostHogEvent {
   PipelineNoteAdded = "pipeline_note_added",
   PipelineTemplateSaved = "pipeline_template_saved",
   PipelineBoardViewed = "pipeline_board_viewed",
+  // Recruiter outreach (outreach spec)
+  OutreachSent = "outreach_sent",
+  OutreachReplied = "outreach_replied",
+  OutreachWithdrawn = "outreach_withdrawn",
+  OutreachDrafted = "outreach_drafted",
+  ApplicationSignalShared = "application_signal_shared",
 }
 
 export type JobUrlPatch = {

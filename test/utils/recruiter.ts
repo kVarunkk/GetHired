@@ -122,6 +122,11 @@ function applicant(n: number, name: string, isPublic: boolean): ApplicantFixture
       visa_sponsorship_required: false,
       github_url: null,
       linkedin_url: null,
+      accepts_outreach: true,
+      desired_roles_search: null,
+      industry_preferences_search: null,
+      top_skills_search: null,
+      work_style_preferences_search: null,
       // Sensitive columns, set to recognisable values so leaks are visible.
       ai_credits: 4242,
       referral_code: `REF-${n}-SECRET`,

@@ -100,7 +100,7 @@ describe("middleware: /agent", () => {
     expect(await res.json()).toEqual({ error: "Finish setting up your company first." });
   });
 
-  it.each(["/dashboard", "/resume-review", "/interview/abc"])(
+  it.each(["/dashboard", "/opportunities", "/resume-review", "/interview/abc"])(
     "keeps %s applicant-only for onboarded companies",
     async (path) => {
       vi.mocked(getUserFromRequest).mockResolvedValue(company);
@@ -235,6 +235,16 @@ describe("middleware: matching workers", () => {
     "/api/updates/company/weekly-matches/worker",
   ])("lets the pipeline notification route %s through without a session (PLT-072)", async (path) => {
     expect(passesThrough(await updateSession(request(path)))).toBe(true);
+  });
+
+  it("lets the outreach expire job through without a session (ORT-035)", async () => {
+    expect(passesThrough(await updateSession(request("/api/updates/outreach/expire")))).toBe(true);
+  });
+
+  it("keeps the outreach routes and pages behind a login", async () => {
+    expect(passesThrough(await updateSession(request("/api/company/outreach")))).toBe(false);
+    expect(redirectTarget(await updateSession(request("/company/outreach")))).toMatch(/^\/auth\/login/);
+    expect(redirectTarget(await updateSession(request("/opportunities")))).toMatch(/^\/auth\/login/);
   });
 
   it("keeps the pipeline board route and the settings page behind a login", async () => {

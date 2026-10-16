@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ListPlus, Loader2 } from "lucide-react";
+import { Check, ListPlus, Loader2, Send } from "lucide-react";
 import toast from "react-hot-toast";
 import { listTalentListsAction } from "@/app/actions/pipeline/list-talent-lists";
 import { saveTalentListAction } from "@/app/actions/pipeline/save-talent-list";
@@ -14,10 +14,19 @@ type ListItem = { id: string; name: string; memberCount: number; hasCandidate: b
 
 /**
  * "Add to list" on a candidate (PL-TASK-051): toggles the candidate in the
- * company's talent lists and creates new ones. "Add to pipeline" waits for the
- * outreach spec, because it must never create a fake application (PL-REQ-012).
+ * company's talent lists and creates new ones. A talent-pool candidate enters
+ * the pipeline by answering an outreach, never through a fake application
+ * (PL-REQ-012), so the footer offers "Reach out" (OR-TASK-003).
  */
-export default function AddToListMenu({ candidateUserId }: { candidateUserId: string }) {
+export default function AddToListMenu({
+  candidateUserId,
+  onReachOut,
+}: {
+  candidateUserId: string;
+  /** Opens the outreach composer. Without it, the footer isn't shown. */
+  onReachOut?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
   const [lists, setLists] = useState<ListItem[] | null>(null);
   const [newName, setNewName] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -71,7 +80,13 @@ export default function AddToListMenu({ candidateUserId }: { candidateUserId: st
   };
 
   return (
-    <Popover onOpenChange={(open) => open && lists === null && void load()}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next && lists === null) void load();
+      }}
+    >
       <PopoverTrigger asChild>
         <Button variant="outline">
           <ListPlus className="mr-2 h-4 w-4" />
@@ -115,12 +130,22 @@ export default function AddToListMenu({ candidateUserId }: { candidateUserId: st
           </Button>
         </div>
 
-        <div className="flex items-center justify-between border-t pt-3">
-          <Button size="sm" variant="ghost" disabled>
-            Add to pipeline
-          </Button>
-          <span className="text-xs text-muted-foreground">Coming with outreach</span>
-        </div>
+        {onReachOut && (
+          <div className="flex items-center justify-between gap-2 border-t pt-3">
+            <span className="text-xs text-muted-foreground">Invite them to apply or chat</span>
+            <Button
+              size="sm"
+              variant="brand"
+              onClick={() => {
+                setOpen(false);
+                onReachOut();
+              }}
+            >
+              <Send className="mr-2 h-3.5 w-3.5" />
+              Reach out
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );

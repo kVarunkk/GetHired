@@ -6,14 +6,22 @@ import { createClient } from "../../lib/supabase/server";
 import { PostgrestError } from "@supabase/supabase-js";
 import { parseMultiSelectParam } from "@/utils/formatters";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { RECRUITER_CANDIDATE_COLUMNS } from "./candidate-columns";
+import { DIRECTORY_CANDIDATE_COLUMNS } from "./candidate-columns";
 
-// RS-SEC-004: only recruiter-safe columns, never `*` or credits/referral data.
-const userInfoSelectString = RECRUITER_CANDIDATE_COLUMNS;
+// RS-SEC-004 and OR-REQ-010: directory columns only. No contact details, never
+// `*` or credits/referral data.
+const userInfoSelectString = DIRECTORY_CANDIDATE_COLUMNS;
 
 // MT-REQ-004: what a card needs in job context (rank, score, explanation).
 const JOB_MATCH_COLUMNS =
   "relevance_rank, match_score, explanation, explanation_status";
+
+// The digest's rerank reads the scrubbed resume sections (OR-REQ-010), never
+// the raw resume: from the view directly, or per resume for the service role.
+const DIGEST_RESUME_COLUMNS = {
+  candidate_directory: ",resume_sections",
+  user_info: ",resumes(is_primary, resume_public_sections(sections))",
+} as const;
 
 // The free-text columns the "Search" filter matches (case-insensitive substring).
 const PROFILE_SEARCH_COLUMNS = [
@@ -114,6 +122,11 @@ export async function buildProfileQuery({
     const supabase = isInternalCall
       ? createServiceRoleClient()
       : await createClient();
+    // OR-SEC-001: company users read talent-pool candidates through
+    // candidate_directory (user_info no longer opens to them). The service
+    // role has no company, so internal calls read user_info, with the same
+    // columns. The cast is for typing: both expose these columns.
+    const table: keyof typeof DIGEST_RESUME_COLUMNS = isInternalCall ? "user_info" : "candidate_directory";
 
     let query;
     let selectString;
@@ -126,7 +139,7 @@ export async function buildProfileQuery({
       // company's own lists.
       selectString = `${userInfoSelectString}, talent_list_members!inner(list_id)`;
       query = supabase
-        .from("user_info")
+        .from(table as "user_info")
         .select(selectString, countOption)
         .eq("talent_list_members.list_id", talentListId)
         .eq("filled", true)
@@ -134,14 +147,14 @@ export async function buildProfileQuery({
     } else if (isFavoriteTabActive) {
       selectString = `${userInfoSelectString}, company_favorites!inner(company_id)`;
       query = supabase
-        .from("user_info")
+        .from(table as "user_info")
         .select(selectString, countOption)
         .eq("company_favorites.company_id", companyId)
         .eq("filled", true)
         .eq("is_public", true);
     } else if (relevanceSearchType === "standard") {
       query = supabase
-        .from("user_info")
+        .from(table as "user_info")
         .select(
           `
           ${userInfoSelectString}, job_relevant_profiles!inner(${JOB_MATCH_COLUMNS})
@@ -155,10 +168,10 @@ export async function buildProfileQuery({
     // for normal search and digest
     else {
       query = supabase
-        .from("user_info")
+        .from(table as "user_info")
         .select(
           `
-          ${userInfoSelectString} ${relevanceSearchType === "digest" ? ",resumes(content, is_primary)" : ""}
+          ${userInfoSelectString} ${relevanceSearchType === "digest" ? DIGEST_RESUME_COLUMNS[table] : ""}
         `,
           countOption,
         )
@@ -191,7 +204,7 @@ export async function buildProfileQuery({
 
     // --- NEW: VECTOR SEARCH LOGIC ---
     if (relevanceSearchType === "digest" && jobEmbedding) {
-      query.eq("resumes.is_primary", true);
+      if (table === "user_info") query.eq("resumes.is_primary", true);
       // Re-build the query to include the similarity score and order by it
       const { data: searchData, error: searchError } = await supabase.rpc(
         "match_user_profiles",

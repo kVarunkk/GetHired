@@ -12,7 +12,7 @@ import {
 
 import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
-import { Briefcase, Building2, Home, LayoutDashboard } from "lucide-react";
+import { Briefcase, Building2, Home, Inbox, LayoutDashboard, Send } from "lucide-react";
 import { INavItem } from "./types";
 import { User } from "@supabase/supabase-js";
 import { platformsArray } from "./platforms";
@@ -281,6 +281,13 @@ export const applicantNavbarItems: INavItem[] = [
     icon: <LayoutDashboard className="h-4 w-4" />,
   },
   {
+    id: "opportunities",
+    label: "Opportunities",
+    href: "/opportunities",
+    type: "startswith",
+    icon: <Inbox className="h-4 w-4" />,
+  },
+  {
     id: "jobs",
     label: "Jobs",
     href: "/jobs",
@@ -354,6 +361,13 @@ export const companyNavbarItems: INavItem[] = [
     icon: <UserIcon className="h-4 w-4" />,
   },
   {
+    id: "outreach",
+    label: "Outreach",
+    href: "/company/outreach",
+    type: "startswith",
+    icon: <Send className="h-4 w-4" />,
+  },
+  {
     id: "settings",
     label: "Settings",
     href: "/company/settings",
@@ -407,6 +421,7 @@ export const authPageNavItems: INavItem[] = [
 
 const verticalNavbarPaths = [
   "/dashboard",
+  "/opportunities",
   "/company",
   "/jobs",
   "/companies",

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { cn } from "@/utils/utils";
 import { Dot, ArrowRight } from "lucide-react";
 import { Button } from "./ui/button";
@@ -12,6 +12,8 @@ import { buildSalaryRange } from "@/utils/buildSalaryRange";
 import MatchScoreBadge from "./matching/MatchScoreBadge";
 import MatchExplanationCard from "./matching/MatchExplanationCard";
 import AddToListMenu from "./pipeline/AddToListMenu";
+import OutreachStatusBadge from "./outreach/OutreachStatusBadge";
+import OutreachComposer from "./outreach/OutreachComposer";
 
 /** The explanation's one-line summary, if the stored JSON has one. */
 function summaryOf(explanation: unknown): string | null {
@@ -35,6 +37,8 @@ const ProfileItem = React.memo(
     /** Set in job context (`?job_post=`): shows the match score and summary. */
     jobPostId?: string | null;
   }) => {
+    const [reachingOut, setReachingOut] = useState(false);
+    const [outreachStatus, setOutreachStatus] = useState(profile.outreach_status ?? null);
     const match = jobPostId ? profile.job_relevant_profiles?.[0] : undefined;
     // A stale explanation describes an older version of the job.
     const summary =
@@ -78,6 +82,7 @@ const ProfileItem = React.memo(
                 score={match?.match_score}
                 className="ml-2 text-xs sm:text-sm"
               />
+              <OutreachStatusBadge status={outreachStatus} className="ml-2" />
             </div>
             {summary && (
               <p className="text-sm text-muted-foreground">{summary}</p>
@@ -94,7 +99,9 @@ const ProfileItem = React.memo(
           </div>
 
           <div className="flex items-center gap-2">
-            {companyId && <AddToListMenu candidateUserId={profile.user_id} />}
+            {companyId && (
+              <AddToListMenu candidateUserId={profile.user_id} onReachOut={() => setReachingOut(true)} />
+            )}
             <Link
               href={profileHref}
               prefetch={false}
@@ -107,6 +114,16 @@ const ProfileItem = React.memo(
             </Link>
           </div>
         </div>
+        {companyId && (
+          <OutreachComposer
+            candidateId={profile.user_id}
+            candidateName={profile.full_name}
+            open={reachingOut}
+            onOpenChange={setReachingOut}
+            defaultJobPostId={jobPostId}
+            onSent={(outreach) => setOutreachStatus(outreach.status as typeof outreachStatus)}
+          />
+        )}
       </div>
     );
   },

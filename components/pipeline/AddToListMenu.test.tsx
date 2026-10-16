@@ -87,10 +87,19 @@ describe("AddToListMenu (PLT-090)", () => {
     expect(screen.getByRole("button", { name: /Backend/ })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("keeps Add to pipeline off until outreach exists", async () => {
-    await open();
+  it("offers Reach out instead of Add to pipeline, never a fake application (ORT-032)", async () => {
+    const onReachOut = vi.fn();
+    render(<AddToListMenu candidateUserId={PUBLIC_APPLICANT.id} onReachOut={onReachOut} />);
+    fireEvent.click(screen.getByRole("button", { name: /Add to list/ }));
+    await waitFor(() => expect(listTalentListsAction).toHaveBeenCalled());
 
-    expect(screen.getByRole("button", { name: /Add to pipeline/ })).toBeDisabled();
-    expect(screen.getByText("Coming with outreach")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Add to pipeline/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Reach out/ }));
+    expect(onReachOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows no Reach out without a handler", async () => {
+    await open();
+    expect(screen.queryByRole("button", { name: /Reach out/ })).not.toBeInTheDocument();
   });
 });

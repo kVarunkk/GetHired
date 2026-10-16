@@ -53,7 +53,7 @@ function topLevelColumns(call: RecordedCall) {
 }
 
 /** The one profiles query (it also returns the total). */
-const dataQuery = () => supabase.callsFor("user_info")[0];
+const dataQuery = () => supabase.callsFor("candidate_directory")[0];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -86,6 +86,34 @@ describe("buildProfileQuery column exposure (RS-SEC-004)", () => {
   });
 });
 
+describe("buildProfileQuery contact gating (ORT-043)", () => {
+  it.each([
+    ["the default listing", {}],
+    ["favorites", { isFavoriteTabActive: true }],
+    ["a talent list", { talentListId: "a1000000-0000-4000-8000-00000000000a" }],
+    ["standard relevance", { relevanceSearchType: "standard" as const, jobId: JOB_POSTING_ID }],
+  ])("reads %s from candidate_directory without contact columns", async (_, overrides) => {
+    await buildProfileQuery({ ...BASE, ...overrides });
+
+    expect(supabase.callsFor("user_info")).toHaveLength(0);
+    const columns = topLevelColumns(dataQuery()!);
+    for (const contact of ["email", "linkedin_url", "github_url"]) expect(columns).not.toContain(contact);
+  });
+
+  it("reads user_info with the service role for internal calls, still without contact columns", async () => {
+    const { createServiceRoleClient } = await import("@/lib/supabase/service-role");
+    const service = createSupabaseMock();
+    vi.mocked(createServiceRoleClient).mockReturnValue(service.client);
+
+    await buildProfileQuery({ ...BASE, isInternalCall: true });
+
+    expect(supabase.calls).toHaveLength(0);
+    const columns = topLevelColumns(service.callsFor("user_info")[0]);
+    expect(columns).toContain("user_id");
+    for (const contact of ["email", "linkedin_url", "github_url"]) expect(columns).not.toContain(contact);
+  });
+});
+
 describe("buildProfileQuery talent list filter (PLT-090)", () => {
   const LIST_ID = "a1000000-0000-4000-8000-00000000000a";
 
@@ -111,7 +139,7 @@ describe("buildProfileQuery talent list filter (PLT-090)", () => {
 
 describe("buildProfileQuery total", () => {
   it("counts the filtered tab itself, not every profile", async () => {
-    supabase.queue("user_info", { data: [], error: null, count: 3 });
+    supabase.queue("candidate_directory", { data: [], error: null, count: 3 });
 
     const result = await buildProfileQuery({
       ...BASE,
@@ -119,7 +147,7 @@ describe("buildProfileQuery total", () => {
       skills: "react",
     });
 
-    expect(supabase.callsFor("user_info")).toHaveLength(1);
+    expect(supabase.callsFor("candidate_directory")).toHaveLength(1);
     const select = dataQuery()!.chain.find((c) => c.method === "select")!;
     expect(select.args[1]).toEqual({ count: "exact" });
     expect(result.count).toBe(3);

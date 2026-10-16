@@ -7,7 +7,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { MATCH_EXPLAIN_TIMEOUT_MS } from "./config";
 import type { MatchErrorCode } from "./errors";
 import { explainMatch } from "./explain-match";
-import { loadCandidate, MATCH_JOB_COLUMNS } from "./load-candidate";
+import { loadCandidate, loadDirectoryCandidate, MATCH_JOB_COLUMNS } from "./load-candidate";
 import { parseStoredExplanation, type MatchExplanation } from "./schemas";
 
 export type ExplainCandidateMatchResult =
@@ -55,8 +55,12 @@ export async function explainCandidateMatch(
     if (cached) return { ok: true, explanation: cached, cached: true };
   }
 
+  // Talent-pool candidates come from the directory with the company's own
+  // client; only a candidate outside it (a private applicant, whose row the
+  // company may read) is loaded with the service role.
   const admin = createServiceRoleClient();
-  const candidate = await loadCandidate(admin, candidateId);
+  const candidate =
+    (await loadDirectoryCandidate(supabase, candidateId)) ?? (await loadCandidate(admin, candidateId));
   if (!candidate) return { ok: false, reason: "not_found" };
 
   const result = await explainMatch(

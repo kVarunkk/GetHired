@@ -3,7 +3,13 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, PRIVATE_NOT_APPLIED, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
-import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
+import {
+  DIRECTORY_CANDIDATE_COLUMNS,
+  RECRUITER_CANDIDATE_COLUMNS,
+} from "@/helpers/profiles/candidate-columns";
+import { flushAfter } from "@/test/utils/after";
+import ProfileClientHydrator from "@/components/ProfileClientHydrator";
+import DirectoryProfile from "@/components/outreach/DirectoryProfile";
 import { render, screen } from "@testing-library/react";
 import { JOB_POST, explanationOf } from "@/test/utils/matching";
 import ProfilePage from "./page";
@@ -21,11 +27,17 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
-vi.mock("@/components/ProfileClientHydrator", () => ({ default: () => null }));
+vi.mock("@/components/ProfileClientHydrator", () => ({ default: vi.fn(() => null) }));
+vi.mock("@/components/outreach/DirectoryProfile", () => ({ default: vi.fn(() => null) }));
+vi.mock("@/components/outreach/ReachOutButton", () => ({ default: () => null }));
 vi.mock("@/components/Error", () => ({ default: () => null }));
 vi.mock("@/hooks/useEntitlementError", () => ({
   useEntitlementError: () => ({ handle: vi.fn(), show: vi.fn(), dialog: null }),
 }));
+
+/** Only the directory columns of a user_info row, as the cached loader selects them. */
+const directoryColumnsOf = (row: Record<string, unknown>) =>
+  Object.fromEntries(DIRECTORY_CANDIDATE_COLUMNS.split(", ").map((c) => [c, row[c]]));
 
 let rls: SupabaseMock;
 let service: SupabaseMock;
@@ -42,7 +54,10 @@ beforeEach(async () => {
   Object.assign(rls.client, { storage: { from: () => ({ createSignedUrl }) } });
   service = createSupabaseMock();
   service.queue("user_info", {
-    data: { ...PUBLIC_APPLICANT.info, resumes: [{ resume_path: "resumes/a/cv.pdf" }] },
+    data: {
+      ...directoryColumnsOf(PUBLIC_APPLICANT.info),
+      resumes: [{ is_primary: true, resume_public_sections: { sections: [{ type: "skills", items: [] }] } }],
+    },
     error: null,
   });
   vi.mocked(createServiceRoleClient).mockReturnValue(service.client);
@@ -77,18 +92,114 @@ describe("company profile page (RS-TEST-004)", () => {
     expect(service.calls).toHaveLength(0);
   });
 
-  it("renders a visible candidate with recruiter-safe columns only", async () => {
-    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+});
 
-    await expect(visit(PUBLIC_APPLICANT.id)).resolves.toBeTruthy();
+describe("company profile page shapes (ORT-044, OR-TEST-004)", () => {
+  const CONTACT = ["email", "linkedin_url", "github_url", "resume_path", "resumes", "signedUrl"];
+
+  it("renders the directory profile without access: no contact props, no signed URL", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+    rls.queueRpc("company_has_candidate_access", { data: false, error: null });
+
+    render(await visit(PUBLIC_APPLICANT.id));
+
+    expect(DirectoryProfile).toHaveBeenCalled();
+    expect(ProfileClientHydrator).not.toHaveBeenCalled();
+    const props = vi.mocked(DirectoryProfile).mock.calls[0][0].profile as Record<string, unknown>;
+    expect(Object.keys(props).sort()).toMatchInlineSnapshot(`
+      [
+        "accepts_outreach",
+        "career_goals_long_term",
+        "career_goals_short_term",
+        "company_size_preference",
+        "created_at",
+        "desired_roles",
+        "experience_years",
+        "filled",
+        "full_name",
+        "industry_preferences",
+        "is_public",
+        "job_type",
+        "max_salary",
+        "min_salary",
+        "preferred_locations",
+        "resume_sections",
+        "salary_currency",
+        "top_skills",
+        "updated_at",
+        "user_id",
+        "visa_sponsorship_required",
+        "work_style_preferences",
+      ]
+    `);
+    for (const key of CONTACT) expect(props).not.toHaveProperty(key);
+    expect(props.resume_sections).toEqual([{ type: "skills", items: [] }]);
+    expect(createSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it("caches only directory columns, with the service role", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+    rls.queueRpc("company_has_candidate_access", { data: false, error: null });
+
+    await visit(PUBLIC_APPLICANT.id);
 
     const [load] = service.callsFor("user_info");
     const select = String(load.chain.find((c) => c.method === "select")?.args[0]);
-    expect(select.replace(/\s+/g, " ").trim()).toBe(
-      `${RECRUITER_CANDIDATE_COLUMNS}, resumes(resume_path)`,
-    );
+    expect(select).toBe(`${DIRECTORY_CANDIDATE_COLUMNS}, resumes(is_primary, resume_public_sections(sections))`);
+    expect(select).not.toMatch(/email|linkedin|github|resume_path/);
     expect(load.chain).toContainEqual({ method: "eq", args: ["user_id", PUBLIC_APPLICANT.id] });
+    expect(rls.callsFor("user_info")).toHaveLength(0);
+  });
+
+  it("renders the full profile with access, through the RLS client and uncached", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+    rls.queueRpc("company_has_candidate_access", { data: true, error: null });
+    rls.queue("user_info", {
+      data: { ...PUBLIC_APPLICANT.info, resumes: [{ resume_path: "resumes/a/cv.pdf" }] },
+      error: null,
+    });
+
+    render(await visit(PUBLIC_APPLICANT.id));
+
+    expect(service.callsFor("user_info")).toHaveLength(0);
+    const select = String(rls.callsFor("user_info")[0].chain.find((c) => c.method === "select")?.args[0]);
+    expect(select).toBe(`${RECRUITER_CANDIDATE_COLUMNS}, resumes(resume_path)`);
     expect(createSignedUrl).toHaveBeenCalledWith("resumes/a/cv.pdf", 3600);
+    expect(DirectoryProfile).not.toHaveBeenCalled();
+    const props = vi.mocked(ProfileClientHydrator).mock.calls[0][0].applicantProfile;
+    expect(props).toMatchObject({ email: PUBLIC_APPLICANT.info.email, signedUrl: "https://signed" });
+  });
+
+  it("falls back to the directory profile when the access check errors", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+    rls.queueRpc("company_has_candidate_access", { data: null, error: { message: "boom" } });
+
+    render(await visit(PUBLIC_APPLICANT.id));
+
+    expect(DirectoryProfile).toHaveBeenCalled();
+    expect(createSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it("records one view after rendering, and never fails the page when it errors (ORT-051)", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+    rls.queueRpc("company_has_candidate_access", { data: false, error: null });
+    rls.queueRpc("record_profile_view", () => {
+      throw new Error("boom");
+    });
+
+    await expect(visit(PUBLIC_APPLICANT.id)).resolves.toBeTruthy();
+    expect(rls.callsFor("record_profile_view")).toHaveLength(0);
+    await flushAfter();
+
+    expect(rls.callsFor("record_profile_view")).toHaveLength(1);
+    expect(rls.callsFor("record_profile_view")[0].chain[0].args[1]).toEqual({ p_candidate: PUBLIC_APPLICANT.id });
+  });
+
+  it("records no view for a candidate the company can't see", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: false, error: null });
+    await expect(visit(PRIVATE_NOT_APPLIED.id)).rejects.toBe(NOT_FOUND);
+    await flushAfter();
+    expect(rls.callsFor("record_profile_view")).toHaveLength(0);
   });
 });
 

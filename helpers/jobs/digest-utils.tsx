@@ -104,12 +104,14 @@ export async function sendJobDigestEmail(
   jobs: AllJobWithRelations[],
   digestDate: string,
   insufficientCredits: boolean = false,
+  profileViews: number = 0,
 ) {
   const emailHtml = await render(
     <JobDigestEmail
       userName={userName}
       jobs={jobs}
       insufficientCredits={insufficientCredits}
+      profileViews={profileViews}
     />,
   );
 
@@ -118,6 +120,7 @@ export async function sendJobDigestEmail(
       userName={userName}
       jobs={jobs}
       insufficientCredits={insufficientCredits}
+      profileViews={profileViews}
     />,
     { plainText: true },
   );

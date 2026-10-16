@@ -1,6 +1,11 @@
 import { google } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 import { z } from "zod";
+import {
+  CompanyInterviewAnalysisSchema,
+  companyAnalysisPrompt,
+  type CompanyInterviewAnalysisResult,
+} from "./company-analysis-prompt";
 
 export const InterviewAnalysisSchema = z.object({
   overall_feedback: z.string(),
@@ -34,19 +39,48 @@ export type InterviewAnalysisResult = z.infer<
 
 export type InterviewAnalysisPerspective = "candidate" | "company";
 
+type AnalysisInput = {
+  candidateName: string;
+  jobTitle: string;
+  jobDescription: string;
+  transcript: string;
+};
+
+/**
+ * The analysis of a completed interview session. `candidate` is the coaching
+ * report for the candidate; `company` is the report for a hiring team the
+ * candidate shared the session with (OR-REQ-031), with its own prompt and
+ * schema.
+ */
+export async function generateInterviewAnalysis(
+  input: AnalysisInput & { perspective: "candidate" },
+): Promise<InterviewAnalysisResult>;
+export async function generateInterviewAnalysis(
+  input: AnalysisInput & { perspective: "company" },
+): Promise<CompanyInterviewAnalysisResult>;
+export async function generateInterviewAnalysis(
+  input: AnalysisInput & { perspective: InterviewAnalysisPerspective },
+): Promise<InterviewAnalysisResult | CompanyInterviewAnalysisResult>;
 export async function generateInterviewAnalysis({
   perspective,
   candidateName,
   jobTitle,
   jobDescription,
   transcript,
-}: {
-  perspective: InterviewAnalysisPerspective;
-  candidateName: string;
-  jobTitle: string;
-  jobDescription: string;
-  transcript: string;
-}): Promise<InterviewAnalysisResult> {
+}: AnalysisInput & { perspective: InterviewAnalysisPerspective }): Promise<
+  InterviewAnalysisResult | CompanyInterviewAnalysisResult
+> {
+  if (perspective === "company") {
+    const { output } = await generateText({
+      model: google("gemini-3.1-flash-lite"),
+      output: Output.object({ schema: CompanyInterviewAnalysisSchema }),
+      prompt: companyAnalysisPrompt({ jobTitle, jobDescription, transcript }),
+    });
+    if (!output) {
+      throw new Error("Interview analysis model returned no structured output.");
+    }
+    return output;
+  }
   if (perspective !== "candidate") {
     throw new Error(`Unsupported interview analysis perspective: ${perspective}`);
   }

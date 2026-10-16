@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AllProfileWithRelations } from "@/utils/types";
 import { CANDIDATE_PROFILE, PII, RESUME_CONTENT } from "@/test/utils/matching";
-import { rerankProfilesIfApplicable } from "./ai-rerank-profiles";
+import { publicResumeContent, rerankProfilesIfApplicable } from "./ai-rerank-profiles";
 
 vi.mock("next/headers", () => ({
   headers: async () => new Headers({ host: "localhost:3000", cookie: "sb=1" }),
@@ -82,5 +82,43 @@ describe("rerankProfilesIfApplicable", () => {
 
     expect(result.initialProfiles.map((p) => p.user_id)).toEqual(["u1", "u2", "u3"]);
     expect(result.matchScores).toBeUndefined();
+  });
+});
+
+describe("publicResumeContent (ORT-045)", () => {
+  const SECTIONS = [{ type: "skills", items: [{ bullets: [{ text: "React" }] }] }];
+
+  it("never reads the raw resume content", () => {
+    const content = publicResumeContent({
+      ...CANDIDATE_PROFILE,
+      resumes: [{ content: RESUME_CONTENT, is_primary: true }],
+    } as AllProfileWithRelations);
+
+    expect(content).toEqual({ sections: [] });
+    expect(JSON.stringify(content)).not.toContain(PII.resumeEmail);
+  });
+
+  it("reads resume_sections from candidate_directory", () => {
+    expect(publicResumeContent({ ...CANDIDATE_PROFILE, resume_sections: SECTIONS } as AllProfileWithRelations)).toEqual({
+      sections: SECTIONS,
+    });
+  });
+
+  it.each([
+    ["an object", { sections: SECTIONS }],
+    ["an array", [{ sections: SECTIONS }]],
+  ])("reads the stored public sections embedded as %s", (_, embedded) => {
+    const profile = {
+      ...CANDIDATE_PROFILE,
+      resumes: [{ is_primary: true, resume_public_sections: embedded }],
+    } as AllProfileWithRelations;
+    expect(publicResumeContent(profile)).toEqual({ sections: SECTIONS });
+  });
+
+  it("sends the rerank no resume PII", async () => {
+    respond(200, { rerankedProfiles: [], filteredOutProfiles: [], scores: {} });
+    await run();
+    const body = fetchMock.mock.calls[0][1].body as string;
+    for (const value of [PII.resumeEmail, PII.resumePhone, PII.resumeUrl]) expect(body).not.toContain(value);
   });
 });

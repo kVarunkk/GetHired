@@ -141,10 +141,7 @@ describe("talent lists (PLT-090, PL-TASK-051)", () => {
 
   it("adds a public candidate, ignoring duplicates", async () => {
     db.queue("talent_lists", { data: { id: LIST_ID }, error: null });
-    db.queue("user_info", {
-      data: { is_public: true, filled: true },
-      error: null,
-    });
+    db.queue("candidate_directory", { data: { filled: true }, error: null });
     db.queue("talent_list_members", { data: null, error: null });
 
     expect(await addToTalentList(ctx(), LIST_ID, PUBLIC_APPLICANT.id)).toEqual({
@@ -156,14 +153,17 @@ describe("talent lists (PLT-090, PL-TASK-051)", () => {
       { list_id: LIST_ID, candidate_user_id: PUBLIC_APPLICANT.id },
       { onConflict: "list_id,candidate_user_id", ignoreDuplicates: true },
     ]);
-    expect(db.callsFor("user_info")[0].chain).toContainEqual({
+    expect(db.callsFor("candidate_directory")[0].chain).toContainEqual({
       method: "eq",
       args: ["user_id", PUBLIC_APPLICANT.id],
     });
+    // A talent-pool candidate's user_info row is never read (OR-SEC-001).
+    expect(db.callsFor("user_info")).toHaveLength(0);
   });
 
-  it("refuses a candidate the company can't view (RLS hides the row)", async () => {
+  it("refuses a candidate the company can't view (not in the directory, RLS hides the row)", async () => {
     db.queue("talent_lists", { data: { id: LIST_ID }, error: null });
+    db.queue("candidate_directory", { data: null, error: null });
     db.queue("user_info", { data: null, error: null });
 
     expect(await addToTalentList(ctx(), LIST_ID, PUBLIC_APPLICANT.id)).toEqual({
@@ -174,13 +174,14 @@ describe("talent lists (PLT-090, PL-TASK-051)", () => {
   });
 
   it.each([
-    ["private", { is_public: false, filled: true }],
-    ["unfinished", { is_public: true, filled: false }],
+    ["private", null, { user_id: PUBLIC_APPLICANT.id }],
+    ["unfinished", { filled: false }, null],
   ])(
     "refuses a %s profile, such as an applicant's: lists hold the talent pool",
-    async (_, row) => {
+    async (_, listed, applicant) => {
       db.queue("talent_lists", { data: { id: LIST_ID }, error: null });
-      db.queue("user_info", { data: row, error: null });
+      db.queue("candidate_directory", { data: listed, error: null });
+      db.queue("user_info", { data: applicant, error: null });
 
       expect(
         await addToTalentList(ctx(), LIST_ID, PUBLIC_APPLICANT.id),
@@ -203,7 +204,7 @@ describe("talent lists (PLT-090, PL-TASK-051)", () => {
       method: "eq",
       args: ["company_id", COMPANY_A.id],
     });
-    expect(db.callsFor("user_info")).toHaveLength(0);
+    expect(db.callsFor("candidate_directory")).toHaveLength(0);
   });
 
   it("rejects malformed ids without querying", async () => {
@@ -243,19 +244,11 @@ describe("talent lists (PLT-090, PL-TASK-051)", () => {
         {
           ...LIST,
           talent_list_members: [
-            {
-              candidate_user_id: PUBLIC_APPLICANT.id,
-              user_info: { is_public: true, filled: true },
-            },
-            {
-              candidate_user_id: "other",
-              user_info: { is_public: true, filled: true },
-            },
-            // Went private after being added: still a member, but the tab won't show them.
-            {
-              candidate_user_id: "gone-private",
-              user_info: { is_public: false, filled: true },
-            },
+            { candidate_user_id: PUBLIC_APPLICANT.id },
+            { candidate_user_id: "other" },
+            // Went private (or blocked the company) after being added: still a
+            // member, but the directory and the tab don't show them.
+            { candidate_user_id: "gone-private" },
           ],
         },
         {
@@ -266,6 +259,10 @@ describe("talent lists (PLT-090, PL-TASK-051)", () => {
           talent_list_members: [],
         },
       ],
+      error: null,
+    });
+    db.queue("candidate_directory", {
+      data: [{ user_id: PUBLIC_APPLICANT.id }, { user_id: "other" }],
       error: null,
     });
 

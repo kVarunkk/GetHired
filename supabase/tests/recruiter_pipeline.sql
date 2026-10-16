@@ -751,8 +751,8 @@ insert into auth.users (id, email, aud, role)
 values ('f6000000-0000-4000-8000-000000000001', 'hidden@applicant.test', 'authenticated', 'authenticated');
 insert into public.user_info (user_id, email, full_name, is_public, filled)
 values ('f6000000-0000-4000-8000-000000000001', 'hidden@applicant.test', 'Hidden', false, true);
-insert into public.talent_lists (id, company_id, name) values
-  ('a1000000-0000-4000-8000-00000000000b', 'c0000000-0000-4000-8000-000000000002', 'B shortlist');
+insert into public.talent_lists (id, company_id, name, slug) values
+  ('a1000000-0000-4000-8000-00000000000b', 'c0000000-0000-4000-8000-000000000002', 'B shortlist', 'b-shortlist');
 
 select set_config('request.jwt.claims', '{"sub":"c1000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 set local role authenticated;
@@ -762,15 +762,15 @@ declare
   a_list constant uuid := 'a1000000-0000-4000-8000-00000000000a';
   b_list constant uuid := 'a1000000-0000-4000-8000-00000000000b';
 begin
-  insert into public.talent_lists (id, company_id, name)
-  values (a_list, 'c0000000-0000-4000-8000-000000000001', 'Backend shortlist');
+  insert into public.talent_lists (id, company_id, name, slug)
+  values (a_list, 'c0000000-0000-4000-8000-000000000001', 'Backend shortlist', 'backend-shortlist');
   begin
-    insert into public.talent_lists (company_id, name) values ('c0000000-0000-4000-8000-000000000001', '');
+    insert into public.talent_lists (company_id, name, slug) values ('c0000000-0000-4000-8000-000000000001', '', 'empty');
     raise exception 'an empty list name was accepted';
   exception when check_violation then null;
   end;
   begin
-    insert into public.talent_lists (company_id, name) values ('c0000000-0000-4000-8000-000000000002', 'Theirs');
+    insert into public.talent_lists (company_id, name, slug) values ('c0000000-0000-4000-8000-000000000002', 'Theirs', 'theirs');
     raise exception 'company A created a list for company B';
   exception when insufficient_privilege then null;
   end;

@@ -39,3 +39,29 @@ export async function loadCandidate(
     resume: (resume?.content as TResumeRowContent | null | undefined) ?? null,
   };
 }
+
+/**
+ * A talent-pool candidate's directory profile and scrubbed resume sections,
+ * read with the company's own client through `candidate_directory` (no
+ * contact columns; OR-SEC-001). Returns null when the candidate isn't in the
+ * directory for this company (private, or they blocked it).
+ */
+export async function loadDirectoryCandidate(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<{ profile: Record<string, unknown>; resume: TResumeRowContent | null } | null> {
+  const { data, error } = await supabase
+    .from("candidate_directory")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(`Failed to load the candidate: ${error.message}`);
+  if (!data) return null;
+
+  const { resume_sections, ...profile } = data;
+  const sections = Array.isArray(resume_sections) ? resume_sections : [];
+  return {
+    profile,
+    resume: sections.length ? ({ sections } as unknown as TResumeRowContent) : null,
+  };
+}

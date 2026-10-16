@@ -1,8 +1,10 @@
 import { tool } from "ai";
+import { after } from "next/server";
 import { z } from "zod";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { scrubPII } from "@/helpers/ai/fairness";
 import { searchProfiles } from "@/helpers/profiles/search-profiles";
+import { loadVisibleCandidates } from "@/helpers/profiles/visible-candidates";
 import { getCandidateMatches } from "@/helpers/matching/candidate-matches";
 import { parseStoredExplanation, type MatchExplanation } from "@/helpers/matching/schemas";
 import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
@@ -24,6 +26,8 @@ import {
 } from "./shared";
 
 const JOB_NOT_FOUND = { error: "Job post not found." } as const;
+const CONTACT_NOTE =
+  "Contact details are shared when the candidate answers Interested to your outreach or applies to one of your jobs.";
 const CANDIDATE_NOT_FOUND = { error: "Candidate not found." } as const;
 
 // AGENT_CANDIDATE_COLUMNS plus the detail fields, as one literal so Supabase can type the row.
@@ -135,21 +139,29 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
 
           const { data, error } = await supabase
             .from("job_relevant_profiles")
-            .select(
-              `relevance_rank, match_score, explanation, explanation_status, user_info(${AGENT_CANDIDATE_COLUMNS})`,
-            )
+            .select("user_id, relevance_rank, match_score, explanation, explanation_status")
             .eq("job_posting_id", jobPostId)
             .order("relevance_rank", { ascending: true, nullsFirst: false })
             .limit(limit ?? AGENT_LIST_DEFAULT_LIMIT);
           if (error) throw error;
 
+          // Directory rows, no contact details (OR-SEC-001). Candidates who went
+          // private (or blocked the company) since matching are left out.
+          const profiles = await loadVisibleCandidates<CandidateRow>(
+            supabase,
+            (data ?? []).flatMap((row) => (row.user_id ? [row.user_id] : [])),
+            AGENT_CANDIDATE_COLUMNS,
+          );
+
           return {
             job: { id: job.id, title: job.title },
             candidates: (data ?? [])
-              // RLS hides candidates who went private since matching.
-              .filter((row) => row.user_info)
-              .map((row) => ({
-                ...compactCandidate(row.user_info as CandidateRow, { jobPostId }),
+              .flatMap((row) => {
+                const profile = row.user_id ? profiles.get(row.user_id) : undefined;
+                return profile ? [{ row, profile }] : [];
+              })
+              .map(({ row, profile }) => ({
+                ...compactCandidate(profile, { jobPostId }),
                 rank: row.relevance_rank,
                 matchScore: row.match_score,
                 matchSummary: sandboxedSummary(completedExplanation(row)),
@@ -177,7 +189,7 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
 
     getCandidateProfile: tool({
       description:
-        "Read a candidate's profile: roles, experience, skills, preferences, a resume excerpt, their matches to the company's jobs, their applications to them, and whether they're saved. Contact details aren't available.",
+        "Read a candidate's profile: roles, experience, skills, preferences, a resume excerpt, their matches to the company's jobs, their applications to them, and whether they're saved. Contact details are included only once the candidate applied to one of the company's jobs or answered Interested to its outreach.",
       inputSchema: z.object({
         candidateId: uuidInput("candidate"),
         jobPostId: uuidInput("job post").optional().describe("A job to show the match for first."),
@@ -186,16 +198,24 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
         withToolErrors(ctx, "getCandidateProfile", async () => {
           if (!(await canView(candidateId))) return CANDIDATE_NOT_FOUND;
 
-          const { data: profile, error } = await supabase
-            .from("user_info")
-            .select(PROFILE_DETAIL_COLUMNS)
-            .eq("user_id", candidateId)
-            .maybeSingle();
-          if (error) throw error;
-          if (!profile) return CANDIDATE_NOT_FOUND;
+          // RA-SEC-005: the full profile, with contact details and the resume,
+          // only with access (applied, or answered Interested). Otherwise the
+          // directory profile and its scrubbed resume sections.
+          const { data: hasAccess, error: accessError } = await supabase.rpc("company_has_candidate_access", {
+            p_user_id: candidateId,
+          });
+          if (accessError) throw accessError;
 
-          const [{ data: resume }, matches, { data: applications, error: applicationsError }, { data: saved }] =
-            await Promise.all([
+          let profile: (CandidateRow & Record<string, unknown>) | null;
+          let resumeContent: TResumeRowContent | null;
+          let contact: { email: string | null; linkedin: string | null; github: string | null } | null = null;
+          if (hasAccess === true) {
+            const [{ data: full, error }, { data: resume }] = await Promise.all([
+              supabase
+                .from("user_info")
+                .select(`${PROFILE_DETAIL_COLUMNS}, email, linkedin_url, github_url`)
+                .eq("user_id", candidateId)
+                .maybeSingle(),
               supabase
                 .from("resumes")
                 .select("content")
@@ -203,6 +223,33 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
                 .eq("is_primary", true)
                 .limit(1)
                 .maybeSingle(),
+            ]);
+            if (error) throw error;
+            profile = full;
+            resumeContent = (resume?.content as TResumeRowContent | null) ?? null;
+            if (full) contact = { email: full.email, linkedin: full.linkedin_url, github: full.github_url };
+          } else {
+            const { data: listed, error } = await supabase
+              .from("candidate_directory")
+              .select(`${PROFILE_DETAIL_COLUMNS}, resume_sections`)
+              .eq("user_id", candidateId)
+              .maybeSingle();
+            if (error) throw error;
+            profile = listed as (CandidateRow & Record<string, unknown>) | null;
+            resumeContent = Array.isArray(listed?.resume_sections)
+              ? ({ sections: listed.resume_sections } as TResumeRowContent)
+              : null;
+          }
+          if (!profile) return CANDIDATE_NOT_FOUND;
+
+          // OR-REQ-020: the agent reading a profile is a view, like the page.
+          after(async () => {
+            const { error } = await supabase.rpc("record_profile_view", { p_candidate: candidateId });
+            if (error) console.error("[agent] couldn't record the profile view", error.message);
+          });
+
+          const [matches, { data: applications, error: applicationsError }, { data: saved }] =
+            await Promise.all([
               getCandidateMatches(supabase, candidateId, company.id, jobPostId),
               supabase
                 .from("applications")
@@ -219,7 +266,7 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
           if (applicationsError) throw applicationsError;
 
           const goals = [profile.career_goals_short_term, profile.career_goals_long_term]
-            .filter((goal): goal is string => !!goal?.trim())
+            .filter((goal): goal is string => typeof goal === "string" && !!goal.trim())
             .join("\n");
 
           return {
@@ -228,7 +275,8 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
             companySize: profile.company_size_preference,
             needsVisaSponsorship: profile.visa_sponsorship_required,
             careerGoals: goals ? wrapInSandbox("candidate_profile", scrubPII(goals)) : null,
-            resumeExcerpt: resumeExcerpt(resume?.content as TResumeRowContent | null),
+            resumeExcerpt: resumeExcerpt(resumeContent),
+            ...(contact ? { contact } : { contactNote: CONTACT_NOTE }),
             matches: matches.map((match) => ({
               jobPostId: match.jobPostId,
               jobTitle: match.jobTitle,
@@ -260,8 +308,8 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
           const ids = [...new Set(candidateIds)];
 
           const [profiles, matches, applications] = await Promise.all([
-            // RLS returns only candidates the company may see.
-            supabase.from("user_info").select(AGENT_CANDIDATE_COLUMNS).in("user_id", ids),
+            // Only candidates the company may see, without contact details.
+            loadVisibleCandidates<CandidateRow>(supabase, ids, AGENT_CANDIDATE_COLUMNS),
             supabase
               .from("job_relevant_profiles")
               .select("user_id, match_score, explanation, explanation_status")
@@ -273,12 +321,12 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
               .eq("job_post_id", jobPostId)
               .in("applicant_user_id", ids),
           ]);
-          for (const { error } of [profiles, matches, applications]) if (error) throw error;
+          for (const { error } of [matches, applications]) if (error) throw error;
 
           return {
             job: { id: job.id, title: job.title },
             candidates: ids.map((id) => {
-              const profile = (profiles.data ?? []).find((p) => p.user_id === id);
+              const profile = profiles.get(id);
               if (!profile) return { id, ...CANDIDATE_NOT_FOUND };
               const match = (matches.data ?? []).find((m) => m.user_id === id);
               const application = (applications.data ?? []).find((a) => a.applicant_user_id === id);

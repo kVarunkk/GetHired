@@ -6,6 +6,7 @@ import {
 import { listPublicPlans } from "@/helpers/billing/plans";
 import { buildProfileQuery } from "@/helpers/profiles/profilesFilterQueryBuilder";
 import { findTalentListIdBySlug } from "@/helpers/pipeline/talent-lists";
+import { outreachStatusFor } from "@/helpers/outreach/list";
 import { expandProfileLocations } from "@/helpers/locations/aliases";
 import { parseMultiSelectParam } from "@/utils/formatters";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
@@ -162,6 +163,17 @@ export async function GET(request: NextRequest) {
         companyId: companyData.id,
         isInternalCall,
       });
+
+    // OR-REQ-007: the company's latest outreach per candidate, for card badges.
+    if (!isInternalCall && initialProfiles.length > 0) {
+      const badges = await outreachStatusFor(
+        { supabase, company: { id: companyData.id } },
+        initialProfiles.map((p) => p.user_id),
+      ).catch(() => ({}) as Awaited<ReturnType<typeof outreachStatusFor>>);
+      for (const profile of initialProfiles) {
+        profile.outreach_status = badges[profile.user_id]?.status ?? null;
+      }
+    }
 
     const hiddenCount = isLimitOnProfiles
       ? Math.max(0, (totalCount ?? 0) - allowedProfiles)

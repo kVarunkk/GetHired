@@ -144,18 +144,29 @@ export async function addToTalentList(
 
   if (!(await ownList(ctx, listId))) return NOT_FOUND;
 
-  // RLS returns the row only for a candidate the company can view.
-  const { data: candidate, error: viewError } = await ctx.supabase
-    .from("user_info")
-    .select("is_public, filled")
+  // The talent pool is read through candidate_directory (OR-SEC-001): public
+  // candidates who haven't blocked the company.
+  const { data: listed, error: viewError } = await ctx.supabase
+    .from("candidate_directory")
+    .select("filled")
     .eq("user_id", candidateUserId)
     .maybeSingle();
   if (viewError)
     throw new Error(`Failed to check the candidate: ${viewError.message}`);
-  if (!candidate) return { ok: false, error: "Candidate not found." };
-  if (!candidate.is_public || !candidate.filled) {
-    return { ok: false, error: PRIVATE_CANDIDATE_ERROR };
+  if (!listed) {
+    // Not in the directory: a private applicant (RLS opens their row to the
+    // company) can't be listed; anyone else is not found.
+    const { data: applicant, error } = await ctx.supabase
+      .from("user_info")
+      .select("user_id")
+      .eq("user_id", candidateUserId)
+      .maybeSingle();
+    if (error) throw new Error(`Failed to check the candidate: ${error.message}`);
+    return applicant
+      ? { ok: false, error: PRIVATE_CANDIDATE_ERROR }
+      : { ok: false, error: "Candidate not found." };
   }
+  if (!listed.filled) return { ok: false, error: PRIVATE_CANDIDATE_ERROR };
 
   const { error } = await ctx.supabase
     .from("talent_list_members")
@@ -195,20 +206,31 @@ export async function listTalentLists(
 ): Promise<TalentListSummary[]> {
   const { data, error } = await supabase
     .from("talent_lists")
-    .select(
-      "id, name, slug, talent_list_members(candidate_user_id, user_info(is_public, filled))",
-    )
+    .select("id, name, slug, talent_list_members(candidate_user_id)")
     .eq("company_id", company.id)
     .order("created_at", { ascending: true });
   if (error) throw new Error(`Failed to load the lists: ${error.message}`);
+
+  // Who the tabs show: filled profiles in the directory (OR-SEC-001).
+  const memberIds = [
+    ...new Set((data ?? []).flatMap((l) => l.talent_list_members.map((m) => m.candidate_user_id))),
+  ];
+  const shown = new Set<string>();
+  if (memberIds.length > 0) {
+    const { data: rows, error: dirError } = await supabase
+      .from("candidate_directory")
+      .select("user_id")
+      .eq("filled", true)
+      .in("user_id", memberIds);
+    if (dirError) throw new Error(`Failed to load the lists: ${dirError.message}`);
+    for (const row of rows ?? []) if (row.user_id) shown.add(row.user_id);
+  }
 
   return (data ?? []).map((list) => ({
     id: list.id,
     name: list.name,
     slug: list.slug,
-    memberCount: list.talent_list_members.filter(
-      (m) => m.user_info?.is_public && m.user_info.filled,
-    ).length,
+    memberCount: list.talent_list_members.filter((m) => shown.has(m.candidate_user_id)).length,
     hasCandidate:
       !!candidateUserId &&
       list.talent_list_members.some(
