@@ -19,6 +19,7 @@ import {
 import { FunnelResult, type FunnelResultData } from "./recruiter/FunnelResult";
 import { MoveApprovalDetails } from "./recruiter/MoveApprovalCard";
 import { OutreachApprovalDetails } from "./recruiter/OutreachApprovalCard";
+import { isRoleApprovalTool, RoleApprovalDetails } from "./recruiter/RoleApprovalCard";
 
 export { isInAppHref };
 
@@ -78,6 +79,17 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   getHiringFunnel: { running: "Loading the funnel…", done: "Loaded the hiring funnel", action: "load the hiring funnel" },
   sendOutreach: { running: "Sending the message…", done: "Sent the message", action: "message the candidate" },
   listOutreach: { running: "Loading your outreach…", done: "Loaded your outreach", action: "load your outreach" },
+  getOutreach: { running: "Reading the message…", done: "Read the message", action: "read the message" },
+  // Team and roles (RP-REQ-032).
+  listTeam: { running: "Loading your team…", done: "Loaded your team", action: "load your team" },
+  listRoles: { running: "Loading roles…", done: "Loaded roles", action: "load roles" },
+  getRole: { running: "Reading the role…", done: "Read the role", action: "read the role" },
+  createRole: { running: "Creating the role…", done: "Created the role", action: "create the role" },
+  updateRole: { running: "Updating the role…", done: "Updated the role", action: "update the role" },
+  deleteRole: { running: "Deleting the role…", done: "Deleted the role", action: "delete the role" },
+  assignRole: { running: "Changing the role…", done: "Changed the member's role", action: "change the member's role" },
+  assignToJob: { running: "Updating the hiring team…", done: "Added to the hiring team", action: "add them to the hiring team" },
+  unassignFromJob: { running: "Updating the hiring team…", done: "Removed from the hiring team", action: "remove them from the hiring team" },
 };
 
 const labelsFor = (name: string) =>
@@ -383,6 +395,18 @@ function approvalTitle(name: string, input: unknown) {
       return `Allow the assistant to ${labelsFor(name).action}?`;
     case "sendOutreach":
       return "Send this message on GetHired?";
+    case "createRole":
+      return "Create this role?";
+    case "updateRole":
+      return "Change this role?";
+    case "deleteRole":
+      return "Delete this role?";
+    case "assignRole":
+      return "Change this team member's role?";
+    case "assignToJob":
+      return "Add this team member to the job's hiring team?";
+    case "unassignFromJob":
+      return "Remove this team member from the job's hiring team?";
     default:
       return `Allow the assistant to ${labelsFor(name).action}?`;
   }
@@ -391,6 +415,8 @@ function approvalTitle(name: string, input: unknown) {
 function approvalDetails(name: string, input: unknown) {
   // Moves and outreach show a server preview (MoveApprovalDetails, OutreachApprovalDetails).
   if (name === "setJobPostStatus" || name === "moveApplications" || name === "sendOutreach") return [];
+  // Role changes show a server preview with the exact diff (RoleApprovalDetails).
+  if (isRoleApprovalTool(name)) return [];
   return describeInput(input);
 }
 
@@ -414,6 +440,7 @@ function ApprovalCard({
       {reason && <p className="text-xs text-muted-foreground">{reason}</p>}
       {name === "moveApplications" && <MoveApprovalDetails input={part.input} />}
       {name === "sendOutreach" && <OutreachApprovalDetails input={part.input} />}
+      {isRoleApprovalTool(name) && <RoleApprovalDetails tool={name} input={part.input} />}
       {(details.length > 0 || isOnboarding) && (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
           {details.map(([key, value]) => (
@@ -622,7 +649,7 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
             {result.emailed ? "Message sent and emailed." : "Message sent. They'll see it on GetHired."}{" "}
             {href && (
               <Link {...NEW_TAB} href={href} className={inlineLink}>
-                Open Outreach
+                Open message
               </Link>
             )}
           </>

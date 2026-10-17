@@ -159,7 +159,7 @@ export default async function CreditsStatusPage({
                 <h3 className="text-lg font-semibold tracking-tight mb-2">
                   Billing & Customer
                 </h3>
-                <p>
+                <p className="[overflow-wrap:anywhere]">
                   <strong className="font-medium">Email:</strong>{" "}
                   {paymentDetails.customer.email}
                 </p>

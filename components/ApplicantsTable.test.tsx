@@ -214,6 +214,17 @@ describe("ApplicantsTable: fit (MT-REQ-007, MT-TEST-006)", () => {
     expect(screen.queryByRole("button", { name: /unscreened/ })).not.toBeInTheDocument();
   });
 
+  it("shows the member's screenings left under their role's cap (RP-REQ-044)", () => {
+    const { unmount } = render(
+      <ApplicantsTable jobPostId={JOB.id} data={rows()} screeningCap={{ limit: 20, remaining: 5 }} />,
+    );
+    expect(screen.getByText("5 of your 20 screenings left this month")).toBeInTheDocument();
+    unmount();
+
+    render(<ApplicantsTable jobPostId={JOB.id} data={rows()} />);
+    expect(screen.queryByText(/screenings left/)).not.toBeInTheDocument();
+  });
+
   it("queues the screenings and toasts the count", async () => {
     fetchMock.mockResolvedValue(Response.json({ queued: 1 }));
     render(<ApplicantsTable jobPostId={JOB.id} data={rows()} />);

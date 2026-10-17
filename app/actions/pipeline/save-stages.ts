@@ -32,7 +32,7 @@ export type SaveStagesActionResult =
  * (add, rename, archive or reorder). The rules are in `helpers/pipeline/stages.ts`.
  */
 export async function saveStagesAction(input: z.input<typeof inputSchema>): Promise<SaveStagesActionResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "settings.stages" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);

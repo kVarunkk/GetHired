@@ -10,7 +10,7 @@ import {
   type TierFixture,
 } from "@/test/utils/billing";
 import { COMPANY_A } from "@/test/utils/recruiter";
-import { EntitlementError } from "./errors";
+import { EntitlementError, MemberLimitError } from "./errors";
 import type { Plan } from "./plans";
 import {
   assertAllowance,
@@ -122,7 +122,7 @@ describe("consumeEntitlement", () => {
       error: null,
     });
 
-    const err = await consumeEntitlement(COMPANY_A.id, "screenings", 1, REF).catch((e) => e);
+    const err = await consumeEntitlement(COMPANY_A.id, "screenings", 1, REF, null).catch((e) => e);
 
     expect(err).toBeInstanceOf(EntitlementError);
     expect(err.payload).toEqual({
@@ -142,10 +142,37 @@ describe("consumeEntitlement", () => {
   it("throws a plain error when the RPC fails", async () => {
     db.queueRpc("consume_entitlement", { data: null, error: { message: "boom" } });
 
-    const err = await consumeEntitlement(COMPANY_A.id, "screenings", 1, REF).catch((e) => e);
+    const err = await consumeEntitlement(COMPANY_A.id, "screenings", 1, REF, null).catch((e) => e);
 
     expect(err).toBeInstanceOf(Error);
     expect(err).not.toBeInstanceOf(EntitlementError);
+  });
+
+  it("maps member_limit to a MemberLimitError with the cap, and no upgrade (RP-REQ-042)", async () => {
+    db.queueRpc("consume_entitlement", {
+      data: { ok: false, reason: "member_limit", credits_needed: 0, limit: 50, used: 50 },
+      error: null,
+    });
+
+    const err = await consumeEntitlement(COMPANY_A.id, "outreach", 1, REF, COMPANY_A.user.id).catch((e) => e);
+
+    expect(err).toBeInstanceOf(MemberLimitError);
+    expect(err).toBeInstanceOf(EntitlementError);
+    expect(err.payload).toMatchObject({ key: "outreach", reason: "member_limit", amount: 50, used: 50, suggestedTier: null });
+    expect(err.message).toBe(
+      "You've used your 50 outreach messages for this month. Ask someone who manages roles to raise your role's limit.",
+    );
+    expect(err.message).not.toMatch(/admin/i);
+    // No plan lookup: there's nothing to buy.
+    expect(db.callsFor("get_company_entitlements")).toHaveLength(0);
+  });
+
+  it("says a zero cap blocks the key", async () => {
+    db.queueRpc("consume_entitlement", { data: { ok: false, reason: "member_limit", limit: 0, used: 0 }, error: null });
+
+    const err = await consumeEntitlement(COMPANY_A.id, "screenings", 1, REF, COMPANY_A.user.id).catch((e) => e);
+
+    expect(err.message).toMatch(/^Your role can't use /);
   });
 });
 
@@ -157,11 +184,17 @@ describe("holds", () => {
     db.queueRpc("consume_entitlement", { data: { ok: true, source: "allowance", credits_spent: 0 }, error: null });
     db.queueRpc("release_hold", { data: true, error: null });
 
-    await holdEntitlement(COMPANY_A.id, "interview_minutes", 15, REF);
-    await consumeEntitlement(COMPANY_A.id, "interview_minutes", 15, REF);
+    await holdEntitlement(COMPANY_A.id, "interview_minutes", 15, REF, COMPANY_A.user.id);
+    await consumeEntitlement(COMPANY_A.id, "interview_minutes", 15, REF, null);
     expect(await releaseHold(COMPANY_A.id, "interview_minutes", REF)).toBe(true);
 
-    expect(rpcArgs("hold_entitlement")).toMatchObject({ p_ref_type: REF.type, p_ref_id: REF.id, p_qty: 15 });
+    // RP-REQ-043: the hold records who took it, so the later charge is theirs.
+    expect(rpcArgs("hold_entitlement")).toMatchObject({
+      p_ref_type: REF.type,
+      p_ref_id: REF.id,
+      p_qty: 15,
+      p_actor: COMPANY_A.user.id,
+    });
     expect(rpcArgs("consume_entitlement")).toMatchObject({ p_ref_type: REF.type, p_ref_id: REF.id });
     expect(rpcArgs("release_hold")).toEqual({
       p_company_id: COMPANY_A.id,
@@ -175,10 +208,18 @@ describe("holds", () => {
     db.queueRpc("hold_entitlement", { data: { ok: false, reason: "insufficient_credits", credits_needed: 5 }, error: null });
     db.queueRpc("get_company_entitlements", { data: entitlementsOf(TIER_FREE, { interview_minutes: 30 }), error: null });
 
-    const err = await holdEntitlement(COMPANY_A.id, "interview_minutes", 5, REF).catch((e) => e);
+    const err = await holdEntitlement(COMPANY_A.id, "interview_minutes", 5, REF, null).catch((e) => e);
 
     expect(err).toBeInstanceOf(EntitlementError);
     expect(err.payload).toMatchObject({ reason: "insufficient_credits", creditsNeeded: 5 });
+  });
+
+  it("a hold over the member's cap throws a MemberLimitError", async () => {
+    db.queueRpc("hold_entitlement", { data: { ok: false, reason: "member_limit", limit: 2, used: 2 }, error: null });
+
+    const err = await holdEntitlement(COMPANY_A.id, "outreach", 1, REF, COMPANY_A.user.id).catch((e) => e);
+
+    expect(err).toBeInstanceOf(MemberLimitError);
   });
 });
 
@@ -214,7 +255,7 @@ describe("assertAllowance", () => {
     });
     db.queueRpc("get_company_entitlements", { data: entitlementsOf(TIER_FREE), error: null });
 
-    const err = await assertAllowance(COMPANY_A.id, "screenings").catch((e) => e);
+    const err = await assertAllowance(COMPANY_A.id, "screenings", 1, null).catch((e) => e);
 
     expect(err).toBeInstanceOf(EntitlementError);
     expect(err.payload).toMatchObject({
@@ -229,12 +270,29 @@ describe("assertAllowance", () => {
   it("resolves when allowed", async () => {
     db.queueRpc("check_entitlement", { data: { allowed: true, source: "allowance", credits_needed: 0, reason: null }, error: null });
 
-    await expect(assertAllowance(COMPANY_A.id, "screenings")).resolves.toBeUndefined();
+    await expect(assertAllowance(COMPANY_A.id, "screenings", 1, null)).resolves.toBeUndefined();
+  });
+
+  it("checks the actor's cap first (RP-REQ-042)", async () => {
+    db.queueRpc("check_member_limit", { data: { allowed: false, limit: 5, used: 5 }, error: null });
+
+    const err = await assertAllowance(COMPANY_A.id, "screenings", 1, COMPANY_A.user.id).catch((e) => e);
+
+    expect(err).toBeInstanceOf(MemberLimitError);
+    expect(rpcArgs("check_member_limit")).toMatchObject({ p_key: "screenings", p_actor: COMPANY_A.user.id });
+    expect(db.callsFor("check_entitlement")).toHaveLength(0);
+  });
+
+  it("goes on to the company check when the actor isn't capped", async () => {
+    db.queueRpc("check_member_limit", { data: { allowed: true, limit: null, used: null }, error: null });
+    db.queueRpc("check_entitlement", { data: { allowed: true, source: "allowance", credits_needed: 0, reason: null }, error: null });
+
+    await expect(assertAllowance(COMPANY_A.id, "screenings", 1, COMPANY_A.user.id)).resolves.toBeUndefined();
   });
 
   it("only takes allowance keys", () => {
     // @ts-expect-error active_job_posts is a limit, not an allowance
-    void (() => assertAllowance(COMPANY_A.id, "active_job_posts"));
+    void (() => assertAllowance(COMPANY_A.id, "active_job_posts", 1, null));
   });
 });
 

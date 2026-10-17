@@ -3,10 +3,13 @@ import { render, screen, within } from "@testing-library/react";
 import { createClient } from "@/lib/supabase/server";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
+import { MEMBER_A, OWNER_A } from "@/test/utils/team";
 import CompanyPage from "./page";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/components/CreateJobPostingDialog", () => ({ default: () => null }));
+vi.mock("@/components/CreateJobPostingDialog", () => ({
+  default: ({ disabled }: { disabled?: boolean }) => <button disabled={disabled}>Create New Job Post</button>,
+}));
 vi.mock("@/components/CompanyJobPostingCard", () => ({
   default: ({ job }: { job: { title: string } }) => <div>{job.title}</div>,
 }));
@@ -17,7 +20,7 @@ let db: SupabaseMock;
 
 /** The company, its metrics, and empty jobs and applicants lists. */
 function dashboard(metrics: unknown) {
-  db.queue("company_info", { data: { id: COMPANY_A.id, name: "Acme" }, error: null });
+  db.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   db.queueRpc("get_company_metrics", { data: metrics, error: null });
 }
 
@@ -115,5 +118,39 @@ describe("company dashboard (PLT-082 characterisation)", () => {
     render(await CompanyPage());
 
     expect(screen.getByText("How are you doing today, Acme?")).toBeInTheDocument();
+  });
+});
+
+describe("company dashboard for a removed member (TMT-053, difference 14)", () => {
+  it("says they're no longer part of a company instead of erroring", async () => {
+    db = createSupabaseMock({ user: MEMBER_A.user });
+    vi.mocked(createClient).mockResolvedValue(db.client);
+    db.queueRpc("my_company_access", { data: null, error: null });
+
+    render(await CompanyPage());
+
+    expect(
+      screen.getByText("You're no longer part of a company on GetHired. Ask your team for a new invite."),
+    ).toBeInTheDocument();
+    expect(db.callsFor("get_company_metrics")).toHaveLength(0);
+  });
+});
+
+describe("company dashboard gating (RP-REQ-016, RPT-024)", () => {
+  it("locks Create New Job Post without jobs.create", async () => {
+    db.queueRpc("my_company_access", { data: MEMBER_A.membership, error: null });
+    db.queueRpc("get_company_metrics", { data: [], error: null });
+
+    render(await CompanyPage());
+
+    expect(screen.getByRole("button", { name: "Create New Job Post" })).toBeDisabled();
+  });
+
+  it("enables it with jobs.create", async () => {
+    dashboard([]);
+
+    render(await CompanyPage());
+
+    expect(screen.getByRole("button", { name: "Create New Job Post" })).toBeEnabled();
   });
 });

@@ -6,29 +6,27 @@ import { useRouter } from "next/navigation";
 import { ArrowUp, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  agentPromptHref as appAgentHref,
-  COMPANY_AGENT_PATH,
-  savePendingPrompt,
-} from "@/helpers/agent/prompt-draft";
-
-const agentPromptHref = (prompt: string) => appAgentHref(prompt, COMPANY_AGENT_PATH);
+import { agentPromptHref, savePendingPrompt } from "@/helpers/agent/prompt-draft";
 
 export type AgentSuggestion = { label: string; prompt: string };
 
 /**
- * A question box plus suggested prompts that open /company/agent with the prompt in
- * its message box (the user still sends it). `toPrompt` turns the typed
- * question into the prompt, e.g. by adding the job post it's about.
+ * A question box plus suggested prompts that open the agent at `basePath`
+ * (`/agent` or `/company/agent`) with the prompt in its message box (the user
+ * still sends it). `toPrompt` turns the typed question into the prompt, e.g. by
+ * adding the job post it's about.
  */
 export default function AskAgentBox({
   title,
   placeholder,
+  basePath,
   suggestions,
   toPrompt = (question) => question.trim(),
 }: {
   title: string;
   placeholder: string;
+  /** The agent page the prompts open. */
+  basePath: string;
   suggestions: AgentSuggestion[];
   toPrompt?: (question: string) => string;
 }) {
@@ -37,7 +35,7 @@ export default function AskAgentBox({
 
   const open = (prompt: string) => {
     savePendingPrompt(prompt);
-    router.push(agentPromptHref(prompt));
+    router.push(agentPromptHref(prompt, basePath));
   };
 
   return (
@@ -85,7 +83,7 @@ export default function AskAgentBox({
         {suggestions.map(({ label, prompt }) => (
           <Link
             key={label}
-            href={agentPromptHref(prompt)}
+            href={agentPromptHref(prompt, basePath)}
             onClick={() => savePendingPrompt(prompt)}
             className="rounded-full border px-3.5 py-1.5 text-sm transition-colors hover:border-brand/40 hover:bg-brandSoft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
           >

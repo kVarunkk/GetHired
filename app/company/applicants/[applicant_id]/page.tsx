@@ -18,6 +18,7 @@ import ActivityTimeline from "@/components/pipeline/ActivityTimeline";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { listNotes } from "@/helpers/pipeline/notes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ScrollMaskX from "@/components/ScrollMaskX";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import { TApplicationStatus } from "@/utils/types";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
@@ -107,7 +108,7 @@ export default async function ApplicantPage({
     const stages = allStages?.filter((s) => !s.archived) ?? null;
 
     const company = await getMyCompany(supabase, user);
-    const [notes, { data: events }] = await Promise.all([
+    const [notes, { data: events }, { data: teammates }] = await Promise.all([
       company
         ? listNotes({ supabase, company }, { applicationId: application.id })
         : [],
@@ -117,7 +118,14 @@ export default async function ApplicantPage({
         .eq("application_id", application.id)
         .order("created_at", { ascending: false })
         .limit(200),
+      // TM-REQ-009: who the notes composer can @mention. Empty without notes.write.
+      company
+        ? supabase.rpc("list_mentionable_members")
+        : Promise.resolve({ data: null }),
     ]);
+    const mentionable = (teammates ?? [])
+      .filter((m) => m.user_id !== user.id && m.name)
+      .map((m) => ({ userId: m.user_id, name: m.name }));
 
     // What the candidate shared (OR-REQ-032). A failure hides the section,
     // not the page. Opening the page ends the candidate's right to un-share.
@@ -160,8 +168,9 @@ export default async function ApplicantPage({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left Panel: Applicant & Job Info */}
-          <div className="md:col-span-1 space-y-4">
+          {/* Left Panel: Applicant & Job Info. Emails and URLs have no spaces
+              to wrap at, so they may break anywhere. */}
+          <div className="min-w-0 space-y-4 [overflow-wrap:anywhere] md:col-span-1">
             <Card>
               <CardHeader>
                 <CardTitle>
@@ -210,15 +219,15 @@ export default async function ApplicantPage({
                   <TabsList className="grid w-full grid-cols-2 !rounded-b-none">
                     <TabsTrigger
                       value="applicant"
-                      className="data-[state=active]:!bg-muted data-[state=active]:!shadow-none"
+                      className="min-w-0 data-[state=active]:!bg-muted data-[state=active]:!shadow-none"
                     >
-                      Applicant Details
+                      <span className="truncate">Applicant</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="job"
-                      className="data-[state=active]:!bg-muted data-[state=active]:!shadow-none"
+                      className="min-w-0 data-[state=active]:!bg-muted data-[state=active]:!shadow-none"
                     >
-                      Job Details
+                      <span className="truncate">Job</span>
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="applicant" className="p-6">
@@ -374,17 +383,20 @@ export default async function ApplicantPage({
           </div>
 
           {/* Right Panel: Overview (screening, answers), Notes, Activity */}
-          <Tabs defaultValue="overview" className="md:col-span-2">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="notes">Notes ({notes.length})</TabsTrigger>
-              <TabsTrigger value="activity">Activity</TabsTrigger>
-            </TabsList>
+          <Tabs defaultValue="overview" className="min-w-0 md:col-span-2">
+            <ScrollMaskX revealSelector='[role="tab"][data-state="active"]'>
+              <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="notes">Notes ({notes.length})</TabsTrigger>
+                <TabsTrigger value="activity">Activity</TabsTrigger>
+              </TabsList>
+            </ScrollMaskX>
             <TabsContent value="notes" className="mt-4">
               <NotesPanel
                 applicationId={application.id}
                 notes={notes}
                 currentUserId={user.id}
+                members={mentionable}
               />
             </TabsContent>
             <TabsContent value="activity" className="mt-4">

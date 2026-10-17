@@ -17,7 +17,12 @@ export async function upsertJobPostingAction(params: {
   values: JobPostingInput;
   existingPostingId?: string;
 }): Promise<UpsertResult> {
-  const auth = await requireCompanyForAction();
+  // RP-REQ-002: a new post needs jobs.create, an edit jobs.edit on that job.
+  const auth = await requireCompanyForAction(
+    params.existingPostingId
+      ? { permission: "jobs.edit", jobId: params.existingPostingId }
+      : { permission: "jobs.create" },
+  );
   if (!auth.ok) return { success: false, error: auth.error };
 
   const result = await upsertJobPosting(auth, params);

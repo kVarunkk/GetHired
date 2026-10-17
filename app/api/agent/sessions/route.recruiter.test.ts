@@ -5,6 +5,7 @@ import { buildRequest } from "@/test/utils/request";
 import { setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
+import { MEMBER_A, OWNER_A } from "@/test/utils/team";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -18,10 +19,7 @@ let supabase: SupabaseMock;
 
 beforeEach(async () => {
   supabase = createSupabaseMock();
-  supabase.queue("company_info", {
-    data: { id: COMPANY_A.id, name: "Acme", email: "hr@acme.dev" },
-    error: null,
-  });
+  supabase.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(COMPANY_A.user, supabase.client);
 });
 
@@ -62,5 +60,17 @@ describe("sessions routes for a company user (RAT-012)", () => {
     });
 
     expect(res.status).toBe(404);
+  });
+
+  it("keeps a member's chats to themselves: filtered by user, never by company (TM-REQ-007)", async () => {
+    supabase = createSupabaseMock();
+    supabase.queueRpc("my_company_access", { data: MEMBER_A.membership, error: null });
+    supabase.queue("agent_sessions", { data: [], error: null });
+    await setRequestUser(MEMBER_A.user, supabase.client);
+
+    expect((await GET()).status).toBe(200);
+    const filters = supabase.callsFor("agent_sessions")[0].chain.filter((m) => m.method === "eq");
+    expect(filters).toContainEqual({ method: "eq", args: ["user_id", MEMBER_A.user.id] });
+    expect(filters.map((m) => m.args[0])).not.toContain("company_id");
   });
 });

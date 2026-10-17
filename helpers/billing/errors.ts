@@ -16,7 +16,11 @@ export type EntitlementPayload = {
   creditBalance: number;
   /** Credits that would cover the shortfall, when overage is allowed. */
   creditsNeeded: number;
-  reason: "limit_reached" | "insufficient_credits";
+  /**
+   * `member_limit`: the member's role caps this key per member, and they've
+   * used it (RP-REQ-042). Distinct from the company running out.
+   */
+  reason: "limit_reached" | "insufficient_credits" | "member_limit";
   suggestedTier: SuggestedTier | null;
 };
 
@@ -34,8 +38,22 @@ export class EntitlementError extends Error {
   }
 }
 
+/** RP-REQ-042: the member's role caps this key; nothing to buy, a role to change. */
+export class MemberLimitError extends EntitlementError {
+  constructor(payload: Omit<EntitlementPayload, "reason">) {
+    super({ ...payload, reason: "member_limit", suggestedTier: null });
+    this.name = "MemberLimitError";
+  }
+}
+
 export function entitlementMessage(p: EntitlementPayload) {
   const what = labelFor(p.key, p.amount ?? 0);
+  if (p.reason === "member_limit") {
+    // RP-GUD-002: no role names in copy.
+    return p.amount === 0
+      ? `Your role can't use ${labelFor(p.key, 2)}. Ask someone who manages roles to change your role's limit.`
+      : `You've used your ${p.amount} ${what} for this month. Ask someone who manages roles to raise your role's limit.`;
+  }
   if (p.kind === "limit") {
     return `Your plan allows ${p.amount} ${what}. Upgrade to add more.`;
   }

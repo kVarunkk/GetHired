@@ -3,6 +3,7 @@ import { revalidateTag } from "next/cache";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { MEMBER_A, OWNER_A } from "@/test/utils/team";
 import { COMPANY_A, jobPostingOf } from "@/test/utils/recruiter";
 import { deleteJobPostingAction } from "./delete-job-posting";
 
@@ -22,7 +23,7 @@ const deletes = (table: string) =>
 
 async function signIn(user = COMPANY_A.user) {
   rls = createSupabaseMock({ user });
-  rls.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(user, rls.client);
 }
 
@@ -34,6 +35,18 @@ beforeEach(async () => {
 });
 
 describe("deleteJobPostingAction", () => {
+  it("refuses a member (TM-REQ-004) without deleting", async () => {
+    rls = createSupabaseMock({ user: MEMBER_A.user });
+    rls.queueRpc("my_company_access", { data: MEMBER_A.membership, error: null });
+    await setRequestUser(MEMBER_A.user, rls.client);
+
+    expect(await deleteJobPostingAction({ jobPostingId: OWN.id })).toEqual({
+      ok: false,
+      error: "Your role can't delete job posts.",
+    });
+    expect(service.calls).toHaveLength(0);
+  });
+
   it("refuses an unauthenticated caller", async () => {
     await setRequestUser(null, rls.client);
 

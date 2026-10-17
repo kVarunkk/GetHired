@@ -12,6 +12,7 @@ import {
   jobPostingOf,
   PRIVATE_APPLIED_TO_A,
 } from "@/test/utils/recruiter";
+import { OWNER_A } from "@/test/utils/team";
 import { DEFAULT_STAGES, stageOf } from "@/test/utils/pipeline";
 import type { RecordedCall } from "@/test/utils/supabase-mock";
 import { updateApplicationStatusAction } from "./update-application-status";
@@ -58,7 +59,7 @@ const stages = (call: RecordedCall) => {
 
 async function signIn(user = COMPANY_A.user) {
   supabase = createSupabaseMock({ user });
-  supabase.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  supabase.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   supabase.queue("pipeline_stages", stages);
   supabase.queue("pipeline_stages", stages);
   await setRequestUser(user, supabase.client);

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
 import ErrorComponent from "@/components/Error";
 import BackButton from "@/components/BackButton";
 import ApplicantsTable from "@/components/ApplicantsTable";
@@ -15,13 +16,9 @@ export default async function CompanyApplicantsPage() {
     if (!user) throw new Error("User not found");
 
     // Fetch company info to get the company_id
-    const { data: companyInfo, error: companyInfoError } = await supabase
-      .from("company_info")
-      .select("id, name")
-      .eq("user_id", user.id)
-      .single();
+    const companyInfo = await getMyCompany(supabase, user);
 
-    if (companyInfoError || !companyInfo) {
+    if (!companyInfo) {
       throw new Error("Company profile not found");
     }
 

@@ -14,9 +14,13 @@ export default function FindSimilarCandidates({ candidateId }: { candidateId: st
   const prompt = similarCandidatesPrompt(candidateId);
   return (
     <Button asChild variant="outline" size="sm">
-      <Link href={agentPromptHref(prompt, COMPANY_AGENT_PATH)} onClick={() => savePendingPrompt(prompt)}>
+      <Link
+        href={agentPromptHref(prompt, COMPANY_AGENT_PATH)}
+        onClick={() => savePendingPrompt(prompt)}
+        aria-label="Find similar candidates"
+      >
         <Users className="h-4 w-4" />
-        Find similar candidates
+        <span className="hidden sm:inline">Find similar candidates</span>
       </Link>
     </Button>
   );

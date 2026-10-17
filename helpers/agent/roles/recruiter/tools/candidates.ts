@@ -19,7 +19,7 @@ import {
   compactCandidate,
   fairnessError,
   limitInput,
-  OUTREACH_URL,
+  outreachUrl,
   type RecruiterToolContext,
   resumeExcerpt,
   textListInput,
@@ -300,7 +300,12 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
             })),
             saved: (saved ?? []).length > 0,
             outreach: latestOutreach
-              ? { status: latestOutreach.status, sentAt: latestOutreach.sentAt.slice(0, 10), url: OUTREACH_URL }
+              ? {
+                  id: latestOutreach.id,
+                  status: latestOutreach.status,
+                  sentAt: latestOutreach.sentAt.slice(0, 10),
+                  url: outreachUrl(latestOutreach.id),
+                }
               : null,
           };
         }),

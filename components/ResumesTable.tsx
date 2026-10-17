@@ -92,7 +92,7 @@ export default function ResumesTable({ data }: ResumesTableProps) {
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
-            {format(new Date(row.original.created_at || ""), "PPP")}
+            {format(new Date(row.original.created_at || ""), "d MMM yyyy")}
           </div>
         ),
       },
@@ -102,7 +102,12 @@ export default function ResumesTable({ data }: ResumesTableProps) {
         header: "Name",
         cell: ({ row }) => (
           <div className="flex items-center gap-1">
-            <div className="text-sm font-medium">{row.original.name}</div>
+            <div
+              className="max-w-[16rem] truncate text-sm font-medium"
+              title={row.original.name ?? undefined}
+            >
+              {row.original.name}
+            </div>
             {row.original.is_primary && <Badge>PRIMARY</Badge>}
             {row.original.is_primary && (
               <InfoTooltip

@@ -4,11 +4,12 @@ import { RA_PROMPT_JOBS } from "./config";
 import { getEntitlements } from "@/helpers/billing/entitlements";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
+import { OWNER_A } from "@/test/utils/team";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/helpers/billing/entitlements", () => ({ getEntitlements: vi.fn() }));
 
-const COMPANY = { id: COMPANY_A.id, name: "Acme", email: "hr@acme.dev" };
+const COMPANY = { ...OWNER_A.myCompany, name: "Acme", email: "hr@acme.dev" };
 const JOB = {
   id: "b0000000-0000-4000-8000-000000000001",
   title: "Backend",

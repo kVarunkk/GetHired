@@ -13,7 +13,7 @@ export type PreviewAgentMoveResult = MovePreview | (Omit<MoveFailure, "ok"> & { 
  * nothing. The company comes from the session.
  */
 export async function previewAgentMoveAction(input: unknown): Promise<PreviewAgentMoveResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "pipeline.move" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = moveApplicationsInput.safeParse(input);

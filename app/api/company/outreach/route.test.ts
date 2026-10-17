@@ -6,6 +6,7 @@ import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { buildRequest } from "@/test/utils/request";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
+import { asEachMember, OWNER_A } from "@/test/utils/team";
 import { OUTREACH_INPUT, outreachOf } from "@/test/utils/outreach";
 import { GET, POST } from "./route";
 
@@ -17,9 +18,9 @@ vi.mock("@/helpers/outreach/list", () => ({ listCompanyOutreach: vi.fn() }));
 const ROW = outreachOf("sent");
 let db: SupabaseMock;
 
-async function signIn(user = COMPANY_A.user, company: unknown = COMPANY_A.infoWithTier) {
+async function signIn(user = COMPANY_A.user, company: unknown = OWNER_A.membership) {
   db = createSupabaseMock({ user });
-  db.queue("company_info", { data: company, error: null });
+  db.queueRpc("my_company_access", { data: company, error: null });
   await setRequestUser(user, db.client);
 }
 
@@ -111,6 +112,7 @@ describe("/api/company/outreach (ORT-030)", () => {
           subject: ROW.subject,
           status: "sent" as const,
           source: "manual" as const,
+          senderName: ROW.sender_name,
           sentAt: ROW.sent_at,
           respondedAt: null,
           expiresAt: ROW.expires_at,
@@ -133,5 +135,18 @@ describe("/api/company/outreach (ORT-030)", () => {
     expect((await GET(buildRequest("/api/company/outreach", { searchParams: { status: "nope" } }))).status).toBe(400);
     await signIn();
     expect((await GET(buildRequest("/api/company/outreach", { searchParams: { jobPostId: "x" } }))).status).toBe(400);
+  });
+});
+
+// TM-TEST-005 / TM-REQ-004: every member sends outreach, as themselves.
+asEachMember("POST outreach", (member) => {
+  it("sends through the shared helper for the session company", async () => {
+    await signIn(member.user, member.membership);
+    vi.mocked(sendOutreach).mockResolvedValue({ ok: true, outreach: ROW, emailed: true });
+
+    expect((await post(OUTREACH_INPUT)).status).toBe(200);
+    const [deps] = vi.mocked(sendOutreach).mock.calls[0];
+    expect(deps.company).toMatchObject({ id: COMPANY_A.id, isOwner: member.myCompany.isOwner, role: member.myCompany.role });
+    expect(deps.user.id).toBe(member.user.id);
   });
 });

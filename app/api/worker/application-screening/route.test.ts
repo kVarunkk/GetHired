@@ -141,10 +141,14 @@ describe("GET /api/worker/application-screening (MT-TEST-004)", () => {
       { job: JOB_POST, application: APPLICATION, profile: CANDIDATE_PROFILE, resume: RESUME_CONTENT },
       expect.anything(),
     );
-    expect(consumeEntitlement).toHaveBeenCalledWith(COMPANY_A.id, "screenings", 1, {
-      type: "application_screening",
-      id: APPLICATION.id,
-    });
+    // Queued on apply: no requester, the system's charge (RP-REQ-043).
+    expect(consumeEntitlement).toHaveBeenCalledWith(
+      COMPANY_A.id,
+      "screenings",
+      1,
+      { type: "application_screening", id: APPLICATION.id },
+      null,
+    );
     expect(vi.mocked(screenApplication).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(consumeEntitlement).mock.invocationCallOrder[0],
     );
@@ -302,11 +306,29 @@ describe("GET /api/worker/application-screening (MT-TEST-004)", () => {
 
     await run();
 
-    expect(consumeEntitlement).toHaveBeenCalledWith(COMPANY_A.id, "screenings", 1, {
-      type: "application_screening",
-      id: APPLICATION.id,
-    });
+    expect(consumeEntitlement).toHaveBeenCalledWith(
+      COMPANY_A.id,
+      "screenings",
+      1,
+      { type: "application_screening", id: APPLICATION.id },
+      null,
+    );
     expect(updates()[1]).toMatchObject({ status: "completed" });
+  });
+
+  it("charges the member who queued it, so their per-member cap applies (RP-REQ-043)", async () => {
+    queueMessages(message(7));
+    screeningData(screeningRow({ requested_by: COMPANY_A.user.id }));
+
+    await run();
+
+    expect(consumeEntitlement).toHaveBeenCalledWith(
+      COMPANY_A.id,
+      "screenings",
+      1,
+      { type: "application_screening", id: APPLICATION.id },
+      COMPANY_A.user.id,
+    );
   });
 
   it("increments attempts and leaves a model error for retry before the last attempt", async () => {

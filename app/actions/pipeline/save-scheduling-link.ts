@@ -14,22 +14,26 @@ const inputSchema = z.object({ schedulingUrl: z.union([httpsUrl, z.literal("")])
 
 /**
  * SERVER ACTION (PL-REQ-008): sets or clears the session company's scheduling
- * link, which `{{scheduling_link}}` inserts into interview invites.
+ * link, which `{{scheduling_link}}` inserts into interview invites. Owners and
+ * admins only (TM-REQ-004).
  */
 export async function saveSchedulingLinkAction(
   input: z.input<typeof inputSchema>,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "settings.scheduling" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Use a link that starts with https://." };
 
-  const { error } = await auth.supabase
-    .from("company_info")
-    .update({ scheduling_url: parsed.data.schedulingUrl || null })
-    .eq("id", auth.company.id);
-  if (error) return { ok: false, error: "Couldn't save the link. Please try again." };
+  // company_info is owner-only; owners and admins change settings through this
+  // RPC, which writes only the settings columns (teams difference 3).
+  const { data, error } = await auth.supabase.rpc("update_company_settings", {
+    p_settings: { scheduling_url: parsed.data.schedulingUrl || null },
+  });
+  if (error || !(data as { ok?: boolean } | null)?.ok) {
+    return { ok: false, error: "Couldn't save the link. Please try again." };
+  }
 
   revalidatePath("/company/settings");
   return { ok: true };

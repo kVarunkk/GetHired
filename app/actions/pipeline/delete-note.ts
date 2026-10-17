@@ -10,7 +10,7 @@ const inputSchema = z.object({ noteId: z.string().uuid() }).strict();
 export async function deleteNoteAction(
   input: z.input<typeof inputSchema>,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "notes.write" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);

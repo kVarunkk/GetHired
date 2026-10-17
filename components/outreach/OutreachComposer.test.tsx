@@ -73,6 +73,7 @@ const CONTEXT: Extract<LoadComposerResult, { ok: true }> = {
     },
   ],
   quota: { remaining: 12, amount: 150 },
+  memberCap: null,
   companyName: "Acme",
   schedulingLink: null,
   senderName: "Sam",
@@ -123,6 +124,11 @@ describe("OutreachComposer (ORT-031, OR-TEST-007)", () => {
   it("shows the remaining monthly quota", async () => {
     open();
     expect(await screen.findByText("12 of 150 left this month")).toBeInTheDocument();
+  });
+
+  it("shows the member's own cap from their role (RP-REQ-044)", async () => {
+    open({ ...CONTEXT, memberCap: { limit: 50, remaining: 2 } });
+    expect(await screen.findByText("12 of 150 left this month · 2 of your 50 left")).toBeInTheDocument();
   });
 
   it("disables Send while empty or over the limits, with counters", async () => {

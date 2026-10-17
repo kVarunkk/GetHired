@@ -3,6 +3,7 @@ import { setRequestUser } from "@/test/utils/auth";
 import { buildRequest } from "@/test/utils/request";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
+import { asEachMember, OWNER_A } from "@/test/utils/team";
 import { DEFAULT_STAGES, PIPELINE_JOB, stageOf } from "@/test/utils/pipeline";
 import type { PipelineBoardData } from "@/utils/types/pipeline.types";
 import { BOARD_STAGE_LIMIT } from "@/helpers/pipeline/board";
@@ -20,10 +21,7 @@ let rls: SupabaseMock;
 
 async function signInCompany() {
   rls = createSupabaseMock({ user: COMPANY_A.user });
-  rls.queue("company_info", {
-    data: { id: COMPANY_A.id, name: COMPANY_A.info.name, email: COMPANY_A.info.email },
-    error: null,
-  });
+  rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(COMPANY_A.user, rls.client);
 }
 
@@ -205,5 +203,20 @@ describe("GET /api/company/job-posts/[job_id]/pipeline (PLT-041)", () => {
     rls.queue("applications", { data: null, error: { message: "boom" } });
 
     expect((await get()).status).toBe(500);
+  });
+});
+
+// TM-TEST-005: every member reads the board.
+asEachMember("GET pipeline board", (member) => {
+  it("returns the session company's board", async () => {
+    rls = createSupabaseMock({ user: member.user });
+    rls.queueRpc("my_company_access", { data: member.membership, error: null });
+    await setRequestUser(member.user, rls.client);
+    ownsJob([rowOf(1)]);
+
+    const { status } = await get();
+
+    expect(status).toBe(200);
+    expect(rls.callsFor("job_postings")[0].chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
   });
 });

@@ -8,6 +8,7 @@ import { COMPANY_A } from "@/test/utils/recruiter";
 import { INJECTION_LINE, JOB_POST, PII, RESUME_CONTENT } from "@/test/utils/matching";
 import { directoryRowOf } from "@/test/utils/outreach";
 import { draftOutreachAction } from "./draft-outreach";
+import { OWNER_A } from "@/test/utils/team";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -22,7 +23,7 @@ const DRAFT = JSON.stringify({
 
 let db: SupabaseMock;
 
-const deps = () => ({ supabase: db.client, company: { id: COMPANY_A.id, name: "Acme", email: null } });
+const deps = () => ({ supabase: db.client, company: { ...OWNER_A.myCompany, name: "Acme", email: null } });
 
 /** The directory row, with RESUME_CONTENT's sections as the view would store them (contact section dropped). */
 const DIRECTORY = directoryRowOf({

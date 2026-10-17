@@ -8,6 +8,7 @@ import { setRequestUser } from "@/test/utils/auth";
 import { buildRequest } from "@/test/utils/request";
 import { createSupabaseMock, type RecordedCall, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
+import { OWNER_A } from "@/test/utils/team";
 import { CANDIDATE_PROFILE, JOB_POST, RESUME_CONTENT, explanationOf } from "@/test/utils/matching";
 import { directoryRowOf } from "@/test/utils/outreach";
 import { POST } from "./route";
@@ -28,10 +29,7 @@ let admin: SupabaseMock;
 
 async function signInCompany() {
   rls = createSupabaseMock({ user: COMPANY_A.user });
-  rls.queue("company_info", {
-    data: { id: COMPANY_A.id, name: COMPANY_A.info.name, email: COMPANY_A.info.email },
-    error: null,
-  });
+  rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(COMPANY_A.user, rls.client);
 }
 

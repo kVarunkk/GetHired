@@ -133,39 +133,41 @@ export function ClientTabs({
           <div className="flex items-center justify-between flex-wrap gap-4 py-6">
             {!isCompanyUser && !isAISearch && page === "jobs" && (
               <div className="flex min-w-0 max-w-full items-center gap-2">
-                <TabsList className="!my-0 max-w-full">
-                  {!applicationStatusFilter && (
+                <ScrollMaskX revealSelector='[role="tab"][data-state="active"]'>
+                  <TabsList className="!my-0">
+                    {!applicationStatusFilter && (
+                      <TabsTrigger
+                        value="all"
+                        className="p-0"
+                        onClick={() => handleTabChange("all")}
+                      >
+                        <span className="py-1 px-2">
+                          All<span className="max-[400px]:hidden"> Jobs</span>
+                        </span>
+                      </TabsTrigger>
+                    )}
+                    {!applicationStatusFilter && (
+                      <TabsTrigger
+                        value="saved"
+                        className="p-0"
+                        onClick={() => handleTabChange("saved")}
+                      >
+                        <span className="py-1 px-2">
+                          Saved<span className="max-[400px]:hidden"> Jobs</span>
+                        </span>
+                      </TabsTrigger>
+                    )}
                     <TabsTrigger
-                      value="all"
+                      value="applied"
                       className="p-0"
-                      onClick={() => handleTabChange("all")}
+                      onClick={() => handleTabChange("applied")}
                     >
                       <span className="py-1 px-2">
-                        All<span className="max-[400px]:hidden"> Jobs</span>
+                        Applied<span className="max-[400px]:hidden"> Jobs</span>
                       </span>
                     </TabsTrigger>
-                  )}
-                  {!applicationStatusFilter && (
-                    <TabsTrigger
-                      value="saved"
-                      className="p-0"
-                      onClick={() => handleTabChange("saved")}
-                    >
-                      <span className="py-1 px-2">
-                        Saved<span className="max-[400px]:hidden"> Jobs</span>
-                      </span>
-                    </TabsTrigger>
-                  )}
-                  <TabsTrigger
-                    value="applied"
-                    className="p-0"
-                    onClick={() => handleTabChange("applied")}
-                  >
-                    <span className="py-1 px-2">
-                      Applied<span className="max-[400px]:hidden"> Jobs</span>
-                    </span>
-                  </TabsTrigger>
-                </TabsList>
+                  </TabsList>
+                </ScrollMaskX>
                 {isPending && (
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 )}
@@ -174,32 +176,34 @@ export function ClientTabs({
 
             {!isCompanyUser && !isAISearch && page === "companies" && (
               <div className="flex min-w-0 max-w-full items-center gap-2">
-                <TabsList className="!my-0 max-w-full">
-                  {
-                    <TabsTrigger
-                      value="all"
-                      className="p-0"
-                      onClick={() => handleTabChange("all")}
-                    >
-                      <span className="py-1 px-2">
-                        All
-                        <span className="max-[400px]:hidden"> Companies</span>
-                      </span>
-                    </TabsTrigger>
-                  }
-                  {
-                    <TabsTrigger
-                      value="saved"
-                      className="p-0"
-                      onClick={() => handleTabChange("saved")}
-                    >
-                      <span className="py-1 px-2">
-                        Saved
-                        <span className="max-[400px]:hidden"> Companies</span>
-                      </span>
-                    </TabsTrigger>
-                  }
-                </TabsList>
+                <ScrollMaskX revealSelector='[role="tab"][data-state="active"]'>
+                  <TabsList className="!my-0">
+                    {
+                      <TabsTrigger
+                        value="all"
+                        className="p-0"
+                        onClick={() => handleTabChange("all")}
+                      >
+                        <span className="py-1 px-2">
+                          All
+                          <span className="max-[400px]:hidden"> Companies</span>
+                        </span>
+                      </TabsTrigger>
+                    }
+                    {
+                      <TabsTrigger
+                        value="saved"
+                        className="p-0"
+                        onClick={() => handleTabChange("saved")}
+                      >
+                        <span className="py-1 px-2">
+                          Saved
+                          <span className="max-[400px]:hidden"> Companies</span>
+                        </span>
+                      </TabsTrigger>
+                    }
+                  </TabsList>
+                </ScrollMaskX>
                 {isPending && (
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 )}

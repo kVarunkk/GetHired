@@ -7,6 +7,9 @@ import { countUserMessagesToday } from "@/helpers/agent/persistence";
 import { AGENT_PATH, COMPANY_AGENT_PATH, readPromptParam } from "@/helpers/agent/prompt-draft";
 import type { AgentRoleId } from "@/helpers/agent/roles/types";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { can } from "@/helpers/companies/permissions";
+import { AGENT_USE_FORBIDDEN } from "@/helpers/agent/auth";
+import { getMemberLimit } from "@/helpers/billing/entitlements";
 
 export type AgentPageSearchParams = Promise<{ session?: string; prompt?: string | string[] }>;
 
@@ -35,16 +38,32 @@ export default async function AgentPage({
     if (!user) throw new Error("User not found");
 
     const accountRole = user.app_metadata?.type === "company" ? "company" : "applicant";
+    const company = accountRole === role && role === "company" ? await getMyCompany(supabase, user) : null;
     if (accountRole !== role) {
       redirectTo = accountRole === "company" ? COMPANY_AGENT_PATH : AGENT_PATH;
-    } else if (role === "company" && !(await getMyCompany(supabase, user))) {
+    } else if (role === "company" && !company) {
       redirectTo = "/get-started?company=true";
+    } else if (role === "company" && !can(company, "agent.use")) {
+      // RP-REQ-030: a role without agent.use gets the reason, not the chat.
+      return (
+        <div className="mx-auto w-full max-w-2xl p-4">
+          <div className="rounded-lg border p-6">
+            <p className="font-semibold">Agent</p>
+            <p className="mt-1 text-sm text-muted-foreground">{AGENT_USE_FORBIDDEN}</p>
+          </div>
+        </div>
+      );
     } else {
       const { session, prompt: promptParam } = await searchParams;
       const prompt = readPromptParam(promptParam);
-      const [pageData, messagesUsedToday] = await Promise.all([
+      const [pageData, messagesUsedToday, memberCap] = await Promise.all([
         loadAgentPageData(supabase, user.id, session, { newChat: prompt !== "", role }),
         countUserMessagesToday(supabase, user.id, new Date()),
+        // RP-REQ-044: a company member's own cap, shown under the chat. A
+        // failed read just hides the hint.
+        company
+          ? getMemberLimit(company.id, "agent_messages", user.id).catch(() => null)
+          : Promise.resolve(null),
       ]);
 
       if (pageData) {
@@ -58,6 +77,7 @@ export default async function AgentPage({
             initialMessages={messages}
             initialDraft={prompt}
             messagesUsedToday={messagesUsedToday}
+            memberCap={memberCap && { limit: memberCap.limit, remaining: memberCap.remaining }}
           />
         );
       }

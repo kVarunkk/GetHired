@@ -3,6 +3,7 @@ import { setRequestUser } from "@/test/utils/auth";
 import { buildRequest } from "@/test/utils/request";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
+import { asEachMember, OWNER_A } from "@/test/utils/team";
 import { APPLICATION, screeningResultOf } from "@/test/utils/matching";
 import { GET } from "./route";
 
@@ -14,10 +15,7 @@ let rls: SupabaseMock;
 
 async function signInCompany() {
   rls = createSupabaseMock({ user: COMPANY_A.user });
-  rls.queue("company_info", {
-    data: { id: COMPANY_A.id, name: COMPANY_A.info.name, email: COMPANY_A.info.email },
-    error: null,
-  });
+  rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(COMPANY_A.user, rls.client);
 }
 
@@ -141,5 +139,18 @@ describe("GET /api/company/applications/[id]/screening (MTT-073)", () => {
 
     expect(screening).not.toHaveProperty("previous_result");
     expect(screening).not.toHaveProperty("job_snapshot_hash");
+  });
+});
+
+// TM-TEST-005: every member reads screenings.
+asEachMember("GET screening", (member) => {
+  it("returns the screening", async () => {
+    rls = createSupabaseMock({ user: member.user });
+    rls.queueRpc("my_company_access", { data: member.membership, error: null });
+    await setRequestUser(member.user, rls.client);
+    rls.queue("applications", { data: { id: APPLICATION.id }, error: null });
+    rls.queue("application_screenings", { data: row(), error: null });
+
+    expect((await get()).status).toBe(200);
   });
 });

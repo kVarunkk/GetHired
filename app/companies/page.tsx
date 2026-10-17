@@ -1,5 +1,6 @@
 import FilterComponent from "@/components/FilterComponent";
 import { createClient } from "@/lib/supabase/server";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { TabsContent } from "@/components/ui/tabs";
 import { TAICredits, TCompanyInfo } from "@/utils/types";
 import { headers } from "next/headers";
@@ -30,11 +31,7 @@ export default async function JobsPage({
       .select("ai_credits, filled")
       .eq("user_id", user?.id)
       .single();
-    const { data: companyData } = await supabase
-      .from("company_info")
-      .select("id, ai_credits, filled")
-      .eq("user_id", user?.id)
-      .single();
+    const companyData = await getMyCompany(supabase, user).catch(() => null);
 
     if (companyData) {
       isCompanyUser = true;

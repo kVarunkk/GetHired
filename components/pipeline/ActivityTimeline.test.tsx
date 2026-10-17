@@ -84,4 +84,20 @@ describe("ActivityTimeline (PLT-054)", () => {
 
     expect(screen.getByText("No activity yet.")).toBeInTheDocument();
   });
+
+  it("shows initials for events with a person, and none for system events (TMT-062)", () => {
+    render(
+      <ActivityTimeline
+        stages={STAGES}
+        events={[
+          eventOf("note_added", { created_at: minutesAgo(3), actor_name: "Ravi Kumar", payload: {} }),
+          eventOf("applied", { created_at: minutesAgo(500), actor_name: null, actor_user_id: null }),
+        ]}
+      />,
+    );
+
+    const [note, applied] = screen.getAllByRole("listitem");
+    expect(note).toHaveTextContent("RK");
+    expect(applied.textContent).toBe(applied.querySelector("p")!.textContent + applied.querySelector("time")!.textContent);
+  });
 });

@@ -31,7 +31,7 @@ const NOT_AVAILABLE = "This candidate isn't available to contact.";
  * contact details.
  */
 export async function previewAgentOutreachAction(input: unknown): Promise<PreviewAgentOutreachResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "outreach.send" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = sendOutreachInput.safeParse(input);

@@ -60,6 +60,7 @@ const itemOf = (id: string, name: string, overrides: Partial<CompanyOutreachItem
   subject: `Hello ${name}`,
   status: "sent",
   source: "manual",
+  senderName: "Olive Owner",
   sentAt: "2026-10-01T09:00:00.000Z",
   respondedAt: null,
   expiresAt: "2026-10-31T09:00:00.000Z",
@@ -87,6 +88,23 @@ describe("OutreachTable", () => {
     expect(screen.getByText("Hello Ada Lovelace")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Withdraw" })).toHaveLength(1);
     expect(screen.getByText("Showing 2 messages")).toBeInTheDocument();
+  });
+
+  it("links each message to its page", () => {
+    renderTable();
+
+    expect(screen.getByRole("link", { name: "Hello Ada Lovelace" })).toHaveAttribute("href", "/company/outreach/1");
+    expect(screen.getAllByRole("link", { name: "View" }).map((link) => link.getAttribute("href"))).toEqual([
+      "/company/outreach/1",
+      "/company/outreach/2",
+    ]);
+  });
+
+  it("shows who sent each message (TMT-062)", () => {
+    renderTable();
+
+    expect(screen.getAllByText("by Olive Owner")).toHaveLength(2);
+    expect(screen.getAllByText("OO").length).toBeGreaterThan(0);
   });
 
   it("searches candidates on the loaded page", async () => {

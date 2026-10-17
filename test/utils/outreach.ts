@@ -63,6 +63,7 @@ export function outreachOf(
     candidate_user_id: PUBLIC_APPLICANT.id,
     job_post_id: OUTREACH_JOB.id,
     sender_user_id: COMPANY_A.user.id,
+    sender_name: "Olive Owner",
     subject: "Frontend role at Acme",
     message: "Hi Ada, your React work stood out. Open to a chat about our frontend role?",
     status,

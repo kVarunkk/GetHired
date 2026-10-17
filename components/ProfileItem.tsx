@@ -54,7 +54,7 @@ const ProfileItem = React.memo(
         )}
       >
         <div className="flex-col sm:flex-row sm:flex items-center justify-between gap-4">
-          <div className="flex flex-col gap-2 mb-6 sm:mb-0">
+          <div className="flex min-w-0 flex-col gap-2 mb-6 sm:mb-0">
             <div className="flex items-center flex-wrap">
               <Link
                 href={profileHref}
@@ -98,20 +98,21 @@ const ProfileItem = React.memo(
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Below sm the buttons share the row and wrap rather than overflow. */}
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:shrink-0">
             {companyId && (
-              <AddToListMenu candidateUserId={profile.user_id} onReachOut={() => setReachingOut(true)} />
+              <AddToListMenu
+                candidateUserId={profile.user_id}
+                onReachOut={() => setReachingOut(true)}
+                className="flex-1 sm:flex-none"
+              />
             )}
-            <Link
-              href={profileHref}
-              prefetch={false}
-              target="_blank"
-            >
-              <Button>
+            <Button asChild className="flex-1 sm:flex-none">
+              <Link href={profileHref} prefetch={false} target="_blank">
                 View Profile
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
         {companyId && (

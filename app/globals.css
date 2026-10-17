@@ -59,6 +59,16 @@
     /* amber-700 */
     --warning-foreground: 0 0% 98%;
 
+    /* Role badges (RP-GUD-001): text on a 10% tint */
+    --role-slate: 215 16% 40%;
+    --role-indigo: 243 75% 55%;
+    --role-emerald: 160 84% 26%;
+    --role-amber: 32 95% 35%;
+    --role-rose: 347 77% 45%;
+    --role-sky: 200 98% 33%;
+    --role-violet: 263 70% 50%;
+    --role-teal: 175 84% 27%;
+
 
 
     /* Interactive Accents */
@@ -107,6 +117,16 @@
     --warning: 43 96% 56%;
     /* amber-400 */
     --warning-foreground: 0 0% 9%;
+
+    /* Role badges (Dark) */
+    --role-slate: 215 20% 70%;
+    --role-indigo: 234 89% 74%;
+    --role-emerald: 156 72% 60%;
+    --role-amber: 43 96% 60%;
+    --role-rose: 351 95% 75%;
+    --role-sky: 199 95% 70%;
+    --role-violet: 255 92% 78%;
+    --role-teal: 172 66% 55%;
 
 
 

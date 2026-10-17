@@ -318,7 +318,7 @@ describe("getCandidateProfile tool", () => {
 
     const result = (await execTool(tools.getCandidateProfile, { candidateId: CANDIDATE_ID })) as Record<string, unknown>;
 
-    expect(result.outreach).toEqual({ status: "sent", sentAt: "2026-10-10", url: "/company/outreach" });
+    expect(result.outreach).toEqual({ id: "o2", status: "sent", sentAt: "2026-10-10", url: "/company/outreach/o2" });
     const chain = supabase.callsFor("candidate_outreach")[0].chain;
     expect(chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
     expect(chain).toContainEqual({ method: "in", args: ["candidate_user_id", [CANDIDATE_ID]] });

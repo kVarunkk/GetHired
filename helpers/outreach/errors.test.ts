@@ -10,6 +10,7 @@ describe("mapOutreachError (ORT-020)", () => {
     ["CANDIDATE_LIMIT", 429],
     ["NOT_FOUND", 404],
     ["JOB_NOT_FOUND", 404],
+    ["FORBIDDEN", 403],
     ["NOT_MEMBER", 403],
     ["INVALID_INPUT", 400],
     ["ALREADY_ANSWERED", 409],

@@ -16,7 +16,10 @@ export async function deleteJobPostingAction({
 }: {
   jobPostingId: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({
+    permission: "jobs.delete",
+    jobId: typeof jobPostingId === "string" ? jobPostingId : null,
+  });
   if (!auth.ok) return { ok: false, error: auth.error };
   const { supabase, company } = auth;
 

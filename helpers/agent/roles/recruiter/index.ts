@@ -5,6 +5,7 @@ import { RA_CONTENT_FILTER_MESSAGE, RA_DAILY_MESSAGE_CAP } from "./config";
 import { loadRecruiterPromptContext } from "./context";
 import { buildRecruiterSystemPrompt } from "./system-prompt";
 import { createRecruiterTools } from "./tools";
+import { hasAssignedScope, missingAbilities } from "./tools/permissions";
 
 const NO_COMPANY = "The recruiter agent needs the session's company.";
 
@@ -17,7 +18,9 @@ export const recruiterRole: AgentRole = {
   async loadPrompt({ supabase, company }) {
     if (!company) throw new Error(NO_COMPANY);
     const context = await loadRecruiterPromptContext(supabase, company);
-    return (input) => buildRecruiterSystemPrompt({ context, ...input });
+    // RP-REQ-030: one line naming what the user's role can't do.
+    const roleLimits = { cannot: missingAbilities({ company }), assignedOnly: hasAssignedScope({ company }) };
+    return (input) => buildRecruiterSystemPrompt({ context, roleLimits, ...input });
   },
   createTools(ctx) {
     if (!ctx.company) throw new Error(NO_COMPANY);

@@ -8,34 +8,35 @@ import ModifiedLink from "./ModifiedLink";
 import { TApplicantProfile } from "@/utils/types/user.types";
 import { TApplicationStatus } from "@/utils/types";
 
+/** One of the candidate's applications to this company's jobs. */
 export default function ProfileActiveApplication({
   app,
 }: {
   app: TApplicantProfile["applications"][number];
 }) {
   return (
-    <div className=" w-full  rounded-lg flex sm:items-center justify-between flex-col sm:flex-row gap-8 hover:bg-secondary transition py-2 px-3">
-      <div className="flex flex-col gap-1">
-        <p className=" text-sm">
-          Applied for:{" "}
-          <ModifiedLink
-            href={`/company/job-posts/${app.job_postings?.id}`}
-            className="underline"
-          >
-            {app.job_postings?.title}
-          </ModifiedLink>
-        </p>
-        <div className="text-sm text-muted-foreground">
-          Applied on {format(new Date(app.created_at), "PPP")}
+    <li className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <ModifiedLink
+          href={`/company/job-posts/${app.job_postings?.id}`}
+          className="truncate text-sm font-medium hover:underline"
+        >
+          {app.job_postings?.title}
+        </ModifiedLink>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <ApplicationStatusBadge status={app.status as TApplicationStatus} />
+          <span>Applied {format(new Date(app.created_at), "PP")}</span>
         </div>
-
-        <ApplicationStatusBadge status={app.status as TApplicationStatus} />
       </div>
-      <ModifiedLink href={`/company/applicants/${app.id}`}>
-        <Button>
-          View Application <ArrowRight className="h-4 w-4" />
-        </Button>
-      </ModifiedLink>
-    </div>
+      <Button asChild variant="outline" size="sm" className="shrink-0">
+        <ModifiedLink
+          href={`/company/applicants/${app.id}`}
+          aria-label={`View application for ${app.job_postings?.title ?? "this job"}`}
+        >
+          View<span className="hidden sm:inline"> application</span>
+          <ArrowRight className="h-4 w-4" />
+        </ModifiedLink>
+      </Button>
+    </li>
   );
 }

@@ -2,12 +2,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Children, isValidElement, type ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import toast from "react-hot-toast";
+import { createTemplateAction } from "@/app/actions/pipeline/create-template";
+import { deleteTemplateAction } from "@/app/actions/pipeline/delete-template";
 import { saveTemplateAction } from "@/app/actions/pipeline/save-template";
 import { templateOf } from "@/test/utils/pipeline";
 import type { TemplateVars } from "@/helpers/pipeline/templates";
 import TemplateEditor from "./TemplateEditor";
 
 vi.mock("@/app/actions/pipeline/save-template", () => ({ saveTemplateAction: vi.fn() }));
+vi.mock("@/app/actions/pipeline/create-template", () => ({ createTemplateAction: vi.fn() }));
+vi.mock("@/app/actions/pipeline/delete-template", () => ({ deleteTemplateAction: vi.fn() }));
 vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 
 // Radix Select doesn't run in jsdom; a native <select> named by the trigger's
@@ -65,6 +69,7 @@ const preview = () => screen.getByRole("region", { name: "Preview" });
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(saveTemplateAction).mockResolvedValue({ ok: true });
+  vi.mocked(deleteTemplateAction).mockResolvedValue({ ok: true });
 });
 
 describe("TemplateEditor (PLT-064)", () => {
@@ -147,5 +152,59 @@ describe("TemplateEditor (PLT-064)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save template" }));
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Template not found."));
+  });
+
+  it("adds a new template, starting from the purpose's default wording", async () => {
+    const created = templateOf("offer", {
+      id: "7e700000-0000-4000-8000-0000000000aa",
+      name: "Offer (contract)",
+      is_default: false,
+    });
+    vi.mocked(createTemplateAction).mockResolvedValue({ ok: true, template: created });
+    render(<TemplateEditor templates={TEMPLATES} sampleVars={SAMPLE} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "New template" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Purpose" }), { target: { value: "offer" } });
+    expect(subject()).toHaveValue(TEMPLATES[3].subject);
+    expect(screen.getByRole("button", { name: "Add template" })).toBeDisabled();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "Offer (contract)" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add template" }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Template added."));
+    expect(createTemplateAction).toHaveBeenCalledWith({
+      purpose: "offer",
+      name: "Offer (contract)",
+      subject: TEMPLATES[3].subject,
+      body: TEMPLATES[3].body_md,
+    });
+    expect(picker()).toHaveValue(created.id);
+  });
+
+  it("cancels a new template back to the selected one", () => {
+    render(<TemplateEditor templates={TEMPLATES} sampleVars={SAMPLE} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "New template" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(picker()).toHaveValue(TEMPLATES[0].id);
+    expect(screen.getByRole("textbox", { name: "Name" })).toHaveValue(TEMPLATES[0].name);
+  });
+
+  it("deletes a company template after confirming, but never offers it for a default", async () => {
+    const own = templateOf("rejection", { id: "7e700000-0000-4000-8000-0000000000bb", name: "Soft no", is_default: false });
+    render(<TemplateEditor templates={[...TEMPLATES, own]} sampleVars={SAMPLE} />);
+
+    expect(screen.queryByRole("button", { name: "Delete template" })).not.toBeInTheDocument();
+
+    fireEvent.change(picker(), { target: { value: own.id } });
+    fireEvent.click(screen.getByRole("button", { name: "Delete template" }));
+    expect(deleteTemplateAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Template deleted."));
+    expect(deleteTemplateAction).toHaveBeenCalledWith({ templateId: own.id });
+    expect(picker()).toHaveValue(TEMPLATES[0].id);
+    expect(screen.queryByRole("option", { name: /Soft no/ })).not.toBeInTheDocument();
   });
 });

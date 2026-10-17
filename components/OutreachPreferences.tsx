@@ -13,7 +13,7 @@ import { Switch } from "./ui/switch";
 export type BlockedCompany = { id: string; name: string | null };
 
 /**
- * The applicant's outreach settings on /dashboard (OR-REQ-012): whether
+ * The applicant's outreach settings on /settings (OR-REQ-012): whether
  * companies may message them, and the companies they blocked.
  */
 export default function OutreachPreferences({
@@ -59,18 +59,18 @@ export default function OutreachPreferences({
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
-        <Label htmlFor="dashboard_accept_outreach" className="text-sm font-medium">
+        <Label htmlFor="settings_accept_outreach" className="text-sm font-medium">
           Accept outreach
         </Label>
         <Switch
-          id="dashboard_accept_outreach"
-          aria-describedby="dashboard_accept_outreach_details"
+          id="settings_accept_outreach"
+          aria-describedby="settings_accept_outreach_details"
           checked={isPublic && accepts}
           disabled={!isPublic || saving}
           onCheckedChange={handleChange}
         />
       </div>
-      <p id="dashboard_accept_outreach_details" className="text-sm text-muted-foreground">
+      <p id="settings_accept_outreach_details" className="text-sm text-muted-foreground">
         {isPublic
           ? "Companies that find your profile can message you here. You answer on GetHired, and your contact details are shared only if you say you're interested."
           : "Your profile is hidden, so companies can't find or message you. Make it public to receive outreach."}

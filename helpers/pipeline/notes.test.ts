@@ -11,10 +11,15 @@ import {
   ratingSummary,
   updateNote,
 } from "./notes";
+import { OWNER_A } from "@/test/utils/team";
+import { flushAfter } from "@/test/utils/after";
+import { mentionToken } from "@/helpers/team/mentions";
+import { sendNoteMentionEmails } from "@/helpers/team/notify-mentions";
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/helpers/team/notify-mentions", () => ({ sendNoteMentionEmails: vi.fn() }));
 
-const company = { id: COMPANY_A.id, name: COMPANY_A.info.name, email: COMPANY_A.info.email };
+const company = { ...OWNER_A.myCompany, displayName: null };
 const user = { ...COMPANY_A.user, user_metadata: { full_name: "Asha Rao" } } as typeof COMPANY_A.user;
 const APP = pipelineAppOf();
 const NOTE_ID = "70e00000-0000-4000-8000-0000000000aa";
@@ -153,6 +158,66 @@ describe("addNote (PLT-052)", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
 
     expect((await addNote(ctx(), { applicationId: APP.id, body: "Hi" })).ok).toBe(true);
+  });
+});
+
+describe("addNote mentions (TMT-071)", () => {
+  const PRIYA = { user_id: "a1000000-0000-4000-8000-000000000002", name: "Priya Shah" };
+  const SAM = { user_id: "a1000000-0000-4000-8000-000000000003", name: "Sam" };
+
+  function onOwnApplication(body: string) {
+    db.queue("applications", { data: { id: APP.id, applicant_user_id: PUBLIC_APPLICANT.id }, error: null });
+    db.queue("candidate_notes", { data: noteOf({ id: NOTE_ID, application_id: APP.id, body }), error: null });
+    db.queue("application_events", { data: null, error: null });
+  }
+
+  it("emails the mentioned teammates after the response, never the author", async () => {
+    const body = `${mentionToken({ userId: PRIYA.user_id, name: PRIYA.name })} and @sam, thoughts? cc @Asha Rao`;
+    onOwnApplication(body);
+    db.queueRpc("list_mentionable_members", {
+      data: [PRIYA, SAM, { user_id: user.id, name: "Asha Rao" }],
+      error: null,
+    });
+
+    const result = await addNote(ctx(), { applicationId: APP.id, body });
+
+    expect(result.ok).toBe(true);
+    // Nothing is sent before the response.
+    expect(sendNoteMentionEmails).not.toHaveBeenCalled();
+    await flushAfter();
+    expect(sendNoteMentionEmails).toHaveBeenCalledTimes(1);
+    expect(sendNoteMentionEmails).toHaveBeenCalledWith({
+      note: expect.objectContaining({ id: NOTE_ID }),
+      authorName: "Asha Rao",
+      userIds: [PRIYA.user_id, SAM.user_id],
+    });
+  });
+
+  it("doesn't look up the team for a note without an @", async () => {
+    onOwnApplication("Strong systems answers.");
+    await addNote(ctx(), { applicationId: APP.id, body: "Strong systems answers." });
+    await flushAfter();
+    expect(db.callsFor("list_mentionable_members")).toHaveLength(0);
+    expect(sendNoteMentionEmails).not.toHaveBeenCalled();
+  });
+
+  it("schedules nothing when no teammate matches, e.g. an email address", async () => {
+    onOwnApplication("Reach them at sam@acme.com");
+    db.queueRpc("list_mentionable_members", { data: [SAM], error: null });
+    await addNote(ctx(), { applicationId: APP.id, body: "Reach them at sam@acme.com" });
+    await flushAfter();
+    expect(sendNoteMentionEmails).not.toHaveBeenCalled();
+  });
+
+  it("still saves the note when the team can't be read", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    onOwnApplication("@Sam please look");
+    db.queueRpc("list_mentionable_members", { data: null, error: { message: "boom" } });
+    const result = await addNote(ctx(), { applicationId: APP.id, body: "@Sam please look" });
+    await flushAfter();
+    expect(result.ok).toBe(true);
+    expect(sendNoteMentionEmails).not.toHaveBeenCalled();
+    log.mockRestore();
   });
 });
 

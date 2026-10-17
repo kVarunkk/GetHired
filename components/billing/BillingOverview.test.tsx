@@ -201,4 +201,40 @@ describe("BillingOverview: confirming plan changes", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ kind: "subscription", tierSlug: "startup" });
     vi.unstubAllGlobals();
   });
+
+  describe("read-only for billing.view (RP-DEC-003) and member usage (RP-REQ-044)", () => {
+    const paid = () => billingOf(TIER_STARTUP, {}, { hasPaidSubscription: true, hasBillingPortal: true });
+    const PACK = { id: "p1", name: "Pack", description: null, credit_amount: 500, amount: 20, currency: "USD", product_id: "prod" };
+
+    it("hides every billing action from a non-owner and says who can manage it", () => {
+      render(
+        <BillingOverview billing={paid()} plans={PLANS} packs={[PACK]} history={[]} canManage={false} />,
+      );
+
+      expect(screen.getByText("Only the company's owners can manage billing.")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Payment method/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Cancel plan" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Buy" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Plans" })).not.toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Usage this month" })).toBeInTheDocument();
+    });
+
+    it("shows owners the actions", () => {
+      render(<BillingOverview billing={paid()} plans={[]} packs={[PACK]} history={[]} />);
+      expect(screen.getByRole("button", { name: "Cancel plan" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Buy" })).toBeInTheDocument();
+    });
+
+    it("shows usage by member when there is some", () => {
+      const rows = [{ userId: "u2", name: "Rita", isOwner: false, roleName: "Recruiter", usage: { outreach: 4 }, limits: { outreach: 50 } }];
+      render(<BillingOverview billing={billingOf()} plans={[]} packs={[]} history={[]} memberUsage={rows} />);
+      expect(screen.getByRole("heading", { name: "Usage by member" })).toBeInTheDocument();
+      expect(screen.getByTestId("member-usage-u2-outreach")).toHaveTextContent("4 of 50");
+    });
+
+    it("leaves the member table out when it couldn't be read", () => {
+      show(billingOf());
+      expect(screen.queryByRole("heading", { name: "Usage by member" })).not.toBeInTheDocument();
+    });
+  });
 });

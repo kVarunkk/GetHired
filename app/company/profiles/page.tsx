@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { redirect } from "next/navigation";
 import { TabsContent } from "@/components/ui/tabs";
 import FilterComponent from "@/components/FilterComponent";
@@ -27,13 +28,16 @@ export default async function ProfilesPage({
   const searchParameters = await searchParams;
   const isAISearch = searchParameters?.sortBy === "relevance";
 
-  const { data: companyData } = await supabase
-    .from("company_info")
-    .select("id, filled, ai_credits")
-    .eq("user_id", user?.id)
-    .single();
+  const company = await getMyCompany(supabase, user);
+  const { data: companyData } = company
+    ? await supabase
+        .from("company_info")
+        .select("id, filled, ai_credits")
+        .eq("id", company.id)
+        .single()
+    : { data: null };
 
-  if (!companyData) {
+  if (!company || !companyData) {
     redirect("/get-started?company=true");
   }
   const onboarding_complete = companyData.filled;
@@ -41,7 +45,7 @@ export default async function ProfilesPage({
   // Talent lists, shown as tabs after Saved (PL-TASK-051). Extra: a failure hides them.
   const talentLists = await listTalentLists({
     supabase,
-    company: { id: companyData.id, name: null, email: null },
+    company,
   }).catch(() => []);
 
   const headersList = await headers();

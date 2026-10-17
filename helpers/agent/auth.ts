@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Database } from "@/utils/types/database.types";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { getMyCompany, type MyCompany } from "@/helpers/companies/get-my-company";
+import { can } from "@/helpers/companies/permissions";
 import type { AgentRoleId } from "./roles/types";
 
 /** Reports an unexpected error and returns a generic 500 (SEC-006). */
@@ -75,6 +76,9 @@ export type AgentUserAuth =
     }
   | { ok: false; response: NextResponse };
 
+/** RP-REQ-030: shown on /company/agent and returned by /api/agent/* without agent.use. */
+export const AGENT_USE_FORBIDDEN = "Your role doesn't include the recruiter agent.";
+
 const forbidden = (error: string) =>
   ({ ok: false, response: NextResponse.json({ error }, { status: 403 }) }) as const;
 
@@ -103,6 +107,8 @@ export async function requireAgentUser(): Promise<AgentUserAuth> {
   const company =
     user.app_metadata?.onboarding_complete === true ? await getMyCompany(supabase, user) : null;
   if (!company) return forbidden("Finish setting up your company first.");
+  // RP-REQ-030: the recruiter agent needs agent.use.
+  if (!can(company, "agent.use")) return forbidden(AGENT_USE_FORBIDDEN);
 
   return { ok: true, user, supabase, role: "company", company };
 }

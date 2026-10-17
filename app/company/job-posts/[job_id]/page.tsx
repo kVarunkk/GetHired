@@ -1,4 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { can } from "@/helpers/companies/permissions";
+import { jobControls } from "@/helpers/companies/job-scope";
 import Error from "@/components/Error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +20,8 @@ import { notFound, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 import AskAgentAboutJobPost from "@/components/agent/recruiter/AskAgentAboutJobPost";
+import HiringTeamPanel from "@/components/jobs/HiringTeamPanel";
+import { listJobHiringTeam } from "@/helpers/team/list-job-hiring-team";
 
 export default async function JobPostPage({
   params,
@@ -44,6 +49,17 @@ export default async function JobPostPage({
 
     if (error) throw error;
     if (!job) notFound();
+
+    // RP-REQ-010: a job the viewer's role doesn't cover is a 404 (the row
+    // itself is public, so RLS can't hide it). RP-REQ-016: the controls follow
+    // the viewer's permissions on this job; the server refuses them too.
+    const company = user ? await getMyCompany(supabase, user) : null;
+    if (!company || job.company_id !== company.id || !can(company, "jobs.view", job.id)) notFound();
+    const controls = jobControls(company, job.id);
+    // RP-REQ-011: the Hiring team panel, for jobs.assign on this job only.
+    const hiringTeam = can(company, "jobs.assign", job.id)
+      ? await listJobHiringTeam(supabase, job.id)
+      : null;
 
     // Prepare data for the Edit dialog
     const existingValues = {
@@ -82,13 +98,18 @@ export default async function JobPostPage({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <JobStatusSwitch job={job} />
+            <JobStatusSwitch job={job} disabled={!controls.publish} />
             <CreateJobPostingDialog
               key={existingValues?.id || "new"}
               companyId={job.company_id}
               existingValues={existingValues}
+              disabled={!controls.edit}
             />
-            <DeleteJobPosting job_posting_id={job.id} is_job_posting_page />
+            <DeleteJobPosting
+              job_posting_id={job.id}
+              is_job_posting_page
+              disabled={!controls.delete}
+            />
             <ShareJobPosting job_id={job.job_id} />
             <FindSuitableProfilesForJobPost job_post_id={job_id} />
             <Button asChild variant="outline" className="rounded-full">
@@ -181,6 +202,8 @@ export default async function JobPostPage({
             </Link>
           </div>
         </div>
+
+        {hiringTeam && <HiringTeamPanel jobPostId={job.id} members={hiringTeam} />}
       </div>
     );
   } catch (err) {

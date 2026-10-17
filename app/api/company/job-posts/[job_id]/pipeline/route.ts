@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireCompany } from "@/helpers/companies/require-company";
+import { companyAllows, requireCompany } from "@/helpers/companies/require-company";
 import { isUuid } from "@/helpers/agent/auth";
 import { loadBoard } from "@/helpers/pipeline/board";
 
@@ -13,11 +13,14 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ job_id: string }> },
 ) {
-  const auth = await requireCompany();
+  const auth = await requireCompany({ permission: "applicants.view" });
   if (!auth.ok) return auth.response;
 
   const { job_id: jobPostId } = await params;
   if (!isUuid(jobPostId)) return notFound();
+  // RP-REQ-010: scope assigned covers only the member's own jobs.
+  const denied = companyAllows(auth.company, { permission: "applicants.view", jobId: jobPostId });
+  if (denied) return NextResponse.json({ error: denied }, { status: 403 });
 
   try {
     const result = await loadBoard(auth, jobPostId);

@@ -246,6 +246,17 @@ describe("listNotes tool", () => {
     expect(result.notes[1]).toMatchObject({ id: "n1", author: "Asha" });
   });
 
+  it("shows mention tokens as @name, without the teammate's id (TM-REQ-009)", async () => {
+    const id = "a1000000-0000-4000-8000-000000000002";
+    vi.mocked(listNotes).mockResolvedValue([note({ body: `@[Priya Shah](${id}) please check` })]);
+
+    const result = (await execTool(tools.listNotes, { applicationId: APP_1 })) as {
+      notes: { body: string }[];
+    };
+
+    expect(result.notes[0].body).toBe("<candidate_note>\n@Priya Shah please check\n</candidate_note>");
+  });
+
   it("reads a candidate's notes by candidate", async () => {
     vi.mocked(listNotes).mockResolvedValue([]);
 

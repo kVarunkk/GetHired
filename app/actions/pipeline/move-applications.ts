@@ -58,7 +58,7 @@ export type MoveApplicationsActionResult =
 export async function moveApplicationsAction(
   input: z.input<typeof inputSchema>,
 ): Promise<MoveApplicationsActionResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "pipeline.move" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
+import { companyAllows } from "@/helpers/companies/require-company";
+import type { PermissionKey } from "@/helpers/companies/permissions";
 import { screenFairnessText, scrubPII, type FairnessContext } from "@/helpers/ai/fairness";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { extractSectionText } from "@/utils/extract-resume-content";
@@ -15,6 +17,22 @@ export { limitInput, uuidInput, withToolErrors } from "@/helpers/agent/tools/sha
  * (`requireAgentUser`), never from model input (RA-SEC-002).
  */
 export type RecruiterToolContext = AgentToolContext & { company: MyCompany };
+
+/**
+ * RP-REQ-031: every tool checks again when it runs, with the job the call
+ * touches, because permissions can change mid-session and scope depends on
+ * the arguments. `jobId` omitted: any scope (RLS filters the rows); `null`: a
+ * row without a job (needs scope all). Returns the `{ error }` to hand back, or
+ * null when allowed. `ctx.company` is reloaded per request (RP-SEC-004).
+ */
+export function requireToolPermission(
+  ctx: Pick<RecruiterToolContext, "company">,
+  key: PermissionKey,
+  jobId?: string | null,
+): { error: string } | null {
+  const denied = companyAllows(ctx.company, jobId === undefined ? { permission: key } : { permission: key, jobId });
+  return denied ? { error: denied } : null;
+}
 
 /**
  * The `user_info` columns recruiter tools read about candidates. No email,
@@ -43,6 +61,7 @@ export const candidateUrl = (candidateId: string, jobPostId?: string | null) =>
 export const applicationUrl = (applicationId: string) => `/company/applicants/${applicationId}`;
 export const jobPostUrl = (jobPostId: string) => `/company/job-posts/${jobPostId}`;
 export const OUTREACH_URL = "/company/outreach";
+export { outreachPath as outreachUrl } from "@/helpers/outreach/config";
 
 export function formatSalary(
   min: number | null | undefined,

@@ -6,6 +6,7 @@ import { setRequestUser } from "@/test/utils/auth";
 import { buildRequest } from "@/test/utils/request";
 import { createSupabaseMock, type RecordedCall, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
+import { OWNER_A } from "@/test/utils/team";
 import { JOB_POST } from "@/test/utils/matching";
 import { POST } from "./route";
 
@@ -22,10 +23,7 @@ let admin: SupabaseMock;
 
 async function signInCompany() {
   rls = createSupabaseMock({ user: COMPANY_A.user });
-  rls.queue("company_info", {
-    data: { id: COMPANY_A.id, name: COMPANY_A.info.name, email: COMPANY_A.info.email },
-    error: null,
-  });
+  rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(COMPANY_A.user, rls.client);
 }
 
@@ -194,7 +192,8 @@ describe("POST /api/company/job-posts/[job_id]/screen (MTT-072)", () => {
 
     expect(res.status).toBe(402);
     expect(await res.json()).toMatchObject({ code: "entitlement", key: "screenings" });
-    expect(assertAllowance).toHaveBeenCalledWith(COMPANY_A.id, "screenings", 1);
+    // The signed-in member is the actor, for their role's monthly cap (RP-REQ-043).
+    expect(assertAllowance).toHaveBeenCalledWith(COMPANY_A.id, "screenings", 1, COMPANY_A.user.id);
     expect(upserted()).toEqual([]);
     expect(admin.callsFor("send_batch")).toHaveLength(0);
   });

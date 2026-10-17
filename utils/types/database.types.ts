@@ -478,6 +478,7 @@ export type Database = {
           recommendation:
             | Database["public"]["Enums"]["screening_recommendation"]
             | null
+          requested_by: string | null
           result: Json | null
           status: string
           updated_at: string
@@ -498,6 +499,7 @@ export type Database = {
           recommendation?:
             | Database["public"]["Enums"]["screening_recommendation"]
             | null
+          requested_by?: string | null
           result?: Json | null
           status?: string
           updated_at?: string
@@ -518,6 +520,7 @@ export type Database = {
           recommendation?:
             | Database["public"]["Enums"]["screening_recommendation"]
             | null
+          requested_by?: string | null
           result?: Json | null
           status?: string
           updated_at?: string
@@ -738,6 +741,42 @@ export type Database = {
           },
         ]
       }
+      candidate_note_mentions: {
+        Row: {
+          company_id: string
+          created_at: string
+          mentioned_user_id: string
+          note_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          mentioned_user_id: string
+          note_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          mentioned_user_id?: string
+          note_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_note_mentions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_note_mentions_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       candidate_notes: {
         Row: {
           application_id: string | null
@@ -804,6 +843,7 @@ export type Database = {
           job_post_id: string | null
           message: string
           responded_at: string | null
+          sender_name: string | null
           sender_user_id: string | null
           sent_at: string
           source: string
@@ -821,6 +861,7 @@ export type Database = {
           job_post_id?: string | null
           message: string
           responded_at?: string | null
+          sender_name?: string | null
           sender_user_id?: string | null
           sent_at?: string
           source?: string
@@ -838,6 +879,7 @@ export type Database = {
           job_post_id?: string | null
           message?: string
           responded_at?: string | null
+          sender_name?: string | null
           sender_user_id?: string | null
           sent_at?: string
           source?: string
@@ -883,6 +925,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "candidate_profile_views_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_audit_log: {
+        Row: {
+          action: string
+          actor_kind: string
+          actor_name: string | null
+          actor_user_id: string | null
+          after: Json | null
+          before: Json | null
+          company_id: string
+          created_at: string
+          id: number
+          target_id: string | null
+          target_label: string | null
+          target_type: string
+        }
+        Insert: {
+          action: string
+          actor_kind?: string
+          actor_name?: string | null
+          actor_user_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          company_id: string
+          created_at?: string
+          id?: never
+          target_id?: string | null
+          target_label?: string | null
+          target_type: string
+        }
+        Update: {
+          action?: string
+          actor_kind?: string
+          actor_name?: string | null
+          actor_user_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          company_id?: string
+          created_at?: string
+          id?: never
+          target_id?: string | null
+          target_label?: string | null
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_audit_log_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "company_info"
@@ -1031,6 +1126,7 @@ export type Database = {
       }
       company_entitlement_holds: {
         Row: {
+          actor_user_id: string | null
           company_id: string
           created_at: string
           expires_at: string
@@ -1041,6 +1137,7 @@ export type Database = {
           ref_type: string
         }
         Insert: {
+          actor_user_id?: string | null
           company_id: string
           created_at?: string
           expires_at?: string
@@ -1051,6 +1148,7 @@ export type Database = {
           ref_type: string
         }
         Update: {
+          actor_user_id?: string | null
           company_id?: string
           created_at?: string
           expires_at?: string
@@ -1121,6 +1219,7 @@ export type Database = {
           ai_credits: number
           company_size: string | null
           created_at: string
+          default_role_id: string | null
           description: string | null
           email: string | null
           embedding: string | null
@@ -1148,6 +1247,7 @@ export type Database = {
           ai_credits?: number
           company_size?: string | null
           created_at?: string
+          default_role_id?: string | null
           description?: string | null
           email?: string | null
           embedding?: string | null
@@ -1175,6 +1275,7 @@ export type Database = {
           ai_credits?: number
           company_size?: string | null
           created_at?: string
+          default_role_id?: string | null
           description?: string | null
           email?: string | null
           embedding?: string | null
@@ -1200,10 +1301,279 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "company_info_default_role_id_fkey"
+            columns: ["default_role_id"]
+            isOneToOne: false
+            referencedRelation: "company_roles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "company_info_tier_id_fkey"
             columns: ["tier_id"]
             isOneToOne: false
             referencedRelation: "company_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          company_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          revoked_at: string | null
+          role_id: string | null
+          token_hash: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          company_id: string
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          role_id?: string | null
+          token_hash: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          role_id?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_invites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_invites_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "company_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_job_assignments: {
+        Row: {
+          assigned_by: string | null
+          company_id: string
+          created_at: string
+          job_post_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          company_id: string
+          created_at?: string
+          job_post_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          company_id?: string
+          created_at?: string
+          job_post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_job_assignments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_job_assignments_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_members: {
+        Row: {
+          company_id: string
+          created_at: string
+          display_name: string | null
+          is_owner: boolean
+          last_active_at: string | null
+          role_id: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          display_name?: string | null
+          is_owner?: boolean
+          last_active_at?: string | null
+          role_id?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          display_name?: string | null
+          is_owner?: boolean
+          last_active_at?: string | null
+          role_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_members_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "company_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_permissions: {
+        Row: {
+          key: string
+          requires: string[]
+          scopable: boolean
+        }
+        Insert: {
+          key: string
+          requires?: string[]
+          scopable: boolean
+        }
+        Update: {
+          key?: string
+          requires?: string[]
+          scopable?: boolean
+        }
+        Relationships: []
+      }
+      company_role_limits: {
+        Row: {
+          key: string
+          monthly_amount: number
+          role_id: string
+        }
+        Insert: {
+          key: string
+          monthly_amount: number
+          role_id: string
+        }
+        Update: {
+          key?: string
+          monthly_amount?: number
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_role_limits_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "company_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_role_permissions: {
+        Row: {
+          permission_key: string
+          role_id: string
+          scope: Database["public"]["Enums"]["permission_scope"]
+        }
+        Insert: {
+          permission_key: string
+          role_id: string
+          scope?: Database["public"]["Enums"]["permission_scope"]
+        }
+        Update: {
+          permission_key?: string
+          role_id?: string
+          scope?: Database["public"]["Enums"]["permission_scope"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_role_permissions_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "company_permissions"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "company_role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "company_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_roles: {
+        Row: {
+          color: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          template_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          template_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          template_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_roles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
             referencedColumns: ["id"]
           },
         ]
@@ -1466,13 +1836,6 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "feedbacks_company_user_id_fkey"
-            columns: ["company_user_id"]
-            isOneToOne: false
-            referencedRelation: "company_info"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "feedbacks_user_id_fkey"
             columns: ["user_id"]
@@ -2864,6 +3227,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_company_invite: {
+        Args: { p_display_name?: string; p_token: string }
+        Returns: Json
+      }
       activate_interview_session: {
         Args: {
           p_interview_id: string
@@ -2876,6 +3243,10 @@ export type Database = {
         Args: { algorithm: string; secret: string; signables: string }
         Returns: string
       }
+      application_job_id: {
+        Args: { p_application_id: string }
+        Returns: string
+      }
       application_status_for_kind: {
         Args: { p_kind: Database["public"]["Enums"]["pipeline_stage_kind"] }
         Returns: Database["public"]["Enums"]["application_status"]
@@ -2884,6 +3255,20 @@ export type Database = {
         Args: { p_company_id: string; p_event: Json }
         Returns: Json
       }
+      assign_job: {
+        Args: {
+          p_actor_kind?: string
+          p_job_post_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      assign_job_creator: {
+        Args: { p_job_post_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      audit_actor_kind: { Args: { p_kind: string }; Returns: string }
+      backfill_company_roles: { Args: never; Returns: number }
       backfill_recruiter_pipeline: { Args: never; Returns: undefined }
       billing_allowance_used: {
         Args: { p_company_id: string; p_key: string }
@@ -2943,9 +3328,23 @@ export type Database = {
           used: number
         }[]
       }
+      caller_is_owner: { Args: { p_company_id: string }; Returns: boolean }
       check_entitlement: {
         Args: { p_company_id: string; p_key: string; p_qty?: number }
         Returns: Json
+      }
+      check_member_limit: {
+        Args: {
+          p_actor: string
+          p_company_id: string
+          p_key: string
+          p_qty: number
+        }
+        Returns: Json
+      }
+      claim_note_mention_emails: {
+        Args: { p_note_id: string; p_user_ids: string[] }
+        Returns: string[]
       }
       company_can_view_candidate: {
         Args: { p_user_id: string }
@@ -2959,6 +3358,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      company_permission_scope: {
+        Args: { p_company_id: string; p_key: string }
+        Returns: string
+      }
       consume_entitlement: {
         Args: {
           p_actor?: string
@@ -2970,6 +3373,22 @@ export type Database = {
         }
         Returns: Json
       }
+      create_company_invite: {
+        Args: { p_actor_kind?: string; p_email: string; p_role_id?: string }
+        Returns: Json
+      }
+      create_company_role: {
+        Args: {
+          p_actor_kind?: string
+          p_color?: string
+          p_description?: string
+          p_grants?: Json
+          p_limits?: Json
+          p_name: string
+          p_template_key?: string
+        }
+        Returns: Json
+      }
       deduct_interview_session_credits: {
         Args: { p_interview_id: string; p_session_id: string }
         Returns: string
@@ -2977,6 +3396,14 @@ export type Database = {
       deduct_user_credits: {
         Args: { p_amount: number; p_user_id: string }
         Returns: undefined
+      }
+      delete_company_role: {
+        Args: {
+          p_actor_kind?: string
+          p_replacement_role_id?: string
+          p_role_id: string
+        }
+        Returns: Json
       }
       desired_roles_search: {
         Args: { "": Database["public"]["Tables"]["user_info"]["Row"] }
@@ -2992,6 +3419,14 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: number
       }
+      expand_role_grants: {
+        Args: { p_grants: Json }
+        Returns: {
+          key: string
+          scope: Database["public"]["Enums"]["permission_scope"]
+        }[]
+      }
+      expanded_grants_json: { Args: { p_grants: Json }; Returns: Json }
       expire_outreach: { Args: never; Returns: number }
       finalize_interview_analysis_session: {
         Args: { p_session_id: string }
@@ -3124,12 +3559,17 @@ export type Database = {
       }
       has_ai_credits_for: { Args: { p_user_id: string }; Returns: boolean }
       has_ai_credits_for_test: { Args: { p_user_id: string }; Returns: boolean }
+      has_company_permission: {
+        Args: { p_company_id: string; p_job_post_id?: string; p_key: string }
+        Returns: boolean
+      }
       heartbeat_interview_session: {
         Args: { p_interview_id: string; p_session_id: string }
         Returns: boolean
       }
       hold_entitlement: {
         Args: {
+          p_actor?: string
           p_company_id: string
           p_expires_at?: string
           p_key: string
@@ -3147,6 +3587,32 @@ export type Database = {
         } & "the function public.industry_preferences_search with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
       is_company_member: { Args: { p_company_id: string }; Returns: boolean }
+      list_company_audit: {
+        Args: {
+          p_action?: string
+          p_actor?: string
+          p_before?: number
+          p_limit?: number
+          p_since?: string
+          p_until?: string
+        }
+        Returns: Json
+      }
+      list_company_roles: { Args: never; Returns: Json }
+      list_company_hiring_teams: { Args: never; Returns: Json }
+      list_company_team: { Args: never; Returns: Json }
+      list_job_hiring_team: { Args: { p_job_post_id: string }; Returns: Json }
+      list_mentionable_members: {
+        Args: never
+        Returns: {
+          name: string
+          user_id: string
+        }[]
+      }
+      make_primary_owner: {
+        Args: { p_actor_kind?: string; p_user_id: string }
+        Returns: Json
+      }
       mark_usage_notified: {
         Args: {
           p_company_id: string
@@ -3198,7 +3664,19 @@ export type Database = {
           user_id: string
         }[]
       }
+      member_can_view_notes: {
+        Args: { p_company_id: string; p_job_post_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      member_display_name: { Args: { p_user_id: string }; Returns: string }
+      member_limit_state: {
+        Args: { p_actor: string; p_company_id: string; p_key: string }
+        Returns: Json
+      }
+      member_usage: { Args: { p_period_start?: string }; Returns: Json }
+      my_company_access: { Args: never; Returns: Json }
       my_company_id: { Args: never; Returns: string }
+      my_job_ids_with: { Args: { p_key: string }; Returns: string[] }
       normalize_all_job_locations_test: {
         Args: { target_ids?: string[] }
         Returns: undefined
@@ -3221,6 +3699,10 @@ export type Database = {
       release_interview_session: {
         Args: { p_interview_id: string; p_session_id: string }
         Returns: boolean
+      }
+      remove_company_member: {
+        Args: { p_actor_kind?: string; p_user_id: string }
+        Returns: Json
       }
       reorder_pipeline_stages: { Args: { p_ids: string[] }; Returns: undefined }
       reserve_interview_session: {
@@ -3247,6 +3729,7 @@ export type Database = {
           job_post_id: string | null
           message: string
           responded_at: string | null
+          sender_name: string | null
           sender_user_id: string | null
           sent_at: string
           source: string
@@ -3261,11 +3744,23 @@ export type Database = {
         }
       }
       resume_sections_public: { Args: { p_content: Json }; Returns: Json }
+      revoke_company_invite: {
+        Args: { p_actor_kind?: string; p_invite_id: string }
+        Returns: Json
+      }
+      role_grants_json: { Args: { p_role_id: string }; Returns: Json }
+      role_limits_json: { Args: { p_role_id: string }; Returns: Json }
+      role_snapshot: { Args: { p_role_id: string }; Returns: Json }
+      role_within_caller_ceiling: {
+        Args: { p_role_id: string }
+        Returns: boolean
+      }
       rollover_free_periods: { Args: never; Returns: Json }
       schedule_company_plan_change: {
         Args: { p_company_id: string; p_tier_slug: string }
         Returns: undefined
       }
+      seed_company_roles: { Args: { p_company_id: string }; Returns: undefined }
       seed_default_pipeline: {
         Args: { p_company_id: string }
         Returns: undefined
@@ -3294,6 +3789,7 @@ export type Database = {
           job_post_id: string | null
           message: string
           responded_at: string | null
+          sender_name: string | null
           sender_user_id: string | null
           sent_at: string
           source: string
@@ -3315,6 +3811,19 @@ export type Database = {
         Args: { p_cancel: boolean; p_company_id: string }
         Returns: undefined
       }
+      set_company_member_role: {
+        Args: { p_actor_kind?: string; p_role_id: string; p_user_id: string }
+        Returns: Json
+      }
+      set_company_owner: {
+        Args: {
+          p_actor_kind?: string
+          p_is_owner: boolean
+          p_role_id?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       set_company_plan: {
         Args: {
           p_actor?: string
@@ -3325,20 +3834,50 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_default_company_role: {
+        Args: { p_actor_kind?: string; p_role_id: string }
+        Returns: Json
+      }
+      set_my_display_name: { Args: { p_name: string }; Returns: Json }
       sign: {
         Args: { algorithm?: string; payload: Json; secret: string }
         Returns: string
       }
       talent_list_company: { Args: { p_list_id: string }; Returns: string }
+      team_invite_hash: { Args: { p_token: string }; Returns: string }
       top_skills_search: {
         Args: { "": Database["public"]["Tables"]["user_info"]["Row"] }
         Returns: {
           error: true
         } & "the function public.top_skills_search with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
+      touch_company_membership: { Args: never; Returns: undefined }
       try_cast_double: { Args: { inp: string }; Returns: number }
+      try_uuid: { Args: { p_value: string }; Returns: string }
+      unassign_job: {
+        Args: {
+          p_actor_kind?: string
+          p_job_post_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      update_company_role: {
+        Args: {
+          p_actor_kind?: string
+          p_color?: string
+          p_description?: string
+          p_grants?: Json
+          p_limits?: Json
+          p_name?: string
+          p_role_id: string
+        }
+        Returns: Json
+      }
+      update_company_settings: { Args: { p_settings: Json }; Returns: Json }
       url_decode: { Args: { data: string }; Returns: string }
       url_encode: { Args: { data: string }; Returns: string }
+      valid_role_limits: { Args: { p_limits: Json }; Returns: boolean }
       verify: {
         Args: { algorithm?: string; secret: string; token: string }
         Returns: {
@@ -3347,11 +3886,33 @@ export type Database = {
           valid: boolean
         }[]
       }
+      within_caller_ceiling: {
+        Args: { p_company_id: string; p_grants: Json; p_limits: Json }
+        Returns: boolean
+      }
       work_style_preferences_search: {
         Args: { "": Database["public"]["Tables"]["user_info"]["Row"] }
         Returns: {
           error: true
         } & "the function public.work_style_preferences_search with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
+      }
+      write_company_audit: {
+        Args: {
+          p_action: string
+          p_actor?: string
+          p_actor_kind?: string
+          p_after: Json
+          p_before: Json
+          p_company_id: string
+          p_target_id: string
+          p_target_label: string
+          p_target_type: string
+        }
+        Returns: undefined
+      }
+      write_role_grants: {
+        Args: { p_grants: Json; p_limits: Json; p_role_id: string }
+        Returns: undefined
       }
     }
     Enums: {
@@ -3371,6 +3932,7 @@ export type Database = {
       job_posting_status: "active" | "inactive"
       job_type_enum: "Fulltime" | "Intern" | "Contract"
       payment_status: "complete" | "failed" | "pending" | "cancelled"
+      permission_scope: "all" | "assigned"
       pipeline_stage_kind:
         | "applied"
         | "screening"
@@ -3529,6 +4091,7 @@ export const Constants = {
       job_posting_status: ["active", "inactive"],
       job_type_enum: ["Fulltime", "Intern", "Contract"],
       payment_status: ["complete", "failed", "pending", "cancelled"],
+      permission_scope: ["all", "assigned"],
       pipeline_stage_kind: [
         "applied",
         "screening",

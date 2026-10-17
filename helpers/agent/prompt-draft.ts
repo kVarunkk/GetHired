@@ -58,3 +58,7 @@ export function takePendingPrompt(): string {
 /** Opens the agent ready to set up the user's profile (see ONBOARDING in system-prompt.ts). */
 export const ONBOARDING_PROMPT =
   "Help me complete my onboarding. Ask me for the missing profile details a few at a time, then set up my profile.";
+
+/** Opens the agent ready to review and update an onboarded user's profile. */
+export const PROFILE_UPDATE_PROMPT =
+  "Review my profile with me. Summarise what it says now, suggest changes that would improve my job matches, and update it once I agree.";

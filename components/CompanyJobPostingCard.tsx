@@ -7,11 +7,15 @@ import Link from "next/link";
 import CreateJobPostingDialog from "./CreateJobPostingDialog";
 import { JobStatusSwitch } from "./JobPostingsTable";
 import { TCompanyIdPageData } from "@/utils/types/jobs.types";
+import type { JobControls } from "@/helpers/companies/job-scope";
 
 export default function CompanyJobPostingCard({
   job,
+  controls = { edit: true, publish: true, delete: true },
 }: {
   job: TCompanyIdPageData;
+  /** What the viewer's role allows on this job (RP-REQ-016); the server checks again. */
+  controls?: JobControls;
 }) {
   return (
     <Card className="p-4 group transition-colors hover:bg-muted/60">
@@ -27,6 +31,7 @@ export default function CompanyJobPostingCard({
             <CreateJobPostingDialog
               key={`${job.id}-${job.updated_at ?? 0}`}
               companyId={job.company_id}
+              disabled={!controls.edit}
               existingValues={{
                 id: job.id,
                 title: job.title,
@@ -44,7 +49,7 @@ export default function CompanyJobPostingCard({
                 questions: job.questions ?? [],
               }}
             />
-            <DeleteJobPosting job_posting_id={job.id} />
+            <DeleteJobPosting job_posting_id={job.id} disabled={!controls.delete} />
           </div>
         </CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -58,7 +63,7 @@ export default function CompanyJobPostingCard({
           </span>{" "}
           Applicant{job.applications?.length !== 1 ? "s" : ""}
         </div>
-        <JobStatusSwitch job={job} />
+        <JobStatusSwitch job={job} disabled={!controls.publish} />
       </CardContent>
     </Card>
   );

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Brain, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   Sheet,
   SheetContent,
@@ -57,6 +58,7 @@ export default function MemoriesPanel({ role = "applicant" }: { role?: AgentRole
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Memory | null>(null);
 
   const load = async () => {
     setError(null);
@@ -178,7 +180,7 @@ export default function MemoriesPanel({ role = "applicant" }: { role?: AgentRole
                           variant="ghost"
                           className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
                           aria-label={`Delete: ${memory.content}`}
-                          onClick={() => remove(memory.id)}
+                          onClick={() => setPendingDelete(memory)}
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -190,6 +192,14 @@ export default function MemoriesPanel({ role = "applicant" }: { role?: AgentRole
             </section>
           );
         })}
+        <ConfirmDialog
+          open={pendingDelete !== null}
+          onOpenChange={(open) => !open && setPendingDelete(null)}
+          title="Delete this memory?"
+          description={<>&ldquo;{pendingDelete?.content}&rdquo; will be forgotten. This can&apos;t be undone.</>}
+          confirmLabel="Delete"
+          onConfirm={() => pendingDelete && remove(pendingDelete.id)}
+        />
       </SheetContent>
     </Sheet>
   );

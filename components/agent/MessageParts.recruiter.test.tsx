@@ -212,7 +212,7 @@ describe("MessageParts: recruiter results (RA-TEST-009)", () => {
     );
   });
 
-  it("confirms a sent outreach with a link to Outreach", () => {
+  it("confirms a sent outreach with a link to the message", () => {
     renderParts(
       assistant([
         output("sendOutreach", {
@@ -221,13 +221,13 @@ describe("MessageParts: recruiter results (RA-TEST-009)", () => {
           status: "sent",
           emailed: true,
           candidateUrl: "/company/profiles/a1",
-          outreachUrl: "/company/outreach",
+          outreachUrl: "/company/outreach/o1",
         }),
       ]),
     );
 
     expect(screen.getByText(/Message sent and emailed/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Outreach" })).toHaveAttribute("href", "/company/outreach");
+    expect(screen.getByRole("link", { name: "Open message" })).toHaveAttribute("href", "/company/outreach/o1");
   });
 
   it("explains when matching hasn't run for a job", () => {

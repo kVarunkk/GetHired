@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     const { data: screening, error: screeningError } = await admin
       .from("application_screenings")
-      .select("id, application_id, company_id, status, job_snapshot_hash, result, attempts")
+      .select("id, application_id, company_id, status, job_snapshot_hash, result, attempts, requested_by")
       .eq("application_id", applicationId)
       .maybeSingle();
     if (screeningError) throw new Error(`Screening load failed: ${screeningError.message}`);
@@ -149,10 +149,15 @@ export async function GET(request: NextRequest) {
     // Charged after the model call (BL-TASK-030). The ref is the application,
     // so a retried message and every later re-screen are free.
     try {
-      await consumeEntitlement(screening.company_id, "screenings", 1, {
-        type: "application_screening",
-        id: applicationId,
-      });
+      // RP-REQ-043: charged to the member who queued it (their per-member cap);
+      // automatic screening on apply has no requester and isn't capped.
+      await consumeEntitlement(
+        screening.company_id,
+        "screenings",
+        1,
+        { type: "application_screening", id: applicationId },
+        screening.requested_by ?? null,
+      );
     } catch (err) {
       if (!(err instanceof EntitlementError)) throw err;
       await admin

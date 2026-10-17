@@ -35,6 +35,13 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
         "screenApplicants",
         "moveApplications",
         "sendOutreach",
+        // RP-REQ-032: every role and hiring-team change.
+        "createRole",
+        "updateRole",
+        "deleteRole",
+        "assignRole",
+        "assignToJob",
+        "unassignFromJob",
       ].sort(),
     );
   });
@@ -51,6 +58,7 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
     "listNotes",
     "getHiringFunnel",
     "listOutreach",
+    "getOutreach",
   ])("gates memory and note writes after %s in the same turn (RA-SEC-003)", (reader) => {
     for (const write of ["saveMemory", "deleteMemory", "addNote"]) {
       expect(typeOf(decide(write, [user("x"), ...ran(reader, "c1")])), write).toBe("user-approval");

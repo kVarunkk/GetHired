@@ -315,6 +315,13 @@ export const applicantNavbarItems: INavItem[] = [
     type: "startswith",
     icon: <FileUser className="h-4 w-4" />,
   },
+  {
+    id: "settings",
+    label: "Settings",
+    href: "/settings",
+    type: "startswith",
+    icon: <Settings className="h-4 w-4" />,
+  },
   // {
   //   id: "companies",
   //   label: "Companies",
@@ -422,6 +429,7 @@ export const authPageNavItems: INavItem[] = [
 const verticalNavbarPaths = [
   "/dashboard",
   "/opportunities",
+  "/settings",
   "/company",
   "/jobs",
   "/companies",

@@ -24,6 +24,7 @@ export default function AgentShell({
   initialMessages,
   initialDraft = "",
   messagesUsedToday = 0,
+  memberCap = null,
   titleRefreshDelayMs = TITLE_REFRESH_DELAY_MS,
 }: {
   role?: AgentRoleId;
@@ -34,6 +35,8 @@ export default function AgentShell({
   initialDraft?: string;
   /** The user's messages so far today, toward the daily cap. */
   messagesUsedToday?: number;
+  /** Company members only: their role's monthly agent message cap (RP-REQ-044). */
+  memberCap?: { limit: number; remaining: number } | null;
   titleRefreshDelayMs?: number;
 }) {
   const router = useRouter();
@@ -193,6 +196,7 @@ export default function AgentShell({
           initialMessages={initialMessages}
           initialDraft={initialDraft}
           messagesUsedToday={messagesUsedToday}
+          memberCap={memberCap}
           onFinish={() => {
             // The reply is saved before the stream closes. Drop the client
             // Router Cache so coming back to this page loads the new turn

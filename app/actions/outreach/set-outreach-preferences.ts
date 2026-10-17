@@ -27,7 +27,7 @@ export async function setOutreachPreferencesAction(
     .eq("user_id", user.id);
   if (error) return { ok: false, error: "Couldn't save the setting. Try again." };
 
-  revalidatePath("/dashboard");
+  revalidatePath("/settings");
   return { ok: true };
 }
 
@@ -49,6 +49,6 @@ export async function unblockCompanyAction(
     .eq("company_id", parsed.data.companyId);
   if (error) return { ok: false, error: "Couldn't unblock the company. Try again." };
 
-  revalidatePath("/dashboard");
+  revalidatePath("/settings");
   return { ok: true };
 }

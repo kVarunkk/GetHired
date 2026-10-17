@@ -6,13 +6,14 @@ import { Loader2 } from "lucide-react";
 import { previewEmailAction, type PreviewEmailResult } from "@/app/actions/pipeline/preview-email";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -71,12 +72,12 @@ type Props = {
 export default function MoveDialog(props: Props) {
   const { open, stage, onCancel } = props;
   return (
-    <Dialog open={open && stage !== null} onOpenChange={(next) => !next && onCancel()}>
-      <DialogContent className="sm:max-w-lg">
+    <ResponsiveDialog open={open && stage !== null} onOpenChange={(next) => !next && onCancel()}>
+      <ResponsiveDialogContent className="sm:max-w-lg">
         {/* Keyed, so each opening starts from the stage's default template. */}
         {open && stage && <MoveDialogBody key={stage.id} {...props} stage={stage} />}
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
 
@@ -147,77 +148,79 @@ function MoveDialogBody({
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>
+      <ResponsiveDialogHeader>
+        <ResponsiveDialogTitle>
           Move {plural(count)} to {stage.name}
-        </DialogTitle>
-        <DialogDescription>
+        </ResponsiveDialogTitle>
+        <ResponsiveDialogDescription>
           The candidate will see:{" "}
           <span className="font-medium capitalize text-foreground">{candidateStatusLabel(stage.kind)}</span>
-        </DialogDescription>
-      </DialogHeader>
+        </ResponsiveDialogDescription>
+      </ResponsiveDialogHeader>
 
-      <div className="flex items-center gap-3">
-        <Switch
-          id="move-email"
-          aria-label="Email candidates"
-          checked={emailOn}
-          disabled={choices.length === 0}
-          onCheckedChange={setEmailOn}
-        />
-        <Label htmlFor="move-email">Email candidates</Label>
-        {choices.length === 0 && (
-          <span className="text-xs text-muted-foreground">No templates for this stage yet.</span>
-        )}
-      </div>
-
-      {emailOn && (
-        <div className="flex flex-col gap-3">
-          <Select value={templateId} onValueChange={pick}>
-            <SelectTrigger aria-label="Template">
-              <SelectValue placeholder="Choose a template" />
-            </SelectTrigger>
-            <SelectContent>
-              {choices.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input aria-label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
-          <Textarea aria-label="Message" rows={6} value={body} onChange={(e) => setBody(e.target.value)} />
-
-          {!local.ok && <p className="text-sm text-destructive">{local.error}</p>}
-          {unknown.length > 0 && (
-            <p role="alert" className="text-sm text-destructive">
-              Unknown variable{unknown.length === 1 ? "" : "s"}: {unknown.map((v) => `{{${v}}}`).join(", ")}
-            </p>
+      <ResponsiveDialogBody className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <Switch
+            id="move-email"
+            aria-label="Email candidates"
+            checked={emailOn}
+            disabled={choices.length === 0}
+            onCheckedChange={setEmailOn}
+          />
+          <Label htmlFor="move-email">Email candidates</Label>
+          {choices.length === 0 && (
+            <span className="text-xs text-muted-foreground">No templates for this stage yet.</span>
           )}
-          {missing.includes("scheduling_link") && (
-            <p className="text-sm text-destructive">
-              Add a scheduling link in Settings, or remove {"{{scheduling_link}}"}.
-            </p>
-          )}
-
-          <section aria-label="Preview" className="rounded-lg border px-4 py-3 text-sm">
-            {preview === null ? (
-              <p className="text-muted-foreground">Preparing the preview…</p>
-            ) : preview.ok ? (
-              <>
-                <p className="font-medium">{preview.subject}</p>
-                <div className="prose prose-sm mt-2 max-w-none break-words dark:prose-invert">
-                  <ReactMarkdown components={{ img: () => null }}>{preview.body}</ReactMarkdown>
-                </div>
-              </>
-            ) : (
-              <p className="text-destructive">{preview.error}</p>
-            )}
-          </section>
         </div>
-      )}
 
-      <DialogFooter className="gap-2">
+        {emailOn && (
+          <div className="flex flex-col gap-3">
+            <Select value={templateId} onValueChange={pick}>
+              <SelectTrigger aria-label="Template">
+                <SelectValue placeholder="Choose a template" />
+              </SelectTrigger>
+              <SelectContent>
+                {choices.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input aria-label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
+            <Textarea aria-label="Message" rows={6} value={body} onChange={(e) => setBody(e.target.value)} />
+
+            {!local.ok && <p className="text-sm text-destructive">{local.error}</p>}
+            {unknown.length > 0 && (
+              <p role="alert" className="text-sm text-destructive">
+                Unknown variable{unknown.length === 1 ? "" : "s"}: {unknown.map((v) => `{{${v}}}`).join(", ")}
+              </p>
+            )}
+            {missing.includes("scheduling_link") && (
+              <p className="text-sm text-destructive">
+                Add a scheduling link in Settings, or remove {"{{scheduling_link}}"}.
+              </p>
+            )}
+
+            <section aria-label="Preview" className="rounded-lg border px-4 py-3 text-sm">
+              {preview === null ? (
+                <p className="text-muted-foreground">Preparing the preview…</p>
+              ) : preview.ok ? (
+                <>
+                  <p className="font-medium">{preview.subject}</p>
+                  <div className="prose prose-sm mt-2 max-w-none break-words dark:prose-invert">
+                    <ReactMarkdown components={{ img: () => null }}>{preview.body}</ReactMarkdown>
+                  </div>
+                </>
+              ) : (
+                <p className="text-destructive">{preview.error}</p>
+              )}
+            </section>
+          </div>
+        )}
+      </ResponsiveDialogBody>
+
+      <ResponsiveDialogFooter className="gap-2">
         <Button variant="outline" disabled={isMoving} onClick={onCancel}>
           Cancel
         </Button>
@@ -225,7 +228,7 @@ function MoveDialogBody({
           {isMoving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {emailOn ? `Move and email ${count}` : "Move"}
         </Button>
-      </DialogFooter>
+      </ResponsiveDialogFooter>
     </>
   );
 }

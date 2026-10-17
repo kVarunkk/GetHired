@@ -10,7 +10,7 @@ const inputSchema = z.object({ candidateUserId: z.string().uuid().optional() }).
 export async function listTalentListsAction(
   input: z.input<typeof inputSchema> = {},
 ): Promise<{ ok: true; lists: TalentListSummary[] } | { ok: false; error: string }> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "talent.view" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);

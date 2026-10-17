@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireCompany } from "@/helpers/companies/require-company";
+import { companyAllows, requireCompany } from "@/helpers/companies/require-company";
 import { toEntitlementResponse } from "@/helpers/billing/errors";
 import { explainCandidateMatch } from "@/helpers/matching/explain-candidate-match";
 import type { MatchErrorCode } from "@/helpers/matching/errors";
@@ -22,13 +22,16 @@ const FAILURE: Record<MatchErrorCode, { status: number; error: string }> = {
  * charges and stores one (`helpers/matching/explain-candidate-match.ts`).
  */
 export async function POST(request: NextRequest) {
-  const auth = await requireCompany();
+  const auth = await requireCompany({ permission: "matching.run" });
   if (!auth.ok) return auth.response;
 
   const parsed = BodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "jobPostId and candidateId must be UUIDs." }, { status: 422 });
   }
+
+  const denied = companyAllows(auth.company, { permission: "matching.run", jobId: parsed.data.jobPostId });
+  if (denied) return NextResponse.json({ error: denied }, { status: 403 });
 
   const result = await explainCandidateMatch(auth, parsed.data, { abortSignal: request.signal });
 

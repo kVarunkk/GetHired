@@ -100,7 +100,7 @@ describe("middleware: /agent", () => {
     expect(await res.json()).toEqual({ error: "Finish setting up your company first." });
   });
 
-  it.each(["/dashboard", "/opportunities", "/resume-review", "/interview/abc"])(
+  it.each(["/dashboard", "/settings", "/opportunities", "/resume-review", "/interview/abc"])(
     "keeps %s applicant-only for onboarded companies",
     async (path) => {
       vi.mocked(getUserFromRequest).mockResolvedValue(company);
@@ -259,5 +259,41 @@ describe("middleware: matching workers", () => {
 
   it("keeps the explain route behind a login", async () => {
     expect(passesThrough(await updateSession(request("/api/company/matches/explain")))).toBe(false);
+  });
+});
+
+describe("middleware: /company/join (TM-TEST-004, teams difference 4)", () => {
+  const JOIN = "/company/join?token=tok_abcdefghijklmnopqrstuvwxyz";
+  const invitee = mockUser({ type: "company", onboardingComplete: false });
+
+  it("serves the join page to signed-out visitors instead of sending them to login", async () => {
+    expect(passesThrough(await updateSession(request(JOIN)))).toBe(true);
+  });
+
+  it("serves it to an applicant, who is still kept out of /company", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+
+    expect(passesThrough(await updateSession(request(JOIN)))).toBe(true);
+    expect(redirectTarget(await updateSession(request("/company")))).toBe("/agent");
+  });
+
+  it("serves it to a company account that hasn't accepted yet, which is still sent to onboarding from /company", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(invitee);
+
+    expect(passesThrough(await updateSession(request(JOIN)))).toBe(true);
+    expect(redirectTarget(await updateSession(request("/company")))).toBe("/get-started?company=true");
+  });
+
+  it("lets an accepted member (onboarded, owning no company) reach /company, not onboarding", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(company);
+
+    expect(passesThrough(await updateSession(request("/company")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/company/applicants")))).toBe(true);
+  });
+
+  it("serves it to a user without a role", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue({ ...applicant, app_metadata: {} });
+
+    expect(passesThrough(await updateSession(request(JOIN)))).toBe(true);
   });
 });

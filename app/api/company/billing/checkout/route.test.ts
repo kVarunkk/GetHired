@@ -8,6 +8,7 @@ import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { buildRequest } from "@/test/utils/request";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { APPLICANT_TRIAL_PLAN, COMPANY_CREDITS_PLAN, TIER_STARTUP } from "@/test/utils/billing";
+import { ADMIN_A, MEMBER_A, OWNER_A } from "@/test/utils/team";
 import { COMPANY_A, COMPANY_B } from "@/test/utils/recruiter";
 import { POST } from "./route";
 
@@ -46,7 +47,7 @@ const paymentInserts = () =>
 
 async function signIn(user = COMPANY_A.user) {
   rls = createSupabaseMock({ user });
-  rls.queue("company_info", { data: COMPANY_A.info, error: null });
+  rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(user, rls.client);
 }
 
@@ -146,6 +147,17 @@ describe("POST /api/company/billing/checkout", () => {
     expect(update.chain[0].args[0]).toMatchObject({ status: "failed" });
   });
 
-  // BL-SEC-004: turned on by the teams spec (BLT-103).
-  it.todo("refuses a member without the owner or admin role (403)");
+  // BL-SEC-004 / TM-REQ-004: billing is owner only (BLT-103, difference 9).
+  it.each([ADMIN_A, MEMBER_A])("refuses a $role with 403 and starts no checkout", async (member) => {
+    rls = createSupabaseMock({ user: member.user });
+    rls.queueRpc("my_company_access", { data: member.membership, error: null });
+    await setRequestUser(member.user, rls.client);
+
+    const res = await post({ kind: "credits", pricePlanId: COMPANY_CREDITS_PLAN.id });
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toMatchObject({ error: "Only the company's owners can manage billing." });
+    expect(createCreditCheckout).not.toHaveBeenCalled();
+    expect(paymentInserts()).toHaveLength(0);
+  });
 });

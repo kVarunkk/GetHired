@@ -1,6 +1,6 @@
 import "server-only";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { EntitlementError, type EntitlementPayload, type SuggestedTier } from "./errors";
+import { EntitlementError, MemberLimitError, type EntitlementPayload, type SuggestedTier } from "./errors";
 import {
   ENTITLEMENT_KEYS,
   kindOf,
@@ -217,13 +217,37 @@ async function entitlementError(
   });
 }
 
-/** Charges an allowance (then credits). Throws EntitlementError when it can't. */
+/**
+ * RP-REQ-042: over the member's cap, the RPCs return `member_limit` with the
+ * cap and what they've used, never an upgrade (it's a role setting).
+ */
+function memberLimitError(key: AllowanceKey, qty: number, r: { limit?: number; used?: number }) {
+  return new MemberLimitError({
+    key,
+    kind: "allowance",
+    qty,
+    used: r.used ?? 0,
+    amount: r.limit ?? 0,
+    overageCredits: null,
+    creditBalance: 0,
+    creditsNeeded: 0,
+    suggestedTier: null,
+  });
+}
+
+/**
+ * Charges an allowance (then credits). Throws EntitlementError when it can't,
+ * or MemberLimitError over the actor's per-member cap (RP-REQ-042).
+ * `actorUserId` is the session user who spends it, from the session and never
+ * input; `null` only for work the system starts itself (RP-REQ-043). A
+ * conversion of a hold is charged to whoever took the hold.
+ */
 export async function consumeEntitlement(
   companyId: string,
   key: AllowanceKey,
   qty: number,
   ref: EntitlementRef,
-  actorUserId?: string,
+  actorUserId: string | null,
 ): Promise<ConsumeResult> {
   const { data, error } = await db().rpc("consume_entitlement", {
     p_company_id: companyId,
@@ -241,19 +265,27 @@ export async function consumeEntitlement(
     duplicate?: boolean;
     reason?: EntitlementPayload["reason"];
     credits_needed?: number;
+    limit?: number;
+    used?: number;
   };
   if (!r.ok) {
+    if (r.reason === "member_limit") throw memberLimitError(key, qty, r);
     throw await entitlementError(companyId, key, qty, r.reason ?? "limit_reached", r.credits_needed ?? 0);
   }
   return { source: r.source ?? "allowance", creditsSpent: r.credits_spent ?? 0, duplicate: r.duplicate ?? false };
 }
 
-/** Sets units aside for committed work (BL-REQ-006). Consume later with the same ref. */
+/**
+ * Sets units aside for committed work (BL-REQ-006). Consume later with the
+ * same ref. The hold records the actor, so the later charge counts toward
+ * their cap (RP-REQ-043).
+ */
 export async function holdEntitlement(
   companyId: string,
   key: AllowanceKey,
   qty: number,
   ref: EntitlementRef,
+  actorUserId: string | null,
   { expiresAt }: { expiresAt?: Date } = {},
 ): Promise<void> {
   const { data, error } = await db().rpc("hold_entitlement", {
@@ -263,10 +295,18 @@ export async function holdEntitlement(
     p_ref_type: ref.type,
     p_ref_id: ref.id,
     ...(expiresAt ? { p_expires_at: expiresAt.toISOString() } : {}),
+    ...(actorUserId ? { p_actor: actorUserId } : {}),
   });
   if (error || !data) throw new Error(`hold_entitlement failed: ${error?.message ?? "no data"}`);
-  const r = data as { ok: boolean; reason?: EntitlementPayload["reason"]; credits_needed?: number };
+  const r = data as {
+    ok: boolean;
+    reason?: EntitlementPayload["reason"];
+    credits_needed?: number;
+    limit?: number;
+    used?: number;
+  };
   if (!r.ok) {
+    if (r.reason === "member_limit") throw memberLimitError(key, qty, r);
     throw await entitlementError(companyId, key, qty, r.reason ?? "limit_reached", r.credits_needed ?? 0);
   }
 }
@@ -294,12 +334,40 @@ export async function assertLimit(companyId: string, key: LimitKey, qty = 1): Pr
   }
 }
 
+/** The actor's per-member cap and use this period for `key`, or null when uncapped (RP-REQ-044). */
+export async function getMemberLimit(
+  companyId: string,
+  key: AllowanceKey,
+  actorUserId: string | null,
+): Promise<{ limit: number; used: number; remaining: number } | null> {
+  if (!actorUserId) return null;
+  const { data, error } = await db().rpc("check_member_limit", {
+    p_company_id: companyId,
+    p_key: key,
+    p_qty: 1,
+    p_actor: actorUserId,
+  });
+  if (error || !data) throw new Error(`check_member_limit failed: ${error?.message ?? "no data"}`);
+  const r = data as { limit: number | null; used: number | null };
+  if (r.limit === null || r.limit === undefined) return null;
+  const used = r.used ?? 0;
+  return { limit: r.limit, used, remaining: Math.max(r.limit - used, 0) };
+}
+
 /**
  * Throws EntitlementError when `qty` more of an allowance (or its credit
- * overage) can't be used right now. Charges nothing: for a preflight before
- * queueing work that `consumeEntitlement` charges later.
+ * overage) can't be used right now, or MemberLimitError over the actor's cap.
+ * Charges nothing: for a preflight before queueing work that
+ * `consumeEntitlement` charges later.
  */
-export async function assertAllowance(companyId: string, key: AllowanceKey, qty = 1): Promise<void> {
+export async function assertAllowance(
+  companyId: string,
+  key: AllowanceKey,
+  qty: number,
+  actorUserId: string | null,
+): Promise<void> {
+  const cap = await getMemberLimit(companyId, key, actorUserId);
+  if (cap && cap.used + qty > cap.limit) throw memberLimitError(key, qty, cap);
   const result = await checkEntitlement(companyId, key, qty);
   if (!result.allowed) {
     throw await entitlementError(companyId, key, qty, result.reason ?? "limit_reached", result.creditsNeeded);

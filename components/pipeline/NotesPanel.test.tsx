@@ -151,6 +151,22 @@ describe("NotesPanel (PLT-054)", () => {
     expect(within(theirs).getByText("Ravi")).toBeInTheDocument();
   });
 
+  it("shows the author's initials and stored name, even after they've left the team (TMT-062)", () => {
+    const removed = "c3000000-0000-4000-8000-000000000009";
+    render(
+      <NotesPanel
+        applicationId={APP.id}
+        notes={[noteOf({ body: "Strong portfolio", author_user_id: removed, author_name: "Max Member" })]}
+        currentUserId={ME}
+      />,
+    );
+
+    const note = screen.getByText("Strong portfolio").closest("li") as HTMLElement;
+    expect(within(note).getByText("Max Member")).toBeInTheDocument();
+    expect(within(note).getByText("MM")).toBeInTheDocument();
+    expect(within(note).queryByText("A teammate")).not.toBeInTheDocument();
+  });
+
   it("edits a note in place", async () => {
     const note = noteOf({ body: "Mine", author_user_id: ME });
     vi.mocked(updateNoteAction).mockResolvedValue({ ok: true });
@@ -200,5 +216,99 @@ describe("NotesPanel (PLT-054)", () => {
 
     expect(screen.getByRole("region", { name: "Ratings" })).toHaveTextContent("No ratings yet");
     expect(screen.getByText("No notes yet.")).toBeInTheDocument();
+  });
+});
+
+describe("NotesPanel mentions (TMT-072)", () => {
+  const PRIYA = { userId: "a1000000-0000-4000-8000-000000000002", name: "Priya Shah" };
+  const PAUL = { userId: "a1000000-0000-4000-8000-000000000003", name: "Paul Mehta" };
+  const SAM = { userId: "a1000000-0000-4000-8000-000000000004", name: "Sam" };
+  const MEMBERS = [PRIYA, PAUL, SAM];
+
+  const type = (value: string) => fireEvent.change(composer(), { target: { value } });
+  const teammates = () => within(screen.getByRole("listbox", { name: "Teammates" })).getAllByRole("option");
+
+  it("lists teammates after @, filtered by what follows", () => {
+    render(<NotesPanel applicationId={APP.id} notes={[]} currentUserId={ME} members={MEMBERS} />);
+
+    type("Ask @");
+    expect(teammates().map((o) => o.textContent)).toEqual([
+      "PSPriya Shah",
+      "PMPaul Mehta",
+      "SASam",
+    ]);
+
+    type("Ask @p");
+    expect(teammates()).toHaveLength(2);
+    type("Ask @me");
+    expect(teammates().map((o) => o.textContent)).toEqual(["PMPaul Mehta"]);
+  });
+
+  it("picks with the arrow keys and Enter, inserting a token", async () => {
+    vi.mocked(addNoteAction).mockResolvedValue({ ok: true, note: noteOf({ author_user_id: ME }) });
+    render(<NotesPanel applicationId={APP.id} notes={[]} currentUserId={ME} members={MEMBERS} />);
+
+    type("Ask @p");
+    fireEvent.keyDown(composer(), { key: "ArrowDown" });
+    expect(teammates()[1]).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(composer(), { key: "Enter" });
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(composer()).toHaveValue(`Ask @[Paul Mehta](${PAUL.userId}) `);
+
+    fireEvent.click(addButton());
+    await waitFor(() =>
+      expect(addNoteAction).toHaveBeenCalledWith({
+        applicationId: APP.id,
+        body: `Ask @[Paul Mehta](${PAUL.userId}) `,
+        rating: null,
+      }),
+    );
+  });
+
+  it("picks with a click", () => {
+    render(<NotesPanel applicationId={APP.id} notes={[]} currentUserId={ME} members={MEMBERS} />);
+
+    type("@sa");
+    fireEvent.mouseDown(teammates()[0]);
+    expect(composer()).toHaveValue(`@[Sam](${SAM.userId}) `);
+  });
+
+  it("closes on Escape and keeps the text", () => {
+    render(<NotesPanel applicationId={APP.id} notes={[]} currentUserId={ME} members={MEMBERS} />);
+
+    type("Ask @pr");
+    fireEvent.keyDown(composer(), { key: "Escape" });
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(composer()).toHaveValue("Ask @pr");
+  });
+
+  it("shows no list for an email address, an unknown name or without teammates", () => {
+    const { unmount } = render(
+      <NotesPanel applicationId={APP.id} notes={[]} currentUserId={ME} members={MEMBERS} />,
+    );
+    type("mail sam@acme");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    type("@zz");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    unmount();
+
+    render(<NotesPanel applicationId={APP.id} notes={[]} currentUserId={ME} />);
+    type("@");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("renders a stored token as @name, not as a link", () => {
+    const { container } = render(
+      <NotesPanel
+        applicationId={APP.id}
+        notes={[noteOf({ body: `@[Priya Shah](${PRIYA.userId}) please check` })]}
+        currentUserId={ME}
+      />,
+    );
+
+    expect(screen.getByText("@Priya Shah")).toBeInTheDocument();
+    expect(container.querySelector("a")).toBeNull();
+    expect(container.textContent).not.toContain(PRIYA.userId);
   });
 });

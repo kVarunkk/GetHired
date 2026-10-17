@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { ChevronRight, CreditCard, Menu, Wallet } from "lucide-react";
 import Brand from "./Brand";
-import { cn, getNavItemsByPath } from "@/utils/utils";
+import { cn, fetcher, getNavItemsByPath, PROFILE_API_KEY } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import FeedbackForm from "./FeedbackForm";
@@ -31,6 +31,8 @@ import ModifiedLink from "./ModifiedLink";
 import SidebarLabel from "./SidebarLabel";
 import ScrollFade from "./ScrollFade";
 import { useOpenOutreachCount } from "./outreach/useOpenOutreachCount";
+import useSWR from "swr";
+
 
 /** The count next to a nav label (open outreach), hidden at 0. */
 function NavCount({ count }: { count?: number }) {
@@ -61,6 +63,9 @@ export default function NavbarComponent({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const isCompanyUser = user?.app_metadata?.type === "company";
+  // RP-REQ-016: Billing is hidden from company roles without billing.view.
+  const { data: profile } = useSWR(user ? PROFILE_API_KEY : null, fetcher, { revalidateOnFocus: false });
+  const showBilling = !isCompanyUser || profile?.profile?.access?.billingView !== false;
   const openOutreach = useOpenOutreachCount(user);
   const navItems = useMemo(() => {
     return getNavItemsByPath(pathname, isCompanyUser, user).map((item) =>
@@ -130,7 +135,9 @@ export default function NavbarComponent({
               pathname.startsWith("/interview") ||
               pathname.startsWith("/agent") ||
               pathname.startsWith("/dashboard") ||
-              pathname.startsWith("/opportunities")) &&
+              pathname.startsWith("/opportunities") ||
+              pathname.startsWith("/settings") ||
+              pathname.startsWith("/get-started")) &&
               "mb-0",
           )}
         >
@@ -141,6 +148,7 @@ export default function NavbarComponent({
                 signedIn={user !== null}
                 isCompanyUser={isCompanyUser}
                 billingActive={pathname.startsWith("/company/billing")}
+                showBilling={showBilling}
               />
             ) : (
               // Same 40px footprint as the menu button, so the logo doesn't shift.
@@ -325,36 +333,38 @@ export default function NavbarComponent({
               />
             ) : user ? (
               <div className="flex flex-col items-center gap-5">
-                {/* Applicants top up credits; companies manage their plan. */}
-                <Tooltip delayDuration={100}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={
-                        isCompanyUser
-                          ? "/company/billing"
-                          : "/dashboard/buy-credits"
-                      }
-                      className={cn(
-                        "text-brand flex px-4 py-2 items-center w-full gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden",
-                        isCompanyUser &&
-                          pathname.startsWith("/company/billing") &&
-                          "bg-secondary",
-                      )}
-                    >
-                      {isCompanyUser ? (
-                        <CreditCard className="h-4 w-4 shrink-0" />
-                      ) : (
-                        <Wallet className="h-4 w-4 shrink-0" />
-                      )}
-                      <SidebarLabel open={isMenuOpen}>
-                        {isCompanyUser ? "Billing" : "Recharge"}
-                      </SidebarLabel>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" hidden={isMenuOpen}>
-                    <p>{isCompanyUser ? "Billing" : "Recharge"}</p>
-                  </TooltipContent>
-                </Tooltip>
+                {/* Applicants top up credits; companies manage their plan (billing.view). */}
+                {showBilling && (
+                  <Tooltip delayDuration={100}>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href={
+                          isCompanyUser
+                            ? "/company/billing"
+                            : "/dashboard/buy-credits"
+                        }
+                        className={cn(
+                          "text-brand flex px-4 py-2 items-center w-full gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden",
+                          isCompanyUser &&
+                            pathname.startsWith("/company/billing") &&
+                            "bg-secondary",
+                        )}
+                      >
+                        {isCompanyUser ? (
+                          <CreditCard className="h-4 w-4 shrink-0" />
+                        ) : (
+                          <Wallet className="h-4 w-4 shrink-0" />
+                        )}
+                        <SidebarLabel open={isMenuOpen}>
+                          {isCompanyUser ? "Billing" : "Recharge"}
+                        </SidebarLabel>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" hidden={isMenuOpen}>
+                      <p>{isCompanyUser ? "Billing" : "Recharge"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 <FeedbackForm
                   isMenuOpen={isMenuOpen}
                   user={user}
@@ -437,11 +447,13 @@ const NavbarSheet = ({
   signedIn,
   isCompanyUser,
   billingActive,
+  showBilling = true,
 }: {
   items: INavItemWithActive[];
   signedIn: boolean;
   isCompanyUser: boolean;
   billingActive: boolean;
+  showBilling?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -484,7 +496,7 @@ const NavbarSheet = ({
             );
           })}
           {/* Same as the sidebar: applicants top up credits; companies manage their plan. */}
-          {signedIn && (
+          {signedIn && showBilling && (
             <Link
               href={isCompanyUser ? "/company/billing" : "/dashboard/buy-credits"}
               className={cn(

@@ -119,6 +119,8 @@ describe("StageEditor (PLT-064)", () => {
     render(<StageEditor stages={STAGES} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Archive Interview" }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Archive" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
 
     expect(await within(rowOf("Interview")).findByRole("alert")).toHaveTextContent(
       "Move the 3 applications out of this stage first.",
@@ -130,6 +132,8 @@ describe("StageEditor (PLT-064)", () => {
     render(<StageEditor stages={STAGES} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Archive Interview" }));
+    expect(saveStagesAction).not.toHaveBeenCalled();
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Archive" }));
 
     await waitFor(() => expect(screen.queryByDisplayValue("Interview")).not.toBeInTheDocument());
     expect(saveStagesAction).toHaveBeenCalledWith({ op: "archive", stageId: stageOf("interview").id });

@@ -340,6 +340,20 @@ export enum PostHogEvent {
   OutreachWithdrawn = "outreach_withdrawn",
   OutreachDrafted = "outreach_drafted",
   ApplicationSignalShared = "application_signal_shared",
+  // Recruiter teams (teams spec)
+  TeamMemberInvited = "team_member_invited",
+  TeamInviteAccepted = "team_invite_accepted",
+  TeamMemberRemoved = "team_member_removed",
+  TeamRoleChanged = "team_role_changed",
+  TeamOwnershipTransferred = "team_ownership_transferred",
+  TeamOwnerChanged = "team_owner_changed",
+  TeamPrimaryOwnerChanged = "team_primary_owner_changed",
+  CompanyRoleCreated = "company_role_created",
+  CompanyRoleUpdated = "company_role_updated",
+  CompanyRoleDeleted = "company_role_deleted",
+  CompanyDefaultRoleChanged = "company_default_role_changed",
+  JobAssigned = "job_assigned",
+  JobUnassigned = "job_unassigned",
 }
 
 export type JobUrlPatch = {

@@ -92,7 +92,7 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
-            {format(new Date(row.original.created_at), "PPP")}
+            {format(new Date(row.original.created_at), "d MMM yyyy")}
           </div>
         ),
       },
@@ -138,7 +138,12 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         accessorKey: "plan",
         header: "Plan",
         cell: ({ row }) => (
-          <div className="text-sm font-medium">{row.original.plan}</div>
+          <div
+            className="max-w-[12rem] truncate text-sm font-medium"
+            title={row.original.plan ?? undefined}
+          >
+            {row.original.plan}
+          </div>
         ),
       },
 

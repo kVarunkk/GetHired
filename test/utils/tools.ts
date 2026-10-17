@@ -5,6 +5,7 @@ import type { AgentToolContext } from "@/helpers/agent/tools/shared";
 import type { RecruiterToolContext } from "@/helpers/agent/roles/recruiter/tools/shared";
 import { mockUser } from "./auth";
 import { COMPANY_A } from "./recruiter";
+import { myCompanyOf } from "./team";
 
 export function toolContext(
   supabase: SupabaseClient<Database>,
@@ -27,7 +28,7 @@ export function recruiterToolContext(
     supabase,
     user: COMPANY_A.user,
     sessionId: "s1",
-    company: { id: COMPANY_A.id, name: COMPANY_A.info.name, email: COMPANY_A.info.email },
+    company: myCompanyOf(COMPANY_A),
     ...overrides,
   };
 }

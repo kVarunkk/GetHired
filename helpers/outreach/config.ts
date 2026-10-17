@@ -35,6 +35,9 @@ export const DECLINE_REASON_OPTIONS: { value: (typeof DECLINE_REASONS)[number]; 
   { value: "other", label: "Other" },
 ];
 
+/** The company-side page of one outreach. */
+export const outreachPath = (id: string) => `/company/outreach/${id}`;
+
 export const OUTREACH_STATUSES = [
   "sent",
   "interested",

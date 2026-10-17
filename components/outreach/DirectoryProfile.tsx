@@ -52,7 +52,7 @@ export default function DirectoryProfile({ profile }: { profile: DirectoryProfil
   const salary = buildSalaryRange(profile.min_salary, profile.max_salary, profile.salary_currency ?? undefined);
 
   return (
-    <div className="flex w-full flex-col gap-6 p-4">
+    <div className="flex w-full min-w-0 flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{profile.full_name}</h1>
         {profile.desired_roles?.length ? (

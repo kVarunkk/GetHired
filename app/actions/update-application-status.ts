@@ -18,7 +18,7 @@ export async function updateApplicationStatusAction(params: {
   status: Enums<"application_status">;
   notify?: boolean;
 }): Promise<UpdateApplicationStatusResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "pipeline.move" });
   if (!auth.ok) return { ok: false, error: auth.error };
   return updateApplicationStatus(auth, params);
 }

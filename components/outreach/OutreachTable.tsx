@@ -21,9 +21,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { OUTREACH_STATUSES } from "@/helpers/outreach/config";
+import { OUTREACH_STATUSES, outreachPath } from "@/helpers/outreach/config";
 import type { CompanyOutreachItem } from "@/helpers/outreach/list";
 import type { OutreachStatus } from "@/utils/types/outreach.types";
+import MemberAvatar from "@/components/team/MemberAvatar";
 
 const ALL_JOBS = "All Jobs";
 const ALL_STATUSES = "All Statuses";
@@ -83,14 +84,20 @@ export default function OutreachTable({
         accessorFn: (row) => row.candidateName ?? "Candidate",
         header: ({ column }) => <SortHeader column={column} label="Candidate" />,
         cell: ({ row }) => (
-          <div>
+          <div className="max-w-xs">
             <Link
               href={`/company/profiles/${row.original.candidateUserId}`}
-              className="font-medium hover:underline"
+              className="block truncate font-medium hover:underline"
             >
               {row.original.candidateName ?? "Candidate"}
             </Link>
-            <p className="max-w-xs truncate text-xs text-muted-foreground">{row.original.subject}</p>
+            <Link
+              href={outreachPath(row.original.id)}
+              className="block truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
+              title={row.original.subject ?? undefined}
+            >
+              {row.original.subject}
+            </Link>
           </div>
         ),
         filterFn: "includesString",
@@ -98,7 +105,11 @@ export default function OutreachTable({
       {
         accessorKey: "jobTitle",
         header: "Job",
-        cell: ({ row }) => <div className="text-sm">{row.original.jobTitle ?? "—"}</div>,
+        cell: ({ row }) => (
+          <div className="max-w-[16rem] truncate text-sm" title={row.original.jobTitle ?? undefined}>
+            {row.original.jobTitle ?? "—"}
+          </div>
+        ),
       },
       {
         accessorKey: "status",
@@ -108,7 +119,20 @@ export default function OutreachTable({
       {
         accessorKey: "sentAt",
         header: ({ column }) => <SortHeader column={column} label="Sent" />,
-        cell: ({ row }) => <div className="text-sm">{formatDate(row.original.sentAt)}</div>,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2 text-sm">
+            {/* TM-REQ-008: who sent it, as stored at send time. */}
+            {row.original.senderName && <MemberAvatar name={row.original.senderName} className="h-6 w-6" />}
+            <div className="min-w-0 max-w-[10rem]">
+              <div>{formatDate(row.original.sentAt)}</div>
+              {row.original.senderName && (
+                <div className="truncate text-xs text-muted-foreground" title={row.original.senderName}>
+                  by {row.original.senderName}
+                </div>
+              )}
+            </div>
+          </div>
+        ),
       },
       {
         id: "respondedAt",
@@ -119,8 +143,14 @@ export default function OutreachTable({
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) =>
-          row.original.status === "sent" ? <WithdrawOutreachButton outreachId={row.original.id} /> : null,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1">
+            <Button asChild size="sm" variant="ghost">
+              <Link href={outreachPath(row.original.id)}>View</Link>
+            </Button>
+            {row.original.status === "sent" && <WithdrawOutreachButton outreachId={row.original.id} />}
+          </div>
+        ),
       },
     ],
     [],

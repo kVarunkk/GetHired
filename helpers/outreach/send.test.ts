@@ -13,6 +13,7 @@ import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-moc
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import { OUTREACH_INPUT, OUTREACH_JOB, outreachOf } from "@/test/utils/outreach";
 import { sendOutreach } from "./send";
+import { HIRING_MANAGER_A, JOB_A1, OWNER_A } from "@/test/utils/team";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/helpers/billing/entitlements", () => ({
@@ -31,7 +32,7 @@ let service: SupabaseMock;
 
 const deps = () => ({
   supabase: user.client,
-  company: { id: COMPANY_A.id, name: "Acme", email: COMPANY_A.info.email },
+  company: { ...OWNER_A.myCompany, name: "Acme" },
   user: COMPANY_A.user,
 });
 
@@ -184,6 +185,31 @@ describe("sendOutreach (ORT-021)", () => {
       event: PostHogEvent.OutreachSent,
       distinctId: COMPANY_A.user.id,
       properties: { has_job: true, source },
+    });
+  });
+
+  describe("job scope (RPT-053)", () => {
+    const hiringManager = () => ({ ...deps(), company: HIRING_MANAGER_A.myCompany });
+
+    it.each([
+      ["a job they aren't assigned to", OUTREACH_INPUT.jobPostId],
+      ["no job (needs all jobs)", null],
+    ])("refuses %s before holding a unit", async (_, jobPostId) => {
+      const result = await sendOutreach(hiringManager(), { ...OUTREACH_INPUT, jobPostId }, { source: "manual" });
+
+      expect(result).toEqual({
+        ok: false,
+        code: "FORBIDDEN",
+        status: 403,
+        error: "Your role can't send outreach for this job.",
+      });
+      expect(holdEntitlement).not.toHaveBeenCalled();
+      expect(user.callsFor("send_candidate_outreach")).toHaveLength(0);
+    });
+
+    it("sends for an assigned job", async () => {
+      const result = await sendOutreach(hiringManager(), { ...OUTREACH_INPUT, jobPostId: JOB_A1 }, { source: "manual" });
+      expect(result).toMatchObject({ ok: true });
     });
   });
 });

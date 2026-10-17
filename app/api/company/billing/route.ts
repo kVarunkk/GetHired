@@ -5,7 +5,7 @@ import { getEntitlements } from "@/helpers/billing/entitlements";
 // BL-REQ-010: the session company's plan, usage and credits. The company always
 // comes from the session; any companyId in the query is ignored.
 export async function GET() {
-  const auth = await requireCompany();
+  const auth = await requireCompany({ permission: "billing.view" });
   if (!auth.ok) return auth.response;
 
   try {

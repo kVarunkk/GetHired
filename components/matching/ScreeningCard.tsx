@@ -120,9 +120,9 @@ function Result({ result, questions }: { result: ScreeningResult; questions: str
               <TableBody>
                 {result.must_have_coverage.map((entry, i) => (
                   <TableRow key={i}>
-                    <TableCell className="font-medium">{entry.requirement}</TableCell>
-                    <TableCell className="whitespace-nowrap">{MET_LABELS[entry.met]}</TableCell>
-                    <TableCell className="text-muted-foreground">{entry.evidence}</TableCell>
+                    <TableCell className="whitespace-normal font-medium">{entry.requirement}</TableCell>
+                    <TableCell>{MET_LABELS[entry.met]}</TableCell>
+                    <TableCell className="whitespace-normal text-muted-foreground">{entry.evidence}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -1,4 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { can } from "@/helpers/companies/permissions";
+import { jobControls, scopeToJobs } from "@/helpers/companies/job-scope";
+import { NO_MEMBERSHIP } from "@/helpers/companies/require-company";
 import ErrorComponent from "@/components/Error";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
@@ -28,19 +32,29 @@ export default async function CompanyPage() {
     if (error) throw error;
     if (!user) throw new Error("User not found");
 
-    const { data: companyInfo, error: companyInfoError } = await supabase
-      .from("company_info")
-      .select("id, name")
-      .eq("user_id", user.id)
-      .single();
-
-    if (companyInfoError || !companyInfo) {
+    const companyInfo = await getMyCompany(supabase, user);
+    if (!companyInfo) {
+      // Onboarded but no membership: removed from their company (teams
+      // difference 14). A new invite works, since the account is free again.
+      if (user.app_metadata?.onboarding_complete) {
+        return (
+          <div className="mx-auto w-full max-w-md p-4 py-12">
+            <div className="rounded-xl border p-6">
+              <h1 className="text-2xl font-semibold tracking-tight">No company</h1>
+              <p className="mt-3 text-sm text-muted-foreground">{NO_MEMBERSHIP}</p>
+            </div>
+          </div>
+        );
+      }
       throw new Error("Company profile not found");
     }
+    // RP-REQ-016: job controls follow the viewer's permissions; the server refuses them too.
+    const canCreateJobs = can(companyInfo, "jobs.create");
 
     const [metricsRes, jobsRes, applicantsRes] = await Promise.all([
       supabase.rpc("get_company_metrics", { company_id: companyInfo.id }),
-      supabase
+      scopeToJobs(
+        supabase
         .from("job_postings")
         .select(
           `
@@ -69,7 +83,9 @@ export default async function CompanyPage() {
           company_info(name, website)
         `,
         )
-        .eq("company_id", companyInfo.id)
+        .eq("company_id", companyInfo.id),
+        companyInfo,
+      )
         .order("created_at", { ascending: false })
         .limit(5),
       supabase
@@ -106,7 +122,7 @@ export default async function CompanyPage() {
     try {
       funnel = await getCompanyFunnel({
         supabase,
-        company: { id: companyInfo.id, name: companyInfo.name, email: null },
+        company: companyInfo,
       });
     } catch (err) {
       console.error("Failed to load the company funnel:", err);
@@ -118,7 +134,10 @@ export default async function CompanyPage() {
           <h2 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-start">
             How are you doing today, {companyInfo.name}?
           </h2>
-          <CreateJobPostingDialog companyId={companyInfo.id} />
+          <CreateJobPostingDialog
+            companyId={companyInfo.id}
+            disabled={!canCreateJobs}
+          />
         </div>
 
         <AskRecruiterAgent />
@@ -226,7 +245,11 @@ export default async function CompanyPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {jobPosts.length > 0 ? (
               jobPosts.map((job) => (
-                <CompanyJobPostingCard key={job.id} job={job} />
+                <CompanyJobPostingCard
+                  key={job.id}
+                  job={job}
+                  controls={jobControls(companyInfo, job.id)}
+                />
               ))
             ) : (
               <p className="text-sm text-muted-foreground">

@@ -4,6 +4,7 @@ import { getDodoClient } from "@/lib/dodo/initialize";
 import { SendPaymentUpdateEmail } from "@/lib/dodo/utils";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
+import { billingContactsFor } from "@/helpers/billing/emails";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { APPLICANT_TRIAL_PLAN, dodoWebhook, paymentRowOf } from "@/test/utils/billing";
 import { POST } from "./route";
@@ -392,7 +393,8 @@ describe("POST /api/dodo/webhook (company billing)", () => {
     expect(service.callsFor("apply_subscription_event")).toHaveLength(0);
   });
 
-  it("payment.succeeded for a company pack calls fulfil_payment and sends no applicant email", async () => {
+  it("payment.succeeded for a company pack calls fulfil_payment and emails the billing contacts, not an applicant", async () => {
+    vi.mocked(billingContactsFor).mockResolvedValue({ companyName: "Acme", emails: ["owner@acme.dev"] });
     service.queue("payments", { data: CREDITS_ROW, error: null });
     service.queueRpc("fulfil_payment", {
       data: { status: "fulfilled", kind: "company_credits", credit_amount: 500 },
@@ -406,7 +408,13 @@ describe("POST /api/dodo/webhook (company billing)", () => {
 
     expect(await res.json()).toEqual({ received: true, status: "processed" });
     expect(service.callsFor("fulfil_payment")[0].chain[0].args[1]).toMatchObject({ p_payment_row_id: CREDITS_ROW.id });
-    expect(SendPaymentUpdateEmail).not.toHaveBeenCalled();
+    // TMT-054 / TM-SEC-005: the owner (billing contacts), resolved by company id.
+    expect(billingContactsFor).toHaveBeenCalledWith(COMPANY_ID);
+    expect(SendPaymentUpdateEmail).toHaveBeenCalledTimes(1);
+    expect(SendPaymentUpdateEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ email: "owner@acme.dev", paymentDetails: expect.objectContaining({ credit_amount: 500 }) }),
+    );
+    expect(service.callsFor("user_info")).toHaveLength(0);
     expect(eventCaptureServer).toHaveBeenCalledWith(
       expect.objectContaining({ event: "billing_credits_purchased", properties: expect.objectContaining({ credits: 500 }) }),
     );

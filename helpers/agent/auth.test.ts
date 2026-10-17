@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { requireAgentUser, requireApplicant } from "./auth";
 import { COMPANY_A } from "@/test/utils/recruiter";
+import { OWNER_A, memberWith } from "@/test/utils/team";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 
@@ -63,10 +64,7 @@ describe("requireAgentUser (RA-TEST-003)", () => {
 
   it("returns an onboarded company user with their company from the session", async () => {
     await setRequestUser(COMPANY_A.user, supabase.client);
-    supabase.queue("company_info", {
-      data: { id: COMPANY_A.id, name: "Acme", email: "hr@acme.dev" },
-      error: null,
-    });
+    supabase.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
 
     const result = await requireAgentUser();
 
@@ -75,21 +73,16 @@ describe("requireAgentUser (RA-TEST-003)", () => {
       role: "company",
       company: { id: COMPANY_A.id, name: "Acme" },
     });
-    expect(supabase.callsFor("company_info")[0].chain).toContainEqual({
-      method: "eq",
-      args: ["user_id", COMPANY_A.user.id],
-    });
+    // The membership is always the caller's: my_company_access() takes no arguments.
+    expect(supabase.callsFor("my_company_access")[0].chain).toEqual([{ method: "rpc", args: ["my_company_access"] }]);
   });
 
   it.each([
     ["hasn't finished onboarding", mockUser({ type: "company", onboardingComplete: false }), true],
-    ["has no company row", mockUser({ type: "company" }), false],
+    ["has no membership", mockUser({ type: "company" }), false],
   ])("responds 403 for a company that %s", async (_label, user, hasRow) => {
     await setRequestUser(user, supabase.client);
-    supabase.queue("company_info", {
-      data: hasRow ? { id: COMPANY_A.id, name: "Acme", email: null } : null,
-      error: null,
-    });
+    supabase.queueRpc("my_company_access", { data: hasRow ? OWNER_A.membership : null, error: null });
 
     const result = await requireAgentUser();
 
@@ -121,5 +114,28 @@ describe("requireAgentUser (RA-TEST-003)", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.response.status).toBe(401);
+  });
+});
+
+describe("requireAgentUser and agent.use (RP-REQ-030, RPT-080)", () => {
+  it("refuses a role without agent.use with 403 and the reason", async () => {
+    const member = memberWith(["applicants.view"]);
+    await setRequestUser(member.user, supabase.client);
+    supabase.queueRpc("my_company_access", { data: member.membership, error: null });
+
+    const result = await requireAgentUser();
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.response.status).toBe(403);
+    expect(await result.response.json()).toEqual({ error: "Your role doesn't include the recruiter agent." });
+  });
+
+  it("lets a role with agent.use through", async () => {
+    const member = memberWith(["agent.use"]);
+    await setRequestUser(member.user, supabase.client);
+    supabase.queueRpc("my_company_access", { data: member.membership, error: null });
+
+    expect(await requireAgentUser()).toMatchObject({ ok: true, role: "company" });
   });
 });

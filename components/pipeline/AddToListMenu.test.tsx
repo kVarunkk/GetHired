@@ -19,8 +19,19 @@ async function open() {
   await screen.findByRole("button", { name: /Backend/ });
 }
 
+// jsdom has no matchMedia. From sm up the menu is a popover, below it a drawer.
+function setViewport(desktop: boolean) {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: desktop && query.includes("min-width"),
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  setViewport(true);
   vi.mocked(listTalentListsAction).mockResolvedValue({ ok: true, lists: [BACKEND, DESIGN] });
   vi.mocked(saveTalentListAction).mockResolvedValue({ ok: true });
 });
@@ -101,5 +112,16 @@ describe("AddToListMenu (PLT-090)", () => {
   it("shows no Reach out without a handler", async () => {
     await open();
     expect(screen.queryByRole("button", { name: /Reach out/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("AddToListMenu on a phone", () => {
+  it("opens a bottom drawer with the same lists", async () => {
+    setViewport(false);
+    await open();
+
+    expect(screen.getByRole("dialog", { name: "Add to list" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Design/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("textbox", { name: "New list name" })).toBeInTheDocument();
   });
 });

@@ -24,38 +24,12 @@ import { useProgress } from "react-transition-progress";
 import GoogleAuthBtn from "./GoogleAuthBtn";
 import { COMPANY_HOME, homePathFor } from "@/helpers/user/home-path";
 
-const isGenericEmail = (email: string) => {
-  const genericDomains = [
-    "gmail.com",
-    "yahoo.com",
-    "outlook.com",
-    "hotmail.com",
-    "aol.com",
-  ];
-  const domain = email.split("@")[1];
-  return genericDomains.includes(domain);
-};
-
-const loginSchema = (isCompany: boolean) =>
-  z.object({
-    email: z
-      .string()
-      .email({ message: "Invalid email address." })
-      .refine(
-        (email) => {
-          if (isCompany) {
-            return !isGenericEmail(email);
-          }
-          return true;
-        },
-        {
-          message: "Company email cannot be a generic public domain.",
-        },
-      ),
-    password: z
-      .string()
-      .min(6, { message: "Password must be at least 6 characters." }),
-  });
+const loginSchema = z.object({
+  email: z.string().email({ message: "Invalid email address." }),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters." }),
+});
 
 export function LoginForm({
   className,
@@ -70,7 +44,7 @@ export function LoginForm({
   const returnToPath = searchParams.get("returnTo");
 
   const form = useForm({
-    resolver: zodResolver(loginSchema(isCompany)),
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",

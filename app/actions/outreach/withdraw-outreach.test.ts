@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import { outreachOf } from "@/test/utils/outreach";
 import { withdrawOutreachAction } from "./withdraw-outreach";
@@ -14,7 +15,7 @@ let db: SupabaseMock;
 
 async function signIn(user = COMPANY_A.user) {
   db = createSupabaseMock({ user });
-  db.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  db.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(user, db.client);
 }
 

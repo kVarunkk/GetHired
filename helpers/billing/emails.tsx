@@ -12,12 +12,13 @@ export type BillingContacts = { companyName: string; emails: string[] };
 
 /**
  * Who gets billing emails (BL-REQ-022): the company's contact address and its
- * owner. The teams spec adds admins.
+ * owner. Billing is owner-only (TM-REQ-004), so admins aren't added.
  */
 export async function billingContactsFor(companyId: string): Promise<BillingContacts> {
   const supabase = createServiceRoleClient();
   const { data: company, error } = await supabase
     .from("company_info")
+    // user_id is the owner (TM-CON-001): billing mail goes to the owner only.
     .select("name, email, user_id")
     .eq("id", companyId)
     .maybeSingle();

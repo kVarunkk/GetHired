@@ -95,7 +95,7 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
-            {format(new Date(row.original.created_at), "PPP")}
+            {format(new Date(row.original.created_at), "d MMM yyyy")}
           </div>
         ),
       },
@@ -103,7 +103,12 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
         accessorKey: "name",
         header: "Name",
         cell: ({ row }) => (
-          <div className="text-sm font-medium">{row.original.name}</div>
+          <div
+            className="max-w-[14rem] truncate text-sm font-medium"
+            title={row.original.name ?? undefined}
+          >
+            {row.original.name}
+          </div>
         ),
       },
 
@@ -122,7 +127,12 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
         accessorKey: "resume",
         header: "Resume",
         cell: ({ row }) => (
-          <div className="text-sm font-medium">{row.original.resume}</div>
+          <div
+            className="max-w-[14rem] truncate text-sm font-medium"
+            title={row.original.resume}
+          >
+            {row.original.resume}
+          </div>
         ),
       },
 
@@ -130,7 +140,12 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
         accessorKey: "job",
         header: "Job Name",
         cell: ({ row }) => (
-          <div className="text-sm font-medium">{row.original.job}</div>
+          <div
+            className="max-w-[16rem] truncate text-sm font-medium"
+            title={row.original.job}
+          >
+            {row.original.job}
+          </div>
         ),
       },
 

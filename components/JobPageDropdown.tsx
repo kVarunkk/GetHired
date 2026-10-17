@@ -16,6 +16,8 @@ import { TApplicationStatus } from "@/utils/types";
 import { createClient } from "@/lib/supabase/client";
 import { copyToClipboard, PROFILE_API_KEY } from "@/utils/utils";
 import { mutate } from "swr";
+import { useState } from "react";
+import ConfirmDialog from "./ConfirmDialog";
 
 const applicationStatuses = Object.values(TApplicationStatus);
 
@@ -32,6 +34,7 @@ export default function JobPageDropdown({
   applicationStatus: TApplicationStatus | null;
   isPlatformJob: boolean;
 }) {
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   const updateApplicationStatus = async (status: TApplicationStatus) => {
     try {
       if (!userId || isCompanyUser || !applicationStatus || isPlatformJob) {
@@ -167,9 +170,7 @@ export default function JobPageDropdown({
           )}
           {!isCompanyUser && userId && applicationStatus && !isPlatformJob && (
             <DropdownMenuItem
-              onClick={() => {
-                removeApplication();
-              }}
+              onClick={() => setConfirmingRemove(true)}
               className=" focus:bg-destructive/70 cursor-pointer"
             >
               <Trash className="h-4 w-4" />
@@ -189,6 +190,14 @@ export default function JobPageDropdown({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ConfirmDialog
+        open={confirmingRemove}
+        onOpenChange={setConfirmingRemove}
+        title="Remove this application?"
+        description="It's removed from your tracked applications, along with its status. This can't be undone."
+        confirmLabel="Remove"
+        onConfirm={removeApplication}
+      />
     </>
   );
 }

@@ -73,6 +73,8 @@ export async function processJobPostingRelevance(
     : await createClient();
 
   try {
+    // userId is the company's owner (RelevanceProfilesMessage), and
+    // company_info.user_id means "owner" (TM-CON-001), so this stays on user_id.
     const { data: companyData, error: companyError } = await supabase
       .from("company_info")
       .select("id, name, email")

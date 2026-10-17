@@ -3,6 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { MEMBER_A, OWNER_A } from "@/test/utils/team";
 import { COMPANY_A, jobPostingOf } from "@/test/utils/recruiter";
 import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
 
@@ -26,7 +27,7 @@ const sent = () =>
     .map((c) => c.chain[0].args[1]);
 
 const updatesOf = (status: string) =>
-  supabase
+  service
     .callsFor("job_postings")
     .filter((c) =>
       c.chain.some(
@@ -36,7 +37,7 @@ const updatesOf = (status: string) =>
 
 async function signIn(user = COMPANY_A.user) {
   supabase = createSupabaseMock({ user });
-  supabase.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  supabase.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(user, supabase.client);
 }
 
@@ -111,6 +112,20 @@ describe("triggerJobPostingRelevanceUpdate", () => {
         sleep_seconds: 0,
       },
     ]);
+  });
+
+  it("lets a member run matching, queued under the owner's id (TM-CON-001)", async () => {
+    supabase = createSupabaseMock({ user: MEMBER_A.user });
+    supabase.queueRpc("my_company_access", { data: MEMBER_A.membership, error: null });
+    supabase.queue("job_postings", {
+      data: { id: OWN.id, matching_status: "completed", updated_at: OWN.updated_at },
+      error: null,
+    });
+    await setRequestUser(MEMBER_A.user, supabase.client);
+
+    expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toMatchObject({ success: true });
+    expect(sent()[0]).toMatchObject({ message: { userId: COMPANY_A.user.id, jobId: OWN.id } });
+    expect(updatesOf("progress")[0].chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
   });
 
   it("marks the posting failed and reports it when the message can't be queued", async () => {

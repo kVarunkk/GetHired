@@ -32,6 +32,8 @@ beforeEach(async () => {
   getUserById.mockResolvedValue({ data: { user: { id: COMPANY_A.user.id, email: "recruiter@acme.dev" } }, error: null });
   vi.mocked(createServiceRoleClient).mockReturnValue(service.client);
   await setRequestUser(PUBLIC_APPLICANT.user, candidate.client);
+  // The sender is still on the team.
+  service.queue("company_members", { data: { user_id: COMPANY_A.user.id }, error: null });
   service.queue("user_info", { data: { full_name: "Ada Lovelace" }, error: null });
   service.queue("job_postings", { data: { title: OUTREACH_JOB.title }, error: null });
 });
@@ -144,5 +146,38 @@ describe("respondToOutreachAction (ORT-024)", () => {
       properties: { status: "interested", has_reason: false, blocked: false },
     });
     expect(JSON.stringify(vi.mocked(eventCaptureServer).mock.calls)).not.toContain("Next week");
+  });
+});
+
+describe("reply recipient after a member is removed (TMT-054, difference 7)", () => {
+  it("sends the reply to the owner when the sender is no longer a member", async () => {
+    const removed = "c3000000-0000-4000-8000-000000000001";
+    service.reset();
+    service.queue("company_members", { data: null, error: null });
+    service.queue("company_info", { data: { user_id: COMPANY_A.user.id }, error: null });
+    service.queue("user_info", { data: { full_name: "Ada Lovelace" }, error: null });
+    service.queue("job_postings", { data: { title: OUTREACH_JOB.title }, error: null });
+    answer(outreachOf("interested", { id: SENT.id, sender_user_id: removed, candidate_contact: "+91 98765 43210" }));
+
+    await respondToOutreachAction({ outreachId: SENT.id, status: "interested" });
+    await flushAfter();
+
+    expect(service.callsFor("company_members")[0].chain).toContainEqual({ method: "eq", args: ["user_id", removed] });
+    expect(getUserById).toHaveBeenCalledWith(COMPANY_A.user.id);
+    expect(getUserById).not.toHaveBeenCalledWith(removed);
+    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ toEmail: "recruiter@acme.dev" }));
+  });
+
+  it("sends nothing when the company has no owner to fall back to", async () => {
+    service.reset();
+    service.queue("company_members", { data: null, error: null });
+    service.queue("company_info", { data: null, error: null });
+    answer();
+
+    await respondToOutreachAction({ outreachId: SENT.id, status: "interested" });
+    await flushAfter();
+
+    expect(getUserById).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 });

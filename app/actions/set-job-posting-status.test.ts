@@ -5,6 +5,7 @@ import { assertLimit } from "@/helpers/billing/entitlements";
 import { EntitlementError } from "@/helpers/billing/errors";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { ADMIN_A, MEMBER_A, OWNER_A } from "@/test/utils/team";
 import { COMPANY_A, jobPostingOf } from "@/test/utils/recruiter";
 import { setJobPostingStatusAction } from "./set-job-posting-status";
 
@@ -23,7 +24,7 @@ const updates = (table: string) =>
 
 async function signIn(user = COMPANY_A.user, posting: unknown = POST) {
   rls = createSupabaseMock({ user });
-  rls.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   rls.queue("job_postings", { data: posting, error: null });
   await setRequestUser(user, rls.client);
 }
@@ -35,6 +36,28 @@ beforeEach(async () => {
 });
 
 describe("setJobPostingStatusAction", () => {
+  it("refuses a member closing a job (TM-REQ-004)", async () => {
+    rls = createSupabaseMock({ user: MEMBER_A.user });
+    rls.queueRpc("my_company_access", { data: MEMBER_A.membership, error: null });
+    await setRequestUser(MEMBER_A.user, rls.client);
+
+    expect(await setJobPostingStatusAction({ jobPostingId: POST.id, status: "inactive" })).toEqual({
+      ok: false,
+      error: "Your role can't open, pause or close job posts.",
+    });
+    expect(service.calls).toHaveLength(0);
+  });
+
+  it("lets an admin activate a job", async () => {
+    rls = createSupabaseMock({ user: ADMIN_A.user });
+    rls.queueRpc("my_company_access", { data: ADMIN_A.membership, error: null });
+    rls.queue("job_postings", { data: POST, error: null });
+    await setRequestUser(ADMIN_A.user, rls.client);
+
+    expect(await setJobPostingStatusAction({ jobPostingId: POST.id, status: "active" })).toEqual({ ok: true });
+    expect(updates("job_postings")).toHaveLength(1);
+  });
+
   it("refuses an applicant", async () => {
     await signIn(mockUser({ type: "applicant" }));
     expect(await setJobPostingStatusAction({ jobPostingId: POST.id, status: "active" })).toMatchObject({ ok: false });

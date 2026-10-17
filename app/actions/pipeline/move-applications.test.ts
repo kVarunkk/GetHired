@@ -4,6 +4,7 @@ import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { moveApplications } from "@/helpers/pipeline/move";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A } from "@/test/utils/recruiter";
 import { PIPELINE_JOB, pipelineAppOf, stageOf } from "@/test/utils/pipeline";
 import { PostHogEvent } from "@/utils/types";
@@ -24,7 +25,7 @@ let supabase: SupabaseMock;
 
 async function signIn(user = COMPANY_A.user) {
   supabase = createSupabaseMock({ user });
-  supabase.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  supabase.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(user, supabase.client);
 }
 

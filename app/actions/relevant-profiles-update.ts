@@ -20,7 +20,10 @@ import {
 export async function triggerJobPostingRelevanceUpdate(
   jobId: string,
 ): Promise<{ success: true; message: string } | { success: false; error: string }> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({
+    permission: "matching.run",
+    jobId: typeof jobId === "string" ? jobId : null,
+  });
   if (!auth.ok) return { success: false, error: auth.error };
   const { supabase, company, user } = auth;
 
@@ -42,36 +45,43 @@ export async function triggerJobPostingRelevanceUpdate(
     return { success: false, error: "Matching is already in progress for this job." };
   }
 
+  // Ownership is settled above. Any member may run matching, but job_postings
+  // writes are owner/admin under RLS (TM-REQ-004), so the status marks use the
+  // service role, scoped to the session company.
+  const service = createServiceRoleClient();
+
   // Marked before queueing, so a fast worker's completed/failed isn't overwritten.
-  const { error: markError } = await supabase
+  const { error: markError } = await service
     .from("job_postings")
     .update({
       matching_status: "progress",
       matching_error: null,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", jobId);
+    .eq("id", jobId)
+    .eq("company_id", company.id);
   if (markError) return { success: false, error: "Failed to start matching." };
 
-  // Ownership is settled above. The worker looks the company up by this
-  // user id, so it comes from the session, never from the client.
-  const { error: sendError } = await createServiceRoleClient()
+  // The worker looks the company up by its owner's user id (TM-CON-001), which
+  // comes from the session's membership, never from the client.
+  const { error: sendError } = await service
     .schema("pgmq_public")
     .rpc("send", {
       queue_name: RELEVANCE_PROFILES_QUEUE,
-      message: { userId: user.id, jobId } satisfies RelevanceProfilesMessage,
+      message: { userId: company.ownerUserId ?? user.id, jobId } satisfies RelevanceProfilesMessage,
       sleep_seconds: 0,
     });
 
   if (sendError) {
-    await supabase
+    await service
       .from("job_postings")
       .update({
         matching_status: "failed",
         matching_error: "Couldn't queue matching.",
         updated_at: new Date().toISOString(),
       })
-      .eq("id", jobId);
+      .eq("id", jobId)
+      .eq("company_id", company.id);
 
     await eventCaptureServerException({
       error: new Error(sendError.message),

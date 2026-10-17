@@ -1,6 +1,7 @@
 "use client";
 
-import AskAgentBox from "./AskAgentBox";
+import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import AskAgentBox from "../AskAgentBox";
 
 // The job post page's entry point to the recruiter agent (RA-REQ-009). The
 // job post's id goes in each prompt so the agent can pass it to its tools.
@@ -27,6 +28,7 @@ export default function AskAgentAboutJobPost({ job }: { job: JobPost }) {
     <AskAgentBox
       title="Ask the agent about this job"
       placeholder="Who should I interview first? Is the salary competitive?…"
+      basePath={COMPANY_AGENT_PATH}
       suggestions={jobPostSuggestions(job)}
       toPrompt={(question) => jobPostQuestionPrompt(job, question)}
     />

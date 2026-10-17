@@ -110,10 +110,14 @@ export async function GET(request: NextRequest) {
     // Same ref as the on-demand route, so a "Why?" for this row, or a retried
     // message, isn't charged twice.
     try {
-      await consumeEntitlement(job.company_id, "match_explanations", 1, {
-        type: "match_explanation",
-        id: row.id,
-      });
+      // The weekly digest's explanations: the system's work, so no actor (RP-REQ-043).
+      await consumeEntitlement(
+        job.company_id,
+        "match_explanations",
+        1,
+        { type: "match_explanation", id: row.id },
+        null,
+      );
     } catch (err) {
       if (!(err instanceof EntitlementError)) throw err;
       await admin

@@ -57,6 +57,8 @@ interface ApplicantsTableProps {
   stages?: StageOption[];
   rowSelection?: RowSelectionState;
   onRowSelectionChange?: (selection: RowSelectionState) => void;
+  /** The member's monthly screening cap from their role, when capped (RP-REQ-044). */
+  screeningCap?: { limit: number; remaining: number } | null;
 }
 
 type Row = TApplicationServer & {
@@ -90,6 +92,7 @@ export default function ApplicantsTable({
   stages,
   rowSelection = {},
   onRowSelectionChange,
+  screeningCap = null,
 }: ApplicantsTableProps) {
   const router = useRouter();
   const { handle: handleEntitlement, dialog } = useEntitlementError();
@@ -171,7 +174,10 @@ export default function ApplicantsTable({
           </Button>
         ),
         cell: ({ row }) => (
-          <div className="font-medium">
+          <div
+            className="max-w-[14rem] truncate font-medium"
+            title={row.original.applicantName || undefined}
+          >
             {row.original.applicantName || "N/A"}
           </div>
         ),
@@ -189,7 +195,7 @@ export default function ApplicantsTable({
           </Button>
         ),
         cell: ({ row }) => (
-          <div className="text-sm ">
+          <div className="max-w-[16rem] truncate text-sm" title={row.original.jobTitle}>
             <Link
               href={`/company/job-posts/${row.original.job_postings?.id}`}
               className="hover:underline underline underline-offset-4 sm:no-underline"
@@ -266,7 +272,7 @@ export default function ApplicantsTable({
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
-            {format(new Date(row.original.created_at), "PPP")}
+            {format(new Date(row.original.created_at), "d MMM yyyy")}
           </div>
         ),
       },
@@ -481,10 +487,17 @@ export default function ApplicantsTable({
             </Button>
           )}
           {jobPostId && unscreened > 0 && (
-            <Button variant="brand" onClick={screenUnscreened} disabled={screening}>
-              {screening && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Screen {unscreened} unscreened
-            </Button>
+            <>
+              {screeningCap && (
+                <span className="text-xs text-muted-foreground">
+                  {screeningCap.remaining} of your {screeningCap.limit} screenings left this month
+                </span>
+              )}
+              <Button variant="brand" onClick={screenUnscreened} disabled={screening}>
+                {screening && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Screen {unscreened} unscreened
+              </Button>
+            </>
           )}
         </div>
       </div>

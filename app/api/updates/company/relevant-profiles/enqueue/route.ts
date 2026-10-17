@@ -61,6 +61,7 @@ export async function GET() {
 
     const { data: jobs, error: jobsError } = await supabase
       .from("job_postings")
+      // company_info.user_id is the owner (TM-CON-001), who the worker runs as.
       .select("id, matched_at, matching_status, updated_at, company_info(user_id)")
       .eq("status", "active");
     if (jobsError) throw new Error(`Couldn't read job postings: ${jobsError.message}`);

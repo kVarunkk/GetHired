@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getPlanSummary } from "@/helpers/billing/entitlements";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
+import { MEMBER_A, OWNER_A, type MemberFixture } from "@/test/utils/team";
 import { GET } from "./route";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -10,10 +11,18 @@ vi.mock("@/helpers/billing/entitlements", () => ({ getPlanSummary: vi.fn() }));
 
 let db: SupabaseMock;
 
-beforeEach(() => {
-  db = createSupabaseMock({ user: COMPANY_A.user });
+function signInAs(member: MemberFixture) {
+  db = createSupabaseMock({ user: member.user });
   vi.mocked(createClient).mockResolvedValue(db.client);
-  db.queue("company_info", { data: { id: COMPANY_A.id, user_id: COMPANY_A.user.id }, error: null });
+  db.queueRpc("my_company_access", { data: member.membership, error: null });
+  db.queue("company_info", {
+    data: { id: COMPANY_A.id, user_id: COMPANY_A.user.id, company_favorites: [{ user_id: "u1" }] },
+    error: null,
+  });
+}
+
+beforeEach(() => {
+  signInAs(OWNER_A);
 });
 
 describe("GET /api/current-user (company)", () => {
@@ -35,5 +44,31 @@ describe("GET /api/current-user (company)", () => {
 
     expect(res.status).toBe(200);
     expect((await res.json()).profile.plan).toBeNull();
+  });
+
+  it("returns the company's id, favorites and the role for a member (TMT-023)", async () => {
+    signInAs(MEMBER_A);
+    vi.mocked(getPlanSummary).mockResolvedValue(null as never);
+
+    const body = await (await GET()).json();
+
+    expect(db.callsFor("company_info")[0].chain).toContainEqual({ method: "eq", args: ["id", COMPANY_A.id] });
+    expect(body.profile).toMatchObject({
+      id: COMPANY_A.id,
+      company_favorites: [{ user_id: "u1" }],
+      roleLabel: "Member",
+      access: { billingView: true, isOwner: false },
+    });
+  });
+
+  it("reports a missing profile for a company user without a membership", async () => {
+    db = createSupabaseMock({ user: MEMBER_A.user });
+    vi.mocked(createClient).mockResolvedValue(db.client);
+    db.queueRpc("my_company_access", { data: null, error: null });
+
+    const body = await (await GET()).json();
+
+    expect(body.profile).toBeNull();
+    expect(db.callsFor("company_info")).toHaveLength(0);
   });
 });

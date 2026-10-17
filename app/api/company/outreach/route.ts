@@ -12,7 +12,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * company, the same way as the composer. Used by the MCP server.
  */
 export async function POST(request: NextRequest) {
-  const auth = await requireCompany();
+  const auth = await requireCompany({ permission: "outreach.send" });
   if (!auth.ok) return auth.response;
 
   const body = await request.json().catch(() => null);
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
 /** GET /api/company/outreach?jobPostId&status&cursor: the company's outreach, 25 a page. */
 export async function GET(request: NextRequest) {
-  const auth = await requireCompany();
+  const auth = await requireCompany({ permission: "outreach.view" });
   if (!auth.ok) return auth.response;
 
   const params = request.nextUrl.searchParams;

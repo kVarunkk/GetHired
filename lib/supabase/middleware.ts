@@ -108,6 +108,9 @@ export async function updateSession(request: NextRequest) {
     // Billing: the public pricing page, the daily cron (X-Internal-Secret) and
     // the admin grant route (x-api-key). Each route checks its own secret.
     "/pricing/companies",
+    // Recruiter teams: the invite landing page. Signed out it offers sign-up
+    // and sign-in; the page itself handles every account state.
+    "/company/join",
     "/api/updates/billing",
     "/api/internal/billing/grant",
     "/privacy-policy",
@@ -168,6 +171,10 @@ export async function updateSession(request: NextRequest) {
     pathname.length > "/remote-jobs/".length;
 
   const isSitemapPage = pathname.startsWith("/sitemap/");
+  // Exempt from the company-only and company-onboarding redirects below, so an
+  // applicant sees why they can't join and an invitee who hasn't accepted yet
+  // can (teams difference 4).
+  const isCompanyJoinPath = pathname === "/company/join";
 
   const isAuthPath = authPaths.some((path) => pathname.startsWith(`${path}`));
   const isPublicPath =
@@ -285,7 +292,8 @@ export async function updateSession(request: NextRequest) {
     // --- Restrict Access to Company Routes ---
     if (
       (pathname.startsWith("/company") || isCompanyOnboardingPath) &&
-      !isCompany
+      !isCompany &&
+      !isCompanyJoinPath
     ) {
       const url = request.nextUrl.clone();
       // Users without a role yet can't open the agent, so they get the job board.
@@ -295,7 +303,7 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    if (pathname.startsWith("/company") && !isCompanyOnboarded && isCompany) {
+    if (pathname.startsWith("/company") && !isCompanyOnboarded && isCompany && !isCompanyJoinPath) {
       const url = request.nextUrl.clone();
       url.pathname = "/get-started";
       deleteSearchParams(url);
@@ -304,9 +312,11 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // --- Restrict Access to Applicant only routes(dashboard, opportunities, get-started, agent, interview) ---
+    // --- Restrict Access to Applicant only routes(dashboard, settings, opportunities, get-started, agent, interview) ---
     if (
       (pathname.startsWith("/dashboard") ||
+        pathname === "/settings" ||
+        pathname.startsWith("/settings/") ||
         pathname.startsWith("/opportunities") ||
         isApplicantOnboardingPath ||
         isResumeReviewPath ||

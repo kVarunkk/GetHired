@@ -32,7 +32,10 @@ import { changeCompanyPlanAction } from "@/app/actions/change-company-plan";
 import { cancelCompanyPlanAction } from "@/app/actions/cancel-company-plan";
 import { resumeCompanyPlanAction } from "@/app/actions/resume-company-plan";
 import { openBillingPortalAction } from "@/app/actions/open-billing-portal";
+import type { MemberUsageRow } from "@/helpers/billing/member-usage";
+import { BILLING_FORBIDDEN } from "@/helpers/billing/access";
 import PlanCards from "./PlanCards";
+import MemberUsage from "./MemberUsage";
 
 export type CreditPack = {
   id: string;
@@ -61,6 +64,10 @@ type BillingOverviewProps = {
   history: BillingHistoryRow[];
   highlightPlan?: string | null;
   checkoutDone?: boolean;
+  /** Owners manage billing; anyone else with billing.view sees it read-only (RP-DEC-003). */
+  canManage?: boolean;
+  /** Per-member usage (RP-REQ-044); null when it couldn't be read. */
+  memberUsage?: MemberUsageRow[] | null;
 };
 
 const formatDate = (iso: string) =>
@@ -127,6 +134,8 @@ export default function BillingOverview({
   history,
   highlightPlan = null,
   checkoutDone = false,
+  canManage = true,
+  memberUsage = null,
 }: BillingOverviewProps) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -294,39 +303,43 @@ export default function BillingOverview({
             {scheduledPlan && ` Moves to ${scheduledPlan} at the end of this period.`}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {billing.cancelAtPeriodEnd && billing.hasPaidSubscription && (
-            <Button
-              variant="brand"
-              disabled={busy !== null}
-              onClick={() => run("resume", resumeCompanyPlanAction, () => toast.success("Your plan will renew."))}
-            >
-              Resume
-            </Button>
-          )}
-          {billing.hasBillingPortal && (
-            <Button
-              variant="outline"
-              disabled={busy !== null}
-              onClick={() =>
-                run("portal", openBillingPortalAction, (r) => window.open((r as { url: string }).url, "_blank", "noopener"))
-              }
-            >
-              <CreditCard className="h-4 w-4" />
-              Payment method and invoices
-              <ExternalLink className="h-3.5 w-3.5" />
-            </Button>
-          )}
-          {billing.hasPaidSubscription && !billing.cancelAtPeriodEnd && (
-            <Button
-              variant="ghost"
-              disabled={busy !== null}
-              onClick={confirmCancel}
-            >
-              Cancel plan
-            </Button>
-          )}
-        </div>
+        {canManage ? (
+          <div className="flex flex-wrap gap-2">
+            {billing.cancelAtPeriodEnd && billing.hasPaidSubscription && (
+              <Button
+                variant="brand"
+                disabled={busy !== null}
+                onClick={() => run("resume", resumeCompanyPlanAction, () => toast.success("Your plan will renew."))}
+              >
+                Resume
+              </Button>
+            )}
+            {billing.hasBillingPortal && (
+              <Button
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() =>
+                  run("portal", openBillingPortalAction, (r) => window.open((r as { url: string }).url, "_blank", "noopener"))
+                }
+              >
+                <CreditCard className="h-4 w-4" />
+                Payment method and invoices
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {billing.hasPaidSubscription && !billing.cancelAtPeriodEnd && (
+              <Button
+                variant="ghost"
+                disabled={busy !== null}
+                onClick={confirmCancel}
+              >
+                Cancel plan
+              </Button>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">{BILLING_FORBIDDEN}</p>
+        )}
       </section>
 
       <section className="flex flex-col gap-3">
@@ -337,6 +350,8 @@ export default function BillingOverview({
           ))}
         </ul>
       </section>
+
+      {memberUsage && memberUsage.length > 0 && <MemberUsage rows={memberUsage} />}
 
       <section id="credits" className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-4">
@@ -369,7 +384,7 @@ export default function BillingOverview({
             ))}
           </ul>
         )}
-        {packs.length > 0 && (
+        {canManage && packs.length > 0 && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {packs.map((pack) => (
               <div key={pack.id} className="flex flex-col gap-3 rounded-xl border p-4">
@@ -393,17 +408,19 @@ export default function BillingOverview({
         )}
       </section>
 
-      <section id="plans" className="flex flex-col gap-3">
-        <h3 className="text-lg font-semibold tracking-tight">Plans</h3>
-        <PlanCards
-          plans={plans}
-          currentSlug={billing.subscribedTierSlug ?? billing.tier.slug}
-          onSelect={selectPlan}
-          highlightSlug={highlightPlan}
-          defaultCurrency={billing.currency === "INR" ? "INR" : "USD"}
-          busySlug={busy}
-        />
-      </section>
+      {canManage && (
+        <section id="plans" className="flex flex-col gap-3">
+          <h3 className="text-lg font-semibold tracking-tight">Plans</h3>
+          <PlanCards
+            plans={plans}
+            currentSlug={billing.subscribedTierSlug ?? billing.tier.slug}
+            onSelect={selectPlan}
+            highlightSlug={highlightPlan}
+            defaultCurrency={billing.currency === "INR" ? "INR" : "USD"}
+            busySlug={busy}
+          />
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <h3 className="text-lg font-semibold tracking-tight">Billing history</h3>

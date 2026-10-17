@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
-import { getEntitlements } from "@/helpers/billing/entitlements";
+import { getEntitlements, getMemberLimit } from "@/helpers/billing/entitlements";
+import { scopeToJobs } from "@/helpers/companies/job-scope";
 import { outreachStatusFor, type OutreachBadge } from "@/helpers/outreach/list";
 import { firstName } from "@/helpers/outreach/linkify";
 import { loadVisibleCandidates } from "@/helpers/profiles/visible-candidates";
@@ -14,12 +15,14 @@ export type ComposerTemplate = { id: string; name: string; subject: string; body
 export type ComposerContext = {
   candidateFirstName: string | null;
   acceptsOutreach: boolean;
-  /** The company's active jobs, for the job picker. */
+  /** The active jobs the member can send outreach for, for the job picker (RPT-053). */
   jobs: { id: string; title: string }[];
   /** Pipeline templates with purpose `custom` (OR-REQ-001). */
   templates: ComposerTemplate[];
   /** This month's outreach allowance; `remaining: null` is unlimited. */
   quota: { remaining: number | null; amount: number | null } | null;
+  /** The member's own monthly outreach cap from their role, or null when uncapped (RP-REQ-044). */
+  memberCap: { limit: number; remaining: number } | null;
   companyName: string | null;
   schedulingLink: string | null;
   senderName: string | null;
@@ -35,7 +38,7 @@ export type LoadComposerResult = ({ ok: true } & ComposerContext) | { ok: false;
 export async function loadOutreachComposerAction(
   input: z.input<typeof inputSchema>,
 ): Promise<LoadComposerResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "outreach.send" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);
@@ -51,13 +54,12 @@ export async function loadOutreachComposerAction(
   const candidate = candidates.get(candidateId);
   if (!candidate) return { ok: false, error: "Candidate not found." };
 
-  const [jobs, templates, companyRow, latest, quota] = await Promise.all([
-    supabase
-      .from("job_postings")
-      .select("id, title")
-      .eq("company_id", company.id)
-      .eq("status", "active")
-      .order("created_at", { ascending: false }),
+  const [jobs, templates, companyRow, latest, quota, memberCap] = await Promise.all([
+    scopeToJobs(
+      supabase.from("job_postings").select("id, title").eq("company_id", company.id).eq("status", "active"),
+      company,
+      "outreach.send",
+    ).order("created_at", { ascending: false }),
     supabase
       .from("company_email_templates")
       .select("id, name, subject, body_md")
@@ -69,6 +71,9 @@ export async function loadOutreachComposerAction(
     getEntitlements(company.id)
       .then((e) => ({ remaining: e.entitlements.outreach.remaining, amount: e.entitlements.outreach.amount }))
       .catch(() => null),
+    getMemberLimit(company.id, "outreach", user.id)
+      .then((cap) => (cap ? { limit: cap.limit, remaining: cap.remaining } : null))
+      .catch(() => null),
   ]);
 
   return {
@@ -78,6 +83,7 @@ export async function loadOutreachComposerAction(
     jobs: jobs.data ?? [],
     templates: templates.data ?? [],
     quota,
+    memberCap,
     companyName: company.name,
     schedulingLink: companyRow.data?.scheduling_url ?? null,
     senderName: (user.user_metadata?.full_name as string | undefined) ?? null,

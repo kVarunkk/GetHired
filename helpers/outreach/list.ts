@@ -14,6 +14,8 @@ export type CompanyOutreachItem = {
   subject: string;
   status: OutreachStatus;
   source: "manual" | "agent";
+  /** Who sent it, as stored at send time (teams difference 8); kept after they leave. */
+  senderName: string | null;
   sentAt: string;
   respondedAt: string | null;
   expiresAt: string;
@@ -88,7 +90,7 @@ export async function listCompanyOutreach(
     supabase
       .from("candidate_outreach")
       .select(
-        "id, candidate_user_id, job_post_id, subject, status, source, sent_at, responded_at, expires_at, job_postings(title)",
+        "id, candidate_user_id, job_post_id, subject, status, source, sender_name, sent_at, responded_at, expires_at, job_postings(title)",
       ),
   );
   if (status) query = query.eq("status", status);
@@ -128,6 +130,7 @@ export async function listCompanyOutreach(
       subject: r.subject,
       status: r.status as OutreachStatus,
       source: r.source as "manual" | "agent",
+      senderName: r.sender_name,
       sentAt: r.sent_at,
       respondedAt: r.responded_at,
       expiresAt: r.expires_at,

@@ -68,7 +68,7 @@ export default function ApiKeysTable({ data }: ApiKeysTableProps) {
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
-            {format(new Date(row.original.created_at || ""), "PPP")}
+            {format(new Date(row.original.created_at || ""), "d MMM yyyy")}
           </div>
         ),
       },
@@ -76,7 +76,12 @@ export default function ApiKeysTable({ data }: ApiKeysTableProps) {
         accessorKey: "name",
         header: "Name",
         cell: ({ row }) => (
-          <div className="text-sm font-medium">{row.original.name}</div>
+          <div
+            className="max-w-[16rem] truncate text-sm font-medium"
+            title={row.original.name ?? undefined}
+          >
+            {row.original.name}
+          </div>
         ),
       },
       {
@@ -93,7 +98,7 @@ export default function ApiKeysTable({ data }: ApiKeysTableProps) {
         cell: ({ row }) => (
           <div className="text-sm ">
             {row.original.last_used_at
-              ? format(new Date(row.original.last_used_at), "PPP")
+              ? format(new Date(row.original.last_used_at), "d MMM yyyy")
               : "-"}
           </div>
         ),

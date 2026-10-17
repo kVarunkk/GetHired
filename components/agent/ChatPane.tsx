@@ -72,6 +72,7 @@ export default function ChatPane({
   initialMessages,
   initialDraft,
   messagesUsedToday = 0,
+  memberCap = null,
   onFinish,
 }: {
   role?: AgentRoleId;
@@ -80,6 +81,8 @@ export default function ChatPane({
   initialDraft?: string;
   /** The user's messages so far today, toward the daily cap. */
   messagesUsedToday?: number;
+  /** The member's monthly agent message cap from their role, when capped (RP-REQ-044). */
+  memberCap?: { limit: number; remaining: number } | null;
   onFinish?: () => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
@@ -93,6 +96,8 @@ export default function ChatPane({
   if (usage.loaded !== messagesUsedToday) setUsage({ loaded: messagesUsedToday, sent: 0 });
   const ui = AGENT_ROLE_UI[role];
   const dailyCapReached = usage.loaded + usage.sent >= ui.dailyCap;
+  // Reloaded with messagesUsedToday, so `sent` counts from the same point.
+  const capLeft = memberCap ? Math.max(memberCap.remaining - usage.sent, 0) : null;
 
   const transport = useMemo(
     () =>
@@ -335,6 +340,11 @@ export default function ChatPane({
         <ScrollToBottomButton visible={!atBottom} onClick={scrollToLatest} />
       </div>
 
+      {memberCap && capLeft !== null && (
+        <p className="px-4 pb-1 text-center text-xs text-muted-foreground">
+          {capLeft} of your {memberCap.limit} agent messages left this month
+        </p>
+      )}
       <Composer busy={busy} onSend={send} onStop={handleStop} initialDraft={initialDraft} />
     </div>
   );

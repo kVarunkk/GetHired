@@ -4,6 +4,7 @@ import { render } from "react-email";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import OutreachEmail from "@/emails/OutreachEmail";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
+import { can } from "@/helpers/companies/permissions";
 import {
   consumeEntitlement,
   holdEntitlement,
@@ -23,7 +24,7 @@ import { PostHogEvent } from "@/utils/types";
 import type { Database } from "@/utils/types/database.types";
 import type { CandidateOutreach, OutreachSource } from "@/utils/types/outreach.types";
 import { sendOutreachSchema } from "./config";
-import { mapOutreachError, type OutreachErrorCode } from "./errors";
+import { forbiddenOutreachError, mapOutreachError, type OutreachErrorCode } from "./errors";
 
 export type OutreachDeps = {
   /** The session user's RLS client: send_candidate_outreach checks membership with it. */
@@ -59,11 +60,17 @@ export async function sendOutreach(
   }
   const { candidateId, jobPostId, subject, message } = parsed.data;
 
+  // RPT-053: the RPC checks the job scope too, but only after the hold.
+  if (!can(company, "outreach.send", jobPostId ?? null)) {
+    const denied = forbiddenOutreachError();
+    return { ok: false, error: denied.message, code: denied.code, status: denied.status };
+  }
+
   const id = randomUUID();
   const ref: EntitlementRef = { type: "outreach", id };
 
   try {
-    await holdEntitlement(company.id, "outreach", 1, ref);
+    await holdEntitlement(company.id, "outreach", 1, ref, user.id);
   } catch (err) {
     if (err instanceof EntitlementError) return { ok: false, ...toEntitlementActionError(err) };
     console.error("[outreach] hold failed:", err);
@@ -134,7 +141,7 @@ async function emailCandidate(company: MyCompany, outreach: CandidateOutreach): 
         subject={outreach.subject}
         message={outreach.message}
         respondUrl={`${base}/opportunities/${outreach.id}`}
-        settingsUrl={`${base}/dashboard`}
+        settingsUrl={`${base}/settings`}
       />
     );
     const [htmlContent, textContent] = await Promise.all([

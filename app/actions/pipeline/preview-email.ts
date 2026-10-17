@@ -37,7 +37,7 @@ export type PreviewEmailResult =
 export async function previewEmailAction(
   input: z.input<typeof inputSchema>,
 ): Promise<PreviewEmailResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "pipeline.move" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);

@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import ProfileFavoriteStar from "@/components/ProfileFavoriteStar";
 import ProfileActiveApplication from "@/components/ProfileActiveApplications";
-import SelectProfile from "@/components/SelectProfile";
 import { GitHubLogoIcon, LinkedInLogoIcon } from "@radix-ui/react-icons";
 import { Mail } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
@@ -36,14 +35,14 @@ export default function ProfileClientHydrator({
     (fav: { user_id: string }) => fav.user_id === applicantProfile?.user_id,
   );
   const companyId = currentUserData?.profile?.id;
-  const jobPostings = currentUserData?.profile?.job_postings;
+  const applications = applicantProfile?.applications ?? [];
 
   return (
-    <div className="flex flex-col w-full p-4 gap-8">
-      <div className="flex items-center justify-between flex-wrap gap-5">
-        <div className="flex flex-col gap-2">
+    <div className="flex flex-col w-full min-w-0 gap-6">
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div className="flex min-w-0 flex-col gap-2">
           <div className="flex items-center gap-1">
-            <h1 className="text-3xl font-medium">
+            <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[28px]">
               {applicantProfile?.full_name}
             </h1>
             {isLoading ? (
@@ -82,13 +81,6 @@ export default function ProfileClientHydrator({
               </Link>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-5">
-          <SelectProfile
-            jobPostings={jobPostings}
-            companyId={companyId}
-            applicantProfile={applicantProfile}
-          />
         </div>
       </div>
 
@@ -204,19 +196,28 @@ export default function ProfileClientHydrator({
         {/* Right Panel: Job and Application History */}
         <div className="md:col-span-2 space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Application History</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+              <CardTitle className="text-base font-semibold">
+                Applications to your jobs
+              </CardTitle>
+              {applications.length > 0 && (
+                <Badge variant="secondary" className="tabular-nums">
+                  {applications.length}
+                </Badge>
+              )}
             </CardHeader>
-            <CardContent className="space-y-6">
-              {applicantProfile?.applications &&
-              applicantProfile?.applications.length > 0 ? (
-                applicantProfile?.applications.map((app) => (
-                  <ProfileActiveApplication key={app.id} app={app} />
-                ))
+            <CardContent>
+              {applications.length > 0 ? (
+                <ul className="divide-y">
+                  {applications.map((app) => (
+                    <ProfileActiveApplication key={app.id} app={app} />
+                  ))}
+                </ul>
               ) : (
-                <p className="text-muted-foreground w-full text-center text-sm">
-                  No application history found.
-                </p>
+                <div className="rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+                  {applicantProfile?.full_name || "This candidate"} hasn&apos;t
+                  applied to any of your jobs yet.
+                </div>
               )}
             </CardContent>
           </Card>

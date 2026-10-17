@@ -22,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowUpDown, ChevronRight, XCircle } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { useJobPostingStatus } from "@/hooks/useJobPostingStatus";
+import RoleLocked from "./team/RoleLocked";
+import { forbiddenMessage } from "@/helpers/companies/permissions";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -36,15 +38,32 @@ import { TCompanyIdPageData } from "@/utils/types/jobs.types";
 
 interface JobPostingsTableProps {
   data: IJobPost[];
+  /** Job ids whose status switch the viewer may use (jobs.publish, RP-REQ-016). Omitted: all. */
+  publishable?: string[];
 }
 
 export const JobStatusSwitch = ({
   job,
+  disabled = false,
 }: {
   job: IJobPost | TCompanyIdPageData;
+  /** Without jobs.publish on this job (RP-REQ-016). */
+  disabled?: boolean;
 }) => {
   const { checkedState, handleUpdateStatus, upgradeDialog } =
     useJobPostingStatus(job.status, job);
+
+  if (disabled) {
+    return (
+      <RoleLocked reason={forbiddenMessage("jobs.publish")}>
+        <Switch
+          checked={checkedState}
+          disabled
+          aria-label={checkedState ? "Job is active" : "Job is inactive"}
+        />
+      </RoleLocked>
+    );
+  }
 
   return (
     <div className="flex items-center">
@@ -58,7 +77,10 @@ export const JobStatusSwitch = ({
   );
 };
 
-export default function JobPostingsTable({ data }: JobPostingsTableProps) {
+export default function JobPostingsTable({
+  data,
+  publishable,
+}: JobPostingsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<
     import("@tanstack/react-table").ColumnFiltersState
@@ -85,7 +107,9 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ row }) => <JobStatusSwitch job={row.original} />,
+        cell: ({ row }) => (
+          <JobStatusSwitch job={row.original} disabled={publishable ? !publishable.includes(row.original.id) : false} />
+        ),
         filterFn: "equals",
       },
       {
@@ -102,7 +126,8 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
         cell: ({ row }) => (
           <ModifiedLink
             href={`/company/job-posts/${row.original.id}`}
-            className="font-medium hover:underline"
+            className="block max-w-[16rem] truncate font-medium hover:underline"
+            title={row.original.title}
           >
             {row.original.title}
           </ModifiedLink>
@@ -113,7 +138,12 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
         accessorKey: "location",
         header: "Location",
         cell: ({ row }) => (
-          <div className="text-sm ">{row.original.location.join(", ")}</div>
+          <div
+            className="max-w-[12rem] truncate text-sm"
+            title={row.original.location.join(", ")}
+          >
+            {row.original.location.join(", ")}
+          </div>
         ),
       },
       {
@@ -168,7 +198,7 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
         ),
       },
     ],
-    [],
+    [publishable],
   );
 
   const table = useReactTable({

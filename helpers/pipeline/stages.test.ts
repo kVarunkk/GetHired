@@ -10,9 +10,10 @@ import {
   renameStage,
   reorderStages,
 } from "./stages";
+import { OWNER_A } from "@/test/utils/team";
 
 let supabase: SupabaseMock;
-const ctx = () => ({ supabase: supabase.client, company: COMPANY_A.info });
+const ctx = () => ({ supabase: supabase.client, company: OWNER_A.myCompany });
 
 const chainOf = (target: string, i = 0) => supabase.callsFor(target)[i]?.chain ?? [];
 const argsOf = (target: string, method: string, i = 0) =>

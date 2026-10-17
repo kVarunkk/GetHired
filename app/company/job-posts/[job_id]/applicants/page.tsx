@@ -6,6 +6,7 @@ import FunnelStrip from "@/components/pipeline/FunnelStrip";
 import PipelineBoard from "@/components/pipeline/PipelineBoard";
 import PipelineList from "@/components/pipeline/PipelineList";
 import { isUuid } from "@/helpers/agent/auth";
+import { getMemberLimit } from "@/helpers/billing/entitlements";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { loadBoard } from "@/helpers/pipeline/board";
 import { getJobFunnel } from "@/helpers/pipeline/funnel";
@@ -54,7 +55,7 @@ export default async function JobApplicantsPage({
     if (error) throw error;
     if (!job) notFound();
 
-    const [{ data: stages, error: stagesError }, { data: templates }, funnel] = await Promise.all([
+    const [{ data: stages, error: stagesError }, { data: templates }, funnel, screeningCap] = await Promise.all([
       supabase
         .from("pipeline_stages")
         .select("id, name, kind")
@@ -71,6 +72,8 @@ export default async function JobApplicantsPage({
         console.error("Failed to load the job funnel:", err);
         return null;
       }),
+      // RP-REQ-044: the member's own cap, next to the Screen button.
+      getMemberLimit(company.id, "screenings", user!.id).catch(() => null),
     ]);
     if (stagesError) throw stagesError;
 
@@ -127,6 +130,7 @@ export default async function JobApplicantsPage({
             jobPostId={job.id}
             stages={stages ?? []}
             templates={templates ?? []}
+            screeningCap={screeningCap && { limit: screeningCap.limit, remaining: screeningCap.remaining }}
           />
         )}
       </div>

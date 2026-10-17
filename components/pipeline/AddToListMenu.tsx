@@ -8,6 +8,15 @@ import { saveTalentListAction } from "@/app/actions/pipeline/save-talent-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/utils/utils";
 
 type ListItem = { id: string; name: string; memberCount: number; hasCandidate: boolean };
@@ -17,15 +26,23 @@ type ListItem = { id: string; name: string; memberCount: number; hasCandidate: b
  * company's talent lists and creates new ones. A talent-pool candidate enters
  * the pipeline by answering an outreach, never through a fake application
  * (PL-REQ-012), so the footer offers "Reach out" (OR-TASK-003).
+ *
+ * A popover from `sm` up and a bottom drawer below it: on a phone the "New
+ * list" field brings up the keyboard, which a bottom sheet copes with and an
+ * anchored popover doesn't (see components/ui/responsive-dialog.tsx).
  */
 export default function AddToListMenu({
   candidateUserId,
   onReachOut,
+  className,
 }: {
   candidateUserId: string;
   /** Opens the outreach composer. Without it, the footer isn't shown. */
   onReachOut?: () => void;
+  /** For the trigger button. */
+  className?: string;
 }) {
+  const isDesktop = useMediaQuery("(min-width: 640px)");
   const [open, setOpen] = useState(false);
   const [lists, setLists] = useState<ListItem[] | null>(null);
   const [newName, setNewName] = useState("");
@@ -79,21 +96,20 @@ export default function AddToListMenu({
     }
   };
 
-  return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (next && lists === null) void load();
-      }}
-    >
-      <PopoverTrigger asChild>
-        <Button variant="outline">
-          <ListPlus className="mr-2 h-4 w-4" />
-          Add to list
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="flex w-72 flex-col gap-3">
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next && lists === null) void load();
+  };
+
+  const trigger = (
+    <Button variant="outline" className={className}>
+      <ListPlus className="mr-2 h-4 w-4" />
+      Add to list
+    </Button>
+  );
+
+  const panel = (
+    <>
         {lists === null ? (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Loading lists" />
         ) : (
@@ -146,6 +162,29 @@ export default function AddToListMenu({
             </Button>
           </div>
         )}
+    </>
+  );
+
+  if (!isDesktop) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+        <DrawerContent>
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Add to list</DrawerTitle>
+            <DrawerDescription>Save this candidate to your talent lists.</DrawerDescription>
+          </DrawerHeader>
+          <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto px-4 pb-6">{panel}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverContent align="end" className="flex w-72 flex-col gap-3">
+        {panel}
       </PopoverContent>
     </Popover>
   );

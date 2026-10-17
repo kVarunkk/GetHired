@@ -3,12 +3,14 @@ import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-moc
 import { COMPANY_A, COMPANY_B, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import { pipelineAppOf, stageOf, templateOf } from "@/test/utils/pipeline";
 import { sendCompanyMessage } from "@/helpers/email/send-company-message";
-import { MAX_MOVE_APPLICATIONS, PL_DAILY_EMAIL_CAP, moveApplications, previewMove } from "./move";
+import { MAX_MOVE_APPLICATIONS, PL_DAILY_EMAIL_CAP, actorName, moveApplications, previewMove } from "./move";
+import { MEMBER_A, OWNER_A } from "@/test/utils/team";
+import { mockUser } from "@/test/utils/auth";
 
 vi.mock("@/helpers/email/send-company-message", () => ({ sendCompanyMessage: vi.fn() }));
 
 let supabase: SupabaseMock;
-const ctx = () => ({ supabase: supabase.client, company: COMPANY_A.info, user: COMPANY_A.user });
+const ctx = () => ({ supabase: supabase.client, company: OWNER_A.myCompany, user: COMPANY_A.user });
 
 const INTERVIEW = stageOf("interview");
 const SCREENING = stageOf("screening");
@@ -526,5 +528,22 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
       skipped: [{ id: app.id, reason: "email_failed" }],
     });
     expect(sendCompanyMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe("actorName (TMT-060, teams difference 8)", () => {
+  it("uses the member's display name first", () => {
+    expect(actorName(MEMBER_A.user, MEMBER_A.myCompany)).toBe("Max Member");
+  });
+
+  it("falls back to the account name, then the email's local part", () => {
+    const company = { ...MEMBER_A.myCompany, displayName: null };
+    expect(actorName(mockUser({ email: "max@acme.dev", user_metadata: { full_name: "Max M" } }), company)).toBe("Max M");
+    expect(actorName(mockUser({ email: "max.m@acme.dev" }), company)).toBe("max.m");
+  });
+
+  it("never uses the company name", () => {
+    const company = { ...MEMBER_A.myCompany, displayName: null, name: "Acme" };
+    expect(actorName(mockUser({ email: "" }), company)).toBeNull();
   });
 });

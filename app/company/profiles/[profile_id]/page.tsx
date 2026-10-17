@@ -176,23 +176,23 @@ export default async function ProfilePage({
     }
 
     return (
-      <div className="flex flex-col gap-4 w-full p-4 mb-20">
+      <div className="flex flex-col gap-6 w-full min-w-0 p-4 mb-20">
         <div className="flex items-center justify-between gap-2">
           <Link
             href="/company/profiles"
-            className="text-muted-foreground hover:text-primary transition-colors w-fit p-2 pl-0"
+            aria-label="Back to candidates"
+            className="shrink-0 text-muted-foreground hover:text-primary transition-colors w-fit p-2 pl-0"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div className="flex items-center gap-2">
-            <FindSimilarCandidates candidateId={profile_id} />
-            <ReachOutButton
-              candidateId={profile_id}
-              candidateName={profile.full_name}
-              status={badges[profile_id]?.status ?? null}
-              defaultJobPostId={jobPostId}
-            />
-          </div>
+          <ReachOutButton
+            candidateId={profile_id}
+            candidateName={profile.full_name}
+            status={badges[profile_id]?.status ?? null}
+            outreachId={badges[profile_id]?.id ?? null}
+            defaultJobPostId={jobPostId}
+            secondaryAction={<FindSimilarCandidates candidateId={profile_id} />}
+          />
         </div>
 
         <ProfileMatches

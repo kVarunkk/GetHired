@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireCompany } from "@/helpers/companies/require-company";
+import { companyAllows, requireCompany } from "@/helpers/companies/require-company";
 import { isUuid } from "@/helpers/agent/auth";
 import { toEntitlementResponse } from "@/helpers/billing/errors";
 import { queueJobScreenings } from "@/helpers/matching/queue-screenings";
@@ -22,11 +22,14 @@ export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ job_id: string }> },
 ) {
-  const auth = await requireCompany();
+  const auth = await requireCompany({ permission: "applicants.screen" });
   if (!auth.ok) return auth.response;
 
   const { job_id: jobPostId } = await params;
   if (!isUuid(jobPostId)) return notFound();
+  // RP-RISK-003: the worker uses the service role, so job scope is checked here.
+  const denied = companyAllows(auth.company, { permission: "applicants.screen", jobId: jobPostId });
+  if (denied) return NextResponse.json({ error: denied }, { status: 403 });
 
   const result = await queueJobScreenings(auth, jobPostId);
   if (result.ok) return NextResponse.json({ queued: result.queued });

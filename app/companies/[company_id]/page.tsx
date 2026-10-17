@@ -1,5 +1,6 @@
 import BackButton from "@/components/BackButton";
 import { createClient } from "@/lib/supabase/server";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
 import ErrorComponent from "@/components/Error";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
@@ -20,11 +21,7 @@ async function fetchCompanyData(company_id: string) {
   let isCompanyUser = false;
 
   if (user && user.id) {
-    const { data: companyData } = await supabase
-      .from("company_info")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
+    const companyData = await getMyCompany(supabase, user).catch(() => null);
 
     if (companyData) {
       isCompanyUser = true;

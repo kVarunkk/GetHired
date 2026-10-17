@@ -11,7 +11,7 @@ import { sendOutreach, type SendOutreachResult } from "@/helpers/outreach/send";
  * input is validated in `sendOutreach`.
  */
 export async function sendOutreachAction(input: SendOutreachInput): Promise<SendOutreachResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "outreach.send" });
   if (!auth.ok) return { ok: false, error: auth.error, code: "NOT_MEMBER", status: 403 };
 
   const result = await sendOutreach(auth, input, { source: "manual" });

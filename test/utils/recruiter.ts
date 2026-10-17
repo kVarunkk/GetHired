@@ -74,6 +74,7 @@ function company(n: number, name: string): CompanyFixture {
     tag_line: null,
     website: `https://${name.toLowerCase()}.dev`,
     scheduling_url: null,
+    default_role_id: `f3000000-0000-4000-8000-00000000000${n}`,
     notify_new_applicants: "daily",
     notify_weekly_matches: true,
     last_applicant_digest_at: null,

@@ -4,6 +4,7 @@ import { wrapInSandbox } from "@/helpers/ai/security";
 import { getCompanyFunnel, getJobFunnel, NEEDS_ATTENTION_DAYS } from "@/helpers/pipeline/funnel";
 import { moveApplications, type MoveEmail } from "@/helpers/pipeline/move";
 import { addNote, listNotes, ratingSummary } from "@/helpers/pipeline/notes";
+import { mentionsToText } from "@/helpers/team/mentions";
 import { listStages } from "@/helpers/pipeline/stages";
 import { statusForKind } from "@/helpers/pipeline/status-map";
 import { addToTalentList, createTalentList, listTalentLists } from "@/helpers/pipeline/talent-lists";
@@ -166,7 +167,7 @@ export function createPipelineTools(ctx: RecruiterToolContext) {
               rating: note.rating,
               createdAt: note.created_at,
               // Team-written, but notes may quote candidates (RA-SEC-003).
-              body: wrapInSandbox("candidate_note", note.body.slice(0, RA_NOTE_EXCERPT_MAX_CHARS)),
+              body: wrapInSandbox("candidate_note", mentionsToText(note.body).slice(0, RA_NOTE_EXCERPT_MAX_CHARS)),
             })),
           };
         }),

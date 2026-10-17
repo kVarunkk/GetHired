@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useRef, useState, type ComponentProps } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { formatDistanceToNow } from "date-fns";
 import { Loader2 } from "lucide-react";
@@ -25,6 +25,14 @@ import {
 } from "@/helpers/pipeline/ratings";
 import type { Tables } from "@/utils/types/database.types";
 import { cn } from "@/utils/utils";
+import MemberAvatar from "@/components/team/MemberAvatar";
+import {
+  activeMentionQuery,
+  filterMentionable,
+  mentionToken,
+  mentionTokenPattern,
+  type MentionableMember,
+} from "@/helpers/team/mentions";
 
 type Note = Tables<"candidate_notes">;
 
@@ -32,20 +40,139 @@ const MAX_LENGTH = 5000;
 const NO_RATING = "none";
 const RATINGS = Object.keys(RATING_LABELS) as CandidateRating[];
 
+const MENTION_HREF = "#mention";
+
 // No images, and links open outside the app. react-markdown escapes raw HTML.
+// Mentions (TM-REQ-009) arrive as links to MENTION_HREF and render as a name.
 const MARKDOWN_COMPONENTS: Components = {
-  a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="underline">
-      {children}
-    </a>
-  ),
+  a: ({ href, children }) =>
+    href === MENTION_HREF ? (
+      <span className="font-medium text-foreground">{children}</span>
+    ) : (
+      <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="underline">
+        {children}
+      </a>
+    ),
   img: () => null,
 };
+
+const escapeMarkdown = (text: string) => text.replace(/[\\`*_{}<>#+!|~]/g, "\\$&");
+
+/** `@[name](id)` tokens as `@name`, marked so the renderer styles them. */
+function withMentions(body: string): string {
+  return body.replace(mentionTokenPattern(), (_, name: string) => `[@${escapeMarkdown(name)}](${MENTION_HREF})`);
+}
 
 function NoteBody({ body }: { body: string }) {
   return (
     <div className="prose prose-sm max-w-none break-words text-sm dark:prose-invert">
-      <ReactMarkdown components={MARKDOWN_COMPONENTS}>{body}</ReactMarkdown>
+      <ReactMarkdown components={MARKDOWN_COMPONENTS}>{withMentions(body)}</ReactMarkdown>
+    </div>
+  );
+}
+
+/**
+ * A textarea with an `@` teammate picker (TMT-072): typing `@` lists
+ * teammates, arrow keys and Enter (or a click) pick one, Escape closes it.
+ * The pick goes in as an `@[name](id)` token.
+ */
+function MentionTextarea({
+  value,
+  onValueChange,
+  members,
+  ...props
+}: Omit<ComponentProps<typeof Textarea>, "value" | "onChange"> & {
+  value: string;
+  onValueChange: (value: string) => void;
+  members: MentionableMember[];
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const listId = useId();
+  const [mention, setMention] = useState<{ query: string; start: number } | null>(null);
+  const [active, setActive] = useState(0);
+  const options = mention ? filterMentionable(members, mention.query) : [];
+  const open = options.length > 0;
+
+  const track = (text: string, caret: number) => {
+    setMention(members.length > 0 ? activeMentionQuery(text, caret) : null);
+    setActive(0);
+  };
+
+  const pick = (member: MentionableMember) => {
+    if (!mention) return;
+    const end = mention.start + 1 + mention.query.length;
+    const inserted = `${mentionToken(member)} `;
+    const next = value.slice(0, mention.start) + inserted + value.slice(end);
+    onValueChange(next);
+    setMention(null);
+    const caret = mention.start + inserted.length;
+    requestAnimationFrame(() => {
+      ref.current?.focus();
+      ref.current?.setSelectionRange(caret, caret);
+    });
+  };
+
+  return (
+    <div className="relative">
+      <Textarea
+        {...props}
+        ref={ref}
+        value={value}
+        aria-autocomplete={members.length > 0 ? "list" : undefined}
+        aria-controls={open ? listId : undefined}
+        aria-activedescendant={open ? `${listId}-${active}` : undefined}
+        onChange={(e) => {
+          onValueChange(e.target.value);
+          track(e.target.value, e.target.selectionStart ?? e.target.value.length);
+        }}
+        onKeyDown={(e) => {
+          if (!open) return;
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setActive((i) => (i + 1) % options.length);
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setActive((i) => (i - 1 + options.length) % options.length);
+          } else if (e.key === "Enter" || e.key === "Tab") {
+            e.preventDefault();
+            pick(options[active]);
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            setMention(null);
+          }
+        }}
+        onBlur={() => setMention(null)}
+      />
+      {open && (
+        <ul
+          id={listId}
+          role="listbox"
+          aria-label="Teammates"
+          className="absolute left-2 top-full z-10 mt-1 w-64 rounded-md border bg-popover p-1 text-sm text-popover-foreground"
+        >
+          {options.map((member, i) => (
+            <li
+              key={member.userId}
+              id={`${listId}-${i}`}
+              role="option"
+              aria-selected={i === active}
+              // mousedown, so the textarea's blur doesn't close the list first.
+              onMouseDown={(e) => {
+                e.preventDefault();
+                pick(member);
+              }}
+              onMouseEnter={() => setActive(i)}
+              className={cn(
+                "flex cursor-pointer items-center gap-2 rounded px-2 py-1.5",
+                i === active && "bg-muted",
+              )}
+            >
+              <MemberAvatar name={member.name} className="h-5 w-5 text-[9px]" />
+              <span className="truncate">{member.name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -97,11 +224,14 @@ export default function NotesPanel({
   candidateUserId,
   notes: initialNotes,
   currentUserId,
+  members = [],
 }: {
   applicationId?: string;
   candidateUserId?: string;
   notes: Note[];
   currentUserId: string;
+  /** Teammates for `@` mentions (TM-REQ-009), without the current user. */
+  members?: MentionableMember[];
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [body, setBody] = useState("");
@@ -152,11 +282,12 @@ export default function NotesPanel({
       </section>
 
       <div className="flex flex-col gap-2 rounded-lg border p-3">
-        <Textarea
+        <MentionTextarea
           aria-label="New note"
-          placeholder="Write a note (markdown). Only your company sees it."
+          placeholder="Write a note (markdown). Type @ to mention a teammate. Only your company sees it."
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onValueChange={setBody}
+          members={members}
           rows={3}
         />
         <div className="flex flex-wrap items-center gap-2">
@@ -245,6 +376,8 @@ function NoteItem({
   return (
     <li className="flex flex-col gap-2 rounded-lg border px-4 py-3">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        {/* TM-REQ-008: the name stored on the note, kept after the author leaves. */}
+        <MemberAvatar name={note.author_name} className="h-6 w-6 text-[10px]" />
         <span className="font-medium text-foreground">{note.author_name ?? "A teammate"}</span>
         <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
         {note.rating && (

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { previewMove } from "@/helpers/pipeline/move";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock } from "@/test/utils/supabase-mock";
+import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A } from "@/test/utils/recruiter";
 import { previewAgentMoveAction } from "./preview-agent-move";
 
@@ -16,7 +17,7 @@ const TEMPLATE = "d0000000-0000-4000-8000-000000000001";
 
 async function signIn(user = COMPANY_A.user) {
   const supabase = createSupabaseMock({ user });
-  supabase.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  supabase.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(user, supabase.client);
 }
 

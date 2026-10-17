@@ -12,7 +12,10 @@ export async function setJobPostingStatusAction(params: {
   jobPostingId: string;
   status: "active" | "inactive";
 }): Promise<SetJobPostStatusResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({
+    permission: "jobs.publish",
+    jobId: typeof params.jobPostingId === "string" ? params.jobPostingId : null,
+  });
   if (!auth.ok) return { ok: false, error: auth.error };
   return setJobPostStatus(auth, params);
 }

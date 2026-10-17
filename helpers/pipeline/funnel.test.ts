@@ -6,17 +6,14 @@ import {
 import { COMPANY_A } from "@/test/utils/recruiter";
 import { PIPELINE_JOB, stageOf } from "@/test/utils/pipeline";
 import { NEEDS_ATTENTION_DAYS, getCompanyFunnel, getJobFunnel } from "./funnel";
+import { OWNER_A } from "@/test/utils/team";
 
 vi.mock("server-only", () => ({}));
 
 const NOW = new Date("2026-10-15T12:00:00.000Z");
 const daysAgo = (n: number) =>
   new Date(NOW.getTime() - n * 86_400_000).toISOString();
-const company = {
-  id: COMPANY_A.id,
-  name: COMPANY_A.info.name,
-  email: COMPANY_A.info.email,
-};
+const company = OWNER_A.myCompany;
 
 let db: SupabaseMock;
 

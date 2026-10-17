@@ -29,7 +29,7 @@ export type SaveTalentListResult = { ok: true; list?: TalentList } | { ok: false
  * lists. `create` with a candidate also adds them, for "New list…" on a card.
  */
 export async function saveTalentListAction(input: z.input<typeof inputSchema>): Promise<SaveTalentListResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "talent_lists.manage" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);

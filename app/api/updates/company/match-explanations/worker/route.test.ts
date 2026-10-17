@@ -114,10 +114,14 @@ describe("GET /api/updates/company/match-explanations/worker (MTT-041)", () => {
       { job: JOB_POST, profile: CANDIDATE_PROFILE, resume: RESUME_CONTENT },
       expect.anything(),
     );
-    expect(consumeEntitlement).toHaveBeenCalledWith(COMPANY_A.id, "match_explanations", 1, {
-      type: "match_explanation",
-      id: ROW_ID,
-    });
+    // The digest's work: no actor (RP-REQ-043).
+    expect(consumeEntitlement).toHaveBeenCalledWith(
+      COMPANY_A.id,
+      "match_explanations",
+      1,
+      { type: "match_explanation", id: ROW_ID },
+      null,
+    );
     expect(updates()).toEqual([
       expect.objectContaining({
         explanation: explanationOf(),

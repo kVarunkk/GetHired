@@ -13,25 +13,28 @@ const inputSchema = z
 
 /**
  * SERVER ACTION (PL-REQ-009, PL-REQ-010): how the session company hears about
- * new applicants, and whether it gets the weekly matches email.
+ * new applicants, and whether it gets the weekly matches email. Owners and
+ * admins only (TM-REQ-004).
  */
 export async function saveCompanyNotificationSettingsAction(
   input: z.input<typeof inputSchema>,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "settings.notifications" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Choose how you'd like to be notified." };
 
-  const { error } = await auth.supabase
-    .from("company_info")
-    .update({
+  // Through the settings RPC: company_info is owner-only (teams difference 3).
+  const { data, error } = await auth.supabase.rpc("update_company_settings", {
+    p_settings: {
       notify_new_applicants: parsed.data.notifyNewApplicants,
       notify_weekly_matches: parsed.data.notifyWeeklyMatches,
-    })
-    .eq("id", auth.company.id);
-  if (error) return { ok: false, error: "Couldn't save your settings. Please try again." };
+    },
+  });
+  if (error || !(data as { ok?: boolean } | null)?.ok) {
+    return { ok: false, error: "Couldn't save your settings. Please try again." };
+  }
 
   revalidatePath("/company/settings");
   return { ok: true };

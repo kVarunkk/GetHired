@@ -82,6 +82,23 @@ describe("ChatPane for a company user (RAT-018, RA-REQ-001)", () => {
   });
 });
 
+describe("ChatPane's per-member cap hint (RP-REQ-044)", () => {
+  it("shows the member's agent messages left this month, counting what they send", async () => {
+    render(
+      <ChatPane role="company" sessionId={SESSION_ID} initialMessages={[]} memberCap={{ limit: 50, remaining: 3 }} />,
+    );
+    expect(screen.getByText("3 of your 50 agent messages left this month")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Find candidates for my latest job" }));
+    expect(screen.getByText("2 of your 50 agent messages left this month")).toBeInTheDocument();
+  });
+
+  it("shows nothing without a cap", () => {
+    render(<ChatPane role="company" sessionId={SESSION_ID} initialMessages={[]} />);
+    expect(screen.queryByText(/agent messages left this month/)).not.toBeInTheDocument();
+  });
+});
+
 describe("MemoriesPanel for a company user", () => {
   afterEach(() => vi.unstubAllGlobals());
 

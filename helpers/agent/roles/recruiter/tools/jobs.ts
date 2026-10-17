@@ -15,12 +15,19 @@ import {
   jobPostUrl,
   limitInput,
   planLimitError,
+  requireToolPermission,
   type RecruiterToolContext,
   uuidInput,
   withToolErrors,
 } from "./shared";
 
 const NOT_FOUND = { error: "Job post not found." } as const;
+
+/**
+ * RP-REQ-031: creating, editing and closing jobs need jobs.create / jobs.edit
+ * (scoped to the job). RLS refuses the write too; the tool answers first,
+ * with a message the model can pass on.
+ */
 
 /** A job post's fields, as the model writes them (camelCase, described). */
 const jobPostFields = {
@@ -181,6 +188,8 @@ export function createJobTools(ctx: RecruiterToolContext) {
       inputSchema: z.object(jobPostFields).strict(),
       execute: (fields) =>
         withToolErrors(ctx, "createJobPost", async () => {
+          const denied = requireToolPermission(ctx, "jobs.create");
+          if (denied) return denied;
           const unfair = jobPostFairness(fields);
           if (unfair) return unfair;
 
@@ -208,6 +217,8 @@ export function createJobTools(ctx: RecruiterToolContext) {
         }),
       execute: ({ jobPostId, ...changes }) =>
         withToolErrors(ctx, "updateJobPost", async () => {
+          const denied = requireToolPermission(ctx, "jobs.edit", jobPostId);
+          if (denied) return denied;
           const unfair = jobPostFairness(changes);
           if (unfair) return unfair;
 
@@ -253,6 +264,8 @@ export function createJobTools(ctx: RecruiterToolContext) {
       }),
       execute: ({ jobPostId, status }) =>
         withToolErrors(ctx, "setJobPostStatus", async () => {
+          const denied = requireToolPermission(ctx, "jobs.publish", jobPostId);
+          if (denied) return denied;
           const result = await setJobPostStatus(ctx, { jobPostingId: jobPostId, status });
           if (!result.ok) return failure(result.error);
           return { id: jobPostId, status, url: jobPostUrl(jobPostId) };

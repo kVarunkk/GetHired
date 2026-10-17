@@ -18,8 +18,11 @@ export type TemplateVars = Record<TemplateVariable, string | null | undefined>;
 export const TEMPLATE_PURPOSES = ["rejection", "advance", "interview_invite", "offer", "custom"] as const;
 export type TemplatePurpose = (typeof TEMPLATE_PURPOSES)[number];
 
+export const MAX_TEMPLATE_NAME = 60;
 export const MAX_TEMPLATE_SUBJECT = 150;
 export const MAX_TEMPLATE_BODY = 5000;
+/** Seeded defaults included. Keeps the template pickers short. */
+export const MAX_TEMPLATES_PER_COMPANY = 30;
 
 // A Map, so `constructor`, `__proto__` and friends are never "known".
 const KNOWN = new Map<string, TemplateVariable>(TEMPLATE_VARIABLES.map((v) => [v, v]));

@@ -18,7 +18,7 @@ export type WithdrawOutreachResult = { ok: true } | { ok: false; error: string }
 export async function withdrawOutreachAction(
   input: z.input<typeof inputSchema>,
 ): Promise<WithdrawOutreachResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "outreach.view" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);

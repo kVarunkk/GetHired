@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { listCompanyOutreach } from "@/helpers/outreach/list";
 import { setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import { OUTREACH_JOB } from "@/test/utils/outreach";
 import OutreachTable from "@/components/outreach/OutreachTable";
@@ -25,6 +26,7 @@ const ITEM = {
   subject: "Frontend role",
   status: "sent" as const,
   source: "manual" as const,
+  senderName: "Olive Owner",
   sentAt: "2026-10-01T09:00:00.000Z",
   respondedAt: null,
   expiresAt: "2026-10-31T09:00:00.000Z",
@@ -33,7 +35,7 @@ const ITEM = {
 beforeEach(async () => {
   vi.clearAllMocks();
   db = createSupabaseMock({ user: COMPANY_A.user });
-  db.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  db.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   db.queue("job_postings", { data: [{ id: OUTREACH_JOB.id, title: "Frontend Engineer" }], error: null });
   await setRequestUser(COMPANY_A.user, db.client);
 });

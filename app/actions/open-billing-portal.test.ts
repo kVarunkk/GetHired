@@ -4,6 +4,7 @@ import { getCompanySubscription } from "@/helpers/billing/subscription";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A } from "@/test/utils/recruiter";
 import { openBillingPortalAction } from "./open-billing-portal";
 
@@ -17,7 +18,7 @@ let rls: SupabaseMock;
 
 async function signIn(user = COMPANY_A.user) {
   rls = createSupabaseMock({ user });
-  rls.queue("company_info", { data: COMPANY_A.info, error: null });
+  rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(user, rls.client);
 }
 

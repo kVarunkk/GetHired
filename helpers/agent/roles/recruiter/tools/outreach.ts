@@ -1,17 +1,22 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { wrapInSandbox } from "@/helpers/ai/security";
 import {
+  DECLINE_REASON_OPTIONS,
   OUTREACH_MESSAGE_MAX,
   OUTREACH_PAGE_SIZE,
   OUTREACH_STATUSES,
   OUTREACH_SUBJECT_MAX,
 } from "@/helpers/outreach/config";
-import { listCompanyOutreach } from "@/helpers/outreach/list";
+import { getCompanyOutreach } from "@/helpers/outreach/detail";
+import { isOpen, listCompanyOutreach } from "@/helpers/outreach/list";
 import { sendOutreach } from "@/helpers/outreach/send";
 import {
   candidateUrl,
   fairnessError,
+  jobPostUrl,
   OUTREACH_URL,
+  outreachUrl,
   planLimitError,
   type RecruiterToolContext,
   uuidInput,
@@ -19,6 +24,9 @@ import {
 } from "./shared";
 
 const LIST_DEFAULT = 10;
+const OUTREACH_NOT_FOUND = { error: "Outreach not found." } as const;
+const CONTACT_SHARED_NOTE =
+  "They shared how to reach them. It's on the outreach page, and getCandidateProfile includes their contact details.";
 
 /** sendOutreach's input, shared with the approval card's preview (`previewAgentOutreachAction`). */
 export const sendOutreachInput = z.object({
@@ -56,7 +64,7 @@ export function createOutreachTools(ctx: RecruiterToolContext) {
             status: result.outreach.status,
             emailed: result.emailed,
             candidateUrl: candidateUrl(result.outreach.candidate_user_id),
-            outreachUrl: OUTREACH_URL,
+            outreachUrl: outreachUrl(result.outreach.id),
           };
         }),
     }),
@@ -92,9 +100,40 @@ export function createOutreachTools(ctx: RecruiterToolContext) {
               status: o.status,
               sentAt: day(o.sentAt),
               respondedAt: day(o.respondedAt),
+              url: outreachUrl(o.id),
             })),
             hasMore: page.items.length > shown.length || page.nextCursor !== null,
             url: OUTREACH_URL,
+          };
+        }),
+    }),
+
+    getOutreach: tool({
+      description:
+        "Read one of the company's outreach messages: the message as sent, who sent it, and the candidate's answer (their note on Interested, the reason on Not interested). Use the id from listOutreach, getCandidateProfile or the page the user came from.",
+      inputSchema: z.object({ outreachId: uuidInput("outreach") }),
+      execute: ({ outreachId }) =>
+        withToolErrors(ctx, "getOutreach", async () => {
+          const o = await getCompanyOutreach({ supabase, company }, outreachId);
+          if (!o) return OUTREACH_NOT_FOUND;
+          const open = isOpen(o);
+          return {
+            id: o.id,
+            candidate: { id: o.candidateUserId, name: o.candidateName, url: candidateUrl(o.candidateUserId) },
+            job: o.jobPostId ? { id: o.jobPostId, title: o.jobTitle, url: jobPostUrl(o.jobPostId) } : null,
+            subject: o.subject,
+            message: o.message,
+            status: o.status,
+            sentBy: o.senderName,
+            sentWithAgent: o.source === "agent",
+            sentAt: day(o.sentAt),
+            respondedAt: day(o.respondedAt),
+            answerBy: open ? day(o.expiresAt) : null,
+            declineReason: DECLINE_REASON_OPTIONS.find((r) => r.value === o.declineReason)?.label ?? null,
+            // Candidate-written (RA-SEC-003). Their contact stays out of the output (RA-SEC-005).
+            candidateNote: o.candidateNote ? wrapInSandbox("candidate_note", o.candidateNote) : null,
+            ...(o.candidateContact ? { contactNote: CONTACT_SHARED_NOTE } : {}),
+            url: outreachUrl(o.id),
           };
         }),
     }),

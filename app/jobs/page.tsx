@@ -133,11 +133,13 @@ export default async function JobsPage({
         .single();
 
       if (jobSeekerDataError) {
+        // No account type yet: getMyCompany would skip the lookup, so check
+        // the membership directly (a company user is anyone with a row).
         const { data: companyData } = await supabase
-          .from("company_info")
-          .select("id, ai_credits, filled")
-          .eq("user_id", user?.id)
-          .single();
+          .from("company_members")
+          .select("company_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
 
         if (companyData) {
           isCompanyUser = true;

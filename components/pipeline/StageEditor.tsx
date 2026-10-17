@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import toast from "react-hot-toast";
 import { saveStagesAction } from "@/app/actions/pipeline/save-stages";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,6 +42,7 @@ export default function StageEditor({ stages: initial }: { stages: StageOption[]
   const [newName, setNewName] = useState("");
   const [newKind, setNewKind] = useState<PipelineStageKind>("screening");
   const [isAdding, setIsAdding] = useState(false);
+  const [archiving, setArchiving] = useState<StageOption | null>(null);
 
   const setError = (id: string, error: string | null) =>
     setErrors((current) => {
@@ -146,7 +148,7 @@ export default function StageEditor({ stages: initial }: { stages: StageOption[]
                     size="sm"
                     variant="ghost"
                     aria-label={`Archive ${stage.name}`}
-                    onClick={() => void archive(stage)}
+                    onClick={() => setArchiving(stage)}
                   >
                     Archive
                   </Button>
@@ -188,6 +190,14 @@ export default function StageEditor({ stages: initial }: { stages: StageOption[]
         </Button>
       </div>
       {full && <p className="text-sm text-muted-foreground">A pipeline can have at most {MAX_STAGES} stages.</p>}
+      <ConfirmDialog
+        open={archiving !== null}
+        onOpenChange={(open) => !open && setArchiving(null)}
+        title={`Archive ${archiving?.name}?`}
+        description="It's removed from your pipeline and boards. Archived stages can't be restored here."
+        confirmLabel="Archive"
+        onConfirm={() => archiving && archive(archiving)}
+      />
     </div>
   );
 }

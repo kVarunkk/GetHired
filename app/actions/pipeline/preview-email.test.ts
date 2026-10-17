@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sendCompanyMessage } from "@/helpers/email/send-company-message";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A } from "@/test/utils/recruiter";
 import { pipelineAppOf } from "@/test/utils/pipeline";
 import { previewEmailAction } from "./preview-email";
@@ -16,7 +17,7 @@ let supabase: SupabaseMock;
 
 async function signIn(user = COMPANY_A.user) {
   supabase = createSupabaseMock({ user });
-  supabase.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  supabase.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(user, supabase.client);
 }
 

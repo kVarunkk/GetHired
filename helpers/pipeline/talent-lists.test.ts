@@ -15,14 +15,11 @@ import {
   removeFromTalentList,
   renameTalentList,
 } from "./talent-lists";
+import { OWNER_A } from "@/test/utils/team";
 
 vi.mock("server-only", () => ({}));
 
-const company = {
-  id: COMPANY_A.id,
-  name: COMPANY_A.info.name,
-  email: COMPANY_A.info.email,
-};
+const company = OWNER_A.myCompany;
 const LIST_ID = "a1000000-0000-4000-8000-00000000000a";
 const LIST = {
   id: LIST_ID,

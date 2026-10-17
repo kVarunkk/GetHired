@@ -7,6 +7,7 @@ import { setJobPostStatus } from "@/helpers/jobs/set-job-post-status";
 import { execTool, inputJsonSchema, recruiterToolContext, validateInput } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, jobPostingOf } from "@/test/utils/recruiter";
+import { ADMIN_A, MEMBER_A } from "@/test/utils/team";
 import { RA_JOB_DESCRIPTION_MAX_CHARS } from "../config";
 
 vi.mock("server-only", () => ({}));
@@ -313,6 +314,44 @@ describe("setJobPostStatus tool", () => {
     vi.mocked(setJobPostStatus).mockResolvedValueOnce({ ok: false, error: "Job posting not found." });
     expect(await execTool(tools.setJobPostStatus, { jobPostId: OTHER_ID, status: "inactive" })).toEqual({
       error: "Job posting not found.",
+    });
+  });
+});
+
+describe("job write tools for a member (TM-REQ-004, teams difference 15)", () => {
+  // RP-REQ-031: the catalog's message for each missing permission.
+  const NO_CREATE = { error: "Your role can't create job posts." };
+  const NO_EDIT = { error: "Your role can't edit job posts." };
+  const NO_PUBLISH = { error: "Your role can't open, pause or close job posts." };
+
+  beforeEach(() => {
+    const ctx = recruiterToolContext(supabase.client, { user: MEMBER_A.user, company: MEMBER_A.myCompany });
+    tools = { ...createCompanyTools(ctx), ...createJobTools(ctx) };
+  });
+
+  it("refuses create, edit and close without querying", async () => {
+    expect(await execTool(tools.createJobPost, DRAFT)).toEqual(NO_CREATE);
+    expect(await execTool(tools.updateJobPost, { jobPostId: JOB.id, title: "Staff Engineer" })).toEqual(NO_EDIT);
+    expect(await execTool(tools.setJobPostStatus, { jobPostId: JOB.id, status: "inactive" })).toEqual(NO_PUBLISH);
+
+    expect(supabase.calls).toHaveLength(0);
+    expect(upsertJobPosting).not.toHaveBeenCalled();
+    expect(setJobPostStatus).not.toHaveBeenCalled();
+  });
+
+  it("still lists and reads the company's jobs", async () => {
+    supabase.queue("job_postings", { data: [JOB], error: null });
+
+    expect(await execTool(tools.listMyJobs, {})).not.toHaveProperty("error");
+  });
+
+  it("lets an admin close a job", async () => {
+    const ctx = recruiterToolContext(supabase.client, { user: ADMIN_A.user, company: ADMIN_A.myCompany });
+    tools = { ...createCompanyTools(ctx), ...createJobTools(ctx) };
+    vi.mocked(setJobPostStatus).mockResolvedValue({ ok: true });
+
+    expect(await execTool(tools.setJobPostStatus, { jobPostId: JOB.id, status: "inactive" })).toMatchObject({
+      status: "inactive",
     });
   });
 });

@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { afterEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 import { afterCallbacks } from "./utils/after";
 
 // Server actions call revalidatePath/revalidateTag, which need a Next request context.
@@ -23,6 +23,25 @@ vi.mock("next/server", async (importOriginal) => {
       afterCallbacks.push(task);
     },
   };
+});
+
+// jsdom has no matchMedia. Default to a desktop viewport, so ResponsiveDialog
+// renders its Dialog; tests for the phone layout set their own.
+function desktopMatchMedia(query: string) {
+  return {
+    matches: query.includes("min-width"),
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  } as MediaQueryList;
+}
+
+beforeEach(() => {
+  if (typeof window !== "undefined") window.matchMedia = desktopMatchMedia;
 });
 
 afterEach(async () => {

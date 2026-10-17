@@ -49,6 +49,18 @@ describe("listCompanyOutreach (ORT-026)", () => {
     expect(page.nextCursor).toBe(encodeCursor(rows[24].sent_at, rows[24].id));
   });
 
+  it("returns the sender's stored name, even after they've left (TMT-061)", async () => {
+    db.queue("candidate_outreach", { data: [row("sent", { sender_name: "Max Member", sender_user_id: null })], error: null });
+    queueCounts(1, 0, 0);
+
+    const page = await listCompanyOutreach(deps());
+
+    expect(String(db.callsFor("candidate_outreach")[0].chain.find((m) => m.method === "select")?.args[0])).toContain(
+      "sender_name",
+    );
+    expect(page.items[0].senderName).toBe("Max Member");
+  });
+
   it("applies the job, status and cursor filters", async () => {
     db.queue("candidate_outreach", { data: [], error: null });
     queueCounts(0, 0, 0);

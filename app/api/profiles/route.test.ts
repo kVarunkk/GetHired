@@ -8,6 +8,7 @@ import { TIER_FREE, TIER_STARTUP, entitlementsOf } from "@/test/utils/billing";
 import { buildRequest } from "@/test/utils/request";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
+import { OWNER_A } from "@/test/utils/team";
 import { expandProfileLocations } from "@/helpers/locations/aliases";
 import { GET } from "./route";
 
@@ -40,6 +41,7 @@ const PROFILES = Array.from({ length: 20 }, (_, i) => ({ user_id: `u${i}` }));
 
 async function signIn(tier = TIER_FREE) {
   rls = createSupabaseMock({ user: COMPANY_A.user });
+  rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   rls.queue("company_info", {
     data: { id: COMPANY_A.id, ai_credits: 0, filled: true, job_postings: [] },
     error: null,

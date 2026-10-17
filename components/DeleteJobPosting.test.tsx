@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import toast from "react-hot-toast";
 import { deleteJobPostingAction } from "@/app/actions/delete-job-posting";
+
 import DeleteJobPosting from "./DeleteJobPosting";
 
 vi.mock("@/app/actions/delete-job-posting", () => ({ deleteJobPostingAction: vi.fn() }));
@@ -52,5 +53,18 @@ describe("DeleteJobPosting", () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Job posting not found."));
     expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
     expect(router.refresh).not.toHaveBeenCalled();
+  });
+
+  it("is disabled for a member, with the reason on focus, and opens nothing (TM-REQ-004)", async () => {
+    render(<DeleteJobPosting job_posting_id={ID} disabled />);
+
+    const button = screen.getByRole("button", { name: "Delete Job Post" });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+
+    fireEvent.focus(button.parentElement!);
+    expect((await screen.findAllByText("Your role can't delete job posts.")).length).toBeGreaterThan(0);
+    expect(deleteJobPostingAction).not.toHaveBeenCalled();
   });
 });

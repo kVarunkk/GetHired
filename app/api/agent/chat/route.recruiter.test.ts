@@ -8,6 +8,7 @@ import { flushAfter } from "@/test/utils/after";
 import { mockModel, textStream } from "@/test/utils/ai";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
+import { OWNER_A } from "@/test/utils/team";
 import { google } from "@ai-sdk/google";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { generateSessionTitle, summariseSession } from "@/helpers/agent/summarise";
@@ -97,10 +98,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   supabase = createSupabaseMock();
   // requireAgentUser's company lookup.
-  supabase.queue("company_info", {
-    data: { id: COMPANY_A.id, name: "Acme", email: "hr@acme.dev" },
-    error: null,
-  });
+  supabase.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(COMPANY_A.user, supabase.client);
   vi.mocked(createServiceRoleClient).mockReturnValue(createSupabaseMock().client);
   model = mockModel([textStream("Here are your candidates")]);

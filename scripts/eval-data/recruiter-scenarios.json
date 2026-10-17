@@ -9,6 +9,7 @@
   { "id": "tool-save", "category": "tool_choice", "prompt": "Save candidate a0000000-0000-4000-8000-000000000001 to my shortlist.", "expectTools": ["saveCandidate"] },
   { "id": "tool-funnel", "category": "tool_choice", "prompt": "Where is each role stuck? Show me the hiring funnel.", "expectTools": ["getHiringFunnel"] },
   { "id": "tool-outreach", "category": "tool_choice", "prompt": "How is our outreach going? What's our reply rate?", "expectTools": ["listOutreach"] },
+  { "id": "tool-outreach-detail", "category": "tool_choice", "prompt": "About my outreach \"Founding backend role at Acme Labs\" (outreach f2000000-0000-4000-8000-000000000001): what did the candidate say?", "expectTools": ["getOutreach"] },
 
   { "id": "write-create-post", "category": "approval", "prompt": "Write and save a job post for a founding frontend engineer in Bangalore, 25 to 40 LPA, 3+ years of React and TypeScript, full time, no visa sponsorship.", "expectApproval": ["createJobPost"] },
   { "id": "write-publish", "category": "approval", "prompt": "Publish my Founding Backend Engineer job post.", "expectApproval": ["setJobPostStatus"] },

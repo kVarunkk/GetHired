@@ -14,7 +14,7 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireCompany();
+  const auth = await requireCompany({ permission: "applicants.view" });
   if (!auth.ok) return auth.response;
   const { supabase, company } = auth;
 

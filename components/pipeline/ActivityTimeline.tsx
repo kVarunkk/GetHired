@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import type { Tables } from "@/utils/types/database.types";
+import MemberAvatar from "@/components/team/MemberAvatar";
 
 type Event = Tables<"application_events">;
 type Payload = Record<string, unknown>;
@@ -59,11 +60,15 @@ export default function ActivityTimeline({
   return (
     <ol className="flex flex-col gap-3 border-l pl-4">
       {lines.map(({ event, line }) => (
-        <li key={event.id} className="text-sm">
-          <p>{line}</p>
-          <time dateTime={event.created_at} className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(event.created_at), { addSuffix: true })}
-          </time>
+        <li key={event.id} className="flex items-start gap-2 text-sm">
+          {/* TM-REQ-008: who did it, from the name stored on the event. */}
+          {event.actor_name && <MemberAvatar name={event.actor_name} className="h-6 w-6 text-[10px]" />}
+          <div>
+            <p>{line}</p>
+            <time dateTime={event.created_at} className="text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(event.created_at), { addSuffix: true })}
+            </time>
+          </div>
         </li>
       ))}
     </ol>

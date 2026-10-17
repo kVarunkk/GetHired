@@ -85,7 +85,7 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
-            {format(new Date(row.original.created_at || ""), "PPP")}
+            {format(new Date(row.original.created_at || ""), "d MMM yyyy")}
           </div>
         ),
       },
@@ -94,8 +94,11 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
         accessorKey: "name",
         header: "Name",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <div className="text-sm font-medium">{row.original.name}</div>
+          <div
+            className="max-w-[14rem] truncate text-sm font-medium"
+            title={row.original.name ?? undefined}
+          >
+            {row.original.name}
           </div>
         ),
       },
@@ -104,17 +107,14 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
         accessorKey: "job_name",
         header: "Job",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <div className="text-sm font-medium">
-              <Link
-                className="underline"
-                href={"/jobs/" + row.original.all_jobs?.id}
-                target="_blank"
-              >
-                {row.original.all_jobs?.job_name}
-              </Link>
-            </div>
-          </div>
+          <Link
+            className="block max-w-[16rem] truncate text-sm font-medium underline"
+            href={"/jobs/" + row.original.all_jobs?.id}
+            target="_blank"
+            title={row.original.all_jobs?.job_name ?? undefined}
+          >
+            {row.original.all_jobs?.job_name}
+          </Link>
         ),
       },
 
@@ -122,17 +122,14 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
         accessorKey: "resume_name",
         header: "Resume",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <div className="text-sm font-medium">
-              <Link
-                className="underline"
-                href={"/resume/" + row.original.resumes?.id}
-                target="_blank"
-              >
-                {row.original.resumes?.name}
-              </Link>
-            </div>
-          </div>
+          <Link
+            className="block max-w-[14rem] truncate text-sm font-medium underline"
+            href={"/resume/" + row.original.resumes?.id}
+            target="_blank"
+            title={row.original.resumes?.name ?? undefined}
+          >
+            {row.original.resumes?.name}
+          </Link>
         ),
       },
 

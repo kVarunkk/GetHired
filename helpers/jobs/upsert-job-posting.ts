@@ -38,7 +38,11 @@ export type UpsertJobPostingResult =
  * client), and its `job_id` comes from the database. New postings are inactive.
  */
 export async function upsertJobPosting(
-  { supabase, company }: { supabase: SupabaseClient<Database>; company: MyCompany },
+  {
+    supabase,
+    company,
+    user,
+  }: { supabase: SupabaseClient<Database>; company: MyCompany; user?: { id: string } },
   params: { values: JobPostingInput; existingPostingId?: string },
 ): Promise<UpsertJobPostingResult> {
   const parsed = jobPostingInputSchema.safeParse(params.values);
@@ -139,6 +143,16 @@ export async function upsertJobPosting(
       .single();
 
     if (postingError || !posting) throw new Error("Failed to save the job posting.");
+
+    // RP-REQ-011: the creator is assigned to a new job, so a job-scoped role
+    // with jobs.create can manage what it creates. Owners see every job.
+    if (!existing && user && !company.isOwner) {
+      const { error: assignError } = await service.rpc("assign_job_creator", {
+        p_job_post_id: posting.id,
+        p_user_id: user.id,
+      });
+      if (assignError) console.error(`[job posting] couldn't assign the creator to ${posting.id}`, assignError);
+    }
 
     // MT-REQ-008: an edit to what screening reads makes old results stale.
     // Done inline, before the relevance re-run below starts: the digest writes

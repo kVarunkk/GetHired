@@ -26,7 +26,7 @@ export type AddNoteActionResult = { ok: true; note: CandidateNote } | { ok: fals
  * `helpers/pipeline/notes.ts`.
  */
 export async function addNoteAction(input: z.input<typeof inputSchema>): Promise<AddNoteActionResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "notes.write" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);

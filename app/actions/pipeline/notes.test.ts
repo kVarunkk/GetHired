@@ -4,6 +4,7 @@ import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { addNote, deleteNote, updateNote } from "@/helpers/pipeline/notes";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock } from "@/test/utils/supabase-mock";
+import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import { noteOf, pipelineAppOf } from "@/test/utils/pipeline";
 import { PostHogEvent } from "@/utils/types";
@@ -27,7 +28,7 @@ const NOTE = noteOf({ application_id: APP.id, rating: "yes" });
 
 async function signIn(user = COMPANY_A.user) {
   const supabase = createSupabaseMock({ user });
-  supabase.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  supabase.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(user, supabase.client);
 }
 

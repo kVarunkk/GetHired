@@ -4,6 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type RecordedCall, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, COMPANY_B, jobPostingOf } from "@/test/utils/recruiter";
+import { ADMIN_A, MEMBER_A, OWNER_A } from "@/test/utils/team";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
 import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
 import { assertLimit } from "@/helpers/billing/entitlements";
@@ -83,6 +84,7 @@ function writtenPosting(call: RecordedCall) {
 /** Routes each awaited query by its chain, so the tests don't depend on query order. */
 function route(mock: SupabaseMock) {
   for (let i = 0; i < 20; i++) {
+    mock.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
     mock.queue("company_info", (call) => {
       if (has(call, "update")) return { data: null, error: null };
       return { data: COMPANY_A.infoWithTier, error: null };
@@ -194,6 +196,28 @@ describe("upsertJobPostingAction: behaviour that must survive", () => {
 });
 
 describe("upsertJobPostingAction: access control (RS-TEST-001)", () => {
+  it("refuses a member (TM-REQ-004) and writes nothing", async () => {
+    rls = createSupabaseMock({ user: MEMBER_A.user });
+    rls.queueRpc("my_company_access", { data: MEMBER_A.membership, error: null });
+    await setRequestUser(MEMBER_A.user, rls.client);
+
+    expect(await upsertJobPostingAction({ values: VALUES })).toEqual({
+      success: false,
+      error: "Your role can't create job posts.",
+    });
+    expect(writes("job_postings")).toHaveLength(0);
+    expect(writes("all_jobs")).toHaveLength(0);
+  });
+
+  it("lets an admin create a posting", async () => {
+    rls = createSupabaseMock({ user: ADMIN_A.user });
+    rls.queueRpc("my_company_access", { data: ADMIN_A.membership, error: null });
+    route(rls);
+    await setRequestUser(ADMIN_A.user, rls.client);
+
+    expect(await upsertJobPostingAction({ values: VALUES })).toMatchObject({ success: true });
+  });
+
   it("refuses an unauthenticated caller without touching the database", async () => {
     await setRequestUser(null, rls.client);
 

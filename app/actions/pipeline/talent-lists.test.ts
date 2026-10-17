@@ -10,6 +10,7 @@ import {
 } from "@/helpers/pipeline/talent-lists";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock } from "@/test/utils/supabase-mock";
+import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import { saveTalentListAction } from "./save-talent-list";
 import { listTalentListsAction } from "./list-talent-lists";
@@ -29,7 +30,7 @@ const LIST = { id: "a1000000-0000-4000-8000-00000000000a", company_id: COMPANY_A
 
 async function signIn(user = COMPANY_A.user, times = 1) {
   const supabase = createSupabaseMock({ user });
-  for (let i = 0; i < times; i++) supabase.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  for (let i = 0; i < times; i++) supabase.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(user, supabase.client);
 }
 

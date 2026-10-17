@@ -2,8 +2,10 @@
 
 import { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import toast from "react-hot-toast";
+import { createTemplateAction } from "@/app/actions/pipeline/create-template";
+import { deleteTemplateAction } from "@/app/actions/pipeline/delete-template";
 import { saveTemplateAction } from "@/app/actions/pipeline/save-template";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,14 +20,25 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   MAX_TEMPLATE_BODY,
+  MAX_TEMPLATE_NAME,
   MAX_TEMPLATE_SUBJECT,
+  MAX_TEMPLATES_PER_COMPANY,
+  TEMPLATE_PURPOSES,
   TEMPLATE_VARIABLES,
   renderTemplate,
+  type TemplatePurpose,
   type TemplateVars,
 } from "@/helpers/pipeline/templates";
 import { cn } from "@/utils/utils";
 
-type Template = { id: string; purpose: string; name: string; subject: string; body_md: string };
+type Template = {
+  id: string;
+  purpose: string;
+  name: string;
+  subject: string;
+  body_md: string;
+  is_default: boolean;
+};
 
 const PURPOSE_LABELS: Record<string, string> = {
   rejection: "Rejection",
@@ -44,10 +57,11 @@ function Counter({ length, max }: { length: number; max: number }) {
 }
 
 /**
- * Company settings: the email templates (PL-TASK-032, PL-REQ-007). One
- * template per purpose, with variable chips that insert at the cursor, length
- * counters and a live preview rendered with sample values by the same
- * whitelist renderer the send uses.
+ * Company settings: the email templates (PL-TASK-032, PL-REQ-007). Each
+ * purpose has a seeded default, which can be edited but not deleted, and the
+ * company can add its own templates next to it. Variable chips insert at the
+ * cursor, with length counters and a live preview rendered with sample values
+ * by the same whitelist renderer the send uses.
  */
 export default function TemplateEditor({
   templates: initial,
@@ -64,15 +78,36 @@ export default function TemplateEditor({
   const [subject, setSubject] = useState(selected?.subject ?? "");
   const [body, setBody] = useState(selected?.body_md ?? "");
   const [isSaving, setIsSaving] = useState(false);
+  /** Set while writing a new template, to its purpose. */
+  const [draftPurpose, setDraftPurpose] = useState<TemplatePurpose | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const messageRef = useRef<HTMLTextAreaElement>(null);
+
+  const load = (t: Pick<Template, "name" | "subject" | "body_md"> | undefined) => {
+    setName(t?.name ?? "");
+    setSubject(t?.subject ?? "");
+    setBody(t?.body_md ?? "");
+  };
 
   const select = (id: string) => {
     const next = templates.find((t) => t.id === id);
     if (!next) return;
     setSelectedId(id);
-    setName(next.name);
-    setSubject(next.subject);
-    setBody(next.body_md);
+    setConfirmingDelete(false);
+    load(next);
+  };
+
+  // A new template starts from the purpose's default wording, with no name.
+  const startDraft = (purpose: TemplatePurpose) => {
+    const base = templates.find((t) => t.purpose === purpose && t.is_default);
+    setDraftPurpose(purpose);
+    setConfirmingDelete(false);
+    load({ name: "", subject: base?.subject ?? "", body_md: base?.body_md ?? "" });
+  };
+
+  const cancelDraft = () => {
+    setDraftPurpose(null);
+    load(selected ?? undefined);
   };
 
   const insert = (variable: string) => {
@@ -92,13 +127,56 @@ export default function TemplateEditor({
   const missing = rendered?.ok ? rendered.missingVariables : [];
   const fits =
     name.trim().length >= 1 &&
-    name.length <= 60 &&
+    name.length <= MAX_TEMPLATE_NAME &&
     subject.trim().length >= 1 &&
     subject.length <= MAX_TEMPLATE_SUBJECT &&
     body.trim().length >= 1 &&
     body.length <= MAX_TEMPLATE_BODY;
 
+  const create = async (purpose: TemplatePurpose) => {
+    setIsSaving(true);
+    try {
+      const result = await createTemplateAction({ purpose, name, subject, body });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setTemplates((current) => [...current, result.template]);
+      setSelectedId(result.template.id);
+      setDraftPurpose(null);
+      toast.success("Template added.");
+    } catch {
+      toast.error("Couldn't add the template. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!selected) return;
+    setIsSaving(true);
+    try {
+      const result = await deleteTemplateAction({ templateId: selected.id });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      const rest = templates.filter((t) => t.id !== selected.id);
+      const next = rest.find((t) => t.purpose === selected.purpose && t.is_default) ?? rest[0];
+      setTemplates(rest);
+      setSelectedId(next?.id ?? "");
+      load(next);
+      setConfirmingDelete(false);
+      toast.success("Template deleted.");
+    } catch {
+      toast.error("Couldn't delete the template. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const save = async () => {
+    if (draftPurpose) return create(draftPurpose);
     if (!selected) return;
     setIsSaving(true);
     try {
@@ -118,23 +196,64 @@ export default function TemplateEditor({
     }
   };
 
-  if (!selected) return <p className="text-sm text-muted-foreground">No templates yet.</p>;
+  if (!selected && !draftPurpose) return <p className="text-sm text-muted-foreground">No templates yet.</p>;
+
+  const atLimit = templates.length >= MAX_TEMPLATES_PER_COMPANY;
+  // Grouped by purpose, the default first.
+  const sorted = [...templates].sort(
+    (a, b) =>
+      TEMPLATE_PURPOSES.indexOf(a.purpose as TemplatePurpose) -
+        TEMPLATE_PURPOSES.indexOf(b.purpose as TemplatePurpose) || Number(b.is_default) - Number(a.is_default),
+  );
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="flex flex-col gap-3">
-        <Select value={selectedId} onValueChange={select}>
-          <SelectTrigger aria-label="Template">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {templates.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                {PURPOSE_LABELS[t.purpose] ?? t.purpose}: {t.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {draftPurpose ? (
+          <div className="flex flex-col gap-1">
+            <Label>New template for</Label>
+            <Select value={draftPurpose} onValueChange={(v) => startDraft(v as TemplatePurpose)}>
+              <SelectTrigger aria-label="Purpose">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TEMPLATE_PURPOSES.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {PURPOSE_LABELS[p]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <div className="min-w-0 flex-1">
+              <Select value={selectedId} onValueChange={select}>
+                <SelectTrigger aria-label="Template">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {sorted.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {PURPOSE_LABELS[t.purpose] ?? t.purpose}: {t.name}
+                      {t.is_default ? " (default)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={atLimit}
+              title={atLimit ? `You can have up to ${MAX_TEMPLATES_PER_COMPANY} templates.` : undefined}
+              onClick={() => startDraft((selected?.purpose as TemplatePurpose | undefined) ?? "custom")}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              New template
+            </Button>
+          </div>
+        )}
 
         <div className="flex flex-col gap-1">
           <Label htmlFor="template-name">Name</Label>
@@ -188,11 +307,32 @@ export default function TemplateEditor({
           </p>
         )}
 
-        <div>
+        <div className="flex flex-wrap items-center gap-2">
           <Button disabled={!fits || unknown.length > 0 || isSaving} onClick={() => void save()}>
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save template
+            {draftPurpose ? "Add template" : "Save template"}
           </Button>
+          {draftPurpose && (
+            <Button variant="outline" disabled={isSaving} onClick={cancelDraft}>
+              Cancel
+            </Button>
+          )}
+          {!draftPurpose && selected && !selected.is_default && !confirmingDelete && (
+            <Button variant="ghost" disabled={isSaving} onClick={() => setConfirmingDelete(true)}>
+              Delete template
+            </Button>
+          )}
+          {!draftPurpose && confirmingDelete && (
+            <span className="flex flex-wrap items-center gap-2 text-sm">
+              Delete &ldquo;{selected?.name}&rdquo;?
+              <Button size="sm" variant="destructive" disabled={isSaving} onClick={() => void remove()}>
+                Delete
+              </Button>
+              <Button size="sm" variant="outline" disabled={isSaving} onClick={() => setConfirmingDelete(false)}>
+                Keep
+              </Button>
+            </span>
+          )}
         </div>
       </div>
 

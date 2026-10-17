@@ -550,9 +550,14 @@ begin
   assert not public.company_has_candidate_access('a0000000-0000-4000-8000-000000000004'),
     'a company-created application unlocked access';
 
-  -- Candidate 1 answered Interested: A may add them to another job.
-  insert into public.applications (applicant_user_id, job_post_id, all_jobs_id) values
-    ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000004', 'd0000000-0000-4000-8000-000000000004');
+  -- Candidate 1 answered Interested, but since 20261017150000 companies never
+  -- create applications: the candidate applies themselves.
+  begin
+    insert into public.applications (applicant_user_id, job_post_id, all_jobs_id) values
+      ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000004', 'd0000000-0000-4000-8000-000000000004');
+    raise exception 'company A created an application for a candidate who answered Interested';
+  exception when insufficient_privilege then null;
+  end;
 end $$;
 reset role;
 

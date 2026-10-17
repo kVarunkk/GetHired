@@ -11,6 +11,7 @@ import {
   OUTREACH_NOTE_MAX,
 } from "@/helpers/outreach/config";
 import { mapOutreachError } from "@/helpers/outreach/errors";
+import { memberOrOwnerUserId } from "@/helpers/team/member-recipient";
 import { firstName } from "@/helpers/outreach/linkify";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
@@ -98,11 +99,14 @@ async function notifyAfterResponse(outreach: CandidateOutreach) {
       return;
     }
     if (outreach.status !== "interested" && outreach.status !== "not_interested") return;
-    if (!outreach.sender_user_id) return;
-
     const service = createServiceRoleClient();
+    // The reply (with the candidate's contact on Interested) goes to the sender
+    // while they're on the team, else to the owner (teams difference 7).
+    const recipientId = await memberOrOwnerUserId(service, outreach.company_id, outreach.sender_user_id);
+    if (!recipientId) return;
+
     const [{ data: sender }, { data: candidate }, job] = await Promise.all([
-      service.auth.admin.getUserById(outreach.sender_user_id),
+      service.auth.admin.getUserById(recipientId),
       service.from("user_info").select("full_name").eq("user_id", outreach.candidate_user_id).maybeSingle(),
       outreach.job_post_id
         ? service.from("job_postings").select("title").eq("id", outreach.job_post_id).maybeSingle()

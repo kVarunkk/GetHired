@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getEntitlements } from "@/helpers/billing/entitlements";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A, COMPANY_B } from "@/test/utils/recruiter";
 import { GET } from "./route";
 
@@ -31,7 +32,7 @@ const ENTITLEMENTS = {
 
 async function signIn(user = COMPANY_A.user) {
   rls = createSupabaseMock({ user });
-  rls.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(user, rls.client);
 }
 

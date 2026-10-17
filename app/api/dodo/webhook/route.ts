@@ -318,7 +318,6 @@ async function fulfil(
       distinctId: row.company_id,
       properties: { companyId: row.company_id, credits: result.credit_amount },
     });
-    return "processed";
   }
 
   await emailUser(supabase, row, payment, TPaymentStatus.COMPLETE, result.credit_amount);
@@ -358,6 +357,32 @@ async function emailUser(
   status: TPaymentStatus,
   creditAmount: number,
 ) {
+  // A company credit pack: the receipt goes to the company's billing contacts
+  // (its owner and contact address; TM-SEC-005), never to whoever clicked.
+  // Subscriptions have their own plan emails.
+  if (row.company_id) {
+    if (row.kind !== "company_credits") return;
+    const contacts = await billingContactsFor(row.company_id).catch(() => null);
+    let sent = false;
+    for (const email of contacts?.emails ?? []) {
+      const result = await SendPaymentUpdateEmail({
+        userName: contacts!.companyName,
+        email,
+        paymentDetails: {
+          status,
+          total_amount: payment.total_amount,
+          currency: payment.currency,
+          credit_amount: creditAmount,
+          payment_method: payment.payment_method ?? "",
+          payment_id: payment.payment_id,
+        },
+      });
+      sent ||= !result.error && !!result.success;
+    }
+    if (sent) await supabase.from("payments").update({ email_sent: true }).eq("id", row.id);
+    return;
+  }
+
   if (!row.user_id) return;
 
   const { data: user } = await supabase

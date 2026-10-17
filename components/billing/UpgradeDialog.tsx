@@ -5,13 +5,13 @@ import Link from "next/link";
 import posthog from "posthog-js";
 import { ArrowUpRight, Coins } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import type { EntitlementPayload } from "@/helpers/billing/errors";
 import { KEY_LABELS } from "@/helpers/billing/keys";
@@ -54,13 +54,13 @@ export default function UpgradeDialog({
     canOverage && !!onUseCredits && creditsNeeded > 0 && payload.creditBalance >= creditsNeeded;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-semibold tracking-tight">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="sm:max-w-md">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle className="font-semibold tracking-tight">
             {isLimit ? "You've reached your plan's limit" : `You've run out of ${label}`}
-          </DialogTitle>
-          <DialogDescription className="text-[15px] leading-7">
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="text-[15px] leading-7">
             {isLimit
               ? `You're using ${payload.used} of ${payload.amount} ${label} on your plan.`
               : `You've used ${payload.used} of ${payload.amount} ${label} this month.`}{" "}
@@ -68,10 +68,10 @@ export default function UpgradeDialog({
               (canUseCredits
                 ? `You can continue with ${creditsNeeded} credits (you have ${payload.creditBalance}).`
                 : `Credits cover more (${payload.overageCredits} per unit); you have ${payload.creditBalance}.`)}
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+        <ResponsiveDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
           {payload.suggestedTier && (
             <Button asChild variant="brand" className="w-full">
               <Link href={`/company/billing?plan=${payload.suggestedTier.slug}`}>
@@ -103,8 +103,8 @@ export default function UpgradeDialog({
               <Link href="/company/billing">See plans</Link>
             </Button>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

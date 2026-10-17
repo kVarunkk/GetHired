@@ -4,25 +4,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import {
-  MAX_TEMPLATE_BODY,
-  MAX_TEMPLATE_SUBJECT,
-  TEMPLATE_VARIABLES,
-  renderTemplate,
-  type TemplateVars,
-} from "@/helpers/pipeline/templates";
+  TEMPLATE_FIELDS_ERROR,
+  templateFields,
+  unknownVariablesRefusal,
+} from "@/helpers/pipeline/template-input";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { PostHogEvent } from "@/utils/types";
 
-const inputSchema = z
-  .object({
-    templateId: z.string().uuid(),
-    name: z.string().trim().min(1).max(60),
-    subject: z.string().trim().min(1).max(MAX_TEMPLATE_SUBJECT),
-    body: z.string().trim().min(1).max(MAX_TEMPLATE_BODY),
-  })
-  .strict();
-
-const PLACEHOLDERS = Object.fromEntries(TEMPLATE_VARIABLES.map((v) => [v, v])) as TemplateVars;
+const inputSchema = z.object({ templateId: z.string().uuid(), ...templateFields }).strict();
 
 /**
  * SERVER ACTION (PL-TASK-032, PL-REQ-007): saves one of the session company's
@@ -32,23 +21,15 @@ const PLACEHOLDERS = Object.fromEntries(TEMPLATE_VARIABLES.map((v) => [v, v])) a
 export async function saveTemplateAction(
   input: z.input<typeof inputSchema>,
 ): Promise<{ ok: true } | { ok: false; error: string; unknownVariables?: string[] }> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "settings.templates" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: `Names are 1 to 60 characters, subjects 1 to ${MAX_TEMPLATE_SUBJECT} and messages 1 to 5,000.`,
-    };
-  }
+  if (!parsed.success) return { ok: false, error: TEMPLATE_FIELDS_ERROR };
   const { templateId, name, subject, body } = parsed.data;
 
-  const rendered = renderTemplate({ subject, body_md: body }, PLACEHOLDERS);
-  if (rendered.ok && rendered.unknownVariables.length > 0) {
-    const list = rendered.unknownVariables.map((v) => `{{${v}}}`).join(", ");
-    return { ok: false, error: `Remove or fix ${list}.`, unknownVariables: rendered.unknownVariables };
-  }
+  const refusal = unknownVariablesRefusal(subject, body);
+  if (refusal) return refusal;
 
   const { data, error } = await auth.supabase
     .from("company_email_templates")

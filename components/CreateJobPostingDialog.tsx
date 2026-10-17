@@ -40,6 +40,8 @@ import { upsertJobPostingAction } from "@/app/actions/upsert-job-posting";
 import { useEntitlementError } from "@/hooks/useEntitlementError";
 import { mutate } from "swr";
 import LocationSearchSelect from "./LocationSearchSelect";
+import RoleLocked from "./team/RoleLocked";
+import { forbiddenMessage } from "@/helpers/companies/permissions";
 
 const jobFormSchema = z
   .object({
@@ -121,9 +123,12 @@ const jobFormSchema = z
 export default function CreateJobPostingDialog({
   companyId,
   existingValues,
+  disabled = false,
 }: {
   companyId: string;
   existingValues?: ICreateJobPostingFormData;
+  /** For members, who can't create or edit jobs (TM-REQ-004). */
+  disabled?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -226,6 +231,28 @@ export default function CreateJobPostingDialog({
   const salaryCurrencies = ["₹", "$", "€", "£", "C$", "A$"];
   const visaOptions = ["Will Sponsor", "Not Required", "Required"];
 
+  const trigger = existingValues ? (
+    <Button
+      variant={"ghost"}
+      className="text-muted-foreground"
+      aria-label="Edit Job Post"
+      disabled={disabled}
+    >
+      <Pencil className=" h-4 w-4" />
+    </Button>
+  ) : (
+    <Button variant="brand" className="max-w-full" disabled={disabled}>
+      <PlusCircle />
+      <span className="truncate">Create New Job Post</span>
+    </Button>
+  );
+
+  if (disabled) {
+    return (
+      <RoleLocked reason={forbiddenMessage(existingValues ? "jobs.edit" : "jobs.create")}>{trigger}</RoleLocked>
+    );
+  }
+
   return (
     <ResponsiveDialog open={isOpen} onOpenChange={setIsOpen}>
       {/* Its own dialog, portalled; it stays mounted when this one closes. */}
@@ -234,16 +261,7 @@ export default function CreateJobPostingDialog({
         title={existingValues ? "Edit Job Post" : "Create Job Post"}
         asChild
       >
-        {existingValues ? (
-          <Button variant={"ghost"} className="text-muted-foreground">
-            <Pencil className=" h-4 w-4" />
-          </Button>
-        ) : (
-          <Button variant="brand" className="max-w-full">
-            <PlusCircle />
-            <span className="truncate">Create New Job Post</span>
-          </Button>
-        )}
+        {trigger}
       </ResponsiveDialogTrigger>
       <ResponsiveDialogContent
         className="h-[85vh] max-w-xl"

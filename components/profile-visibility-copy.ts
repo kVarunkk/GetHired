@@ -1,6 +1,6 @@
 /**
- * What a public profile shows recruiters (spec §3.6). Shared by the onboarding
- * preferences and the dashboard setting so they never disagree. Keep in sync
+ * What a public profile shows recruiters (spec §3.6). Used by the /settings
+ * switch. Keep in sync
  * with DIRECTORY_CANDIDATE_COLUMNS, candidate_directory and the user_info company
  * policies (OR-SEC-001).
  */

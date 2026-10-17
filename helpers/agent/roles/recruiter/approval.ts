@@ -17,6 +17,13 @@ export const recruiterToolApproval = createToolApproval({
     "screenApplicants",
     "moveApplications",
     "sendOutreach",
+    // RP-REQ-032: every role and hiring-team change asks; the card shows the diff.
+    "createRole",
+    "updateRole",
+    "deleteRole",
+    "assignRole",
+    "assignToJob",
+    "unassignFromJob",
   ],
   untrustedContentTools: [
     "getCandidateProfile",
@@ -29,8 +36,9 @@ export const recruiterToolApproval = createToolApproval({
     "getJobPost",
     "listNotes",
     "getHiringFunnel",
-    // Candidate names are candidate-written.
+    // Candidate names and answer notes are candidate-written.
     "listOutreach",
+    "getOutreach",
   ],
   gatedWriteTools: ["saveMemory", "deleteMemory", "addNote"],
   untrustedReason:

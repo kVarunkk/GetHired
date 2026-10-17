@@ -12,6 +12,7 @@ import { parseMultiSelectParam } from "@/utils/formatters";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -34,12 +35,17 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { data: companyData, error: companyError } = await supabase
-    .from("company_info")
-    .select("id, ai_credits, filled, job_postings(id, embedding_new)")
-    .eq("user_id", user.id)
-    .single();
-  if (companyError || !companyData) {
+  // The company comes from the user's membership (recruiter teams); internal
+  // digest calls pass the owner's id.
+  const company = await getMyCompany(supabase, user).catch(() => null);
+  const { data: companyData, error: companyError } = company
+    ? await supabase
+        .from("company_info")
+        .select("id, ai_credits, filled, job_postings(id, embedding_new)")
+        .eq("id", company.id)
+        .single()
+    : { data: null, error: null };
+  if (!company || companyError || !companyData) {
     return NextResponse.json(
       { error: "Unauthorized: Not a company user" },
       { status: 403 },
@@ -91,10 +97,7 @@ export async function GET(request: NextRequest) {
   const talentListId =
     tab && !isFavoriteTabActive && tab !== "all"
       ? await findTalentListIdBySlug(
-          {
-            supabase,
-            company: { id: companyData.id, name: null, email: null },
-          },
+          { supabase, company },
           tab,
         )
       : null;

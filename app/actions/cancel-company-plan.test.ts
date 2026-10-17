@@ -5,6 +5,7 @@ import { getCompanySubscription, type CompanySubscription } from "@/helpers/bill
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A } from "@/test/utils/recruiter";
 import { cancelCompanyPlanAction } from "./cancel-company-plan";
 
@@ -30,7 +31,7 @@ let service: SupabaseMock;
 
 async function signIn(user = COMPANY_A.user) {
   rls = createSupabaseMock({ user });
-  rls.queue("company_info", { data: COMPANY_A.info, error: null });
+  rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(user, rls.client);
 }
 

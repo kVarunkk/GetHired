@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A, PRIVATE_NOT_APPLIED, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import {
   DIRECTORY_CANDIDATE_COLUMNS,
@@ -49,7 +50,7 @@ const visit = (profile_id: string, searchParams: Record<string, string> = {}) =>
 beforeEach(async () => {
   vi.clearAllMocks();
   rls = createSupabaseMock({ user: COMPANY_A.user });
-  rls.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   createSignedUrl = vi.fn().mockResolvedValue({ data: { signedUrl: "https://signed" } });
   Object.assign(rls.client, { storage: { from: () => ({ createSignedUrl }) } });
   service = createSupabaseMock();

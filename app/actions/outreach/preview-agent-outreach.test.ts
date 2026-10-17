@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getEntitlements } from "@/helpers/billing/entitlements";
 import { setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A } from "@/test/utils/recruiter";
 import { previewAgentOutreachAction } from "./preview-agent-outreach";
 
@@ -19,7 +20,7 @@ let db: SupabaseMock;
 beforeEach(async () => {
   vi.clearAllMocks();
   db = createSupabaseMock({ user: COMPANY_A.user });
-  db.queue("company_info", { data: COMPANY_A.infoWithTier, error: null });
+  db.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   await setRequestUser(COMPANY_A.user, db.client);
   vi.mocked(getEntitlements).mockResolvedValue({
     entitlements: { outreach: { remaining: 12, amount: 150 } },

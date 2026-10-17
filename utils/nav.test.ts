@@ -37,6 +37,10 @@ describe("Agent navigation (TASK-071)", () => {
     expect(getNavbarVairantByPath("/opportunities")).toBe("vertical");
     expect(getNavbarVairantByPath("/opportunities/abc")).toBe("vertical");
   });
+
+  it("uses the sidebar layout on /settings", () => {
+    expect(getNavbarVairantByPath("/settings")).toBe("vertical");
+  });
 });
 
 describe("signed-out horizontal navbar", () => {

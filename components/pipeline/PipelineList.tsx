@@ -14,6 +14,7 @@ export default function PipelineList({
   jobPostId,
   stages,
   templates = [],
+  screeningCap = null,
 }: {
   data: (TApplicationServer & { stage_id: string | null })[];
   jobPostId: string;
@@ -21,6 +22,8 @@ export default function PipelineList({
   stages: StageOption[];
   /** The company's email templates, for the move dialog. */
   templates?: TemplateOption[];
+  /** The member's own screening cap (RP-REQ-044), for the Screen button. */
+  screeningCap?: { limit: number; remaining: number } | null;
 }) {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
@@ -42,6 +45,7 @@ export default function PipelineList({
         stages={stages}
         rowSelection={rowSelection}
         onRowSelectionChange={setRowSelection}
+        screeningCap={screeningCap}
       />
     </div>
   );

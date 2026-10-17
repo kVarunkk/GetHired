@@ -44,6 +44,16 @@ export default {
           foreground: "hsl(var(--brand-soft-foreground))",
         },
         // Status colours (design-system.md §1)
+        role: {
+          slate: "hsl(var(--role-slate))",
+          indigo: "hsl(var(--role-indigo))",
+          emerald: "hsl(var(--role-emerald))",
+          amber: "hsl(var(--role-amber))",
+          rose: "hsl(var(--role-rose))",
+          sky: "hsl(var(--role-sky))",
+          violet: "hsl(var(--role-violet))",
+          teal: "hsl(var(--role-teal))",
+        },
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",

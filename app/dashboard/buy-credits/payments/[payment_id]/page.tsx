@@ -96,22 +96,22 @@ export default async function PaymentIdPage({
         {/* --- Main Content Grid --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left Panel */}
-          <div className="md:col-span-1 space-y-4">
+          <div className="min-w-0 space-y-4 [overflow-wrap:anywhere] md:col-span-1">
             <Card className=" ">
               <CardContent className="p-0">
                 <Tabs defaultValue="fulfillment" className="w-full">
                   <TabsList className="grid w-full grid-cols-2 !rounded-b-none">
                     <TabsTrigger
                       value="fulfillment"
-                      className="data-[state=active]:!bg-muted data-[state=active]:!shadow-none"
+                      className="min-w-0 data-[state=active]:!bg-muted data-[state=active]:!shadow-none"
                     >
-                      Fulfillment Details
+                      <span className="truncate">Fulfillment</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="billing"
-                      className="data-[state=active]:!bg-muted data-[state=active]:!shadow-none"
+                      className="min-w-0 data-[state=active]:!bg-muted data-[state=active]:!shadow-none"
                     >
-                      Billing Details
+                      <span className="truncate">Billing</span>
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="fulfillment" className="p-6">

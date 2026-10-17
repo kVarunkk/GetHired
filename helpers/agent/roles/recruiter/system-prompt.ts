@@ -68,6 +68,16 @@ const CAPABILITIES: Record<string, string> = {
   getHiringFunnel: "show the hiring funnel for one job (stage counts, conversion, time in stage, time to hire) or across active jobs, with applicants waiting too long in Applied",
   sendOutreach: "message a candidate on GetHired about a role, optionally one of the company's jobs (with the user's approval; uses one outreach from the plan)",
   listOutreach: "list the company's outreach messages with each candidate's answer and the reply rate",
+  getOutreach: "read one outreach message and the candidate's answer, with its note or decline reason",
+  listTeam: "list the team: members, their roles and how many jobs each is assigned to",
+  listRoles: "list the company's roles with their permissions and per-member monthly limits",
+  getRole: "read one role and who has it",
+  createRole: "create a role from permissions, for all jobs or assigned jobs only (with the user's approval)",
+  updateRole: "change a role's name, permissions or limits (with the user's approval)",
+  deleteRole: "delete a role, moving its members to another role (with the user's approval)",
+  assignRole: "change a team member's role (with the user's approval)",
+  assignToJob: "add a team member to a job's hiring team (with the user's approval)",
+  unassignFromJob: "remove a team member from a job's hiring team (with the user's approval)",
   saveMemory: "remember durable facts about how the team hires",
   deleteMemory: "forget a saved memory",
 };
@@ -129,6 +139,27 @@ function renderMemories(memories: AgentPromptMemory[]) {
 }
 
 /**
+ * RP-REQ-030: what the user's role leaves out, so the model explains instead
+ * of trying. `cannot` holds catalog phrases ("edit job posts"); empty for owners.
+ */
+export type RecruiterRoleLimits = { cannot: string[]; assignedOnly: boolean };
+
+function renderRoleLimits({ cannot, assignedOnly }: RecruiterRoleLimits) {
+  const lines: string[] = [];
+  if (cannot.length > 0) {
+    lines.push(
+      `You can't: ${cannot.join(", ")}. The user's role doesn't include these; if asked, say so in one sentence and suggest asking an owner or someone who manages roles. Don't try a workaround.`,
+    );
+  }
+  if (assignedOnly) {
+    lines.push(
+      "Some of the user's permissions cover only the jobs they're assigned to. A tool that refuses a job for that reason means the user isn't on that job's hiring team.",
+    );
+  }
+  return lines.join("\n");
+}
+
+/**
  * Builds the recruiter agent's system prompt (RA spec §4.2). `toolNames` are
  * the tools enabled this turn, so the capabilities match them. Pure.
  */
@@ -138,12 +169,14 @@ export function buildRecruiterSystemPrompt({
   now,
   summary,
   toolNames,
+  roleLimits,
 }: {
   context: RecruiterPromptContext;
   memories: AgentPromptMemory[];
   now: Date;
   summary: string | null;
   toolNames: string[];
+  roleLimits?: RecruiterRoleLimits;
 }): string {
   const capabilities = toolNames
     .filter((name) => CAPABILITIES[name])
@@ -153,6 +186,9 @@ export function buildRecruiterSystemPrompt({
   const sections = [
     `# Role\n${role(context.company.name ?? "this company")}`,
     `# Capabilities\nYou can:\n${capabilities}`,
+    ...(roleLimits && (roleLimits.cannot.length > 0 || roleLimits.assignedOnly)
+      ? [`# The user's role\n${renderRoleLimits(roleLimits)}`]
+      : []),
     `# Rules\n${RULES}`,
     `# Today\n${now.toISOString().slice(0, 10)}`,
     `# Company\n${renderCompany(context)}`,

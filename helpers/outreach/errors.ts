@@ -9,6 +9,7 @@ export type OutreachErrorCode =
   | "CANDIDATE_LIMIT"
   | "NOT_FOUND"
   | "JOB_NOT_FOUND"
+  | "FORBIDDEN"
   | "NOT_MEMBER"
   | "INVALID_INPUT"
   | "ALREADY_ANSWERED"
@@ -37,6 +38,8 @@ const ERRORS: Record<Exclude<OutreachErrorCode, "UNKNOWN">, Omit<OutreachError, 
   // A block also raises NOT_FOUND, so a company can't tell it was blocked.
   NOT_FOUND: { status: 404, message: "This candidate isn't available to contact." },
   JOB_NOT_FOUND: { status: 404, message: "That job wasn't found in your company." },
+  // RP-REQ-002: outreach.send at a scope that doesn't cover the job (or no job).
+  FORBIDDEN: { status: 403, message: "Your role can't send outreach for this job." },
   NOT_MEMBER: { status: 403, message: "Only company accounts can send outreach." },
   INVALID_INPUT: { status: 400, message: "Check the subject and message and try again." },
   ALREADY_ANSWERED: { status: 409, message: "You've already answered this message." },
@@ -63,4 +66,8 @@ export function mapOutreachError(err: unknown): OutreachError {
 
 export function outreachLimitError(): OutreachError {
   return { code: "OUTREACH_LIMIT", ...ERRORS.OUTREACH_LIMIT };
+}
+
+export function forbiddenOutreachError(): OutreachError {
+  return { code: "FORBIDDEN", ...ERRORS.FORBIDDEN };
 }

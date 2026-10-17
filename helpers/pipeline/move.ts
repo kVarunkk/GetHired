@@ -61,11 +61,18 @@ type Ctx = { supabase: SupabaseClient<Database>; company: MyCompany; user: User 
 const LOAD_COLUMNS =
   "id, applicant_user_id, stage_id, pipeline_stages(kind), user_info(email, full_name), job_postings!inner(id, company_id, title, company_info(name))";
 
-/** The name stored with events, so it survives a member leaving (difference 5). */
+/**
+ * The member's name, stored with events, notes and emails so it survives them
+ * leaving (pipeline difference 5). Their team display name, else their
+ * account's name, else their email's local part; never the company name, so
+ * teammates' actions stay told apart (teams difference 8, TM-REQ-008).
+ */
 export function actorName(user: User, company: MyCompany): string | null {
   const meta = user.user_metadata ?? {};
-  const name = meta.full_name ?? meta.name;
-  return typeof name === "string" && name.trim() ? name.trim() : company.name;
+  for (const name of [company.displayName, meta.full_name, meta.name]) {
+    if (typeof name === "string" && name.trim()) return name.trim();
+  }
+  return user.email?.split("@")[0] || null;
 }
 
 const IST_OFFSET_MS = 330 * 60_000;

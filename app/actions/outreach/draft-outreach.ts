@@ -15,7 +15,7 @@ const inputSchema = z
 
 /** SERVER ACTION (OR-TASK-040): "Draft with AI" in the outreach composer. Free; 20 a day per company. */
 export async function draftOutreachAction(input: z.input<typeof inputSchema>): Promise<DraftOutreachResult> {
-  const auth = await requireCompanyForAction();
+  const auth = await requireCompanyForAction({ permission: "outreach.send" });
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const parsed = inputSchema.safeParse(input);

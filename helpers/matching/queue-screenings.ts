@@ -23,7 +23,11 @@ export type QueueScreeningsResult =
  * tool; `supabase` and `company` come from the session.
  */
 export async function queueJobScreenings(
-  { supabase, company }: { supabase: SupabaseClient<Database>; company: MyCompany },
+  {
+    supabase,
+    company,
+    user,
+  }: { supabase: SupabaseClient<Database>; company: MyCompany; user: { id: string } },
   jobPostId: string,
 ): Promise<QueueScreeningsResult> {
   // Another company's job is "not_found", so its existence isn't confirmed.
@@ -70,7 +74,8 @@ export async function queueJobScreenings(
   });
   if (needsAllowance) {
     try {
-      await assertAllowance(company.id, "screenings", 1);
+      // RP-REQ-042: the member's own cap too, before anything is queued.
+      await assertAllowance(company.id, "screenings", 1, user.id);
     } catch (err) {
       if (err instanceof EntitlementError) return { ok: false, reason: "entitlement", error: err };
       throw err;
@@ -86,6 +91,8 @@ export async function queueJobScreenings(
       status: "queued",
       attempts: 0,
       error_code: null,
+      // RP-REQ-043: the worker charges this member, not "the system".
+      requested_by: user.id,
       updated_at: now,
     })),
     { onConflict: "application_id" },
