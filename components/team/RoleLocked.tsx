@@ -35,7 +35,7 @@ export default function RoleLocked({
           <span
             tabIndex={0}
             // The disabled child would swallow the tap's click, so the span takes it.
-            className="inline-flex cursor-not-allowed rounded-md [&>*]:pointer-events-none"
+            className="inline-flex min-w-0 max-w-full cursor-not-allowed rounded-md [&>*]:pointer-events-none"
             onPointerDown={(e) => {
               isTouch.current = e.pointerType !== "mouse";
               if (!isTouch.current) return;

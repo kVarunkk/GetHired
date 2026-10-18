@@ -77,7 +77,7 @@ export default function CreateResumeDialog() {
       <ResponsiveDialogTrigger asChild>
         <Button variant="brand" className="max-w-full">
           <Plus className="w-4 h-4" />
-          <span className="truncate">Add Resume</span>
+          <span>Add Resume</span>
         </Button>
       </ResponsiveDialogTrigger>
 

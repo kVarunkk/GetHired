@@ -295,7 +295,7 @@ export default function CreateJobPostingDialog({
   ) : (
     <Button variant="brand" className="max-w-full" disabled={disabled}>
       <PlusCircle />
-      <span className="truncate">Create New Job Post</span>
+      <span>Create New Job Post</span>
     </Button>
   );
 

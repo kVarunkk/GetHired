@@ -55,7 +55,7 @@ function AgentJobSearchBox({ className }: { className?: string }) {
         value={query}
         maxLength={MAX_PROMPT_CHARS}
         placeholder="Describe your dream job..."
-        className="h-8 min-w-0 flex-1 bg-transparent px-1 text-base placeholder:text-xs placeholder:text-muted-foreground focus-visible:outline-none md:text-sm"
+        className="h-8 min-w-0 flex-1 bg-transparent px-1 text-sm placeholder:text-xs placeholder:text-muted-foreground focus-visible:outline-none"
         onChange={(event) => setQuery(event.target.value)}
       />
       <Button

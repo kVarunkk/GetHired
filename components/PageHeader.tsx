@@ -32,7 +32,7 @@ export default function PageHeader({
           <h1 className="break-words text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
           {description && <div className="text-sm text-muted-foreground">{description}</div>}
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {actions && <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">{actions}</div>}
       </div>
     </div>
   );

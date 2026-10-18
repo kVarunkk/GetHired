@@ -144,7 +144,7 @@ export default function CreateInterviewDialog({
       <ResponsiveDialogTrigger asChild>
         <Button variant="brand" className="max-w-full">
           <Plus className="w-4 h-4" />
-          <span className="truncate">Create Interview</span>
+          <span>Create Interview</span>
         </Button>
       </ResponsiveDialogTrigger>
       <ResponsiveDialogContent className="sm:max-w-xl">

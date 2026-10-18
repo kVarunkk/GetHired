@@ -84,7 +84,7 @@ export default function CreateResumeReviewDialog() {
       <ResponsiveDialogTrigger asChild>
         <Button variant="brand" className="max-w-full">
           <Plus className="w-4 h-4" />
-          <span className="truncate">Create CV Review</span>
+          <span>Create CV Review</span>
         </Button>
       </ResponsiveDialogTrigger>
 

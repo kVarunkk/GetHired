@@ -11,7 +11,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "./ui/card";
@@ -32,6 +31,8 @@ import { Step7ReviewSubmit } from "./onboarding-steps/Step7";
 import { isValidUrl } from "@/utils/utils";
 import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
+import PageHeader from "./PageHeader";
+import StickyActionBar from "./StickyActionBar";
 import {
   agentPromptHref,
   ONBOARDING_PROMPT,
@@ -452,8 +453,23 @@ export const OnboardingForm: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col w-full gap-8 mb-20 p-4">
-      <h1 className="text-3xl font-medium">Profile</h1>
+    <div className="flex flex-col w-full gap-6 mb-20 p-4">
+      <PageHeader
+        title="Profile"
+        description={
+          <>
+            Your roles, skills and resume. Visibility, outreach and email
+            preferences are in{" "}
+            <Link
+              href="/settings"
+              className="font-medium text-foreground underline underline-offset-4 transition-colors hover:text-brand"
+            >
+              Settings
+            </Link>
+            .
+          </>
+        }
+      />
       <div className="flex flex-col gap-5 max-w-2xl w-full">
         <div className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
@@ -473,16 +489,6 @@ export const OnboardingForm: React.FC = () => {
             </Link>
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Profile visibility, outreach and email preferences are in{" "}
-          <Link
-            href="/settings"
-            className="font-medium text-foreground underline underline-offset-4 transition-colors hover:text-brand"
-          >
-            Settings
-          </Link>
-          .
-        </p>
       </div>
 
       {stepLoading ? (
@@ -490,8 +496,8 @@ export const OnboardingForm: React.FC = () => {
           <Loader2 className="animate-spin h-5 w-5 text-muted-foreground" />
         </div>
       ) : (
-        <Card className="w-full max-w-2xl !border-none !p-0 shadow-none">
-          <CardHeader className="!p-0 mb-5">
+        <Card className="flex w-full max-w-2xl flex-col gap-6 !border-none !p-0 shadow-none">
+          <CardHeader className="!p-0">
             <Progress value={progress} className="mt-4" />
           </CardHeader>
           <CurrentStepComponent
@@ -501,17 +507,17 @@ export const OnboardingForm: React.FC = () => {
             setErrors={setFormErrors}
             // loadingLocations={isLoadingLocations}
           />
-          {error && (
-            <p
-              role="alert"
-              className="mt-2 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
-            >
-              <AlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
-              {error}
-            </p>
-          )}
-
-          <CardFooter className="flex items-center justify-between !p-0 mt-5">
+          {/* In the sticky bar, so the error shows wherever Next was clicked. */}
+          <StickyActionBar className="justify-between">
+            {error && (
+              <p
+                role="alert"
+                className="flex w-full items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+              >
+                <AlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+                {error}
+              </p>
+            )}
             <Button
               variant={"outline"}
               onClick={handleBack}
@@ -526,8 +532,8 @@ export const OnboardingForm: React.FC = () => {
                   ? "Submit"
                   : "Next"}
             </Button>
-          </CardFooter>
-          <p className="text-muted-foreground text-xs text-center mt-5">
+          </StickyActionBar>
+          <p className="text-muted-foreground text-xs text-center">
             No need to panic, you can always update this information.
           </p>
         </Card>
