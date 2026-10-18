@@ -138,6 +138,21 @@ describe("validateAnswers (AF-REQ-007)", () => {
       expect(errorFor(form, { [salary]: 100 }, salary)).toBe("Enter an amount and a currency.");
     });
 
+    it("only accepts an earliest start date from today on", () => {
+      const start = standardAnswerKey("earliest_start_date");
+      const form = formOf([], { earliest_start_date: "required" });
+      expect(errorFor(form, { [start]: "2026-10-16" }, start)).toBe("Pick a date from today on.");
+      expect(check(form, { [start]: TODAY }).ok).toBe(true);
+    });
+
+    it("only accepts a notice period of whole days, 0 or more", () => {
+      const notice = standardAnswerKey("notice_period_days");
+      const form = formOf([], { notice_period_days: "required" });
+      expect(errorFor(form, { [notice]: -5 }, notice)).toBe("Enter at least 0.");
+      expect(errorFor(form, { [notice]: 2.5 }, notice)).toBe("Enter a whole number.");
+      expect(check(form, { [notice]: 0 }).ok).toBe(true);
+    });
+
     it("validates work authorisation as yes/no", () => {
       const form = formOf([], { work_authorization: "required" });
       expect(check(form, { [auth]: true }).ok).toBe(true);

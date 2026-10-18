@@ -129,7 +129,16 @@ export default function ApplicationFields({
             );
             break;
           case "date":
-            control = <Input {...common} type="date" value={(value as string) ?? ""} onChange={(e) => onChange(field.key, e.target.value || undefined)} />;
+            control = (
+              <Input
+                {...common}
+                type="date"
+                min={field.minDate}
+                max={field.maxDate}
+                value={(value as string) ?? ""}
+                onChange={(e) => onChange(field.key, e.target.value || undefined)}
+              />
+            );
             break;
           case "number":
             control = (

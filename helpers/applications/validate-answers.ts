@@ -6,6 +6,7 @@ import {
   liveQuestions,
   type ApplicationForm,
   type QuestionType,
+  type StandardFieldDef,
   type StandardFieldKey,
   type StandardFieldKind,
 } from "@/helpers/jobs/application-form-schema";
@@ -49,7 +50,8 @@ export function fieldsOf(form: ApplicationForm): Field[] {
   const standard: Field[] = STANDARD_FIELD_KEYS.flatMap((key) => {
     const mode = form.standard_fields[key];
     if (!mode || mode === "off") return [];
-    return [{ key: standardAnswerKey(key), kind: STANDARD_FIELDS[key].kind, required: mode === "required" }];
+    const { kind, min, integer, date_rule }: StandardFieldDef = STANDARD_FIELDS[key];
+    return [{ key: standardAnswerKey(key), kind, required: mode === "required", min, integer, date_rule }];
   });
   return [...questions, ...standard];
 }

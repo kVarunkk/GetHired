@@ -43,6 +43,16 @@ export const KNOCKOUT_TYPES: readonly QuestionType[] = ["yes_no", "single_select
 /** The value kind of a standard field: a question type, or a salary (amount and currency). */
 export type StandardFieldKind = QuestionType | "salary";
 
+/** A standard field's definition. `min`/`integer`/`date_rule` are fixed checks on its answer. */
+export type StandardFieldDef = {
+  label: string;
+  kind: StandardFieldKind;
+  profile: string | null;
+  min?: number;
+  integer?: boolean;
+  date_rule?: "future";
+};
+
 /**
  * AF-REQ-002 / AF-SEC-001: the fixed standard fields. None asks about a
  * protected characteristic. `profile` names where the applicant form
@@ -54,11 +64,11 @@ export const STANDARD_FIELDS = {
   portfolio_url: { label: "Portfolio or GitHub", kind: "url", profile: "portfolio" },
   current_location: { label: "Current location", kind: "short_text", profile: "location" },
   expected_salary: { label: "Expected salary", kind: "salary", profile: null },
-  notice_period_days: { label: "Notice period (days)", kind: "number", profile: null },
-  earliest_start_date: { label: "Earliest start date", kind: "date", profile: null },
+  notice_period_days: { label: "Notice period (days)", kind: "number", profile: null, min: 0, integer: true },
+  earliest_start_date: { label: "Earliest start date", kind: "date", profile: null, date_rule: "future" },
   work_authorization: { label: "Are you authorised to work in this job's locations?", kind: "yes_no", profile: null },
   cover_letter: { label: "Cover letter", kind: "long_text", profile: null },
-} as const satisfies Record<string, { label: string; kind: StandardFieldKind; profile: string | null }>;
+} as const satisfies Record<string, StandardFieldDef>;
 
 export type StandardFieldKey = keyof typeof STANDARD_FIELDS;
 export const STANDARD_FIELD_KEYS = Object.keys(STANDARD_FIELDS) as StandardFieldKey[];
