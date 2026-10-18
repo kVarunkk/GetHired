@@ -1,4 +1,5 @@
 import { revalidateTag } from "next/cache";
+import { careersCompanyTag } from "@/helpers/careers/cache-tags";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
@@ -8,6 +9,10 @@ import {
   jobPostingInputSchema,
   type JobPostingInput,
 } from "@/helpers/jobs/job-posting-schema";
+import { formFromLegacyQuestions, legacyQuestionsOf } from "@/helpers/jobs/application-form-schema";
+import { screenFormFairness } from "@/helpers/jobs/form-fairness";
+import { splitForm } from "@/helpers/jobs/public-application-form";
+import type { Json } from "@/utils/types/database.types";
 import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
 import { assertLimit } from "@/helpers/billing/entitlements";
 import {
@@ -53,6 +58,12 @@ export async function upsertJobPosting(
     };
   }
   const values = parsed.data;
+
+  // AF-REQ-001 / AF-CON-001: the typed form, or one built from the old questions.
+  const fullForm = values.application_form ?? formFromLegacyQuestions(values.questions);
+  const fairness = screenFormFairness(fullForm);
+  if (!fairness.ok) return { success: false, error: fairness.error };
+  const { stored: storedForm, rules: formRules } = splitForm(fullForm);
 
   const { existingPostingId } = params;
   const isUpdate = existingPostingId !== undefined;
@@ -120,7 +131,10 @@ export async function upsertJobPosting(
       visa_sponsorship: values.visa_sponsorship,
       min_equity: values.min_equity,
       max_equity: values.max_equity,
-      questions: values.questions,
+      questions: legacyQuestionsOf(fullForm),
+      application_form: storedForm as unknown as Json,
+      ...(values.department !== undefined ? { department: values.department } : {}),
+      ...(values.workplace_type !== undefined ? { workplace_type: values.workplace_type } : {}),
       ...(values.skills ? { skills: values.skills } : {}),
       salary_range,
       equity_range,
@@ -143,6 +157,15 @@ export async function upsertJobPosting(
       .single();
 
     if (postingError || !posting) throw new Error("Failed to save the job posting.");
+
+    // AF-SEC-003: the knockout rules live apart from the world-readable posting.
+    const { error: rulesError } = await service.from("job_posting_form_rules").upsert({
+      job_post_id: posting.id,
+      company_id: company.id,
+      rules: formRules as unknown as Json,
+      updated_at: new Date().toISOString(),
+    });
+    if (rulesError) throw new Error("Failed to save the application form.");
 
     // RP-REQ-011: the creator is assigned to a new job, so a job-scoped role
     // with jobs.create can manage what it creates. Owners see every job.
@@ -257,6 +280,9 @@ export async function upsertJobPosting(
         .update({ job_id: insertedJob.id })
         .eq("id", posting.id);
     }
+
+    // CP-CON-001: the careers page lists the company's active jobs.
+    revalidateTag(careersCompanyTag(company.id));
 
     if (posting.status === "active") {
       await triggerJobPostingRelevanceUpdate(posting.id);

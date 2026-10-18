@@ -216,11 +216,28 @@ describe("middleware: billing routes", () => {
   });
 });
 
+describe("middleware: careers pages (CP-SEC-001, CPT-048)", () => {
+  it.each(["/careers/acme", "/careers/acme/jobs/d0000000-0000-4000-8000-000000000001", "/api/careers/acme/jobs"])(
+    "lets %s through without a session",
+    async (path) => {
+      expect(passesThrough(await updateSession(request(path)))).toBe(true);
+    },
+  );
+
+  it("keeps the bare /careers path private", async () => {
+    expect(redirectTarget(await updateSession(request("/careers")))).toMatch(/^\/auth\/login/);
+  });
+});
+
 describe("middleware: matching workers", () => {
   it("lets the match explanations worker through without a session", async () => {
     expect(
       passesThrough(await updateSession(request("/api/updates/company/match-explanations/worker"))),
     ).toBe(true);
+  });
+
+  it("lets the knockout email worker through without a session (CPT-032)", async () => {
+    expect(passesThrough(await updateSession(request("/api/updates/knockouts/worker")))).toBe(true);
   });
 
   it("lets the application screening worker through without a session", async () => {

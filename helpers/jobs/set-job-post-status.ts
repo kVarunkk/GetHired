@@ -1,4 +1,5 @@
 import { revalidatePath, revalidateTag } from "next/cache";
+import { careersCompanyTag } from "@/helpers/careers/cache-tags";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
@@ -74,6 +75,7 @@ export async function setJobPostStatus(
     const { error } = await service.from("all_jobs").update({ status }).eq("id", posting.job_id);
     if (error) return { ok: false, error: "Failed to update the public job listing." };
     revalidateTag(`job-${posting.job_id}`);
+    revalidateTag(careersCompanyTag(company.id));
     revalidatePath(`/jobs/${posting.job_id}`);
   }
 

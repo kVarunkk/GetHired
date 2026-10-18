@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -45,14 +45,24 @@ function access(
 
 const MIGRATION = path.join(process.cwd(), "supabase/migrations/20261017160000_recruiter_roles.sql");
 
+const MIGRATIONS_DIR = path.join(process.cwd(), "supabase/migrations");
+
+/** Every `insert into company_permissions` row across the migrations, later ones winning (upserts). */
 function migrationCatalog() {
-  const sql = readFileSync(MIGRATION, "utf8");
-  const block = sql.match(/insert into public\.company_permissions[\s\S]*?;/)?.[0] ?? "";
-  return [...block.matchAll(/\('([a-z_.]+)',\s*(true|false),\s*'\{([^}]*)\}'\)/g)].map((m) => ({
-    key: m[1],
-    scopable: m[2] === "true",
-    requires: m[3] ? m[3].split(",").map((s) => s.trim()) : [],
-  }));
+  const rows = new Map<string, { key: string; scopable: boolean; requires: string[] }>();
+  for (const file of readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort()) {
+    const sql = readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
+    for (const [block] of sql.matchAll(/insert into public\.company_permissions[\s\S]*?;/g)) {
+      for (const m of block.matchAll(/\('([a-z_.]+)',\s*(true|false),\s*'\{([^}]*)\}'\)/g)) {
+        rows.set(m[1], {
+          key: m[1],
+          scopable: m[2] === "true",
+          requires: m[3] ? m[3].split(",").map((x) => x.trim()) : [],
+        });
+      }
+    }
+  }
+  return [...rows.values()];
 }
 
 function migrationArray(marker: string) {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { applicationFormSchema } from "./application-form-schema";
 
 export const MAX_JOB_POSTING_QUESTIONS = 10;
 export const MAX_JOB_POSTING_QUESTION_CHARS = 300;
@@ -46,6 +47,17 @@ export const jobPostingInputSchema = z
       .optional()
       .transform((questions) => (questions ?? []).filter((q) => q !== "")),
     skills: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
+    // AF-REQ-001: the typed form. When it's sent, `questions` is ignored and
+    // rebuilt from it for old clients (AF-CON-001).
+    application_form: applicationFormSchema.optional(),
+    // CP-REQ-020: careers page filters.
+    department: z
+      .string()
+      .trim()
+      .max(60, "Departments can be at most 60 characters.")
+      .optional()
+      .transform((d) => (d ? d : null)),
+    workplace_type: z.enum(["onsite", "hybrid", "remote"]).nullable().optional(),
   })
   .strict()
   .refine((v) => ordered(v.min_salary, v.max_salary), {

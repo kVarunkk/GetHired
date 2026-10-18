@@ -11,6 +11,7 @@ const applicantsServerQuery = supabase
         created_at,
         status,
         resume_url,
+        answers_v2,
         job_postings(
           id,
           title
@@ -22,6 +23,11 @@ const applicantsServerQuery = supabase
           status,
           fit_score,
           recommendation
+        ),
+        application_knockouts(
+          failed,
+          reasons,
+          action_taken
         )
       `,
   )

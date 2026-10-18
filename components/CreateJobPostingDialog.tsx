@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import AgentHandoff from "@/components/agent/AgentHandoff";
 import { Button } from "@/components/ui/button";
+import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import { jobPostHandoffPrompt } from "@/helpers/agent/handoff-prompts";
 import {
   ResponsiveDialog,
   ResponsiveDialogBody,
@@ -32,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Pencil, PlusCircle, Trash } from "lucide-react";
+import { Loader2, Pencil, PlusCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { ICreateJobPostingFormData } from "@/utils/types";
@@ -42,6 +45,16 @@ import { mutate } from "swr";
 import LocationSearchSelect from "./LocationSearchSelect";
 import RoleLocked from "./team/RoleLocked";
 import { forbiddenMessage } from "@/helpers/companies/permissions";
+import ApplicationFormBuilder from "./jobs/ApplicationFormBuilder";
+import QuestionSetPicker from "./jobs/QuestionSetPicker";
+import { applyQuestionSet } from "@/helpers/jobs/question-sets";
+import { loadJobFormAction } from "@/app/actions/jobs/load-job-form";
+import {
+  applicationFormSchema,
+  formFromLegacyQuestions,
+  readApplicationForm,
+  type ApplicationForm,
+} from "@/helpers/jobs/application-form-schema";
 
 const jobFormSchema = z
   .object({
@@ -77,10 +90,9 @@ const jobFormSchema = z
     }),
     min_equity: z.coerce.number().min(0).max(100).optional(),
     max_equity: z.coerce.number().min(0).max(100).optional(),
-    questions: z
-      .array(z.string().min(1, "Question cannot be empty."))
-      .max(3, "You can add a maximum of 3 questions.")
-      .optional(),
+    // CP-REQ-020: careers page filters.
+    department: z.string().trim().max(60, "Departments can be at most 60 characters.").optional(),
+    workplace_type: z.enum(["onsite", "hybrid", "remote"]).nullable().optional(),
   })
   .refine(
     (data) => {
@@ -152,16 +164,54 @@ export default function CreateJobPostingDialog({
       visa_sponsorship: "Not Required",
       min_equity: 0,
       max_equity: 0,
-      questions: [""],
+      department: "",
+      workplace_type: null,
     },
   });
 
+  // AF-REQ-001: the typed form, edited on step 2. An edit loads the full form
+  // (with its knockout rules) and the questions that already have answers.
+  const [applicationForm, setApplicationForm] = useState<ApplicationForm>(() =>
+    existingValues
+      ? readApplicationForm(existingValues.application_form, existingValues.questions)
+      : formFromLegacyQuestions([]),
+  );
+  const [answeredQuestionIds, setAnsweredQuestionIds] = useState<string[]>([]);
+  const [formLoaded, setFormLoaded] = useState(!existingValues?.id);
+  const existingId = existingValues?.id;
+  useEffect(() => {
+    if (!isOpen || formLoaded || !existingId) return;
+    let cancelled = false;
+    void loadJobFormAction({ jobPostId: existingId }).then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        setApplicationForm(result.form);
+        setAnsweredQuestionIds(result.answeredQuestionIds);
+      } else {
+        toast.error(result.error);
+      }
+      setFormLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, formLoaded, existingId]);
+
   const onSubmit = async (values: ICreateJobPostingFormData) => {
+    const checkedForm = applicationFormSchema.safeParse(applicationForm);
+    if (!checkedForm.success) {
+      toast.error(checkedForm.error.issues[0]?.message ?? "Check the application questions.");
+      return;
+    }
     setLoading(true);
 
     try {
+      // The form replaces the old questions list (AF-CON-001: the server rebuilds it).
+      const fields = { ...values };
+      delete fields.id;
+      delete fields.questions;
       const result = await upsertJobPostingAction({
-        values,
+        values: { ...fields, application_form: checkedForm.data },
         existingPostingId: existingValues?.id,
       });
 
@@ -224,12 +274,14 @@ export default function CreateJobPostingDialog({
     }
   };
 
-  const currentQuestions = form.watch("questions");
-  const canAddQuestion = currentQuestions ? currentQuestions.length < 3 : false;
-
   const jobTypes = ["Fulltime", "Intern", "Contract"];
   const salaryCurrencies = ["₹", "$", "€", "£", "C$", "A$"];
   const visaOptions = ["Will Sponsor", "Not Required", "Required"];
+  const workplaceOptions = [
+    { value: "onsite", label: "On-site" },
+    { value: "hybrid", label: "Hybrid" },
+    { value: "remote", label: "Remote" },
+  ] as const;
 
   const trigger = existingValues ? (
     <Button
@@ -281,6 +333,26 @@ export default function CreateJobPostingDialog({
         </ResponsiveDialogHeader>
         <Form {...form}>
           <ResponsiveDialogBody>
+            {step === 1 && (
+              <div className="mb-4">
+                <AgentHandoff
+                  label={existingValues ? "Or tell the agent what to change" : "Or describe the job and let the agent write it"}
+                  placeholder={
+                    existingValues
+                      ? "Raise the salary range and make it remote…"
+                      : "Senior backend engineer, Go, remote in India, 30-45 LPA…"
+                  }
+                  basePath={COMPANY_AGENT_PATH}
+                  toPrompt={(text) =>
+                    jobPostHandoffPrompt(
+                      text,
+                      existingValues?.id ? { id: existingValues.id, title: existingValues.title } : undefined,
+                    )
+                  }
+                  onHandoff={() => setIsOpen(false)}
+                />
+              </div>
+            )}
             <form
               id="JobPostingForm"
               onSubmit={form.handleSubmit(onSubmit)}
@@ -387,6 +459,49 @@ export default function CreateJobPostingDialog({
                               {visaOptions.map((option) => (
                                 <SelectItem key={option} value={option}>
                                   {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="department"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Department (optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Engineering" maxLength={60} {...field} value={field.value ?? ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="workplace_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Workplace (optional)</FormLabel>
+                          <Select
+                            onValueChange={(v) => field.onChange(v === "none" ? null : v)}
+                            defaultValue={field.value ?? "none"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Not set" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">Not set</SelectItem>
+                              {workplaceOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -577,63 +692,27 @@ export default function CreateJobPostingDialog({
                   </div>
                 </>
               ) : (
-                <>
-                  <FormLabel>
-                    Add up to 3 custom questions for applicants:
-                  </FormLabel>
-                  <div className="space-y-4">
-                    {currentQuestions &&
-                      currentQuestions.map((q, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <FormField
-                            control={form.control}
-                            name={`questions.${index}`}
-                            render={({ field }) => (
-                              <FormItem className="flex-grow">
-                                <FormControl>
-                                  <Textarea
-                                    placeholder={`Question ${index + 1}`}
-                                    className="resize-y"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const newQuestions = currentQuestions.filter(
-                                (_, i) => i !== index,
-                              );
-                              form.setValue("questions", newQuestions);
-                            }}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    {canAddQuestion && (
-                      <div className="flex justify-end">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            form.setValue("questions", [
-                              ...(currentQuestions || []),
-                              "",
-                            ]);
-                          }}
-                        >
-                          Add Another Question
-                        </Button>
-                      </div>
-                    )}
+                formLoaded ? (
+                  <div className="flex flex-col gap-4">
+                    <QuestionSetPicker
+                      disabled={loading}
+                      onApply={(copy) =>
+                        setApplicationForm(applyQuestionSet(applicationForm, copy, answeredQuestionIds))
+                      }
+                    />
+                    <ApplicationFormBuilder
+                      value={applicationForm}
+                      onChange={setApplicationForm}
+                      answeredQuestionIds={answeredQuestionIds}
+                      disabled={loading}
+                    />
                   </div>
-                </>
+                ) : (
+                  <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading the application form…
+                  </div>
+                )
               )}
             </form>
           </ResponsiveDialogBody>
@@ -658,7 +737,7 @@ export default function CreateJobPostingDialog({
                 form="JobPostingForm"
                 type="submit"
                 variant="brand"
-                disabled={loading}
+                disabled={loading || !formLoaded}
               >
                 {loading ? (
                   <>

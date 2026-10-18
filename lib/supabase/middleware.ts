@@ -90,6 +90,8 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/company/relevant-profiles/worker",
     "/api/updates/interview-analysis/worker",
     "/api/updates/company/match-explanations/worker",
+    // Knockout rejection emails, 24 hours after the move (X-Internal-Secret).
+    "/api/updates/knockouts/worker",
     "/api/worker/user/onboarding",
     "/api/worker/application-screening",
     // Pipeline notifications (X-Internal-Secret).
@@ -171,6 +173,10 @@ export async function updateSession(request: NextRequest) {
     pathname.length > "/remote-jobs/".length;
 
   const isSitemapPage = pathname.startsWith("/sitemap/");
+  // CP-SEC-001: careers pages, their job pages and their jobs API are public.
+  const isCareersPath =
+    (pathname.startsWith("/careers/") && pathname.length > "/careers/".length) ||
+    (pathname.startsWith("/api/careers/") && pathname.length > "/api/careers/".length);
   // Exempt from the company-only and company-onboarding redirects below, so an
   // applicant sees why they can't join and an invitee who hasn't accepted yet
   // can (teams difference 4).
@@ -183,7 +189,8 @@ export async function updateSession(request: NextRequest) {
     isBlogPage ||
     isCompanyPage ||
     isRemoteJobsLocationPage ||
-    isSitemapPage;
+    isSitemapPage ||
+    isCareersPath;
 
   const isProtectedPath = !isAuthPath && !isPublicPath;
   const isProtectedRelevanceSearch =

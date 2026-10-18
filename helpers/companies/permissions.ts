@@ -1,4 +1,4 @@
-// The company permission catalog (plan/feature-recruiter-roles-spec.md, RP-REQ-001/002).
+// The company permission catalog (plan/recruiter-roles/feature-recruiter-roles-spec.md, RP-REQ-001/002).
 //
 // One list, mirrored in the `company_permissions` table so SQL can check the
 // same keys (RP-TEST-002 compares the two). Adding a permission means a new
@@ -254,6 +254,24 @@ export const PERMISSION_CATALOG = [
     scopable: false,
     requires: [],
     deny: "change notification settings",
+  },
+  {
+    key: "careers.edit",
+    group: "Settings",
+    label: "Edit the careers page",
+    description: "Claim the careers page address, edit its branding and sections, and publish it.",
+    scopable: false,
+    requires: [],
+    deny: "edit the careers page",
+  },
+  {
+    key: "question_sets.manage",
+    group: "Settings",
+    label: "Manage question sets",
+    description: "Save, rename and delete reusable application question sets. Anyone who edits a job can apply one.",
+    scopable: false,
+    requires: ["jobs.view"],
+    deny: "manage question sets",
   },
   {
     key: "company.profile",

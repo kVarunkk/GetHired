@@ -100,6 +100,7 @@ function route(mock: SupabaseMock) {
       );
       return { data: row ?? null, error: null };
     });
+    mock.queue("job_posting_form_rules", { data: null, error: null });
     mock.queue("all_jobs", (call) => {
       if (has(call, "insert")) return { data: { id: NEW_JOB_ID }, error: null };
       return { data: null, error: state.allJobsUpdateError };
@@ -372,5 +373,93 @@ describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)
 
     expect(result).toEqual({ success: true, isUpdate: true });
     expect(service.callsFor("send_batch")).toHaveLength(1);
+  });
+});
+
+describe("upsertJobPostingAction: application forms (CPT-017, AF-CON-001)", () => {
+  const qid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+  const postingPayload = () => {
+    const write = writes("job_postings").find((c) => has(c, "insert") || (has(c, "update") && has(c, "select")));
+    return (argsOf(write!, "insert") ?? argsOf(write!, "update"))?.[0] as Record<string, unknown>;
+  };
+  const rulesWrite = () => writes("job_posting_form_rules").map((c) => argsOf(c, "upsert")?.[0]);
+
+  it("turns legacy questions into a form, keeping questions for old clients", async () => {
+    await upsertJobPostingAction({ values: VALUES });
+
+    expect(postingPayload()).toMatchObject({
+      questions: ["Why us?"],
+      application_form: {
+        version: 1,
+        questions: [{ id: qid(1), type: "long_text", label: "Why us?", required: true }],
+        standard_fields: {},
+      },
+    });
+  });
+
+  it("stores a typed form without its rules, writes the rules apart and syncs questions", async () => {
+    const application_form = {
+      version: 1 as const,
+      questions: [
+        { id: qid(1), type: "long_text" as const, label: "Why us?", required: true },
+        {
+          id: qid(2),
+          type: "yes_no" as const,
+          label: "Can you relocate?",
+          required: true,
+          knockout: { fail_if: { kind: "equals" as const, value: false }, action: "flag" as const },
+        },
+        { id: qid(3), type: "short_text" as const, label: "Nickname", required: false },
+      ],
+      standard_fields: { phone: "optional" as const },
+    };
+
+    const result = await upsertJobPostingAction({ values: { ...VALUES, questions: undefined, application_form } });
+
+    expect(result).toEqual({ success: true, isUpdate: false });
+    const payload = postingPayload();
+    expect(payload.questions).toEqual(["Why us?"]);
+    expect(JSON.stringify(payload.application_form)).not.toContain("knockout");
+    expect(rulesWrite()).toEqual([
+      {
+        job_post_id: expect.any(String),
+        company_id: COMPANY_A.id,
+        rules: { questions: { [qid(2)]: { fail_if: { kind: "equals", value: false }, action: "flag" } }, standard: {} },
+        updated_at: expect.any(String),
+      },
+    ]);
+  });
+
+  it("refuses a question about a protected characteristic (AF-SEC-001)", async () => {
+    const application_form = {
+      version: 1 as const,
+      questions: [{ id: qid(1), type: "yes_no" as const, label: "Are you married?", required: true }],
+      standard_fields: {},
+    };
+
+    const result = await upsertJobPostingAction({ values: { ...VALUES, application_form } });
+
+    expect(result).toEqual({
+      success: false,
+      error: `Application questions can't ask about marital status. Change or remove "Are you married?".`,
+    });
+    expect(writes("job_postings")).toHaveLength(0);
+  });
+
+  it("rejects an invalid form", async () => {
+    const application_form = { version: 1, questions: [{ id: "q1", type: "file", label: "CV", required: true }], standard_fields: {} };
+    const result = await upsertJobPostingAction({ values: { ...VALUES, application_form } as never });
+    expect(result).toMatchObject({ success: false });
+    expect(writes("job_postings")).toHaveLength(0);
+  });
+
+  it("revalidates the company's careers page (CP-CON-001)", async () => {
+    await upsertJobPostingAction({ values: VALUES });
+    expect(revalidateTag).toHaveBeenCalledWith(`careers-company:${COMPANY_A.id}`);
+  });
+
+  it("writes department and workplace type (CP-REQ-020)", async () => {
+    await upsertJobPostingAction({ values: { ...VALUES, department: " Engineering ", workplace_type: "hybrid" } });
+    expect(postingPayload()).toMatchObject({ department: "Engineering", workplace_type: "hybrid" });
   });
 });

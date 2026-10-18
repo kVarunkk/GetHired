@@ -11,6 +11,8 @@ export type BoardApplication = {
   noteCount: number;
   /** strong_no..strong_yes scored 1–4, or null with no ratings. */
   ratingAvg: number | null;
+  /** AF-REQ-003: the knockout questions it failed, or null when it passed (or had none). */
+  knockoutReasons?: string[] | null;
 };
 
 export type BoardStage = {

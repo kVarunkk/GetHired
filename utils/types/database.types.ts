@@ -461,6 +461,64 @@ export type Database = {
           },
         ]
       }
+      application_knockouts: {
+        Row: {
+          action_taken: string
+          application_id: string
+          company_id: string
+          created_at: string
+          failed: boolean
+          job_post_id: string
+          reasons: Json
+          reject_email_due_at: string | null
+          reject_email_sent_at: string | null
+        }
+        Insert: {
+          action_taken: string
+          application_id: string
+          company_id: string
+          created_at?: string
+          failed: boolean
+          job_post_id: string
+          reasons?: Json
+          reject_email_due_at?: string | null
+          reject_email_sent_at?: string | null
+        }
+        Update: {
+          action_taken?: string
+          application_id?: string
+          company_id?: string
+          created_at?: string
+          failed?: boolean
+          job_post_id?: string
+          reasons?: Json
+          reject_email_due_at?: string | null
+          reject_email_sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_knockouts_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_knockouts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_knockouts_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_screenings: {
         Row: {
           application_id: string
@@ -553,14 +611,17 @@ export type Database = {
         Row: {
           all_jobs_id: string | null
           answers: string[]
+          answers_v2: Json | null
           applicant_user_id: string | null
           created_at: string
+          form_snapshot: Json | null
           id: string
           job_post_id: string | null
           resume_id: string | null
           resume_path: string | null
           resume_url: string | null
           source: string
+          source_detail: string | null
           stage_entered_at: string
           stage_id: string | null
           status: Database["public"]["Enums"]["application_status"]
@@ -569,14 +630,17 @@ export type Database = {
         Insert: {
           all_jobs_id?: string | null
           answers?: string[]
+          answers_v2?: Json | null
           applicant_user_id?: string | null
           created_at?: string
+          form_snapshot?: Json | null
           id?: string
           job_post_id?: string | null
           resume_id?: string | null
           resume_path?: string | null
           resume_url?: string | null
           source?: string
+          source_detail?: string | null
           stage_entered_at?: string
           stage_id?: string | null
           status?: Database["public"]["Enums"]["application_status"]
@@ -585,14 +649,17 @@ export type Database = {
         Update: {
           all_jobs_id?: string | null
           answers?: string[]
+          answers_v2?: Json | null
           applicant_user_id?: string | null
           created_at?: string
+          form_snapshot?: Json | null
           id?: string
           job_post_id?: string | null
           resume_id?: string | null
           resume_path?: string | null
           resume_url?: string | null
           source?: string
+          source_detail?: string | null
           stage_entered_at?: string
           stage_id?: string | null
           status?: Database["public"]["Enums"]["application_status"]
@@ -1020,6 +1087,32 @@ export type Database = {
           },
         ]
       }
+      company_careers_slug_history: {
+        Row: {
+          company_id: string
+          retired_at: string
+          slug: string
+        }
+        Insert: {
+          company_id: string
+          retired_at?: string
+          slug: string
+        }
+        Update: {
+          company_id?: string
+          retired_at?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_careers_slug_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_credit_ledger: {
         Row: {
           company_id: string
@@ -1217,6 +1310,12 @@ export type Database = {
       company_info: {
         Row: {
           ai_credits: number
+          careers_accent_color: string | null
+          careers_cover_url: string | null
+          careers_links: Json
+          careers_published: boolean
+          careers_sections: Json
+          careers_slug: string | null
           company_size: string | null
           created_at: string
           default_role_id: string | null
@@ -1245,6 +1344,12 @@ export type Database = {
         }
         Insert: {
           ai_credits?: number
+          careers_accent_color?: string | null
+          careers_cover_url?: string | null
+          careers_links?: Json
+          careers_published?: boolean
+          careers_sections?: Json
+          careers_slug?: string | null
           company_size?: string | null
           created_at?: string
           default_role_id?: string | null
@@ -1273,6 +1378,12 @@ export type Database = {
         }
         Update: {
           ai_credits?: number
+          careers_accent_color?: string | null
+          careers_cover_url?: string | null
+          careers_links?: Json
+          careers_published?: boolean
+          careers_sections?: Json
+          careers_slug?: string | null
           company_size?: string | null
           created_at?: string
           default_role_id?: string | null
@@ -1474,6 +1585,44 @@ export type Database = {
           scopable?: boolean
         }
         Relationships: []
+      }
+      company_question_sets: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          form: Json
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          form: Json
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          form?: Json
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_question_sets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_role_limits: {
         Row: {
@@ -2108,10 +2257,48 @@ export type Database = {
           },
         ]
       }
-      job_postings: {
+      job_posting_form_rules: {
         Row: {
           company_id: string
+          job_post_id: string
+          rules: Json
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          job_post_id: string
+          rules?: Json
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          job_post_id?: string
+          rules?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_posting_form_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_posting_form_rules_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: true
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_postings: {
+        Row: {
+          application_form: Json
+          company_id: string
           created_at: string
+          department: string | null
           description: string | null
           embedding: string | null
           embedding_new: string | null
@@ -2140,10 +2327,13 @@ export type Database = {
           title: string
           updated_at: string
           visa_sponsorship: Database["public"]["Enums"]["visa_job_postings"]
+          workplace_type: Database["public"]["Enums"]["workplace_type"] | null
         }
         Insert: {
+          application_form?: Json
           company_id: string
           created_at?: string
+          department?: string | null
           description?: string | null
           embedding?: string | null
           embedding_new?: string | null
@@ -2172,10 +2362,13 @@ export type Database = {
           title: string
           updated_at?: string
           visa_sponsorship?: Database["public"]["Enums"]["visa_job_postings"]
+          workplace_type?: Database["public"]["Enums"]["workplace_type"] | null
         }
         Update: {
+          application_form?: Json
           company_id?: string
           created_at?: string
+          department?: string | null
           description?: string | null
           embedding?: string | null
           embedding_new?: string | null
@@ -2204,6 +2397,7 @@ export type Database = {
           title?: string
           updated_at?: string
           visa_sponsorship?: Database["public"]["Enums"]["visa_job_postings"]
+          workplace_type?: Database["public"]["Enums"]["workplace_type"] | null
         }
         Relationships: [
           {
@@ -3329,6 +3523,15 @@ export type Database = {
         }[]
       }
       caller_is_owner: { Args: { p_company_id: string }; Returns: boolean }
+      careers_page_json: {
+        Args: { c: Database["public"]["Tables"]["company_info"]["Row"] }
+        Returns: Json
+      }
+      careers_slug_available: {
+        Args: { p_company: string; p_slug: string }
+        Returns: boolean
+      }
+      careers_slug_valid: { Args: { p_slug: string }; Returns: boolean }
       check_entitlement: {
         Args: { p_company_id: string; p_key: string; p_qty?: number }
         Returns: Json
@@ -3342,6 +3545,7 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_careers_slug: { Args: { p_slug: string }; Returns: Json }
       claim_note_mention_emails: {
         Args: { p_note_id: string; p_user_ids: string[] }
         Returns: string[]
@@ -3458,6 +3662,11 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_careers_jobs: {
+        Args: { p_preview?: boolean; p_slug: string }
+        Returns: Json
+      }
+      get_careers_page: { Args: { p_slug: string }; Returns: Json }
       get_company_entitlements: {
         Args: { p_company_id: string }
         Returns: Json
@@ -3487,6 +3696,7 @@ export type Database = {
           job_url: string
         }[]
       }
+      get_my_careers_page: { Args: never; Returns: Json }
       get_my_profile_view_count: { Args: { p_days?: number }; Returns: number }
       get_platform_stats: {
         Args: never
@@ -3587,6 +3797,7 @@ export type Database = {
         } & "the function public.industry_preferences_search with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
       is_company_member: { Args: { p_company_id: string }; Returns: boolean }
+      legacy_question_id: { Args: { p_index: number }; Returns: string }
       list_company_audit: {
         Args: {
           p_action?: string
@@ -3598,8 +3809,8 @@ export type Database = {
         }
         Returns: Json
       }
-      list_company_roles: { Args: never; Returns: Json }
       list_company_hiring_teams: { Args: never; Returns: Json }
+      list_company_roles: { Args: never; Returns: Json }
       list_company_team: { Args: never; Returns: Json }
       list_job_hiring_team: { Args: { p_job_post_id: string }; Returns: Json }
       list_mentionable_members: {
@@ -3756,6 +3967,15 @@ export type Database = {
         Returns: boolean
       }
       rollover_free_periods: { Args: never; Returns: Json }
+      save_careers_page: {
+        Args: {
+          p_accent_color: string
+          p_cover_url: string
+          p_links: Json
+          p_sections: Json
+        }
+        Returns: Json
+      }
       schedule_company_plan_change: {
         Args: { p_company_id: string; p_tier_slug: string }
         Returns: undefined
@@ -3807,6 +4027,7 @@ export type Database = {
         Args: { job_row: Database["public"]["Tables"]["all_jobs"]["Row"] }
         Returns: Json
       }
+      set_careers_published: { Args: { p_published: boolean }; Returns: Json }
       set_company_cancel_at_period_end: {
         Args: { p_cancel: boolean; p_company_id: string }
         Returns: undefined
@@ -3843,6 +4064,7 @@ export type Database = {
         Args: { algorithm?: string; payload: Json; secret: string }
         Returns: string
       }
+      slugify_company_name: { Args: { p_name: string }; Returns: string }
       talent_list_company: { Args: { p_list_id: string }; Returns: string }
       team_invite_hash: { Args: { p_token: string }; Returns: string }
       top_skills_search: {
@@ -3861,6 +4083,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      unique_careers_slug: {
+        Args: { p_base: string; p_company: string }
+        Returns: string
       }
       update_company_role: {
         Args: {
@@ -3943,6 +4169,7 @@ export type Database = {
         | "on_hold"
       screening_recommendation: "strong_yes" | "yes" | "maybe" | "no"
       visa_job_postings: "Will Sponsor" | "Not Required" | "Required"
+      workplace_type: "onsite" | "hybrid" | "remote"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4103,6 +4330,7 @@ export const Constants = {
       ],
       screening_recommendation: ["strong_yes", "yes", "maybe", "no"],
       visa_job_postings: ["Will Sponsor", "Not Required", "Required"],
+      workplace_type: ["onsite", "hybrid", "remote"],
     },
   },
 } as const

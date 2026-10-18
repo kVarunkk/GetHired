@@ -68,6 +68,8 @@ const companyIdSelectString = supabase
           min_equity,
           max_equity,
           questions,
+          department,
+          workplace_type,
           status,
           job_id,
           updated_at,
