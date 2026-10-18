@@ -102,6 +102,12 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/company/weekly-matches/worker",
     // Outreach expiry (X-Internal-Secret).
     "/api/updates/outreach/expire",
+    // Screening interviews: the voice server's transcript callback
+    // (x-voice-callback-secret), and the expiry/reminder and retention crons
+    // (X-Internal-Secret).
+    "/api/internal/interview-transcript",
+    "/api/updates/screening-interviews",
+    "/api/updates/screening-interviews/retention",
     "/api/ai-search/jobs",
     "/api/ai-search/profiles",
     "/api/dodo/webhook",

@@ -7,6 +7,7 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "eval:screening": "vitest run -c evals/screening-interview/vitest.config.mts",
     "build:emails": "email build",
     "dev:emails": "email dev",
     "postinstall": "patch-package"

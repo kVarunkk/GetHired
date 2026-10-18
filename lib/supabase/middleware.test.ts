@@ -201,6 +201,22 @@ describe("middleware: regressions", () => {
   });
 });
 
+describe("middleware: screening interview routes", () => {
+  it("lets the voice callback and the crons through without a session (each checks its own secret)", async () => {
+    for (const path of [
+      "/api/internal/interview-transcript",
+      "/api/updates/screening-interviews",
+      "/api/updates/screening-interviews/retention",
+    ]) {
+      expect(passesThrough(await updateSession(request(path))), path).toBe(true);
+    }
+  });
+
+  it("keeps the screening start route behind a session", async () => {
+    expect(passesThrough(await updateSession(request("/api/interview/screening/start")))).toBe(false);
+  });
+});
+
 describe("middleware: billing routes", () => {
   it("lets the billing cron and the grant route through without a session", async () => {
     expect(passesThrough(await updateSession(request("/api/updates/billing")))).toBe(true);

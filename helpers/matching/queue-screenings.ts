@@ -9,6 +9,26 @@ import { sendScreeningMessages } from "./enqueue-screenings";
 /** Statuses that "Screen unscreened" picks up again. */
 const RESCREENABLE = new Set(["stale", "failed", "skipped_quota"]);
 
+/**
+ * How many of a job's applications "Screen unscreened" would queue: no
+ * screening yet, or a stale, failed or skipped one. Reads through RLS, so
+ * the caller sees only jobs they have applicants.view on.
+ */
+export async function countUnscreenedApplications(
+  supabase: SupabaseClient<Database>,
+  jobPostId: string,
+): Promise<number> {
+  const [{ data: applications }, { data: screenings }] = await Promise.all([
+    supabase.from("applications").select("id").eq("job_post_id", jobPostId),
+    supabase.from("application_screenings").select("application_id, status").eq("job_post_id", jobPostId),
+  ]);
+  const statusOf = new Map((screenings ?? []).map((s) => [s.application_id, s.status]));
+  return (applications ?? []).filter((a) => {
+    const status = statusOf.get(a.id);
+    return status === undefined || RESCREENABLE.has(status);
+  }).length;
+}
+
 export type QueueScreeningsResult =
   | { ok: true; queued: number }
   | { ok: false; reason: "not_found" | "load_failed" | "queue_failed" | "send_failed" }

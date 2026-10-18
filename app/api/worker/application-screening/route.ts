@@ -15,6 +15,7 @@ import {
   type ApplicationScreeningMessage,
 } from "@/helpers/matching/enqueue-screenings";
 import { loadCandidate, MATCH_JOB_COLUMNS } from "@/helpers/matching/load-candidate";
+import { inviteAboveFitThreshold } from "@/helpers/interview/screening/fit-threshold";
 import { sendEmailForStatusUpdate } from "@/utils/email";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
 
@@ -201,6 +202,14 @@ export async function GET(request: NextRequest) {
       },
     });
     if (eventError) console.error("[screening worker] screened event failed", eventError.message);
+
+    // SI-REQ-010: invite to the job's AI interview when the score reaches its
+    // bar. Never throws, so it can't fail the screening.
+    await inviteAboveFitThreshold(admin, {
+      applicationId,
+      jobPostId: application.job_post_id,
+      fitScore: result.result.fit_score,
+    });
 
     await archive(msg_id);
     return "done";

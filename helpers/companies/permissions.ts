@@ -117,6 +117,25 @@ export const PERMISSION_CATALOG = [
     deny: "run AI screening",
   },
   {
+    key: "interviews.view",
+    group: "Applicants",
+    label: "View AI interviews",
+    description: "See AI interview status, reports and transcripts.",
+    scopable: true,
+    requires: ["applicants.view"],
+    deny: "view AI interviews",
+  },
+  {
+    key: "interviews.manage",
+    group: "Applicants",
+    label: "Manage AI interviews",
+    description:
+      "Set up a job's AI interview, invite applicants, and cancel, extend or grant attempts. Spends interview minutes.",
+    scopable: true,
+    requires: ["interviews.view"],
+    deny: "manage AI interviews",
+  },
+  {
     key: "notes.view",
     group: "Applicants",
     label: "Read notes",

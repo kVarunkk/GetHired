@@ -16,6 +16,7 @@ import {
   RESUME_CONTENT,
   screeningResultOf,
 } from "@/test/utils/matching";
+import { inviteAboveFitThreshold } from "@/helpers/interview/screening/fit-threshold";
 import { GET } from "./route";
 
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
@@ -24,6 +25,9 @@ vi.mock("@/helpers/matching/screen-application", () => ({ screenApplication: vi.
 vi.mock("@/utils/email", () => ({ sendEmailForStatusUpdate: vi.fn() }));
 vi.mock("@/utils/formatters", () => ({ INTERNAL_API_SECRET: "test-secret" }));
 vi.mock("server-only", () => ({}));
+vi.mock("@/helpers/interview/screening/fit-threshold", () => ({
+  inviteAboveFitThreshold: vi.fn(async () => ({ invited: false, reason: "disabled" })),
+}));
 
 const QUEUE = "application_screening_queue";
 const SCREENING_ID = "f1000000-0000-4000-8000-000000000001";
@@ -188,6 +192,29 @@ describe("GET /api/worker/application-screening (MT-TEST-004)", () => {
         payload: { fit_score: 82, recommendation: "yes", previous_fit_score: 61 },
       },
     ]);
+  });
+
+  it("offers the fit-threshold AI interview invite after a completed screening (SIT-03C)", async () => {
+    queueMessages(message(7));
+    screeningData();
+
+    await run();
+
+    expect(inviteAboveFitThreshold).toHaveBeenCalledWith(db.client, {
+      applicationId: APPLICATION.id,
+      jobPostId: APPLICATION.job_post_id,
+      fitScore: 82,
+    });
+  });
+
+  it("offers no invite when the screening fails or is skipped", async () => {
+    queueMessages(message(7, MATCH_MAX_ATTEMPTS));
+    screeningData(screeningRow({ attempts: MATCH_MAX_ATTEMPTS - 1 }));
+    vi.mocked(screenApplication).mockResolvedValue({ ok: false, errorCode: "model_error" });
+
+    await run();
+
+    expect(inviteAboveFitThreshold).not.toHaveBeenCalled();
   });
 
   it("writes no screened event when the screening fails", async () => {

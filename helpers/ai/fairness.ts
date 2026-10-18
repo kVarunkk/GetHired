@@ -75,8 +75,9 @@ const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
 const URL_WITH_SCHEME = /\b(?:https?:\/\/|www\.)[^\s<>()"']+[^\s<>()"'.,;:!?]/gi;
 // A bare domain followed by a path ("linkedin.com/in/x"), or a bare domain on
 // a common TLD. "Node.js" and "v2.3.1" don't match either.
+// "B.Tech" and "M.Tech" are degrees, not domains.
 const BARE_URL =
-  /\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:[a-z]{2,}\/[^\s<>()"']*[^\s<>()"'.,;:!?]|(?:com|in|io|dev|org|net|me|co|ai|app|xyz|tech)\b)/gi;
+  /\b(?![bm]\.tech\b)[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:[a-z]{2,}\/[^\s<>()"']*[^\s<>()"'.,;:!?]|(?:com|in|io|dev|org|net|me|co|ai|app|xyz|tech)\b)/gi;
 // A run of digits, spaces, dots, dashes and brackets; it's a phone number
 // only if it holds 10 to 15 digits, so years and ranges are left alone.
 const PHONE_CANDIDATE = /\+?\(?\d[\d\s().-]{7,}\d/g;
@@ -127,6 +128,9 @@ const RULES: FairnessRule[] = [
   // Race, ethnicity, national origin.
   { term: "race", pattern: /\b(?:race(?!\s*conditions?)|racial|ethnic\w*|caucasian|hispanic|latin[oa]s?|african american|skin colou?r|fair skin|fair complexion|complexion)\b/, exclusionary: true },
   { term: "national origin", pattern: /\b(?:nationality|national origin|ethnic origin)\b/, exclusionary: true },
+  // Proxies for national origin (SI-SEC-006). Not "React Native" or "accent colour".
+  { term: "native language", pattern: /\bnative\s+(?:\w+\s+)?speakers?\b|\bnative speakers? of\b|\bmother\s*tongue\b/, exclusionary: true },
+  { term: "accent", pattern: /\baccents?\b(?!\s*colou?rs?)/, exclusionary: true },
   // Disability and sexual orientation.
   { term: "disability", pattern: /\b(?:disabled|disabilit(?:y|ies)|handicap\w*|able-bodied|wheelchair)\b/, exclusionary: true },
   { term: "sexual orientation", pattern: /\b(?:gay|lesbian|lgbt\w*|queer|homosexual|heterosexual|sexual orientation)\b/, exclusionary: true },

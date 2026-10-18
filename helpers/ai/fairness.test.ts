@@ -99,6 +99,8 @@ describe("scrubPII (MT-SEC-002)", () => {
     "Node.js and Next.js",
     "Raised ₹15,00,000 in 2021",
     "v2.3.1 released",
+    "B.Tech, IIT Bombay",
+    "M.Tech in Computer Science",
   ])("leaves %j alone", (input) => {
     expect(scrubPII(input)).toBe(input);
   });
@@ -143,6 +145,11 @@ describe("screenFairnessText (RA-TEST-006)", () => {
     "Caucasian",
     "ladki chahiye",
     "jaati",
+    "native English speaker",
+    "Native speakers of Hindi",
+    "mother tongue Kannada",
+    "neutral accent",
+    "no strong accents",
   ])("rejects %j", (text) => {
     expect(screenFairnessText(text, { context: "candidate_filter" }).ok).toBe(false);
   });
@@ -167,6 +174,9 @@ describe("screenFairnessText (RA-TEST-006)", () => {
     "work authorization in India",
     "image processing",
     "managed a team of 6",
+    "React Native and native mobile apps",
+    "accent colour",
+    "fluent in English",
   ])("allows %j", (text) => {
     expect(screenFairnessText(text, { context: "candidate_filter" })).toEqual({ ok: true });
   });

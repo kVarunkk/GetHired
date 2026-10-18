@@ -65,8 +65,14 @@ function migrationCatalog() {
   return [...rows.values()];
 }
 
+/** The `array[...]` after `marker` in the latest migration that has it (later redefinitions win). */
 function migrationArray(marker: string) {
-  const sql = readFileSync(MIGRATION, "utf8");
+  const file = readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .filter((f) => readFileSync(path.join(MIGRATIONS_DIR, f), "utf8").includes(marker))
+    .at(-1);
+  const sql = readFileSync(file ? path.join(MIGRATIONS_DIR, file) : MIGRATION, "utf8");
   const after = sql.slice(sql.indexOf(marker));
   const list = after.match(/array\[([\s\S]*?)\]/)?.[1] ?? "";
   return [...list.matchAll(/'([a-z_.]+)'/g)].map((m) => m[1]);
@@ -263,6 +269,47 @@ describe("canGrant and isWithinCeiling (RP-REQ-012 rule 1)", () => {
     expect(isWithinCeiling(actor, [], { outreach: 51 })).toBe(false);
     // No cap of their own on screenings: any cap is within it.
     expect(isWithinCeiling(actor, [], { screenings: 1000 })).toBe(true);
+  });
+});
+
+describe("screening interview keys (SIT-004)", () => {
+  it("adds interviews.view and interviews.manage, both scopable to assigned jobs", () => {
+    expect(isPermissionKey("interviews.view")).toBe(true);
+    expect(isPermissionKey("interviews.manage")).toBe(true);
+    expect(permissionEntry("interviews.view" as PermissionKey).scopable).toBe(true);
+    expect(permissionEntry("interviews.manage" as PermissionKey).scopable).toBe(true);
+  });
+
+  it("view needs applicants.view, and manage needs view", () => {
+    expect(permissionEntry("interviews.view" as PermissionKey).requires).toEqual(["applicants.view"]);
+    expect(permissionEntry("interviews.manage" as PermissionKey).requires).toEqual(["interviews.view"]);
+    const grants = expandDependencies([{ key: "interviews.manage" as PermissionKey, scope: "assigned" }]);
+    expect(grants.get("interviews.view" as PermissionKey)).toBe("assigned");
+    expect(grants.get("applicants.view")).toBe("assigned");
+    expect(grants.get("jobs.view")).toBe("assigned");
+  });
+
+  it("is in the Applicants group", () => {
+    expect(permissionEntry("interviews.view" as PermissionKey).group).toBe("Applicants");
+    expect(permissionEntry("interviews.manage" as PermissionKey).group).toBe("Applicants");
+  });
+
+  it("names the missing permission in the 403 copy", () => {
+    expect(forbiddenMessage("interviews.view" as PermissionKey)).toBe(
+      "Your role can't view AI interviews.",
+    );
+    expect(forbiddenMessage("interviews.manage" as PermissionKey, { forJob: true })).toBe(
+      "Your role can't manage AI interviews for this job.",
+    );
+  });
+
+  it("gives Admin both and Member only interviews.view", () => {
+    const admin = templateGrants(roleTemplate("admin")!);
+    const member = templateGrants(roleTemplate("member")!);
+    expect(admin.get("interviews.view" as PermissionKey)).toBe("all");
+    expect(admin.get("interviews.manage" as PermissionKey)).toBe("all");
+    expect(member.get("interviews.view" as PermissionKey)).toBe("all");
+    expect(member.has("interviews.manage" as PermissionKey)).toBe(false);
   });
 });
 

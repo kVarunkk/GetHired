@@ -1,0 +1,22 @@
+{
+  "voiceSessionId": "sid-fixture",
+  "interviewId": "7d2c8f3e-9a41-4b6e-8f0a-2c5d1e9b4a10",
+  "turns": [
+    {
+      "turn_id": 1,
+      "timestamp": 1760000000.5,
+      "user": "I led the move from a monolith to three services.",
+      "assistant": "What was the hardest trade-off in that move?",
+      "interrupted": false
+    },
+    {
+      "turn_id": 2,
+      "timestamp": 1760000042.25,
+      "user": "Probably keeping payments consistent across",
+      "assistant": null,
+      "interrupted": true
+    }
+  ],
+  "endReason": "completed",
+  "durationSeconds": 612
+}

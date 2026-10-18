@@ -13,6 +13,14 @@ import {
 } from "@/helpers/interview/interview-analysis";
 import { CompanyInterviewAnalysisSchema } from "@/helpers/interview/company-analysis-prompt";
 import { InterviewAnalysisStatusEmail } from "@/emails/InterviewAnalysisStatusEmail";
+import {
+  generateScreeningReport,
+  loadScreeningAnalysisInput,
+} from "@/helpers/interview/screening/analysis";
+import { notifyCompanyOfCompletedInterview } from "@/helpers/interview/screening/notify-company";
+import { storedScreeningReportSchema } from "@/helpers/interview/screening/schemas";
+
+type ServiceClient = ReturnType<typeof createServiceRoleClient>;
 
 type AnalysisMessage = {
   msg_id: number;
@@ -29,7 +37,7 @@ const MAX_RETRIES = 3;
  * the earliest application the session is attached to.
  */
 async function sharedJobFor(
-  supabase: ReturnType<typeof createServiceRoleClient>,
+  supabase: ServiceClient,
   sessionId: string,
 ): Promise<{ title: string; description: string } | null> {
   const { data, error } = await supabase
@@ -64,6 +72,77 @@ function formatTranscript(turns: unknown): string {
     .join("\n");
 }
 
+/**
+ * A screening interview's company report (SI-REQ-030, spec §3.3): scored
+ * against the invite's config snapshot, stored, then the company is emailed.
+ * The candidate gets no email (SI-DEC-003). Throws to retry the message.
+ */
+async function processScreeningAnalysis(
+  supabase: ServiceClient,
+  analysis: {
+    id: string;
+    perspective: string;
+    status: string;
+    result: unknown;
+    notification_sent_at: string | null;
+  },
+  session: { turns: unknown },
+  applicationInterviewId: string | null,
+) {
+  if (analysis.perspective !== "company") {
+    throw new Error("A screening session only has a company analysis.");
+  }
+  if (!applicationInterviewId) {
+    throw new Error("Screening interview has no application interview.");
+  }
+
+  if (analysis.status !== "completed" || !storedScreeningReportSchema.safeParse(analysis.result).success) {
+    const { companyId, snapshot, jobDescription, turns } = await loadScreeningAnalysisInput(
+      supabase,
+      applicationInterviewId,
+      session.turns,
+    );
+
+    const { error: processingError } = await supabase
+      .from("interview_analyses")
+      .update({ status: "processing", error_code: null })
+      .eq("id", analysis.id);
+    if (processingError) throw processingError;
+
+    const report = await generateScreeningReport({
+      snapshot,
+      jobDescription,
+      turns,
+      trace: { analysisId: analysis.id, companyId },
+    });
+
+    const { error: saveError } = await supabase
+      .from("interview_analyses")
+      .update({
+        status: "completed",
+        result: report,
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", analysis.id);
+    if (saveError) throw saveError;
+  }
+
+  if (!analysis.notification_sent_at) {
+    await notifyCompanyOfCompletedInterview(supabase, applicationInterviewId, { scored: true });
+
+    const { error: notificationError } = await supabase
+      .from("interview_analyses")
+      .update({
+        notification_sent_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", analysis.id)
+      .is("notification_sent_at", null);
+    if (notificationError) throw notificationError;
+  }
+}
+
 async function sendAnalysisEmail(
   email: string,
   candidateName: string,
@@ -95,6 +174,14 @@ async function sendAnalysisEmail(
     htmlContent,
     textContent,
   });
+}
+
+async function deleteMessage(supabase: ServiceClient, messageId: number) {
+  const { error } = await supabase.schema("pgmq_public").rpc("delete", {
+    queue_name: "interview_analysis_queue",
+    message_id: messageId,
+  });
+  if (error) throw error;
 }
 
 export async function GET() {
@@ -143,7 +230,7 @@ export async function GET() {
 
         const { data: interview, error: interviewError } = await supabase
           .from("interviews")
-          .select("id, user_id, job_id")
+          .select("id, user_id, job_id, kind, application_interview_id")
           .eq("id", session.interview_id)
           .single();
         if (interviewError || !interview) {
@@ -151,6 +238,13 @@ export async function GET() {
         }
         if (!interview.user_id) {
           throw new Error("Interview has no candidate owner.");
+        }
+
+        if (interview.kind === "screening") {
+          await processScreeningAnalysis(supabase, analysis, session, interview.application_interview_id);
+          await deleteMessage(supabase, message.msg_id);
+          completed++;
+          continue;
         }
 
         // A company report (OR-REQ-031) is for the hiring team the
@@ -249,13 +343,7 @@ export async function GET() {
           if (notificationError) throw notificationError;
         }
 
-        const { error: deleteError } = await supabase
-          .schema("pgmq_public")
-          .rpc("delete", {
-            queue_name: "interview_analysis_queue",
-            message_id: message.msg_id,
-          });
-        if (deleteError) throw deleteError;
+        await deleteMessage(supabase, message.msg_id);
         completed++;
       } catch (error) {
         failed++;
@@ -285,13 +373,7 @@ export async function GET() {
             .neq("status", "completed");
           if (updateError) throw updateError;
 
-          const { error: deleteError } = await supabase
-            .schema("pgmq_public")
-            .rpc("delete", {
-              queue_name: "interview_analysis_queue",
-              message_id: message.msg_id,
-            });
-          if (deleteError) throw deleteError;
+          await deleteMessage(supabase, message.msg_id);
 
           await sendEmailForStatusUpdate(
             `INTERVIEW ANALYSIS POISON ALERT: Analysis ${message.message.analysisId} failed after ${message.read_ct} attempts.`,

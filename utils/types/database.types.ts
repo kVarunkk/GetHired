@@ -461,6 +461,119 @@ export type Database = {
           },
         ]
       }
+      application_interviews: {
+        Row: {
+          accommodation_request: string | null
+          applicant_user_id: string
+          application_id: string
+          attempt_granted: boolean
+          attempts_used: number
+          company_id: string
+          completed_at: string | null
+          config_snapshot: Json
+          consent_version: string | null
+          consented_at: string | null
+          created_at: string
+          credits_charged: boolean
+          credits_cost: number
+          deadline_at: string
+          deadline_extensions: number
+          id: string
+          interview_id: string | null
+          invited_by: string | null
+          invited_via: string
+          job_post_id: string
+          max_attempts: number
+          paused_at: string | null
+          reminder_sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accommodation_request?: string | null
+          applicant_user_id: string
+          application_id: string
+          attempt_granted?: boolean
+          attempts_used?: number
+          company_id: string
+          completed_at?: string | null
+          config_snapshot: Json
+          consent_version?: string | null
+          consented_at?: string | null
+          created_at?: string
+          credits_charged?: boolean
+          credits_cost: number
+          deadline_at: string
+          deadline_extensions?: number
+          id?: string
+          interview_id?: string | null
+          invited_by?: string | null
+          invited_via: string
+          job_post_id: string
+          max_attempts?: number
+          paused_at?: string | null
+          reminder_sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accommodation_request?: string | null
+          applicant_user_id?: string
+          application_id?: string
+          attempt_granted?: boolean
+          attempts_used?: number
+          company_id?: string
+          completed_at?: string | null
+          config_snapshot?: Json
+          consent_version?: string | null
+          consented_at?: string | null
+          created_at?: string
+          credits_charged?: boolean
+          credits_cost?: number
+          deadline_at?: string
+          deadline_extensions?: number
+          id?: string
+          interview_id?: string | null
+          invited_by?: string | null
+          invited_via?: string
+          job_post_id?: string
+          max_attempts?: number
+          paused_at?: string | null
+          reminder_sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_interviews_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_interviews_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_interviews_interview_id_fkey"
+            columns: ["interview_id"]
+            isOneToOne: true
+            referencedRelation: "interviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_interviews_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_knockouts: {
         Row: {
           action_taken: string
@@ -2051,33 +2164,42 @@ export type Database = {
       interview_sessions: {
         Row: {
           created_at: string
+          duration_seconds: number | null
+          end_reason: string | null
           ended_at: string | null
           id: string
           interview_id: string
           started_at: string
           status: string
+          transcript_source: string
           turns: Json
           updated_at: string
           voice_session_id: string
         }
         Insert: {
           created_at?: string
+          duration_seconds?: number | null
+          end_reason?: string | null
           ended_at?: string | null
           id?: string
           interview_id: string
           started_at?: string
           status?: string
+          transcript_source?: string
           turns?: Json
           updated_at?: string
           voice_session_id: string
         }
         Update: {
           created_at?: string
+          duration_seconds?: number | null
+          end_reason?: string | null
           ended_at?: string | null
           id?: string
           interview_id?: string
           started_at?: string
           status?: string
+          transcript_source?: string
           turns?: Json
           updated_at?: string
           voice_session_id?: string
@@ -2096,10 +2218,12 @@ export type Database = {
         Row: {
           active_session_id: string | null
           active_session_updated_at: string | null
+          application_interview_id: string | null
           charged_session_ids: string[]
           created_at: string
           id: string
           job_id: string | null
+          kind: string
           name: string | null
           resume_id: string | null
           turns: Json
@@ -2109,10 +2233,12 @@ export type Database = {
         Insert: {
           active_session_id?: string | null
           active_session_updated_at?: string | null
+          application_interview_id?: string | null
           charged_session_ids?: string[]
           created_at?: string
           id?: string
           job_id?: string | null
+          kind?: string
           name?: string | null
           resume_id?: string | null
           turns?: Json
@@ -2122,10 +2248,12 @@ export type Database = {
         Update: {
           active_session_id?: string | null
           active_session_updated_at?: string | null
+          application_interview_id?: string | null
           charged_session_ids?: string[]
           created_at?: string
           id?: string
           job_id?: string | null
+          kind?: string
           name?: string | null
           resume_id?: string | null
           turns?: Json
@@ -2133,6 +2261,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "interviews_application_interview_id_fkey"
+            columns: ["application_interview_id"]
+            isOneToOne: true
+            referencedRelation: "application_interviews"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "interviews_job_id_fkey"
             columns: ["job_id"]
@@ -2254,6 +2389,69 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      job_interview_configs: {
+        Row: {
+          company_id: string
+          competencies: Json
+          created_at: string
+          deadline_days: number
+          duration_minutes: number
+          enabled: boolean
+          fit_threshold: number | null
+          invite_rule: string
+          job_post_id: string
+          language: string
+          questions: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          competencies?: Json
+          created_at?: string
+          deadline_days?: number
+          duration_minutes?: number
+          enabled?: boolean
+          fit_threshold?: number | null
+          invite_rule?: string
+          job_post_id: string
+          language?: string
+          questions?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          competencies?: Json
+          created_at?: string
+          deadline_days?: number
+          duration_minutes?: number
+          enabled?: boolean
+          fit_threshold?: number | null
+          invite_rule?: string
+          job_post_id?: string
+          language?: string
+          questions?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_interview_configs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_interview_configs_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: true
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3593,6 +3791,11 @@ export type Database = {
         }
         Returns: Json
       }
+      create_screening_invite: {
+        Args: { p_application_id: string; p_invited_by?: string; p_via: string }
+        Returns: Json
+      }
+      decline_screening_interview: { Args: { p_id: string }; Returns: Json }
       deduct_interview_session_credits: {
         Args: { p_interview_id: string; p_session_id: string }
         Returns: string
@@ -3632,8 +3835,18 @@ export type Database = {
       }
       expanded_grants_json: { Args: { p_grants: Json }; Returns: Json }
       expire_outreach: { Args: never; Returns: number }
+      expire_screening_interviews: { Args: never; Returns: string[] }
       finalize_interview_analysis_session: {
         Args: { p_session_id: string }
+        Returns: Json
+      }
+      finish_screening_session: {
+        Args: {
+          p_duration_seconds?: number
+          p_end_reason: string
+          p_session_id: string
+          p_turns: Json
+        }
         Returns: Json
       }
       first_pipeline_stage: {
@@ -3824,6 +4037,10 @@ export type Database = {
         Args: { p_actor_kind?: string; p_user_id: string }
         Returns: Json
       }
+      manage_screening_interview: {
+        Args: { p_action: string; p_days?: number; p_id: string }
+        Returns: Json
+      }
       mark_usage_notified: {
         Args: {
           p_company_id: string
@@ -3888,6 +4105,27 @@ export type Database = {
       my_company_access: { Args: never; Returns: Json }
       my_company_id: { Args: never; Returns: string }
       my_job_ids_with: { Args: { p_key: string }; Returns: string[] }
+      my_screening_interviews: {
+        Args: never
+        Returns: {
+          application_id: string
+          attempts_used: number
+          company_name: string
+          competency_names: string[]
+          completed_at: string
+          consent_version: string
+          consented_at: string
+          created_at: string
+          deadline_at: string
+          duration_minutes: number
+          id: string
+          interview_id: string
+          job_post_id: string
+          job_title: string
+          max_attempts: number
+          status: string
+        }[]
+      }
       normalize_all_job_locations_test: {
         Args: { target_ids?: string[] }
         Returns: undefined
@@ -3897,6 +4135,10 @@ export type Database = {
         Returns: Database["public"]["Enums"]["pipeline_stage_kind"]
       }
       record_profile_view: { Args: { p_candidate: string }; Returns: undefined }
+      record_screening_consent: {
+        Args: { p_id: string; p_version: string }
+        Returns: Json
+      }
       redact_pii: { Args: { p_text: string }; Returns: string }
       release_hold: {
         Args: {
@@ -3916,9 +4158,17 @@ export type Database = {
         Returns: Json
       }
       reorder_pipeline_stages: { Args: { p_ids: string[] }; Returns: undefined }
+      request_screening_accommodation: {
+        Args: { p_id: string; p_text: string }
+        Returns: Json
+      }
       reserve_interview_session: {
         Args: { p_interview_id: string; p_reservation_id: string }
         Returns: string
+      }
+      reserve_screening_attempt: {
+        Args: { p_id: string; p_reservation_id: string }
+        Returns: Json
       }
       respond_to_outreach: {
         Args: {
@@ -4060,6 +4310,14 @@ export type Database = {
         Returns: Json
       }
       set_my_display_name: { Args: { p_name: string }; Returns: Json }
+      start_screening_attempt: {
+        Args: {
+          p_id: string
+          p_reservation_id: string
+          p_voice_session_id: string
+        }
+        Returns: Json
+      }
       sign: {
         Args: { algorithm?: string; payload: Json; secret: string }
         Returns: string

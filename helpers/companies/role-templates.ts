@@ -50,6 +50,7 @@ export const MEMBER_KEYS: PermissionKey[] = [
   "applicants.view",
   "pipeline.move",
   "applicants.screen",
+  "interviews.view",
   "notes.view",
   "notes.write",
   "talent.view",
