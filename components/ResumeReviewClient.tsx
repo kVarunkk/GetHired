@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import BackButton from "./BackButton";
+import { BackLink } from "./PageHeader";
 import ResumeSection from "./resume-review/ResumeSection";
 import JdSection from "./resume-review/JdSection";
 import {
@@ -10,6 +10,7 @@ import {
   TResumeReviewServer,
 } from "@/utils/types/review.types";
 import AnalysisPane from "./resume-review/AnalysisPane";
+import { AskAgentAboutResumeReview } from "./agent/AskAgentOnApplicantIdPages";
 import { markAnalysisAsFailedAction } from "@/app/actions/mark-review-analysis-failed";
 import useSWR, { mutate } from "swr";
 import { cn, fetcher } from "@/utils/utils";
@@ -120,7 +121,7 @@ export default function ResumeReviewClient({
       <aside className="sm:w-[40%] border-r flex flex-col ">
         <div className="p-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <BackButton />
+            <BackLink href="/resume-review" label="Back to resume reviews" />
             <div className="flex flex-col ">
               <h2 className="text-lg font-semibold tracking-tight">
                 Analysis Pane
@@ -144,6 +145,15 @@ export default function ResumeReviewClient({
             </div>
           )}
         </div>
+
+        {/* Only once there's an analysis to ask about. */}
+        {review?.ai_response && !review.analysis_failed && (
+          <div className="border-b p-4">
+            <AskAgentAboutResumeReview
+              review={{ id: review.id, name: review.name, jobId: review.job_id }}
+            />
+          </div>
+        )}
 
         <AnalysisPane
           isParsed={isParsed}

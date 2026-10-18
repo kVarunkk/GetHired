@@ -109,6 +109,26 @@ describe("buildScreeningInput answers", () => {
     expect(answers).toContain(`Q2: ${JOB_POST.questions[1]}\nA2: I want to work on a product`);
   });
 
+  it("uses typed answers and the snapshot's labels (AF-REQ-009)", () => {
+    const qid = "00000000-0000-4000-8000-000000000009";
+    const input = buildScreeningInput(
+      JOB_POST,
+      {
+        ...APPLICATION,
+        answers_v2: { [qid]: false },
+        form_snapshot: {
+          version: 1,
+          questions: [{ id: qid, type: "yes_no", label: "Can you relocate?", required: true }],
+          standard_fields: {},
+        },
+      },
+      CANDIDATE_PROFILE,
+      RESUME_CONTENT,
+    );
+    const answers = sandboxes(input).find((b) => b.tag === "screening_answers")!.body;
+    expect(answers).toBe("Q1: Can you relocate?\nA1: No");
+  });
+
   it("marks an empty answer as missing", () => {
     const answers = sandboxes(screeningInput()).find((b) => b.tag === "screening_answers")!.body;
 

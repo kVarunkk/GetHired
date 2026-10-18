@@ -14,10 +14,13 @@ describe("MemberUsage (RP-REQ-044)", () => {
     render(<MemberUsage rows={ROWS} />);
     expect(screen.getByText("Owner")).toBeInTheDocument();
     expect(screen.getByText("Recruiter")).toBeInTheDocument();
-    expect(screen.getByTestId("member-usage-u1-outreach")).toHaveTextContent("outreach messages: 3");
-    expect(screen.getByTestId("member-usage-u2-outreach")).toHaveTextContent("outreach messages: 50 of 50");
+    expect(screen.getByTestId("member-usage-u1-outreach")).toHaveTextContent(/^3$/);
+    expect(screen.getByTestId("member-usage-u2-outreach")).toHaveTextContent("50 of 50");
     expect(screen.getByTestId("member-usage-u2-outreach")).toHaveClass("text-destructive");
-    expect(screen.getByTestId("member-usage-u2-screenings")).toHaveTextContent("screenings: 2");
+    expect(screen.getByTestId("member-usage-u2-screenings")).toHaveTextContent(/^2$/);
+    expect(screen.getByRole("columnheader", { name: "outreach messages" })).toBeInTheDocument();
+    // Ian used nothing but still gets a cell per column.
+    expect(screen.getByTestId("member-usage-u3-outreach")).toHaveTextContent(/^0$/);
   });
 
   it("says when a member has used nothing", () => {
@@ -27,6 +30,6 @@ describe("MemberUsage (RP-REQ-044)", () => {
 
   it("shows a cap even before anything is used", () => {
     render(<MemberUsage rows={[{ ...ROWS[2], limits: { screenings: 10 } }]} />);
-    expect(screen.getByTestId("member-usage-u3-screenings")).toHaveTextContent("screenings: 0 of 10");
+    expect(screen.getByTestId("member-usage-u3-screenings")).toHaveTextContent("0 of 10");
   });
 });

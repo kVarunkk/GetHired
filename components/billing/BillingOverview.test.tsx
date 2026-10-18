@@ -80,6 +80,32 @@ describe("BillingOverview (BL-REQ-010, BL-TEST-005)", () => {
     expect(within(lots).getByText("Expires October 1, 2027")).toBeInTheDocument();
   });
 
+  it("shows billing history as a table", () => {
+    render(
+      <BillingOverview
+        billing={billingOf()}
+        plans={[]}
+        packs={[]}
+        history={[
+          {
+            id: "p1",
+            kind: "company_subscription",
+            credit_amount: null,
+            total_amount: 4900,
+            currency: "USD",
+            status: "complete",
+            created_at: "2026-10-01T00:00:00Z",
+          },
+        ]}
+      />,
+    );
+    const table = screen.getByRole("table", { name: "Billing history" });
+    const row = within(table).getAllByRole("row")[1];
+    expect(within(row).getByText("Subscription")).toBeInTheDocument();
+    expect(within(row).getByText("49.00 USD")).toBeInTheDocument();
+    expect(within(row).getByText("complete")).toBeInTheDocument();
+  });
+
   it("shows 'Cancels on' with a Resume button", async () => {
     vi.mocked(resumeCompanyPlanAction).mockResolvedValue({ ok: true });
     show(billingOf(TIER_STARTUP, {}, { hasPaidSubscription: true, cancelAtPeriodEnd: true }));

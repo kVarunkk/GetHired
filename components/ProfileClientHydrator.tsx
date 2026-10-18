@@ -39,49 +39,41 @@ export default function ProfileClientHydrator({
 
   return (
     <div className="flex flex-col w-full min-w-0 gap-6">
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <div className="flex min-w-0 flex-col gap-2">
-          <div className="flex items-center gap-1">
-            <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[28px]">
-              {applicantProfile?.full_name}
-            </h1>
-            {isLoading ? (
-              <Skeleton className="h-5 w-5" />
-            ) : (
-              <ProfileFavoriteStar
-                profileId={applicantProfile?.user_id}
-                companyId={companyId}
-                isFavorite={isFavorite}
-              />
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href={`mailto:${applicantProfile?.email}`}
-              className=" text-muted-foreground hover:text-primary transition-colors"
-            >
-              <Mail className="h-6 w-6" />
-            </Link>
-            {applicantProfile?.linkedin_url && (
-              <Link
-                target="_blank"
-                href={applicantProfile?.linkedin_url}
-                className=" text-muted-foreground hover:text-primary transition-colors"
-              >
-                <LinkedInLogoIcon className="h-6 w-6" />
-              </Link>
-            )}
-            {applicantProfile?.github_url && (
-              <Link
-                target="_blank"
-                href={applicantProfile?.github_url}
-                className=" text-muted-foreground hover:text-primary transition-colors"
-              >
-                <GitHubLogoIcon className="h-6 w-6" />
-              </Link>
-            )}
-          </div>
-        </div>
+      {/* The name is in the page's header. */}
+      <div className="flex items-center gap-2">
+        <Link
+          href={`mailto:${applicantProfile?.email}`}
+          className=" text-muted-foreground hover:text-primary transition-colors"
+        >
+          <Mail className="h-6 w-6" />
+        </Link>
+        {applicantProfile?.linkedin_url && (
+          <Link
+            target="_blank"
+            href={applicantProfile?.linkedin_url}
+            className=" text-muted-foreground hover:text-primary transition-colors"
+          >
+            <LinkedInLogoIcon className="h-6 w-6" />
+          </Link>
+        )}
+        {applicantProfile?.github_url && (
+          <Link
+            target="_blank"
+            href={applicantProfile?.github_url}
+            className=" text-muted-foreground hover:text-primary transition-colors"
+          >
+            <GitHubLogoIcon className="h-6 w-6" />
+          </Link>
+        )}
+        {isLoading ? (
+          <Skeleton className="h-5 w-5" />
+        ) : (
+          <ProfileFavoriteStar
+            profileId={applicantProfile?.user_id}
+            companyId={companyId}
+            isFavorite={isFavorite}
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

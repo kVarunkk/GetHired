@@ -143,7 +143,12 @@ export default async function CompanyIdPage({
             </div>
           </div>
 
-          <div className="flex items-center gap-5">
+          <div className="flex flex-wrap items-center gap-3">
+            {companyData.careers_published && companyData.careers_slug && (
+              <Button asChild variant="outline">
+                <Link href={`/careers/${companyData.careers_slug}`}>View careers page</Link>
+              </Button>
+            )}
             <Link
               target="_blank"
               rel="noopener noreferrer"

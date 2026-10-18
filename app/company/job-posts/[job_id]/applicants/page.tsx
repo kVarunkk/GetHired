@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { answerFilterQuestions } from "@/helpers/applications/answer-filters";
+import { readApplicationForm } from "@/helpers/jobs/application-form-schema";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import Error from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
 import FunnelStrip from "@/components/pipeline/FunnelStrip";
 import PipelineBoard from "@/components/pipeline/PipelineBoard";
 import PipelineList from "@/components/pipeline/PipelineList";
@@ -46,7 +48,9 @@ export default async function JobApplicantsPage({
           id,
           title,
           company_id,
-          applications(*, user_info(${RECRUITER_CANDIDATE_COLUMNS}), job_postings(*), application_screenings(status, fit_score, recommendation))
+          questions,
+          application_form,
+          applications(*, user_info(${RECRUITER_CANDIDATE_COLUMNS}), job_postings(*), application_screenings(status, fit_score, recommendation), application_knockouts(failed, reasons, action_taken))
         ` as const,
       )
       .eq("id", job_id)
@@ -88,37 +92,29 @@ export default async function JobApplicantsPage({
 
     return (
       <div className="mb-20 flex w-full flex-col gap-6 p-4">
-        <Link
-          href={`/company/job-posts/${job.id}`}
-          className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to the job
-        </Link>
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[28px]">
-              Applicants ({applications.length})
-            </h1>
-            <p className="text-muted-foreground [overflow-wrap:anywhere]">{job.title}</p>
-          </div>
-          <nav aria-label="Applicants view" className="flex rounded-md border p-0.5 text-sm">
-            {(["list", "board"] as const).map((option) => (
-              <Link
-                key={option}
-                href={`?view=${option}`}
-                aria-current={view === option ? "page" : undefined}
-                className={cn(
-                  "rounded px-3 py-1 capitalize text-muted-foreground",
-                  view === option && "bg-muted font-medium text-foreground",
-                )}
-              >
-                {option}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        <PageHeader
+          backHref={`/company/job-posts/${job.id}`}
+          backLabel="Back to the job"
+          title={`Applicants (${applications.length})`}
+          description={<span className="[overflow-wrap:anywhere]">{job.title}</span>}
+          actions={
+            <nav aria-label="Applicants view" className="flex rounded-md border p-0.5 text-sm">
+              {(["list", "board"] as const).map((option) => (
+                <Link
+                  key={option}
+                  href={`?view=${option}`}
+                  aria-current={view === option ? "page" : undefined}
+                  className={cn(
+                    "rounded px-3 py-1 capitalize text-muted-foreground",
+                    view === option && "bg-muted font-medium text-foreground",
+                  )}
+                >
+                  {option}
+                </Link>
+              ))}
+            </nav>
+          }
+        />
 
         {funnel && funnel.total > 0 && <FunnelStrip stages={funnel.stages} />}
 
@@ -131,6 +127,7 @@ export default async function JobApplicantsPage({
             stages={stages ?? []}
             templates={templates ?? []}
             screeningCap={screeningCap && { limit: screeningCap.limit, remaining: screeningCap.remaining }}
+            answerQuestions={answerFilterQuestions(readApplicationForm(job.application_form, job.questions))}
           />
         )}
       </div>

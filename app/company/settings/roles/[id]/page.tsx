@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import AskAgentAboutRoles from "@/components/agent/recruiter/AskAgentAboutRoles";
 import Error from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
 import Forbidden from "@/components/roles/Forbidden";
 import RoleActions from "@/components/roles/RoleActions";
 import RoleEditor from "@/components/roles/RoleEditor";
@@ -43,40 +43,41 @@ export default async function RolePage({ params }: { params: Promise<{ id: strin
 
     return (
       <div className="mb-20 flex w-full max-w-4xl flex-col gap-6 p-4">
-        <Link
-          href="/company/settings/roles"
-          className="flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-brand"
-        >
-          <ArrowLeft className="h-4 w-4" /> Roles
-        </Link>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{role.name}</h1>
-              {role.isDefault && (
-                <Badge variant="outline" className="text-muted-foreground" title="New invites get this role">
-                  Default
-                </Badge>
-              )}
-            </div>
-            {readOnly && (
-              <p className="text-sm text-muted-foreground">
-                {canManage
-                  ? "This role has permissions you don't have, so you can't change it."
-                  : "You can view this role but not change it."}
-              </p>
-            )}
-          </div>
-          {!readOnly && (
-            <RoleActions
-              role={role}
-              redirectOnDelete
-              replacements={roles
-                .filter((r) => r.id !== role.id && r.withinCeiling)
-                .map((r) => ({ id: r.id, name: r.name }))}
-            />
-          )}
-        </div>
+        <PageHeader
+          backHref="/company/settings/roles"
+          backLabel="Back to roles"
+          title={role.name}
+          description={
+            readOnly &&
+            (canManage
+              ? "This role has permissions you don't have, so you can't change it."
+              : "You can view this role but not change it.")
+          }
+          actions={
+            (role.isDefault || !readOnly) && (
+              <>
+                {role.isDefault && (
+                  <Badge variant="outline" className="text-muted-foreground" title="New invites get this role">
+                    Default
+                  </Badge>
+                )}
+                {!readOnly && (
+                  <RoleActions
+                    role={role}
+                    redirectOnDelete
+                    replacements={roles
+                      .filter((r) => r.id !== role.id && r.withinCeiling)
+                      .map((r) => ({ id: r.id, name: r.name }))}
+                  />
+                )}
+              </>
+            )
+          }
+        />
+
+        {can(company, "agent.use") && (
+          <AskAgentAboutRoles role={{ id: role.id, name: role.name }} canManage={!readOnly && !ownRole} />
+        )}
 
         <section className="flex flex-col gap-2 rounded-lg border p-5" aria-label="Who has this role">
           <h2 className="text-lg font-semibold tracking-tight">Who has this role</h2>

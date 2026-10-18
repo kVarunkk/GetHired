@@ -243,7 +243,7 @@ export function SignUpForm({
                     isCompany
                       ? "/auth/login?company=true"
                       : returnToPath
-                        ? "/auth/login?returnTo=" + returnToPath
+                        ? "/auth/login?returnTo=" + encodeURIComponent(returnToPath)
                         : "/auth/login"
                   }
                   className="font-medium underline underline-offset-4 transition-colors hover:text-brand"

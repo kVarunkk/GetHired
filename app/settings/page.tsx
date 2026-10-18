@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import ErrorComponent from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
+import { AskAgentAboutSettings } from "@/components/agent/AskAgentOnApplicantPages";
 import { Button } from "@/components/ui/button";
 import PrivacySettings from "@/components/settings/PrivacySettings";
 import EmailPreferences from "@/components/settings/EmailPreferences";
@@ -64,9 +66,13 @@ export default async function SettingsPage() {
     }));
 
     return (
-      <div className="mb-20 flex w-full flex-col gap-8 p-4">
-        <h1 className="text-3xl font-medium">Settings</h1>
+      <div className="mb-20 flex w-full flex-col gap-6 p-4">
+        <PageHeader
+          title="Settings"
+          description="Your privacy, email preferences and profile."
+        />
         <div className="flex w-full max-w-3xl flex-col gap-6">
+          <AskAgentAboutSettings />
           <Section
             title="Privacy"
             description="Who can find your profile and contact you."

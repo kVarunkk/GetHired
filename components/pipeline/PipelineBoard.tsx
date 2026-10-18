@@ -1,5 +1,6 @@
 "use client";
 
+import KnockoutBadge from "@/components/applications/KnockoutBadge";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import posthog from "posthog-js";
@@ -296,6 +297,9 @@ function CardDetails({ card }: { card: BoardApplication }) {
         <span>
           {card.noteCount} note{card.noteCount === 1 ? "" : "s"}
         </span>
+      )}
+      {card.knockoutReasons && (
+        <KnockoutBadge knockout={{ failed: true, reasons: card.knockoutReasons.map((label) => ({ label })) }} />
       )}
     </div>
   );

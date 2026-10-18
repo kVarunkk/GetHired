@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import type { ColumnDef } from "@tanstack/react-table";
+import DataTable from "@/components/DataTable";
 import { ALLOWANCE_KEYS, ENTITLEMENT_KEYS, KEY_LABELS, type EntitlementKey } from "@/helpers/billing/keys";
 import type { CompanyEntitlements } from "@/helpers/billing/entitlements";
 import CreditCostList from "@/components/CreditCostList";
@@ -36,6 +38,8 @@ import type { MemberUsageRow } from "@/helpers/billing/member-usage";
 import { BILLING_FORBIDDEN } from "@/helpers/billing/access";
 import PlanCards from "./PlanCards";
 import MemberUsage from "./MemberUsage";
+import PageHeader from "@/components/PageHeader";
+import { AskAgentAboutBilling } from "@/components/agent/recruiter/AskAgentOnMainPages";
 
 export type CreditPack = {
   id: string;
@@ -68,10 +72,49 @@ type BillingOverviewProps = {
   canManage?: boolean;
   /** Per-member usage (RP-REQ-044); null when it couldn't be read. */
   memberUsage?: MemberUsageRow[] | null;
+  /** agent.use: shows the usage helper under the header. */
+  canUseAgent?: boolean;
 };
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+const HISTORY_COLUMNS: ColumnDef<BillingHistoryRow>[] = [
+  {
+    id: "date",
+    header: "Date",
+    cell: ({ row }) => formatDate(row.original.created_at),
+    meta: { className: "text-muted-foreground" },
+  },
+  {
+    id: "item",
+    header: "Item",
+    cell: ({ row }) =>
+      row.original.kind === "company_subscription" ? "Subscription" : `${row.original.credit_amount ?? ""} credits`,
+  },
+  {
+    id: "amount",
+    header: "Amount",
+    cell: ({ row }) =>
+      row.original.total_amount !== null
+        ? `${(row.original.total_amount / 100).toFixed(2)} ${row.original.currency}`
+        : "-",
+    meta: { className: "text-right tabular-nums", headerClassName: "text-right" },
+  },
+  {
+    id: "status",
+    header: "Status",
+    cell: ({ row }) => (
+      <Badge
+        variant={
+          row.original.status === "complete" ? "success" : row.original.status === "failed" ? "destructive" : "secondary"
+        }
+      >
+        {row.original.status}
+      </Badge>
+    ),
+  },
+];
 
 /** What a confirm dialog is about to do. */
 type PendingChange = {
@@ -136,6 +179,7 @@ export default function BillingOverview({
   checkoutDone = false,
   canManage = true,
   memberUsage = null,
+  canUseAgent = false,
 }: BillingOverviewProps) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -269,10 +313,9 @@ export default function BillingOverview({
 
   return (
     <div className="flex w-full flex-col gap-8 p-4 mb-20">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-2xl sm:text-[28px] font-semibold tracking-tight">Billing</h2>
-        <p className="text-[15px] leading-7 text-muted-foreground">Your plan, usage and credits.</p>
-      </div>
+      <PageHeader title="Billing" description="Your plan, usage and credits." />
+
+      {canUseAgent && <AskAgentAboutBilling />}
 
       {billing.status === "past_due" && (
         <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
@@ -424,30 +467,14 @@ export default function BillingOverview({
 
       <section className="flex flex-col gap-3">
         <h3 className="text-lg font-semibold tracking-tight">Billing history</h3>
-        {history.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No payments yet.</p>
-        ) : (
-          <ul className="divide-y rounded-xl border">
-            {history.map((row) => (
-              <li key={row.id} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
-                <span>
-                  {row.kind === "company_subscription" ? "Subscription" : `${row.credit_amount ?? ""} credits`}
-                  <span className="text-muted-foreground"> · {formatDate(row.created_at)}</span>
-                </span>
-                <span className="flex items-center gap-2">
-                  {row.total_amount !== null && (
-                    <span className="tabular-nums">
-                      {(row.total_amount / 100).toFixed(2)} {row.currency}
-                    </span>
-                  )}
-                  <Badge variant={row.status === "complete" ? "success" : row.status === "failed" ? "destructive" : "secondary"}>
-                    {row.status}
-                  </Badge>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <DataTable
+          aria-label="Billing history"
+          data={history}
+          columns={HISTORY_COLUMNS}
+          noun="payments"
+          emptyMessage="No payments yet."
+          getRowId={(row) => row.id}
+        />
       </section>
       <AlertDialog open={dialogOpen} onOpenChange={(open) => !confirming && setDialogOpen(open)}>
         <AlertDialogContent>

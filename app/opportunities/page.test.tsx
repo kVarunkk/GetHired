@@ -10,6 +10,7 @@ import OpportunityPage from "./[id]/page";
 
 const NOT_FOUND = new Error("NEXT_NOT_FOUND");
 vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
   notFound: () => {
     throw NOT_FOUND;
   },

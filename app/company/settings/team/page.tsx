@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { AskAgentAboutTeam } from "@/components/agent/recruiter/AskAgentAboutTeam";
 import Error from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
 import InviteDialog from "@/components/team/InviteDialog";
 import RoleMatrix from "@/components/roles/RoleMatrix";
 import TeamTable from "@/components/team/TeamTable";
@@ -46,16 +47,12 @@ export default async function CompanyTeamPage({
 
     return (
       <div className="mb-20 flex w-full flex-col gap-6 p-4">
-        <Link
-          href="/company/settings"
-          className="flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-brand"
-        >
-          <ArrowLeft className="h-4 w-4" /> Settings
-        </Link>
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Team</h1>
-            <p className="text-sm text-muted-foreground">
+        <PageHeader
+          backHref="/company/settings"
+          backLabel="Back to settings"
+          title="Team"
+          description={
+            <>
               Who&apos;s on {company.name ?? "your company"}&apos;s hiring team and what their roles allow.
               {can(company, "roles.view") && (
                 <>
@@ -73,18 +70,28 @@ export default async function CompanyTeamPage({
                   </Link>
                 </>
               )}
-            </p>
-          </div>
-          {canInvite && (
-            <InviteDialog
-              ownerEmail={primary?.email ?? null}
-              seats={team.seats}
-              roles={inviteRoleOptions(company, roles)}
-              canCreateRole={can(company, "roles.manage")}
-              initialRoleId={inviteRoleId}
-            />
-          )}
-        </div>
+            </>
+          }
+          actions={
+            canInvite && (
+              <InviteDialog
+                ownerEmail={primary?.email ?? null}
+                seats={team.seats}
+                roles={inviteRoleOptions(company, roles)}
+                canCreateRole={can(company, "roles.manage")}
+                initialRoleId={inviteRoleId}
+                canUseAgent={can(company, "agent.use")}
+              />
+            )
+          }
+        />
+        {can(company, "agent.use") && (
+          <AskAgentAboutTeam
+            canInvite={canInvite}
+            canAssignRoles={can(company, "team.assign_roles") && can(company, "roles.view")}
+            canAssignJobs={canAny(company, "jobs.assign")}
+          />
+        )}
         <TeamTable
           members={team.members}
           invites={team.invites}

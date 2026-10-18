@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
 import ErrorComponent from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
+import { AskAgentAboutOpportunities } from "@/components/agent/AskAgentOnApplicantPages";
 import OutreachStatusBadge from "@/components/outreach/OutreachStatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { isOpen, listMyOpportunities } from "@/helpers/outreach/list";
@@ -19,13 +21,11 @@ export default async function OpportunitiesPage() {
 
     return (
       <div className="flex w-full flex-col gap-6 p-4 mb-20">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Opportunities</h1>
-          <p className="text-sm text-muted-foreground">
-            Companies that found your public profile and want to talk. Your contact details stay hidden
-            until you answer Interested.
-          </p>
-        </div>
+        <PageHeader
+          title="Opportunities"
+          description="Companies that found your public profile and want to talk. Your contact details stay hidden until you answer Interested."
+        />
+        <AskAgentAboutOpportunities />
 
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">

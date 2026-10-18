@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getMyCareersLink } from "@/helpers/careers/my-careers-link";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { jobControls } from "@/helpers/companies/job-scope";
@@ -10,7 +11,7 @@ import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
 import DeleteJobPosting from "@/components/DeleteJobPosting";
 import { Briefcase, DollarSign, Users, MapPin } from "lucide-react";
 import { format } from "date-fns";
-import BackButton from "@/components/BackButton";
+import PageHeader from "@/components/PageHeader";
 import { JobStatusSwitch } from "@/components/JobPostingsTable";
 import Link from "next/link";
 import JobDescriptionCard from "@/components/JobDetailsCard";
@@ -56,6 +57,7 @@ export default async function JobPostPage({
     const company = user ? await getMyCompany(supabase, user) : null;
     if (!company || job.company_id !== company.id || !can(company, "jobs.view", job.id)) notFound();
     const controls = jobControls(company, job.id);
+    const careersLink = company ? await getMyCareersLink(supabase, company.id).catch(() => null) : null;
     // RP-REQ-011: the Hiring team panel, for jobs.assign on this job only.
     const hiringTeam = can(company, "jobs.assign", job.id)
       ? await listJobHiringTeam(supabase, job.id)
@@ -77,51 +79,54 @@ export default async function JobPostPage({
       min_equity: job.min_equity ?? 0,
       max_equity: job.max_equity ?? 0,
       questions: job.questions ?? [],
+      department: job.department ?? "",
+      workplace_type: job.workplace_type ?? null,
     };
 
     return (
-      <div className="flex flex-col w-full gap-8 p-4 mb-20">
-        <div>
-          <BackButton />
-        </div>
-        {/* --- Header Section --- */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="min-w-0 text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[28px]">
-              {job.title}
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              at {job.company_info?.name}
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Posted on {format(new Date(job.created_at), "PPP")}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <JobStatusSwitch job={job} disabled={!controls.publish} />
-            <CreateJobPostingDialog
-              key={existingValues?.id || "new"}
-              companyId={job.company_id}
-              existingValues={existingValues}
-              disabled={!controls.edit}
-            />
-            <DeleteJobPosting
-              job_posting_id={job.id}
-              is_job_posting_page
-              disabled={!controls.delete}
-            />
-            <ShareJobPosting job_id={job.job_id} />
-            <FindSuitableProfilesForJobPost job_post_id={job_id} />
-            <Button asChild variant="outline" className="rounded-full">
-              <Link href={`/company/job-posts/${job.id}/applicants`}>
-                <Users className="w-4 h-4" />
-                View applicants ({job.applications?.length ?? 0})
-              </Link>
-            </Button>
-          </div>
-        </div>
+      <div className="flex flex-col w-full gap-6 p-4 mb-20">
+        <PageHeader
+          backHref="/company/job-posts"
+          backLabel="Back to job posts"
+          title={<span className="[overflow-wrap:anywhere]">{job.title}</span>}
+          description={
+            <>
+              at {job.company_info?.name} · Posted on {format(new Date(job.created_at), "PPP")}
+            </>
+          }
+          actions={
+            <>
+              <JobStatusSwitch job={job} disabled={!controls.publish} />
+              <CreateJobPostingDialog
+                key={existingValues?.id || "new"}
+                companyId={job.company_id}
+                existingValues={existingValues}
+                disabled={!controls.edit}
+              />
+              <DeleteJobPosting
+                job_posting_id={job.id}
+                is_job_posting_page
+                disabled={!controls.delete}
+              />
+              <ShareJobPosting job_id={job.job_id} careersSlug={careersLink?.published ? careersLink.slug : null} />
+              <FindSuitableProfilesForJobPost job_post_id={job_id} />
+              <Button asChild variant="outline" className="rounded-full">
+                <Link href={`/company/job-posts/${job.id}/applicants`}>
+                  <Users className="w-4 h-4" />
+                  View applicants ({job.applications?.length ?? 0})
+                </Link>
+              </Button>
+            </>
+          }
+        />
 
-        <AskAgentAboutJobPost job={{ id: job.id, title: job.title }} />
+        {can(company, "agent.use") && (
+          <AskAgentAboutJobPost
+            job={{ id: job.id, title: job.title }}
+            canMatch={can(company, "matching.run", job.id)}
+            canViewApplicants={can(company, "applicants.view", job.id)}
+          />
+        )}
 
         {/* --- Job Details Section --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

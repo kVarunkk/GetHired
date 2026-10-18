@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { History, ShieldCheck, Users, UsersRound } from "lucide-react";
+import { Globe, History, ListChecks, ShieldCheck, Users, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Error from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
+import { AskAgentAboutSettings } from "@/components/agent/recruiter/AskAgentOnMainPages";
 import StageEditor from "@/components/pipeline/StageEditor";
 import TemplateEditor from "@/components/pipeline/TemplateEditor";
 import SchedulingLinkForm from "@/components/pipeline/SchedulingLinkForm";
@@ -11,6 +13,7 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can, canAny, forbiddenMessage, type PermissionKey } from "@/helpers/companies/permissions";
 import { actorName } from "@/helpers/pipeline/move";
 import { listStages } from "@/helpers/pipeline/stages";
+import { QUESTION_SETS_PATH } from "@/helpers/jobs/question-sets";
 import { createClient } from "@/lib/supabase/server";
 
 function Section({
@@ -82,9 +85,19 @@ export default async function CompanySettingsPage() {
 
     return (
       <div className="mb-20 flex w-full flex-col gap-6 p-4">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">
-          Settings
-        </h1>
+        <PageHeader
+          title="Settings"
+          description="Your team, careers page, hiring pipeline and notifications."
+        />
+
+        {can(company, "agent.use") && (
+          <AskAgentAboutSettings
+            canEditStages={can(company, "settings.stages")}
+            canEditTemplates={can(company, "settings.templates")}
+            canEditCareers={can(company, "careers.edit")}
+            canViewTeam={can(company, "team.view")}
+          />
+        )}
 
         {(can(company, "team.view") ||
           can(company, "roles.view") ||
@@ -134,6 +147,38 @@ export default async function CompanySettingsPage() {
           </section>
         )}
 
+
+          <section className="flex flex-col gap-4 rounded-lg border p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">Careers page</h2>
+              <p className="text-sm text-muted-foreground">
+                A branded page with all your open roles, to share from your website and job posts.
+              </p>
+            </div>
+            <Button asChild variant="outline" className="w-fit">
+              <Link href="/company/settings/careers">
+                <Globe className="mr-2 h-4 w-4" />
+                Careers page
+              </Link>
+            </Button>
+          </section>
+
+          {can(company, "jobs.view") && (
+            <section className="flex flex-col gap-4 rounded-lg border p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight">Question sets</h2>
+                <p className="text-sm text-muted-foreground">
+                  Reusable application questions and knockout rules to apply when you post a job.
+                </p>
+              </div>
+              <Button asChild variant="outline" className="w-fit">
+                <Link href={QUESTION_SETS_PATH}>
+                  <ListChecks className="mr-2 h-4 w-4" />
+                  Question sets
+                </Link>
+              </Button>
+            </section>
+          )}
 
           <Section
             title="Pipeline stages"

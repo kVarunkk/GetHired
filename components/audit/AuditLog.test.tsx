@@ -32,7 +32,7 @@ describe("AuditLog (RPT-072)", () => {
   it("renders each entry with the actor, what changed and when", () => {
     render(<AuditLog initialEntries={[entry(2)]} initialNextBefore={null} filters={{}} actors={ACTORS} />);
 
-    const list = screen.getByRole("list", { name: "Audit log" });
+    const list = screen.getByRole("table", { name: "Audit log" });
     expect(within(list).getByText("Olive Owner")).toBeInTheDocument();
     expect(within(list).getByText(/changed Sam's role from Member to Recruiter/)).toBeInTheDocument();
     expect(within(list).getByText(/ago$/)).toBeInTheDocument();
@@ -79,7 +79,7 @@ describe("AuditLog (RPT-072)", () => {
     fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-10-01" } });
     expect(router.push).toHaveBeenCalledWith("/company/settings/audit?action=role&since=2026-10-01");
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear Filters" }));
     expect(router.push).toHaveBeenLastCalledWith("/company/settings/audit");
   });
 });

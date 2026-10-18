@@ -235,6 +235,14 @@ describe("updateNote and deleteNote", () => {
     expect(call.chain).toContainEqual({ method: "eq", args: ["author_user_id", user.id] });
   });
 
+  it("updateNote keeps the rating when none is passed", async () => {
+    db.queue("candidate_notes", { data: [{ id: NOTE_ID }], error: null });
+
+    await updateNote(ctx(), NOTE_ID, { body: "Edited" });
+
+    expect(methodArgs(db.callsFor("candidate_notes")[0], "update")).toEqual([{ body: "Edited" }]);
+  });
+
   it("updateNote reports someone else's note as not found", async () => {
     db.queue("candidate_notes", { data: [], error: null });
 

@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { getCompanyOutreach, type CompanyOutreachDetail } from "@/helpers/outreach/detail";
 import { setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import { OWNER_A } from "@/test/utils/team";
+import { OWNER_A, memberWith } from "@/test/utils/team";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import { OUTREACH_JOB } from "@/test/utils/outreach";
 import AskAgentAboutOutreach from "@/components/agent/recruiter/AskAgentAboutOutreach";
@@ -82,6 +82,30 @@ describe("/company/outreach/[id]", () => {
     );
     expect(screen.getByRole("button", { name: "Withdraw" })).toBeInTheDocument();
     expect(vi.mocked(AskAgentAboutOutreach).mock.calls[0][0].outreach).toMatchObject({ id: ID, status: "sent" });
+  });
+
+  it("puts the agent helper under the actions, above the message", async () => {
+    vi.mocked(getCompanyOutreach).mockResolvedValue(detail());
+
+    await renderPage();
+
+    const helper = screen.getByTestId("ask-agent");
+    const withdraw = screen.getByRole("button", { name: "Withdraw" });
+    const message = screen.getByText("Hi Ada, your React work stood out.");
+    expect(withdraw.compareDocumentPosition(helper) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(helper.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("hides the agent helper without agent.use", async () => {
+    db = createSupabaseMock({ user: COMPANY_A.user });
+    db.queueRpc("my_company_access", { data: memberWith(["outreach.view"]).membership, error: null });
+    await setRequestUser(COMPANY_A.user, db.client);
+    vi.mocked(getCompanyOutreach).mockResolvedValue(detail());
+
+    await renderPage();
+
+    expect(screen.getByRole("heading", { name: "Frontend role at Acme" })).toBeInTheDocument();
+    expect(screen.queryByTestId("ask-agent")).not.toBeInTheDocument();
   });
 
   it("shows an Interested answer with the note and contact", async () => {

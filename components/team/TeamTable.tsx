@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
+import type { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
+import DataTable from "@/components/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,14 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import RoleBadge from "@/components/roles/RoleBadge";
 import { changeRoleAction } from "@/app/actions/team/change-role";
@@ -131,242 +125,242 @@ export default function TeamTable({ members, invites, roles, me, companyName }: 
     return me.isOwner || (member.role ? roleWithin.get(member.role.id) === true : false);
   };
 
+  const memberColumns: ColumnDef<TeamMember>[] = [
+    {
+      id: "member",
+      header: "Member",
+      cell: ({ row: { original: member } }) => (
+        <div className="flex min-w-48 items-center gap-3">
+          <MemberAvatar name={member.name} email={member.email} />
+          <div className="min-w-0">
+            <p className="max-w-64 truncate font-medium">
+              {member.name ?? member.email}
+              {member.userId === me.userId && <span className="text-muted-foreground"> (you)</span>}
+            </p>
+            {member.name && <p className="max-w-64 truncate text-xs text-muted-foreground">{member.email}</p>}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "role",
+      header: "Role",
+      cell: ({ row: { original: member } }) => {
+        // Rule 4/5: the picker shows but is disabled on your own row and on
+        // members whose role is above yours.
+        const showPicker = me.canAssignRoles && !member.isOwner;
+        if (!showPicker || !member.role) {
+          return <RoleBadge role={member.role} owner={member.isOwner} primary={member.isPrimaryOwner} />;
+        }
+        const pickerDisabledReason = member.userId === me.userId ? RULE5 : !canActOn(member) ? ABOVE : null;
+        const options = !assignable.some((r) => r.id === member.role!.id)
+          ? [{ ...member.role, withinCeiling: false }, ...assignable]
+          : assignable;
+        return (
+          <Select
+            value={member.role.id}
+            disabled={busy !== null || pickerDisabledReason !== null}
+            onValueChange={(roleId) =>
+              run(`role:${member.userId}`, () => changeRoleAction({ userId: member.userId, roleId }), "Role changed.")
+            }
+          >
+            <SelectTrigger
+              className="h-8 w-40"
+              aria-label={`Role for ${member.email ?? member.name}`}
+              title={pickerDisabledReason ?? undefined}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((role) => (
+                <SelectItem key={role.id} value={role.id} disabled={!role.withinCeiling}>
+                  {role.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      },
+    },
+    {
+      id: "joined",
+      header: "Joined",
+      cell: ({ row }) => ago(row.original.joinedAt),
+      meta: { className: "text-muted-foreground" },
+    },
+    {
+      id: "lastActive",
+      header: "Last active",
+      cell: ({ row }) => ago(row.original.lastActiveAt),
+      meta: { className: "text-muted-foreground" },
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row: { original: member } }) => {
+        const isMe = member.userId === me.userId;
+        const ownerItems = me.isOwner
+          ? [
+              !member.isOwner && { key: "make-owner", label: "Make owner" },
+              member.isOwner && !member.isPrimaryOwner && { key: "remove-owner", label: "Remove owner role" },
+              member.isOwner && !member.isPrimaryOwner && { key: "make-primary", label: "Make primary owner" },
+            ].filter(Boolean)
+          : [];
+        const canRemoveThem = !isMe && me.canRemove && canActOn(member) && !member.isPrimaryOwner;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            {canRemoveThem && (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busy !== null}
+                onClick={() => setPending({ kind: "remove", member })}
+              >
+                Remove
+              </Button>
+            )}
+            {isMe &&
+              (me.isPrimaryOwner ? (
+                <span className="text-xs text-muted-foreground">Make another owner primary to leave.</span>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy !== null}
+                  onClick={() => setPending({ kind: "leave" })}
+                >
+                  Leave team
+                </Button>
+              ))}
+            {ownerItems.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={busy !== null}
+                    aria-label={`Owner actions for ${member.email ?? member.name}`}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {ownerItems.map((item) =>
+                    item ? (
+                      <DropdownMenuItem
+                        key={item.key}
+                        onSelect={() => {
+                          if (item.key === "make-owner") {
+                            void run(
+                              `owner:${member.userId}`,
+                              () => setOwnerAction({ userId: member.userId, isOwner: true }),
+                              "They're now an owner.",
+                            );
+                          } else if (item.key === "remove-owner") {
+                            setDemote(member);
+                          } else {
+                            setMakePrimary(member);
+                          }
+                        }}
+                      >
+                        {item.label}
+                      </DropdownMenuItem>
+                    ) : null,
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
+  const inviteColumns: ColumnDef<TeamInvite>[] = [
+    {
+      id: "email",
+      header: "Email",
+      cell: ({ row }) => (
+        <div className="flex min-w-48 items-center gap-3">
+          <MemberAvatar name={null} email={row.original.email} />
+          <p className="max-w-64 truncate font-medium">{row.original.email}</p>
+        </div>
+      ),
+    },
+    {
+      id: "role",
+      header: "Role",
+      cell: ({ row }) =>
+        row.original.role ? (
+          <RoleBadge role={row.original.role} />
+        ) : (
+          <Badge variant="outline" className="text-muted-foreground">
+            Default role
+          </Badge>
+        ),
+    },
+    {
+      id: "invitedBy",
+      header: "Invited by",
+      cell: ({ row }) => row.original.invitedBy ?? "-",
+      meta: { className: "text-muted-foreground" },
+    },
+    {
+      id: "expires",
+      header: "Expires",
+      cell: ({ row }) => ago(row.original.expiresAt),
+      meta: { className: "text-muted-foreground" },
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row: { original: invite } }) =>
+        me.canInvite && (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={busy !== null}
+              onClick={() =>
+                run(`resend:${invite.id}`, () => resendInviteAction({ inviteId: invite.id }), "Invite resent.")
+              }
+            >
+              Resend
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={busy !== null}
+              onClick={() => setPending({ kind: "revoke", invite })}
+            >
+              Revoke
+            </Button>
+          </div>
+        ),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="overflow-x-auto rounded-md border">
-        <Table aria-label="Members">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Member</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead>Last active</TableHead>
-              <TableHead>
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {members.map((member) => {
-              const isMe = member.userId === me.userId;
-              const actionable = canActOn(member);
-              // Rule 4/5: the picker shows but is disabled on your own row and on
-              // members whose role is above yours.
-              const showPicker = me.canAssignRoles && !member.isOwner;
-              const pickerDisabledReason = isMe ? RULE5 : !actionable ? ABOVE : null;
-              const options =
-                member.role && !assignable.some((r) => r.id === member.role!.id)
-                  ? [{ ...member.role, withinCeiling: false }, ...assignable]
-                  : assignable;
-              const ownerItems = me.isOwner
-                ? [
-                    !member.isOwner && { key: "make-owner", label: "Make owner" },
-                    member.isOwner && !member.isPrimaryOwner && { key: "remove-owner", label: "Remove owner role" },
-                    member.isOwner && !member.isPrimaryOwner && { key: "make-primary", label: "Make primary owner" },
-                  ].filter(Boolean)
-                : [];
-              const canRemoveThem = !isMe && me.canRemove && actionable && !member.isPrimaryOwner;
-              return (
-                <TableRow key={member.userId}>
-                  <TableCell>
-                    <div className="flex min-w-48 items-center gap-3">
-                      <MemberAvatar name={member.name} email={member.email} />
-                      <div className="min-w-0">
-                        <p className="max-w-64 truncate font-medium">
-                          {member.name ?? member.email}
-                          {isMe && <span className="text-muted-foreground"> (you)</span>}
-                        </p>
-                        {member.name && (
-                          <p className="max-w-64 truncate text-xs text-muted-foreground">{member.email}</p>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {showPicker && member.role ? (
-                      <Select
-                        value={member.role.id}
-                        disabled={busy !== null || pickerDisabledReason !== null}
-                        onValueChange={(roleId) =>
-                          run(
-                            `role:${member.userId}`,
-                            () => changeRoleAction({ userId: member.userId, roleId }),
-                            "Role changed.",
-                          )
-                        }
-                      >
-                        <SelectTrigger
-                          className="h-8 w-40"
-                          aria-label={`Role for ${member.email ?? member.name}`}
-                          title={pickerDisabledReason ?? undefined}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {options.map((role) => (
-                            <SelectItem key={role.id} value={role.id} disabled={!role.withinCeiling}>
-                              {role.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <RoleBadge role={member.role} owner={member.isOwner} primary={member.isPrimaryOwner} />
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">{ago(member.joinedAt)}</TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">
-                    {ago(member.lastActiveAt)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-1">
-                      {canRemoveThem && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={busy !== null}
-                          onClick={() => setPending({ kind: "remove", member })}
-                        >
-                          Remove
-                        </Button>
-                      )}
-                      {isMe &&
-                        (me.isPrimaryOwner ? (
-                          <span className="text-xs text-muted-foreground">
-                            Make another owner primary to leave.
-                          </span>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={busy !== null}
-                            onClick={() => setPending({ kind: "leave" })}
-                          >
-                            Leave team
-                          </Button>
-                        ))}
-                      {ownerItems.length > 0 && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              disabled={busy !== null}
-                              aria-label={`Owner actions for ${member.email ?? member.name}`}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {ownerItems.map((item) =>
-                              item ? (
-                                <DropdownMenuItem
-                                  key={item.key}
-                                  onSelect={() => {
-                                    if (item.key === "make-owner") {
-                                      void run(
-                                        `owner:${member.userId}`,
-                                        () => setOwnerAction({ userId: member.userId, isOwner: true }),
-                                        "They're now an owner.",
-                                      );
-                                    } else if (item.key === "remove-owner") {
-                                      setDemote(member);
-                                    } else {
-                                      setMakePrimary(member);
-                                    }
-                                  }}
-                                >
-                                  {item.label}
-                                </DropdownMenuItem>
-                              ) : null,
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        aria-label="Members"
+        data={members}
+        columns={memberColumns}
+        noun="members"
+        getRowId={(member) => member.userId}
+      />
 
       <div className="flex flex-col gap-2">
         <h3 className="text-xs font-medium text-muted-foreground">Pending invites</h3>
-        <div className="overflow-x-auto rounded-md border">
-          <Table aria-label="Pending invites">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Invited by</TableHead>
-                <TableHead>Expires</TableHead>
-                <TableHead>
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invites.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    No pending invites.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                invites.map((invite) => (
-                  <TableRow key={invite.id}>
-                    <TableCell>
-                      <div className="flex min-w-48 items-center gap-3">
-                        <MemberAvatar name={null} email={invite.email} />
-                        <p className="max-w-64 truncate font-medium">{invite.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {invite.role ? (
-                        <RoleBadge role={invite.role} />
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          Default role
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {invite.invitedBy ?? "-"}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">{ago(invite.expiresAt)}</TableCell>
-                    <TableCell>
-                      {me.canInvite && (
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={busy !== null}
-                            onClick={() =>
-                              run(`resend:${invite.id}`, () => resendInviteAction({ inviteId: invite.id }), "Invite resent.")
-                            }
-                          >
-                            Resend
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={busy !== null}
-                            onClick={() => setPending({ kind: "revoke", invite })}
-                          >
-                            Revoke
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable
+          aria-label="Pending invites"
+          data={invites}
+          columns={inviteColumns}
+          noun="invites"
+          emptyMessage="No pending invites."
+          getRowId={(invite) => invite.id}
+        />
       </div>
 
       <ConfirmDialog

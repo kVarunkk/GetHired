@@ -5,7 +5,6 @@ import { agentPromptHref as appAgentHref, COMPANY_AGENT_PATH } from "@/helpers/a
 import AskAgentAboutJobPost, { jobPostQuestionPrompt, jobPostSuggestions } from "./AskAgentAboutJobPost";
 import AskRecruiterAgent from "./AskRecruiterAgent";
 import { similarCandidatesPrompt } from "./FindSimilarCandidates";
-import FindSimilarCandidates from "./FindSimilarCandidates";
 import { AGENT_ROLE_UI } from "../roles";
 
 vi.mock("next/navigation", () => ({ useRouter: vi.fn() }));
@@ -14,6 +13,7 @@ vi.mock("next/navigation", () => ({ useRouter: vi.fn() }));
 const agentPromptHref = (text: string) => appAgentHref(text, COMPANY_AGENT_PATH);
 
 const JOB = { id: "b0000000-0000-4000-8000-000000000001", title: "Founding Backend Engineer" };
+const ALL = { canMatch: true, canViewApplicants: true };
 let push: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
@@ -28,7 +28,7 @@ describe("AskAgentAboutJobPost (RA-REQ-009)", () => {
     expect(jobPostQuestionPrompt(JOB, "  Is the salary competitive? ")).toBe(
       'About my job post "Founding Backend Engineer" (job post b0000000-0000-4000-8000-000000000001): Is the salary competitive?',
     );
-    const suggestions = jobPostSuggestions(JOB);
+    const suggestions = jobPostSuggestions(JOB, ALL);
     expect(suggestions[0].prompt).toBe(
       'Find and rank the best candidates for "Founding Backend Engineer" (job post b0000000-0000-4000-8000-000000000001).',
     );
@@ -36,7 +36,7 @@ describe("AskAgentAboutJobPost (RA-REQ-009)", () => {
   });
 
   it("opens the agent with the question", () => {
-    render(<AskAgentAboutJobPost job={JOB} />);
+    render(<AskAgentAboutJobPost job={JOB} {...ALL} />);
 
     fireEvent.change(screen.getByLabelText("Question for the assistant"), {
       target: { value: "Who applied this week?" },
@@ -46,10 +46,21 @@ describe("AskAgentAboutJobPost (RA-REQ-009)", () => {
     expect(push).toHaveBeenCalledWith(agentPromptHref(jobPostQuestionPrompt(JOB, "Who applied this week?")));
   });
 
-  it("links each suggestion to the agent with its prompt", () => {
-    render(<AskAgentAboutJobPost job={JOB} />);
+  it("hides the chips whose tools the viewer's permissions don't allow", () => {
+    expect(jobPostSuggestions(JOB, { canMatch: false, canViewApplicants: false }).map((s) => s.label)).toEqual([
+      "Improve the post",
+    ]);
+    expect(jobPostSuggestions(JOB, ALL).map((s) => s.label)).toEqual([
+      "Find candidates",
+      "Strongest applicants",
+      "Improve the post",
+    ]);
+  });
 
-    const [first] = jobPostSuggestions(JOB);
+  it("links each suggestion to the agent with its prompt", () => {
+    render(<AskAgentAboutJobPost job={JOB} {...ALL} />);
+
+    const [first] = jobPostSuggestions(JOB, ALL);
     expect(screen.getByRole("link", { name: first.label })).toHaveAttribute(
       "href",
       agentPromptHref(first.prompt),
@@ -73,17 +84,11 @@ describe("AskRecruiterAgent on the dashboard", () => {
   });
 });
 
-describe("FindSimilarCandidates on a profile", () => {
+describe("similarCandidatesPrompt", () => {
   it("asks for job-related similarity only, by candidate id", () => {
     const prompt = similarCandidatesPrompt("a0000000-0000-4000-8000-000000000001");
     expect(prompt).toBe(
       "Find candidates with similar roles, skills and experience to candidate a0000000-0000-4000-8000-000000000001.",
-    );
-
-    render(<FindSimilarCandidates candidateId="a0000000-0000-4000-8000-000000000001" />);
-    expect(screen.getByRole("link", { name: /Find similar candidates/ })).toHaveAttribute(
-      "href",
-      agentPromptHref(prompt),
     );
   });
 });

@@ -1,7 +1,13 @@
+import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
+import { Search } from "lucide-react";
 import ErrorComponent from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
 import OutreachTable from "@/components/outreach/OutreachTable";
+import { AskAgentAboutOutreachList } from "@/components/agent/recruiter/AskAgentOnMainPages";
+import { Button } from "@/components/ui/button";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { can, canAny } from "@/helpers/companies/permissions";
 import { OUTREACH_STATUSES } from "@/helpers/outreach/config";
 import { listCompanyOutreach } from "@/helpers/outreach/list";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
@@ -37,20 +43,33 @@ export default async function CompanyOutreachPage({
 
     return (
       <div className="flex w-full flex-col gap-6 p-4 mb-20">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Outreach</h1>
-            <p className="text-sm text-muted-foreground">
-              Messages to candidates in the talent pool. They answer on GetHired.
-            </p>
-          </div>
-          <div className="rounded-lg border px-4 py-2 text-right">
-            <p className="text-xs font-medium text-muted-foreground">Reply rate</p>
-            <p className="text-lg font-semibold" data-testid="reply-rate">
-              {page.replyRate === null ? "—" : `${Math.round(page.replyRate * 100)}%`}
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="Outreach"
+          description="Messages to candidates in the talent pool. They answer on GetHired."
+          actions={
+            <>
+              <div className="rounded-lg border px-4 py-2 text-right">
+                <p className="text-xs font-medium text-muted-foreground">Reply rate</p>
+                <p className="text-lg font-semibold" data-testid="reply-rate">
+                  {page.replyRate === null ? "—" : `${Math.round(page.replyRate * 100)}%`}
+                </p>
+              </div>
+              {/* Outreach starts from a candidate's profile, so the CTA goes there. */}
+              {can(company, "talent.view") && (
+                <Button asChild variant="brand">
+                  <Link href="/company/profiles">
+                    <Search className="h-4 w-4" />
+                    Find candidates
+                  </Link>
+                </Button>
+              )}
+            </>
+          }
+        />
+
+        {can(company, "agent.use") && canAny(company, "outreach.send") && (
+          <AskAgentAboutOutreachList canMatch={canAny(company, "matching.run")} />
+        )}
 
         <OutreachTable
           items={page.items}

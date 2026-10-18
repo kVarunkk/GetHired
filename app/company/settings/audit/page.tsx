@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { AskAgentAboutAudit } from "@/components/agent/recruiter/AskAgentAboutTeam";
 import AuditLog from "@/components/audit/AuditLog";
 import Error from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
 import Forbidden from "@/components/roles/Forbidden";
 import { AUDIT_ACTION_GROUP_VALUES, type AuditActionGroup, type AuditFilters } from "@/helpers/companies/audit";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
@@ -56,18 +56,13 @@ export default async function CompanyAuditPage({
 
     return (
       <div className="mb-20 flex w-full max-w-4xl flex-col gap-6 p-4">
-        <Link
-          href="/company/settings"
-          className="flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-brand"
-        >
-          <ArrowLeft className="h-4 w-4" /> Settings
-        </Link>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Audit log</h1>
-          <p className="text-sm text-muted-foreground">
-            Changes to roles, owners, members, invites and hiring teams. Entries can&apos;t be edited or deleted.
-          </p>
-        </div>
+        <PageHeader
+          backHref="/company/settings"
+          backLabel="Back to settings"
+          title="Audit log"
+          description="Changes to roles, owners, members, invites and hiring teams. Entries can't be edited or deleted."
+        />
+        {can(company, "agent.use") && <AskAgentAboutAudit />}
         <AuditLog
           initialEntries={page.entries}
           initialNextBefore={page.nextBefore}

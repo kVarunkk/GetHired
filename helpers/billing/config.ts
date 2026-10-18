@@ -1,4 +1,4 @@
-// Billing tunables (plan/feature-recruiter-billing-spec.md). The SQL functions
+// Billing tunables (plan/recruiter-billing/feature-recruiter-billing-spec.md). The SQL functions
 // use the same values: apply_subscription_event sets grace_until = now() + 7 days.
 
 /** BL-REQ-013: days a past-due company keeps its plan. */

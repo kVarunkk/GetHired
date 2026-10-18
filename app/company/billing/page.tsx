@@ -4,7 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { canManageBilling, canViewBilling } from "@/helpers/billing/access";
 import { listMemberUsage } from "@/helpers/billing/member-usage";
-import { forbiddenMessage } from "@/helpers/companies/permissions";
+import { can, forbiddenMessage } from "@/helpers/companies/permissions";
 import { getEntitlements } from "@/helpers/billing/entitlements";
 import { listPublicPlans } from "@/helpers/billing/plans";
 import BillingOverview from "@/components/billing/BillingOverview";
@@ -74,6 +74,7 @@ export default async function CompanyBillingPage({
         checkoutDone={params.checkout === "done"}
         canManage={canManage}
         memberUsage={memberUsage}
+        canUseAgent={can(company, "agent.use")}
       />
     );
   } catch (err) {

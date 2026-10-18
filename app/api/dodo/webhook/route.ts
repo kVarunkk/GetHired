@@ -10,7 +10,7 @@ import { billingContactsFor, sendPlanChangedEmail } from "@/helpers/billing/emai
 import type { Database, Json } from "@/utils/types/database.types";
 import { JsonCompatible, PostHogEvent, TPaymentStatus } from "@/utils/types";
 
-// The Dodo webhook, as a dispatcher (plan/feature-recruiter-billing-spec.md §4.1):
+// The Dodo webhook, as a dispatcher (plan/recruiter-billing/feature-recruiter-billing-spec.md §4.1):
 //   1. verify the signature, before parsing anything;
 //   2. store the delivery in billing_webhook_events (a duplicate is a no-op);
 //   3. route by event type (payments by the kind on our payments row);

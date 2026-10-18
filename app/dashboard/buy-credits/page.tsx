@@ -8,7 +8,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import CreditPurchaseButton from "@/components/CreditPurchaseButton";
 import Error from "@/components/Error";
-import BackButton from "@/components/BackButton";
+import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -31,27 +31,19 @@ export default async function BuyCreditsPage() {
   }
 
   return (
-    <div className="flex flex-col w-full gap-8 p-4">
-      <div>
-        <BackButton />
-      </div>
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-2xl sm:text-[28px] font-semibold text-start tracking-tight">
-            Buy AI Credits
-          </h2>
-          <p className="text-[15px] leading-7 text-muted-foreground">
-            Instantly top up your account to continue using AI features.
-          </p>
-        </div>
-
-        <Button asChild variant={"outline"}>
-          <Link href={"/dashboard/buy-credits/payments"}>
-            View Purchase History
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </Button>
-      </div>
+    <div className="flex flex-col w-full gap-6 p-4">
+      <PageHeader
+        title="Buy AI credits"
+        description="Instantly top up your account to continue using AI features."
+        actions={
+          <Button asChild variant={"outline"}>
+            <Link href={"/dashboard/buy-credits/payments"}>
+              View Purchase History
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {plans.map((plan) => (

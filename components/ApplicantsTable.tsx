@@ -1,40 +1,16 @@
 "use client";
 
+import KnockoutBadge from "@/components/applications/KnockoutBadge";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import {
-  ColumnDef,
-  ColumnFiltersState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-  RowSelectionState,
-  SortingState,
-} from "@tanstack/react-table";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { format } from "date-fns";
-import { ChevronRight, ArrowUpDown, Loader2, XCircle } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { ChevronRight, ArrowUpDown, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import DataTable, { FilterSelect, SelectFilter, SortableHeader, TextFilter } from "@/components/DataTable";
 import type { StageOption } from "@/components/pipeline/StagePicker";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
 import MatchScoreBadge from "./matching/MatchScoreBadge";
@@ -59,7 +35,18 @@ interface ApplicantsTableProps {
   onRowSelectionChange?: (selection: RowSelectionState) => void;
   /** The member's monthly screening cap from their role, when capped (RP-REQ-044). */
   screeningCap?: { limit: number; remaining: number } | null;
+  /** AF-REQ-008: the job's yes/no and single-choice questions, to filter by answer. */
+  answerQuestions?: AnswerFilterQuestion[];
 }
+
+export type { AnswerFilterQuestion } from "@/helpers/applications/answer-filters";
+import type { AnswerFilterQuestion } from "@/helpers/applications/answer-filters";
+
+/** An answer as the filter compares it: yes/no become "yes"/"no". */
+const answerKey = (value: unknown) => (value === true ? "yes" : value === false ? "no" : typeof value === "string" ? value : null);
+
+/** Filter-only columns: the recommendation and knockout badges show elsewhere. */
+const COLUMN_VISIBILITY = { recommendation: false, knockout: false };
 
 type Row = TApplicationServer & {
   stage_id?: string | null;
@@ -67,10 +54,7 @@ type Row = TApplicationServer & {
   jobTitle: string;
 };
 
-const ALL_STAGES = "All stages";
-
 const applicationStatuses = [
-  "All Statuses",
   "submitted",
   "reviewed",
   "selected",
@@ -78,8 +62,14 @@ const applicationStatuses = [
   "rejected",
 ];
 
-const ALL_RECOMMENDATIONS = "All recommendations";
-const recommendations = Object.keys(RECOMMENDATION_LABELS) as ScreeningRecommendation[];
+const recommendationOptions = (Object.keys(RECOMMENDATION_LABELS) as ScreeningRecommendation[]).map((r) => ({
+  value: r,
+  label: RECOMMENDATION_LABELS[r],
+}));
+const knockoutOptions = [
+  { value: "failed", label: "Didn't meet requirements" },
+  { value: "passed", label: "Met requirements" },
+];
 
 /** Screenings the backfill route queues again: none, stale, failed, skipped. */
 const needsScreening = (status: string | undefined) =>
@@ -93,16 +83,11 @@ export default function ApplicantsTable({
   rowSelection = {},
   onRowSelectionChange,
   screeningCap = null,
+  answerQuestions = [],
 }: ApplicantsTableProps) {
   const router = useRouter();
   const { handle: handleEntitlement, dialog } = useEntitlementError();
-  const [sorting, setSorting] = useState<SortingState>(
-    defaultSort === "fit" ? [{ id: "fit", desc: true }] : [],
-  );
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [page, setPage] = useState(1);
   const [screening, setScreening] = useState(false);
-  const pageSize = 10;
 
   const jobTitles = useMemo(() => {
     const titles = data
@@ -111,16 +96,29 @@ export default function ApplicantsTable({
         (title): title is string =>
           typeof title === "string" && title.length > 0,
       );
-    return ["All Titles", ...new Set(titles)];
+    return [...new Set(titles)];
   }, [data]);
 
+  const [answerQuestionId, setAnswerQuestionId] = useState<string | null>(null);
+  const [answerValue, setAnswerValue] = useState<string | null>(null);
+  const answerQuestion = answerQuestions.find((q) => q.id === answerQuestionId) ?? null;
+
   const flatData = useMemo(() => {
-    return data.map((item) => ({
+    const rows = data.map((item) => ({
       ...item,
       applicantName: item.user_info?.full_name || "",
       jobTitle: item.job_postings?.title || "",
     }));
-  }, [data]);
+    if (!answerQuestionId || !answerValue) return rows;
+    return rows.filter((row) => {
+      const answers = row.answers_v2;
+      if (!answers || typeof answers !== "object" || Array.isArray(answers)) return false;
+      return answerKey((answers as Record<string, unknown>)[answerQuestionId]) === answerValue;
+    });
+  }, [data, answerQuestionId, answerValue]);
+
+  // Only jobs with knockout rules have failed rows worth filtering by.
+  const hasKnockouts = useMemo(() => data.some((item) => item.application_knockouts?.failed), [data]);
 
   const unscreened = useMemo(
     () => data.filter((item) => needsScreening(item.application_screenings?.status)).length,
@@ -165,34 +163,32 @@ export default function ApplicantsTable({
       {
         accessorKey: "applicantName",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Applicant Name
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <SortableHeader column={column} label="Applicant Name" />
         ),
         cell: ({ row }) => (
-          <div
-            className="max-w-[14rem] truncate font-medium"
-            title={row.original.applicantName || undefined}
-          >
-            {row.original.applicantName || "N/A"}
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              className="max-w-[14rem] truncate font-medium"
+              title={row.original.applicantName || undefined}
+            >
+              {row.original.applicantName || "N/A"}
+            </div>
+            <KnockoutBadge knockout={row.original.application_knockouts} />
           </div>
         ),
         filterFn: "includesString",
       },
       {
+        // AF-REQ-003: filter only; the badge sits next to the name.
+        id: "knockout",
+        accessorFn: (row) =>
+          row.application_knockouts ? (row.application_knockouts.failed ? "failed" : "passed") : "none",
+        filterFn: "equals",
+      },
+      {
         accessorKey: "jobTitle",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Job Title
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <SortableHeader column={column} label="Job Title" />
         ),
         cell: ({ row }) => (
           <div className="max-w-[16rem] truncate text-sm" title={row.original.jobTitle}>
@@ -243,13 +239,7 @@ export default function ApplicantsTable({
       {
         accessorKey: "status",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Status
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <SortableHeader column={column} label="Status" />
         ),
         cell: ({ row }) => (
           <ApplicationStatusBadge
@@ -262,13 +252,7 @@ export default function ApplicantsTable({
       {
         accessorKey: "created_at",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Date Applied
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <SortableHeader column={column} label="Date Applied" />
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
@@ -290,57 +274,6 @@ export default function ApplicantsTable({
       },
     ];
   }, [stages]);
-
-  const table = useReactTable({
-    data: flatData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getRowId: (row) => row.id,
-    enableRowSelection: !!stages,
-    onRowSelectionChange: (updater) =>
-      onRowSelectionChange?.(updater instanceof Function ? updater(rowSelection) : updater),
-    onSortingChange: (updater) => {
-      setSorting((old) =>
-        updater instanceof Function ? updater(old) : updater,
-      );
-      setPage(1);
-    },
-    onColumnFiltersChange: (updater) => {
-      setColumnFilters((old) =>
-        updater instanceof Function ? updater(old) : updater,
-      );
-      setPage(1);
-    },
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility: { recommendation: false },
-      rowSelection,
-    },
-  });
-
-  const paginatedRows = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return table.getRowModel().rows.slice(start, start + pageSize);
-  }, [table, page, pageSize, table.getRowModel().rows]);
-
-  const totalRecords = table.getRowModel().rows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-
-  const clearFilters = () => {
-    setColumnFilters([]);
-    table.getColumn("applicantName")?.setFilterValue("");
-    table.getColumn("jobTitle")?.setFilterValue(undefined);
-    table.getColumn("status")?.setFilterValue(undefined);
-    table.getColumn("recommendation")?.setFilterValue(undefined);
-    table.getColumn("stage")?.setFilterValue(undefined);
-  };
-
-  const hasFilters = useMemo(() => {
-    return columnFilters.length > 0;
-  }, [columnFilters]);
 
   const screenUnscreened = async () => {
     if (!jobPostId) return;
@@ -364,129 +297,97 @@ export default function ApplicantsTable({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Filters Section */}
-      <div className="flex items-center justify-between gap-4 flex-wrap ">
-        <div className="flex items-center gap-4 overflow-x-auto p-1">
-          <Input
-            placeholder="Applicant Name"
-            value={
-              (table.getColumn("applicantName")?.getFilterValue() as string) ??
-              ""
-            }
-            onChange={(event) =>
-              table
-                .getColumn("applicantName")
-                ?.setFilterValue(event.target.value)
-            }
-            className="w-[150px] shrink-0 text-sm"
-          />
-
-          <Select
-            onValueChange={(value) =>
-              table
-                .getColumn("jobTitle")
-                ?.setFilterValue(value === "All Titles" ? undefined : value)
-            }
-            value={
-              (table.getColumn("jobTitle")?.getFilterValue() as string) ??
-              "All Titles"
-            }
-          >
-            <SelectTrigger className="w-[180px]" aria-label="Filter by job title">
-              <SelectValue placeholder="Filter by Job Title" />
-            </SelectTrigger>
-            <SelectContent>
-              {jobTitles.map((title) => (
-                <SelectItem key={title} value={title}>
-                  {title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            onValueChange={(value) =>
-              table
-                .getColumn("status")
-                ?.setFilterValue(value === "All Statuses" ? undefined : value)
-            }
-            value={
-              (table.getColumn("status")?.getFilterValue() as string) ??
-              "All Statuses"
-            }
-          >
-            <SelectTrigger className="w-[180px]" aria-label="Filter by status">
-              <SelectValue placeholder="Filter by Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {applicationStatuses.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {status}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            onValueChange={(value) =>
-              table
-                .getColumn("recommendation")
-                ?.setFilterValue(value === ALL_RECOMMENDATIONS ? undefined : value)
-            }
-            value={
-              (table.getColumn("recommendation")?.getFilterValue() as string) ??
-              ALL_RECOMMENDATIONS
-            }
-          >
-            <SelectTrigger className="w-[190px]" aria-label="Filter by recommendation">
-              <SelectValue placeholder="Filter by recommendation" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_RECOMMENDATIONS}>{ALL_RECOMMENDATIONS}</SelectItem>
-              {recommendations.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {RECOMMENDATION_LABELS[r]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {stages && (
-            <Select
-              onValueChange={(value) =>
-                table
-                  .getColumn("stage")
-                  ?.setFilterValue(value === ALL_STAGES ? undefined : value)
-              }
-              value={(table.getColumn("stage")?.getFilterValue() as string) ?? ALL_STAGES}
-            >
-              <SelectTrigger className="w-[160px]" aria-label="Filter by stage">
-                <SelectValue placeholder="Filter by stage" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_STAGES}>{ALL_STAGES}</SelectItem>
-                {stages.map((stage) => (
-                  <SelectItem key={stage.id} value={stage.id}>
-                    {stage.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {hasFilters && (
-            <Button
-              variant="ghost"
-              onClick={clearFilters}
-              className="text-muted-foreground"
-            >
-              <XCircle className="w-4 h-4 mr-2" />
-              Clear Filters
-            </Button>
-          )}
-          {jobPostId && unscreened > 0 && (
+    <>
+      <DataTable
+        data={flatData}
+        columns={columns}
+        noun="applicants"
+        initialSorting={defaultSort === "fit" ? [{ id: "fit", desc: true }] : []}
+        columnVisibility={COLUMN_VISIBILITY}
+        getRowId={(row) => row.id}
+        enableRowSelection={!!stages}
+        rowSelection={rowSelection}
+        onRowSelectionChange={onRowSelectionChange}
+        externalFiltersActive={Boolean(answerQuestionId && answerValue)}
+        onClearFilters={() => {
+          setAnswerQuestionId(null);
+          setAnswerValue(null);
+        }}
+        filters={(table) => (
+          <>
+            <TextFilter table={table} column="applicantName" placeholder="Applicant Name" />
+            <SelectFilter
+              table={table}
+              column="jobTitle"
+              allLabel="All Titles"
+              options={jobTitles}
+              label="Filter by job title"
+            />
+            <SelectFilter
+              table={table}
+              column="status"
+              allLabel="All Statuses"
+              options={applicationStatuses}
+              label="Filter by status"
+            />
+            <SelectFilter
+              table={table}
+              column="recommendation"
+              allLabel="All recommendations"
+              options={recommendationOptions}
+              label="Filter by recommendation"
+              className="w-[190px]"
+            />
+            {answerQuestions.length > 0 && (
+              <>
+                <FilterSelect
+                  value={answerQuestionId}
+                  onChange={(value) => {
+                    setAnswerQuestionId(value);
+                    setAnswerValue(null);
+                  }}
+                  allLabel="Any answers"
+                  options={answerQuestions.map((q) => ({ value: q.id, label: q.label }))}
+                  label="Filter by question"
+                  className="w-[200px]"
+                />
+                {answerQuestion && (
+                  <FilterSelect
+                    value={answerValue}
+                    onChange={setAnswerValue}
+                    allLabel="Any answer"
+                    options={answerQuestion.options}
+                    label="Answer"
+                    className="w-[160px]"
+                  />
+                )}
+              </>
+            )}
+            {hasKnockouts && (
+              <SelectFilter
+                table={table}
+                column="knockout"
+                allLabel="All requirements"
+                options={knockoutOptions}
+                label="Filter by requirements"
+                className="w-[200px]"
+              />
+            )}
+            {stages && (
+              <SelectFilter
+                table={table}
+                column="stage"
+                allLabel="All stages"
+                options={stages.map((stage) => ({ value: stage.id, label: stage.name }))}
+                label="Filter by stage"
+                className="w-[160px]"
+              />
+            )}
+          </>
+        )}
+        actions={
+          jobPostId &&
+          unscreened > 0 && (
             <>
               {screeningCap && (
                 <span className="text-xs text-muted-foreground">
@@ -498,92 +399,10 @@ export default function ApplicantsTable({
                 Screen {unscreened} unscreened
               </Button>
             </>
-          )}
-        </div>
-      </div>
-
-      {/* Table Section */}
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {paginatedRows.length ? (
-              paginatedRows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={table.getVisibleLeafColumns().length}
-                  className="h-24 text-center"
-                >
-                  No applicants found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="my-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-muted-foreground sm:text-sm">
-        <div>
-          Showing {paginatedRows.length ? (page - 1) * pageSize + 1 : 0}-
-          {(page - 1) * pageSize + paginatedRows.length} of {totalRecords}{" "}
-          applicants
-        </div>
-        <div className="flex min-w-0 max-w-full items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="min-w-0"
-          >
-            <span className="truncate">Previous</span>
-          </Button>
-          <span className="whitespace-nowrap">
-            {/* "Page" is dropped on the narrowest phones so the footer fits. */}
-            <span className="max-[400px]:hidden">Page </span>
-            {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="min-w-0"
-          >
-            <span className="truncate">Next</span>
-          </Button>
-        </div>
-      </div>
+          )
+        }
+      />
       {dialog}
-    </div>
+    </>
   );
 }

@@ -1,9 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
+import { getMyCareersLink } from "@/helpers/careers/my-careers-link";
+import CareersLinkBar from "@/components/careers/CareersLinkBar";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { jobControls, scopeToJobs } from "@/helpers/companies/job-scope";
 import { NO_MEMBERSHIP } from "@/helpers/companies/require-company";
 import ErrorComponent from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
@@ -50,6 +53,8 @@ export default async function CompanyPage() {
     }
     // RP-REQ-016: job controls follow the viewer's permissions; the server refuses them too.
     const canCreateJobs = can(companyInfo, "jobs.create");
+    // CP-REQ-014: the careers page link on the dashboard.
+    const careersLink = await getMyCareersLink(supabase, companyInfo.id).catch(() => null);
 
     const [metricsRes, jobsRes, applicantsRes] = await Promise.all([
       supabase.rpc("get_company_metrics", { company_id: companyInfo.id }),
@@ -76,6 +81,8 @@ export default async function CompanyPage() {
           min_equity,
           max_equity,
           questions,
+          department,
+          workplace_type,
           status,
           job_id,
           updated_at,
@@ -130,17 +137,19 @@ export default async function CompanyPage() {
 
     return (
       <div className="flex flex-col w-full gap-5 p-4 mb-20">
-        <div className="flex items-center justify-between flex-wrap gap-5">
-          <h2 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-start">
-            How are you doing today, {companyInfo.name}?
-          </h2>
-          <CreateJobPostingDialog
-            companyId={companyInfo.id}
-            disabled={!canCreateJobs}
-          />
-        </div>
+        <PageHeader
+          title={`How are you doing today, ${companyInfo.name}?`}
+          actions={
+            <CreateJobPostingDialog
+              companyId={companyInfo.id}
+              disabled={!canCreateJobs}
+            />
+          }
+        />
 
-        <AskRecruiterAgent />
+        {can(companyInfo, "agent.use") && <AskRecruiterAgent />}
+
+        {careersLink && <CareersLinkBar slug={careersLink.slug} published={careersLink.published} />}
 
         {/* --- Metrics Section --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

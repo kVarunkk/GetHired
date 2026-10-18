@@ -40,7 +40,7 @@ export default function FindSuitableProfilesForJobPost({
         onClick={() => handleAiSearch(job_post_id)}
       >
         <Search className="w-4 h-4" />
-        Find Suitable Profiles
+        AI Smart Search
       </Button>
     );
   } else return "";

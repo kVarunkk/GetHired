@@ -124,6 +124,8 @@ describe("GET /api/company/job-posts/[job_id]/pipeline (PLT-041)", () => {
         daysInStage: 3,
         noteCount: 0,
         ratingAvg: null,
+        // AF-REQ-003: no knockout failure on this card.
+        knockoutReasons: null,
       },
       expect.objectContaining({ id: appId(2), fitScore: null, daysInStage: 0 }),
       // Only a completed screening's score counts.

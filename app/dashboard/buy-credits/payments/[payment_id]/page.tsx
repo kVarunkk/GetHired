@@ -1,4 +1,4 @@
-import BackButton from "@/components/BackButton";
+import PageHeader from "@/components/PageHeader";
 import Error from "@/components/Error";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,32 +48,30 @@ export default async function PaymentIdPage({
     const plan = paymentData.price_plan;
 
     return (
-      <div className="flex flex-col w-full gap-8 p-4">
-        <div>
-          <BackButton />
-        </div>
-
-        <div className="flex items-center justify-between flex-wrap gap-5">
-          <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight">
-            Payment Details
-          </h1>
-          <div className="flex items-center gap-4 flex-wrap">
-            <Link href="mailto:varun@devhub.co.in">
-              <Button variant="link" className="w-full ">
-                <Headset className="w-4 h-4 mr-2" />
-                Contact Support
-              </Button>
-            </Link>
-            {paymentData.payment_id ? (
-              <DownloadInvoiceButton
-                paymentId={paymentData.payment_id}
-                isPaymentStatusPage={false}
-              />
-            ) : (
-              ""
-            )}
-          </div>
-        </div>
+      <div className="flex flex-col w-full gap-6 p-4">
+        <PageHeader
+          backHref="/dashboard/buy-credits/payments"
+          backLabel="Back to purchases"
+          title="Payment details"
+          actions={
+            <>
+              <Link href="mailto:varun@devhub.co.in">
+                <Button variant="link" className="w-full ">
+                  <Headset className="w-4 h-4 mr-2" />
+                  Contact Support
+                </Button>
+              </Link>
+              {paymentData.payment_id ? (
+                <DownloadInvoiceButton
+                  paymentId={paymentData.payment_id}
+                  isPaymentStatusPage={false}
+                />
+              ) : (
+                ""
+              )}
+            </>
+          }
+        />
 
         {paymentData.status === "pending" ? (
           <div className="flex gap-2 text-sm text-muted-foreground border rounded-lg bg-muted/40 px-3 py-2.5">

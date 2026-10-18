@@ -1,4 +1,5 @@
 import type { Database } from "@/utils/types/database.types";
+import { answersView } from "@/helpers/applications/answers-view";
 import type { TResumeRowContent } from "@/utils/types";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { scrubPII, stripProtected } from "@/helpers/ai/fairness";
@@ -23,7 +24,8 @@ type JobPosting = Pick<
   | "visa_sponsorship"
   | "questions"
 >;
-type Application = Pick<Tables["applications"]["Row"], "answers">;
+type Application = Pick<Tables["applications"]["Row"], "answers"> &
+  Partial<Pick<Tables["applications"]["Row"], "answers_v2" | "form_snapshot">>;
 /** A `user_info` row, possibly with extra keys; protected ones are dropped. */
 type Profile = Record<string, unknown>;
 
@@ -144,14 +146,12 @@ function candidateSection(profile: Profile, resume: TResumeRowContent | null): s
 }
 
 function answersSection(job: JobPosting, application: Application, fullName: unknown): string {
-  const questions = job.questions ?? [];
-  if (questions.length === 0) return "## Screening answers\nNo screening questions.";
+  // AF-REQ-009: typed answers with the labels the candidate saw; old rows by position.
+  const answers = answersView(application, job.questions);
+  if (answers.length === 0) return "## Screening answers\nNo screening questions.";
 
-  const pairs = questions
-    .map((question, i) => {
-      const answer = application.answers?.[i]?.trim();
-      return `Q${i + 1}: ${question}\nA${i + 1}: ${answer ? cleanText(answer, fullName) : MISSING}`;
-    })
+  const pairs = answers
+    .map(({ label, text }, i) => `Q${i + 1}: ${label}\nA${i + 1}: ${text ? cleanText(text, fullName) : MISSING}`)
     .join("\n\n");
 
   return `## Screening answers\n${wrapInSandbox("screening_answers", pairs)}`;

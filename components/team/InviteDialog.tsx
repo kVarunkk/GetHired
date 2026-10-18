@@ -27,6 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import AgentHandoff from "@/components/agent/AgentHandoff";
+import { inviteHandoffPrompt } from "@/helpers/agent/handoff-prompts";
+import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 import { inviteMemberAction } from "@/app/actions/team/invite-member";
 import { domainNotice } from "@/helpers/team/free-mail-domains";
 import { NEW_ROLE_FOR_INVITE_HREF, type InviteRoleOption } from "@/helpers/team/invite-roles";
@@ -41,6 +44,8 @@ type Props = {
   canCreateRole?: boolean;
   /** A role to open the dialog with, after creating it for this invite. */
   initialRoleId?: string;
+  /** agent.use: offer to send the invite through the agent (inviteTeamMember). */
+  canUseAgent?: boolean;
 };
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -52,7 +57,7 @@ export const seatsLabel = ({ used, limit }: Props["seats"]) =>
   limit === null ? `${used} seats used` : `${used} of ${limit} seats used`;
 
 /** TM-REQ-002 / RP-REQ-007: invite someone by email with one of the company's roles. */
-export default function InviteDialog({ ownerEmail, seats, roles, canCreateRole = false, initialRoleId }: Props) {
+export default function InviteDialog({ ownerEmail, seats, roles, canCreateRole = false, initialRoleId, canUseAgent = false }: Props) {
   const router = useRouter();
   const initialOption = roles.find((r) => r.kind === "role" && r.id === initialRoleId);
   const [open, setOpen] = useState(Boolean(initialOption));
@@ -122,18 +127,28 @@ export default function InviteDialog({ ownerEmail, seats, roles, canCreateRole =
           </Button>
         </ResponsiveDialogTrigger>
         <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Invite a teammate</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              They get an email with a link that works once and expires in 7
+              days.
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+          {/* Outside the invite form: AgentHandoff is a form of its own. */}
+          {canUseAgent && (
+            <AgentHandoff
+              label="Or tell the agent who to invite"
+              placeholder="priya@acme.com as a hiring manager…"
+              basePath={COMPANY_AGENT_PATH}
+              toPrompt={inviteHandoffPrompt}
+              onHandoff={() => onOpenChange(false)}
+            />
+          )}
           <form
             onSubmit={onSubmit}
             noValidate
             className="flex min-h-0 flex-col gap-4"
           >
-            <ResponsiveDialogHeader>
-              <ResponsiveDialogTitle>Invite a teammate</ResponsiveDialogTitle>
-              <ResponsiveDialogDescription>
-                They get an email with a link that works once and expires in 7
-                days.
-              </ResponsiveDialogDescription>
-            </ResponsiveDialogHeader>
             <ResponsiveDialogBody className="flex flex-col gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="invite-email">Email</Label>

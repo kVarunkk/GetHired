@@ -18,6 +18,9 @@ import ResumeSourceSelector from "./ResumeSourceSelector";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import AgentHandoff from "./agent/AgentHandoff";
+import { AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import { resumeReviewHandoffPrompt } from "@/helpers/agent/handoff-prompts";
 import { createResumeReviewAction } from "@/app/actions/create-resume-review";
 import { useProgress } from "react-transition-progress";
 import useSWR from "swr";
@@ -93,6 +96,13 @@ export default function CreateResumeReviewDialog() {
             new PDF.
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
+        <AgentHandoff
+          label="Or tell the agent which job to review it against"
+          placeholder="The frontend role at Razorpay I saved yesterday…"
+          basePath={AGENT_PATH}
+          toPrompt={resumeReviewHandoffPrompt}
+          onHandoff={() => setIsOpen(false)}
+        />
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-4">
           {/* Flex columns, not grids: an auto grid track grows to fit a long
               resume name and pushes the list wider than the drawer. */}

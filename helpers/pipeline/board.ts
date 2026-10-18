@@ -1,4 +1,5 @@
 import "server-only";
+import { knockoutReasons } from "@/components/applications/KnockoutBadge";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
 import type { Database } from "@/utils/types/database.types";
@@ -17,7 +18,7 @@ const DAY_MS = 86_400_000;
 
 // Only what a card shows. No contact details (PL-SEC-002).
 const CARD_COLUMNS =
-  "id, stage_id, stage_entered_at, created_at, user_info(full_name), application_screenings(status, fit_score)";
+  "id, stage_id, stage_entered_at, created_at, user_info(full_name), application_screenings(status, fit_score), application_knockouts(failed, reasons)";
 
 type Ctx = { supabase: SupabaseClient<Database>; company: MyCompany };
 
@@ -84,6 +85,7 @@ export async function loadBoard(
       ),
       noteCount: stats?.count ?? 0,
       ratingAvg: stats ? ratingSummary(stats.rated).average : null,
+      knockoutReasons: row.application_knockouts?.failed ? knockoutReasons(row.application_knockouts) : null,
     };
   });
 

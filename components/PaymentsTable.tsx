@@ -1,34 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-  SortingState,
-} from "@tanstack/react-table";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { useMemo } from "react";
+import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ChevronRight } from "lucide-react";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
+import DataTable, { SelectFilter, SortableHeader } from "./DataTable";
 import { formatCurrency } from "@/utils/utils";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 import { TPaymentsTableRecord } from "@/utils/types/payments.types";
@@ -39,7 +17,6 @@ interface PaymentsTableProps {
 }
 
 const paymentStatuses = [
-  "All Statuses",
   "complete",
   "failed",
   "pending",
@@ -47,7 +24,6 @@ const paymentStatuses = [
 ];
 
 const pricePlans = [
-  "All Plans",
   "Trial Pack",
   "Standard Bundle",
   "Pro Bundle",
@@ -55,13 +31,6 @@ const pricePlans = [
 ];
 
 export default function PaymentsTable({ data }: PaymentsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<
-    import("@tanstack/react-table").ColumnFiltersState
-  >([]);
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-
   const flatData = useMemo(() => {
     return data.map((item) => ({
       ...item,
@@ -82,13 +51,7 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
       {
         accessorKey: "created_at",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Date Purchased
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <SortableHeader column={column} label="Date Purchased" />
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
@@ -122,13 +85,7 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
       {
         accessorKey: "credits",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Credits Purchased
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <SortableHeader column={column} label="Credits Purchased" />
         ),
         cell: ({ row }) => (
           <div className="text-sm font-medium ml-2">{row.original.credits}</div>
@@ -166,191 +123,29 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
     [],
   );
 
-  const table = useReactTable({
-    data: flatData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    onSortingChange: (updater) => {
-      setSorting((old) =>
-        updater instanceof Function ? updater(old) : updater,
-      );
-      setPage(1);
-    },
-    onColumnFiltersChange: (updater) => {
-      setColumnFilters((old) =>
-        updater instanceof Function ? updater(old) : updater,
-      );
-      setPage(1);
-    },
-    state: {
-      sorting,
-      columnFilters,
-    },
-  });
-
-  const paginatedRows = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return table.getRowModel().rows.slice(start, start + pageSize);
-  }, [table, page, pageSize, table.getRowModel().rows]);
-
-  const totalRecords = table.getRowModel().rows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-
-  const clearFilters = () => {
-    setColumnFilters([]);
-    table.getColumn("status")?.setFilterValue(undefined);
-  };
-
-  const hasFilters = useMemo(() => {
-    return columnFilters.length > 0;
-  }, [columnFilters]);
-
   return (
-    <div className="space-y-4">
-      {/* Filters Section */}
-      <div className="flex items-center justify-between gap-4 flex-wrap ">
-        <div className="flex items-center gap-4 overflow-x-auto p-1">
-          <Select
-            onValueChange={(value) =>
-              table
-                .getColumn("plan")
-                ?.setFilterValue(value === "All Plans" ? undefined : value)
-            }
-            value={
-              (table.getColumn("plan")?.getFilterValue() as string) ??
-              "All Plans"
-            }
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Plans" />
-            </SelectTrigger>
-            <SelectContent>
-              {pricePlans.map((title) => (
-                <SelectItem key={title} value={title}>
-                  {title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            onValueChange={(value) =>
-              table
-                .getColumn("status")
-                ?.setFilterValue(value === "All Statuses" ? undefined : value)
-            }
-            value={
-              (table.getColumn("status")?.getFilterValue() as string) ??
-              "All Statuses"
-            }
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {paymentStatuses.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {status}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {hasFilters && (
-          <Button
-            variant="ghost"
-            onClick={clearFilters}
-            className="text-muted-foreground"
-          >
-            <XCircle className="w-4 h-4 mr-2" />
-            Clear Filters
-          </Button>
-        )}
-      </div>
-
-      {/* Table Section */}
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {paginatedRows.length ? (
-              paginatedRows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No purchases found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="my-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-muted-foreground sm:text-sm">
-        <div>
-          Showing {paginatedRows.length ? (page - 1) * pageSize + 1 : 0}-
-          {(page - 1) * pageSize + paginatedRows.length} of {totalRecords}{" "}
-          purchases
-        </div>
-        <div className="flex min-w-0 max-w-full items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="min-w-0"
-          >
-            <span className="truncate">Previous</span>
-          </Button>
-          <span className="whitespace-nowrap">
-            {/* "Page" is dropped on the narrowest phones so the footer fits. */}
-            <span className="max-[400px]:hidden">Page </span>
-            {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="min-w-0"
-          >
-            <span className="truncate">Next</span>
-          </Button>
-        </div>
-      </div>
-    </div>
+    <DataTable
+      data={flatData}
+      columns={columns}
+      noun="purchases"
+      filters={(table) => (
+        <>
+          <SelectFilter
+            table={table}
+            column="plan"
+            allLabel="All Plans"
+            options={pricePlans}
+            label="Filter by plan"
+          />
+          <SelectFilter
+            table={table}
+            column="status"
+            allLabel="All Statuses"
+            options={paymentStatuses}
+            label="Filter by status"
+          />
+        </>
+      )}
+    />
   );
 }

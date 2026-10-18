@@ -31,7 +31,7 @@ export async function GET() {
   if (userRole === "applicant") {
     tableName = "user_info";
     selectString =
-      "user_id, ai_credits, relevant_jobs_update_status, user_favorites(job_id), user_favorites_companies(company_id), applications(all_jobs_id, status), filled, resumes(id, name, created_at, is_primary, resume_path, parsing_failed), job_feedback(job_id, vote_type)";
+      "user_id, ai_credits, relevant_jobs_update_status, linkedin_url, github_url, preferred_locations, min_salary, salary_currency, user_favorites(job_id), user_favorites_companies(company_id), applications(all_jobs_id, status), filled, resumes(id, name, created_at, is_primary, resume_path, parsing_failed), job_feedback(job_id, vote_type)";
   } else if (userRole === "company") {
     tableName = "company_info";
     selectString =

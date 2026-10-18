@@ -70,6 +70,8 @@ function applicationRow(
     job_postings: JOB,
     user_info: { full_name: name },
     application_screenings: screening,
+    application_knockouts: null,
+    answers_v2: null,
     ...overrides,
   };
 }
@@ -212,6 +214,51 @@ describe("ApplicantsTable: fit (MT-REQ-007, MT-TEST-006)", () => {
 
     render(<ApplicantsTable data={rows()} />);
     expect(screen.queryByRole("button", { name: /unscreened/ })).not.toBeInTheDocument();
+  });
+
+  it("badges applications that failed a knockout rule, with the reasons (AF-REQ-003)", () => {
+    render(
+      <ApplicantsTable
+        data={[
+          applicationRow("Kai", null, {
+            application_knockouts: { failed: true, reasons: [{ label: "Can you relocate?" }], action_taken: "flagged" },
+          }),
+          applicationRow("Lee", null, { application_knockouts: { failed: false, reasons: [], action_taken: "none" } }),
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByTitle(/^Didn't meet: /)).toHaveLength(1);
+    expect(screen.getByTitle("Didn't meet: Can you relocate?")).toHaveTextContent("Didn't meet requirements");
+    expect(screen.getByRole("combobox", { name: "Filter by requirements" })).toBeInTheDocument();
+  });
+
+  it("filters by the answer to a yes/no or choice question (AF-REQ-008)", () => {
+    const qid = "00000000-0000-4000-8000-000000000001";
+    const names = () => screen.queryAllByRole("row").slice(1).map((r) => within(r).queryAllByRole("cell")[0]?.textContent);
+    render(
+      <ApplicantsTable
+        data={[
+          applicationRow("Yes Person", null, { answers_v2: { [qid]: true } }),
+          applicationRow("No Person", null, { answers_v2: { [qid]: false } }),
+          applicationRow("Old Person"),
+        ]}
+        answerQuestions={[{ id: qid, label: "Can you relocate?", options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }] }]}
+      />,
+    );
+
+    expect(screen.queryByRole("combobox", { name: "Answer" })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by question" }), { target: { value: qid } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Answer" }), { target: { value: "yes" } });
+
+    expect(names()).toEqual(["Yes Person"]);
+    fireEvent.change(screen.getByRole("combobox", { name: "Answer" }), { target: { value: "no" } });
+    expect(names()).toEqual(["No Person"]);
+  });
+
+  it("has no requirements filter when nothing failed", () => {
+    render(<ApplicantsTable data={rows()} />);
+    expect(screen.queryByRole("combobox", { name: "Filter by requirements" })).not.toBeInTheDocument();
   });
 
   it("shows the member's screenings left under their role's cap (RP-REQ-044)", () => {

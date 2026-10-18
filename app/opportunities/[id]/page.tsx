@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import AskAgentAboutJob from "@/components/AskAgentAboutJob";
 import ErrorComponent from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
 import PlainMessage from "@/components/outreach/PlainMessage";
 import RespondForm from "@/components/outreach/RespondForm";
 import { isOpen } from "@/helpers/outreach/list";
@@ -44,6 +44,7 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
     const open = isOpen({ status, expiresAt: outreach.expires_at });
 
     let applyHref: string | null = null;
+    let openJobId: string | null = null;
     const allJobsId = outreach.job_postings?.job_id;
     if (allJobsId) {
       const { data: listing } = await supabase
@@ -51,30 +52,32 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
         .select("id, status")
         .eq("id", allJobsId)
         .maybeSingle();
-      if (listing && listing.status === "active") applyHref = `/jobs/${listing.id}?apply=true`;
+      if (listing && listing.status === "active") {
+        openJobId = listing.id;
+        applyHref = `/jobs/${listing.id}?apply=true`;
+      }
     }
 
     return (
       <div className="flex w-full max-w-3xl flex-col gap-6 p-4 mb-20">
-        <Link
-          href="/opportunities"
-          className="w-fit p-2 pl-0 text-muted-foreground transition-colors hover:text-primary"
-          aria-label="Back to opportunities"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
+        <PageHeader
+          backHref="/opportunities"
+          backLabel="Back to opportunities"
+          eyebrow={`${companyName}${outreach.job_postings?.title ? ` · ${outreach.job_postings.title}` : ""}`}
+          title={outreach.subject}
+          description={`Sent ${formatDate(outreach.sent_at)}${open ? ` · answer by ${formatDate(outreach.expires_at)}` : ""}`}
+        />
 
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-medium text-muted-foreground">
-            {companyName}
-            {outreach.job_postings?.title ? ` · ${outreach.job_postings.title}` : ""}
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{outreach.subject}</h1>
-          <p className="text-sm text-muted-foreground">
-            Sent {formatDate(outreach.sent_at)}
-            {open ? ` · answer by ${formatDate(outreach.expires_at)}` : ""}
-          </p>
-        </div>
+        {/* No outreach tools: the agent can only help with the job itself. */}
+        {openJobId && (
+          <AskAgentAboutJob
+            job={{
+              id: openJobId,
+              job_name: outreach.job_postings?.title ?? null,
+              company_name: outreach.company_info?.name ?? null,
+            }}
+          />
+        )}
 
         <section className="flex flex-col gap-2 rounded-xl border p-4">
           <h2 className="text-xs font-medium text-muted-foreground">Message from {companyName}</h2>

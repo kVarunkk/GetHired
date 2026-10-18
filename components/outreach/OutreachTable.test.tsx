@@ -145,7 +145,8 @@ describe("OutreachTable", () => {
 
   it("shows the empty state, or no matches when filtered", () => {
     const { unmount } = renderTable({ items: [] });
-    expect(screen.getByText(/No outreach yet/)).toBeInTheDocument();
+    expect(screen.getByText(/No outreach yet\. Outreach starts from a candidate's profile/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Profiles" })).toHaveAttribute("href", "/company/profiles");
     expect(screen.getByRole("button", { name: "Older" })).toBeDisabled();
     unmount();
 

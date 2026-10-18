@@ -12,6 +12,9 @@ import {
   ResponsiveDialogTrigger,
 } from "@/components/ui/responsive-dialog";
 import { Button } from "./ui/button";
+import AgentHandoff from "./agent/AgentHandoff";
+import { AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import { resumeUploadHandoffPrompt } from "@/helpers/agent/handoff-prompts";
 import ResumeSourceSelector from "./ResumeSourceSelector";
 import { startTransition, useState } from "react";
 import toast from "react-hot-toast";
@@ -97,14 +100,23 @@ export default function CreateResumeDialog() {
               <p className="text-sm text-muted-foreground">Processing Upload</p>
             </div>
           ) : (
-            <ResumeSourceSelector
-              existingResumes={existingResumes}
-              selectedId={null}
-              onSelectExisting={() => {}}
-              file={selectedFile}
-              onFileChange={(file) => setSelectedFile(file)}
-              view="upload"
-            />
+            <div className="flex flex-col gap-4">
+              <AgentHandoff
+                label="Or upload it in chat and let the agent use it"
+                placeholder="Then make it my primary resume and find matching jobs…"
+                basePath={AGENT_PATH}
+                toPrompt={resumeUploadHandoffPrompt}
+                onHandoff={() => setIsOpen(false)}
+              />
+              <ResumeSourceSelector
+                existingResumes={existingResumes}
+                selectedId={null}
+                onSelectExisting={() => {}}
+                file={selectedFile}
+                onFileChange={(file) => setSelectedFile(file)}
+                view="upload"
+              />
+            </div>
           )}
         </ResponsiveDialogBody>
         <ResponsiveDialogFooter>

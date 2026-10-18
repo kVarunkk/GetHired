@@ -2,17 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import type { ColumnDef } from "@tanstack/react-table";
 import { ChevronDown, Info, Loader2 } from "lucide-react";
+import DataTable from "@/components/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import MatchScoreBadge from "@/components/matching/MatchScoreBadge";
 import { useEntitlementError } from "@/hooks/useEntitlementError";
 import {
@@ -33,6 +27,24 @@ const MET_LABELS: Record<ScreeningResult["must_have_coverage"][number]["met"], s
   no: "Not met",
   unknown: "Unknown",
 };
+
+const MUST_HAVE_COLUMNS: ColumnDef<ScreeningResult["must_have_coverage"][number]>[] = [
+  {
+    accessorKey: "requirement",
+    header: "Requirement",
+    meta: { className: "whitespace-normal font-medium" },
+  },
+  {
+    id: "met",
+    header: "Met",
+    cell: ({ row }) => MET_LABELS[row.original.met],
+  },
+  {
+    accessorKey: "evidence",
+    header: "Evidence",
+    meta: { className: "whitespace-normal text-muted-foreground" },
+  },
+];
 
 const QUALITY_LABELS: Record<ScreeningResult["answer_feedback"][number]["quality"], string> = {
   strong: "Strong",
@@ -108,26 +120,13 @@ function Result({ result, questions }: { result: ScreeningResult; questions: str
       {result.must_have_coverage.length > 0 && (
         <section className="flex flex-col gap-1">
           <h4 className="text-xs font-medium text-muted-foreground">Must-haves</h4>
-          <div className="overflow-x-auto rounded-lg border">
-            <Table aria-label="Must-haves">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Requirement</TableHead>
-                  <TableHead>Met</TableHead>
-                  <TableHead>Evidence</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {result.must_have_coverage.map((entry, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="whitespace-normal font-medium">{entry.requirement}</TableCell>
-                    <TableCell>{MET_LABELS[entry.met]}</TableCell>
-                    <TableCell className="whitespace-normal text-muted-foreground">{entry.evidence}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable
+            aria-label="Must-haves"
+            data={result.must_have_coverage}
+            columns={MUST_HAVE_COLUMNS}
+            noun="requirements"
+            pageSize={null}
+          />
         </section>
       )}
       <List title="Flags" items={result.flags} />

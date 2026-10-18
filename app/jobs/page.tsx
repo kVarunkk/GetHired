@@ -4,6 +4,8 @@ import { TabsContent } from "@/components/ui/tabs";
 import { AllJobWithRelations, JobListingSearchParams } from "@/utils/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
+import PageHeader from "@/components/PageHeader";
+import { AskAgentAboutJobs } from "@/components/agent/AskAgentOnApplicantPages";
 import { Metadata } from "next";
 import JobsComponent from "@/components/JobsComponent";
 import {
@@ -218,6 +220,13 @@ export default async function JobsPage({
         />
       </div>
       <div className="w-full md:w-3/4 ">
+        <div className="flex flex-col gap-6 pt-4">
+          <PageHeader
+            title="Jobs"
+            description="Open roles from GetHired companies and across the web. Filter them, or search with AI."
+          />
+          {user?.app_metadata.type === "applicant" && <AskAgentAboutJobs />}
+        </div>
         <ClientTabs
           user={user}
           isCompanyUser={isCompanyUser}

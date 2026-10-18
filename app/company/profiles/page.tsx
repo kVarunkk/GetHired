@@ -6,10 +6,13 @@ import FilterComponent from "@/components/FilterComponent";
 import { AllProfileWithRelations } from "@/utils/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
+import PageHeader from "@/components/PageHeader";
 import JobsComponent from "@/components/JobsComponent";
 import { getBaseUrl } from "@/utils/get-base-url";
 import type { SuggestedTier } from "@/helpers/billing/errors";
 import { listTalentLists } from "@/helpers/pipeline/talent-lists";
+import { can, canAny } from "@/helpers/companies/permissions";
+import { AskAgentAboutProfiles } from "@/components/agent/recruiter/AskAgentOnMainPages";
 
 export default async function ProfilesPage({
   searchParams,
@@ -109,6 +112,19 @@ export default async function ProfilesPage({
         />
       </div>
       <div className="w-full md:w-3/4">
+        <div className="flex flex-col gap-6 pt-4">
+          <PageHeader
+            title="Profiles"
+            description="Candidates in the talent pool. Search, save them to lists and reach out."
+          />
+          {can(company, "agent.use") && (
+            <AskAgentAboutProfiles
+              canSearch={can(company, "talent.view")}
+              canMatch={canAny(company, "matching.run")}
+              canManageLists={can(company, "talent_lists.manage")}
+            />
+          )}
+        </div>
         <ClientTabs
           user={user}
           isCompanyUser={true}

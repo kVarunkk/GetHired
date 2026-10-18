@@ -14,6 +14,7 @@ import CreditDepositDialog from "@/components/CreditDepositDialog";
 import ProfileViewsCard from "@/components/ProfileViewsCard";
 import { PROFILE_VIEW_WINDOW_DAYS } from "@/helpers/outreach/config";
 import AskApplicantAgent from "@/components/agent/AskApplicantAgent";
+import PageHeader from "@/components/PageHeader";
 
 export default async function DashboardPage() {
   try {
@@ -79,12 +80,14 @@ export default async function DashboardPage() {
 
     return (
       <div className="flex flex-col w-full gap-5 mb-20 p-4">
-        <div className="flex items-center justify-between flex-wrap gap-5">
-          <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-start capitalize">
-            How are you doing today,{" "}
-            {userInfoData.full_name ?? userInfoData.email?.split("@")[0]}?
-          </h1>
-        </div>
+        <PageHeader
+          title={
+            <span className="capitalize">
+              How are you doing today,{" "}
+              {userInfoData.full_name ?? userInfoData.email?.split("@")[0]}?
+            </span>
+          }
+        />
 
         <AskApplicantAgent />
 

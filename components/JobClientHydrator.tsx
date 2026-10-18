@@ -1,5 +1,6 @@
 "use client";
 
+import { useSignUpToApplyHref } from "./jobs/ApplicationSourceContext";
 import useSWR from "swr";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -59,6 +60,7 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
     [job, jobUrlsData],
   );
 
+  const signUpHref = useSignUpToApplyHref(job.id);
   const isCompanyUser = currentUserData?.role === "company";
   const onboardingComplete = currentUserData?.profile?.filled ?? false;
 
@@ -157,7 +159,7 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
                     href={
                       userId
                         ? jobData.job_url
-                        : "/auth/sign-up?returnTo=/jobs/" + jobData.id
+                        : signUpHref
                     }
                   >
                     Original Job

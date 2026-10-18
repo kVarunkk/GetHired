@@ -255,7 +255,7 @@ export function ClientTabs({
             {page === "jobs" && !isCompanyUser && (
               <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                 {/* On a phone the search box takes the full row and the icon buttons go below it. */}
-                <AgentJobSearchBox className="w-full" />
+                {/* <AgentJobSearchBox className="w-full" /> */}
                 <div className="flex items-center gap-2">
                   <BookmarkJobSearch user={user} />
                   <JobsPageDropdown user={user} />

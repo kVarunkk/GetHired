@@ -12,6 +12,7 @@ vi.mock("@/components/CreateJobPostingDialog", () => ({
 vi.mock("@/components/JobPostingsTable", () => ({ default: () => null }));
 vi.mock("@/components/BackButton", () => ({ default: () => null }));
 vi.mock("server-only", () => ({}));
+vi.mock("next/navigation", async (orig) => ({ ...(await orig()), useRouter: () => ({ push: vi.fn() }) }));
 
 let db: SupabaseMock;
 
@@ -28,6 +29,8 @@ describe("/company/job-posts (RP-REQ-010/016)", () => {
   it("locks Create New Job Post without jobs.create", async () => {
     signInAs(MEMBER_A);
     render(await CompanyJobPostsPage());
+    expect(screen.getByRole("heading", { level: 1, name: "Job posts" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /back/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create New Job Post" })).toBeDisabled();
   });
 

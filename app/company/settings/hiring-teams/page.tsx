@@ -1,11 +1,11 @@
-import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { AskAgentAboutHiringTeams } from "@/components/agent/recruiter/AskAgentAboutTeam";
 import Error from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
 import Forbidden from "@/components/roles/Forbidden";
 import HiringTeamsMatrix from "@/components/team/HiringTeamsMatrix";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
-import { canAny } from "@/helpers/companies/permissions";
+import { can, canAny } from "@/helpers/companies/permissions";
 import { listCompanyHiringTeams } from "@/helpers/team/list-company-hiring-teams";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,19 +33,18 @@ export default async function CompanyHiringTeamsPage() {
 
     return (
       <div className="mb-20 flex w-full flex-col gap-6 p-4">
-        <Link
-          href="/company/settings"
-          className="flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-brand"
-        >
-          <ArrowLeft className="h-4 w-4" /> Settings
-        </Link>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Hiring teams</h1>
-          <p className="text-sm text-muted-foreground">
-            Who&apos;s assigned to each job. Members whose role is limited to assigned jobs only see and work on the
-            jobs they&apos;re ticked for. Owners and roles with access to all jobs see every job anyway.
-          </p>
-        </div>
+        <PageHeader
+          backHref="/company/settings"
+          backLabel="Back to settings"
+          title="Hiring teams"
+          description={
+            <>
+              Who&apos;s assigned to each job. Members whose role is limited to assigned jobs only see and work on the
+              jobs they&apos;re ticked for. Owners and roles with access to all jobs see every job anyway.
+            </>
+          }
+        />
+        {can(company, "agent.use") && <AskAgentAboutHiringTeams />}
         <HiringTeamsMatrix jobs={teams.jobs} members={teams.members} />
       </div>
     );

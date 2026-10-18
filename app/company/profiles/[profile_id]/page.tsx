@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import PageHeader from "@/components/PageHeader";
 import { unstable_cache } from "next/cache";
 import { after } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -18,7 +17,8 @@ import { publicResumeContent } from "@/helpers/profiles/ai-rerank-profiles";
 import { getCandidateMatches } from "@/helpers/matching/candidate-matches";
 import { outreachStatusFor } from "@/helpers/outreach/list";
 import ProfileMatches from "@/components/matching/ProfileMatches";
-import FindSimilarCandidates from "@/components/agent/recruiter/FindSimilarCandidates";
+import AskAgentAboutCandidate from "@/components/agent/recruiter/AskAgentAboutCandidate";
+import { can, canAny } from "@/helpers/companies/permissions";
 import DirectoryProfile, { type DirectoryProfileData } from "@/components/outreach/DirectoryProfile";
 import ReachOutButton from "@/components/outreach/ReachOutButton";
 import type { AllProfileWithRelations } from "@/utils/types";
@@ -177,23 +177,30 @@ export default async function ProfilePage({
 
     return (
       <div className="flex flex-col gap-6 w-full min-w-0 p-4 mb-20">
-        <div className="flex items-center justify-between gap-2">
-          <Link
-            href="/company/profiles"
-            aria-label="Back to candidates"
-            className="shrink-0 text-muted-foreground hover:text-primary transition-colors w-fit p-2 pl-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <ReachOutButton
-            candidateId={profile_id}
-            candidateName={profile.full_name}
-            status={badges[profile_id]?.status ?? null}
-            outreachId={badges[profile_id]?.id ?? null}
-            defaultJobPostId={jobPostId}
-            secondaryAction={<FindSimilarCandidates candidateId={profile_id} />}
+        <PageHeader
+          backHref="/company/profiles"
+          backLabel="Back to candidates"
+          title={<span className="[overflow-wrap:anywhere]">{profile.full_name}</span>}
+          description={!hasAccess && profile.desired_roles?.length ? profile.desired_roles.join(", ") : undefined}
+          actions={
+            <ReachOutButton
+              candidateId={profile_id}
+              candidateName={profile.full_name}
+              status={badges[profile_id]?.status ?? null}
+              outreachId={badges[profile_id]?.id ?? null}
+              defaultJobPostId={jobPostId}
+            />
+          }
+        />
+
+        {can(company, "agent.use") && (
+          <AskAgentAboutCandidate
+            candidate={{ id: profile_id, name: profile.full_name }}
+            canSearch={can(company, "talent.view")}
+            canManageLists={can(company, "talent_lists.manage")}
+            canSendOutreach={canAny(company, "outreach.send")}
           />
-        </div>
+        )}
 
         <ProfileMatches
           candidateId={profile_id}

@@ -8,6 +8,7 @@ import { readSource, sourceFiles } from "@/test/utils/source";
 const ALLOWED: Record<string, string> = {
   "helpers/companies/role-templates.ts": "the Admin template's key and name",
   "helpers/user/is-admin.ts": "the platform operator role (app_metadata.role)",
+  "helpers/careers/slug.ts": "a reserved careers page address (/careers/admin), not copy",
   "app/api/updates/applicants/applications/route.tsx": "cron status for the platform operator",
   "app/api/updates/applicants/job-alert/route.tsx": "cron status for the platform operator",
   "app/api/updates/applicants/onboarding/route.tsx": "cron status for the platform operator",

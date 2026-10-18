@@ -14,6 +14,7 @@ vi.mock("@/components/pipeline/TemplateEditor", () => ({ default: () => <input a
 vi.mock("@/components/pipeline/SchedulingLinkForm", () => ({ default: () => <input aria-label="Scheduling link" /> }));
 vi.mock("@/components/pipeline/NotificationSettings", () => ({ default: () => <input aria-label="Notifications" /> }));
 vi.mock("server-only", () => ({}));
+vi.mock("next/navigation", async (orig) => ({ ...(await orig()), useRouter: () => ({ push: vi.fn() }) }));
 
 let db: SupabaseMock;
 
@@ -61,5 +62,23 @@ describe("/company/settings (RP-REQ-016, RPT-024)", () => {
     expect(screen.getByRole("link", { name: /Team/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Roles/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Audit log/ })).not.toBeInTheDocument();
+    // CP-REQ-012: everyone can open the careers page editor (read-only without careers.edit).
+    expect(screen.getByRole("link", { name: /Careers page/ })).toHaveAttribute("href", "/company/settings/careers");
+  });
+
+  it("offers agent suggestions only for the settings the role can change", async () => {
+    signInAs(OWNER_A);
+    const { unmount } = render(await CompanySettingsPage());
+    expect(screen.getByRole("link", { name: "Add a pipeline stage" })).toHaveAttribute(
+      "href",
+      expect.stringMatching(/^\/company\/agent\?prompt=/),
+    );
+    expect(screen.getByRole("link", { name: "Write an email template" })).toBeInTheDocument();
+    unmount();
+
+    signInAs(MEMBER_A);
+    render(await CompanySettingsPage());
+    expect(screen.queryByRole("link", { name: "Write an email template" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Add a pipeline stage" })).not.toBeInTheDocument();
   });
 });

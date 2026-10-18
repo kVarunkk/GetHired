@@ -34,7 +34,7 @@ describe("AskAgentAboutJob", () => {
     render(<AskAgentAboutJob job={JOB} />);
     const prompt = jobQuestionPrompt(JOB, "Am I a fit?");
 
-    fireEvent.change(screen.getByLabelText("Question about this job"), {
+    fireEvent.change(screen.getByLabelText("Question for the assistant"), {
       target: { value: "Am I a fit?" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Ask" }));

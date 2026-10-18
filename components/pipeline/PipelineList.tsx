@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
-import ApplicantsTable from "@/components/ApplicantsTable";
+import ApplicantsTable, { type AnswerFilterQuestion } from "@/components/ApplicantsTable";
 import type { TApplicationServer } from "@/utils/types/application.types";
 import BulkActionBar from "./BulkActionBar";
 import type { TemplateOption } from "./MoveDialog";
@@ -15,6 +15,7 @@ export default function PipelineList({
   stages,
   templates = [],
   screeningCap = null,
+  answerQuestions = [],
 }: {
   data: (TApplicationServer & { stage_id: string | null })[];
   jobPostId: string;
@@ -24,6 +25,7 @@ export default function PipelineList({
   templates?: TemplateOption[];
   /** The member's own screening cap (RP-REQ-044), for the Screen button. */
   screeningCap?: { limit: number; remaining: number } | null;
+  answerQuestions?: AnswerFilterQuestion[];
 }) {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
@@ -46,6 +48,7 @@ export default function PipelineList({
         rowSelection={rowSelection}
         onRowSelectionChange={setRowSelection}
         screeningCap={screeningCap}
+        answerQuestions={answerQuestions}
       />
     </div>
   );

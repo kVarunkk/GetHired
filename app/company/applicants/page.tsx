@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { can, canAny } from "@/helpers/companies/permissions";
 import ErrorComponent from "@/components/Error";
-import BackButton from "@/components/BackButton";
+import PageHeader from "@/components/PageHeader";
 import ApplicantsTable from "@/components/ApplicantsTable";
+import { AskAgentAboutApplicants } from "@/components/agent/recruiter/AskAgentOnMainPages";
 
 export default async function CompanyApplicantsPage() {
   try {
@@ -31,6 +33,7 @@ export default async function CompanyApplicantsPage() {
         created_at,
         status,
         resume_url,
+        answers_v2,
         job_postings(
           id,
           title
@@ -42,6 +45,11 @@ export default async function CompanyApplicantsPage() {
           status,
           fit_score,
           recommendation
+        ),
+        application_knockouts(
+          failed,
+          reasons,
+          action_taken
         )
       `,
       )
@@ -53,13 +61,18 @@ export default async function CompanyApplicantsPage() {
     }
 
     return (
-      <div className="flex flex-col w-full gap-8 p-4 mb-20">
-        <div>
-          <BackButton />
-        </div>
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-medium ">Job Applicants</h1>
-        </div>
+      <div className="flex flex-col w-full gap-6 p-4 mb-20">
+        <PageHeader
+          title="Applicants"
+          description="Everyone who applied to your job posts."
+        />
+        {can(companyInfo, "agent.use") && (
+          <AskAgentAboutApplicants
+            canView={canAny(companyInfo, "applicants.view")}
+            canScreen={canAny(companyInfo, "applicants.screen")}
+            canMove={canAny(companyInfo, "pipeline.move")}
+          />
+        )}
         <ApplicantsTable data={applicants || []} />
       </div>
     );

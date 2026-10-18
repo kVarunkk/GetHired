@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// The companies' agent (plan/feature-recruiter-agent-spec.md). Applicants use /agent.
+// The companies' agent (plan/recruiter-agent/feature-recruiter-agent-spec.md). Applicants use /agent.
 export default function CompanyAgentPage({ searchParams }: { searchParams: AgentPageSearchParams }) {
   return <AgentPage role="company" searchParams={searchParams} />;
 }

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { ArrowLeft, Briefcase, User } from "lucide-react";
+import { Briefcase, User } from "lucide-react";
 import ErrorComponent from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
 import AskAgentAboutOutreach from "@/components/agent/recruiter/AskAgentAboutOutreach";
 import OutreachStatusBadge from "@/components/outreach/OutreachStatusBadge";
 import PlainMessage from "@/components/outreach/PlainMessage";
@@ -10,6 +11,7 @@ import MemberAvatar from "@/components/team/MemberAvatar";
 import { Button } from "@/components/ui/button";
 import { isUuid } from "@/helpers/agent/auth";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { can } from "@/helpers/companies/permissions";
 import { DECLINE_REASON_OPTIONS } from "@/helpers/outreach/config";
 import { getCompanyOutreach, type CompanyOutreachDetail } from "@/helpers/outreach/detail";
 import { isOpen } from "@/helpers/outreach/list";
@@ -79,8 +81,8 @@ function Answer({ outreach }: { outreach: CompanyOutreachDetail }) {
 
 /**
  * One of the company's outreach messages: the message as sent, who sent it,
- * the candidate's answer (with their contact on Interested) and a way to ask
- * the agent about it.
+ * the candidate's answer (with their contact on Interested) and, under the
+ * actions, a way to ask the agent about it.
  */
 export default async function CompanyOutreachDetailPage({ params }: { params: Promise<{ id: string }> }) {
   try {
@@ -99,34 +101,28 @@ export default async function CompanyOutreachDetailPage({ params }: { params: Pr
 
     return (
       <div className="flex w-full max-w-3xl flex-col gap-6 p-4 mb-20">
-        <Link
-          href="/company/outreach"
-          className="w-fit p-2 pl-0 text-muted-foreground transition-colors hover:text-primary"
-          aria-label="Back to outreach"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium text-muted-foreground">
-            To {candidate}
-            {outreach.jobTitle ? ` · ${outreach.jobTitle}` : ""}
-          </p>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight sm:text-[28px]">
-              {outreach.subject}
-            </h1>
-            <OutreachStatusBadge status={outreach.status} className="mt-1.5 shrink-0" />
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            {outreach.senderName && <MemberAvatar name={outreach.senderName} className="h-6 w-6" />}
-            <span>
-              Sent {formatDate(outreach.sentAt)}
-              {outreach.senderName ? ` by ${outreach.senderName}` : ""}
-              {outreach.source === "agent" ? " with the agent" : ""}
-            </span>
-          </div>
-        </div>
+        <PageHeader
+          backHref="/company/outreach"
+          backLabel="Back to outreach"
+          eyebrow={
+            <>
+              To {candidate}
+              {outreach.jobTitle ? ` · ${outreach.jobTitle}` : ""}
+            </>
+          }
+          title={outreach.subject}
+          description={
+            <div className="flex flex-wrap items-center gap-2">
+              {outreach.senderName && <MemberAvatar name={outreach.senderName} className="h-6 w-6" />}
+              <span>
+                Sent {formatDate(outreach.sentAt)}
+                {outreach.senderName ? ` by ${outreach.senderName}` : ""}
+                {outreach.source === "agent" ? " with the agent" : ""}
+              </span>
+            </div>
+          }
+          actions={<OutreachStatusBadge status={outreach.status} className="shrink-0" />}
+        />
 
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild variant="outline" size="sm">
@@ -146,6 +142,8 @@ export default async function CompanyOutreachDetailPage({ params }: { params: Pr
           {outreach.status === "sent" && <WithdrawOutreachButton outreachId={outreach.id} />}
         </div>
 
+        {can(company, "agent.use") && <AskAgentAboutOutreach outreach={outreach} />}
+
         <section className="flex flex-col gap-2 rounded-xl border p-4">
           <h2 className="text-xs font-medium text-muted-foreground">Your message</h2>
           <PlainMessage text={outreach.message} />
@@ -155,8 +153,6 @@ export default async function CompanyOutreachDetailPage({ params }: { params: Pr
           <h2 className="text-xs font-medium text-muted-foreground">Answer</h2>
           <Answer outreach={outreach} />
         </section>
-
-        <AskAgentAboutOutreach outreach={outreach} />
       </div>
     );
   } catch (err) {

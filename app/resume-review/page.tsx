@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import ResumeReviewsTable from "@/components/ResumeReviewsTable";
 import CreateResumeReviewDialog from "@/components/CreateResumeReviewDialog";
+import PageHeader from "@/components/PageHeader";
+import { AskAgentAboutResumeReviews } from "@/components/agent/AskAgentOnApplicantPages";
 
 export default async function ResumeReviewPage() {
   try {
@@ -29,11 +31,13 @@ export default async function ResumeReviewPage() {
     const tableKey = `${reviews?.length || 0}-${reviews?.[0]?.id || "empty"}`;
 
     return (
-      <div className="flex flex-col w-full gap-8 p-4 mb-20">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <h1 className="text-3xl font-medium ">All CV Reviews</h1>
-          <CreateResumeReviewDialog />
-        </div>
+      <div className="flex flex-col w-full gap-6 p-4 mb-20">
+        <PageHeader
+          title="Resume reviews"
+          description="AI reviews of your resume against a job, with a score and what to fix."
+          actions={<CreateResumeReviewDialog />}
+        />
+        <AskAgentAboutResumeReviews />
         <ResumeReviewsTable key={tableKey} data={reviews || []} />
       </div>
     );

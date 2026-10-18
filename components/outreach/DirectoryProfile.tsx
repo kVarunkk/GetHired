@@ -53,16 +53,11 @@ export default function DirectoryProfile({ profile }: { profile: DirectoryProfil
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{profile.full_name}</h1>
-        {profile.desired_roles?.length ? (
-          <p className="text-sm text-muted-foreground">{profile.desired_roles.join(", ")}</p>
-        ) : null}
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Lock className="h-4 w-4" />
-          Contact details are shared when {name} responds or applies.
-        </p>
-      </div>
+      {/* The name and desired roles are in the page's header. */}
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Lock className="h-4 w-4" />
+        Contact details are shared when {name} responds or applies.
+      </p>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <div className="flex flex-col gap-4 rounded-xl border p-4 md:col-span-1">

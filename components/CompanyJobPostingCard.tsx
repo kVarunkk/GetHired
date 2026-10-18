@@ -47,6 +47,8 @@ export default function CompanyJobPostingCard({
                 min_equity: job.min_equity ?? 0,
                 max_equity: job.max_equity ?? 0,
                 questions: job.questions ?? [],
+                department: job.department ?? "",
+                workplace_type: job.workplace_type ?? null,
               }}
             />
             <DeleteJobPosting job_posting_id={job.id} disabled={!controls.delete} />

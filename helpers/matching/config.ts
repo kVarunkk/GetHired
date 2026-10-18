@@ -1,6 +1,6 @@
 /**
  * Tunables for recruiter matching and screening
- * (plan/feature-recruiter-matching-spec.md). Imported by the UI too, so keep
+ * (plan/recruiter-matching/feature-recruiter-matching-spec.md). Imported by the UI too, so keep
  * this file free of server-only code.
  */
 

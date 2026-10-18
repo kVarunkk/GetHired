@@ -197,6 +197,19 @@ describe("PipelineBoard (PLT-043, PL-TEST-006)", () => {
     expect(within(arjun).queryByTitle("Average rating")).not.toBeInTheDocument();
   });
 
+  it("badges a card that failed a knockout rule (AF-REQ-003)", () => {
+    render(
+      <PipelineBoard
+        jobPostId={PIPELINE_JOB.id}
+        initial={boardOf([cardOf(1, { name: "Kai", knockoutReasons: ["Can you relocate?"] }), cardOf(2, { name: "Lee" })])}
+      />,
+    );
+    const kai = screen.getByRole("link", { name: "Kai" }).closest("[data-card]") as HTMLElement;
+    expect(within(kai).getByTitle("Didn't meet: Can you relocate?")).toBeInTheDocument();
+    const lee = screen.getByRole("link", { name: "Lee" }).closest("[data-card]") as HTMLElement;
+    expect(within(lee).queryByText("Didn't meet requirements")).not.toBeInTheDocument();
+  });
+
   it("captures pipeline_board_viewed once", () => {
     render(<PipelineBoard jobPostId={PIPELINE_JOB.id} initial={boardOf([])} />);
 

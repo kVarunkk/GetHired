@@ -139,11 +139,14 @@ async function mentionedTeammates(
   return parseMentions(body, members, authorUserId);
 }
 
-/** Edits the body and rating of one of the session user's own notes. */
+/**
+ * Edits the body and rating of one of the session user's own notes. Without
+ * `rating` (the agent's edits) the note keeps its rating; `null` clears it.
+ */
 export async function updateNote(
   { supabase, company, user }: Ctx,
   noteId: string,
-  input: { body: string; rating: CandidateRating | null },
+  input: { body: string; rating?: CandidateRating | null },
 ): Promise<Result> {
   const checked = checkBody(input.body);
   if (!checked.ok) return checked;
@@ -151,7 +154,7 @@ export async function updateNote(
 
   const { data, error } = await supabase
     .from("candidate_notes")
-    .update({ body: checked.body, rating: input.rating })
+    .update({ body: checked.body, ...(input.rating !== undefined ? { rating: input.rating } : {}) })
     .eq("id", noteId)
     .eq("company_id", company.id)
     .eq("author_user_id", user.id)

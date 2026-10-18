@@ -99,13 +99,13 @@ export default function FindSuitableJobs({
         >
           <SelectTrigger
             disabled={isPending}
-            className="rounded-full border-brand bg-brand hover:bg-brand/90 hover:border-brand w-[200px]"
+            className="rounded-full border-brand bg-brand hover:bg-brand/90 hover:border-brand"
           >
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             <SelectValue
               placeholder={
                 <p className="flex items-center gap-2 text-brand-foreground">
-                  <Search className="w-4 h-4" /> Find Suitable Profiles
+                  <Search className="w-4 h-4" /> AI Smart Search
                 </p>
               }
             />

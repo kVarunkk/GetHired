@@ -10,6 +10,8 @@ import type { TeamInvite, TeamMember } from "@/helpers/team/list-team";
 import { COMPANY_A } from "@/test/utils/recruiter";
 import { ADMIN_A, MEMBER_A, OWNER_A, ROLES_A, memberOf, type MemberFixture } from "@/test/utils/team";
 import InviteDialog from "./InviteDialog";
+import { inviteHandoffPrompt } from "@/helpers/agent/handoff-prompts";
+import { agentPromptHref, COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 import type { InviteRoleOption } from "@/helpers/team/invite-roles";
 import TeamTable, { type TeamRoleOption, type TeamViewer } from "./TeamTable";
 
@@ -392,5 +394,28 @@ describe("InviteDialog (RP-REQ-007, TM-REQ-010)", () => {
     await waitFor(() =>
       expect(inviteMemberAction).toHaveBeenCalledWith({ email: "eng@acme.com", templateKey: "recruiter" }),
     );
+  });
+
+  it("offers the agent only with agent.use, and hands the invite over to it", () => {
+    open("founder@acme.com");
+    expect(screen.queryByRole("form", { name: "Or tell the agent who to invite" })).not.toBeInTheDocument();
+    cleanup();
+
+    render(<InviteDialog ownerEmail="founder@acme.com" seats={{ used: 2, limit: 5 }} roles={ROLES} canUseAgent />);
+    fireEvent.click(screen.getByRole("button", { name: "Invite" }));
+    const handoff = screen.getByRole("form", { name: "Or tell the agent who to invite" });
+    // Not nested in the invite form, so its submit doesn't send an invite.
+    expect(handoff.parentElement?.closest("form")).toBeNull();
+
+    fireEvent.change(within(handoff).getByLabelText("Describe it for the assistant"), {
+      target: { value: "priya@acme.com as a recruiter" },
+    });
+    fireEvent.click(within(handoff).getByRole("button", { name: "Open in the assistant" }));
+
+    expect(router.push).toHaveBeenCalledWith(
+      agentPromptHref(inviteHandoffPrompt("priya@acme.com as a recruiter"), COMPANY_AGENT_PATH),
+    );
+    expect(inviteMemberAction).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Send invite" })).not.toBeInTheDocument();
   });
 });

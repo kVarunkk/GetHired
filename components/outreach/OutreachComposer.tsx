@@ -6,7 +6,10 @@ import toast from "react-hot-toast";
 import { loadOutreachComposerAction, type ComposerContext } from "@/app/actions/outreach/load-composer";
 import { sendOutreachAction } from "@/app/actions/outreach/send-outreach";
 import { draftOutreachAction } from "@/app/actions/outreach/draft-outreach";
+import AgentHandoff from "@/components/agent/AgentHandoff";
 import { Button } from "@/components/ui/button";
+import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import { outreachHandoffPrompt } from "@/helpers/agent/handoff-prompts";
 import {
   ResponsiveDialog,
   ResponsiveDialogBody,
@@ -203,6 +206,18 @@ export default function OutreachComposer({
               </div>
             ) : (
               <div className="flex flex-col gap-3">
+                {!blocked && (
+                  <AgentHandoff
+                    label="Or let the agent write it from their profile"
+                    placeholder="Mention their Go experience and that the role is remote…"
+                    basePath={COMPANY_AGENT_PATH}
+                    toPrompt={(text) => {
+                      const job = ctx.jobs.find((j) => j.id === jobPostId);
+                      return outreachHandoffPrompt(text, candidateId, job ? { id: job.id, title: job.title } : null);
+                    }}
+                    onHandoff={() => onOpenChange(false)}
+                  />
+                )}
                 {blocked && (
                   <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
                     {name} isn&apos;t accepting outreach right now.

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
-import BackButton from "@/components/BackButton";
+import PageHeader from "@/components/PageHeader";
 // import { IPayment } from "@/utils/types";
 import PaymentsTable from "@/components/PaymentsTable";
 import { Button } from "@/components/ui/button";
@@ -31,18 +31,20 @@ export default async function PaymentsPage() {
     }
 
     return (
-      <div className="flex flex-col w-full gap-8 p-4">
-        <div>
-          <BackButton />
-        </div>
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <h1 className="text-3xl font-medium ">All Purchases</h1>
-          <Button asChild>
-            <Link href={"/dashboard/buy-credits"}>
-              Buy More Credits <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
+      <div className="flex flex-col w-full gap-6 p-4">
+        <PageHeader
+          title="Purchases"
+          description="Your AI credit purchases and their receipts."
+          actions={
+            <Button asChild>
+              <Link href={"/dashboard/buy-credits"}>
+                Buy More Credits <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          }
+          backHref="/dashboard/buy-credits"
+          backLabel="Back to buy credits"
+        />
         <PaymentsTable data={payments || []} />
       </div>
     );

@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import KnockoutBadge from "@/components/applications/KnockoutBadge";
+import ApplicationAnswers from "@/components/applications/ApplicationAnswers";
+import { answersView } from "@/helpers/applications/answers-view";
 import Error from "@/components/Error";
-import BackButton from "@/components/BackButton";
+import PageHeader from "@/components/PageHeader";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +33,8 @@ import {
   markSharedSignalsViewed,
 } from "@/helpers/applications/shared-signals";
 import { isUuid } from "@/helpers/agent/auth";
+import { can } from "@/helpers/companies/permissions";
+import AskAgentAboutApplication from "@/components/agent/recruiter/AskAgentAboutApplication";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 import ScreeningCard from "@/components/matching/ScreeningCard";
 import {
@@ -65,6 +70,9 @@ export default async function ApplicantPage({
         stage_id,
         resumes(resume_path),
         answers,
+        answers_v2,
+        form_snapshot,
+        application_knockouts(failed, reasons, action_taken),
         job_post_id,
         user_info(${RECRUITER_CANDIDATE_COLUMNS}),
         job_postings(
@@ -140,6 +148,7 @@ export default async function ApplicantPage({
       after(() => markSharedSignalsViewed(application.id, ids));
     }
 
+    const jobId = application.job_post_id ?? undefined;
     let signedUrl: string | null = null;
 
     const { data: signedUrlData } = await supabase.storage
@@ -151,21 +160,45 @@ export default async function ApplicantPage({
     }
 
     return (
-      <div className="flex flex-col w-full gap-8 p-4 mb-20">
-        <div>
-          <BackButton />
-        </div>
+      <div className="flex flex-col w-full gap-6 p-4 mb-20">
+        <PageHeader
+          backHref="/company/applicants"
+          backLabel="Back to applicants"
+          eyebrow="Applicant"
+          title={<span className="[overflow-wrap:anywhere]">{application.user_info?.full_name || "Applicant details"}</span>}
+          description={
+            application.job_postings?.title && (
+              <span className="[overflow-wrap:anywhere]">Applied for {application.job_postings.title}</span>
+            )
+          }
+          actions={
+            stages &&
+            stages.length > 0 && (
+              <StagePicker
+                applicationId={application.id}
+                stages={stages}
+                currentStageId={application.stage_id}
+              />
+            )
+          }
+        />
 
-        <div className="flex items-center justify-between flex-wrap gap-5">
-          <h1 className="text-3xl font-medium">Applicant Details</h1>
-          {stages && stages.length > 0 && (
-            <StagePicker
-              applicationId={application.id}
-              stages={stages}
-              currentStageId={application.stage_id}
-            />
-          )}
-        </div>
+        {company && can(company, "agent.use") && (
+          <AskAgentAboutApplication
+            application={{
+              id: application.id,
+              candidateId: application.applicant_user_id,
+              candidateName: application.user_info?.full_name ?? null,
+              jobPostId: application.job_post_id,
+              jobTitle: application.job_postings?.title ?? null,
+            }}
+            canView={can(company, "applicants.view", jobId)}
+            canMatch={can(company, "matching.run", jobId)}
+            canViewNotes={can(company, "notes.view", jobId)}
+            canMove={can(company, "pipeline.move", jobId)}
+            canSearch={can(company, "talent.view")}
+          />
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left Panel: Applicant & Job Info. Emails and URLs have no spaces
@@ -422,27 +455,15 @@ export default async function ApplicantPage({
               )}
               <Card>
                 <CardHeader>
-                  <CardTitle>Application Answers</CardTitle>
+                  <CardTitle className="flex flex-wrap items-center gap-2">
+                    Application Answers
+                    <KnockoutBadge knockout={application.application_knockouts} />
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {application.answers && application.answers.length > 0 ? (
-                    application.answers.map((answer, index) => (
-                      <div key={index}>
-                        <p className="font-semibold text-sm">
-                          Q:{" "}
-                          {application.job_postings?.questions?.[index] ||
-                            `Question ${index + 1}`}
-                        </p>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                          A: {answer}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground">
-                      No custom questions were asked for this job.
-                    </p>
-                  )}
+                  <ApplicationAnswers
+                    answers={answersView(application, application.job_postings?.questions)}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

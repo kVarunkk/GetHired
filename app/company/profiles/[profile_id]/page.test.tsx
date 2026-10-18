@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import { OWNER_A } from "@/test/utils/team";
+import { OWNER_A, memberWith } from "@/test/utils/team";
 import { COMPANY_A, PRIVATE_NOT_APPLIED, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import {
   DIRECTORY_CANDIDATE_COLUMNS,
@@ -18,6 +18,7 @@ import ProfilePage from "./page";
 const NOT_FOUND = new Error("NEXT_NOT_FOUND");
 
 vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
   notFound: () => {
     throw NOT_FOUND;
   },
@@ -315,5 +316,35 @@ describe("company profile page matches (MT-REQ-004)", () => {
     render(await visit(PUBLIC_APPLICANT.id));
 
     expect(screen.queryByRole("heading", { name: /Matches for your jobs/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("company profile page agent helper", () => {
+  const visible = () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+    rls.queueRpc("company_has_candidate_access", { data: false, error: null });
+  };
+
+  it("shows the candidate helper under the header, with the chips the owner's permissions allow", async () => {
+    visible();
+
+    render(await visit(PUBLIC_APPLICANT.id));
+
+    expect(screen.getByRole("heading", { name: "Ask the agent about this candidate" })).toBeInTheDocument();
+    for (const label of ["Which jobs fit them?", "Find similar candidates", "Add to a talent list", "Draft outreach"]) {
+      expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
+    }
+  });
+
+  it("hides the helper without agent.use", async () => {
+    rls = createSupabaseMock({ user: COMPANY_A.user });
+    rls.queueRpc("my_company_access", { data: memberWith(["talent.view"]).membership, error: null });
+    Object.assign(rls.client, { storage: { from: () => ({ createSignedUrl }) } });
+    await setRequestUser(COMPANY_A.user, rls.client);
+    visible();
+
+    render(await visit(PUBLIC_APPLICANT.id));
+
+    expect(screen.queryByRole("heading", { name: "Ask the agent about this candidate" })).not.toBeInTheDocument();
   });
 });

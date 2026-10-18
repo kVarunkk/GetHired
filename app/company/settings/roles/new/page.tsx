@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { AskAgentToCreateRole } from "@/components/agent/recruiter/AskAgentAboutRoles";
 import Error from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
 import Forbidden from "@/components/roles/Forbidden";
 import RoleEditor, { type RoleEditorValues } from "@/components/roles/RoleEditor";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
@@ -64,13 +64,12 @@ export default async function NewRolePage({
 
     return (
       <div className="mb-20 flex w-full max-w-4xl flex-col gap-6 p-4">
-        <Link
-          href={next === "invite" ? "/company/settings/team" : "/company/settings/roles"}
-          className="flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-brand"
-        >
-          <ArrowLeft className="h-4 w-4" /> {next === "invite" ? "Team" : "Roles"}
-        </Link>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">New role</h1>
+        <PageHeader
+          backHref={next === "invite" ? "/company/settings/team" : "/company/settings/roles"}
+          backLabel={next === "invite" ? "Back to team" : "Back to roles"}
+          title="New role"
+        />
+        {can(company, "agent.use") && <AskAgentToCreateRole />}
         <RoleEditor
           mode="create"
           initial={initial}

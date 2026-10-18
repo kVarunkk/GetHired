@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
+import StickyActionBar from "@/components/StickyActionBar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -115,19 +116,6 @@ export default function RoleEditor({
   const [templateKey, setTemplateKey] = useState<string | null>(initial.templateKey ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // The save bar sticks to the bottom of the screen; while it's stuck (the
-  // form goes on below it) the content fades out under it, like ScrollFade.
-  const endRef = useRef<HTMLDivElement>(null);
-  const [stuck, setStuck] = useState(false);
-
-  useEffect(() => {
-    const end = endRef.current;
-    if (!end || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(([entry]) => setStuck(!entry.isIntersecting));
-    observer.observe(end);
-    return () => observer.disconnect();
-  }, []);
-
   const permissionsLocked = readOnly || ownRole;
 
   /** The widest scope the viewer may grant for `key`, or null. */
@@ -324,36 +312,18 @@ export default function RoleEditor({
       />
 
       {!readOnly && (
-        <>
-          <div
-            data-stuck={stuck}
-            className={cn(
-              "sticky bottom-0 z-10 -mx-4 bg-background px-4 py-3 transition-colors duration-200",
-              stuck ? "border-t" : "border-t border-transparent",
-            )}
-          >
-            <div
-              aria-hidden
-              className={cn(
-                "pointer-events-none absolute inset-x-0 bottom-full h-8 bg-gradient-to-t from-background to-transparent transition-opacity duration-200",
-                stuck ? "opacity-100" : "opacity-0",
-              )}
-            />
-            {/* In the sticky bar, so the error shows wherever Save was clicked. */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <Button type="submit" variant="brand" disabled={busy || !name.trim()}>
-                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save role
-              </Button>
-              {error && (
-                <p role="alert" className="text-sm text-destructive">
-                  {error}
-                </p>
-              )}
-            </div>
-          </div>
-          <div ref={endRef} aria-hidden className="-mt-6 h-px" />
-        </>
+        // In the sticky bar, so the error shows wherever Save was clicked.
+        <StickyActionBar>
+          <Button type="submit" variant="brand" disabled={busy || !name.trim()}>
+            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save role
+          </Button>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+        </StickyActionBar>
       )}
     </form>
   );

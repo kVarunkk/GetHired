@@ -14,7 +14,7 @@ import {
   FileUser,
   Briefcase,
 } from "lucide-react";
-import BackButton from "./BackButton";
+import { BackLink } from "./PageHeader";
 import { TInterviewServer } from "@/utils/types/interview.types";
 import Link from "next/link";
 import { Button } from "./ui/button";
@@ -159,7 +159,7 @@ export default function InterviewComponent({
       {/* Top Header Bar */}
       <header className="flex-none border-b border-border bg-card px-4 py-3 sm:px-6 flex items-center justify-between gap-3 z-10">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <BackButton />
+          <BackLink href="/interview" label="Back to interviews" />
           <div className="min-w-0 flex-1">
             <h1
               className="text-base sm:text-lg font-semibold tracking-tight leading-tight truncate"

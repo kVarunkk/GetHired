@@ -14,6 +14,7 @@ const handleEntitlement = vi.fn();
 vi.mock("@/hooks/useEntitlementError", () => ({
   useEntitlementError: () => ({ handle: handleEntitlement, show: vi.fn(), dialog: <div data-testid="upgrade" /> }),
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("react-hot-toast", () => ({ default: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/app/actions/outreach/load-composer", () => ({ loadOutreachComposerAction: vi.fn() }));
 vi.mock("@/app/actions/outreach/send-outreach", () => ({ sendOutreachAction: vi.fn() }));

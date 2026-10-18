@@ -117,7 +117,7 @@ describe("company dashboard (PLT-082 characterisation)", () => {
 
     render(await CompanyPage());
 
-    expect(screen.getByText("How are you doing today, Acme?")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "How are you doing today, Acme?" })).toBeInTheDocument();
   });
 });
 
@@ -152,5 +152,16 @@ describe("company dashboard gating (RP-REQ-016, RPT-024)", () => {
     render(await CompanyPage());
 
     expect(screen.getByRole("button", { name: "Create New Job Post" })).toBeEnabled();
+  });
+});
+
+describe("company dashboard careers link (CP-REQ-014, CPT-053)", () => {
+  it("shows the careers page link", async () => {
+    dashboard([]);
+    db.queue("company_info", { data: { careers_slug: "acme", careers_published: true }, error: null });
+
+    render(await CompanyPage());
+
+    expect(screen.getByRole("link", { name: "gethired.devhub.co.in/careers/acme" })).toHaveAttribute("href", "/careers/acme");
   });
 });

@@ -23,6 +23,9 @@ import ResumeSourceSelector from "./ResumeSourceSelector";
 import { TResumeReviewResume } from "@/utils/types/review.types";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
+import AgentHandoff from "./agent/AgentHandoff";
+import { AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import { interviewHandoffPrompt } from "@/helpers/agent/handoff-prompts";
 import { createInterviewAction } from "@/app/actions/create-interview";
 import { useRouter } from "next/navigation";
 import { useProgress } from "react-transition-progress";
@@ -184,95 +187,104 @@ export default function CreateInterviewDialog({
             />
           </ResponsiveDialogBody>
         ) : (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              handleSubmit(formData);
-            }}
-            className="flex min-h-0 flex-col gap-4"
-          >
-            <ResponsiveDialogBody className="flex flex-col gap-4">
-              {/* min-w-0 lets the resume name truncate instead of pushing the row wider than the drawer. */}
-              <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">
-                {selectedResume ? (
-                  <div className="flex min-w-0 items-center gap-1">
-                    <span className="shrink-0">Using</span>
-                    <span
-                      title={selectedResume?.name ?? "Selected Resume"}
-                      className="min-w-0 truncate font-medium text-foreground"
-                    >
-                      {selectedResume?.name}
-                    </span>
-                  </div>
-                ) : (
-                  <p>Select a Resume</p>
-                )}
-                <Button
-                  type="button"
-                  variant={"link"}
-                  onClick={() => setView("resume")}
-                  className="h-auto shrink-0 p-0 text-muted-foreground underline"
-                >
-                  Change
-                </Button>
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Interview Name (Optional)</Label>
-                <Input
-                  name="name"
-                  placeholder="e.g., Full Stack Developer Interview"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label>
-                  Job URL{" "}
-                  <InfoTooltip
-                    content="
-                                Enter a valid Job URL from GetHired. For e.g., https://gethired.devhub.co.in/jobs/bf28fb7d-8a09-45f4-8376-c391c64ca782
-                                "
-                  />
-                </Label>
-                <Input
-                  required
-                  name="jobUrl"
-                  placeholder="e.g., https://gethired.devhub.co.in/jobs/bf28fb7d-8a09-45f4-8376-c391c64ca782"
-                  value={jobUrl}
-                  onChange={(event) => setJobUrl(event.target.value)}
-                />
-              </div>
-
-              {error && (
-                <div
-                  role="alert"
-                  className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
-                >
-                  <AlertCircle aria-hidden className="h-4 w-4 shrink-0" />
-                  <p>{error}</p>
-                  {!isOnboardingComplete && (
-                    <Link
-                      href={"/get-started"}
-                      className="font-medium underline underline-offset-4"
-                    >
-                      Complete Profile
-                    </Link>
+          <>
+            <AgentHandoff
+              label="Or tell the agent which job to practise for"
+              placeholder="The backend role at Zerodha I applied to…"
+              basePath={AGENT_PATH}
+              toPrompt={interviewHandoffPrompt}
+              onHandoff={() => setOpen(false)}
+            />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                handleSubmit(formData);
+              }}
+              className="flex min-h-0 flex-col gap-4"
+            >
+              <ResponsiveDialogBody className="flex flex-col gap-4">
+                {/* min-w-0 lets the resume name truncate instead of pushing the row wider than the drawer. */}
+                <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">
+                  {selectedResume ? (
+                    <div className="flex min-w-0 items-center gap-1">
+                      <span className="shrink-0">Using</span>
+                      <span
+                        title={selectedResume?.name ?? "Selected Resume"}
+                        className="min-w-0 truncate font-medium text-foreground"
+                      >
+                        {selectedResume?.name}
+                      </span>
+                    </div>
+                  ) : (
+                    <p>Select a Resume</p>
                   )}
+                  <Button
+                    type="button"
+                    variant={"link"}
+                    onClick={() => setView("resume")}
+                    className="h-auto shrink-0 p-0 text-muted-foreground underline"
+                  >
+                    Change
+                  </Button>
                 </div>
-              )}
-            </ResponsiveDialogBody>
-            <ResponsiveDialogFooter>
-              <Button
-                variant="brand"
-                disabled={isLoading || creditsState < TAICredits.AI_INTERVIEW}
-                className="w-full"
-              >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Interview
-              </Button>
-            </ResponsiveDialogFooter>
-          </form>
+
+                <div className="grid gap-2">
+                  <Label>Interview Name (Optional)</Label>
+                  <Input
+                    name="name"
+                    placeholder="e.g., Full Stack Developer Interview"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>
+                    Job URL{" "}
+                    <InfoTooltip
+                      content="
+                                  Enter a valid Job URL from GetHired. For e.g., https://gethired.devhub.co.in/jobs/bf28fb7d-8a09-45f4-8376-c391c64ca782
+                                  "
+                    />
+                  </Label>
+                  <Input
+                    required
+                    name="jobUrl"
+                    placeholder="e.g., https://gethired.devhub.co.in/jobs/bf28fb7d-8a09-45f4-8376-c391c64ca782"
+                    value={jobUrl}
+                    onChange={(event) => setJobUrl(event.target.value)}
+                  />
+                </div>
+
+                {error && (
+                  <div
+                    role="alert"
+                    className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+                  >
+                    <AlertCircle aria-hidden className="h-4 w-4 shrink-0" />
+                    <p>{error}</p>
+                    {!isOnboardingComplete && (
+                      <Link
+                        href={"/get-started"}
+                        className="font-medium underline underline-offset-4"
+                      >
+                        Complete Profile
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </ResponsiveDialogBody>
+              <ResponsiveDialogFooter>
+                <Button
+                  variant="brand"
+                  disabled={isLoading || creditsState < TAICredits.AI_INTERVIEW}
+                  className="w-full"
+                >
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Interview
+                </Button>
+              </ResponsiveDialogFooter>
+            </form>
+          </>
         )}
       </ResponsiveDialogContent>
     </ResponsiveDialog>
