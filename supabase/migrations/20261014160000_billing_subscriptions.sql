@@ -1,4 +1,4 @@
--- Self-serve company payments (plan/feature-recruiter-billing-spec.md §4.2, BL-TASK-021).
+-- Self-serve company payments (plan/recruiter-billing/feature-recruiter-billing-spec.md §4.2, BL-TASK-021).
 --
 -- 1. fulfil_payment also fulfils company credit packs and records subscription payments.
 -- 2. apply_subscription_event maps Dodo subscription events onto company_subscriptions.

@@ -1,4 +1,4 @@
--- Recruiter access control (plan/feature-recruiter-security-spec.md, RS-TASK-011).
+-- Recruiter access control (plan/recruiter-security/feature-recruiter-security-spec.md, RS-TASK-011).
 --
 -- 1. Access helpers: my_company_id, is_company_member, company_can_view_candidate.
 -- 2. Companies read user_info, resumes and resume files only for candidates who

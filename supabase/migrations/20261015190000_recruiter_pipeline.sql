@@ -1,5 +1,5 @@
 -- Recruiter pipeline, part 1 (PLT-011, PL-TASK-001): stages and moves.
--- plan/feature-recruiter-pipeline-spec.md §3.1–§3.3 and the tasks file's
+-- plan/recruiter-pipeline/feature-recruiter-pipeline-spec.md §3.1–§3.3 and the tasks file's
 -- "Differences from the spec" 1–5.
 --
 -- 1. pipeline_stage_kind, pipeline_stages, the kind <-> status maps.

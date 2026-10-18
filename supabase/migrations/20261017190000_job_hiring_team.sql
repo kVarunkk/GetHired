@@ -1,5 +1,5 @@
 -- Recruiter roles, phase 5: the job page's Hiring team panel
--- (plan/feature-recruiter-roles-spec.md RP-REQ-011, RPT-052).
+-- (plan/recruiter-roles/feature-recruiter-roles-spec.md RP-REQ-011, RPT-052).
 --
 -- The panel needs, for one job, who is assigned and who could be. That depends
 -- on each member's role grants and the caller's ceiling, which members with

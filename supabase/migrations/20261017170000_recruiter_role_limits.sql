@@ -1,4 +1,4 @@
--- Recruiter roles, phase 6: per-member monthly caps (plan/feature-recruiter-roles-spec.md
+-- Recruiter roles, phase 6: per-member monthly caps (plan/recruiter-roles/feature-recruiter-roles-spec.md
 -- RP-REQ-040..044, RPT-061).
 --
 -- A role can cap how much of an allowance key each member spends per usage

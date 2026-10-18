@@ -1,4 +1,4 @@
--- Recruiter teams, phase 4: @mentions in notes (plan/feature-recruiter-teams-spec.md
+-- Recruiter teams, phase 4: @mentions in notes (plan/recruiter-teams/feature-recruiter-teams-spec.md
 -- TM-REQ-009, TMT-070..072).
 --
 -- A note mentions teammates as `@[name](user id)` tokens (or a plain `@name`).

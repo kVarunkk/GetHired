@@ -1,4 +1,4 @@
--- Company billing model (plan/feature-recruiter-billing-spec.md §3, BL-TASK-010).
+-- Company billing model (plan/recruiter-billing/feature-recruiter-billing-spec.md §3, BL-TASK-010).
 --
 -- 1. Plans: company_tiers under migrations, plus tier_entitlements (§5.1).
 -- 2. company_subscriptions (one per company, free by default), company_usage,

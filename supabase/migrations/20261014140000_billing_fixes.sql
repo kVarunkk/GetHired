@@ -1,4 +1,4 @@
--- Billing spec phase 1 (plan/feature-recruiter-billing-spec.md, BL-TASK-001/002):
+-- Billing spec phase 1 (plan/recruiter-billing/feature-recruiter-billing-spec.md, BL-TASK-001/002):
 -- the applicant payment fixes, independent of the company billing model.
 --   BL-F01  price_plan.audience, so checkout can refuse company packs.
 --   BL-F02  fulfil_payment: one transaction, row lock, atomic increment.

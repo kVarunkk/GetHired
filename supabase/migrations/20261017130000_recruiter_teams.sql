@@ -1,4 +1,4 @@
--- Recruiter teams, phase 1 (plan/feature-recruiter-teams-spec.md, TMT-013/014).
+-- Recruiter teams, phase 1 (plan/recruiter-teams/feature-recruiter-teams-spec.md, TMT-013/014).
 --
 -- 1. company_role enum, company_members, company_invites (+ RLS: members read,
 --    nobody writes directly; TM-SEC-006).

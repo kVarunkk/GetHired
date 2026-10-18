@@ -1,4 +1,4 @@
--- Recruiter roles and permissions (plan/feature-recruiter-roles-spec.md).
+-- Recruiter roles and permissions (plan/recruiter-roles/feature-recruiter-roles-spec.md).
 --
 -- Replaces the fixed owner/admin/member enum with custom roles built from a
 -- permission catalog, job-scoped access, several owners (one primary) and an

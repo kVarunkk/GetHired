@@ -1,5 +1,5 @@
 -- Recruiter pipeline, part 2 (PLT-051, PL-TASK-020): notes and ratings.
--- plan/feature-recruiter-pipeline-spec.md §3.1 and the tasks file's
+-- plan/recruiter-pipeline/feature-recruiter-pipeline-spec.md §3.1 and the tasks file's
 -- difference 5 (author_name, kept after a member leaves).
 --
 -- Notes are company-internal (PL-SEC-004): members of the company read them,

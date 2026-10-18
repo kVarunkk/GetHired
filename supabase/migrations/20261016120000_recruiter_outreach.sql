@@ -1,7 +1,7 @@
 -- Recruiter outreach, part 1 (OR-TASK-001, ORT-011): outreach messages, the
 -- candidate's blocks and outreach preference, and the RPCs that send, answer
--- and expire them. See plan/feature-recruiter-outreach-spec.md and the
--- "Differences from the spec" in plan/feature-recruiter-outreach-tasks.md.
+-- and expire them. See plan/recruiter-outreach/feature-recruiter-outreach-spec.md and the
+-- "Differences from the spec" in plan/recruiter-outreach/feature-recruiter-outreach-tasks.md.
 --
 -- 1. user_info.accepts_outreach
 -- 2. candidate_outreach, candidate_company_blocks (+ RLS)

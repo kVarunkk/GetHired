@@ -1,4 +1,4 @@
--- Recruiter agent (plan/feature-recruiter-agent-spec.md §3, RAT-011).
+-- Recruiter agent (plan/recruiter-agent/feature-recruiter-agent-spec.md §3, RAT-011).
 --
 -- 1. agent_sessions.role: which toolset a session belongs to. The chat route
 --    loads a session only under the caller's role, so a user whose role

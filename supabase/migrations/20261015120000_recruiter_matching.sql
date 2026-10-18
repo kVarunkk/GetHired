@@ -1,4 +1,4 @@
--- Recruiter matching and screening (plan/feature-recruiter-matching-spec.md).
+-- Recruiter matching and screening (plan/recruiter-matching/feature-recruiter-matching-spec.md).
 -- Part 1 (§3.1, MTT-014): match scores and explanations on job_relevant_profiles.
 
 -- unique_job_user_pair (job_posting_id, user_id) already exists live with no
