@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { format } from "date-fns";
+import { formatDate } from "@/utils/date";
 import { UserApiTokensRow } from "@/utils/types";
 import DataTable, { SortableHeader, TextFilter } from "./DataTable";
 import DynamicActions from "./DynamicTableActions";
@@ -37,7 +37,7 @@ export default function ApiKeysTable({ data }: ApiKeysTableProps) {
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
-            {format(new Date(row.original.created_at || ""), "d MMM yyyy")}
+            {formatDate(row.original.created_at)}
           </div>
         ),
       },
@@ -61,7 +61,7 @@ export default function ApiKeysTable({ data }: ApiKeysTableProps) {
         cell: ({ row }) => (
           <div className="text-sm ">
             {row.original.last_used_at
-              ? format(new Date(row.original.last_used_at), "d MMM yyyy")
+              ? formatDate(row.original.last_used_at)
               : "-"}
           </div>
         ),

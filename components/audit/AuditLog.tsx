@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
+import { formatDate } from "@/utils/date";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Bot, Loader2 } from "lucide-react";
 import DataTable, { DataTableFooter, FilterSelect } from "@/components/DataTable";
@@ -26,7 +27,7 @@ const COLUMNS: ColumnDef<AuditEntry>[] = [
     cell: ({ row }) => {
       const when = new Date(row.original.createdAt);
       return (
-        <time dateTime={row.original.createdAt} title={format(when, "PPpp")}>
+        <time dateTime={row.original.createdAt} suppressHydrationWarning title={formatDate(when, { dateStyle: "medium", timeStyle: "medium" }, "en-US")}>
           {formatDistanceToNow(when, { addSuffix: true })}
         </time>
       );

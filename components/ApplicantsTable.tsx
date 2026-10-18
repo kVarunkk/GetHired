@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { format } from "date-fns";
+import { formatDate } from "@/utils/date";
 import { ChevronRight, ArrowUpDown, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import DataTable, { FilterSelect, SelectFilter, SortableHeader, TextFilter } from "@/components/DataTable";
@@ -256,7 +256,7 @@ export default function ApplicantsTable({
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
-            {format(new Date(row.original.created_at), "d MMM yyyy")}
+            {formatDate(row.original.created_at)}
           </div>
         ),
       },

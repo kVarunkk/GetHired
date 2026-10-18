@@ -101,13 +101,13 @@ export default function TheGetHiredAdvantageSection({
             value={
               isHirePage
                 ? "Zero Vacancy Time"
-                : `${jobCount.toLocaleString()} Jobs`
+                : `${jobCount.toLocaleString("en-US")} Jobs`
             }
             title={isHirePage ? "Direct Talent Access" : "Market-Wide Reach"}
             description={
               isHirePage
                 ? "Gain a competitive advantage by connecting instantly and directly with candidates who are ready to interview."
-                : `Browse over ${jobCount.toLocaleString()} active roles from the most innovative startups and tech companies, updated daily for your growth.`
+                : `Browse over ${jobCount.toLocaleString("en-US")} active roles from the most innovative startups and tech companies, updated daily for your growth.`
             }
           />
         </div>

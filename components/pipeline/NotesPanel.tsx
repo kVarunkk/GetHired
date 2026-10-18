@@ -379,7 +379,7 @@ function NoteItem({
         {/* TM-REQ-008: the name stored on the note, kept after the author leaves. */}
         <MemberAvatar name={note.author_name} className="h-6 w-6 text-[10px]" />
         <span className="font-medium text-foreground">{note.author_name ?? "A teammate"}</span>
-        <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
+        <span suppressHydrationWarning>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
         {note.rating && (
           <Badge variant="outline" className="font-normal">
             {RATING_LABELS[note.rating]}
@@ -387,7 +387,7 @@ function NoteItem({
         )}
         {isMine && mode === "view" && (
           <span className="ml-auto flex gap-1">
-            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setMode("edit")}>
+            <Button size="sm" variant="ghost" className="h-7 min-h-7 px-2" onClick={() => setMode("edit")}>
               Edit
             </Button>
             <Button

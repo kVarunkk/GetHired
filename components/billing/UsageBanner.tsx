@@ -6,6 +6,7 @@ import { AlertCircle, AlertTriangle } from "lucide-react";
 import { KEY_LABELS, type EntitlementKey, type EntitlementState } from "@/helpers/billing/keys";
 import { fetcher } from "@/utils/utils";
 import { cn } from "@/utils/utils";
+import { formatDate } from "@/utils/date";
 
 export type UsageBannerData = {
   status: string;
@@ -19,7 +20,7 @@ type Notice = { level: "warning" | "error"; text: string } | null;
 export function usageNotice(data: UsageBannerData): Notice {
   if (data.status === "past_due") {
     const until = data.graceUntil
-      ? new Date(data.graceUntil).toLocaleDateString("en-US", { month: "long", day: "numeric" })
+      ? formatDate(data.graceUntil, { month: "long", day: "numeric" }, "en-US")
       : "soon";
     return {
       level: "error",

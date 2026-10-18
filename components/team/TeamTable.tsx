@@ -70,8 +70,11 @@ type Props = {
   companyName: string;
 };
 
-const ago = (iso: string | null) =>
-  iso ? formatDistanceToNow(new Date(iso), { addSuffix: true }) : "Never";
+const ago = (iso: string | null) => (
+  <span suppressHydrationWarning>
+    {iso ? formatDistanceToNow(new Date(iso), { addSuffix: true }) : "Never"}
+  </span>
+);
 
 type ActionResult = { ok: boolean; error?: unknown };
 const errorText = (r: ActionResult) =>

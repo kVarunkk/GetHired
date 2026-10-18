@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { formatDate } from "@/utils/date";
 import { Button } from "./ui/button";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
 import { ArrowRight } from "lucide-react";
@@ -25,7 +25,7 @@ export default function ProfileActiveApplication({
         </ModifiedLink>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <ApplicationStatusBadge status={app.status as TApplicationStatus} />
-          <span>Applied {format(new Date(app.created_at), "PP")}</span>
+          <span>Applied {formatDate(app.created_at, { dateStyle: "medium" }, "en-US")}</span>
         </div>
       </div>
       <Button asChild variant="outline" size="sm" className="shrink-0">

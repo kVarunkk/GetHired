@@ -280,7 +280,7 @@ function JobResults({ jobs, totalCount }: { jobs: CompactJob[]; totalCount?: num
       )}
       {typeof totalCount === "number" && totalCount > jobs.length && (
         <p className="border-t bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
-          Showing {jobs.length} of {totalCount.toLocaleString()} jobs. Ask for more to see the
+          Showing {jobs.length} of {totalCount.toLocaleString("en-US")} jobs. Ask for more to see the
           next page.
         </p>
       )}

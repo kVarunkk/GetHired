@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { formatDate } from "@/utils/date";
 import { ChevronRight } from "lucide-react";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
 import DataTable, { SelectFilter, SortableHeader } from "./DataTable";
@@ -55,7 +55,7 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
-            {format(new Date(row.original.created_at), "d MMM yyyy")}
+            {formatDate(row.original.created_at)}
           </div>
         ),
       },

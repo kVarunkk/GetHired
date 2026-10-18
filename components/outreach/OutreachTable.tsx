@@ -12,9 +12,9 @@ import { OUTREACH_STATUSES, outreachPath } from "@/helpers/outreach/config";
 import type { CompanyOutreachItem } from "@/helpers/outreach/list";
 import type { OutreachStatus } from "@/utils/types/outreach.types";
 import MemberAvatar from "@/components/team/MemberAvatar";
+import { formatDate } from "@/utils/date";
 
-const formatDate = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+const shownDate = (iso: string | null) => formatDate(iso) || "—";
 
 /**
  * The company's outreach (OR-REQ-007), laid out like the app's other tables.
@@ -97,7 +97,7 @@ export default function OutreachTable({
             {/* TM-REQ-008: who sent it, as stored at send time. */}
             {row.original.senderName && <MemberAvatar name={row.original.senderName} className="h-6 w-6" />}
             <div className="min-w-0 max-w-[10rem]">
-              <div>{formatDate(row.original.sentAt)}</div>
+              <div>{shownDate(row.original.sentAt)}</div>
               {row.original.senderName && (
                 <div className="truncate text-xs text-muted-foreground" title={row.original.senderName}>
                   by {row.original.senderName}
@@ -111,7 +111,7 @@ export default function OutreachTable({
         id: "respondedAt",
         accessorFn: (row) => row.respondedAt ?? "",
         header: ({ column }) => <SortableHeader column={column} label="Responded" />,
-        cell: ({ row }) => <div className="text-sm">{formatDate(row.original.respondedAt)}</div>,
+        cell: ({ row }) => <div className="text-sm">{shownDate(row.original.respondedAt)}</div>,
       },
       {
         id: "actions",

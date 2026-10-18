@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { formatDate } from "@/utils/date";
 import { ChevronRight } from "lucide-react";
 import DataTable, { SortableHeader, TextFilter } from "./DataTable";
 import DynamicActions from "./DynamicTableActions";
@@ -63,7 +63,7 @@ export default function ResumesTable({ data }: ResumesTableProps) {
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
-            {format(new Date(row.original.created_at || ""), "d MMM yyyy")}
+            {formatDate(row.original.created_at)}
           </div>
         ),
       },

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
+import { formatDate } from "@/utils/date";
 import DataTable from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
 import { QUESTION_SETS_PATH } from "@/helpers/jobs/question-sets";
@@ -33,7 +34,7 @@ const COLUMNS: ColumnDef<QuestionSetRow>[] = [
   {
     id: "updated",
     header: "Updated",
-    cell: ({ row }) => new Date(row.original.updatedAt).toLocaleDateString(undefined, { dateStyle: "medium" }),
+    cell: ({ row }) => formatDate(row.original.updatedAt),
     meta: { className: "text-muted-foreground" },
   },
   {

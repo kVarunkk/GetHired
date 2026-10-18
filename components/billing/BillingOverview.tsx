@@ -40,6 +40,7 @@ import PlanCards from "./PlanCards";
 import MemberUsage from "./MemberUsage";
 import PageHeader from "@/components/PageHeader";
 import { AskAgentAboutBilling } from "@/components/agent/recruiter/AskAgentOnMainPages";
+import { formatDate } from "@/utils/date";
 
 export type CreditPack = {
   id: string;
@@ -76,14 +77,13 @@ type BillingOverviewProps = {
   canUseAgent?: boolean;
 };
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+const longDate = (iso: string) => formatDate(iso, { dateStyle: "long" }, "en-US");
 
 const HISTORY_COLUMNS: ColumnDef<BillingHistoryRow>[] = [
   {
     id: "date",
     header: "Date",
-    cell: ({ row }) => formatDate(row.original.created_at),
+    cell: ({ row }) => longDate(row.original.created_at),
     meta: { className: "text-muted-foreground" },
   },
   {
@@ -259,7 +259,7 @@ export default function BillingOverview({
     const subInterval = billing.billingInterval ?? interval;
     const subCurrency = (billing.currency as BillingCurrency | null) ?? currency;
     const price = priceLabel(target, subInterval, subCurrency);
-    const date = formatDate(billing.renewsAt);
+    const date = longDate(billing.renewsAt);
     const currentName = current?.name ?? billing.tier.name;
 
     ask(
@@ -295,7 +295,7 @@ export default function BillingOverview({
   }
 
   function confirmCancel() {
-    const date = formatDate(billing.renewsAt);
+    const date = longDate(billing.renewsAt);
     ask({
       key: "cancel",
       title: `Cancel ${billing.tier.name}?`,
@@ -322,7 +322,7 @@ export default function BillingOverview({
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             We couldn&apos;t take your last payment. Your plan keeps working until{" "}
-            {billing.graceUntil ? formatDate(billing.graceUntil) : "the end of the grace period"}. Update your payment
+            {billing.graceUntil ? longDate(billing.graceUntil) : "the end of the grace period"}. Update your payment
             method to keep it.
           </span>
         </div>
@@ -337,12 +337,12 @@ export default function BillingOverview({
           </div>
           <p className="text-sm text-muted-foreground">
             {billing.cancelAtPeriodEnd
-              ? `Cancels on ${formatDate(billing.renewsAt)}. You'll move to Free then.`
+              ? `Cancels on ${longDate(billing.renewsAt)}. You'll move to Free then.`
               : billing.manualUntil
-                ? `Until ${formatDate(billing.manualUntil)}.`
+                ? `Until ${longDate(billing.manualUntil)}.`
                 : renewsAt
-                  ? `Renews on ${formatDate(renewsAt)}.`
-                  : `Usage resets on ${formatDate(billing.period.end)}.`}
+                  ? `Renews on ${longDate(renewsAt)}.`
+                  : `Usage resets on ${longDate(billing.period.end)}.`}
             {scheduledPlan && ` Moves to ${scheduledPlan} at the end of this period.`}
           </p>
         </div>
@@ -421,7 +421,7 @@ export default function BillingOverview({
               <li key={lot.id} className="flex items-center justify-between px-4 py-3 text-sm">
                 <span className="tabular-nums">{lot.remaining.toLocaleString("en-US")} credits</span>
                 <span className="text-muted-foreground">
-                  {lot.expiresAt ? `Expires ${formatDate(lot.expiresAt)}` : "No expiry"}
+                  {lot.expiresAt ? `Expires ${longDate(lot.expiresAt)}` : "No expiry"}
                 </span>
               </li>
             ))}

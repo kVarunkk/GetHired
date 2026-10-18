@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatDate } from "@/utils/date";
 import {
   previewAgentOutreachAction,
   type PreviewAgentOutreachResult,
@@ -8,8 +9,7 @@ import {
 
 type OutreachInput = { subject?: unknown; message?: unknown };
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+const dayMonth = (iso: string) => formatDate(iso, { day: "numeric", month: "short" });
 
 function quotaLabel(quota: { remaining: number | null; amount: number | null } | null) {
   if (!quota) return null;
@@ -70,7 +70,7 @@ export function OutreachApprovalDetails({ input }: { input: unknown }) {
       {warning && <p className="text-destructive">This message won&apos;t go through: {warning}</p>}
       {!warning && preview.openSince && (
         <p className="text-warning">
-          {name} hasn&apos;t answered your message from {formatDate(preview.openSince)} yet.
+          {name} hasn&apos;t answered your message from {dayMonth(preview.openSince)} yet.
         </p>
       )}
       <div className="flex flex-col gap-1 rounded-lg border bg-background p-3">

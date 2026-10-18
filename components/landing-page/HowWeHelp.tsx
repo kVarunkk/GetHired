@@ -60,7 +60,7 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
         name: isHirePage ? "AI Job Composer" : "Searches every major job board",
         description: isHirePage
           ? "Create high-converting roles instantly. Our templates mandate key data to ensure clarity and attract only the most qualified, focused talent."
-          : `Over ${jobCount.toLocaleString()} listings from Greenhouse, Workday, Ashby and more.`,
+          : `Over ${jobCount.toLocaleString("en-US")} listings from Greenhouse, Workday, Ashby and more.`,
         href: isHirePage ? "/company" : "/jobs",
         cta: isHirePage ? "Learn more" : "Browse jobs",
         background: isHirePage ? <HireComposerPreview /> : <PlatformGrid />,
