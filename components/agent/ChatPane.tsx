@@ -17,6 +17,7 @@ import Composer from "./Composer";
 import ScrollToBottomButton from "./ScrollToBottomButton";
 import MessageParts, { StepNode } from "./MessageParts";
 import { AGENT_ROLE_UI, APPLICANT_STARTERS, type AgentRoleId } from "./roles";
+import { cn } from "@/utils/utils";
 
 /** The applicant's starter prompts. */
 export const SUGGESTED_PROMPTS = APPLICANT_STARTERS;
@@ -122,6 +123,9 @@ export default function ChatPane({
     id: sessionId,
     messages: initialMessages,
     transport,
+    // Batch streamed chunks: each update re-parses the reply's markdown, which
+    // lags on phones when it runs for every word.
+    throttle: 50,
     // Continue automatically once approvals are answered or the upload finishes.
     sendAutomaticallyWhen: (options) =>
       lastAssistantMessageIsCompleteWithApprovalResponses(options) ||
@@ -337,6 +341,14 @@ export default function ChatPane({
             <div ref={endRef} />
           </div>
         </div>
+        {/* Fades the conversation out above the composer while there's more below. */}
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background to-transparent transition-opacity duration-200",
+            atBottom ? "opacity-0" : "opacity-100",
+          )}
+        />
         <ScrollToBottomButton visible={!atBottom} onClick={scrollToLatest} />
       </div>
 

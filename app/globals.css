@@ -214,12 +214,30 @@
   }
 }
 
-/* Agent replies: each streamed word fades in (components/agent/animate-words.ts). */
+/* Agent replies: each streamed word fades in (components/agent/animate-words.ts).
+   Opacity only by default: a filter on every word span is too heavy for phone
+   GPUs (it janks and the text shimmers), so the blur is for mouse devices. */
 .agent-word {
   animation: agent-word-in 0.4s ease-out both;
 }
 
 @keyframes agent-word-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .agent-word {
+    animation-name: agent-word-in-blur;
+  }
+}
+
+@keyframes agent-word-in-blur {
   from {
     opacity: 0;
     filter: blur(3px);
