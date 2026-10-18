@@ -2,7 +2,7 @@ import { TCompanyInfo } from "@/utils/types";
 import { createClient } from "../../lib/supabase/server";
 import { PostgrestError } from "@supabase/supabase-js";
 import { parseMultiSelectParam } from "@/utils/formatters";
-export const companiesSelectString = `id, created_at, updated_at, name, industry, description, website, headquarters, company_size, logo_url, tag_line`;
+export const companiesSelectString = `id, created_at, updated_at, name, industry, description, website, headquarters, company_size, logo_url, tag_line, careers_slug`;
 
 export const buildCompaniesQuery = async ({
   industry,
@@ -37,6 +37,7 @@ export const buildCompaniesQuery = async ({
     let query;
     let selectString;
 
+    // Each company links to its careers page, so only published ones are listed.
     if (isFavoriteTabActive) {
       if (!user) {
         return {
@@ -54,7 +55,9 @@ export const buildCompaniesQuery = async ({
         .from("company_info")
         .select(selectString, { count: "exact" })
         .eq("user_favorites_companies.user_id", user.id)
-        .eq("filled", true);
+        .eq("filled", true)
+        .eq("careers_published", true)
+        .not("careers_slug", "is", null);
     } else {
       // Explicitly select columns and exclude 'embedding'
       selectString = `
@@ -64,7 +67,9 @@ export const buildCompaniesQuery = async ({
       query = supabase
         .from("company_info")
         .select(selectString, { count: "exact" })
-        .eq("filled", true);
+        .eq("filled", true)
+        .eq("careers_published", true)
+        .not("careers_slug", "is", null);
     }
 
     let matchedCompanyIds: string[] = [];

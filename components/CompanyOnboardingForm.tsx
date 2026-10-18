@@ -13,6 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import StickyActionBar from "@/components/StickyActionBar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -28,9 +29,11 @@ import { User } from "@supabase/supabase-js";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { careersPath } from "@/helpers/careers/slug";
 import { commonIndustries } from "@/utils/utils";
 import { markMyOnboardingComplete } from "@/app/actions/update-user-metadata";
 import LocationSearchSelect from "./LocationSearchSelect";
+import PageHeader from "./PageHeader";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -73,6 +76,7 @@ export default function CompanyOnboardingForm({
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [deletePending, setDeletePending] = useState(false);
+  const [careers, setCareers] = useState<{ slug: string; published: boolean } | null>(null);
 
   const router = useRouter();
   const companyId = company?.id ?? null;
@@ -110,7 +114,7 @@ export default function CompanyOnboardingForm({
       const { data: existingValues } = await supabase
         .from("company_info")
         .select(
-          "id, name, description, website, industry, headquarters, company_size, tag_line, logo_url",
+          "id, name, description, website, industry, headquarters, company_size, tag_line, logo_url, careers_slug, careers_published",
         )
         .eq("id", companyId)
         .single();
@@ -127,6 +131,12 @@ export default function CompanyOnboardingForm({
         });
         if (existingValues.logo_url) {
           setExistingLogoUrl(existingValues.logo_url);
+        }
+        if (existingValues.careers_slug) {
+          setCareers({
+            slug: existingValues.careers_slug,
+            published: existingValues.careers_published,
+          });
         }
       }
     })();
@@ -268,8 +278,8 @@ export default function CompanyOnboardingForm({
 
   if (!company) {
     return (
-      <div className="flex flex-col w-full gap-8 p-4 mb-20">
-        <h1 className="text-3xl font-medium">Company Profile</h1>
+      <div className="flex flex-col w-full gap-6 p-4 mb-20">
+        <PageHeader title="Company Profile" />
         <div className="max-w-2xl w-full rounded-lg border p-6">
           <p className="font-semibold">
             Your account isn&apos;t part of a company
@@ -284,27 +294,41 @@ export default function CompanyOnboardingForm({
   }
 
   return (
-    <div className="flex flex-col w-full gap-8 p-4 mb-20">
-      <h1 className="text-3xl font-medium">Company Profile</h1>
-      <div className="flex flex-col gap-5 max-w-2xl w-full">
-        {!canEdit && (
-          <p className="text-sm text-muted-foreground">
-            Your role can&apos;t edit the company profile.
-          </p>
-        )}
+    <div className="flex flex-col w-full gap-6 p-4 mb-20">
+      <PageHeader
+        title="Company Profile"
+        description={
+          careers?.published ? (
+            "How your company appears to candidates."
+          ) : (
+            <Link
+              href="/company/settings/careers"
+              className="font-medium text-foreground underline underline-offset-4 transition-colors hover:text-brand"
+            >
+              Publish your careers page to appear on the companies list
+            </Link>
+          )
+        }
+      />
+      {careers?.published && (
         <Link
-          href={`/companies/${companyId}`}
-          className="text-sm font-medium underline underline-offset-4 flex items-center gap-1 transition-colors hover:text-brand"
+          href={careersPath(careers.slug)}
+          className="text-sm font-medium underline underline-offset-4 flex w-fit items-center gap-1 transition-colors hover:text-brand"
           target="_blank"
           rel="noopener noreferrer"
         >
-          View Public Profile <ExternalLink className="h-4 w-4" />
+          View careers page <ExternalLink className="h-4 w-4" />
         </Link>
-      </div>
+      )}
+      {!canEdit && (
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          Your role can&apos;t edit the company profile.
+        </p>
+      )}
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="w-full max-w-2xl"
+          className="flex w-full max-w-2xl flex-col gap-6"
         >
           <fieldset disabled={!canEdit} className="space-y-6">
             <FormField
@@ -528,7 +552,9 @@ export default function CompanyOnboardingForm({
               />
             </div>
 
-            {canEdit && (
+          </fieldset>
+          {canEdit && (
+            <StickyActionBar>
               <Button
                 type="submit"
                 variant="brand"
@@ -544,8 +570,8 @@ export default function CompanyOnboardingForm({
                   "Complete Onboarding"
                 )}
               </Button>
-            )}
-          </fieldset>
+            </StickyActionBar>
+          )}
         </form>
       </Form>
       {canEdit && (
