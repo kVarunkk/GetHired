@@ -31,6 +31,22 @@ export function jobSuggestions(job: Job) {
   ];
 }
 
+// For the dialog shown once the user says they applied on the company's site:
+// next steps for that application. createInterview, findSimilarJobs and
+// getJobDetails back these.
+export function appliedQuestionPrompt(job: Job, question: string) {
+  return `I just applied to ${jobRef(job)}. ${question.trim()}`;
+}
+
+export function appliedSuggestions(job: Job) {
+  const ref = jobRef(job);
+  return [
+    { label: "Prep for the interview", prompt: `I just applied to ${ref}. Set up a mock interview for it.` },
+    { label: "What to expect next", prompt: `I just applied to ${ref}. What should I prepare for in their hiring process?` },
+    { label: "Similar jobs", prompt: `I just applied to ${ref}. Find similar jobs I should apply to.` },
+  ];
+}
+
 export default function AskAgentAboutJob({ job }: { job: Job }) {
   return (
     <AskAgentBox

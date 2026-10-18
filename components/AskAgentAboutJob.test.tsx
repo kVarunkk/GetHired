@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useRouter } from "next/navigation";
 import { agentPromptHref, takePendingPrompt } from "@/helpers/agent/prompt-draft";
-import AskAgentAboutJob, { jobQuestionPrompt, jobSuggestions } from "./AskAgentAboutJob";
+import AskAgentAboutJob, {
+  appliedQuestionPrompt,
+  appliedSuggestions,
+  jobQuestionPrompt,
+  jobSuggestions,
+} from "./AskAgentAboutJob";
 
 vi.mock("next/navigation", () => ({ useRouter: vi.fn() }));
 
@@ -22,6 +27,13 @@ describe("AskAgentAboutJob", () => {
       "About the Frontend Engineer role at Acme (/jobs/j1): Is it remote?",
     );
     for (const { prompt } of jobSuggestions(JOB)) expect(prompt).toContain("(/jobs/j1)");
+  });
+
+  it("puts the job's link in the after-applying prompts too", () => {
+    expect(appliedQuestionPrompt(JOB, " Why Acme? ")).toBe(
+      "I just applied to the Frontend Engineer role at Acme (/jobs/j1). Why Acme?",
+    );
+    for (const { prompt } of appliedSuggestions(JOB)) expect(prompt).toContain("(/jobs/j1)");
   });
 
   it("leaves out a missing company", () => {
