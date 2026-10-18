@@ -16,6 +16,8 @@ export const RA_NOTES_LISTED = 20;
 export const RA_NOTE_EXCERPT_MAX_CHARS = 1000;
 /** Talent lists addToTalentList may create up to. */
 export const RA_MAX_TALENT_LISTS = 20;
+/** Email template bodies listEmailTemplates returns are trimmed to this length, unless one template is asked for. */
+export const RA_TEMPLATE_EXCERPT_MAX_CHARS = 300;
 /** Jobs listed in the company-wide funnel. */
 export const RA_FUNNEL_MAX_JOBS = 15;
 /** Candidates one comparison can cover. */

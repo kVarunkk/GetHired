@@ -1,12 +1,14 @@
 import type { Tool } from "ai";
 import { createApplicantTools } from "./applicants";
 import { createCandidateTools } from "./candidates";
+import { createCareersTools } from "./careers";
 import { createCompanyTools } from "./company";
 import { createJobTools } from "./jobs";
 import { createMatchingTools } from "./matching";
 import { createRecruiterMemoryTools } from "./memory";
 import { createOutreachTools } from "./outreach";
 import { createPipelineTools } from "./pipeline";
+import { createQuestionSetTools } from "./question-sets";
 import {
   checkToolPermission,
   RECRUITER_TOOL_PERMISSIONS,
@@ -15,6 +17,7 @@ import {
   type ToolPermission,
 } from "./permissions";
 import { createRoleTools } from "./roles";
+import { createTemplateTools } from "./templates";
 import { withToolErrors, type RecruiterToolContext } from "./shared";
 
 export type { RecruiterToolContext } from "./shared";
@@ -24,12 +27,15 @@ export function createAllRecruiterTools(ctx: RecruiterToolContext) {
   return {
     ...createCompanyTools(ctx),
     ...createJobTools(ctx),
+    ...createQuestionSetTools(ctx),
     ...createCandidateTools(ctx),
     ...createApplicantTools(ctx),
     ...createMatchingTools(ctx),
     ...createPipelineTools(ctx),
+    ...createTemplateTools(ctx),
     ...createOutreachTools(ctx),
     ...createRoleTools(ctx),
+    ...createCareersTools(ctx),
     ...createRecruiterMemoryTools(ctx),
   };
 }

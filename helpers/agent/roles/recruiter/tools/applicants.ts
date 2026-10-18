@@ -1,4 +1,5 @@
 import { tool } from "ai";
+import { answersView } from "@/helpers/applications/answers-view";
 import { z } from "zod";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { scrubPII } from "@/helpers/ai/fairness";
@@ -104,7 +105,7 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
           const { data: application, error } = await supabase
             .from("applications")
             .select(
-              `id, status, created_at, answers, resume_id, applicant_user_id, job_postings!inner(id, title, company_id, questions), pipeline_stages(id, name), user_info(${AGENT_CANDIDATE_COLUMNS})`,
+              `id, status, created_at, answers, answers_v2, form_snapshot, resume_id, applicant_user_id, job_postings!inner(id, title, company_id, questions), pipeline_stages(id, name), user_info(${AGENT_CANDIDATE_COLUMNS})`,
             )
             .eq("id", applicationId)
             .eq("job_postings.company_id", company.id)
@@ -127,15 +128,13 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
               .maybeSingle(),
           ]);
 
-          const questions = application.job_postings.questions ?? [];
-          const answers = questions.length
+          // AF-REQ-009: typed answers with the labels the candidate saw.
+          const answerViews = answersView(application, application.job_postings.questions);
+          const answers = answerViews.length
             ? wrapInSandbox(
                 "application_answers",
-                questions
-                  .map((question, i) => {
-                    const answer = application.answers?.[i]?.trim();
-                    return `Q${i + 1}: ${question}\nA${i + 1}: ${answer ? scrubPII(answer) : "[no answer]"}`;
-                  })
+                answerViews
+                  .map(({ label, text }, i) => `Q${i + 1}: ${label}\nA${i + 1}: ${text ? scrubPII(text) : "[no answer]"}`)
                   .join("\n\n"),
               )
             : null;

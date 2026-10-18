@@ -8,6 +8,7 @@ import { EntitlementError, toEntitlementActionError, type EntitlementActionError
 import { sendEmail } from "@/utils/email";
 import { deploymentUrl } from "@/utils/formatters";
 import type { Database } from "@/utils/types/database.types";
+import type { ActorKind } from "@/helpers/companies/role-rpc";
 import { asTeamRpcResult, teamErrorMessage } from "./errors";
 
 export type CreatedInvite = { id: string; email: string; role: { id: string; name: string } };
@@ -31,11 +32,13 @@ export const inviterName = (user: User, company: MyCompany) =>
  * comes back from `create_company_invite` once, goes into exactly one email,
  * and is never returned, logged or tracked. The caller has already checked
  * team.invite; the RPC checks it again, and the role's ceiling (RP-REQ-012).
- * No `roleId` means the company's default role.
+ * No `roleId` means the company's default role. `actorKind` "agent" marks the
+ * audit entry as the recruiter agent's.
  */
 export async function createAndSendInvite(
   { supabase, user, company }: Deps,
   { email, roleId }: { email: string; roleId?: string | null },
+  actorKind: ActorKind = "user",
 ): Promise<CreateInviteResult> {
   // BLT-103: seats are members plus open invites. The RPC checks again in its
   // transaction; this gives the plan's upgrade message first.
@@ -49,6 +52,7 @@ export async function createAndSendInvite(
   const { data, error } = await supabase.rpc("create_company_invite", {
     p_email: email,
     ...(roleId ? { p_role_id: roleId } : {}),
+    ...(actorKind === "agent" ? { p_actor_kind: actorKind } : {}),
   });
   if (error) return { ok: false, error: teamErrorMessage("unknown") };
   const result = asTeamRpcResult(data);

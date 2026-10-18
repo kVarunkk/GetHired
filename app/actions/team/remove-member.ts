@@ -1,10 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { companyAllows, requireCompanyForAction } from "@/helpers/companies/require-company";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
-import { asTeamRpcResult, teamErrorMessage } from "@/helpers/team/errors";
+import { teamErrorMessage } from "@/helpers/team/errors";
+import { removeMember } from "@/helpers/team/remove-member";
 import { PostHogEvent } from "@/utils/types";
 
 const inputSchema = z.object({ userId: z.string().uuid() }).strict();
@@ -32,12 +32,9 @@ export async function removeMemberAction(
     if (denied) return { ok: false, error: denied };
   }
 
-  const { data, error } = await auth.supabase.rpc("remove_company_member", { p_user_id: parsed.data.userId });
-  if (error) return { ok: false, error: teamErrorMessage("unknown") };
-  const result = asTeamRpcResult(data);
-  if (!result.ok) return { ok: false, error: teamErrorMessage(result.reason) };
+  const result = await removeMember(auth.supabase, parsed.data.userId);
+  if (!result.ok) return result;
 
-  revalidatePath("/company/settings/team");
   await eventCaptureServer({
     event: PostHogEvent.TeamMemberRemoved,
     distinctId: auth.user.id,

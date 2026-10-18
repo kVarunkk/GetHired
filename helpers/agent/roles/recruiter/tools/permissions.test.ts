@@ -26,12 +26,14 @@ vi.mock("@/helpers/pipeline/move", async (importOriginal) => ({
 vi.mock("@/helpers/pipeline/notes", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/helpers/pipeline/notes")>()),
   addNote: vi.fn(),
+  updateNote: vi.fn(),
+  deleteNote: vi.fn(),
 }));
 
 import { queueJobScreenings } from "@/helpers/matching/queue-screenings";
 import { sendOutreach } from "@/helpers/outreach/send";
 import { moveApplications } from "@/helpers/pipeline/move";
-import { addNote } from "@/helpers/pipeline/notes";
+import { addNote, deleteNote, updateNote } from "@/helpers/pipeline/notes";
 
 const A1_APP = "e0000000-0000-4000-8000-0000000000a1";
 const A2_APP = "e0000000-0000-4000-8000-0000000000a2";
@@ -158,6 +160,56 @@ describe("per-call checks (RP-REQ-031, RPT-081)", () => {
 
     expect(await execTool(tools.screenApplicants, { jobPostId: JOB_A1 })).toMatchObject({ queued: 2 });
     expect(queueJobScreenings).toHaveBeenCalledWith(expect.anything(), JOB_A1);
+  });
+
+  it("scopes note edits by the note's application, and a candidate note needs scope all", async () => {
+    const tools = toolsFor(HIRING_MANAGER_A);
+    const NOTE = "70e00000-0000-4000-8000-0000000000aa";
+
+    db.queue("candidate_notes", { data: { application_id: A2_APP }, error: null });
+    jobOfApplications();
+    expect(await execTool(tools.updateNote, { noteId: NOTE, body: "Edited" })).toEqual({
+      error: "Your role can't write notes for this job.",
+    });
+    db.queue("candidate_notes", { data: { application_id: null }, error: null });
+    expect(await execTool(tools.deleteNote, { noteId: NOTE })).toEqual({
+      error: "Your role can't write notes.",
+    });
+    db.queue("candidate_notes", { data: null, error: null });
+    expect(await execTool(tools.deleteNote, { noteId: NOTE })).toEqual({ error: "Note not found." });
+    expect(updateNote).not.toHaveBeenCalled();
+    expect(deleteNote).not.toHaveBeenCalled();
+
+    db.queue("candidate_notes", { data: { application_id: A1_APP }, error: null });
+    jobOfApplications();
+    vi.mocked(deleteNote).mockResolvedValue({ ok: true });
+    expect(await execTool(tools.deleteNote, { noteId: NOTE })).toEqual({ noteId: NOTE, deleted: true });
+  });
+
+  it("leaves the stage tools out without settings.stages", () => {
+    const stageTools = ["createStage", "renameStage", "reorderStages", "archiveStage"];
+    const names = Object.keys(toolsFor(memberWith(["applicants.view"])));
+    expect(names).toContain("listStages");
+    for (const name of stageTools) expect(names, name).not.toContain(name);
+    expect(Object.keys(toolsFor(memberWith(["settings.stages"])))).toEqual(expect.arrayContaining(stageTools));
+  });
+
+  it("leaves the email template tools out without settings.templates", () => {
+    const templateTools = ["listEmailTemplates", "createEmailTemplate", "updateEmailTemplate", "deleteEmailTemplate"];
+    const names = Object.keys(toolsFor(memberWith(["applicants.view", "settings.stages"])));
+    for (const name of templateTools) expect(names, name).not.toContain(name);
+    expect(Object.keys(toolsFor(memberWith(["settings.templates"])))).toEqual(expect.arrayContaining(templateTools));
+  });
+
+  it("leaves the talent list writes out without talent_lists.manage", () => {
+    const names = Object.keys(toolsFor(memberWith(["talent.view"])));
+    expect(names).toContain("listTalentLists");
+    for (const name of ["renameTalentList", "removeFromTalentList", "deleteTalentList"]) {
+      expect(names, name).not.toContain(name);
+    }
+    expect(Object.keys(toolsFor(memberWith(["talent.view", "talent_lists.manage"])))).toEqual(
+      expect.arrayContaining(["renameTalentList", "removeFromTalentList", "deleteTalentList"]),
+    );
   });
 
   it("calls an unknown application not found", async () => {

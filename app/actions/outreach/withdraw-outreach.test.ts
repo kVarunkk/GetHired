@@ -5,6 +5,7 @@ import { OWNER_A } from "@/test/utils/team";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import { outreachOf } from "@/test/utils/outreach";
 import { withdrawOutreachAction } from "./withdraw-outreach";
+import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -35,6 +36,9 @@ describe("withdrawOutreachAction (ORT-024)", () => {
     expect(chain).toContainEqual({ method: "eq", args: ["id", SENT.id] });
     expect(chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
     expect(chain).toContainEqual({ method: "eq", args: ["status", "sent"] });
+    expect(eventCaptureServer).toHaveBeenCalledWith(
+      expect.objectContaining({ distinctId: COMPANY_A.user.id, properties: { source: "manual" } }),
+    );
   });
 
   it("returns { ok: false } when nothing was updated (another company's id, or answered)", async () => {

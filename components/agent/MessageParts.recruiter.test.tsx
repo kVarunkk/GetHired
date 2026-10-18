@@ -5,10 +5,12 @@ import type { UIMessage } from "ai";
 import MessageParts from "./MessageParts";
 import { previewAgentMoveAction } from "@/app/actions/pipeline/preview-agent-move";
 import { previewAgentOutreachAction } from "@/app/actions/outreach/preview-agent-outreach";
+import { previewAgentJobDeleteAction } from "@/app/actions/jobs/preview-agent-job-delete";
 
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
 vi.mock("@/app/actions/pipeline/preview-agent-move", () => ({ previewAgentMoveAction: vi.fn() }));
 vi.mock("@/app/actions/outreach/preview-agent-outreach", () => ({ previewAgentOutreachAction: vi.fn() }));
+vi.mock("@/app/actions/jobs/preview-agent-job-delete", () => ({ previewAgentJobDeleteAction: vi.fn() }));
 
 const assistant = (parts: unknown[]): UIMessage =>
   ({ id: "a1", role: "assistant", parts }) as UIMessage;
@@ -379,5 +381,70 @@ describe("MessageParts: recruiter approvals (RA-REQ-005)", () => {
     renderParts(assistant([approval("setJobPostStatus", { jobPostId: "b1", status: "active" })]));
 
     expect(screen.getByText("Publish this job post?")).toBeInTheDocument();
+  });
+
+  it("names the job and its applications before deleting it", async () => {
+    vi.mocked(previewAgentJobDeleteAction).mockResolvedValue({
+      ok: true,
+      title: "Backend Engineer",
+      status: "active",
+      applications: 4,
+    });
+    renderParts(assistant([approval("deleteJobPost", { jobPostId: "b0000000-0000-4000-8000-000000000001" })]));
+
+    expect(screen.getByText("Delete this job post?")).toBeInTheDocument();
+    expect(await screen.findByText("Backend Engineer")).toBeInTheDocument();
+    expect(screen.getByText("Published")).toBeInTheDocument();
+    expect(screen.getByText(/The 4 applications and their notes are deleted too/)).toBeInTheDocument();
+    // The id isn't shown as a field.
+    expect(screen.queryByText("b0000000-0000-4000-8000-000000000001")).not.toBeInTheDocument();
+  });
+
+  it("warns before a delete that would be refused", async () => {
+    vi.mocked(previewAgentJobDeleteAction).mockResolvedValue({ ok: false, error: "Your role can't delete job posts." });
+    renderParts(assistant([approval("deleteJobPost", { jobPostId: "b1" })]));
+
+    expect(await screen.findByText(/won.t go through: Your role can.t delete job posts/)).toBeInTheDocument();
+  });
+
+  it("confirms a deleted job post by title", () => {
+    renderParts(assistant([output("deleteJobPost", { id: "b1", title: "Backend Engineer", deleted: true })]));
+
+    expect(screen.getByText("Deleted “Backend Engineer”.")).toBeInTheDocument();
+  });
+
+  it("asks before withdrawing an outreach message, without showing its id", () => {
+    renderParts(assistant([approval("withdrawOutreach", { outreachId: "f0000000-0000-4000-8000-000000000009" })]));
+
+    expect(screen.getByText(/^Withdraw this message\? The candidate won.t be able to answer it/)).toBeInTheDocument();
+    expect(screen.queryByText("f0000000-0000-4000-8000-000000000009")).not.toBeInTheDocument();
+  });
+
+  it("asks before deleting a note, without showing its id", () => {
+    renderParts(assistant([approval("deleteNote", { noteId: "70e00000-0000-4000-8000-0000000000aa" })]));
+
+    expect(screen.getByText("Delete this note? This can't be undone.")).toBeInTheDocument();
+    expect(screen.queryByText("70e00000-0000-4000-8000-0000000000aa")).not.toBeInTheDocument();
+  });
+
+  it("asks before archiving a stage, without showing its id", () => {
+    renderParts(assistant([approval("archiveStage", { stageId: "f0000000-0000-4000-8000-0000000000a3" })]));
+
+    expect(screen.getByText("Archive this stage? It leaves your pipeline and can't be brought back.")).toBeInTheDocument();
+    expect(screen.queryByText("f0000000-0000-4000-8000-0000000000a3")).not.toBeInTheDocument();
+  });
+
+  it("asks before deleting an email template, without showing its id", () => {
+    renderParts(assistant([approval("deleteEmailTemplate", { templateId: "d0000000-0000-4000-8000-000000000001" })]));
+
+    expect(screen.getByText("Delete this email template? This can't be undone.")).toBeInTheDocument();
+    expect(screen.queryByText("d0000000-0000-4000-8000-000000000001")).not.toBeInTheDocument();
+  });
+
+  it("asks before deleting a talent list, without showing its id", () => {
+    renderParts(assistant([approval("deleteTalentList", { listId: "f0000000-0000-4000-8000-000000000001" })]));
+
+    expect(screen.getByText(/^Delete this talent list\? Its candidates stay in the talent pool/)).toBeInTheDocument();
+    expect(screen.queryByText("f0000000-0000-4000-8000-000000000001")).not.toBeInTheDocument();
   });
 });

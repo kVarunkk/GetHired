@@ -13,17 +13,43 @@ export const recruiterToolApproval = createToolApproval({
     "createJobPost",
     "updateJobPost",
     "setJobPostStatus",
+    // Deleting takes the job's applications with it.
+    "deleteJobPost",
+    "applyQuestionSet",
+    "saveQuestionSet",
+    "deleteQuestionSet",
     "runMatchingForJob",
     "screenApplicants",
     "moveApplications",
     "sendOutreach",
+    // The candidate can no longer answer, and it can't be undone.
+    "withdrawOutreach",
+    // Archived stages leave the board and the app has no way to bring them back.
+    "archiveStage",
+    // A template can't be brought back.
+    "deleteEmailTemplate",
+    // A note can't be brought back.
+    "deleteNote",
+    // A list can't be brought back (its candidates stay in the pool).
+    "deleteTalentList",
     // RP-REQ-032: every role and hiring-team change asks; the card shows the diff.
     "createRole",
     "updateRole",
     "deleteRole",
     "assignRole",
+    "setDefaultRole",
     "assignToJob",
     "unassignFromJob",
+    // Invites email someone outside the company; revoking breaks a link they may be using.
+    "inviteTeamMember",
+    "resendInvite",
+    "revokeInvite",
+    // The member loses access at once, and only a new invite brings them back.
+    "removeTeamMember",
+    // The careers page is public.
+    "updateCareersPage",
+    "setCareersAddress",
+    "setCareersPublished",
   ],
   untrustedContentTools: [
     "getCandidateProfile",
@@ -40,7 +66,7 @@ export const recruiterToolApproval = createToolApproval({
     "listOutreach",
     "getOutreach",
   ],
-  gatedWriteTools: ["saveMemory", "deleteMemory", "addNote"],
+  gatedWriteTools: ["saveMemory", "deleteMemory", "addNote", "updateNote"],
   untrustedReason:
     "The assistant read candidate profiles or applications in this reply, so memory and note changes need your OK.",
   creditTools: ["screenApplicants", "runMatchingForJob", "explainMatch"],

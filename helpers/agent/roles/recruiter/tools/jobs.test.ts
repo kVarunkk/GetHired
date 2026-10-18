@@ -4,6 +4,7 @@ import { createJobTools } from "./jobs";
 import { getEntitlements } from "@/helpers/billing/entitlements";
 import { upsertJobPosting } from "@/helpers/jobs/upsert-job-posting";
 import { setJobPostStatus } from "@/helpers/jobs/set-job-post-status";
+import { deleteJobPost } from "@/helpers/jobs/delete-job-post";
 import { execTool, inputJsonSchema, recruiterToolContext, validateInput } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, jobPostingOf } from "@/test/utils/recruiter";
@@ -17,6 +18,7 @@ vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
 vi.mock("@/helpers/billing/entitlements", () => ({ getEntitlements: vi.fn() }));
 vi.mock("@/helpers/jobs/upsert-job-posting", () => ({ upsertJobPosting: vi.fn() }));
 vi.mock("@/helpers/jobs/set-job-post-status", () => ({ setJobPostStatus: vi.fn() }));
+vi.mock("@/helpers/jobs/delete-job-post", () => ({ deleteJobPost: vi.fn() }));
 
 const JOB = jobPostingOf(COMPANY_A, {
   title: "Senior Backend Engineer",
@@ -157,11 +159,23 @@ describe("listMyJobs tool", () => {
 });
 
 describe("getJobPost tool", () => {
-  it("returns the company's job with a sandboxed, trimmed description and counts", async () => {
+  it("returns the company's job with a sandboxed, trimmed description, its form and counts", async () => {
+    const qid = "00000000-0000-4000-8000-000000000007";
+    const rule = { fail_if: { kind: "equals", value: false }, action: "flag" };
     supabase.queue("job_postings", {
-      data: { ...JOB, description: "x".repeat(RA_JOB_DESCRIPTION_MAX_CHARS + 100) },
+      data: {
+        ...JOB,
+        description: "x".repeat(RA_JOB_DESCRIPTION_MAX_CHARS + 100),
+        department: "Engineering",
+        application_form: {
+          version: 1,
+          questions: [{ id: qid, type: "yes_no", label: "Can you relocate?", required: true }],
+          standard_fields: {},
+        },
+      },
       error: null,
     });
+    supabase.queue("job_posting_form_rules", { data: { rules: { questions: { [qid]: rule }, standard: {} } }, error: null });
     supabase.queue("applications", {
       data: [{ status: "submitted" }, { status: "submitted" }, { status: "reviewed" }],
       error: null,
@@ -177,7 +191,10 @@ describe("getJobPost tool", () => {
     expect(result.description).toMatch(/^<job_description>\n/);
     expect(String(result.description).length).toBeLessThan(RA_JOB_DESCRIPTION_MAX_CHARS + 60);
     expect(result.applicantsByStatus).toEqual({ submitted: 2, reviewed: 1 });
-    expect(result.questions).toEqual(["Why us?"]);
+    expect(result.department).toBe("Engineering");
+    expect(result.applicationForm).toMatchObject({
+      questions: [{ id: qid, label: "Can you relocate?", knockout: rule }],
+    });
     expect(result.url).toBe(`/company/job-posts/${JOB.id}`);
   });
 
@@ -281,6 +298,73 @@ describe("updateJobPost tool", () => {
     });
   });
 
+  it("keeps the typed form and its knockout rules when other fields change (CPT-023)", async () => {
+    const qid = "00000000-0000-4000-8000-000000000007";
+    const form = {
+      version: 1,
+      questions: [{ id: qid, type: "yes_no", label: "Can you relocate?", required: true }],
+      standard_fields: { phone: "optional" },
+    };
+    const rule = { fail_if: { kind: "equals", value: false }, action: "flag" };
+    supabase.queue("job_postings", { data: { ...JOB, application_form: form }, error: null });
+    supabase.queue("job_posting_form_rules", { data: { rules: { questions: { [qid]: rule }, standard: {} } }, error: null });
+    vi.mocked(upsertJobPosting).mockResolvedValue({ success: true, isUpdate: true, postingId: JOB.id });
+
+    await execTool(tools.updateJobPost, { jobPostId: JOB.id, title: "Staff Backend Engineer" });
+
+    const [, params] = vi.mocked(upsertJobPosting).mock.calls[0];
+    expect(params.values.application_form).toEqual({
+      ...form,
+      questions: [{ ...form.questions[0], knockout: rule }],
+      standard_knockouts: undefined,
+    });
+  });
+
+  it("replaces the form when the agent drafts one", async () => {
+    supabase.queue("job_postings", { data: JOB, error: null });
+    vi.mocked(upsertJobPosting).mockResolvedValue({ success: true, isUpdate: true, postingId: JOB.id });
+    const applicationForm = {
+      version: 1,
+      questions: [{ id: "00000000-0000-4000-8000-000000000008", type: "short_text", label: "GitHub handle?", required: false }],
+      standard_fields: {},
+    };
+
+    await execTool(tools.updateJobPost, { jobPostId: JOB.id, applicationForm });
+
+    const [, params] = vi.mocked(upsertJobPosting).mock.calls[0];
+    expect(params.values.application_form).toEqual(applicationForm);
+  });
+
+  it("keeps answered questions, archived, when the agent's form drops them (AF-REQ-005)", async () => {
+    const answered = { id: "00000000-0000-4000-8000-000000000007", type: "yes_no", label: "Can you relocate?", required: true };
+    const unanswered = { id: "00000000-0000-4000-8000-000000000009", type: "short_text", label: "Pronouns?", required: false };
+    supabase.queue("job_postings", {
+      data: { ...JOB, application_form: { version: 1, questions: [answered, unanswered], standard_fields: {} } },
+      error: null,
+    });
+    supabase.queue("applications", { data: [{ answers: [], answers_v2: { [answered.id]: true } }], error: null });
+    vi.mocked(upsertJobPosting).mockResolvedValue({ success: true, isUpdate: true, postingId: JOB.id });
+    const fresh = { id: "00000000-0000-4000-8000-000000000008", type: "short_text", label: "GitHub handle?", required: false };
+
+    await execTool(tools.updateJobPost, {
+      jobPostId: JOB.id,
+      applicationForm: { version: 1, questions: [fresh], standard_fields: {} },
+    });
+
+    const [, params] = vi.mocked(upsertJobPosting).mock.calls[0];
+    expect(params.values.application_form?.questions).toEqual([fresh, { ...answered, archived: true }]);
+  });
+
+  it("keeps the department and workplace type when other fields change", async () => {
+    supabase.queue("job_postings", { data: { ...JOB, department: "Engineering", workplace_type: "hybrid" }, error: null });
+    vi.mocked(upsertJobPosting).mockResolvedValue({ success: true, isUpdate: true, postingId: JOB.id });
+
+    await execTool(tools.updateJobPost, { jobPostId: JOB.id, title: "Staff Backend Engineer" });
+
+    const [, params] = vi.mocked(upsertJobPosting).mock.calls[0];
+    expect(params.values).toMatchObject({ department: "Engineering", workplace_type: "hybrid" });
+  });
+
   it("treats another company's posting as not found", async () => {
     supabase.queue("job_postings", { data: null, error: null });
 
@@ -318,11 +402,40 @@ describe("setJobPostStatus tool", () => {
   });
 });
 
+describe("deleteJobPost tool", () => {
+  it("deletes through the shared helper, within the session company", async () => {
+    vi.mocked(deleteJobPost).mockResolvedValue({ ok: true, title: JOB.title });
+
+    expect(await execTool(tools.deleteJobPost, { jobPostId: JOB.id })).toEqual({
+      id: JOB.id,
+      title: JOB.title,
+      deleted: true,
+    });
+    const [deps, params] = vi.mocked(deleteJobPost).mock.calls[0];
+    expect(deps.company.id).toBe(COMPANY_A.id);
+    expect(params).toEqual({ jobPostingId: JOB.id });
+  });
+
+  it("passes on the helper's error", async () => {
+    vi.mocked(deleteJobPost).mockResolvedValue({ ok: false, error: "Job posting not found." });
+
+    expect(await execTool(tools.deleteJobPost, { jobPostId: OTHER_ID })).toEqual({
+      error: "Job posting not found.",
+    });
+  });
+
+  it("only takes a job post id", async () => {
+    expect((await validateInput(tools.deleteJobPost, { jobPostId: "nope" })).success).toBe(false);
+    expect(Object.keys((await inputJsonSchema(tools.deleteJobPost)).properties ?? {})).toEqual(["jobPostId"]);
+  });
+});
+
 describe("job write tools for a member (TM-REQ-004, teams difference 15)", () => {
   // RP-REQ-031: the catalog's message for each missing permission.
   const NO_CREATE = { error: "Your role can't create job posts." };
   const NO_EDIT = { error: "Your role can't edit job posts." };
   const NO_PUBLISH = { error: "Your role can't open, pause or close job posts." };
+  const NO_DELETE = { error: "Your role can't delete job posts." };
 
   beforeEach(() => {
     const ctx = recruiterToolContext(supabase.client, { user: MEMBER_A.user, company: MEMBER_A.myCompany });
@@ -333,10 +446,12 @@ describe("job write tools for a member (TM-REQ-004, teams difference 15)", () =>
     expect(await execTool(tools.createJobPost, DRAFT)).toEqual(NO_CREATE);
     expect(await execTool(tools.updateJobPost, { jobPostId: JOB.id, title: "Staff Engineer" })).toEqual(NO_EDIT);
     expect(await execTool(tools.setJobPostStatus, { jobPostId: JOB.id, status: "inactive" })).toEqual(NO_PUBLISH);
+    expect(await execTool(tools.deleteJobPost, { jobPostId: JOB.id })).toEqual(NO_DELETE);
 
     expect(supabase.calls).toHaveLength(0);
     expect(upsertJobPosting).not.toHaveBeenCalled();
     expect(setJobPostStatus).not.toHaveBeenCalled();
+    expect(deleteJobPost).not.toHaveBeenCalled();
   });
 
   it("still lists and reads the company's jobs", async () => {

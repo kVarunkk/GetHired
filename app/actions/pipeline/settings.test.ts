@@ -123,7 +123,7 @@ describe("saveTemplateAction (PLT-064)", () => {
     expect(eventCaptureServer).toHaveBeenCalledWith({
       event: PostHogEvent.PipelineTemplateSaved,
       distinctId: COMPANY_A.user.id,
-      properties: { purpose: "rejection" },
+      properties: { purpose: "rejection", source: "manual" },
     });
   });
 
@@ -180,7 +180,7 @@ describe("createTemplateAction", () => {
     expect(eventCaptureServer).toHaveBeenCalledWith({
       event: PostHogEvent.PipelineTemplateSaved,
       distinctId: COMPANY_A.user.id,
-      properties: { purpose: "rejection", created: true },
+      properties: { purpose: "rejection", created: true, source: "manual" },
     });
   });
 

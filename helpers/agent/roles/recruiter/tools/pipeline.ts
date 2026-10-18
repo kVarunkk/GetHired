@@ -3,11 +3,26 @@ import { z } from "zod";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { getCompanyFunnel, getJobFunnel, NEEDS_ATTENTION_DAYS } from "@/helpers/pipeline/funnel";
 import { moveApplications, type MoveEmail } from "@/helpers/pipeline/move";
-import { addNote, listNotes, ratingSummary } from "@/helpers/pipeline/notes";
+import { addNote, deleteNote, listNotes, ratingSummary, updateNote } from "@/helpers/pipeline/notes";
 import { mentionsToText } from "@/helpers/team/mentions";
-import { listStages } from "@/helpers/pipeline/stages";
+import {
+  archiveStage,
+  createStage,
+  listStages,
+  MAX_ACTIVE_STAGES,
+  MAX_STAGE_NAME,
+  renameStage,
+  reorderStages,
+} from "@/helpers/pipeline/stages";
 import { statusForKind } from "@/helpers/pipeline/status-map";
-import { addToTalentList, createTalentList, listTalentLists } from "@/helpers/pipeline/talent-lists";
+import {
+  addToTalentList,
+  createTalentList,
+  deleteTalentList,
+  listTalentLists,
+  removeFromTalentList,
+  renameTalentList,
+} from "@/helpers/pipeline/talent-lists";
 import { MAX_TEMPLATE_BODY, MAX_TEMPLATE_SUBJECT } from "@/helpers/pipeline/templates";
 import { Constants } from "@/utils/types/database.types";
 import { slugifyListName, talentListPath } from "@/utils/talent-list-tabs";
@@ -60,7 +75,7 @@ export function toMoveEmail(email: z.infer<typeof moveApplicationsInput>["email"
 
 /** The pipeline tools (RA-TASK-040), on top of `helpers/pipeline/*` (RA-CON-003). */
 export function createPipelineTools(ctx: RecruiterToolContext) {
-  const { supabase, company } = ctx;
+  const { supabase, company, user } = ctx;
 
   return {
     listStages: tool({
@@ -92,6 +107,63 @@ export function createPipelineTools(ctx: RecruiterToolContext) {
               isDefault: t.is_default,
             })),
           };
+        }),
+    }),
+
+    createStage: tool({
+      description: `Add a pipeline stage after the existing ones (up to ${MAX_ACTIVE_STAGES} active stages). Its kind sets what candidates in it see (listStages' candidateSees); use reorderStages to move it into place.`,
+      inputSchema: z.object({
+        name: z.string().trim().min(1).max(MAX_STAGE_NAME),
+        kind: z.enum(Constants.public.Enums.pipeline_stage_kind),
+      }),
+      execute: ({ name, kind }) =>
+        withToolErrors(ctx, "createStage", async () => {
+          const result = await createStage(ctx, { name, kind });
+          if (!result.ok) return { error: result.error };
+          const { stage } = result;
+          return { stage: { id: stage.id, name: stage.name, kind: stage.kind, candidateSees: statusForKind(stage.kind) } };
+        }),
+    }),
+
+    renameStage: tool({
+      description: "Rename one of the company's pipeline stages (ids from listStages). Its kind, and what candidates see, stay the same.",
+      inputSchema: z.object({
+        stageId: uuidInput("stage"),
+        name: z.string().trim().min(1).max(MAX_STAGE_NAME),
+      }),
+      execute: ({ stageId, name }) =>
+        withToolErrors(ctx, "renameStage", async () => {
+          const result = await renameStage(ctx, { stageId, name });
+          if (!result.ok) return { error: result.error };
+          return { stage: { id: stageId, name }, renamed: true };
+        }),
+    }),
+
+    reorderStages: tool({
+      description:
+        "Put the company's pipeline stages in a new order. stageIds must list every active stage from listStages exactly once, in the new order.",
+      inputSchema: z.object({
+        stageIds: z.array(uuidInput("stage")).min(1).max(MAX_ACTIVE_STAGES),
+      }),
+      execute: ({ stageIds }) =>
+        withToolErrors(ctx, "reorderStages", async () => {
+          const result = await reorderStages(ctx, stageIds);
+          if (!result.ok) return { error: result.error };
+          return { stageIds, reordered: true };
+        }),
+    }),
+
+    archiveStage: tool({
+      description:
+        "Archive an empty pipeline stage (ids from listStages), only when the user asks. Stages that still hold applications can't be archived until they're moved out, and the Applied, Hired and Rejected stages can't be archived at all.",
+      inputSchema: z.object({ stageId: uuidInput("stage") }),
+      execute: ({ stageId }) =>
+        withToolErrors(ctx, "archiveStage", async () => {
+          const result = await archiveStage(ctx, { stageId });
+          if (!result.ok) {
+            return { error: result.error, ...("count" in result ? { applications: result.count } : {}) };
+          }
+          return { stageId, archived: true };
         }),
     }),
 
@@ -164,12 +236,42 @@ export function createPipelineTools(ctx: RecruiterToolContext) {
             notes: notes.slice(0, RA_NOTES_LISTED).map((note) => ({
               id: note.id,
               author: note.author_name,
+              // Only the user's own notes can be edited or deleted.
+              mine: note.author_user_id === user.id,
               rating: note.rating,
               createdAt: note.created_at,
               // Team-written, but notes may quote candidates (RA-SEC-003).
               body: wrapInSandbox("candidate_note", mentionsToText(note.body).slice(0, RA_NOTE_EXCERPT_MAX_CHARS)),
             })),
           };
+        }),
+    }),
+
+    updateNote: tool({
+      description:
+        "Edit one of the user's own notes (mine: true in listNotes): replace its text and, optionally, its rating (null clears it; left out, it stays). Teammates' notes can't be edited. Job-related observations only, never protected characteristics.",
+      inputSchema: z.object({
+        noteId: uuidInput("note"),
+        body: z.string().trim().min(1).max(RA_MAX_NOTE_CHARS),
+        rating: z.enum(Constants.public.Enums.candidate_rating).nullable().optional(),
+      }),
+      execute: ({ noteId, body, rating }) =>
+        withToolErrors(ctx, "updateNote", async () => {
+          const result = await updateNote(ctx, noteId, { body, rating });
+          if (!result.ok) return { error: result.error };
+          return { noteId, updated: true };
+        }),
+    }),
+
+    deleteNote: tool({
+      description:
+        "Delete one of the user's own notes (mine: true in listNotes), only when the user asks. Teammates' notes can't be deleted.",
+      inputSchema: z.object({ noteId: uuidInput("note") }),
+      execute: ({ noteId }) =>
+        withToolErrors(ctx, "deleteNote", async () => {
+          const result = await deleteNote(ctx, noteId);
+          if (!result.ok) return { error: result.error };
+          return { noteId, deleted: true };
         }),
     }),
 
@@ -210,6 +312,66 @@ export function createPipelineTools(ctx: RecruiterToolContext) {
             added: !alreadyIn,
             url: talentListPath(list.slug),
           };
+        }),
+    }),
+
+    listTalentLists: tool({
+      description:
+        "List the company's named talent lists, oldest first, with how many candidates each shows and its tab on the profiles page. With candidateId, each list also says whether that candidate is on it.",
+      inputSchema: z.object({ candidateId: uuidInput("candidate").optional() }),
+      execute: ({ candidateId }) =>
+        withToolErrors(ctx, "listTalentLists", async () => {
+          const lists = await listTalentLists(ctx, { candidateUserId: candidateId });
+          return {
+            lists: lists.map((list) => ({
+              id: list.id,
+              name: list.name,
+              memberCount: list.memberCount,
+              ...(candidateId ? { hasCandidate: list.hasCandidate } : {}),
+              url: talentListPath(list.slug),
+            })),
+          };
+        }),
+    }),
+
+    renameTalentList: tool({
+      description: "Rename one of the company's talent lists (ids from listTalentLists). The list's tab address changes with its name.",
+      inputSchema: z.object({
+        listId: uuidInput("talent list"),
+        name: z.string().trim().min(1).max(60),
+      }),
+      execute: ({ listId, name }) =>
+        withToolErrors(ctx, "renameTalentList", async () => {
+          const result = await renameTalentList(ctx, listId, name);
+          if (!result.ok) return { error: result.error };
+          return { list: { id: listId, name }, renamed: true, url: talentListPath(slugifyListName(name)) };
+        }),
+    }),
+
+    removeFromTalentList: tool({
+      description:
+        "Take a candidate off one of the company's talent lists (ids from listTalentLists). They stay in the talent pool and on the company's other lists.",
+      inputSchema: z.object({
+        listId: uuidInput("talent list"),
+        candidateId: uuidInput("candidate"),
+      }),
+      execute: ({ listId, candidateId }) =>
+        withToolErrors(ctx, "removeFromTalentList", async () => {
+          const result = await removeFromTalentList(ctx, listId, candidateId);
+          if (!result.ok) return { error: result.error };
+          return { listId, candidateId, removed: true };
+        }),
+    }),
+
+    deleteTalentList: tool({
+      description:
+        "Delete one of the company's talent lists (ids from listTalentLists), only when the user asks. Its candidates stay in the talent pool and on other lists.",
+      inputSchema: z.object({ listId: uuidInput("talent list") }),
+      execute: ({ listId }) =>
+        withToolErrors(ctx, "deleteTalentList", async () => {
+          const result = await deleteTalentList(ctx, listId);
+          if (!result.ok) return { error: result.error };
+          return { listId, deleted: true };
         }),
     }),
 

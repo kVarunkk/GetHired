@@ -2,9 +2,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPipelineTools, toMoveEmail } from "./pipeline";
 import { getCompanyFunnel, getJobFunnel } from "@/helpers/pipeline/funnel";
 import { moveApplications } from "@/helpers/pipeline/move";
-import { addNote, listNotes, type CandidateNote } from "@/helpers/pipeline/notes";
-import { listStages, type PipelineStage } from "@/helpers/pipeline/stages";
-import { addToTalentList, createTalentList, listTalentLists } from "@/helpers/pipeline/talent-lists";
+import { addNote, deleteNote, listNotes, updateNote, type CandidateNote } from "@/helpers/pipeline/notes";
+import {
+  archiveStage,
+  createStage,
+  listStages,
+  renameStage,
+  reorderStages,
+  type PipelineStage,
+} from "@/helpers/pipeline/stages";
+import {
+  addToTalentList,
+  createTalentList,
+  deleteTalentList,
+  listTalentLists,
+  removeFromTalentList,
+  renameTalentList,
+} from "@/helpers/pipeline/talent-lists";
 import { execTool, inputJsonSchema, recruiterToolContext, validateInput } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
@@ -14,17 +28,30 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
-vi.mock("@/helpers/pipeline/stages", () => ({ listStages: vi.fn() }));
+vi.mock("@/helpers/pipeline/stages", () => ({
+  MAX_ACTIVE_STAGES: 12,
+  MAX_STAGE_NAME: 40,
+  listStages: vi.fn(),
+  createStage: vi.fn(),
+  renameStage: vi.fn(),
+  reorderStages: vi.fn(),
+  archiveStage: vi.fn(),
+}));
 vi.mock("@/helpers/pipeline/move", () => ({ moveApplications: vi.fn() }));
 vi.mock("@/helpers/pipeline/notes", async () => ({
   ...(await vi.importActual<typeof import("@/helpers/pipeline/ratings")>("@/helpers/pipeline/ratings")),
   addNote: vi.fn(),
   listNotes: vi.fn(),
+  updateNote: vi.fn(),
+  deleteNote: vi.fn(),
 }));
 vi.mock("@/helpers/pipeline/talent-lists", () => ({
   addToTalentList: vi.fn(),
   createTalentList: vi.fn(),
   listTalentLists: vi.fn(),
+  renameTalentList: vi.fn(),
+  removeFromTalentList: vi.fn(),
+  deleteTalentList: vi.fn(),
 }));
 vi.mock("@/helpers/pipeline/funnel", () => ({
   NEEDS_ATTENTION_DAYS: 3,
@@ -136,6 +163,119 @@ describe("listStages tool", () => {
   });
 });
 
+describe("createStage tool", () => {
+  it("adds the stage through the shared helper, saying what candidates in it see", async () => {
+    vi.mocked(createStage).mockResolvedValue({ ok: true, stage: stage(STAGE, "Take-home", "interview", 7) });
+
+    const result = await execTool(tools.createStage, { name: " Take-home ", kind: "interview" });
+
+    const [ctx, input] = vi.mocked(createStage).mock.calls[0];
+    expectSessionCtx(ctx);
+    expect(input).toEqual({ name: "Take-home", kind: "interview" });
+    expect(result).toEqual({
+      stage: { id: STAGE, name: "Take-home", kind: "interview", candidateSees: "reviewed" },
+    });
+  });
+
+  it("returns the helper's refusal (the stage limit)", async () => {
+    vi.mocked(createStage).mockResolvedValue({ ok: false, error: "A pipeline can have at most 12 stages." });
+
+    expect(await execTool(tools.createStage, { name: "Extra", kind: "screening" })).toEqual({
+      error: "A pipeline can have at most 12 stages.",
+    });
+  });
+
+  it("limits names like the stage editor and takes only real kinds", async () => {
+    expect((await validateInput(tools.createStage, { name: "x".repeat(41), kind: "interview" })).success).toBe(false);
+    expect((await validateInput(tools.createStage, { name: "Chat", kind: "coffee" })).success).toBe(false);
+  });
+});
+
+describe("renameStage tool", () => {
+  it("renames through the shared helper", async () => {
+    vi.mocked(renameStage).mockResolvedValue({ ok: true });
+
+    const result = await execTool(tools.renameStage, { stageId: STAGE, name: "Onsite" });
+
+    const [ctx, input] = vi.mocked(renameStage).mock.calls[0];
+    expectSessionCtx(ctx);
+    expect(input).toEqual({ stageId: STAGE, name: "Onsite" });
+    expect(result).toEqual({ stage: { id: STAGE, name: "Onsite" }, renamed: true });
+  });
+
+  it("returns the helper's refusal", async () => {
+    vi.mocked(renameStage).mockResolvedValue({ ok: false, error: "Stage not found." });
+
+    expect(await execTool(tools.renameStage, { stageId: STAGE, name: "Onsite" })).toEqual({
+      error: "Stage not found.",
+    });
+  });
+});
+
+describe("reorderStages tool", () => {
+  it("passes the new order to the shared helper", async () => {
+    vi.mocked(reorderStages).mockResolvedValue({ ok: true });
+    const ids = [STAGE, "90000000-0000-4000-8000-000000000001"];
+
+    const result = await execTool(tools.reorderStages, { stageIds: ids });
+
+    const [ctx, passed] = vi.mocked(reorderStages).mock.calls[0];
+    expectSessionCtx(ctx);
+    expect(passed).toEqual(ids);
+    expect(result).toEqual({ stageIds: ids, reordered: true });
+  });
+
+  it("returns the helper's refusal when a stage is missing", async () => {
+    vi.mocked(reorderStages).mockResolvedValue({ ok: false, error: "Reorder every active stage exactly once." });
+
+    expect(await execTool(tools.reorderStages, { stageIds: [STAGE] })).toEqual({
+      error: "Reorder every active stage exactly once.",
+    });
+  });
+
+  it("takes 1 to 12 stages", async () => {
+    expect((await validateInput(tools.reorderStages, { stageIds: [] })).success).toBe(false);
+    expect((await validateInput(tools.reorderStages, { stageIds: Array(13).fill(STAGE) })).success).toBe(false);
+  });
+});
+
+describe("archiveStage tool", () => {
+  it("archives through the shared helper", async () => {
+    vi.mocked(archiveStage).mockResolvedValue({ ok: true });
+
+    const result = await execTool(tools.archiveStage, { stageId: STAGE });
+
+    const [ctx, input] = vi.mocked(archiveStage).mock.calls[0];
+    expectSessionCtx(ctx);
+    expect(input).toEqual({ stageId: STAGE });
+    expect(result).toEqual({ stageId: STAGE, archived: true });
+  });
+
+  it("says how many applications are still in the stage", async () => {
+    vi.mocked(archiveStage).mockResolvedValue({
+      ok: false,
+      error: "Move the 3 applications out of this stage first.",
+      count: 3,
+    });
+
+    expect(await execTool(tools.archiveStage, { stageId: STAGE })).toEqual({
+      error: "Move the 3 applications out of this stage first.",
+      applications: 3,
+    });
+  });
+
+  it("returns the helper's refusal for a protected stage", async () => {
+    vi.mocked(archiveStage).mockResolvedValue({
+      ok: false,
+      error: "The Applied, Hired and Rejected stages can't be archived.",
+    });
+
+    expect(await execTool(tools.archiveStage, { stageId: STAGE })).toEqual({
+      error: "The Applied, Hired and Rejected stages can't be archived.",
+    });
+  });
+});
+
 describe("moveApplications tool", () => {
   it("moves through the shared helper with the session company", async () => {
     vi.mocked(moveApplications).mockResolvedValue({
@@ -243,7 +383,7 @@ describe("listNotes tool", () => {
     expect(result.notes[0].body).toBe(
       `<candidate_note>\n${long.slice(0, RA_NOTE_EXCERPT_MAX_CHARS)}\n</candidate_note>`,
     );
-    expect(result.notes[1]).toMatchObject({ id: "n1", author: "Asha" });
+    expect(result.notes[1]).toMatchObject({ id: "n1", author: "Asha", mine: true });
   });
 
   it("shows mention tokens as @name, without the teammate's id (TM-REQ-009)", async () => {
@@ -263,6 +403,72 @@ describe("listNotes tool", () => {
     await execTool(tools.listNotes, { candidateId: CANDIDATE });
 
     expect(vi.mocked(listNotes).mock.calls[0][1]).toEqual({ candidateUserId: CANDIDATE });
+  });
+});
+
+describe("listNotes tool, authorship", () => {
+  it("marks teammates' notes as not mine", async () => {
+    vi.mocked(listNotes).mockResolvedValue([note({ author_user_id: "a1000000-0000-4000-8000-000000000009" })]);
+
+    const result = (await execTool(tools.listNotes, { applicationId: APP_1 })) as { notes: { mine: boolean }[] };
+
+    expect(result.notes[0].mine).toBe(false);
+  });
+});
+
+describe("updateNote tool", () => {
+  const NOTE = "70e00000-0000-4000-8000-0000000000aa";
+
+  it("edits the user's note through the shared helper, keeping the rating when none is passed", async () => {
+    vi.mocked(updateNote).mockResolvedValue({ ok: true });
+
+    const result = await execTool(tools.updateNote, { noteId: NOTE, body: " Strong on systems. " });
+
+    const [ctx, noteId, input] = vi.mocked(updateNote).mock.calls[0];
+    expectSessionCtx(ctx);
+    expect(noteId).toBe(NOTE);
+    expect(input).toEqual({ body: "Strong on systems.", rating: undefined });
+    expect(result).toEqual({ noteId: NOTE, updated: true });
+  });
+
+  it("passes a cleared rating", async () => {
+    vi.mocked(updateNote).mockResolvedValue({ ok: true });
+
+    await execTool(tools.updateNote, { noteId: NOTE, body: "x", rating: null });
+
+    expect(vi.mocked(updateNote).mock.calls[0][2]).toEqual({ body: "x", rating: null });
+  });
+
+  it("returns the helper's refusal (fairness, someone else's note)", async () => {
+    vi.mocked(updateNote).mockResolvedValue({ ok: false, error: "Note not found." });
+
+    expect(await execTool(tools.updateNote, { noteId: NOTE, body: "x" })).toEqual({ error: "Note not found." });
+  });
+
+  it("limits the text like addNote", async () => {
+    expect((await validateInput(tools.updateNote, { noteId: NOTE, body: "" })).success).toBe(false);
+    expect((await validateInput(tools.updateNote, { noteId: NOTE, body: "x".repeat(2001) })).success).toBe(false);
+  });
+});
+
+describe("deleteNote tool", () => {
+  const NOTE = "70e00000-0000-4000-8000-0000000000aa";
+
+  it("deletes the user's note through the shared helper", async () => {
+    vi.mocked(deleteNote).mockResolvedValue({ ok: true });
+
+    const result = await execTool(tools.deleteNote, { noteId: NOTE });
+
+    const [ctx, noteId] = vi.mocked(deleteNote).mock.calls[0];
+    expectSessionCtx(ctx);
+    expect(noteId).toBe(NOTE);
+    expect(result).toEqual({ noteId: NOTE, deleted: true });
+  });
+
+  it("returns not found for someone else's note", async () => {
+    vi.mocked(deleteNote).mockResolvedValue({ ok: false, error: "Note not found." });
+
+    expect(await execTool(tools.deleteNote, { noteId: NOTE })).toEqual({ error: "Note not found." });
   });
 });
 
@@ -340,6 +546,98 @@ describe("addToTalentList tool", () => {
     expect(await execTool(tools.addToTalentList, { candidateId: CANDIDATE, listName: "Bench" })).toEqual({
       error: "Candidate not found.",
     });
+  });
+});
+
+describe("listTalentLists tool", () => {
+  it("returns each list with its count and tab, and no candidate flag without a candidate", async () => {
+    vi.mocked(listTalentLists).mockResolvedValue([
+      { id: LIST, name: "Backend bench", slug: "backend-bench", memberCount: 3, hasCandidate: false },
+    ]);
+
+    const result = await execTool(tools.listTalentLists, {});
+
+    expectSessionCtx(vi.mocked(listTalentLists).mock.calls[0][0]);
+    expect(vi.mocked(listTalentLists).mock.calls[0][1]).toEqual({ candidateUserId: undefined });
+    expect(result).toEqual({
+      lists: [{ id: LIST, name: "Backend bench", memberCount: 3, url: "/company/profiles?tab=backend-bench" }],
+    });
+  });
+
+  it("says whether the candidate is on each list", async () => {
+    vi.mocked(listTalentLists).mockResolvedValue([
+      { id: LIST, name: "Bench", slug: "bench", memberCount: 1, hasCandidate: true },
+    ]);
+
+    const result = await execTool(tools.listTalentLists, { candidateId: CANDIDATE });
+
+    expect(vi.mocked(listTalentLists).mock.calls[0][1]).toEqual({ candidateUserId: CANDIDATE });
+    expect(result).toMatchObject({ lists: [{ id: LIST, hasCandidate: true }] });
+  });
+});
+
+describe("renameTalentList tool", () => {
+  it("renames through the helper and returns the new tab", async () => {
+    vi.mocked(renameTalentList).mockResolvedValue({ ok: true });
+
+    const result = await execTool(tools.renameTalentList, { listId: LIST, name: "  Q4 frontend " });
+
+    const [ctx, listId, name] = vi.mocked(renameTalentList).mock.calls[0];
+    expectSessionCtx(ctx);
+    expect([listId, name]).toEqual([LIST, "Q4 frontend"]);
+    expect(result).toEqual({
+      list: { id: LIST, name: "Q4 frontend" },
+      renamed: true,
+      url: "/company/profiles?tab=q4-frontend",
+    });
+  });
+
+  it("returns the helper's refusal", async () => {
+    vi.mocked(renameTalentList).mockResolvedValue({ ok: false, error: "List not found." });
+
+    expect(await execTool(tools.renameTalentList, { listId: LIST, name: "Bench" })).toEqual({
+      error: "List not found.",
+    });
+  });
+});
+
+describe("removeFromTalentList tool", () => {
+  it("removes the candidate from the list", async () => {
+    vi.mocked(removeFromTalentList).mockResolvedValue({ ok: true });
+
+    const result = await execTool(tools.removeFromTalentList, { listId: LIST, candidateId: CANDIDATE });
+
+    const [ctx, ...args] = vi.mocked(removeFromTalentList).mock.calls[0];
+    expectSessionCtx(ctx);
+    expect(args).toEqual([LIST, CANDIDATE]);
+    expect(result).toEqual({ listId: LIST, candidateId: CANDIDATE, removed: true });
+  });
+
+  it("returns the helper's refusal", async () => {
+    vi.mocked(removeFromTalentList).mockResolvedValue({ ok: false, error: "List not found." });
+
+    expect(await execTool(tools.removeFromTalentList, { listId: LIST, candidateId: CANDIDATE })).toEqual({
+      error: "List not found.",
+    });
+  });
+});
+
+describe("deleteTalentList tool", () => {
+  it("deletes the list", async () => {
+    vi.mocked(deleteTalentList).mockResolvedValue({ ok: true });
+
+    const result = await execTool(tools.deleteTalentList, { listId: LIST });
+
+    const [ctx, listId] = vi.mocked(deleteTalentList).mock.calls[0];
+    expectSessionCtx(ctx);
+    expect(listId).toBe(LIST);
+    expect(result).toEqual({ listId: LIST, deleted: true });
+  });
+
+  it("returns the helper's refusal", async () => {
+    vi.mocked(deleteTalentList).mockResolvedValue({ ok: false, error: "List not found." });
+
+    expect(await execTool(tools.deleteTalentList, { listId: LIST })).toEqual({ error: "List not found." });
   });
 });
 

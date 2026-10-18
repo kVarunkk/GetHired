@@ -12,8 +12,13 @@ export const ROLE_APPROVAL_TOOLS = [
   "updateRole",
   "deleteRole",
   "assignRole",
+  "setDefaultRole",
+  "removeTeamMember",
   "assignToJob",
   "unassignFromJob",
+  "inviteTeamMember",
+  "resendInvite",
+  "revokeInvite",
 ] as const;
 export type RoleApprovalTool = (typeof ROLE_APPROVAL_TOOLS)[number];
 
@@ -23,7 +28,7 @@ export const isRoleApprovalTool = (name: string): name is RoleApprovalTool =>
 /**
  * RP-REQ-032: the approval card for the agent's role and hiring-team changes,
  * showing exactly what changes: permissions added or removed (with their
- * scope), limits, who moves where. Loaded from a server preview, which also
+ * scope), limits, who moves where, who an invite goes to. Loaded from a server preview, which also
  * warns when the RPC will refuse it.
  */
 export function RoleApprovalDetails({ tool, input }: { tool: RoleApprovalTool; input: unknown }) {
@@ -44,12 +49,13 @@ export function RoleApprovalDetails({ tool, input }: { tool: RoleApprovalTool; i
   if (!preview.ok) return <p className="text-xs text-destructive">{preview.error}</p>;
 
   const rows: [string, string][] = [];
-  if (preview.role) rows.push(["Role", preview.role.name]);
+  if (preview.email) rows.push(["Email", preview.email]);
+  if (preview.role) rows.push([tool === "setDefaultRole" ? "New default" : "Role", preview.role.name]);
   if (preview.to && (tool === "updateRole" || tool === "assignRole")) {
     rows.push([tool === "updateRole" ? "New name" : "New role", preview.to]);
   }
   if (preview.member) rows.push(["Member", preview.member]);
-  if (preview.from) rows.push(["Current role", preview.from]);
+  if (preview.from) rows.push([tool === "setDefaultRole" ? "Current default" : "Current role", preview.from]);
   if (preview.job) rows.push(["Job", preview.job]);
   if (tool === "deleteRole") {
     rows.push(["People moved", `${preview.role?.members ?? 0}${preview.replacement ? ` to ${preview.replacement}` : ""}`]);

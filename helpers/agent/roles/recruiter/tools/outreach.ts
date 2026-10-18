@@ -11,6 +11,7 @@ import {
 import { getCompanyOutreach } from "@/helpers/outreach/detail";
 import { isOpen, listCompanyOutreach } from "@/helpers/outreach/list";
 import { sendOutreach } from "@/helpers/outreach/send";
+import { withdrawOutreach } from "@/helpers/outreach/withdraw";
 import {
   candidateUrl,
   fairnessError,
@@ -19,6 +20,7 @@ import {
   outreachUrl,
   planLimitError,
   type RecruiterToolContext,
+  requireToolPermission,
   uuidInput,
   withToolErrors,
 } from "./shared";
@@ -135,6 +137,21 @@ export function createOutreachTools(ctx: RecruiterToolContext) {
             ...(o.candidateContact ? { contactNote: CONTACT_SHARED_NOTE } : {}),
             url: outreachUrl(o.id),
           };
+        }),
+    }),
+
+    withdrawOutreach: tool({
+      description:
+        "Withdraw one of the company's outreach messages that the candidate hasn't answered yet. They can no longer answer it, and it doesn't count toward the reply rate. Only when the user asked to withdraw it.",
+      inputSchema: z.object({ outreachId: uuidInput("outreach") }),
+      execute: ({ outreachId }) =>
+        withToolErrors(ctx, "withdrawOutreach", async () => {
+          // The same key as withdrawOutreachAction.
+          const denied = requireToolPermission(ctx, "outreach.view");
+          if (denied) return denied;
+          const result = await withdrawOutreach({ supabase, company, user }, outreachId, { source: "agent" });
+          if (!result.ok) return { error: result.error };
+          return { id: outreachId, withdrawn: true, url: outreachUrl(outreachId) };
         }),
     }),
   };

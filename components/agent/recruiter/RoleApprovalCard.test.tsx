@@ -5,7 +5,7 @@ import { RoleApprovalDetails } from "./RoleApprovalCard";
 
 vi.mock("@/app/actions/roles/preview-agent-role", () => ({ previewAgentRoleAction: vi.fn() }));
 
-const base = { role: null, diff: null, replacement: null, member: null, from: null, to: null, job: null, warning: null };
+const base = { role: null, diff: null, replacement: null, member: null, from: null, to: null, job: null, email: null, warning: null };
 
 describe("RoleApprovalDetails (RP-REQ-032, RPT-082)", () => {
   it("shows the exact grant and limit diff of an updateRole", async () => {
@@ -48,6 +48,46 @@ describe("RoleApprovalDetails (RP-REQ-032, RPT-082)", () => {
     expect(await screen.findByText(/will be refused/)).toBeInTheDocument();
     expect(screen.getByText("Max Member")).toBeInTheDocument();
     expect(screen.getByText("Admin")).toBeInTheDocument();
+  });
+
+  it("shows who an invite goes to and with which role", async () => {
+    vi.mocked(previewAgentRoleAction).mockResolvedValue({
+      ok: true,
+      ...base,
+      email: "priya@acme.dev",
+      role: { name: "Recruiter (new role)", members: 0 },
+    });
+
+    render(<RoleApprovalDetails tool="inviteTeamMember" input={{ email: "priya@acme.dev", templateKey: "recruiter" }} />);
+
+    expect(await screen.findByText("priya@acme.dev")).toBeInTheDocument();
+    expect(screen.getByText("Email")).toBeInTheDocument();
+    expect(screen.getByText("Recruiter (new role)")).toBeInTheDocument();
+  });
+
+  it("labels the new and current default role", async () => {
+    vi.mocked(previewAgentRoleAction).mockResolvedValue({
+      ok: true,
+      ...base,
+      role: { name: "Admin", members: 2 },
+      from: "Member",
+    });
+
+    render(<RoleApprovalDetails tool="setDefaultRole" input={{ roleId: "r1" }} />);
+
+    expect(await screen.findByText("New default")).toBeInTheDocument();
+    expect(screen.getByText("Admin")).toBeInTheDocument();
+    expect(screen.getByText("Current default")).toBeInTheDocument();
+    expect(screen.getByText("Member")).toBeInTheDocument();
+  });
+
+  it("shows who a removal takes off the team", async () => {
+    vi.mocked(previewAgentRoleAction).mockResolvedValue({ ok: true, ...base, member: "Max Member", from: "Member" });
+
+    render(<RoleApprovalDetails tool="removeTeamMember" input={{ memberId: "u1" }} />);
+
+    expect(await screen.findByText("Max Member")).toBeInTheDocument();
+    expect(screen.getByText("Current role")).toBeInTheDocument();
   });
 
   it("shows the preview's error", async () => {

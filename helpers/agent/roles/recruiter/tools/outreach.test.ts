@@ -1,18 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createOutreachTools } from "./outreach";
 import { sendOutreach } from "@/helpers/outreach/send";
+import { withdrawOutreach } from "@/helpers/outreach/withdraw";
 import { listCompanyOutreach, type CompanyOutreachItem } from "@/helpers/outreach/list";
 import { getCompanyOutreach, type CompanyOutreachDetail } from "@/helpers/outreach/detail";
 import { execTool, inputJsonSchema, recruiterToolContext, validateInput } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
 import { outreachOf } from "@/test/utils/outreach";
+import { MEMBER_A } from "@/test/utils/team";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
 vi.mock("@/helpers/outreach/send", () => ({ sendOutreach: vi.fn() }));
+vi.mock("@/helpers/outreach/withdraw", () => ({ withdrawOutreach: vi.fn() }));
 vi.mock("@/helpers/outreach/list", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/helpers/outreach/list")>()),
   listCompanyOutreach: vi.fn(),
@@ -283,5 +286,48 @@ describe("getOutreach tool", () => {
     vi.mocked(getCompanyOutreach).mockResolvedValue(null);
 
     expect(await execTool(tools.getOutreach, { outreachId: OUTREACH_ID })).toEqual({ error: "Outreach not found." });
+  });
+});
+
+describe("withdrawOutreach tool", () => {
+  it("only takes an outreach id", async () => {
+    expect((await validateInput(tools.withdrawOutreach, { outreachId: "nope" })).success).toBe(false);
+    expect(Object.keys((await inputJsonSchema(tools.withdrawOutreach)).properties ?? {})).toEqual(["outreachId"]);
+  });
+
+  it("withdraws through the shared helper with the session company, user and source agent", async () => {
+    vi.mocked(withdrawOutreach).mockResolvedValue({ ok: true, candidateUserId: CANDIDATE });
+
+    expect(await execTool(tools.withdrawOutreach, { outreachId: OUTREACH_ID })).toEqual({
+      id: OUTREACH_ID,
+      withdrawn: true,
+      url: `/company/outreach/${OUTREACH_ID}`,
+    });
+    const [deps, id, options] = vi.mocked(withdrawOutreach).mock.calls[0];
+    expect(deps.company.id).toBe(COMPANY_A.id);
+    expect(deps.user.id).toBe(COMPANY_A.user.id);
+    expect(id).toBe(OUTREACH_ID);
+    expect(options).toEqual({ source: "agent" });
+  });
+
+  it("passes on the helper's error (answered, or not the company's)", async () => {
+    vi.mocked(withdrawOutreach).mockResolvedValue({ ok: false, error: "Only an unanswered message can be withdrawn." });
+
+    expect(await execTool(tools.withdrawOutreach, { outreachId: OUTREACH_ID })).toEqual({
+      error: "Only an unanswered message can be withdrawn.",
+    });
+  });
+
+  it("refuses without outreach.view, before touching the helper", async () => {
+    const grants = new Map(MEMBER_A.myCompany.grants);
+    grants.delete("outreach.view");
+    const ctx = recruiterToolContext(supabase.client, {
+      user: MEMBER_A.user,
+      company: { ...MEMBER_A.myCompany, grants },
+    });
+
+    const result = await execTool(createOutreachTools(ctx).withdrawOutreach, { outreachId: OUTREACH_ID });
+    expect(result).toEqual({ error: expect.stringMatching(/^Your role can't/) });
+    expect(withdrawOutreach).not.toHaveBeenCalled();
   });
 });

@@ -156,3 +156,68 @@ describe("role and team tools (RPT-082, RP-REQ-032)", () => {
     expect(result).toMatchObject({ members: [{ id: MEMBER_A.user.id, name: "Max Member", role: "Member", assignedJobs: 1 }] });
   });
 });
+
+describe("hiring team and audit reads", () => {
+  it("lists each job's hiring team by name, without emails", async () => {
+    db.queueRpc("list_company_hiring_teams", {
+      data: {
+        jobs: [{ id: JOB_A1, title: "Backend", status: "active", created_at: "2026-10-01", assigned_user_ids: [MEMBER_A.user.id, "gone"] }],
+        members: [
+          { user_id: MEMBER_A.user.id, email: "member@acme.dev", display_name: "Max Member", is_owner: false, role: { id: ROLES_A.member.id, name: "Member", color: "slate" }, assignable: true, removable: true },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await execTool(tools.listHiringTeams, {});
+
+    expect(JSON.stringify(result)).not.toContain("member@acme.dev");
+    expect(result).toMatchObject({
+      jobs: [{ id: JOB_A1, hiringTeam: [{ id: MEMBER_A.user.id, name: "Max Member" }, { id: "gone", name: "A former member" }] }],
+      members: [{ id: MEMBER_A.user.id, role: "Member", canAdd: true, canRemove: true }],
+      url: "/company/settings/hiring-teams",
+    });
+  });
+
+  it("reads the audit log with filters, described in words", async () => {
+    db.queueRpc("list_company_audit", {
+      data: [
+        {
+          id: 7,
+          actor_user_id: OWNER_A.user.id,
+          actor_name: "Olive Owner",
+          actor_kind: "agent",
+          action: "member.removed",
+          target_type: "member",
+          target_id: MEMBER_A.user.id,
+          target_label: "Max Member",
+          before: null,
+          after: null,
+          created_at: "2026-10-10T10:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+
+    const result = await execTool(tools.getAuditLog, { memberId: OWNER_A.user.id, kind: "member", since: "2026-10-01" });
+
+    expect(result).toEqual({
+      entries: [{ at: "2026-10-10T10:00:00.000Z", who: "Olive Owner", what: "removed Max Member from the team with the recruiter agent" }],
+      more: false,
+      url: "/company/settings/audit",
+    });
+    expect(rpcArgs("list_company_audit")[0]).toMatchObject({
+      p_actor: OWNER_A.user.id,
+      p_action: "member",
+      p_since: "2026-10-01T00:00:00.000Z",
+    });
+  });
+
+  it("explains a missing permission instead of failing", async () => {
+    db.queueRpc("list_company_audit", { data: null, error: null });
+    db.queueRpc("list_company_hiring_teams", { data: null, error: null });
+
+    expect(await execTool(tools.getAuditLog, {})).toEqual({ error: "Your role can't read the audit log." });
+    expect(await execTool(tools.listHiringTeams, {})).toEqual({ error: "Your role can't change the hiring team." });
+  });
+});

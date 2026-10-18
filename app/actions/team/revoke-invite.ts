@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
-import { asTeamRpcResult, teamErrorMessage } from "@/helpers/team/errors";
+import { teamErrorMessage } from "@/helpers/team/errors";
+import { revokeInvite } from "@/helpers/team/invites";
 
 const inputSchema = z.object({ inviteId: z.string().uuid() }).strict();
 
@@ -17,13 +18,8 @@ export async function revokeInviteAction(
   const parsed = inputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: teamErrorMessage("not_found") };
 
-  // The RPC scopes the invite to the caller's company.
-  const { data, error } = await auth.supabase.rpc("revoke_company_invite", {
-    p_invite_id: parsed.data.inviteId,
-  });
-  if (error) return { ok: false, error: teamErrorMessage("unknown") };
-  const result = asTeamRpcResult(data);
-  if (!result.ok) return { ok: false, error: teamErrorMessage(result.reason) };
+  const result = await revokeInvite(auth.supabase, parsed.data.inviteId);
+  if (!result.ok) return result;
 
   revalidatePath("/company/settings/team");
   return { ok: true };

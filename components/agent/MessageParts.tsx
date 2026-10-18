@@ -1,5 +1,6 @@
 "use client";
 
+import { describeApplicationForm } from "@/helpers/jobs/describe-application-form";
 import { memo, useEffect, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown, { type Components } from "react-markdown";
@@ -17,6 +18,7 @@ import {
   type CandidateRowData,
 } from "./recruiter/RecruiterResults";
 import { FunnelResult, type FunnelResultData } from "./recruiter/FunnelResult";
+import { JobDeleteApprovalDetails } from "./recruiter/JobDeleteApprovalCard";
 import { MoveApprovalDetails } from "./recruiter/MoveApprovalCard";
 import { OutreachApprovalDetails } from "./recruiter/OutreachApprovalCard";
 import { isRoleApprovalTool, RoleApprovalDetails } from "./recruiter/RoleApprovalCard";
@@ -60,6 +62,11 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   createJobPost: { running: "Saving the job post…", done: "Saved the job post", action: "create the job post" },
   updateJobPost: { running: "Updating the job post…", done: "Updated the job post", action: "update the job post" },
   setJobPostStatus: { running: "Updating the job post…", done: "Updated the job post", action: "change the job post's status" },
+  deleteJobPost: { running: "Deleting the job post…", done: "Deleted the job post", action: "delete the job post" },
+  listQuestionSets: { running: "Loading question sets…", done: "Loaded question sets", action: "load question sets" },
+  applyQuestionSet: { running: "Applying the question set…", done: "Applied the question set", action: "apply the question set" },
+  saveQuestionSet: { running: "Saving the question set…", done: "Saved the question set", action: "save the question set" },
+  deleteQuestionSet: { running: "Deleting the question set…", done: "Deleted the question set", action: "delete the question set" },
   searchCandidates: { running: "Searching candidates…", done: "Searched candidates", action: "search candidates" },
   findMatchesForJob: { running: "Finding matched candidates…", done: "Found matched candidates", action: "find matched candidates" },
   runMatchingForJob: { running: "Starting matching…", done: "Started matching", action: "start matching" },
@@ -72,14 +79,29 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   getApplication: { running: "Reading the application…", done: "Read the application", action: "read the application" },
   screenApplicants: { running: "Queueing screenings…", done: "Queued screenings", action: "screen applicants" },
   listStages: { running: "Loading your pipeline…", done: "Loaded your pipeline", action: "load your pipeline" },
+  createStage: { running: "Adding the stage…", done: "Added the stage", action: "add a pipeline stage" },
+  renameStage: { running: "Renaming the stage…", done: "Renamed the stage", action: "rename the stage" },
+  reorderStages: { running: "Reordering your stages…", done: "Reordered your stages", action: "reorder your stages" },
+  archiveStage: { running: "Archiving the stage…", done: "Archived the stage", action: "archive the stage" },
+  listEmailTemplates: { running: "Loading email templates…", done: "Loaded email templates", action: "load your email templates" },
+  createEmailTemplate: { running: "Saving the template…", done: "Saved the template", action: "add an email template" },
+  updateEmailTemplate: { running: "Updating the template…", done: "Updated the template", action: "edit the email template" },
+  deleteEmailTemplate: { running: "Deleting the template…", done: "Deleted the template", action: "delete the email template" },
   moveApplications: { running: "Moving applications…", done: "Moved applications", action: "move applications" },
   addNote: { running: "Saving the note…", done: "Saved the note", action: "add a note" },
   listNotes: { running: "Reading notes…", done: "Read the notes", action: "read the notes" },
+  updateNote: { running: "Updating the note…", done: "Updated the note", action: "edit the note" },
+  deleteNote: { running: "Deleting the note…", done: "Deleted the note", action: "delete the note" },
   addToTalentList: { running: "Adding to the list…", done: "Added to the list", action: "add the candidate to a list" },
+  listTalentLists: { running: "Checking your talent lists…", done: "Checked your talent lists", action: "read your talent lists" },
+  renameTalentList: { running: "Renaming the list…", done: "Renamed the list", action: "rename the list" },
+  removeFromTalentList: { running: "Removing from the list…", done: "Removed from the list", action: "take the candidate off the list" },
+  deleteTalentList: { running: "Deleting the list…", done: "Deleted the list", action: "delete the list" },
   getHiringFunnel: { running: "Loading the funnel…", done: "Loaded the hiring funnel", action: "load the hiring funnel" },
   sendOutreach: { running: "Sending the message…", done: "Sent the message", action: "message the candidate" },
   listOutreach: { running: "Loading your outreach…", done: "Loaded your outreach", action: "load your outreach" },
   getOutreach: { running: "Reading the message…", done: "Read the message", action: "read the message" },
+  withdrawOutreach: { running: "Withdrawing the message…", done: "Withdrew the message", action: "withdraw the message" },
   // Team and roles (RP-REQ-032).
   listTeam: { running: "Loading your team…", done: "Loaded your team", action: "load your team" },
   listRoles: { running: "Loading roles…", done: "Loaded roles", action: "load roles" },
@@ -88,8 +110,19 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   updateRole: { running: "Updating the role…", done: "Updated the role", action: "update the role" },
   deleteRole: { running: "Deleting the role…", done: "Deleted the role", action: "delete the role" },
   assignRole: { running: "Changing the role…", done: "Changed the member's role", action: "change the member's role" },
+  setDefaultRole: { running: "Changing the default role…", done: "Changed the default role", action: "change the default role" },
+  removeTeamMember: { running: "Removing the member…", done: "Removed them from the team", action: "remove them from the team" },
   assignToJob: { running: "Updating the hiring team…", done: "Added to the hiring team", action: "add them to the hiring team" },
   unassignFromJob: { running: "Updating the hiring team…", done: "Removed from the hiring team", action: "remove them from the hiring team" },
+  listInvites: { running: "Loading invites…", done: "Loaded invites", action: "load invites" },
+  inviteTeamMember: { running: "Sending the invite…", done: "Sent the invite", action: "invite them to the team" },
+  resendInvite: { running: "Resending the invite…", done: "Resent the invite", action: "resend the invite" },
+  revokeInvite: { running: "Revoking the invite…", done: "Revoked the invite", action: "revoke the invite" },
+  // Careers page.
+  getCareersPage: { running: "Reading the careers page…", done: "Read the careers page", action: "read the careers page" },
+  updateCareersPage: { running: "Updating the careers page…", done: "Updated the careers page", action: "update the careers page" },
+  setCareersAddress: { running: "Changing the address…", done: "Changed the careers page address", action: "change the careers page address" },
+  setCareersPublished: { running: "Updating the careers page…", done: "Updated the careers page", action: "publish the careers page" },
 };
 
 const labelsFor = (name: string) =>
@@ -286,6 +319,7 @@ const FIELD_LABELS: Record<string, string> = {
   visaSponsorship: "Visa sponsorship",
   skills: "Skills",
   questions: "Screening questions",
+  applicationForm: "Application form",
   status: "Status",
 };
 
@@ -302,7 +336,10 @@ const formatValue = (value: unknown) =>
 const describeInput = (input: unknown) =>
   Object.entries((input ?? {}) as Record<string, unknown>)
     .filter(([key]) => !/Ids?$/.test(key))
-    .map(([key, value]) => [FIELD_LABELS[key] ?? key, formatValue(value)] as const);
+    .map(
+      ([key, value]) =>
+        [FIELD_LABELS[key] ?? key, key === "applicationForm" ? describeApplicationForm(value) : formatValue(value)] as const,
+    );
 
 /** Indigo: the agent is waiting on the user. */
 function ActionCard({ children }: { children: React.ReactNode }) {
@@ -382,6 +419,22 @@ function approvalTitle(name: string, input: unknown) {
       return "Update this job post?";
     case "setJobPostStatus":
       return values.status === "active" ? "Publish this job post?" : "Unpublish this job post?";
+    case "deleteJobPost":
+      return "Delete this job post?";
+    case "applyQuestionSet":
+      return "Apply this question set to the job? It replaces the job's application form; answered questions stay, archived.";
+    case "saveQuestionSet":
+      return values.questionSetId ? "Overwrite this question set?" : "Save this question set?";
+    case "deleteQuestionSet":
+      return "Delete this question set? Jobs it was applied to keep their copy.";
+    case "updateCareersPage":
+      return "Update your public careers page?";
+    case "setCareersAddress":
+      return typeof values.slug === "string"
+        ? `Change your careers page address to /careers/${values.slug}? The old address will redirect for 90 days.`
+        : "Change your careers page address?";
+    case "setCareersPublished":
+      return values.published ? "Publish your careers page?" : "Unpublish your careers page?";
     case "runMatchingForJob":
       return "Start matching candidates to this job? It runs in the background, and you'll get an email when it's done.";
     case "screenApplicants":
@@ -395,6 +448,16 @@ function approvalTitle(name: string, input: unknown) {
       return `Allow the assistant to ${labelsFor(name).action}?`;
     case "sendOutreach":
       return "Send this message on GetHired?";
+    case "archiveStage":
+      return "Archive this stage? It leaves your pipeline and can't be brought back.";
+    case "deleteEmailTemplate":
+      return "Delete this email template? This can't be undone.";
+    case "deleteNote":
+      return "Delete this note? This can't be undone.";
+    case "deleteTalentList":
+      return "Delete this talent list? Its candidates stay in the talent pool, but the list can't be brought back.";
+    case "withdrawOutreach":
+      return "Withdraw this message? The candidate won't be able to answer it, and this can't be undone.";
     case "createRole":
       return "Create this role?";
     case "updateRole":
@@ -403,18 +466,28 @@ function approvalTitle(name: string, input: unknown) {
       return "Delete this role?";
     case "assignRole":
       return "Change this team member's role?";
+    case "setDefaultRole":
+      return "Make this the default role for new invites?";
+    case "removeTeamMember":
+      return "Remove this person from your team? They lose access right away.";
     case "assignToJob":
       return "Add this team member to the job's hiring team?";
     case "unassignFromJob":
       return "Remove this team member from the job's hiring team?";
+    case "inviteTeamMember":
+      return "Invite this person to your team? They'll get an email with a link to join.";
+    case "resendInvite":
+      return "Resend this invite? The old link stops working.";
+    case "revokeInvite":
+      return "Revoke this invite? Its link stops working.";
     default:
       return `Allow the assistant to ${labelsFor(name).action}?`;
   }
 }
 
 function approvalDetails(name: string, input: unknown) {
-  // Moves and outreach show a server preview (MoveApprovalDetails, OutreachApprovalDetails).
-  if (name === "setJobPostStatus" || name === "moveApplications" || name === "sendOutreach") return [];
+  // Deletes, moves and outreach show a server preview (JobDeleteApprovalDetails, MoveApprovalDetails, OutreachApprovalDetails).
+  if (["setJobPostStatus", "deleteJobPost", "moveApplications", "sendOutreach"].includes(name)) return [];
   // Role changes show a server preview with the exact diff (RoleApprovalDetails).
   if (isRoleApprovalTool(name)) return [];
   return describeInput(input);
@@ -438,6 +511,7 @@ function ApprovalCard({
     <ActionCard>
       <p className="text-sm font-medium text-foreground">{title}</p>
       {reason && <p className="text-xs text-muted-foreground">{reason}</p>}
+      {name === "deleteJobPost" && <JobDeleteApprovalDetails input={part.input} />}
       {name === "moveApplications" && <MoveApprovalDetails input={part.input} />}
       {name === "sendOutreach" && <OutreachApprovalDetails input={part.input} />}
       {isRoleApprovalTool(name) && <RoleApprovalDetails tool={name} input={part.input} />}
@@ -622,6 +696,10 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
         }
       />
     );
+  }
+
+  if (name === "deleteJobPost" && result.deleted === true) {
+    return <Step tone="done" label={`Deleted “${String(result.title ?? "the job post")}”.`} />;
   }
 
   if (name === "moveApplications" && typeof result.moved === "number") {

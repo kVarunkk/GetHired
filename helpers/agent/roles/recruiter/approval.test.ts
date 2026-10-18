@@ -31,17 +31,37 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
         "createJobPost",
         "updateJobPost",
         "setJobPostStatus",
+        "deleteJobPost",
         "runMatchingForJob",
         "screenApplicants",
         "moveApplications",
         "sendOutreach",
+        "withdrawOutreach",
+        "archiveStage",
+        "deleteEmailTemplate",
+        "deleteNote",
+        "deleteTalentList",
         // RP-REQ-032: every role and hiring-team change.
         "createRole",
         "updateRole",
         "deleteRole",
         "assignRole",
+        "setDefaultRole",
         "assignToJob",
         "unassignFromJob",
+        // Invites email someone, and revoking breaks their link.
+        "inviteTeamMember",
+        "resendInvite",
+        "revokeInvite",
+        // Removing a member cuts their access at once.
+        "removeTeamMember",
+        // Question sets and the public careers page.
+        "applyQuestionSet",
+        "saveQuestionSet",
+        "deleteQuestionSet",
+        "updateCareersPage",
+        "setCareersAddress",
+        "setCareersPublished",
       ].sort(),
     );
   });
@@ -60,7 +80,7 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
     "listOutreach",
     "getOutreach",
   ])("gates memory and note writes after %s in the same turn (RA-SEC-003)", (reader) => {
-    for (const write of ["saveMemory", "deleteMemory", "addNote"]) {
+    for (const write of ["saveMemory", "deleteMemory", "addNote", "updateNote"]) {
       expect(typeOf(decide(write, [user("x"), ...ran(reader, "c1")])), write).toBe("user-approval");
     }
   });

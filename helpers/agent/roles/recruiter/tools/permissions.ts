@@ -7,9 +7,11 @@ import { requireToolPermission, type RecruiterToolContext } from "./shared";
  * - `jobPostId`: the input's `jobPostId` (absent: any scope);
  * - `jobPostIdOrNone`: the input's `jobPostId`, and no job needs scope all
  *   (outreach without a job, RP-REQ-002);
- * - `applicationId` / `applicationIds`: the job of each application.
+ * - `applicationId` / `applicationIds`: the job of each application;
+ * - `noteId`: the job of the note's application (a note on a talent-pool
+ *   candidate has none: scope all, as when adding it).
  */
-export type JobSource = "any" | "jobPostId" | "jobPostIdOrNone" | "applicationId" | "applicationIds";
+export type JobSource = "any" | "jobPostId" | "jobPostIdOrNone" | "applicationId" | "applicationIds" | "noteId";
 
 export type ToolPermission = {
   /** Any one of these (at any scope) puts the tool in the user's tool set. */
@@ -32,6 +34,13 @@ export const RECRUITER_TOOL_PERMISSIONS = {
   createJobPost: p(["jobs.create"]),
   updateJobPost: p(["jobs.edit"], "jobPostId"),
   setJobPostStatus: p(["jobs.publish"], "jobPostId"),
+  deleteJobPost: p(["jobs.delete"], "jobPostId"),
+  // AF-REQ-004: anyone who edits a job can apply a set; question_sets.manage saves them.
+  listQuestionSets: p(["jobs.view"]),
+  applyQuestionSet: p(["jobs.edit"], "jobPostId"),
+  // Copying a job's form also needs jobs.view on that job, checked in the tool.
+  saveQuestionSet: p(["question_sets.manage"]),
+  deleteQuestionSet: p(["question_sets.manage"]),
   searchCandidates: p(["talent.view"]),
   findMatchesForJob: p(["matching.run"], "jobPostId"),
   runMatchingForJob: p(["matching.run"], "jobPostId"),
@@ -44,27 +53,63 @@ export const RECRUITER_TOOL_PERMISSIONS = {
   getApplication: p(["applicants.view"], "applicationId"),
   getHiringFunnel: p(["applicants.view"], "jobPostId"),
   listStages: p(["applicants.view"]),
+  // The same key as saveStagesAction.
+  createStage: p(["settings.stages"]),
+  renameStage: p(["settings.stages"]),
+  reorderStages: p(["settings.stages"]),
+  archiveStage: p(["settings.stages"]),
+  // The same key as the template editor's actions.
+  listEmailTemplates: p(["settings.templates"]),
+  createEmailTemplate: p(["settings.templates"]),
+  updateEmailTemplate: p(["settings.templates"]),
+  deleteEmailTemplate: p(["settings.templates"]),
   moveApplications: p(["pipeline.move"], "applicationIds"),
   addNote: p(["notes.write"], "applicationId"),
   listNotes: p(["notes.view"], "applicationId"),
+  // The same key as the note actions; helpers/pipeline/notes only touches the user's own notes.
+  updateNote: p(["notes.write"], "noteId"),
+  deleteNote: p(["notes.write"], "noteId"),
   addToTalentList: p(["talent_lists.manage"]),
+  // The same keys as listTalentListsAction / saveTalentListAction.
+  listTalentLists: p(["talent.view"]),
+  renameTalentList: p(["talent_lists.manage"]),
+  removeFromTalentList: p(["talent_lists.manage"]),
+  deleteTalentList: p(["talent_lists.manage"]),
   explainMatch: p(["matching.run"], "jobPostId"),
   screenApplicants: p(["applicants.screen"], "jobPostId"),
   sendOutreach: p(["outreach.send"], "jobPostIdOrNone"),
   listOutreach: p(["outreach.view"], "jobPostId"),
   getOutreach: p(["outreach.view"]),
+  // The same key as withdrawOutreachAction.
+  withdrawOutreach: p(["outreach.view"]),
   saveMemory: p(["agent.use"]),
   deleteMemory: p(["agent.use"]),
   // RP-REQ-032: team, roles and hiring teams.
   listTeam: p(["team.view"]),
   listRoles: p(["roles.view"]),
+  // The RPC returns only the jobs the user has jobs.assign on.
+  listHiringTeams: p(["jobs.assign"]),
+  getAuditLog: p(["audit.view"]),
   getRole: p(["roles.view"]),
   createRole: p(["roles.manage"]),
   updateRole: p(["roles.manage"]),
   deleteRole: p(["roles.manage"]),
   assignRole: p(["team.assign_roles"]),
+  // The same keys as setDefaultRoleAction / removeMemberAction (removing someone else).
+  setDefaultRole: p(["roles.manage"]),
+  removeTeamMember: p(["team.remove"]),
   assignToJob: p(["jobs.assign"], "jobPostId"),
   unassignFromJob: p(["jobs.assign"], "jobPostId"),
+  listInvites: p(["team.view"]),
+  // A templateKey also needs roles.manage, checked in inviteMember.
+  inviteTeamMember: p(["team.invite"]),
+  resendInvite: p(["team.invite"]),
+  revokeInvite: p(["team.invite"]),
+  // CP-REQ-012: everyone on the team can see the careers page; careers.edit changes it.
+  getCareersPage: p(["agent.use"]),
+  updateCareersPage: p(["careers.edit"]),
+  setCareersAddress: p(["careers.edit"]),
+  setCareersPublished: p(["careers.edit"]),
 } as const satisfies Record<string, ToolPermission>;
 
 export type RecruiterToolName = keyof typeof RECRUITER_TOOL_PERMISSIONS;
@@ -118,19 +163,39 @@ async function jobsOf(
             : [];
       // A note on a talent-pool candidate has no application: no job, scope all.
       if (ids.length === 0) return { jobs: source === "applicationId" && "candidateId" in input ? [null] : undefined };
-      // application_job_id is security definer and scoped to the caller's
-      // company, so a job is found even where the role can't see the row.
-      const jobs = await Promise.all(
-        ids.map(async (id) => {
-          const { data, error } = await ctx.supabase.rpc("application_job_id", { p_application_id: id });
-          if (error) throw new Error(`application_job_id failed: ${error.message}`);
-          return (data as string | null) ?? null;
-        }),
-      );
-      if (jobs.some((job) => job === null)) return { error: "Application not found." };
-      return { jobs };
+      return jobsOfApplications(ctx, ids);
+    }
+    case "noteId": {
+      if (typeof input.noteId !== "string") return { jobs: undefined };
+      const { data: note, error } = await ctx.supabase
+        .from("candidate_notes")
+        .select("application_id")
+        .eq("id", input.noteId)
+        .eq("company_id", ctx.company.id)
+        .maybeSingle();
+      if (error) throw new Error(`Failed to load the note: ${error.message}`);
+      if (!note) return { error: "Note not found." };
+      return note.application_id ? jobsOfApplications(ctx, [note.application_id]) : { jobs: [null] };
     }
   }
+}
+
+/** Each application's job, or an error when one isn't the company's. */
+async function jobsOfApplications(
+  ctx: RecruiterToolContext,
+  ids: string[],
+): Promise<{ jobs: string[] } | { error: string }> {
+  // application_job_id is security definer and scoped to the caller's
+  // company, so a job is found even where the role can't see the row.
+  const jobs = await Promise.all(
+    ids.map(async (id) => {
+      const { data, error } = await ctx.supabase.rpc("application_job_id", { p_application_id: id });
+      if (error) throw new Error(`application_job_id failed: ${error.message}`);
+      return (data as string | null) ?? null;
+    }),
+  );
+  if (jobs.some((job) => job === null)) return { error: "Application not found." };
+  return { jobs: jobs as string[] };
 }
 
 /**
