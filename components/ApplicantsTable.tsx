@@ -19,6 +19,8 @@ import { TApplicationStatus } from "@/utils/types";
 import { RECOMMENDATION_LABELS, type ScreeningRecommendation } from "@/helpers/matching/config";
 import { isScreeningInProgress, type ScreeningStatus } from "@/helpers/matching/screening-view";
 import { useEntitlementError } from "@/hooks/useEntitlementError";
+import InterviewStatusBadge from "@/components/interviews/InterviewStatusBadge";
+import type { InterviewSummary } from "@/helpers/interview/screening/summary-view";
 
 interface ApplicantsTableProps {
   data: (TApplicationServer & { stage_id?: string | null })[];
@@ -37,6 +39,8 @@ interface ApplicantsTableProps {
   screeningCap?: { limit: number; remaining: number } | null;
   /** AF-REQ-008: the job's yes/no and single-choice questions, to filter by answer. */
   answerQuestions?: AnswerFilterQuestion[];
+  /** SIT-062: each application's AI interview by application id. Adds the Interview column. */
+  interviews?: Record<string, InterviewSummary>;
 }
 
 export type { AnswerFilterQuestion } from "@/helpers/applications/answer-filters";
@@ -84,6 +88,7 @@ export default function ApplicantsTable({
   onRowSelectionChange,
   screeningCap = null,
   answerQuestions = [],
+  interviews,
 }: ApplicantsTableProps) {
   const router = useRouter();
   const { handle: handleEntitlement, dialog } = useEntitlementError();
@@ -158,6 +163,23 @@ export default function ApplicantsTable({
       ),
       filterFn: "equals",
     };
+    const interviewColumn: ColumnDef<Row> = {
+      id: "interview",
+      // Scored interviews by score; unscored ones last in both directions.
+      accessorFn: (row) => interviews?.[row.id]?.overallScore ?? undefined,
+      sortUndefined: "last",
+      sortDescFirst: true,
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting()}>
+          Interview
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const summary = interviews?.[row.original.id];
+        return summary ? <InterviewStatusBadge summary={summary} /> : <span className="text-muted-foreground">—</span>;
+      },
+    };
     return [
       ...(stages ? [selectColumn] : []),
       {
@@ -230,6 +252,7 @@ export default function ApplicantsTable({
           return <span className="text-muted-foreground">—</span>;
         },
       },
+      ...(interviews ? [interviewColumn] : []),
       {
         id: "recommendation",
         accessorFn: (row) => row.application_screenings?.recommendation ?? undefined,
@@ -264,16 +287,16 @@ export default function ApplicantsTable({
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <Link href={`/company/applicants/${row.original.id}`}>
+          <Link href={`/company/applications/${row.original.id}`}>
             <Button variant="ghost" size="sm">
-              View Applicant
+              View Application
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
         ),
       },
     ];
-  }, [stages]);
+  }, [stages, interviews]);
 
   const screenUnscreened = async () => {
     if (!jobPostId) return;
@@ -301,7 +324,7 @@ export default function ApplicantsTable({
       <DataTable
         data={flatData}
         columns={columns}
-        noun="applicants"
+        noun="applications"
         initialSorting={defaultSort === "fit" ? [{ id: "fit", desc: true }] : []}
         columnVisibility={COLUMN_VISIBILITY}
         getRowId={(row) => row.id}

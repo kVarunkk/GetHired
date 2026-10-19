@@ -1,28 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
-import { getMyCareersLink } from "@/helpers/careers/my-careers-link";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
-import { jobControls } from "@/helpers/companies/job-scope";
 import Error from "@/components/Error";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
-import DeleteJobPosting from "@/components/DeleteJobPosting";
 import { Briefcase, DollarSign, Users, MapPin } from "lucide-react";
-import { format } from "date-fns";
-import PageHeader from "@/components/PageHeader";
-import { JobStatusSwitch } from "@/components/JobPostingsTable";
 import Link from "next/link";
 import JobDescriptionCard from "@/components/JobDetailsCard";
-import FindSuitableProfilesForJobPost from "@/components/FindSuitableProfilesForJobPost";
-import ShareJobPosting from "@/components/ShareJobPosting";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 import AskAgentAboutJobPost from "@/components/agent/recruiter/AskAgentAboutJobPost";
-import HiringTeamPanel from "@/components/jobs/HiringTeamPanel";
-import { listJobHiringTeam } from "@/helpers/team/list-job-hiring-team";
 
 export default async function JobPostPage({
   params,
@@ -52,84 +40,26 @@ export default async function JobPostPage({
     if (!job) notFound();
 
     // RP-REQ-010: a job the viewer's role doesn't cover is a 404 (the row
-    // itself is public, so RLS can't hide it). RP-REQ-016: the controls follow
-    // the viewer's permissions on this job; the server refuses them too.
+    // itself is public, so RLS can't hide it). The layout checks it too.
     const company = user ? await getMyCompany(supabase, user) : null;
     if (!company || job.company_id !== company.id || !can(company, "jobs.view", job.id)) notFound();
-    const controls = jobControls(company, job.id);
-    const careersLink = company ? await getMyCareersLink(supabase, company.id).catch(() => null) : null;
-    // RP-REQ-011: the Hiring team panel, for jobs.assign on this job only.
-    const hiringTeam = can(company, "jobs.assign", job.id)
-      ? await listJobHiringTeam(supabase, job.id)
-      : null;
 
-    // Prepare data for the Edit dialog
-    const existingValues = {
-      id: job.id,
-      title: job.title,
-      description: job.description ?? "",
-      location: job.location ?? [],
-      job_type: job.job_type,
-      salary_currency: job.salary_currency ?? "$",
-      min_salary: job.min_salary ?? 0,
-      max_salary: job.max_salary ?? 0,
-      min_experience: job.min_experience ?? 0,
-      max_experience: job.max_experience ?? 0,
-      visa_sponsorship: job.visa_sponsorship ?? "Not Required",
-      min_equity: job.min_equity ?? 0,
-      max_equity: job.max_equity ?? 0,
-      questions: job.questions ?? [],
-      department: job.department ?? "",
-      workplace_type: job.workplace_type ?? null,
-    };
-
+    // The layout shows the header and the job's controls.
     return (
-      <div className="flex flex-col w-full gap-6 p-4 mb-20">
-        <PageHeader
-          backHref="/company/job-posts"
-          backLabel="Back to job posts"
-          title={<span className="[overflow-wrap:anywhere]">{job.title}</span>}
-          description={
-            <>
-              at {job.company_info?.name} · Posted on {format(new Date(job.created_at), "PPP")}
-            </>
-          }
-          actions={
-            <>
-              <JobStatusSwitch job={job} disabled={!controls.publish} />
-              <CreateJobPostingDialog
-                key={existingValues?.id || "new"}
-                companyId={job.company_id}
-                existingValues={existingValues}
-                disabled={!controls.edit}
-              />
-              <DeleteJobPosting
-                job_posting_id={job.id}
-                is_job_posting_page
-                disabled={!controls.delete}
-              />
-              <ShareJobPosting job_id={job.job_id} careersSlug={careersLink?.published ? careersLink.slug : null} />
-              <FindSuitableProfilesForJobPost job_post_id={job_id} />
-              <Button asChild variant="outline" className="rounded-full">
-                <Link href={`/company/job-posts/${job.id}/applicants`}>
-                  <Users className="w-4 h-4" />
-                  View applicants ({job.applications?.length ?? 0})
-                </Link>
-              </Button>
-            </>
-          }
-        />
-
+      <div className="mb-20 flex flex-col gap-6">
         {can(company, "agent.use") && (
           <AskAgentAboutJobPost
             job={{ id: job.id, title: job.title }}
             canMatch={can(company, "matching.run", job.id)}
             canViewApplicants={can(company, "applicants.view", job.id)}
+            canViewInterviews={can(company, "interviews.view", job.id)}
+            canManageInterviews={can(company, "interviews.manage", job.id) && can(company, "jobs.edit", job.id)}
           />
         )}
 
         {/* --- Job Details Section --- */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* The app sidebar and the job nav leave too little room for three columns below xl. */}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           {/* Details Card */}
           <JobDescriptionCard
             job={job}
@@ -138,7 +68,7 @@ export default async function JobPostPage({
           />
 
           {/* Key Metrics/Details Sidebar */}
-          <div className="grid gap-4">
+          <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-1">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Location</CardTitle>
@@ -188,13 +118,13 @@ export default async function JobPostPage({
             </Card>
 
             <Link
-              href={`/company/job-posts/${job.id}/applicants`}
+              href={`/company/job-posts/${job.id}/applications`}
               className="rounded-xl transition-colors hover:bg-muted/60"
             >
               <Card className="h-full bg-transparent">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Applicants
+                    Applications
                   </CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
@@ -207,8 +137,6 @@ export default async function JobPostPage({
             </Link>
           </div>
         </div>
-
-        {hiringTeam && <HiringTeamPanel jobPostId={job.id} members={hiringTeam} />}
       </div>
     );
   } catch (err) {

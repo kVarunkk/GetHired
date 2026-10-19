@@ -6,6 +6,8 @@ import type { Database } from "@/utils/types/database.types";
 import type { BoardApplication, PipelineBoardData } from "@/utils/types/pipeline.types";
 import { ratingSummary, type CandidateRating } from "./ratings";
 import { listStages } from "./stages";
+import { can } from "@/helpers/companies/permissions";
+import { getInterviewSummaries } from "@/helpers/interview/screening/summaries";
 
 /** PL-ASSUMPTION-001: above this many applications, columns are cut... */
 export const BOARD_TRUNCATE_ABOVE = 500;
@@ -62,6 +64,14 @@ export async function loadBoard(
     .eq("applications.job_post_id", jobPostId);
   if (notesError) throw new Error(`Failed to load the notes: ${notesError.message}`);
 
+  // SIT-062: the interview badge. Extra: a failure only hides it.
+  const interviews = can(company, "interviews.view", jobPostId)
+    ? await getInterviewSummaries(supabase, jobPostId).catch((err) => {
+        console.error("Failed to load the board's interviews:", err);
+        return {} as Awaited<ReturnType<typeof getInterviewSummaries>>;
+      })
+    : {};
+
   const noteStats = new Map<string, { count: number; rated: { rating: CandidateRating }[] }>();
   for (const note of notes ?? []) {
     if (!note.application_id) continue;
@@ -86,6 +96,7 @@ export async function loadBoard(
       noteCount: stats?.count ?? 0,
       ratingAvg: stats ? ratingSummary(stats.rated).average : null,
       knockoutReasons: row.application_knockouts?.failed ? knockoutReasons(row.application_knockouts) : null,
+      ...(interviews[row.id] ? { interview: interviews[row.id] } : {}),
     };
   });
 

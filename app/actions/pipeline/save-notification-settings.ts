@@ -36,6 +36,6 @@ export async function saveCompanyNotificationSettingsAction(
     return { ok: false, error: "Couldn't save your settings. Please try again." };
   }
 
-  revalidatePath("/company/settings");
+  revalidatePath("/company/settings/notifications");
   return { ok: true };
 }

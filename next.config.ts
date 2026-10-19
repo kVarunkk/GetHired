@@ -25,6 +25,19 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": ["./app/content/**/*"],
   },
+  // The company "Applicants" pages became "Applications". Old links (in sent
+  // emails, bookmarks and agent chats) keep working.
+  async redirects() {
+    return [
+      { source: "/company/applicants", destination: "/company/applications", permanent: true },
+      { source: "/company/applicants/:id", destination: "/company/applications/:id", permanent: true },
+      {
+        source: "/company/job-posts/:id/applicants",
+        destination: "/company/job-posts/:id/applications",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

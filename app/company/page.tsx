@@ -10,7 +10,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
+import { CreateJobPostButton } from "@/components/jobs/JobPostButtons";
 import { Button } from "@/components/ui/button";
 import CompanyJobPostingCard from "@/components/CompanyJobPostingCard";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
@@ -140,10 +140,7 @@ export default async function CompanyPage() {
         <PageHeader
           title={`How are you doing today, ${companyInfo.name}?`}
           actions={
-            <CreateJobPostingDialog
-              companyId={companyInfo.id}
-              disabled={!canCreateJobs}
-            />
+            <CreateJobPostButton disabled={!canCreateJobs} />
           }
         />
 
@@ -215,7 +212,7 @@ export default async function CompanyPage() {
                     >
                       <span>
                         <Link
-                          href={`/company/applicants/${item.applicationId}`}
+                          href={`/company/applications/${item.applicationId}`}
                           className="font-medium hover:underline"
                         >
                           {item.name}
@@ -223,7 +220,7 @@ export default async function CompanyPage() {
                         <span className="text-muted-foreground">
                           {" for "}
                           <Link
-                            href={`/company/job-posts/${item.jobPostId}/applicants`}
+                            href={`/company/job-posts/${item.jobPostId}/applications`}
                             className="hover:underline"
                           >
                             {item.jobTitle}
@@ -268,13 +265,13 @@ export default async function CompanyPage() {
           </div>
         </div>
 
-        {/* --- Recent Applicants Section --- */}
+        {/* --- Recent Applications Section --- */}
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold tracking-tight">
-              Recent Applicants
+              Recent Applications
             </h3>
-            <Link href={"/company/applicants"}>
+            <Link href={"/company/applications"}>
               <Button variant={"ghost"}>View all</Button>
             </Link>
           </div>
@@ -287,7 +284,7 @@ export default async function CompanyPage() {
                 >
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <Link
-                      href={`/company/applicants/${applicant.id}`}
+                      href={`/company/applications/${applicant.id}`}
                       className="font-medium underline underline-offset-4 transition-colors hover:text-brand sm:no-underline"
                     >
                       {applicant.user_info?.full_name || "New Applicant"}

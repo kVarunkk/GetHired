@@ -7,8 +7,8 @@ import { MEMBER_A, OWNER_A } from "@/test/utils/team";
 import CompanyPage from "./page";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/components/CreateJobPostingDialog", () => ({
-  default: ({ disabled }: { disabled?: boolean }) => <button disabled={disabled}>Create New Job Post</button>,
+vi.mock("@/components/jobs/JobPostButtons", () => ({
+  CreateJobPostButton: ({ disabled }: { disabled?: boolean }) => <button disabled={disabled}>Create New Job Post</button>,
 }));
 vi.mock("@/components/CompanyJobPostingCard", () => ({
   default: ({ job }: { job: { title: string } }) => <div>{job.title}</div>,
@@ -93,7 +93,7 @@ describe("company dashboard (PLT-082 characterisation)", () => {
     const attention = screen.getByRole("region", { name: "Needs attention" });
     expect(within(attention).getByRole("link", { name: "Priya Sharma" })).toHaveAttribute(
       "href",
-      "/company/applicants/app-1",
+      "/company/applications/app-1",
     );
     expect(attention).toHaveTextContent("5 days in Applied");
     // The metrics are unchanged.

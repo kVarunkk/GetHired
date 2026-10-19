@@ -12,6 +12,10 @@ import { KNOCKOUT_EMAIL_DELAY_MS, rejectForKnockout } from "@/helpers/applicatio
 import { validateAnswers } from "@/helpers/applications/validate-answers";
 import { isTextType, liveQuestions, readApplicationForm } from "@/helpers/jobs/application-form-schema";
 import { publicApplicationForm, withRules } from "@/helpers/jobs/public-application-form";
+import {
+  getScreeningInviteForApplication,
+  type ScreeningInviteSummary,
+} from "@/helpers/interview/screening/my-interviews";
 import { PostHogEvent, TAICredits } from "@/utils/types";
 import type { Json } from "@/utils/types/database.types";
 
@@ -31,7 +35,7 @@ const inputSchema = z
 
 export type SubmitApplicationInput = z.input<typeof inputSchema>;
 export type SubmitApplicationResult =
-  | { ok: true; applicationId: string; creditsDeducted: boolean }
+  | { ok: true; applicationId: string; creditsDeducted: boolean; interview: ScreeningInviteSummary | null }
   | { ok: false; error: string; fieldErrors?: Record<string, string> };
 
 const NOT_APPLICANT = "Sign in with an applicant account to apply.";
@@ -158,6 +162,10 @@ export async function submitApplicationAction(input: SubmitApplicationInput): Pr
     console.error("[apply] credit deduction failed", err);
   }
 
+  // SIT-050: invites usually come later, from the fit-threshold screening
+  // worker, so this is mostly null; the card shows when one already exists.
+  const interview = await getScreeningInviteForApplication(supabase, application.id);
+
   after(async () => {
     try {
       await eventCaptureServer({
@@ -168,5 +176,5 @@ export async function submitApplicationAction(input: SubmitApplicationInput): Pr
     } catch {}
   });
 
-  return { ok: true, applicationId: application.id, creditsDeducted };
+  return { ok: true, applicationId: application.id, creditsDeducted, interview };
 }

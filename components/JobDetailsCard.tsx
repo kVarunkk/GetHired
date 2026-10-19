@@ -99,7 +99,8 @@ export default function JobDescriptionCard({
   }
 
   return (
-    <div className="min-w-0 md:col-span-2">
+    // The company job page sits next to two sidebars, so its grid only splits at xl.
+    <div className={cn("min-w-0", page === "job-posts" ? "xl:col-span-2" : "md:col-span-2")}>
       <Card>
         <CardHeader>
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1">

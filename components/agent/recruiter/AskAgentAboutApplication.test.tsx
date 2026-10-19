@@ -72,3 +72,22 @@ describe("AskAgentAboutApplication", () => {
     );
   });
 });
+
+describe("AskAgentAboutApplication: AI interview chips (SIT-072)", () => {
+  it("offers the report summary only with a report to read (getInterviewReport)", () => {
+    const chips = applicationSuggestions(APPLICATION, { ...NONE, interview: "report" });
+    expect(labels(chips)).toEqual(["Summarise the AI interview"]);
+    expect(chips[0].prompt).toContain(`(application ${APPLICATION.id})`);
+  });
+
+  it("offers the invite only when inviting is possible (inviteToInterview)", () => {
+    expect(labels(applicationSuggestions(APPLICATION, { ...NONE, interview: "invite" }))).toEqual([
+      "Invite to the AI interview",
+    ]);
+  });
+
+  it("offers neither without the permissions", () => {
+    expect(labels(applicationSuggestions(APPLICATION, { ...NONE, interview: null }))).toEqual([]);
+    expect(labels(applicationSuggestions(APPLICATION, NONE))).toEqual([]);
+  });
+});

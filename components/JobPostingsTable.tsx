@@ -117,7 +117,7 @@ export default function JobPostingsTable({
       {
         accessorKey: "applications",
         header: ({ column }) => (
-          <SortableHeader column={column} label="Applicants" />
+          <SortableHeader column={column} label="Applications" />
         ),
         cell: ({ row }) => (
           <div className="text-sm ">

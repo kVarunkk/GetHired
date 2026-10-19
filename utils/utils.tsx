@@ -354,9 +354,9 @@ export const companyNavbarItems: INavItem[] = [
     icon: <Briefcase className="h-4 w-4" />,
   },
   {
-    id: "applicants",
-    label: "Applicants",
-    href: "/company/applicants",
+    id: "applications",
+    label: "Applications",
+    href: "/company/applications",
     type: "startswith",
     icon: <FileUser className="h-4 w-4" />,
   },

@@ -1,7 +1,7 @@
 import { notFound, unstable_rethrow } from "next/navigation";
 import AskAgentAboutQuestionSets from "@/components/agent/recruiter/AskAgentAboutQuestionSets";
 import Error from "@/components/Error";
-import PageHeader from "@/components/PageHeader";
+import SectionHeader from "@/components/SectionHeader";
 import Forbidden from "@/components/roles/Forbidden";
 import QuestionSetEditor from "@/components/jobs/QuestionSetEditor";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
@@ -25,8 +25,8 @@ export default async function NewQuestionSetPage() {
     if (!can(company, "question_sets.manage")) return <Forbidden what="the question set editor" />;
 
     return (
-      <div className="mb-20 flex w-full max-w-4xl flex-col gap-6 p-4">
-        <PageHeader backHref={QUESTION_SETS_PATH} backLabel="Back to question sets" title="New question set" />
+      <div className="mb-20 flex w-full max-w-4xl flex-col gap-6">
+        <SectionHeader backHref={QUESTION_SETS_PATH} backLabel="Back to question sets" title="New question set" />
         {can(company, "agent.use") && <AskAgentAboutQuestionSets canManage />}
         <QuestionSetEditor initialForm={emptyApplicationForm()} />
       </div>

@@ -1,4 +1,5 @@
 import type { Enums } from "./database.types";
+import type { InterviewSummary } from "@/helpers/interview/screening/summary-view";
 
 /** One card on the pipeline board (PL-TASK-011). Never carries contact details. */
 export type BoardApplication = {
@@ -13,6 +14,8 @@ export type BoardApplication = {
   ratingAvg: number | null;
   /** AF-REQ-003: the knockout questions it failed, or null when it passed (or had none). */
   knockoutReasons?: string[] | null;
+  /** SIT-062: the AI interview, for members with interviews.view on the job. */
+  interview?: InterviewSummary;
 };
 
 export type BoardStage = {

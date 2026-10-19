@@ -29,6 +29,7 @@ export async function unassignJobAction(
   if (!result.ok) return { ok: false, error: result.error };
 
   revalidatePath(`/company/job-posts/${parsed.data.jobPostId}`);
+  revalidatePath(`/company/job-posts/${parsed.data.jobPostId}/hiring-team`);
   revalidatePath("/company/settings/hiring-teams");
   await eventCaptureServer({ event: PostHogEvent.JobUnassigned, distinctId: auth.user.id });
   return { ok: true };

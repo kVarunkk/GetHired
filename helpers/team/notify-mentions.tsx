@@ -57,7 +57,7 @@ export async function sendNoteMentionEmails({
     const candidateFirstName = firstName(candidate?.full_name) ?? "a candidate";
     const jobTitle = application?.job_postings?.title ?? null;
     const url = note.application_id
-      ? `${deploymentUrl()}/company/applicants/${note.application_id}`
+      ? `${deploymentUrl()}/company/applications/${note.application_id}`
       : `${deploymentUrl()}/company/profiles/${note.candidate_user_id}`;
 
     const message = (

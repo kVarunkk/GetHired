@@ -67,7 +67,7 @@ describe("addNoteAction (PLT-053)", () => {
     expect(deps.company.id).toBe(COMPANY_A.id);
     expect(deps.user.id).toBe(COMPANY_A.user.id);
     expect(params).toEqual({ applicationId: APP.id, body: "Hi", rating: "yes" });
-    expect(revalidatePath).toHaveBeenCalledWith(`/company/applicants/${APP.id}`);
+    expect(revalidatePath).toHaveBeenCalledWith(`/company/applications/${APP.id}`, "layout");
     expect(eventCaptureServer).toHaveBeenCalledWith({
       event: PostHogEvent.PipelineNoteAdded,
       distinctId: COMPANY_A.user.id,

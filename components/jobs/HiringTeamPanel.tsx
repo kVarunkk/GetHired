@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { UserPlus, UsersRound } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -22,7 +21,7 @@ import type { HiringTeamMember } from "@/helpers/team/list-job-hiring-team";
 const displayName = (m: HiringTeamMember) => m.name ?? m.email ?? "Team member";
 
 /**
- * RP-REQ-011: who is assigned to a job. A role whose permissions are limited
+ * RP-REQ-011: who is assigned to a job (the job's Hiring team page). A role whose permissions are limited
  * to "Assigned jobs" only reaches the jobs its members are on here. Only
  * rendered for viewers with jobs.assign on the job; the RPCs check again.
  */
@@ -54,18 +53,7 @@ export default function HiringTeamPanel({
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div className="space-y-1.5">
-          <CardTitle className="text-base font-semibold">Hiring team</CardTitle>
-          <CardDescription>
-            Members whose role is limited to assigned jobs can only see and work on this job if they&apos;re
-            here. Owners and roles with access to all jobs see it anyway.
-          </CardDescription>
-        </div>
-        <UsersRound className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
         {assigned.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nobody is assigned to this job yet.</p>
         ) : (
@@ -80,7 +68,7 @@ export default function HiringTeamPanel({
                 <RoleBadge role={m.role} owner={m.isOwner} className="hidden sm:inline-flex" />
                 {m.removable ? (
                   <Button
-                    variant="ghost"
+                    variant="destructive-ghost"
                     size="sm"
                     disabled={busy !== null}
                     aria-label={`Remove ${displayName(m)}`}
@@ -141,7 +129,6 @@ export default function HiringTeamPanel({
             No one else can be added. Only members whose role has job-level permissions can be assigned.
           </p>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }

@@ -22,6 +22,8 @@ import { publicApplicationForm } from "@/helpers/jobs/public-application-form";
 import { fieldsOf, validateAnswers } from "@/helpers/applications/validate-answers";
 import { prefillStandardAnswers, type PrefillProfile } from "@/helpers/applications/prefill";
 import { useApplicationSource } from "./jobs/ApplicationSourceContext";
+import ScreeningInviteCard from "./interviews/ScreeningInviteCard";
+import type { ScreeningInviteSummary } from "@/helpers/interview/screening/my-interviews";
 
 const draftKey = (allJobsId: string) => `gethired:apply-draft:${allJobsId}`;
 
@@ -87,6 +89,7 @@ export default function JobApplicationForm({
   const [values, setValues] = useState<FieldValues>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [invite, setInvite] = useState<ScreeningInviteSummary | null>(null);
 
   const { data, isLoading } = useSWR(PROFILE_API_KEY, fetcher, {
     revalidateOnFocus: false,
@@ -204,7 +207,9 @@ export default function JobApplicationForm({
       await revalidateCacheAction(`profile-${userId}`);
 
       toast.success("Application sent!");
-      onSuccess();
+      // SIT-050: stay open on the interview card until the applicant picks.
+      if (submitted.interview) setInvite(submitted.interview);
+      else onSuccess();
     } catch {
       toast.error(
         "Some error occured while submitting application. Please try again later.",
@@ -213,6 +218,8 @@ export default function JobApplicationForm({
       setLoading(false);
     }
   };
+
+  if (invite) return <ScreeningInviteCard interview={invite} onLater={onSuccess} />;
 
   return (
     <div className="flex flex-col h-full ">

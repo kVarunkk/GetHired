@@ -6,8 +6,8 @@ import { HIRING_MANAGER_A, JOB_A1, MEMBER_A, OWNER_A, type MemberFixture } from 
 import CompanyJobPostsPage from "./page";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/components/CreateJobPostingDialog", () => ({
-  default: ({ disabled }: { disabled?: boolean }) => <button disabled={disabled}>Create New Job Post</button>,
+vi.mock("@/components/jobs/JobPostButtons", () => ({
+  CreateJobPostButton: ({ disabled }: { disabled?: boolean }) => <button disabled={disabled}>Create New Job Post</button>,
 }));
 vi.mock("@/components/JobPostingsTable", () => ({ default: () => null }));
 vi.mock("@/components/BackButton", () => ({ default: () => null }));

@@ -1,7 +1,7 @@
 import { notFound, unstable_rethrow } from "next/navigation";
 import { AskAgentAboutHiringTeams } from "@/components/agent/recruiter/AskAgentAboutTeam";
 import Error from "@/components/Error";
-import PageHeader from "@/components/PageHeader";
+import SectionHeader from "@/components/SectionHeader";
 import Forbidden from "@/components/roles/Forbidden";
 import HiringTeamsMatrix from "@/components/team/HiringTeamsMatrix";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
@@ -32,10 +32,8 @@ export default async function CompanyHiringTeamsPage() {
     if (!teams) return <Forbidden what="hiring teams" />;
 
     return (
-      <div className="mb-20 flex w-full flex-col gap-6 p-4">
-        <PageHeader
-          backHref="/company/settings"
-          backLabel="Back to settings"
+      <div className="mb-20 flex w-full flex-col gap-6">
+        <SectionHeader
           title="Hiring teams"
           description={
             <>

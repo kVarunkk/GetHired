@@ -9,11 +9,9 @@ import {
   AskAgentAboutJobPosts,
   AskAgentAboutOutreachList,
   AskAgentAboutProfiles,
-  AskAgentAboutSettings,
   jobPostsSuggestions,
   outreachSuggestions,
   profilesSuggestions,
-  settingsSuggestions,
 } from "./AskAgentOnMainPages";
 
 vi.mock("next/navigation", () => ({ useRouter: vi.fn() }));
@@ -49,12 +47,6 @@ describe("main page agent helpers", () => {
       "Compare candidates",
     ]);
 
-    expect(
-      labels(settingsSuggestions({ canEditStages: false, canEditTemplates: false, canEditCareers: false, canViewTeam: true })),
-    ).toEqual(["Who's on my team"]);
-    expect(
-      labels(settingsSuggestions({ canEditStages: true, canEditTemplates: true, canEditCareers: true, canViewTeam: false })),
-    ).toEqual(["Add a pipeline stage", "Write an email template", "Review my templates", "Improve my careers page"]);
   });
 
   it("offer outreach chips the outreach tools back, matching only with matching.run", () => {
@@ -75,7 +67,6 @@ describe("main page agent helpers", () => {
         <AskAgentAboutProfiles canSearch canMatch canManageLists />
         <AskAgentAboutOutreachList canMatch />
         <AskAgentAboutBilling />
-        <AskAgentAboutSettings canEditStages canEditTemplates canEditCareers canViewTeam />
       </>,
     );
     const links = screen.getAllByRole("link");

@@ -56,7 +56,7 @@ const submit = () => fireEvent.click(screen.getByRole("button", { name: /submit 
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
-  vi.mocked(submitApplicationAction).mockResolvedValue({ ok: true, applicationId: APPLICATION_ID, creditsDeducted: true });
+  vi.mocked(submitApplicationAction).mockResolvedValue({ ok: true, applicationId: APPLICATION_ID, creditsDeducted: true, interview: null });
   vi.mocked(attachToApplicationAction).mockResolvedValue({ ok: true, attachmentId: "x", analysisQueued: true });
   vi.mocked(listShareableSignalsAction).mockResolvedValue({
     sessions: [{ id: SESSION_ID, label: "Backend mock", endedAt: "2026-10-10T00:00:00.000Z" }],
@@ -239,5 +239,39 @@ describe("JobApplicationForm typed forms (CPT-016, AF-REQ-006)", () => {
     submit();
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
     expect(window.localStorage.getItem(`gethired:apply-draft:${ALL_JOBS_ID}`)).toBeNull();
+  });
+});
+
+describe("JobApplicationForm screening interview card (SIT-050)", () => {
+  const INTERVIEW_ID = "a1000000-0000-4000-8000-000000000001";
+
+  it("shows the interview card when the application comes with an invite", async () => {
+    vi.mocked(submitApplicationAction).mockResolvedValue({
+      ok: true,
+      applicationId: APPLICATION_ID,
+      creditsDeducted: true,
+      interview: { id: INTERVIEW_ID, durationMinutes: 15, deadlineAt: "2026-10-24T12:00:00.000Z" },
+    });
+    await goToStep2();
+    submit();
+
+    expect(await screen.findByText(/ai interview/i, { selector: "h3" })).toBeInTheDocument();
+    expect(screen.getByText(/15-minute/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /start now/i })).toHaveAttribute(
+      "href",
+      `/interview/screening/${INTERVIEW_ID}`,
+    );
+    // The dialog stays open on the card until the applicant picks.
+    expect(onSuccess).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /do it later/i }));
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes straight away without an invite", async () => {
+    await goToStep2();
+    submit();
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(screen.queryByRole("link", { name: /start now/i })).not.toBeInTheDocument();
   });
 });

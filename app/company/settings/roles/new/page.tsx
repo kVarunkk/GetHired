@@ -1,7 +1,7 @@
 import { notFound, unstable_rethrow } from "next/navigation";
 import { AskAgentToCreateRole } from "@/components/agent/recruiter/AskAgentAboutRoles";
 import Error from "@/components/Error";
-import PageHeader from "@/components/PageHeader";
+import SectionHeader from "@/components/SectionHeader";
 import Forbidden from "@/components/roles/Forbidden";
 import RoleEditor, { type RoleEditorValues } from "@/components/roles/RoleEditor";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
@@ -63,8 +63,8 @@ export default async function NewRolePage({
     }
 
     return (
-      <div className="mb-20 flex w-full max-w-4xl flex-col gap-6 p-4">
-        <PageHeader
+      <div className="mb-20 flex w-full max-w-4xl flex-col gap-6">
+        <SectionHeader
           backHref={next === "invite" ? "/company/settings/team" : "/company/settings/roles"}
           backLabel={next === "invite" ? "Back to team" : "Back to roles"}
           title="New role"

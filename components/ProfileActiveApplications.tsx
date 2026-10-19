@@ -30,7 +30,7 @@ export default function ProfileActiveApplication({
       </div>
       <Button asChild variant="outline" size="sm" className="shrink-0">
         <ModifiedLink
-          href={`/company/applicants/${app.id}`}
+          href={`/company/applications/${app.id}`}
           aria-label={`View application for ${app.job_postings?.title ?? "this job"}`}
         >
           View<span className="hidden sm:inline"> application</span>

@@ -5,7 +5,7 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can, canAny } from "@/helpers/companies/permissions";
 import { jobControls, scopeToJobs } from "@/helpers/companies/job-scope";
 import ErrorComponent from "@/components/Error";
-import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
+import { CreateJobPostButton } from "@/components/jobs/JobPostButtons";
 import JobPostingsTable from "@/components/JobPostingsTable";
 import PageHeader from "@/components/PageHeader";
 import { AskAgentAboutJobPosts } from "@/components/agent/recruiter/AskAgentOnMainPages";
@@ -58,10 +58,7 @@ export default async function CompanyJobPostsPage() {
           title="Job posts"
           description="Your company's job posts, their status and applicants."
           actions={
-            <CreateJobPostingDialog
-              companyId={companyInfo.id}
-              disabled={!canCreateJobs}
-            />
+            <CreateJobPostButton disabled={!canCreateJobs} />
           }
         />
         {can(companyInfo, "agent.use") && (

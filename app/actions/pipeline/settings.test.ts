@@ -176,7 +176,7 @@ describe("createTemplateAction", () => {
       is_default: false,
     });
     expect(argsOf("company_email_templates", "eq")).toContainEqual(["company_id", COMPANY_A.id]);
-    expect(revalidatePath).toHaveBeenCalledWith("/company/settings");
+    expect(revalidatePath).toHaveBeenCalledWith("/company/settings/email-templates");
     expect(eventCaptureServer).toHaveBeenCalledWith({
       event: PostHogEvent.PipelineTemplateSaved,
       distinctId: COMPANY_A.user.id,

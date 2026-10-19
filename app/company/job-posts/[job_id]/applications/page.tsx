@@ -3,13 +3,17 @@ import { answerFilterQuestions } from "@/helpers/applications/answer-filters";
 import { readApplicationForm } from "@/helpers/jobs/application-form-schema";
 import { notFound, unstable_rethrow } from "next/navigation";
 import Error from "@/components/Error";
-import PageHeader from "@/components/PageHeader";
+import SectionHeader from "@/components/SectionHeader";
 import FunnelStrip from "@/components/pipeline/FunnelStrip";
 import PipelineBoard from "@/components/pipeline/PipelineBoard";
 import PipelineList from "@/components/pipeline/PipelineList";
 import { isUuid } from "@/helpers/agent/auth";
 import { getMemberLimit } from "@/helpers/billing/entitlements";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { can } from "@/helpers/companies/permissions";
+import { getInterviewConfig } from "@/helpers/interview/screening/config";
+import { DEFAULT_DURATION_MINUTES } from "@/helpers/interview/screening/schemas";
+import { getInterviewSummaries } from "@/helpers/interview/screening/summaries";
 import { loadBoard } from "@/helpers/pipeline/board";
 import { getJobFunnel } from "@/helpers/pipeline/funnel";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
@@ -18,10 +22,10 @@ import type { PipelineBoardData } from "@/utils/types/pipeline.types";
 import { cn } from "@/utils/utils";
 
 /**
- * A job's applicants (PL-TASK-004, PL-TASK-010): the funnel strip and the
- * List or Board view (`?view=list|board`). The job page links here.
+ * A job's applications (PL-TASK-004, PL-TASK-010): the funnel strip and the
+ * List or Board view (`?view=list|board`). A section of the job's layout.
  */
-export default async function JobApplicantsPage({
+export default async function JobApplicationsPage({
   params,
   searchParams,
 }: {
@@ -59,7 +63,8 @@ export default async function JobApplicantsPage({
     if (error) throw error;
     if (!job) notFound();
 
-    const [{ data: stages, error: stagesError }, { data: templates }, funnel, screeningCap] = await Promise.all([
+    const canViewInterviews = can(company, "interviews.view", job.id);
+    const [{ data: stages, error: stagesError }, { data: templates }, funnel, screeningCap, interviewData] = await Promise.all([
       supabase
         .from("pipeline_stages")
         .select("id, name, kind")
@@ -78,6 +83,13 @@ export default async function JobApplicantsPage({
       }),
       // RP-REQ-044: the member's own cap, next to the Screen button.
       getMemberLimit(company.id, "screenings", user!.id).catch(() => null),
+      // SIT-062: the Interview column and bulk invites. Extra: a failure hides them.
+      canViewInterviews
+        ? Promise.all([getInterviewConfig(supabase, job.id), getInterviewSummaries(supabase, job.id)]).catch((err) => {
+            console.error("Failed to load the job's interviews:", err);
+            return null;
+          })
+        : null,
     ]);
     if (stagesError) throw stagesError;
 
@@ -89,16 +101,25 @@ export default async function JobApplicantsPage({
     }
 
     const applications = job.applications ?? [];
+    const [interviewConfig, interviews] = interviewData ?? [null, undefined];
+    // Show the column once the interview is set up or anyone was invited.
+    const showInterviews = !!interviews && (!!interviewConfig || Object.keys(interviews).length > 0);
+    // Shown while the interview is off too: the dialog then points to its setup.
+    const interviewInvite =
+      interviewData && can(company, "interviews.manage", job.id)
+        ? {
+            durationMinutes: interviewConfig?.duration_minutes ?? DEFAULT_DURATION_MINUTES,
+            enabled: !!interviewConfig?.enabled,
+          }
+        : undefined;
 
     return (
-      <div className="mb-20 flex w-full flex-col gap-6 p-4">
-        <PageHeader
-          backHref={`/company/job-posts/${job.id}`}
-          backLabel="Back to the job"
-          title={`Applicants (${applications.length})`}
-          description={<span className="[overflow-wrap:anywhere]">{job.title}</span>}
+      <div className="mb-20 flex w-full flex-col gap-6">
+        <SectionHeader
+          title={`Applications (${applications.length})`}
+          description="Everyone who applied to this job, by stage."
           actions={
-            <nav aria-label="Applicants view" className="flex rounded-md border p-0.5 text-sm">
+            <nav aria-label="Applications view" className="flex rounded-md border p-0.5 text-sm">
               {(["list", "board"] as const).map((option) => (
                 <Link
                   key={option}
@@ -128,6 +149,8 @@ export default async function JobApplicantsPage({
             templates={templates ?? []}
             screeningCap={screeningCap && { limit: screeningCap.limit, remaining: screeningCap.remaining }}
             answerQuestions={answerFilterQuestions(readApplicationForm(job.application_form, job.questions))}
+            interviews={showInterviews ? interviews : undefined}
+            interviewInvite={interviewInvite}
           />
         )}
       </div>

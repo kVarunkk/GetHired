@@ -1,7 +1,7 @@
 import { notFound, unstable_rethrow } from "next/navigation";
 import AskAgentAboutRoles from "@/components/agent/recruiter/AskAgentAboutRoles";
 import Error from "@/components/Error";
-import PageHeader from "@/components/PageHeader";
+import SectionHeader from "@/components/SectionHeader";
 import Forbidden from "@/components/roles/Forbidden";
 import NewRoleMenu from "@/components/roles/NewRoleMenu";
 import RolesTable from "@/components/roles/RolesTable";
@@ -33,10 +33,8 @@ export default async function CompanyRolesPage() {
     const manageable = roles.filter((r) => r.withinCeiling);
 
     return (
-      <div className="mb-20 flex w-full flex-col gap-6 p-4">
-        <PageHeader
-          backHref="/company/settings"
-          backLabel="Back to settings"
+      <div className="mb-20 flex w-full flex-col gap-6">
+        <SectionHeader
           title="Roles"
           description={
             <>

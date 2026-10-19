@@ -15,7 +15,15 @@ export const TEMPLATE_VARIABLES = [
 export type TemplateVariable = (typeof TEMPLATE_VARIABLES)[number];
 export type TemplateVars = Record<TemplateVariable, string | null | undefined>;
 
-export const TEMPLATE_PURPOSES = ["rejection", "advance", "interview_invite", "offer", "custom"] as const;
+export const TEMPLATE_PURPOSES = [
+  "rejection",
+  "advance",
+  "interview_invite",
+  "offer",
+  "on_hold",
+  "reopen",
+  "custom",
+] as const;
 export type TemplatePurpose = (typeof TEMPLATE_PURPOSES)[number];
 
 export const MAX_TEMPLATE_NAME = 60;
@@ -110,7 +118,27 @@ export function purposeForKind(kind: string): TemplatePurpose {
       return "interview_invite";
     case "offer":
       return "offer";
+    case "on_hold":
+      return "on_hold";
     default:
       return "advance";
   }
+}
+
+// The forward order of the stage kinds. Rejected and On hold sit outside it.
+const FORWARD_RANK: Record<string, number> = { applied: 0, screening: 1, interview: 2, offer: 3, hired: 4 };
+
+/**
+ * The purpose whose templates suit a move from one stage kind to another.
+ * Rejected and On hold depend only on the target. Coming back from a decision
+ * (Rejected or Hired), resuming from On hold into an early stage, or any
+ * move to an earlier stage is a `reopen`: "Next steps" would read wrong to a
+ * candidate who was told something else. The rest go by the target.
+ */
+export function purposeForMove(from: string | null, to: string): TemplatePurpose {
+  if (to === "rejected" || to === "on_hold") return purposeForKind(to);
+  if (from === "rejected" || from === "hired") return "reopen";
+  if (from === "on_hold") return to === "applied" || to === "screening" ? "reopen" : purposeForKind(to);
+  if (from !== null && FORWARD_RANK[to] < FORWARD_RANK[from]) return "reopen";
+  return purposeForKind(to);
 }

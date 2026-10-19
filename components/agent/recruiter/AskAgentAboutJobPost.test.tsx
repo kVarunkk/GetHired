@@ -92,3 +92,24 @@ describe("similarCandidatesPrompt", () => {
     );
   });
 });
+
+describe("AskAgentAboutJobPost: AI interview chips (SIT-072)", () => {
+  const NO = { canMatch: false, canViewApplicants: false };
+
+  it("offers setup with interviews.manage (configureScreeningInterview) and results with interviews.view", () => {
+    const labels = (p: Parameters<typeof jobPostSuggestions>[1]) => jobPostSuggestions(JOB, p).map((s) => s.label);
+    expect(labels({ ...NO, canManageInterviews: true, canViewInterviews: true })).toEqual([
+      "Set up an AI interview",
+      "AI interview results",
+      "Improve the post",
+    ]);
+    expect(labels({ ...NO, canViewInterviews: true })).toEqual(["AI interview results", "Improve the post"]);
+    expect(labels(NO)).toEqual(["Improve the post"]);
+  });
+
+  it("puts the job post id in the interview prompts", () => {
+    for (const s of jobPostSuggestions(JOB, { ...NO, canManageInterviews: true, canViewInterviews: true })) {
+      expect(s.prompt).toContain(`(job post ${JOB.id})`);
+    }
+  });
+});

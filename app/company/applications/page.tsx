@@ -6,7 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import ApplicantsTable from "@/components/ApplicantsTable";
 import { AskAgentAboutApplicants } from "@/components/agent/recruiter/AskAgentOnMainPages";
 
-export default async function CompanyApplicantsPage() {
+export default async function CompanyApplicationsPage() {
   try {
     const supabase = await createClient();
     const {
@@ -63,8 +63,8 @@ export default async function CompanyApplicantsPage() {
     return (
       <div className="flex flex-col w-full gap-6 p-4 mb-20">
         <PageHeader
-          title="Applicants"
-          description="Everyone who applied to your job posts."
+          title="Applications"
+          description="Every application to your job posts."
         />
         {can(companyInfo, "agent.use") && (
           <AskAgentAboutApplicants

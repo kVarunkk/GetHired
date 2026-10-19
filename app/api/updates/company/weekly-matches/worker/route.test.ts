@@ -90,7 +90,7 @@ describe("GET /api/updates/company/weekly-matches/worker (PLT-073, PL-REQ-010)",
       expect(out).not.toContain("Sharma");
       expect(out).not.toContain("private@mail.test");
     }
-    expect(email.htmlContent).toContain("https://gethired.test/company/settings#notifications");
+    expect(email.htmlContent).toContain("https://gethired.test/company/settings/notifications");
 
     const [jobs] = db.callsFor("job_postings");
     expect(jobs.chain).toContainEqual({ method: "eq", args: ["status", "active"] });

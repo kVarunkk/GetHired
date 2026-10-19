@@ -24,7 +24,7 @@ export type ApplicantDigestMessage = { companyId: string };
 
 type Admin = SupabaseClient<Database>;
 
-export const settingsUrl = () => `${deploymentUrl()}/company/settings#notifications`;
+export const settingsUrl = () => `${deploymentUrl()}/company/settings/notifications`;
 
 /** Where the digest starts: the watermark, or a day ago for a first digest. */
 export const digestSince = (watermark: string | null, now = Date.now()) =>
@@ -56,7 +56,7 @@ export async function loadNewApplicants(
     const job = row.job_postings;
     const entry = byJob.get(job.id) ?? {
       title: job.title,
-      url: `${deploymentUrl()}/company/job-posts/${job.id}/applicants`,
+      url: `${deploymentUrl()}/company/job-posts/${job.id}/applications`,
       applicants: [],
     };
     const screening = row.application_screenings;

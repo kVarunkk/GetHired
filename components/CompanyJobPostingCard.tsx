@@ -4,7 +4,7 @@ import DeleteJobPosting from "@/components/DeleteJobPosting";
 // import { IJobPosting } from "@/utils/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import CreateJobPostingDialog from "./CreateJobPostingDialog";
+import { EditJobPostButton } from "./jobs/JobPostButtons";
 import { JobStatusSwitch } from "./JobPostingsTable";
 import { TCompanyIdPageData } from "@/utils/types/jobs.types";
 import type { JobControls } from "@/helpers/companies/job-scope";
@@ -28,29 +28,7 @@ export default function CompanyJobPostingCard({
             {job.title}
           </Link>
           <div className="items-center gap-1 flex sm:hidden sm:group-hover:flex">
-            <CreateJobPostingDialog
-              key={`${job.id}-${job.updated_at ?? 0}`}
-              companyId={job.company_id}
-              disabled={!controls.edit}
-              existingValues={{
-                id: job.id,
-                title: job.title,
-                description: job.description ?? "",
-                location: job.location ?? [],
-                job_type: job.job_type ?? undefined,
-                salary_currency: job.salary_currency ?? "$",
-                min_salary: job.min_salary ?? 0,
-                max_salary: job.max_salary ?? 0,
-                min_experience: job.min_experience ?? 0,
-                max_experience: job.max_experience ?? 0,
-                visa_sponsorship: job.visa_sponsorship ?? "Not Required",
-                min_equity: job.min_equity ?? 0,
-                max_equity: job.max_equity ?? 0,
-                questions: job.questions ?? [],
-                department: job.department ?? "",
-                workplace_type: job.workplace_type ?? null,
-              }}
-            />
+            <EditJobPostButton jobPostId={job.id} disabled={!controls.edit} />
             <DeleteJobPosting job_posting_id={job.id} disabled={!controls.delete} />
           </div>
         </CardTitle>
@@ -63,7 +41,7 @@ export default function CompanyJobPostingCard({
           <span className="font-medium text-foreground">
             {job.applications?.length || 0}
           </span>{" "}
-          Applicant{job.applications?.length !== 1 ? "s" : ""}
+          Application{job.applications?.length !== 1 ? "s" : ""}
         </div>
         <JobStatusSwitch job={job} disabled={!controls.publish} />
       </CardContent>

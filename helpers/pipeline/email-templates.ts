@@ -70,7 +70,7 @@ export async function createTemplate(
     .single();
   if (error || !data) return { ok: false, error: "Couldn't add the template. Please try again." };
 
-  revalidatePath("/company/settings");
+  revalidatePath("/company/settings/email-templates");
   await eventCaptureServer({
     event: PostHogEvent.PipelineTemplateSaved,
     distinctId: user.id,
@@ -119,7 +119,7 @@ export async function saveTemplate(
   if (error) return { ok: false, error: "Couldn't save the template. Please try again." };
   if (!data) return NOT_FOUND;
 
-  revalidatePath("/company/settings");
+  revalidatePath("/company/settings/email-templates");
   await eventCaptureServer({
     event: PostHogEvent.PipelineTemplateSaved,
     distinctId: user.id,
@@ -150,6 +150,6 @@ export async function deleteTemplate(
   if (error) return { ok: false, error: "Couldn't delete the template. Please try again." };
   if (!data) return { ok: false, error: "Template not found, or it's a default template." };
 
-  revalidatePath("/company/settings");
+  revalidatePath("/company/settings/email-templates");
   return { ok: true };
 }

@@ -88,7 +88,7 @@ describe("moveApplicationsAction (PLT-031)", () => {
     expect(deps.user.id).toBe(COMPANY_A.user.id);
     expect(params).toEqual({ applicationIds: [APP.id], stageId: INTERVIEW.id });
     expect(revalidatePath).toHaveBeenCalledWith(`/company/job-posts/${PIPELINE_JOB.id}`);
-    expect(revalidatePath).toHaveBeenCalledWith(`/company/job-posts/${PIPELINE_JOB.id}/applicants`);
+    expect(revalidatePath).toHaveBeenCalledWith(`/company/job-posts/${PIPELINE_JOB.id}/applications`);
   });
 
   it("passes an email choice through", async () => {

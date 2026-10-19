@@ -2,7 +2,7 @@ import { notFound, unstable_rethrow } from "next/navigation";
 import { AskAgentAboutAudit } from "@/components/agent/recruiter/AskAgentAboutTeam";
 import AuditLog from "@/components/audit/AuditLog";
 import Error from "@/components/Error";
-import PageHeader from "@/components/PageHeader";
+import SectionHeader from "@/components/SectionHeader";
 import Forbidden from "@/components/roles/Forbidden";
 import { AUDIT_ACTION_GROUP_VALUES, type AuditActionGroup, type AuditFilters } from "@/helpers/companies/audit";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
@@ -55,10 +55,8 @@ export default async function CompanyAuditPage({
     if (!page) return <Forbidden what="the audit log" />;
 
     return (
-      <div className="mb-20 flex w-full max-w-4xl flex-col gap-6 p-4">
-        <PageHeader
-          backHref="/company/settings"
-          backLabel="Back to settings"
+      <div className="mb-20 flex w-full max-w-4xl flex-col gap-6">
+        <SectionHeader
           title="Audit log"
           description="Changes to roles, owners, members, invites and hiring teams. Entries can't be edited or deleted."
         />

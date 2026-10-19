@@ -13,6 +13,31 @@ vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
+// MoveDialog has its own tests; here it confirms, with or without an email.
+const EMAIL = { templateId: "ab000000-0000-4000-8000-0000000000e1" };
+vi.mock("./MoveDialog", () => ({
+  default: ({
+    open,
+    stage,
+    previewApplicationId,
+    onConfirm,
+    onCancel,
+  }: {
+    open: boolean;
+    stage: { name: string } | null;
+    previewApplicationId: string | null;
+    onConfirm: (email?: typeof EMAIL) => void;
+    onCancel: () => void;
+  }) =>
+    open ? (
+      <div role="dialog" aria-label={`Move to ${stage?.name}`} data-preview={previewApplicationId}>
+        <button onClick={() => onConfirm()}>Move</button>
+        <button onClick={() => onConfirm(EMAIL)}>Move and email</button>
+        <button onClick={onCancel}>Cancel</button>
+      </div>
+    ) : null,
+}));
+
 // Radix Select doesn't run in jsdom; a native <select> keeps the same contract.
 vi.mock("@/components/ui/select", () => ({
   Select: ({
@@ -78,12 +103,13 @@ describe("StagePicker (PLT-032)", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
-  it("asks first when the candidate will see a new status", async () => {
+  it("opens MoveDialog first when the candidate will see a new status", async () => {
     renderPicker();
 
     fireEvent.change(select(), { target: { value: stageOf("rejected").id } });
 
-    expect(screen.getByText(/The candidate will see:/)).toHaveTextContent("rejected");
+    const dialog = screen.getByRole("dialog", { name: `Move to ${stageOf("rejected").name}` });
+    expect(dialog).toHaveAttribute("data-preview", APPLICATION_ID);
     expect(moveApplicationsAction).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Move" }));
@@ -96,6 +122,39 @@ describe("StagePicker (PLT-032)", () => {
     );
   });
 
+  it("passes the email from MoveDialog to the move", async () => {
+    vi.mocked(moveApplicationsAction).mockResolvedValue({ ok: true, moved: 1, emailed: 1, skipped: [] });
+    renderPicker();
+
+    fireEvent.change(select(), { target: { value: stageOf("rejected").id } });
+    fireEvent.click(screen.getByRole("button", { name: "Move and email" }));
+
+    await waitFor(() =>
+      expect(moveApplicationsAction).toHaveBeenCalledWith({
+        applicationIds: [APPLICATION_ID],
+        stageId: stageOf("rejected").id,
+        email: EMAIL,
+      }),
+    );
+    expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("The email is on its way"));
+  });
+
+  it("keeps the move but says so when the email fails", async () => {
+    vi.mocked(moveApplicationsAction).mockResolvedValue({
+      ok: true,
+      moved: 1,
+      emailed: 0,
+      skipped: [{ id: APPLICATION_ID, reason: "email_failed" }],
+    });
+    renderPicker();
+
+    fireEvent.change(select(), { target: { value: stageOf("rejected").id } });
+    fireEvent.click(screen.getByRole("button", { name: "Move and email" }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("email couldn't be sent")));
+    expect(select()).toHaveValue(stageOf("rejected").id);
+  });
+
   it("cancelling the confirmation keeps the current stage", () => {
     renderPicker();
 
@@ -104,7 +163,7 @@ describe("StagePicker (PLT-032)", () => {
 
     expect(moveApplicationsAction).not.toHaveBeenCalled();
     expect(select()).toHaveValue(stageOf("screening").id);
-    expect(screen.queryByText(/The candidate will see:/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("reverts and toasts when the action refuses", async () => {

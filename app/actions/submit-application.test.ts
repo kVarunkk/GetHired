@@ -71,7 +71,7 @@ describe("submitApplicationAction (AF-REQ-007, CPT-015)", () => {
 
     const result = await submitApplicationAction(INPUT);
 
-    expect(result).toEqual({ ok: true, applicationId: APPLICATION_ID, creditsDeducted: true });
+    expect(result).toEqual({ ok: true, applicationId: APPLICATION_ID, creditsDeducted: true, interview: null });
     const row = insertOf(user, "applications");
     expect(row).toEqual({
       job_post_id: JOB.id,
@@ -110,7 +110,7 @@ describe("submitApplicationAction (AF-REQ-007, CPT-015)", () => {
 
     const result = await submitApplicationAction({ ...INPUT, answers: { ...ANSWERS, [id(2)]: false } });
 
-    expect(result).toEqual({ ok: true, applicationId: APPLICATION_ID, creditsDeducted: true });
+    expect(result).toEqual({ ok: true, applicationId: APPLICATION_ID, creditsDeducted: true, interview: null });
     expect(insertOf(service, "application_knockouts")).toMatchObject({
       failed: true,
       action_taken: "flagged",
@@ -242,9 +242,35 @@ describe("submitApplicationAction (AF-REQ-007, CPT-015)", () => {
     });
   });
 
+  describe("screening interview invite (SIT-050)", () => {
+    it("returns the invite when the application already has one", async () => {
+      queueHappyPath();
+      user.queueRpc("my_screening_interviews", {
+        data: { id: "a1000000-0000-4000-8000-000000000001", duration_minutes: 15, deadline_at: "2026-10-24T00:00:00.000Z" },
+        error: null,
+      });
+
+      const result = await submitApplicationAction(INPUT);
+
+      expect(result).toMatchObject({
+        ok: true,
+        interview: { id: "a1000000-0000-4000-8000-000000000001", durationMinutes: 15, deadlineAt: "2026-10-24T00:00:00.000Z" },
+      });
+      // Read through the applicant's function, for this application only, after the insert.
+      const read = user.callsFor("my_screening_interviews")[0];
+      expect(read.chain).toContainEqual({ method: "eq", args: ["application_id", APPLICATION_ID] });
+      expect(read.chain).toContainEqual({ method: "eq", args: ["status", "invited"] });
+    });
+
+    it("returns no invite when there isn't one", async () => {
+      queueHappyPath();
+      expect(await submitApplicationAction(INPUT)).toMatchObject({ ok: true, interview: null });
+    });
+  });
+
   it("still succeeds when the credit can't be charged", async () => {
     queueHappyPath();
     vi.mocked(deductUserCreditsHelper).mockRejectedValue(new Error("no credits"));
-    expect(await submitApplicationAction(INPUT)).toEqual({ ok: true, applicationId: APPLICATION_ID, creditsDeducted: false });
+    expect(await submitApplicationAction(INPUT)).toEqual({ ok: true, applicationId: APPLICATION_ID, creditsDeducted: false, interview: null });
   });
 });

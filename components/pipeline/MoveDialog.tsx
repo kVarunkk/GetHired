@@ -26,9 +26,11 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { MoveEmail } from "@/helpers/pipeline/move";
+import type { PipelineStageKind } from "@/helpers/pipeline/status-map";
 import {
   TEMPLATE_VARIABLES,
   purposeForKind,
+  purposeForMove,
   renderTemplate,
   type TemplateVars,
 } from "@/helpers/pipeline/templates";
@@ -58,6 +60,10 @@ type Props = {
   templates: TemplateOption[];
   /** The first selected application, whose candidate fills the preview. */
   previewApplicationId: string | null;
+  /** Each application's current stage kind, which picks the suggested template with the target. */
+  fromKinds?: (PipelineStageKind | null)[];
+  /** How many of them have an open AI interview invite, which a move to Rejected or Hired cancels. */
+  openInterviews?: number;
   isMoving?: boolean;
   onConfirm: (email?: MoveEmail) => void;
   onCancel: () => void;
@@ -66,8 +72,9 @@ type Props = {
 /**
  * Confirms a move (PL-REQ-004, PL-TASK-031): the stage, the status the
  * candidates will see and, optionally, an email from one of the company's
- * templates, editable and previewed with a real candidate's values. Nothing
- * is sent while unknown variables remain.
+ * templates, editable and previewed with a real candidate's values. The
+ * suggested template follows where the candidates come from as well as where
+ * they go (`purposeForMove`). Nothing is sent while unknown variables remain.
  */
 export default function MoveDialog(props: Props) {
   const { open, stage, onCancel } = props;
@@ -87,11 +94,18 @@ function MoveDialogBody({
   changesStatus,
   templates,
   previewApplicationId,
+  fromKinds = [],
+  openInterviews = 0,
   isMoving = false,
   onConfirm,
   onCancel,
 }: Props & { stage: StageOption }) {
-  const purpose = purposeForKind(stage.kind);
+  // One purpose when every application comes from a stage that suggests the
+  // same one; otherwise the target's, with a note to check the wording.
+  const purposes = new Set(fromKinds.map((from) => purposeForMove(from, stage.kind)));
+  const mixed = purposes.size > 1;
+  const purpose = purposes.size === 1 ? [...purposes][0] : purposeForKind(stage.kind);
+  const cancelsInterviews = (stage.kind === "rejected" || stage.kind === "hired") && openInterviews > 0;
   const choices = useMemo(
     () => [
       ...templates.filter((t) => t.purpose === purpose),
@@ -159,6 +173,14 @@ function MoveDialogBody({
       </ResponsiveDialogHeader>
 
       <ResponsiveDialogBody className="flex flex-col gap-4">
+        {cancelsInterviews && (
+          <p className="text-sm text-muted-foreground">
+            {count === 1
+              ? "Their open AI interview invite will be cancelled, and the held interview minutes released."
+              : `${openInterviews} open AI interview invite${openInterviews === 1 ? "" : "s"} will be cancelled, and the held interview minutes released.`}
+          </p>
+        )}
+
         <div className="flex items-center gap-3">
           <Switch
             id="move-email"
@@ -175,6 +197,11 @@ function MoveDialogBody({
 
         {emailOn && (
           <div className="flex flex-col gap-3">
+            {mixed && (
+              <p className="text-sm text-muted-foreground">
+                These applications come from different stages. Check that the message suits all of them.
+              </p>
+            )}
             <Select value={templateId} onValueChange={pick}>
               <SelectTrigger aria-label="Template">
                 <SelectValue placeholder="Choose a template" />

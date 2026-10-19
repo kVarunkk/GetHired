@@ -2,7 +2,7 @@ import { notFound, unstable_rethrow } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import AskAgentAboutRoles from "@/components/agent/recruiter/AskAgentAboutRoles";
 import Error from "@/components/Error";
-import PageHeader from "@/components/PageHeader";
+import SectionHeader from "@/components/SectionHeader";
 import Forbidden from "@/components/roles/Forbidden";
 import RoleActions from "@/components/roles/RoleActions";
 import RoleEditor from "@/components/roles/RoleEditor";
@@ -42,8 +42,8 @@ export default async function RolePage({ params }: { params: Promise<{ id: strin
     const ownRole = company.role?.id === role.id;
 
     return (
-      <div className="mb-20 flex w-full max-w-4xl flex-col gap-6 p-4">
-        <PageHeader
+      <div className="mb-20 flex w-full max-w-4xl flex-col gap-6">
+        <SectionHeader
           backHref="/company/settings/roles"
           backLabel="Back to roles"
           title={role.name}

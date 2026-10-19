@@ -15,6 +15,8 @@ import {
 import type { MoveEmail } from "@/helpers/pipeline/move";
 import { changesCandidateStatus } from "@/helpers/pipeline/status-map";
 import MoveDialog, { type TemplateOption } from "./MoveDialog";
+import InviteToInterviewDialog from "@/components/interviews/InviteToInterviewDialog";
+import { isOpenInterview } from "@/helpers/interview/screening/summary-view";
 import type { StageOption } from "./StagePicker";
 
 /** PL-REQ-004 / PL-SEC-005; mirrors MAX_MOVE_APPLICATIONS on the server. */
@@ -32,6 +34,9 @@ export default function BulkActionBar({
   stages,
   templates = [],
   stageIdOf = () => null,
+  interviewStatusOf = () => null,
+  interviewInvite,
+  nameOf,
   onDone,
 }: {
   selectedIds: string[];
@@ -41,12 +46,21 @@ export default function BulkActionBar({
   templates?: TemplateOption[];
   /** Each selected application's current stage, to tell whether a move changes its status. */
   stageIdOf?: (applicationId: string) => string | null;
+  /** Each selected application's AI interview status, to warn about the invites a move cancels. */
+  interviewStatusOf?: (applicationId: string) => string | null;
+  /**
+   * SIT-062: "Invite to AI interview", when the member has interviews.manage.
+   * While the job's interview is off the dialog points to its setup.
+   */
+  interviewInvite?: { jobPostId: string; durationMinutes: number; enabled: boolean };
+  nameOf?: (applicationId: string) => string;
   /** Called after a successful move, to clear the selection. */
   onDone: () => void;
 }) {
   const router = useRouter();
   const [target, setTarget] = useState<StageOption | null>(null);
   const [isMoving, setIsMoving] = useState(false);
+  const [inviting, setInviting] = useState(false);
 
   if (selectedIds.length === 0) return null;
 
@@ -75,7 +89,7 @@ export default function BulkActionBar({
       const failed = result.skipped.filter((s) => s.reason === "email_failed").length;
       toast.success(
         `Moved ${plural(result.moved)} to ${stage.name}.` +
-          (result.emailed > 0 ? ` Emailed ${result.emailed}.` : "") +
+          (result.emailed > 0 ? ` Emailing ${result.emailed}.` : "") +
           (failed > 0 ? ` ${failed} email${failed === 1 ? "" : "s"} couldn't be sent.` : "") +
           (skipped > 0 ? ` ${plural(skipped)} couldn't be found.` : ""),
       );
@@ -113,12 +127,30 @@ export default function BulkActionBar({
             </SelectContent>
           </Select>
           {rejected && (
-            <Button size="sm" variant="outline" disabled={disabled} onClick={() => setTarget(rejected)}>
+            <Button size="sm" variant="destructive-outline" disabled={disabled} onClick={() => setTarget(rejected)}>
               Reject…
+            </Button>
+          )}
+          {interviewInvite && (
+            <Button size="sm" variant="outline" disabled={disabled} onClick={() => setInviting(true)}>
+              Invite to AI interview
             </Button>
           )}
         </div>
       </div>
+
+      {interviewInvite && (
+        <InviteToInterviewDialog
+          open={inviting}
+          onOpenChange={setInviting}
+          jobPostId={interviewInvite.jobPostId}
+          applicationIds={selectedIds}
+          nameOf={nameOf}
+          durationMinutes={interviewInvite.durationMinutes}
+          enabled={interviewInvite.enabled}
+          onDone={onDone}
+        />
+      )}
 
       <MoveDialog
         open={target !== null}
@@ -127,6 +159,8 @@ export default function BulkActionBar({
         changesStatus={target ? changesStatus(target) : false}
         templates={templates}
         previewApplicationId={selectedIds[0] ?? null}
+        fromKinds={selectedIds.map((id) => kindOf(stageIdOf(id)))}
+        openInterviews={selectedIds.filter((id) => isOpenInterview(interviewStatusOf(id))).length}
         isMoving={isMoving}
         onConfirm={(email) => target && void move(target, email)}
         onCancel={() => setTarget(null)}

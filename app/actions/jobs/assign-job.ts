@@ -29,6 +29,7 @@ export async function assignJobAction(
   if (!result.ok) return { ok: false, error: result.error };
 
   revalidatePath(`/company/job-posts/${parsed.data.jobPostId}`);
+  revalidatePath(`/company/job-posts/${parsed.data.jobPostId}/hiring-team`);
   revalidatePath("/company/settings/hiring-teams");
   await eventCaptureServer({ event: PostHogEvent.JobAssigned, distinctId: auth.user.id });
   return { ok: true };

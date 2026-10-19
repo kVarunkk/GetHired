@@ -193,6 +193,56 @@ describe("MoveDialog (PLT-063, PL-TEST-006)", () => {
     expect(onConfirm).toHaveBeenCalledWith(undefined);
   });
 
+  describe("picks the template from where the candidates come from (purposeForMove)", () => {
+    const REOPEN = templateOf("reopen");
+    const ALL = [...TEMPLATES, option(REOPEN), option(templateOf("interview_invite"))];
+    const SCREENING = { id: stageOf("screening").id, name: "Screening", kind: "screening" as const };
+    const INTERVIEW = { id: stageOf("interview").id, name: "Interview", kind: "interview" as const };
+    const picker = () => screen.getByRole("combobox", { name: "Template" });
+
+    it("suggests Back under review for a candidate coming back from Rejected", () => {
+      renderDialog({ stage: INTERVIEW, templates: ALL, fromKinds: ["rejected"], count: 1 });
+
+      expect(picker()).toHaveValue(REOPEN.id);
+      expect(subject()).toHaveValue(REOPEN.subject);
+    });
+
+    it("suggests the target's template for a forward move", () => {
+      renderDialog({ stage: INTERVIEW, templates: ALL, fromKinds: ["screening"], count: 1 });
+
+      expect(picker()).toHaveValue(templateOf("interview_invite").id);
+    });
+
+    it("falls back to the target's template, with a note, when the origins disagree", () => {
+      renderDialog({ stage: SCREENING, templates: ALL, fromKinds: ["applied", "rejected"], count: 2 });
+
+      expect(picker()).toHaveValue(templateOf("advance").id);
+      expect(screen.getByText(/come from different stages/)).toBeInTheDocument();
+    });
+
+    it("has no note when every origin suggests the same template", () => {
+      renderDialog({ stage: SCREENING, templates: ALL, fromKinds: ["rejected", "hired"], count: 2 });
+
+      expect(picker()).toHaveValue(REOPEN.id);
+      expect(screen.queryByText(/come from different stages/)).not.toBeInTheDocument();
+    });
+  });
+
+  it("says a move to Rejected cancels open AI interview invites", () => {
+    renderDialog({ openInterviews: 2 });
+
+    expect(screen.getByText(/2 open AI interview invites will be cancelled/)).toBeInTheDocument();
+  });
+
+  it("says nothing about interviews for a move to a stage that keeps them", () => {
+    renderDialog({
+      stage: { id: stageOf("interview").id, name: "Interview", kind: "interview" },
+      openInterviews: 2,
+    });
+
+    expect(screen.queryByText(/AI interview/)).not.toBeInTheDocument();
+  });
+
   it("shows the status the candidate will see", () => {
     renderDialog();
 

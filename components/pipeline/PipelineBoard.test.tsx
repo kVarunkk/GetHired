@@ -185,7 +185,7 @@ describe("PipelineBoard (PLT-043, PL-TEST-006)", () => {
     );
 
     const priya = screen.getByRole("link", { name: "Priya Sharma" });
-    expect(priya).toHaveAttribute("href", `/company/applicants/${appId(1)}`);
+    expect(priya).toHaveAttribute("href", `/company/applications/${appId(1)}`);
     const card = priya.closest("[data-card]") as HTMLElement;
     expect(within(card).getByText("82")).toBeInTheDocument();
     expect(within(card).getByText("3d in stage")).toBeInTheDocument();
@@ -208,6 +208,22 @@ describe("PipelineBoard (PLT-043, PL-TEST-006)", () => {
     expect(within(kai).getByTitle("Didn't meet: Can you relocate?")).toBeInTheDocument();
     const lee = screen.getByRole("link", { name: "Lee" }).closest("[data-card]") as HTMLElement;
     expect(within(lee).queryByText("Didn't meet requirements")).not.toBeInTheDocument();
+  });
+
+  it("badges a card with its AI interview (SIT-062)", () => {
+    render(
+      <PipelineBoard
+        jobPostId={PIPELINE_JOB.id}
+        initial={boardOf([
+          cardOf(1, { name: "Kai", interview: { id: "ai1", status: "completed", overallScore: 4.5, report: "ready" } }),
+          cardOf(2, { name: "Lee" }),
+        ])}
+      />,
+    );
+    const kai = screen.getByRole("link", { name: "Kai" }).closest("[data-card]") as HTMLElement;
+    expect(within(kai).getByTitle("AI interview")).toHaveTextContent("4.5 / 5");
+    const lee = screen.getByRole("link", { name: "Lee" }).closest("[data-card]") as HTMLElement;
+    expect(within(lee).queryByTitle("AI interview")).not.toBeInTheDocument();
   });
 
   it("captures pipeline_board_viewed once", () => {

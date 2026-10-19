@@ -76,7 +76,7 @@ export async function moveApplicationsAction(
   const movedApps = result.applications.filter((a) => moved.has(a.id));
   for (const jobPostId of new Set(movedApps.map((a) => a.jobPostId))) {
     revalidatePath(`/company/job-posts/${jobPostId}`);
-    revalidatePath(`/company/job-posts/${jobPostId}/applicants`);
+    revalidatePath(`/company/job-posts/${jobPostId}/applications`);
   }
 
   if (result.moved > 0) {

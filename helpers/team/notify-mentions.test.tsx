@@ -55,7 +55,7 @@ describe("sendNoteMentionEmails (TMT-071)", () => {
     const mail = vi.mocked(sendEmail).mock.calls[0][0];
     expect(mail.toEmail).toBe("priya@acme.dev");
     expect(mail.subject).toBe("Asha Rao mentioned you in a note on Ravi");
-    expect(mail.htmlContent).toContain(`/company/applicants/${APP_ID}`);
+    expect(mail.htmlContent).toContain(`/company/applications/${APP_ID}`);
     expect(mail.textContent).toContain("Backend Engineer");
     // The token is shown as @name; the id never reaches the email.
     expect(mail.textContent).toContain("@Priya Shah can you check");

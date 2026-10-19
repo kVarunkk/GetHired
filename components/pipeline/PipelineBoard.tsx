@@ -1,5 +1,7 @@
 "use client";
 
+import InterviewStatusBadge from "@/components/interviews/InterviewStatusBadge";
+import { isOpenInterview } from "@/helpers/interview/screening/summary-view";
 import KnockoutBadge from "@/components/applications/KnockoutBadge";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -114,7 +116,7 @@ export default function PipelineBoard({
         if (result.skipped.some((s) => s.reason === "email_failed")) {
           toast.error(`Moved ${app.name}, but the email couldn't be sent.`);
         } else if (result.emailed > 0) {
-          toast.success(`Moved ${app.name} and emailed them.`);
+          toast.success(`Moved ${app.name}. Their email is on its way.`);
         }
         void refetch();
       }
@@ -141,6 +143,8 @@ export default function PipelineBoard({
       changesStatus
       templates={templates}
       previewApplicationId={pending?.app.id ?? null}
+      fromKinds={pending ? [(pending.app.stageId && stageById.get(pending.app.stageId)?.kind) || null] : []}
+      openInterviews={isOpenInterview(pending?.app.interview?.status) ? 1 : 0}
       onConfirm={(email) => pending && void commit(pending, email)}
       onCancel={() => setPending(null)}
     />
@@ -301,6 +305,7 @@ function CardDetails({ card }: { card: BoardApplication }) {
       {card.knockoutReasons && (
         <KnockoutBadge knockout={{ failed: true, reasons: card.knockoutReasons.map((label) => ({ label })) }} />
       )}
+      {card.interview && <InterviewStatusBadge summary={card.interview} className="px-1.5 py-0" />}
     </div>
   );
 }
@@ -330,7 +335,7 @@ function BoardCard({ card }: { card: BoardApplication }) {
         <GripVertical className="h-4 w-4" />
       </button>
       <div className="min-w-0 flex-1">
-        <Link href={`/company/applicants/${card.id}`} className="block truncate font-medium hover:underline">
+        <Link href={`/company/applications/${card.id}`} className="block truncate font-medium hover:underline">
           {card.name}
         </Link>
         <CardDetails card={card} />
@@ -369,7 +374,7 @@ function MobileBoard({ board, cardsIn, onMove }: BoardProps) {
             <li key={card.id} className="flex items-start gap-3 rounded-md border p-3 text-sm">
               <div className="min-w-0 flex-1">
                 <Link
-                  href={`/company/applicants/${card.id}`}
+                  href={`/company/applications/${card.id}`}
                   className="block truncate font-medium hover:underline"
                 >
                   {card.name}

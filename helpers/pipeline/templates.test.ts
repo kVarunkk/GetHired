@@ -3,6 +3,7 @@ import {
   MAX_TEMPLATE_BODY,
   MAX_TEMPLATE_SUBJECT,
   TEMPLATE_VARIABLES,
+  purposeForMove,
   renderTemplate,
   type TemplateVars,
 } from "./templates";
@@ -128,5 +129,29 @@ describe("renderTemplate (PLT-060, PL-TEST-003)", () => {
   it("refuses an empty subject or body", () => {
     expect(render("  ", "x")).toEqual({ ok: false, error: "Add a subject." });
     expect(render("x", "  ")).toEqual({ ok: false, error: "Add a message." });
+  });
+});
+
+describe("purposeForMove", () => {
+  it.each([
+    [null, "applied", "advance"],
+    ["applied", "screening", "advance"],
+    ["screening", "interview", "interview_invite"],
+    ["interview", "offer", "offer"],
+    ["offer", "hired", "advance"],
+    ["screening", "rejected", "rejection"],
+    ["hired", "rejected", "rejection"],
+    ["interview", "on_hold", "on_hold"],
+    ["rejected", "on_hold", "on_hold"],
+    ["rejected", "screening", "reopen"],
+    ["rejected", "interview", "reopen"],
+    ["hired", "offer", "reopen"],
+    ["on_hold", "screening", "reopen"],
+    ["on_hold", "interview", "interview_invite"],
+    ["on_hold", "offer", "offer"],
+    ["interview", "applied", "reopen"],
+    ["offer", "screening", "reopen"],
+  ])("%s → %s suggests %s", (from, to, purpose) => {
+    expect(purposeForMove(from, to)).toBe(purpose);
   });
 });

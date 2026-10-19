@@ -23,6 +23,12 @@ type Allowed = {
   canViewNotes: boolean;
   canMove: boolean;
   canSearch: boolean;
+  /**
+   * SIT-072: "report" with interviews.view and an interview to read
+   * (getInterviewReport); "invite" with interviews.manage, the job's interview
+   * on and no invite yet (inviteToInterview).
+   */
+  interview?: "report" | "invite" | null;
 };
 
 const when = (allowed: boolean, suggestion: AgentSuggestion) => (allowed ? [suggestion] : []);
@@ -56,6 +62,16 @@ export function applicationSuggestions(a: Application, p: Allowed): AgentSuggest
     ...when(p.canMove, {
       label: "Move to the next stage",
       prompt: `Move ${ref} to the next stage of the pipeline. Show me before moving.`,
+    }),
+    // getInterviewReport
+    ...when(p.interview === "report", {
+      label: "Summarise the AI interview",
+      prompt: `Summarise the AI interview for ${ref}: the scores with their evidence, and what to ask in the next interview.`,
+    }),
+    // inviteToInterview (asks before inviting)
+    ...when(p.interview === "invite", {
+      label: "Invite to the AI interview",
+      prompt: `Invite ${ref} to the AI interview.`,
     }),
     // searchCandidates
     ...when(p.canSearch && a.candidateId !== null, {

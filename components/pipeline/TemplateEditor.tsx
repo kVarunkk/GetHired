@@ -45,6 +45,8 @@ const PURPOSE_LABELS: Record<string, string> = {
   advance: "Next steps",
   interview_invite: "Interview invite",
   offer: "Offer",
+  on_hold: "On hold",
+  reopen: "Back under review",
   custom: "Custom message",
 };
 
@@ -207,8 +209,8 @@ export default function TemplateEditor({
   );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="flex flex-col gap-3">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="flex min-w-0 flex-col gap-3">
         {draftPurpose ? (
           <div className="flex flex-col gap-1">
             <Label>New template for</Label>
@@ -318,7 +320,7 @@ export default function TemplateEditor({
             </Button>
           )}
           {!draftPurpose && selected && !selected.is_default && !confirmingDelete && (
-            <Button variant="ghost" disabled={isSaving} onClick={() => setConfirmingDelete(true)}>
+            <Button variant="destructive-ghost" disabled={isSaving} onClick={() => setConfirmingDelete(true)}>
               Delete template
             </Button>
           )}
@@ -336,13 +338,13 @@ export default function TemplateEditor({
         </div>
       </div>
 
-      <section aria-label="Preview" className="rounded-lg border px-4 py-3 text-sm">
+      <section aria-label="Preview" className="min-w-0 rounded-lg border px-4 py-3 text-sm">
         <p className="mb-2 text-xs font-medium uppercase text-muted-foreground">Preview</p>
         {rendered === null ? (
           <p className="text-muted-foreground">Add a subject and a message.</p>
         ) : rendered.ok ? (
           <>
-            <p className="font-medium">{rendered.subject}</p>
+            <p className="font-medium break-words">{rendered.subject}</p>
             <div className="prose prose-sm mt-2 max-w-none break-words dark:prose-invert">
               <ReactMarkdown components={{ img: () => null }}>{rendered.body}</ReactMarkdown>
             </div>

@@ -1,7 +1,8 @@
 import { notFound, unstable_rethrow } from "next/navigation";
+import { AskAgentAboutCareers } from "@/components/agent/recruiter/AskAgentAboutSettings";
 import CareersEditor from "@/components/careers/CareersEditor";
 import Error from "@/components/Error";
-import PageHeader from "@/components/PageHeader";
+import SectionHeader from "@/components/SectionHeader";
 import { getMyCareersPreview } from "@/helpers/careers/get-careers-page";
 import { parseCareersFilters, searchCompanyJobs, toSearchView } from "@/helpers/careers/search-company-jobs";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
@@ -29,13 +30,12 @@ export default async function CareersSettingsPage() {
     const jobs = toSearchView(searchCompanyJobs(preview.jobs, parseCareersFilters(new URLSearchParams())));
 
     return (
-      <div className="mb-20 flex w-full flex-col gap-6 p-4">
-        <PageHeader
-          backHref="/company/settings"
-          backLabel="Back to settings"
+      <div className="mb-20 flex w-full flex-col gap-6">
+        <SectionHeader
           title="Careers page"
           description="A branded page with all your open roles, at your own address on GetHired."
         />
+        {can(company, "agent.use") && <AskAgentAboutCareers canEdit={can(company, "careers.edit")} />}
         <CareersEditor
           initial={preview.page}
           jobs={jobs}

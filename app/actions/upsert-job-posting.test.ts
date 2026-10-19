@@ -142,11 +142,11 @@ describe("upsertJobPostingAction: behaviour that must survive", () => {
   });
 
   it("creates the posting when the limit allows it", async () => {
-    expect(await upsertJobPostingAction({ values: VALUES })).toEqual({ success: true, isUpdate: false });
+    expect(await upsertJobPostingAction({ values: VALUES })).toMatchObject({ success: true, isUpdate: false });
   });
 
   it("creates the posting, then the all_jobs row, and links job_id", async () => {
-    expect(await upsertJobPostingAction({ values: VALUES })).toEqual({ success: true, isUpdate: false });
+    expect(await upsertJobPostingAction({ values: VALUES })).toMatchObject({ success: true, isUpdate: false });
 
     const [insertAllJobs] = writes("all_jobs");
     expect(argsOf(insertAllJobs, "insert")?.[0]).toMatchObject({
@@ -164,7 +164,7 @@ describe("upsertJobPostingAction: behaviour that must survive", () => {
   it("re-embeds an edit, updates all_jobs and revalidates the job", async () => {
     const result = await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id });
 
-    expect(result).toEqual({ success: true, isUpdate: true });
+    expect(result).toMatchObject({ success: true, isUpdate: true });
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/api/update-embedding/gemini/job"),
       expect.objectContaining({ headers: { "X-Internal-Secret": INTERNAL_API_SECRET } }),
@@ -284,6 +284,7 @@ describe("upsertJobPostingAction: access control (RS-TEST-001)", () => {
     expect(await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id })).toEqual({
       success: true,
       isUpdate: true,
+      postingId: OWN.id,
     });
     expect(assertLimit).not.toHaveBeenCalled();
   });
@@ -311,7 +312,7 @@ describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)
       existingPostingId: OWN.id,
     });
 
-    expect(result).toEqual({ success: true, isUpdate: true });
+    expect(result).toMatchObject({ success: true, isUpdate: true });
     const [screenings] = writesTo("application_screenings");
     expect(argsOf(screenings, "update")?.[0]).toEqual(
       expect.objectContaining({ status: "stale", attempts: 0 }),
@@ -371,7 +372,7 @@ describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)
       existingPostingId: OWN.id,
     });
 
-    expect(result).toEqual({ success: true, isUpdate: true });
+    expect(result).toMatchObject({ success: true, isUpdate: true });
     expect(service.callsFor("send_batch")).toHaveLength(1);
   });
 });
@@ -416,7 +417,7 @@ describe("upsertJobPostingAction: application forms (CPT-017, AF-CON-001)", () =
 
     const result = await upsertJobPostingAction({ values: { ...VALUES, questions: undefined, application_form } });
 
-    expect(result).toEqual({ success: true, isUpdate: false });
+    expect(result).toMatchObject({ success: true, isUpdate: false });
     const payload = postingPayload();
     expect(payload.questions).toEqual(["Why us?"]);
     expect(JSON.stringify(payload.application_form)).not.toContain("knockout");

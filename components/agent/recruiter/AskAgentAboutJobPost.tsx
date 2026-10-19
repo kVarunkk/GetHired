@@ -9,7 +9,14 @@ import AskAgentBox, { type AgentSuggestion } from "../AskAgentBox";
 // the viewer's permissions don't give the agent.
 
 type JobPost = { id: string; title: string };
-type Allowed = { canMatch: boolean; canViewApplicants: boolean };
+type Allowed = {
+  canMatch: boolean;
+  canViewApplicants: boolean;
+  /** interviews.view on the job (getInterviewSetup, compareInterviewReports). */
+  canViewInterviews?: boolean;
+  /** interviews.manage and jobs.edit on the job (configureScreeningInterview). */
+  canManageInterviews?: boolean;
+};
 
 const when = (allowed: boolean, suggestion: AgentSuggestion) => (allowed ? [suggestion] : []);
 
@@ -26,6 +33,16 @@ export function jobPostSuggestions(job: JobPost, p: Allowed): AgentSuggestion[] 
     ...when(p.canMatch, { label: "Find candidates", prompt: `Find and rank the best candidates for ${ref}.` }),
     // listApplicants / getHiringFunnel
     ...when(p.canViewApplicants, { label: "Strongest applicants", prompt: `Who are the strongest applicants for ${ref}?` }),
+    // configureScreeningInterview (asks before saving)
+    ...when(!!p.canManageInterviews, {
+      label: "Set up an AI interview",
+      prompt: `Set up an AI screening interview for ${ref}: suggest competencies and must-ask questions from the post, and show me before saving.`,
+    }),
+    // getInterviewSetup / compareInterviewReports
+    ...when(!!p.canViewInterviews, {
+      label: "AI interview results",
+      prompt: `How is the AI interview going for ${ref}? Who did best, per competency?`,
+    }),
     // getJobPost (jobs.view, which the page itself needs)
     { label: "Improve the post", prompt: `Suggest improvements to the job post ${ref}.` },
   ];

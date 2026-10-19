@@ -20,6 +20,8 @@ vi.mock("./MoveDialog", () => ({
     stage,
     changesStatus,
     previewApplicationId,
+    fromKinds = [],
+    openInterviews = 0,
     onConfirm,
     onCancel,
   }: {
@@ -27,6 +29,8 @@ vi.mock("./MoveDialog", () => ({
     stage: { name: string } | null;
     changesStatus: boolean;
     previewApplicationId: string | null;
+    fromKinds?: (string | null)[];
+    openInterviews?: number;
     onConfirm: (email?: { templateId: string }) => void;
     onCancel: () => void;
   }) =>
@@ -36,6 +40,8 @@ vi.mock("./MoveDialog", () => ({
         aria-label={`Move to ${stage?.name}`}
         data-changes-status={String(changesStatus)}
         data-preview={previewApplicationId ?? ""}
+        data-from-kinds={fromKinds.join(",")}
+        data-open-interviews={String(openInterviews)}
       >
         <button onClick={() => onConfirm()}>Move</button>
         <button onClick={() => onConfirm({ templateId: "7e700000-0000-4000-8000-000000000001" })}>
@@ -43,6 +49,24 @@ vi.mock("./MoveDialog", () => ({
         </button>
         <button onClick={onCancel}>Cancel</button>
       </div>
+    ) : null,
+}));
+
+vi.mock("@/components/interviews/InviteToInterviewDialog", () => ({
+  MAX_INTERVIEW_INVITES: 50,
+  default: ({
+    open,
+    applicationIds,
+    durationMinutes,
+    enabled,
+  }: {
+    open: boolean;
+    applicationIds: string[];
+    durationMinutes: number;
+    enabled?: boolean;
+  }) =>
+    open ? (
+      <div role="dialog" aria-label="Invite">{`${applicationIds.join(",")} ${durationMinutes} ${enabled ? "on" : "off"}`}</div>
     ) : null,
 }));
 
@@ -164,7 +188,7 @@ describe("BulkActionBar (PL-TEST-006)", () => {
       }),
     );
     expect(toast.success).toHaveBeenCalledWith(
-      "Moved 2 applications to Rejected. Emailed 1. 1 email couldn't be sent.",
+      "Moved 2 applications to Rejected. Emailing 1. 1 email couldn't be sent.",
     );
   });
 
@@ -181,6 +205,26 @@ describe("BulkActionBar (PL-TEST-006)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     fireEvent.click(reject());
     expect(screen.getByRole("dialog")).toHaveAttribute("data-changes-status", "true");
+  });
+
+  it("tells MoveDialog where each application comes from and how many open interviews it has", () => {
+    const [a, b] = ids(2);
+    const stageIdOf = (id: string) => (id === a ? stageOf("rejected").id : stageOf("screening").id);
+    const interviewStatusOf = (id: string) => (id === a ? "cancelled" : "invited");
+    render(
+      <BulkActionBar
+        selectedIds={[a, b]}
+        stages={STAGES}
+        stageIdOf={stageIdOf}
+        interviewStatusOf={interviewStatusOf}
+        onDone={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(reject());
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("data-from-kinds", "rejected,screening");
+    expect(dialog).toHaveAttribute("data-open-interviews", "1");
   });
 
   it("disables Move to… and Reject… while a move is pending", async () => {
@@ -216,5 +260,50 @@ describe("BulkActionBar (PL-TEST-006)", () => {
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Stage not found."));
     expect(onDone).not.toHaveBeenCalled();
+  });
+});
+
+describe("BulkActionBar: AI interview invites (SIT-062)", () => {
+  it("opens the invite dialog for the selection", () => {
+    render(
+      <BulkActionBar
+        selectedIds={["a1", "a2"]}
+        stages={STAGES}
+        interviewInvite={{ jobPostId: "j1", durationMinutes: 15, enabled: true }}
+        onDone={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Invite to AI interview" }));
+    expect(screen.getByRole("dialog", { name: "Invite" })).toHaveTextContent("a1,a2 15 on");
+  });
+
+  it("still offers the invite while the job's interview is off", () => {
+    render(
+      <BulkActionBar
+        selectedIds={["a1"]}
+        stages={STAGES}
+        interviewInvite={{ jobPostId: "j1", durationMinutes: 15, enabled: false }}
+        onDone={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Invite to AI interview" }));
+    expect(screen.getByRole("dialog", { name: "Invite" })).toHaveTextContent("a1 15 off");
+  });
+
+  it("has no invite button without interviews.manage", () => {
+    render(<BulkActionBar selectedIds={["a1"]} stages={STAGES} onDone={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Invite to AI interview" })).not.toBeInTheDocument();
+  });
+
+  it("disables the invite above 50 selected", () => {
+    render(
+      <BulkActionBar
+        selectedIds={Array.from({ length: 51 }, (_, i) => `a${i}`)}
+        stages={STAGES}
+        interviewInvite={{ jobPostId: "j1", durationMinutes: 15, enabled: true }}
+        onDone={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Invite to AI interview" })).toBeDisabled();
   });
 });

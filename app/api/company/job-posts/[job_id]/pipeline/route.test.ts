@@ -3,7 +3,7 @@ import { setRequestUser } from "@/test/utils/auth";
 import { buildRequest } from "@/test/utils/request";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
-import { asEachMember, OWNER_A } from "@/test/utils/team";
+import { asEachMember, memberWith, OWNER_A } from "@/test/utils/team";
 import { DEFAULT_STAGES, PIPELINE_JOB, stageOf } from "@/test/utils/pipeline";
 import type { PipelineBoardData } from "@/utils/types/pipeline.types";
 import { BOARD_STAGE_LIMIT } from "@/helpers/pipeline/board";
@@ -135,6 +135,31 @@ describe("GET /api/company/job-posts/[job_id]/pipeline (PLT-041)", () => {
 
     const [appQuery] = rls.callsFor("applications");
     expect(appQuery.chain).toContainEqual({ method: "eq", args: ["job_post_id", PIPELINE_JOB.id] });
+  });
+
+  it("badges a card with its AI interview (SIT-062)", async () => {
+    await signInCompany();
+    ownsJob([rowOf(1), rowOf(2)]);
+    rls.queue("application_interviews", {
+      data: [{ id: "ai1", application_id: appId(1), status: "invited", interview_id: "i1" }],
+      error: null,
+    });
+
+    const { body } = await get();
+
+    expect(body.applications[0].interview).toEqual({ id: "ai1", status: "invited", overallScore: null, report: "none" });
+    expect(body.applications[1]).not.toHaveProperty("interview");
+  });
+
+  it("reads no interviews without interviews.view", async () => {
+    rls = createSupabaseMock({ user: COMPANY_A.user });
+    rls.queueRpc("my_company_access", { data: memberWith(["applicants.view"]).membership, error: null });
+    await setRequestUser(COMPANY_A.user, rls.client);
+    ownsJob([rowOf(1)]);
+
+    await get();
+
+    expect(rls.callsFor("application_interviews")).toHaveLength(0);
   });
 
   it("counts each card's notes and averages its ratings (PLT-053)", async () => {

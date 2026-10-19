@@ -4,9 +4,10 @@ import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 import AskAgentBox, { type AgentSuggestion } from "../AskAgentBox";
 
 // The company main pages' entry points to the recruiter agent (job posts,
-// applicants, profiles, outreach, billing, settings). Each suggestion maps to a recruiter
-// tool, and the page passes the `can(...)` / `canAny(...)` booleans that hide
-// the ones the viewer's permissions don't give the agent.
+// applicants, profiles, outreach, billing; the settings sections' are in
+// AskAgentAboutSettings). Each suggestion maps to a recruiter tool, and the
+// page passes the `can(...)` / `canAny(...)` booleans that hide the ones the
+// viewer's permissions don't give the agent.
 
 const when = (allowed: boolean, suggestion: AgentSuggestion) => (allowed ? [suggestion] : []);
 
@@ -143,48 +144,6 @@ export function AskAgentAboutBilling() {
       basePath={COMPANY_AGENT_PATH}
       suggestions={BILLING_SUGGESTIONS}
       toPrompt={(question) => `About my plan and usage: ${question.trim()}`}
-    />
-  );
-}
-
-export function settingsSuggestions(p: {
-  canEditStages: boolean;
-  canEditTemplates: boolean;
-  canEditCareers: boolean;
-  canViewTeam: boolean;
-}): AgentSuggestion[] {
-  return [
-    ...when(p.canEditStages, {
-      label: "Add a pipeline stage",
-      prompt: "Help me add a stage to my hiring pipeline. Show me the current stages and ask where it goes.",
-    }),
-    ...when(p.canEditTemplates, {
-      label: "Write an email template",
-      prompt: "Help me write a new email template for candidates. Ask me what it's for first.",
-    }),
-    ...when(p.canEditTemplates, {
-      label: "Review my templates",
-      prompt: "Read my email templates and suggest how to make them clearer and warmer.",
-    }),
-    ...when(p.canEditCareers, {
-      label: "Improve my careers page",
-      prompt: "Read my careers page and suggest improvements to its text, then make the changes I agree to.",
-    }),
-    ...when(p.canViewTeam, {
-      label: "Who's on my team",
-      prompt: "Summarise my team: who's on it, their roles and what each role lets them do.",
-    }),
-  ];
-}
-
-export function AskAgentAboutSettings(props: Parameters<typeof settingsSuggestions>[0]) {
-  return (
-    <AskAgentBox
-      title="Let the agent set things up"
-      placeholder="Add a Take-home stage after Screen…"
-      basePath={COMPANY_AGENT_PATH}
-      suggestions={settingsSuggestions(props)}
-      toPrompt={(question) => `About my company settings: ${question.trim()}`}
     />
   );
 }

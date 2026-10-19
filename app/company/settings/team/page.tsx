@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { AskAgentAboutTeam } from "@/components/agent/recruiter/AskAgentAboutTeam";
 import Error from "@/components/Error";
-import PageHeader from "@/components/PageHeader";
+import SectionHeader from "@/components/SectionHeader";
 import InviteDialog from "@/components/team/InviteDialog";
 import RoleMatrix from "@/components/roles/RoleMatrix";
 import TeamTable from "@/components/team/TeamTable";
@@ -46,32 +45,10 @@ export default async function CompanyTeamPage({
     const { invite: inviteRoleId } = await searchParams;
 
     return (
-      <div className="mb-20 flex w-full flex-col gap-6 p-4">
-        <PageHeader
-          backHref="/company/settings"
-          backLabel="Back to settings"
+      <div className="mb-20 flex w-full flex-col gap-6">
+        <SectionHeader
           title="Team"
-          description={
-            <>
-              Who&apos;s on {company.name ?? "your company"}&apos;s hiring team and what their roles allow.
-              {can(company, "roles.view") && (
-                <>
-                  {" "}
-                  <Link href="/company/settings/roles" className="underline underline-offset-4 hover:text-brand">
-                    Manage roles
-                  </Link>
-                </>
-              )}
-              {canAny(company, "jobs.assign") && (
-                <>
-                  {" "}
-                  <Link href="/company/settings/hiring-teams" className="underline underline-offset-4 hover:text-brand">
-                    Manage hiring teams
-                  </Link>
-                </>
-              )}
-            </>
-          }
+          description={<>Who&apos;s on {company.name ?? "your company"}&apos;s hiring team and what their roles allow.</>}
           actions={
             canInvite && (
               <InviteDialog

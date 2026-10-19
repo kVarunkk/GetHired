@@ -35,7 +35,7 @@ export async function addNoteAction(input: z.input<typeof inputSchema>): Promise
   const result = await addNote(auth, parsed.data);
   if (!result.ok) return result;
 
-  if (result.note.application_id) revalidatePath(`/company/applicants/${result.note.application_id}`);
+  if (result.note.application_id) revalidatePath(`/company/applications/${result.note.application_id}`, "layout");
   await eventCaptureServer({
     event: PostHogEvent.PipelineNoteAdded,
     distinctId: auth.user.id,

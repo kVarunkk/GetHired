@@ -5,7 +5,7 @@ import type { JobPostingInput } from "@/helpers/jobs/job-posting-schema";
 import { upsertJobPosting, type UpsertJobPostingResult } from "@/helpers/jobs/upsert-job-posting";
 
 type UpsertResult =
-  | { success: true; isUpdate: boolean }
+  | { success: true; isUpdate: boolean; postingId: string }
   | Exclude<UpsertJobPostingResult, { success: true }>;
 
 /**
@@ -26,5 +26,5 @@ export async function upsertJobPostingAction(params: {
   if (!auth.ok) return { success: false, error: auth.error };
 
   const result = await upsertJobPosting(auth, params);
-  return result.success ? { success: true, isUpdate: result.isUpdate } : result;
+  return result.success ? { success: true, isUpdate: result.isUpdate, postingId: result.postingId } : result;
 }

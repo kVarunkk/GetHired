@@ -102,7 +102,7 @@ describe("GET /api/updates/company/applicant-digest/worker (PLT-071, PL-TEST-007
       expect(out).toContain("Candidate 2 · fit score pending");
       expect(out).not.toContain("@mail.test");
     }
-    expect(email.htmlContent).toContain(`https://gethired.test/company/job-posts/${JOB_1.id}/applicants`);
+    expect(email.htmlContent).toContain(`https://gethired.test/company/job-posts/${JOB_1.id}/applications`);
 
     // Applications since the watermark, for this company only.
     const [load] = db.callsFor("applications");

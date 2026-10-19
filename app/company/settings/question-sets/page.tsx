@@ -4,7 +4,7 @@ import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AskAgentAboutQuestionSets from "@/components/agent/recruiter/AskAgentAboutQuestionSets";
 import Error from "@/components/Error";
-import PageHeader from "@/components/PageHeader";
+import SectionHeader from "@/components/SectionHeader";
 import Forbidden from "@/components/roles/Forbidden";
 import QuestionSetsTable from "@/components/jobs/QuestionSetsTable";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
@@ -37,10 +37,8 @@ export default async function QuestionSetsPage() {
     const atLimit = sets.length >= MAX_QUESTION_SETS;
 
     return (
-      <div className="mb-20 flex w-full flex-col gap-6 p-4">
-        <PageHeader
-          backHref="/company/settings"
-          backLabel="Back to settings"
+      <div className="mb-20 flex w-full flex-col gap-6">
+        <SectionHeader
           title="Question sets"
           description={
             <>

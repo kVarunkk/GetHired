@@ -35,6 +35,8 @@ export async function saveSchedulingLinkAction(
     return { ok: false, error: "Couldn't save the link. Please try again." };
   }
 
-  revalidatePath("/company/settings");
+  revalidatePath("/company/settings/scheduling");
+  // The templates preview shows the link.
+  revalidatePath("/company/settings/email-templates");
   return { ok: true };
 }

@@ -111,9 +111,9 @@ describe("ApplicantsTable: behaviour that must survive", () => {
       expect.arrayContaining(["Applicant Name", "Job Title", "Status", "Date Applied", "Actions"]),
     );
     expect(names()).toEqual(["Grace", "Ada", "Alan"]);
-    expect(screen.getAllByRole("link", { name: /View Applicant/ })[0]).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: /View Application/ })[0]).toHaveAttribute(
       "href",
-      `/company/applicants/${data[0].id}`,
+      `/company/applications/${data[0].id}`,
     );
   });
 
@@ -358,5 +358,43 @@ describe("ApplicantsTable: pipeline list (PLT-033)", () => {
 
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Filter by stage" })).not.toBeInTheDocument();
+  });
+});
+
+describe("ApplicantsTable: AI interview column (SIT-062)", () => {
+  const rows = () => [
+    applicationRow("NoInterview"),
+    applicationRow("Waiting"),
+    applicationRow("Low"),
+    applicationRow("High"),
+  ];
+  const summaries = (data: TApplicationServer[]) => ({
+    [data[1].id]: { id: "ai1", status: "invited", overallScore: null, report: "none" as const },
+    [data[2].id]: { id: "ai2", status: "completed", overallScore: 2.5, report: "ready" as const },
+    [data[3].id]: { id: "ai3", status: "completed", overallScore: 4.2, report: "ready" as const },
+  });
+
+  it("shows each interview's status or overall score", () => {
+    const data = rows();
+    render(<ApplicantsTable data={data} interviews={summaries(data)} />);
+
+    expect(screen.getByRole("columnheader", { name: /Interview/ })).toBeInTheDocument();
+    expect(screen.getByText("Invited")).toBeInTheDocument();
+    expect(screen.getByText("4.2 / 5")).toBeInTheDocument();
+    expect(screen.getByText("2.5 / 5")).toBeInTheDocument();
+  });
+
+  it("sorts by overall score, highest first, unscored last", async () => {
+    const data = rows();
+    render(<ApplicantsTable data={data} interviews={summaries(data)} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /Interview/ }));
+
+    expect(names().slice(0, 2)).toEqual(["High", "Low"]);
+  });
+
+  it("has no column without interview data (no interviews.view)", () => {
+    render(<ApplicantsTable data={rows()} />);
+    expect(screen.queryByRole("columnheader", { name: /Interview/ })).not.toBeInTheDocument();
   });
 });

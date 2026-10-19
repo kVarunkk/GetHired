@@ -171,7 +171,7 @@ export default function JobPageDropdown({
           {!isCompanyUser && userId && applicationStatus && !isPlatformJob && (
             <DropdownMenuItem
               onClick={() => setConfirmingRemove(true)}
-              className=" focus:bg-destructive/70 cursor-pointer"
+              className="cursor-pointer text-destructive focus:text-destructive"
             >
               <Trash className="h-4 w-4" />
               Remove Application
