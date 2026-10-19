@@ -9,7 +9,7 @@ import type { Database } from "@/utils/types/database.types";
 import type { ConfigSnapshot } from "./schemas";
 
 export const companyApplicantUrl = (applicationId: string) =>
-  `${deploymentUrl()}/company/applicants/${applicationId}`;
+  `${deploymentUrl()}/company/applications/${applicationId}`;
 
 /**
  * Who hears about an interview: the company's owners and the members whose

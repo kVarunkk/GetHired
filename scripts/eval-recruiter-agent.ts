@@ -95,7 +95,7 @@ const applicant = (n: number, c: (typeof CANDIDATES)[number], fit: number, statu
   screening: "completed",
   fitScore: fit,
   recommendation: fit >= 75 ? "yes" : "maybe",
-  url: `/company/applicants/e0000000-0000-4000-8000-00000000000${n}`,
+  url: `/company/applications/e0000000-0000-4000-8000-00000000000${n}`,
 });
 
 /** What each tool returns, given the model's input. */
@@ -197,7 +197,7 @@ const FIXTURES: Record<string, (input: Record<string, unknown>) => unknown> = {
       ),
       resumeExcerpt: null,
       screening: { status: "completed", fitScore: 79, recommendation: "yes", details: null },
-      url: `/company/applicants/${input.applicationId}`,
+      url: `/company/applications/${input.applicationId}`,
     };
   },
   getHiringFunnel: () => ({
@@ -272,6 +272,52 @@ const FIXTURES: Record<string, (input: Record<string, unknown>) => unknown> = {
     outreachUrl: "/company/outreach/f2000000-0000-4000-8000-000000000003",
   }),
   addNote: () => ({ noteId: "f1000000-0000-4000-8000-000000000001", rating: null }),
+  // Screening interviews (SIT-072).
+  getInterviewSetup: () => ({
+    jobPostId: JOB_ID,
+    jobTitle: "Founding Backend Engineer",
+    config: {
+      enabled: true,
+      invite_rule: "fit_threshold",
+      fit_threshold: 70,
+      questions: [],
+      competencies: [
+        { name: "System design", description: "Designs services that scale." },
+        { name: "Communication", description: "Explains trade-offs clearly." },
+      ],
+      duration_minutes: 15,
+      deadline_days: 5,
+      language: "en",
+    },
+    funnel: { invited: 3, waiting: 0, inProgress: 0, completed: 3, expired: 0, declined: 0, avgScore: 3.7 },
+    url: `/company/job-posts/${JOB_ID}`,
+  }),
+  compareInterviewReports: (input) => ({
+    competencies: ["System design", "Communication"],
+    rows: `<interview_comparison>${JSON.stringify(
+      (input.applicationIds as string[]).map((id, i) => ({
+        applicationId: id,
+        name: CANDIDATES[i]?.name ?? "Applicant",
+        status: "completed",
+        overallScore: 4 - i * 0.5,
+        scores: { "System design": 5 - i, Communication: 3 },
+      })),
+    )}</interview_comparison>`,
+  }),
+  getInterviewReport: (input) => ({
+    applicationId: input.applicationId,
+    status: "completed",
+    overallScore: 4,
+    report: `<interview_report>${JSON.stringify({
+      competencies: [{ name: "System design", score: 4, rationale: "Clear sharding plan.", evidence: [{ turnId: 2, quote: "I sharded the orders table by tenant." }] }],
+      summary: "Solid backend depth.",
+      strengths: ["Sharding"],
+      concerns: [],
+      followUpQuestions: ["How did you rebalance shards?"],
+    })}</interview_report>`,
+  }),
+  configureScreeningInterview: (input) => ({ jobPostId: input.jobPostId, saved: true }),
+  inviteToInterview: (input) => ({ invited: input.applicationIds, skipped: [] }),
 };
 
 /** The production tool definitions, with fixture outputs instead of database calls. */

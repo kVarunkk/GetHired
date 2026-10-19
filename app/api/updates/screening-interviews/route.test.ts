@@ -90,7 +90,7 @@ describe("/api/updates/screening-interviews (SI-REQ-014, SI-TEST-009)", () => {
     expect(mails.find((m) => m.toEmail === "priya@example.com")!.textContent).toContain("has expired");
     const company = mails.find((m) => m.toEmail === "owner@acme.dev")!;
     expect(company.textContent).toContain("Priya Sharma didn't take the AI interview");
-    expect(company.htmlContent).toContain("https://app.test/company/applicants/app1");
+    expect(company.htmlContent).toContain("https://app.test/company/applications/app1");
   });
 
   it("sends a reminder once: the claim sets reminder_sent_at, so a second run finds none", async () => {

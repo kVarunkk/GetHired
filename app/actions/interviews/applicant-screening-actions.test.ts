@@ -9,6 +9,7 @@ import { notifyCompanyOfCandidateResponse } from "@/helpers/interview/screening/
 import { recordScreeningConsentAction } from "./record-screening-consent";
 import { declineScreeningInterviewAction } from "./decline-screening-interview";
 import { requestScreeningAccommodationAction } from "./request-screening-accommodation";
+import { getMyScreeningInterviewAction } from "./get-my-screening-interview";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
@@ -95,5 +96,22 @@ describe("applicant screening actions (SI-REQ-016/020/026)", () => {
     });
     await flushAfter();
     expect(notifyCompanyOfCandidateResponse).toHaveBeenCalledWith(service.client, AI, "accommodation");
+  });
+});
+
+describe("getMyScreeningInterviewAction (SIT-053)", () => {
+  it("reads the session applicant's own interview through my_screening_interviews", async () => {
+    rls.queueRpc("my_screening_interviews", { data: { id: AI, status: "completed" }, error: null });
+    expect(await getMyScreeningInterviewAction({ id: AI })).toEqual({ ok: true, interview: { id: AI, status: "completed" } });
+    expect(rls.callsFor("my_screening_interviews")[0].chain).toContainEqual({ method: "eq", args: ["id", AI] });
+  });
+
+  it("returns not found for an interview that isn't theirs", async () => {
+    expect(await getMyScreeningInterviewAction({ id: AI })).toEqual({ ok: false, error: "Interview not found." });
+  });
+
+  it("refuses a company user", async () => {
+    await signIn(mockUser({ type: "company" }));
+    expect(await getMyScreeningInterviewAction({ id: AI })).toEqual({ ok: false, error: "Only applicants can do this." });
   });
 });

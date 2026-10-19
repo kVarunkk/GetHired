@@ -110,6 +110,12 @@ export const RECRUITER_TOOL_PERMISSIONS = {
   updateCareersPage: p(["careers.edit"]),
   setCareersAddress: p(["careers.edit"]),
   setCareersPublished: p(["careers.edit"]),
+  // Screening interviews (SIT-071). Configuring also needs jobs.edit, checked in the tool.
+  getInterviewSetup: p(["interviews.view"], "jobPostId"),
+  configureScreeningInterview: p(["interviews.manage"], "jobPostId"),
+  inviteToInterview: p(["interviews.manage"], "applicationIds"),
+  getInterviewReport: p(["interviews.view"], "applicationId"),
+  compareInterviewReports: p(["interviews.view"], "applicationIds"),
 } as const satisfies Record<string, ToolPermission>;
 
 export type RecruiterToolName = keyof typeof RECRUITER_TOOL_PERMISSIONS;

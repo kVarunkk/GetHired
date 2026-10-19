@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import InterviewComponent from "@/components/InterviewComponent";
-import { notFound, unstable_rethrow } from "next/navigation";
+import { notFound, redirect, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
 
 type SessionSummary = {
@@ -29,6 +29,11 @@ export default async function InterviewIdPage({
 
     if (error) throw error;
     if (!data) notFound();
+    // A company's screening interview has its own page (SIT-054).
+    if (data.kind === "screening") {
+      if (!data.application_interview_id) notFound();
+      redirect(`/interview/screening/${data.application_interview_id}`);
+    }
 
     const { data: sessions, error: sessionsError } = await supabase
       .from("interview_sessions")

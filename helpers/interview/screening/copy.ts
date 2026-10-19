@@ -8,6 +8,7 @@ export const INVITE_SKIP_MESSAGES: Record<string, string> = {
   manual_only: "This job only invites applicants by hand.",
   job_inactive: "The job post isn't open.",
   exists: "Already invited.",
+  closed: "The applicant is in a Rejected or Hired stage.",
   not_applicant: "This application can't be invited.",
   insufficient_credits: "Not enough interview minutes or credits.",
   member_limit: "Your role's monthly interview minutes are used up.",
@@ -24,7 +25,9 @@ export const MANAGE_MESSAGES: Record<string, string> = {
   invalid_status: "That isn't possible at this stage of the interview.",
   invalid_days: "Extend by 1 to 14 days.",
   limit_reached: "That's already been used the maximum number of times.",
-  insufficient_credits: "Not enough interview minutes or credits for another attempt.",
+  closed: "The applicant is in a Rejected or Hired stage. Move them to another stage first.",
+  job_inactive: "The job post isn't open.",
+  insufficient_credits: "Not enough interview minutes or credits for this interview.",
   member_limit: "Your role's monthly interview minutes are used up.",
 };
 

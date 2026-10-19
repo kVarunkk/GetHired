@@ -59,8 +59,8 @@ export async function inviteToInterviewAction(input: {
   }
 
   if (result.invited.length > 0) {
-    revalidatePath(`/company/job-posts/${jobPostId}/applicants`);
-    for (const { applicationId } of result.invited) revalidatePath(`/company/applicants/${applicationId}`);
+    revalidatePath(`/company/job-posts/${jobPostId}/applications`);
+    for (const { applicationId } of result.invited) revalidatePath(`/company/applications/${applicationId}`, "layout");
   }
   return {
     ok: true,

@@ -6,11 +6,15 @@ import MessageParts from "./MessageParts";
 import { previewAgentMoveAction } from "@/app/actions/pipeline/preview-agent-move";
 import { previewAgentOutreachAction } from "@/app/actions/outreach/preview-agent-outreach";
 import { previewAgentJobDeleteAction } from "@/app/actions/jobs/preview-agent-job-delete";
+import { previewAgentInterviewInviteAction } from "@/app/actions/interviews/preview-agent-interview-invite";
 
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
 vi.mock("@/app/actions/pipeline/preview-agent-move", () => ({ previewAgentMoveAction: vi.fn() }));
 vi.mock("@/app/actions/outreach/preview-agent-outreach", () => ({ previewAgentOutreachAction: vi.fn() }));
 vi.mock("@/app/actions/jobs/preview-agent-job-delete", () => ({ previewAgentJobDeleteAction: vi.fn() }));
+vi.mock("@/app/actions/interviews/preview-agent-interview-invite", () => ({
+  previewAgentInterviewInviteAction: vi.fn(),
+}));
 
 const assistant = (parts: unknown[]): UIMessage =>
   ({ id: "a1", role: "assistant", parts }) as UIMessage;
@@ -109,7 +113,7 @@ describe("MessageParts: recruiter results (RA-TEST-009)", () => {
               screening: "completed",
               fitScore: 77,
               recommendation: "yes",
-              url: "/company/applicants/e1",
+              url: "/company/applications/e1",
             },
           ],
         }),
@@ -117,7 +121,7 @@ describe("MessageParts: recruiter results (RA-TEST-009)", () => {
     );
 
     const link = screen.getByRole("link", { name: /Ada Lovelace/ });
-    expect(link).toHaveAttribute("href", "/company/applicants/e1");
+    expect(link).toHaveAttribute("href", "/company/applications/e1");
     expect(within(link).getByText(/Backend Engineer/)).toBeInTheDocument();
     expect(within(link).getByText(/Reviewed/)).toBeInTheDocument();
     expect(screen.getByLabelText("Match score 77 out of 100, strong")).toBeInTheDocument();
@@ -167,7 +171,7 @@ describe("MessageParts: recruiter results (RA-TEST-009)", () => {
           ],
           jobs: [],
           needsAttention: [
-            { applicationId: "e1", name: "Ada", jobTitle: "Backend Engineer", daysInApplied: 5, url: "/company/applicants/e1" },
+            { applicationId: "e1", name: "Ada", jobTitle: "Backend Engineer", daysInApplied: 5, url: "/company/applications/e1" },
           ],
         }),
       ]),
@@ -176,7 +180,7 @@ describe("MessageParts: recruiter results (RA-TEST-009)", () => {
     const strip = screen.getByRole("list", { name: "Pipeline funnel" });
     expect(within(strip).getByText("Applied")).toBeInTheDocument();
     expect(within(strip).getByText("4")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ada" })).toHaveAttribute("href", "/company/applicants/e1");
+    expect(screen.getByRole("link", { name: "Ada" })).toHaveAttribute("href", "/company/applications/e1");
     expect(screen.getByText("Backend Engineer · 5d")).toBeInTheDocument();
   });
 
@@ -192,7 +196,7 @@ describe("MessageParts: recruiter results (RA-TEST-009)", () => {
       ]),
     );
 
-    expect(screen.getByText("Moved 3 applications to Interview, emailed 2, 1 skipped")).toBeInTheDocument();
+    expect(screen.getByText("Moved 3 applications to Interview, emailing 2, 1 skipped")).toBeInTheDocument();
   });
 
   it("links to the talent list a candidate was added to", () => {
@@ -446,5 +450,60 @@ describe("MessageParts: recruiter approvals (RA-REQ-005)", () => {
 
     expect(screen.getByText(/^Delete this talent list\? Its candidates stay in the talent pool/)).toBeInTheDocument();
     expect(screen.queryByText("f0000000-0000-4000-8000-000000000001")).not.toBeInTheDocument();
+  });
+});
+
+describe("MessageParts: screening interview approvals (SIT-071)", () => {
+  const approval = (tool: string, input: unknown) => ({
+    type: `tool-${tool}`,
+    toolCallId: "c1",
+    state: "approval-requested",
+    input,
+    approval: { id: "ap1" },
+  });
+
+  it("shows the exact interview setup before approval", () => {
+    renderParts(
+      assistant([
+        approval("configureScreeningInterview", {
+          jobPostId: "b1",
+          enabled: true,
+          inviteRule: "fit_threshold",
+          fitThreshold: 75,
+          questions: ["Why this team?"],
+          competencies: [{ name: "System design", description: "Designs services that scale." }],
+          durationMinutes: 20,
+          deadlineDays: 7,
+        }),
+      ]),
+    );
+
+    expect(screen.getByText("Set up this AI interview?")).toBeInTheDocument();
+    expect(screen.getByText("Applicants scoring at least 75")).toBeInTheDocument();
+    expect(screen.getByText("System design")).toBeInTheDocument();
+    expect(screen.getByText("Designs services that scale.")).toBeInTheDocument();
+    expect(screen.getByText("Why this team?")).toBeInTheDocument();
+    expect(screen.getByText("20 minutes")).toBeInTheDocument();
+    expect(screen.getByText("7 days")).toBeInTheDocument();
+  });
+
+  it("shows who'd be invited, who wouldn't, and the minutes held", async () => {
+    vi.mocked(previewAgentInterviewInviteAction).mockResolvedValue({
+      ok: true,
+      totalMinutes: 30,
+      applicants: [
+        { id: "e1", name: "Ada", jobTitle: "Backend Engineer", invite: true, minutes: 15 },
+        { id: "e2", name: "Grace", jobTitle: "Backend Engineer", invite: true, minutes: 15 },
+        { id: "e3", name: "Alan", jobTitle: "Backend Engineer", invite: false, message: "Already invited." },
+      ],
+    });
+    renderParts(assistant([approval("inviteToInterview", { applicationIds: ["e1", "e2", "e3"] })]));
+
+    expect(screen.getByText("Invite 3 applicants to the AI interview?")).toBeInTheDocument();
+    expect(await screen.findByText("Ada")).toBeInTheDocument();
+    expect(screen.getByText("Grace")).toBeInTheDocument();
+    expect(screen.getByText(/Alan/)).toBeInTheDocument();
+    expect(screen.getByText(/Already invited./)).toBeInTheDocument();
+    expect(screen.getByText(/30 interview minutes/)).toBeInTheDocument();
   });
 });

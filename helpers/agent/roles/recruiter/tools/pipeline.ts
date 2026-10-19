@@ -168,7 +168,7 @@ export function createPipelineTools(ctx: RecruiterToolContext) {
     }),
 
     moveApplications: tool({
-      description: `Move up to ${RA_MAX_BULK_APPLICATIONS} applications to the company's jobs into a pipeline stage (ids from listStages). With email, the candidates whose visible status changes get the template's email; subject and body replace the template's text and may use its {{variables}}.`,
+      description: `Move up to ${RA_MAX_BULK_APPLICATIONS} applications to the company's jobs into a pipeline stage (ids from listStages). With email, the candidates whose visible status changes get the template's email; subject and body replace the template's text and may use its {{variables}}. Pick the template by where the candidates come from as well as where they go: rejection for a Rejected stage, on_hold for On hold, reopen when they come back from Rejected or Hired, resume from On hold into Applied or Screening, or move to an earlier stage; otherwise the target's (interview_invite, offer, advance). Moving a candidate to Rejected or Hired cancels their open AI interview invite. Emails are queued and go out within a few minutes; emailed counts the queued ones.`,
       inputSchema: moveApplicationsInput,
       execute: ({ applicationIds, stageId, email }) =>
         withToolErrors(ctx, "moveApplications", async () => {

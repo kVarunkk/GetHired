@@ -94,7 +94,7 @@ describe("notifyCompanyOfCandidateResponse (SI-REQ-016/026)", () => {
     const mail = vi.mocked(sendEmail).mock.calls[0][0];
     expect(mail.subject).toBe("Priya Sharma asked for an alternative to the AI interview");
     expect(mail.textContent).toContain("I have a hearing impairment.");
-    expect(mail.htmlContent).toContain(`/company/applicants/${APP}`);
+    expect(mail.htmlContent).toContain(`/company/applications/${APP}`);
   });
 
   it("sends the decline", async () => {
@@ -131,7 +131,7 @@ describe("notifyCompanyOfCompletedInterview (SI-REQ-030)", () => {
     const mail = vi.mocked(sendEmail).mock.calls[0][0];
     expect(mail.subject).toBe("Priya Sharma finished the AI interview for Backend Engineer");
     expect(mail.textContent).toContain("The report is ready");
-    expect(mail.htmlContent).toContain(`/company/applicants/${APP}`);
+    expect(mail.htmlContent).toContain(`/company/applications/${APP}`);
   });
 
   it("says when the interview was too short to score", async () => {

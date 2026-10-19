@@ -24,6 +24,8 @@ type RoleUi = {
   /** Starter prompts on an empty chat, each with an icon (same order). */
   starters: string[];
   icons: LucideIcon[];
+  /** The message box's placeholder. */
+  placeholder: string;
   dailyCap: number;
   memoriesTitle: string;
   memoriesDescription: string;
@@ -46,6 +48,7 @@ export const AGENT_ROLE_UI: Record<AgentRoleId, RoleUi> = {
     starters: APPLICANT_STARTERS,
     // Search, match, review, track.
     icons: [Search, Target, FileSearch, ListChecks],
+    placeholder: "Ask about jobs, your resume or applications…",
     dailyCap: AGENT_DAILY_MESSAGE_CAP,
     memoriesTitle: "What the assistant remembers",
     memoriesDescription:
@@ -64,6 +67,7 @@ export const AGENT_ROLE_UI: Record<AgentRoleId, RoleUi> = {
     ],
     // Find, rank, write, funnel.
     icons: [Users, Award, PenLine, Gauge],
+    placeholder: "Ask about candidates, applicants or your job posts…",
     dailyCap: RA_DAILY_MESSAGE_CAP,
     memoriesTitle: "What the assistant remembers about your hiring",
     memoriesDescription:

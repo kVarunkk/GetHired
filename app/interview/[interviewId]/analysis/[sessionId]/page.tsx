@@ -22,6 +22,8 @@ export default async function InterviewAnalysisPage({
     .select("id, name")
     .eq("id", interviewId)
     .eq("user_id", user.id)
+    // SI-DEC-003: candidates never see a screening analysis.
+    .eq("kind", "practice")
     .single();
 
   if (interviewError || !interview) notFound();

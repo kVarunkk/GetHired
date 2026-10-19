@@ -62,6 +62,9 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
         "updateCareersPage",
         "setCareersAddress",
         "setCareersPublished",
+        // SIT-071: screening interview setup and invites.
+        "configureScreeningInterview",
+        "inviteToInterview",
       ].sort(),
     );
   });

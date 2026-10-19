@@ -50,6 +50,9 @@ export const recruiterToolApproval = createToolApproval({
     "updateCareersPage",
     "setCareersAddress",
     "setCareersPublished",
+    // SIT-071: the card shows the exact setup; invites email applicants and hold minutes.
+    "configureScreeningInterview",
+    "inviteToInterview",
   ],
   untrustedContentTools: [
     "getCandidateProfile",
@@ -65,11 +68,14 @@ export const recruiterToolApproval = createToolApproval({
     // Candidate names and answer notes are candidate-written.
     "listOutreach",
     "getOutreach",
+    // Interview quotes and applicant names are candidate words.
+    "getInterviewReport",
+    "compareInterviewReports",
   ],
   gatedWriteTools: ["saveMemory", "deleteMemory", "addNote", "updateNote"],
   untrustedReason:
     "The assistant read candidate profiles or applications in this reply, so memory and note changes need your OK.",
-  creditTools: ["screenApplicants", "runMatchingForJob", "explainMatch"],
+  creditTools: ["screenApplicants", "runMatchingForJob", "explainMatch", "inviteToInterview"],
   perTurnCaps: [
     {
       tools: ["moveApplications", "sendOutreach"],

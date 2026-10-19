@@ -46,6 +46,7 @@ export async function saveInterviewConfigAction({
   const result = await saveInterviewConfig(auth.supabase, { companyId: auth.company.id, jobPostId }, config);
   if (!result.ok) return result;
   revalidatePath(`/company/job-posts/${jobPostId}`);
+  revalidatePath(`/company/job-posts/${jobPostId}/interview`);
 
   const offersScreening =
     result.config.enabled &&

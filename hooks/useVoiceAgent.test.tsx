@@ -373,3 +373,96 @@ describe("useVoiceAgent (practice): heartbeat", () => {
     expect(result.current.status).toBe("error");
   });
 });
+
+describe("useVoiceAgent (screening, SIT-051)", () => {
+  const APPLICATION_INTERVIEW_ID = "ai-1";
+  const renderScreening = () =>
+    renderHook(() => useVoiceAgent(INTERVIEW_ID, { mode: "screening", applicationInterviewId: APPLICATION_INTERVIEW_ID }));
+
+  async function renderScreeningLive() {
+    const hook = renderScreening();
+    await act(async () => {
+      await hook.result.current.start();
+    });
+    await act(async () => {
+      await socket().serverOpen();
+    });
+    expect(hook.result.current.status).toBe("live");
+    return hook;
+  }
+
+  it("starts through the screening route with the application interview id", async () => {
+    await renderScreeningLive();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/interview/screening/start", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ applicationInterviewId: APPLICATION_INTERVIEW_ID }),
+    });
+    expect(socket().url).toBe(WS_URL);
+  });
+
+  it("never saves turns, charges credits or finalizes; the voice server records the transcript", async () => {
+    const { result } = await renderScreeningLive();
+
+    await act(async () => {
+      socket().serverMessage({ transcript: { role: "user", turn_id: "1", text: "I build APIs." } });
+      socket().serverMessage({ turn: turn(1, "I build APIs.", "Tell me about yourself.") });
+    });
+    expect(result.current.lines).toHaveLength(1);
+
+    await act(async () => {
+      socket().serverClose(1000);
+    });
+    await waitFor(() => expect(result.current.status).toBe("stopped"));
+
+    expect(supabase.callsFor("interview_sessions")).toHaveLength(0);
+    expect(deductInterviewSessionCreditsAction).not.toHaveBeenCalled();
+    expect(finalizeInterviewSessionAction).not.toHaveBeenCalled();
+    expect(result.current.analysisSession).toBeNull();
+    expect(releaseInterviewSessionAction).toHaveBeenCalledWith(INTERVIEW_ID, VOICE_SESSION_ID);
+  });
+
+  it("doesn't finalize on stop or unmount either", async () => {
+    const { result, unmount } = await renderScreeningLive();
+    await act(async () => {
+      result.current.stop();
+    });
+    await waitFor(() => expect(result.current.status).toBe("stopped"));
+    unmount();
+    expect(finalizeInterviewSessionAction).not.toHaveBeenCalled();
+    expect(releaseInterviewSessionAction).toHaveBeenCalledWith(INTERVIEW_ID, VOICE_SESSION_ID);
+  });
+
+  it("keeps the heartbeat", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    await renderScreeningLive();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
+    expect(heartbeatInterviewSessionAction).toHaveBeenCalledWith(INTERVIEW_ID, VOICE_SESSION_ID);
+  });
+
+  it("shows the busy message on a 1013 close", async () => {
+    const { result } = await renderScreeningLive();
+
+    await act(async () => {
+      socket().serverClose(1013);
+    });
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(result.current.errorMessage).toBe("Our interview server is busy. Please try again in a minute.");
+  });
+
+  it("shows the route's refusal", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: "Agree to the interview terms first.", code: "no_consent" }), { status: 428 }),
+    );
+    const { result } = renderScreening();
+    await act(async () => {
+      await result.current.start();
+    });
+    expect(result.current.status).toBe("error");
+    expect(result.current.errorMessage).toBe("Agree to the interview terms first.");
+  });
+});

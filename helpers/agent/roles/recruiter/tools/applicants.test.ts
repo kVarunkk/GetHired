@@ -113,7 +113,7 @@ describe("listApplicants tool", () => {
           screening: "completed",
           fitScore: 81,
           recommendation: "yes",
-          url: `/company/applicants/${APP_ID}`,
+          url: `/company/applications/${APP_ID}`,
         },
       ],
     });
@@ -191,7 +191,7 @@ describe("getApplication tool", () => {
       job: { id: JOB_POST.id, title: JOB_POST.title },
       candidate: { id: CANDIDATE_PROFILE.user_id, name: PII.name },
       screening: { status: "completed", fitScore: 81, recommendation: "yes" },
-      url: `/company/applicants/${APP_ID}`,
+      url: `/company/applications/${APP_ID}`,
     });
     const answers = String(result.answers);
     expect(answers).toMatch(/^<application_answers>\n/);

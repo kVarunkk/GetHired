@@ -48,7 +48,7 @@ export function createTemplateTools(ctx: RecruiterToolContext) {
     }),
 
     createEmailTemplate: tool({
-      description: `Add an email template for a purpose (rejection, advance, interview_invite, offer or custom), next to the default one. The message is markdown and may use only these variables: ${VARIABLES}. Write it as the company, with no promises the user didn't make.`,
+      description: `Add an email template for a purpose (rejection, advance, interview_invite, offer, on_hold, reopen or custom), next to the default one. The message is markdown and may use only these variables: ${VARIABLES}. Write it as the company, with no promises the user didn't make.`,
       inputSchema: z.object({ purpose: z.enum(TEMPLATE_PURPOSES), ...templateFields }),
       execute: (input) =>
         withToolErrors(ctx, "createEmailTemplate", async () => {

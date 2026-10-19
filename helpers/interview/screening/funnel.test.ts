@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createSupabaseMock } from "@/test/utils/supabase-mock";
-import { getInterviewFunnel } from "./funnel";
+import { countUninvitedAboveThreshold, getInterviewFunnel } from "./funnel";
 
 const JOB = "b0000000-0000-4000-8000-0000000000a1";
 
@@ -66,5 +66,33 @@ describe("getInterviewFunnel (SI-REQ-004)", () => {
       avgScore: null,
     });
     expect(mock.callsFor("interview_sessions")).toHaveLength(0);
+  });
+});
+
+describe("countUninvitedAboveThreshold (difference 35)", () => {
+  it("counts completed screenings at or above the bar with no interview", async () => {
+    const mock = createSupabaseMock();
+    mock.queue("application_screenings", {
+      data: [{ application_id: "a1" }, { application_id: "a2" }, { application_id: "a3" }],
+      error: null,
+    });
+    mock.queue("application_interviews", { data: [{ application_id: "a2" }], error: null });
+
+    expect(await countUninvitedAboveThreshold(mock.client, JOB, 70)).toBe(2);
+    const screenings = mock.callsFor("application_screenings")[0].chain;
+    expect(screenings).toContainEqual({ method: "eq", args: ["job_post_id", JOB] });
+    expect(screenings).toContainEqual({ method: "eq", args: ["status", "completed"] });
+    expect(screenings).toContainEqual({ method: "gte", args: ["fit_score", 70] });
+    expect(mock.callsFor("application_interviews")[0].chain).toContainEqual({
+      method: "in",
+      args: ["application_id", ["a1", "a2", "a3"]],
+    });
+  });
+
+  it("is 0 without screenings above the bar", async () => {
+    const mock = createSupabaseMock();
+    mock.queue("application_screenings", { data: [], error: null });
+    expect(await countUninvitedAboveThreshold(mock.client, JOB, 70)).toBe(0);
+    expect(mock.callsFor("application_interviews")).toHaveLength(0);
   });
 });

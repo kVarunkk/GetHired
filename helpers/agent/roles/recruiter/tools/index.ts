@@ -3,6 +3,7 @@ import { createApplicantTools } from "./applicants";
 import { createCandidateTools } from "./candidates";
 import { createCareersTools } from "./careers";
 import { createCompanyTools } from "./company";
+import { createInterviewTools } from "./interviews";
 import { createJobTools } from "./jobs";
 import { createMatchingTools } from "./matching";
 import { createRecruiterMemoryTools } from "./memory";
@@ -36,6 +37,7 @@ export function createAllRecruiterTools(ctx: RecruiterToolContext) {
     ...createOutreachTools(ctx),
     ...createRoleTools(ctx),
     ...createCareersTools(ctx),
+    ...createInterviewTools(ctx),
     ...createRecruiterMemoryTools(ctx),
   };
 }
@@ -49,7 +51,6 @@ const PERMISSIONS: Record<keyof AllRecruiterTools, ToolPermission> = RECRUITER_T
  * The recruiter agent's tools, bound to the session's company (RA spec §4.3).
  * Only the tools the user's role allows are included (RP-REQ-030), and each
  * one checks again when it runs, with the job the call touches (RP-REQ-031).
- * Phase 6 (screening interviews) adds its tools here.
  */
 export function createRecruiterTools(ctx: RecruiterToolContext): Partial<AllRecruiterTools> {
   const all = createAllRecruiterTools(ctx);

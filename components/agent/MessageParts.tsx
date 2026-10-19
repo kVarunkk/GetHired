@@ -21,6 +21,7 @@ import { FunnelResult, type FunnelResultData } from "./recruiter/FunnelResult";
 import { JobDeleteApprovalDetails } from "./recruiter/JobDeleteApprovalCard";
 import { MoveApprovalDetails } from "./recruiter/MoveApprovalCard";
 import { OutreachApprovalDetails } from "./recruiter/OutreachApprovalCard";
+import { InterviewConfigApprovalDetails, InterviewInviteApprovalDetails } from "./recruiter/InterviewApprovalCard";
 import { isRoleApprovalTool, RoleApprovalDetails } from "./recruiter/RoleApprovalCard";
 
 export { isInAppHref };
@@ -123,6 +124,12 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   updateCareersPage: { running: "Updating the careers page…", done: "Updated the careers page", action: "update the careers page" },
   setCareersAddress: { running: "Changing the address…", done: "Changed the careers page address", action: "change the careers page address" },
   setCareersPublished: { running: "Updating the careers page…", done: "Updated the careers page", action: "publish the careers page" },
+  // Screening interviews (SIT-071).
+  getInterviewSetup: { running: "Reading the interview setup…", done: "Read the interview setup", action: "read the interview setup" },
+  configureScreeningInterview: { running: "Saving the interview setup…", done: "Saved the interview setup", action: "set up the AI interview" },
+  inviteToInterview: { running: "Sending interview invites…", done: "Sent interview invites", action: "invite applicants to the AI interview" },
+  getInterviewReport: { running: "Reading the interview report…", done: "Read the interview report", action: "read the interview report" },
+  compareInterviewReports: { running: "Comparing interviews…", done: "Compared interviews", action: "compare interview reports" },
 };
 
 const labelsFor = (name: string) =>
@@ -439,6 +446,14 @@ function approvalTitle(name: string, input: unknown) {
       return "Start matching candidates to this job? It runs in the background, and you'll get an email when it's done.";
     case "screenApplicants":
       return "Screen this job's unscreened applicants? Each new screening uses one from your plan.";
+    case "configureScreeningInterview":
+      return "Set up this AI interview?";
+    case "inviteToInterview":
+      if (Array.isArray(values.applicationIds)) {
+        const count = values.applicationIds.length;
+        return `Invite ${count} ${count === 1 ? "applicant" : "applicants"} to the AI interview?`;
+      }
+      return `Allow the assistant to ${labelsFor(name).action}?`;
     case "moveApplications":
       if (Array.isArray(values.applicationIds)) {
         const count = values.applicationIds.length;
@@ -488,6 +503,8 @@ function approvalTitle(name: string, input: unknown) {
 function approvalDetails(name: string, input: unknown) {
   // Deletes, moves and outreach show a server preview (JobDeleteApprovalDetails, MoveApprovalDetails, OutreachApprovalDetails).
   if (["setJobPostStatus", "deleteJobPost", "moveApplications", "sendOutreach"].includes(name)) return [];
+  // The interview setup and invites have their own details (InterviewApprovalCard).
+  if (["configureScreeningInterview", "inviteToInterview"].includes(name)) return [];
   // Role changes show a server preview with the exact diff (RoleApprovalDetails).
   if (isRoleApprovalTool(name)) return [];
   return describeInput(input);
@@ -514,6 +531,8 @@ function ApprovalCard({
       {name === "deleteJobPost" && <JobDeleteApprovalDetails input={part.input} />}
       {name === "moveApplications" && <MoveApprovalDetails input={part.input} />}
       {name === "sendOutreach" && <OutreachApprovalDetails input={part.input} />}
+      {name === "configureScreeningInterview" && <InterviewConfigApprovalDetails input={part.input} />}
+      {name === "inviteToInterview" && <InterviewInviteApprovalDetails input={part.input} />}
       {isRoleApprovalTool(name) && <RoleApprovalDetails tool={name} input={part.input} />}
       {(details.length > 0 || isOnboarding) && (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
@@ -711,7 +730,7 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
       moved === 0
         ? `No applications moved to ${stage}`
         : `Moved ${moved} ${moved === 1 ? "application" : "applications"} to ${stage}`,
-      emailed > 0 && `emailed ${emailed}`,
+      emailed > 0 && `emailing ${emailed}`,
       skipped > 0 && `${skipped} skipped`,
     ].filter(Boolean);
     return <Step tone="done" label={parts.join(", ")} />;
@@ -958,6 +977,12 @@ function toBlocks(parts: MessagePart[]): Block[] {
   });
   return blocks;
 }
+
+/**
+ * True once a message has something to show. A reply starts with only
+ * step markers, and rendering it then would push the loader down a gap.
+ */
+export const hasVisibleParts = (message: UIMessage) => toBlocks(message.parts).length > 0;
 
 /**
  * Renders one chat message's parts: text, tool steps, approvals, uploads.

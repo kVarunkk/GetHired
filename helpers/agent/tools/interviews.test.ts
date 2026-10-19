@@ -83,6 +83,8 @@ describe("listInterviews tool", () => {
         ],
       },
       { method: "eq", args: ["user_id", "u1"] },
+      // SIT-054: screening interviews aren't the user's practice interviews.
+      { method: "eq", args: ["kind", "practice"] },
       { method: "order", args: ["created_at", { ascending: false }] },
       { method: "limit", args: [5] },
     ]);
@@ -142,6 +144,7 @@ describe("getInterviewAnalysis tool", () => {
       { method: "select", args: ["id, name"] },
       { method: "eq", args: ["id", INTERVIEW_ID] },
       { method: "eq", args: ["user_id", "u1"] },
+      { method: "eq", args: ["kind", "practice"] },
       { method: "maybeSingle", args: [] },
     ]);
     expect(supabase.callsFor("interview_sessions")[0].chain).toEqual([

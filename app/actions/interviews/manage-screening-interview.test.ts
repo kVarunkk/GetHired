@@ -69,6 +69,7 @@ describe("manageScreeningInterviewAction (SI-REQ-015/026)", () => {
     ["extend", 3],
     ["grant_attempt", undefined],
     ["waive", undefined],
+    ["reopen", undefined],
   ] as const)("%s calls the RPC and revalidates the applicant", async (action, days) => {
     queueInterview();
     rls.queueRpc("manage_screening_interview", { data: { ok: true, status: "invited" }, error: null });
@@ -79,13 +80,14 @@ describe("manageScreeningInterviewAction (SI-REQ-015/026)", () => {
       p_action: action,
       ...(days ? { p_days: days } : {}),
     });
-    expect(revalidatePath).toHaveBeenCalledWith(`/company/applicants/${APP}`);
+    expect(revalidatePath).toHaveBeenCalledWith(`/company/applications/${APP}`, "layout");
   });
 
   it.each([
     ["invalid_status", "That isn't possible at this stage of the interview."],
     ["limit_reached", "That's already been used the maximum number of times."],
-    ["insufficient_credits", "Not enough interview minutes or credits for another attempt."],
+    ["insufficient_credits", "Not enough interview minutes or credits for this interview."],
+    ["closed", "The applicant is in a Rejected or Hired stage. Move them to another stage first."],
     ["forbidden", "Your role can't manage AI interviews for this job."],
   ])("maps %s to its message", async (reason, message) => {
     queueInterview();

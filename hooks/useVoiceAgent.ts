@@ -32,10 +32,20 @@ type Options = {
   // Drops mic frames while the AI is speaking.
   // Kills echo but also disables barge-in.
   muteMicWhilePlaying?: boolean;
-};
+} & (
+  | { mode?: "practice" }
+  // SI-REQ-024: the voice server records a screening transcript and reports
+  // it, so the browser never saves turns, charges credits or finalizes.
+  | { mode: "screening"; applicationInterviewId: string }
+);
+
+export const VOICE_BUSY_MESSAGE = "Our interview server is busy. Please try again in a minute.";
+const VOICE_BUSY_CLOSE_CODE = 1013;
 
 export function useVoiceAgent(interviewId: string, opts: Options = {}) {
   const { muteMicWhilePlaying = false } = opts;
+  const screening = opts.mode === "screening";
+  const applicationInterviewId = opts.mode === "screening" ? opts.applicationInterviewId : null;
 
   const [status, setStatus] = useState<Status>("idle");
   const [lines, setLines] = useState<Line[]>([]);
@@ -100,7 +110,7 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
 
   const finalizeCurrentSession = useCallback(async () => {
     const sessionId = interviewSessionIdRef.current;
-    if (!sessionId || finalizingRef.current) return;
+    if (screening || !sessionId || finalizingRef.current) return;
 
     finalizingRef.current = true;
     try {
@@ -120,7 +130,7 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
       finalizingRef.current = false;
       console.error("[INTERVIEW_ANALYSIS_FINALIZE_FAILED]:", error);
     }
-  }, [interviewId, saveTurns]);
+  }, [interviewId, saveTurns, screening]);
 
   const releaseSession = useCallback(() => {
     const sessionId = sessionIdRef.current;
@@ -331,15 +341,21 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
 
       nextTimeRef.current = playbackCtx.currentTime;
 
-      const res = await fetch("/api/interview/start", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          interviewId,
-        }),
-      });
+      const res = screening
+        ? await fetch("/api/interview/screening/start", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ applicationInterviewId }),
+          })
+        : await fetch("/api/interview/start", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              interviewId,
+            }),
+          });
 
       if (!res.ok) {
         const response = (await res.json().catch(() => null)) as {
@@ -435,13 +451,15 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
 
           micSourceRef.current = micSource;
 
-          const chargeResult = await deductInterviewSessionCreditsAction(
-            interviewId,
-            sessionId,
-          );
+          if (!screening) {
+            const chargeResult = await deductInterviewSessionCreditsAction(
+              interviewId,
+              sessionId,
+            );
 
-          if (!chargeResult.success) {
-            throw new Error(chargeResult.error);
+            if (!chargeResult.success) {
+              throw new Error(chargeResult.error);
+            }
           }
 
           if (stale()) {
@@ -479,15 +497,20 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event: CloseEvent) => {
         if (stale()) {
           return;
         }
 
+        // A full voice server refuses the socket. For screening the attempt
+        // is given back (zero answers), so the candidate can just retry.
+        const busy = screening && event?.code === VOICE_BUSY_CLOSE_CODE;
+
         const finish = async () => {
           await finalizeCurrentSession();
           cleanup();
-          setStatus(sessionLockLostRef.current ? "error" : "stopped");
+          if (busy) setErrorMessage(VOICE_BUSY_MESSAGE);
+          setStatus(sessionLockLostRef.current || busy ? "error" : "stopped");
         };
 
         // Ensure we wait for all audio chunks to finish playing before tearing down
@@ -618,9 +641,11 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
             signal.turn,
           ];
 
-          void saveTurns().catch((error: unknown) => {
-            console.error("Failed to save interview turns:", error);
-          });
+          if (!screening) {
+            void saveTurns().catch((error: unknown) => {
+              console.error("Failed to save interview turns:", error);
+            });
+          }
         }
       };
     } catch (err) {
@@ -644,6 +669,9 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
     releaseSession,
     stopPlayback,
     finalizeCurrentSession,
+    screening,
+    applicationInterviewId,
+    saveTurns,
   ]);
 
   useEffect(() => {

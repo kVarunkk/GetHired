@@ -1,11 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import { flushAfter } from "@/test/utils/after";
-import { sendInterviewInviteEmails } from "./invite";
 import { inviteAboveFitThreshold } from "./fit-threshold";
 
 vi.mock("server-only", () => ({}));
-vi.mock("./invite", () => ({ sendInterviewInviteEmails: vi.fn() }));
 
 const APP = "e0000000-0000-4000-8000-000000000001";
 const JOB = "b0000000-0000-4000-8000-0000000000a1";
@@ -25,7 +22,7 @@ beforeEach(() => {
 });
 
 describe("inviteAboveFitThreshold (SI-REQ-010, SIT-03C)", () => {
-  it("invites at the threshold, with no actor, and emails after the response", async () => {
+  it("invites at the threshold, with no actor (the RPC queues the email)", async () => {
     config();
     db.queueRpc("create_screening_invite", { data: { ok: true, id: "ai1" }, error: null });
 
@@ -37,9 +34,6 @@ describe("inviteAboveFitThreshold (SI-REQ-010, SIT-03C)", () => {
       p_application_id: APP,
       p_via: "fit_threshold",
     });
-    expect(sendInterviewInviteEmails).not.toHaveBeenCalled();
-    await flushAfter();
-    expect(sendInterviewInviteEmails).toHaveBeenCalledWith(db.client, ["ai1"]);
   });
 
   it.each([
@@ -68,8 +62,6 @@ describe("inviteAboveFitThreshold (SI-REQ-010, SIT-03C)", () => {
       invited: false,
       reason: "exists",
     });
-    await flushAfter();
-    expect(sendInterviewInviteEmails).not.toHaveBeenCalled();
   });
 
   it("reports an allowance failure without throwing", async () => {

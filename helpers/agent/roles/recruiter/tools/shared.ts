@@ -58,7 +58,7 @@ export type CandidateRow = {
 
 export const candidateUrl = (candidateId: string, jobPostId?: string | null) =>
   `/company/profiles/${candidateId}${jobPostId ? `?job_post=${jobPostId}` : ""}`;
-export const applicationUrl = (applicationId: string) => `/company/applicants/${applicationId}`;
+export const applicationUrl = (applicationId: string) => `/company/applications/${applicationId}`;
 export const jobPostUrl = (jobPostId: string) => `/company/job-posts/${jobPostId}`;
 export const OUTREACH_URL = "/company/outreach";
 export { outreachPath as outreachUrl } from "@/helpers/outreach/config";
@@ -120,6 +120,25 @@ export function fairnessError(
     }
   }
   return null;
+}
+
+// §3.5: memories hold the hiring bar, never one candidate's interview score.
+const SCORED_VERB = /\b(scored|got|received|earned|rated)\b[^.\n]{0,30}\d/i;
+const SCORE_NUMBER = /\b\d+(?:\.\d+)?\s*(?:\/\s*(?:5|10|100)\b|out of\s+\d+)/i;
+const SCORE_WORDS = /\b(interview|screening|score)\b/i;
+const BAR_WORDS = /\b(at least|minimum|bar|threshold|cut-?off|or (?:higher|above|more))\b/i;
+
+/** A `PER_CANDIDATE_SCORE` error when a memory records a candidate's interview score, or null. */
+export function perCandidateScoreError(content: string) {
+  const isScore =
+    SCORED_VERB.test(content) || (SCORE_WORDS.test(content) && SCORE_NUMBER.test(content) && !BAR_WORDS.test(content));
+  return isScore
+    ? ({
+        error: "PER_CANDIDATE_SCORE",
+        message:
+          "Memories can't hold a candidate's interview scores. Save the hiring bar or a decision's job-related reason instead.",
+      } as const)
+    : null;
 }
 
 /** A short free-text list input (roles, skills, locations). */

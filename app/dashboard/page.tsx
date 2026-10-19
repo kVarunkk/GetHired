@@ -15,6 +15,8 @@ import ProfileViewsCard from "@/components/ProfileViewsCard";
 import { PROFILE_VIEW_WINDOW_DAYS } from "@/helpers/outreach/config";
 import AskApplicantAgent from "@/components/agent/AskApplicantAgent";
 import PageHeader from "@/components/PageHeader";
+import MyScreeningInterviews from "@/components/interviews/MyScreeningInterviews";
+import { listMyScreeningInterviews } from "@/helpers/interview/screening/my-interviews";
 
 export default async function DashboardPage() {
   try {
@@ -46,7 +48,7 @@ export default async function DashboardPage() {
       .map((each) => each.invited_email)
       .filter((email): email is string => email !== null);
 
-    const [metricsRes, appliedJobsRes, viewsRes] = await Promise.all([
+    const [metricsRes, appliedJobsRes, viewsRes, screeningInterviews] = await Promise.all([
       supabase.rpc("get_applicant_weekly_metrics", { p_user_id: user.id }),
       supabase
         .from("applications")
@@ -57,6 +59,8 @@ export default async function DashboardPage() {
         .order("created_at", { ascending: false })
         .limit(3),
       supabase.rpc("get_my_profile_view_count", { p_days: PROFILE_VIEW_WINDOW_DAYS }),
+      // An extra too: a failure reads as no interviews.
+      listMyScreeningInterviews(supabase),
     ]);
 
     const { data: metricsData, error: metricsError } = metricsRes;
@@ -162,6 +166,8 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        <MyScreeningInterviews interviews={screeningInterviews} />
 
         {/* --- Active Job Posts Section --- */}
         <div className="mt-8">

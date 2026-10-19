@@ -287,7 +287,7 @@ describe("getCandidateProfile tool", () => {
           applicationId: "e0000000-0000-4000-8000-000000000001",
           jobTitle: JOB_POST.title,
           status: "reviewed",
-          url: "/company/applicants/e0000000-0000-4000-8000-000000000001",
+          url: "/company/applications/e0000000-0000-4000-8000-000000000001",
         },
       ],
     });
@@ -407,7 +407,7 @@ describe("compareCandidates tool", () => {
         status: "submitted",
         fitScore: 81,
         recommendation: "yes",
-        url: "/company/applicants/e0000000-0000-4000-8000-000000000001",
+        url: "/company/applications/e0000000-0000-4000-8000-000000000001",
       },
     });
     expect(String(result.candidates[0].matchDetails)).toMatch(/^<match_explanation>/);

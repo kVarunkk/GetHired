@@ -1130,6 +1130,99 @@ begin
     'practice didn''t charge 10 credits';
 end $$;
 
+-- ================================================ block 3: invite emails and bulk invites
+-- 20261020120000. Messages sent in this transaction have enqueued_at = now(),
+-- which keeps the linked project's own queued messages out of the counts.
+
+create function pg_temp.queued(p_ai uuid) returns bigint language sql as $$
+  select count(*) from pgmq.q_screening_invite_email_queue
+   where enqueued_at = now() and message ->> 'application_interview_id' = p_ai::text
+$$;
+create function pg_temp.queued_total() returns bigint language sql as $$
+  select count(*) from pgmq.q_screening_invite_email_queue where enqueued_at = now()
+$$;
+
+-- Every invite above queued exactly one email, and no refusal queued one.
+do $$
+declare
+  r record;
+begin
+  for r in select id from public.application_interviews where application_id::text like 'e0000000-0000-4000-8000-%' loop
+    assert pg_temp.queued(r.id) = 1, format('interview %s queued %s emails', r.id, pg_temp.queued(r.id));
+  end loop;
+  assert pg_temp.queued_total() = (select count(*) from public.application_interviews
+                                     where application_id::text like 'e0000000-0000-4000-8000-%'),
+    'a refused invite queued an email';
+end $$;
+
+-- Bulk invites on A2 (manual, 10 minutes).
+insert into public.applications (id, applicant_user_id, job_post_id, all_jobs_id) values
+  ('e0000000-0000-4000-8000-000000000013', 'a0000000-0000-4000-8000-000000000003',
+   'b0000000-0000-4000-8000-000000000003', 'd0000000-0000-4000-8000-000000000003');
+do $$
+declare
+  ids uuid[] := array[
+    'e0000000-0000-4000-8000-000000000013', -- new: invited
+    'e0000000-0000-4000-8000-000000000011', -- already has an interview
+    'e0000000-0000-4000-8000-000000000001', -- on A1, not this job
+    'e0000000-0000-4000-8000-0000000000ff'  -- no such application
+  ]::uuid[];
+  before bigint := pg_temp.queued_total();
+  res jsonb;
+  ai uuid;
+begin
+  begin
+    perform public.create_screening_invites('b0000000-0000-4000-8000-000000000003', ids, 'manual',
+      'c1000000-0000-4000-8000-000000000002');
+    raise exception 'a bulk invite by another company''s member was accepted';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.create_screening_invites('b0000000-0000-4000-8000-000000000003', ids, 'all', null);
+    raise exception 'bulk invite source ''all'' was accepted';
+  exception when invalid_parameter_value then null;
+  end;
+  begin
+    perform public.create_screening_invites('b0000000-0000-4000-8000-000000000003',
+      (select array_agg(gen_random_uuid()) from generate_series(1, 51)), 'manual', null);
+    raise exception '51 bulk invites were accepted';
+  exception when invalid_parameter_value then null;
+  end;
+  assert not exists (select 1 from public.application_interviews
+                      where application_id = 'e0000000-0000-4000-8000-000000000013'),
+    'a refused bulk call left an interview';
+  assert pg_temp.queued_total() = before, 'a refused bulk call queued an email';
+
+  res := public.create_screening_invites('b0000000-0000-4000-8000-000000000003', ids, 'manual',
+           'c5000000-0000-4000-8000-000000000001');
+  assert jsonb_array_length(res) = 4, format('bulk results: %s', res);
+  assert (select array_agg(r ->> 'application_id' order by n) from jsonb_array_elements(res) with ordinality t(r, n))
+       = (select array_agg(i::text) from unnest(ids) i), format('bulk results out of order: %s', res);
+  perform pg_temp.expect(res -> 0, null, 'bulk invite of a new application');
+  perform pg_temp.expect(res -> 1, 'exists', 'bulk invite of an invited application');
+  perform pg_temp.expect(res -> 2, 'not_found', 'bulk invite of another job''s application');
+  perform pg_temp.expect(res -> 3, 'not_found', 'bulk invite of no application');
+
+  ai := (res -> 0 ->> 'id')::uuid;
+  perform set_config('test.ai13', ai::text, true);
+  assert (select invited_via = 'manual' and invited_by = 'c5000000-0000-4000-8000-000000000001'
+            from public.application_interviews where id = ai), 'bulk invite row';
+  assert pg_temp.hold(ai) = 10, 'the bulk invite has no 10-minute hold';
+  assert pg_temp.queued(ai) = 1 and pg_temp.queued_total() = before + 1,
+    'the bulk call didn''t queue exactly one email';
+end $$;
+
+-- A reopen queues the invite email again (A2's expired interview).
+set local role authenticated;
+select pg_temp.act('c5000000-0000-4000-8000-000000000001');
+select pg_temp.expect(public.manage_screening_interview(current_setting('test.ai11')::uuid, 'reopen'),
+  null, 'reopen the expired interview');
+reset role;
+do $$
+begin
+  assert pg_temp.queued(current_setting('test.ai11')::uuid) = 2, 'a reopen didn''t queue the email again';
+end $$;
+
 select 'screening_interviews: ok' as result;
 
 rollback;

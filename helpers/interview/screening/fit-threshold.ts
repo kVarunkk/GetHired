@@ -1,8 +1,6 @@
 import "server-only";
-import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
-import { sendInterviewInviteEmails } from "./invite";
 
 export type FitThresholdInviteResult = { invited: true; id: string } | { invited: false; reason: string };
 
@@ -10,7 +8,7 @@ export type FitThresholdInviteResult = { invited: true; id: string } | { invited
  * SI-REQ-010: after an MT screening completes, invite the applicant when the
  * job's interview is on with the fit-threshold rule and the score reaches
  * it. System work: no actor, so the interview_minutes hold isn't capped per
- * member. A re-screen never invites twice (one interview per application).
+ * member. The RPC queues the invite email. A re-screen never invites twice (one interview per application).
  * Never throws: a failed invite mustn't fail the screening. When the
  * allowance is out nobody is invited; the job page derives its banner from
  * screened-above-the-bar applications without an interview.
@@ -47,9 +45,7 @@ export async function inviteAboveFitThreshold(
       return { invited: false, reason };
     }
 
-    const id = result.id;
-    after(() => sendInterviewInviteEmails(admin, [id]));
-    return { invited: true, id };
+    return { invited: true, id: result.id };
   } catch (err) {
     console.error("[screening] fit-threshold invite threw", applicationId, err);
     return { invited: false, reason: "failed" };

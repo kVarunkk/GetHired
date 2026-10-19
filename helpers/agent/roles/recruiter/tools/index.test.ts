@@ -8,7 +8,7 @@ vi.mock("server-only", () => ({}));
 const tools = createRecruiterTools(recruiterToolContext(createSupabaseMock().client));
 
 describe("createRecruiterTools (RAT-028)", () => {
-  it("exposes exactly the recruiter's tools for phases 0–5, roles, question sets and the careers page, to an owner", () => {
+  it("exposes exactly the recruiter's tools for phases 0–6, roles, question sets and the careers page, to an owner", () => {
     expect(Object.keys(tools).sort()).toEqual(
       [
         "getMyCompany",
@@ -78,6 +78,11 @@ describe("createRecruiterTools (RAT-028)", () => {
         "updateCareersPage",
         "setCareersAddress",
         "setCareersPublished",
+        "getInterviewSetup",
+        "configureScreeningInterview",
+        "inviteToInterview",
+        "getInterviewReport",
+        "compareInterviewReports",
         "saveMemory",
         "deleteMemory",
       ].sort(),

@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { createMemoryTools } from "@/helpers/agent/tools/memory";
-import { fairnessError, type RecruiterToolContext } from "./shared";
+import { fairnessError, perCandidateScoreError, type RecruiterToolContext } from "./shared";
 
 /**
  * The applicant agent's memory tools, described for hiring, with the fairness
@@ -14,10 +14,12 @@ export function createRecruiterMemoryTools(ctx: RecruiterToolContext) {
     saveMemory: tool({
       inputSchema: saveMemory.inputSchema,
       description:
-        "Remember durable hiring context for this recruiter: the hiring bar, interview process, compensation bands, team context, or a decision and its reason. Never a candidate's personal data. Pass memoryId to update an existing memory instead of adding a duplicate.",
+        "Remember durable hiring context for this recruiter: the hiring bar, interview process, compensation bands, team context, or a decision and its reason. Never a candidate's personal data or interview scores. Pass memoryId to update an existing memory instead of adding a duplicate.",
       execute: async (input, options) => {
         const unfair = fairnessError([input.content], "memory");
         if (unfair) return unfair;
+        const score = perCandidateScoreError(input.content);
+        if (score) return score;
         return saveMemory.execute!(input, options);
       },
     }),

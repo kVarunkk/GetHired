@@ -66,3 +66,32 @@ export async function getInterviewFunnel(supabase: SupabaseClient<Database>, job
     avgScore,
   };
 }
+
+/**
+ * Applicants screened at or above the job's bar who have no interview: the
+ * fit-threshold invite was skipped, almost always because the interview
+ * minutes ran out (difference 35). The job page shows a banner when > 0.
+ */
+export async function countUninvitedAboveThreshold(
+  supabase: SupabaseClient<Database>,
+  jobPostId: string,
+  threshold: number,
+): Promise<number> {
+  const { data: screened, error } = await supabase
+    .from("application_screenings")
+    .select("application_id")
+    .eq("job_post_id", jobPostId)
+    .eq("status", "completed")
+    .gte("fit_score", threshold);
+  if (error) throw new Error(`Couldn't load the screenings: ${error.message}`);
+  const ids = (screened ?? []).map((s) => s.application_id);
+  if (ids.length === 0) return 0;
+
+  const { data: invited, error: invitedError } = await supabase
+    .from("application_interviews")
+    .select("application_id")
+    .in("application_id", ids);
+  if (invitedError) throw new Error(`Couldn't load the interviews: ${invitedError.message}`);
+  const done = new Set((invited ?? []).map((i) => i.application_id));
+  return ids.filter((id) => !done.has(id)).length;
+}

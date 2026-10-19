@@ -4,16 +4,17 @@ import { revalidatePath } from "next/cache";
 import { companyAllows, requireCompanyForAction } from "@/helpers/companies/require-company";
 import { manageMessage } from "@/helpers/interview/screening/copy";
 
-const ACTIONS = ["cancel", "extend", "grant_attempt", "waive"] as const;
+const ACTIONS = ["cancel", "extend", "grant_attempt", "waive", "reopen"] as const;
 export type ManageScreeningAction = (typeof ACTIONS)[number];
 
 export type ManageScreeningInterviewResult = { ok: true; status: string } | { ok: false; error: string };
 
 /**
  * SERVER ACTION: cancel, extend (1–14 days, twice at most), grant another
- * attempt (once) or waive a paused interview (SI-REQ-015/026). Needs
- * interviews.manage on the interview's job; the RPC checks it again and logs
- * the event.
+ * attempt (once), waive a paused interview (SI-REQ-015/026) or reopen a
+ * cancelled or expired one with attempts left, which emails the invite again
+ * (the RPC queues it). Needs interviews.manage on the interview's job; the RPC
+ * checks it again and logs the event.
  */
 export async function manageScreeningInterviewAction({
   id,
@@ -53,6 +54,6 @@ export async function manageScreeningInterviewAction({
   if (error || !result) return { ok: false, error: manageMessage("unknown") };
   if (!result.ok) return { ok: false, error: manageMessage(result.reason ?? "unknown") };
 
-  revalidatePath(`/company/applicants/${interview.application_id}`);
+  revalidatePath(`/company/applications/${interview.application_id}`, "layout");
   return { ok: true, status: result.status ?? "" };
 }

@@ -70,7 +70,7 @@ describe("inviteToInterviewAction (SI-REQ-010/012)", () => {
     expect(deps.company.id).toBe(COMPANY_A.id);
     expect(deps.user.id).toBe(ADMIN_A.user.id);
     expect(input).toEqual({ jobPostId: JOB_A1, applicationIds: [APP, "e2"], via: "manual" });
-    expect(revalidatePath).toHaveBeenCalledWith(`/company/job-posts/${JOB_A1}/applicants`);
+    expect(revalidatePath).toHaveBeenCalledWith(`/company/job-posts/${JOB_A1}/applications`);
   });
 
   it("returns the upgrade dialog's error when nothing could be paid for", async () => {

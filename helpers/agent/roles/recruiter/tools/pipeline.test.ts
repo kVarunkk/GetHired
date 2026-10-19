@@ -340,7 +340,7 @@ describe("addNote tool", () => {
     const [ctx, input] = vi.mocked(addNote).mock.calls[0];
     expectSessionCtx(ctx);
     expect(input).toEqual({ body: "Great answers.", rating: "strong_yes", applicationId: APP_1 });
-    expect(result).toEqual({ noteId: "n9", rating: "strong_yes", url: `/company/applicants/${APP_1}` });
+    expect(result).toEqual({ noteId: "n9", rating: "strong_yes", url: `/company/applications/${APP_1}` });
   });
 
   it("notes on a talent-pool candidate", async () => {
@@ -711,7 +711,7 @@ describe("getHiringFunnel tool", () => {
           name: "Ada",
           jobTitle: "Backend Engineer",
           daysInApplied: 5,
-          url: `/company/applicants/${APP_1}`,
+          url: `/company/applications/${APP_1}`,
         },
       ],
     });

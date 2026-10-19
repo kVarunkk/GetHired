@@ -25,6 +25,8 @@ export default async function InterviewPage({
       .from("interviews")
       .select("id, created_at, name, all_jobs(id, job_name), resumes(id, name)")
       .eq("user_id", user.id)
+      // Company screening interviews live on the dashboard, not here (SIT-054).
+      .eq("kind", "practice")
       .order("created_at", { ascending: false });
 
     if (interviewsError) {
