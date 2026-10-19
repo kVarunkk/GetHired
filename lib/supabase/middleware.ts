@@ -96,6 +96,10 @@ export async function updateSession(request: NextRequest) {
     "/api/worker/application-screening",
     // Pipeline notifications (X-Internal-Secret).
     "/api/worker/company-notifications",
+    // Stage-move emails queued by the pipeline (X-Internal-Secret).
+    "/api/worker/pipeline-emails",
+    // Screening invite emails queued by the invite RPCs (X-Internal-Secret).
+    "/api/worker/screening-invite-emails",
     "/api/updates/company/applicant-digest/enqueue",
     "/api/updates/company/applicant-digest/worker",
     "/api/updates/company/weekly-matches/enqueue",

@@ -212,6 +212,14 @@ describe("middleware: screening interview routes", () => {
     }
   });
 
+  it("keeps the candidate's screening page applicant-only (SIT-053)", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(company);
+    expect(redirectTarget(await updateSession(request("/interview/screening/ai1")))).toBe("/auth/login");
+
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+    expect(passesThrough(await updateSession(request("/interview/screening/ai1")))).toBe(true);
+  });
+
   it("keeps the screening start route behind a session", async () => {
     expect(passesThrough(await updateSession(request("/api/interview/screening/start")))).toBe(false);
   });
@@ -321,7 +329,7 @@ describe("middleware: /company/join (TM-TEST-004, teams difference 4)", () => {
     vi.mocked(getUserFromRequest).mockResolvedValue(company);
 
     expect(passesThrough(await updateSession(request("/company")))).toBe(true);
-    expect(passesThrough(await updateSession(request("/company/applicants")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/company/applications")))).toBe(true);
   });
 
   it("serves it to a user without a role", async () => {

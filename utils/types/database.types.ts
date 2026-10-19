@@ -3639,6 +3639,10 @@ export type Database = {
         Args: { p_application_id: string }
         Returns: string
       }
+      application_stage_closed: {
+        Args: { p_application_id: string }
+        Returns: boolean
+      }
       application_status_for_kind: {
         Args: { p_kind: Database["public"]["Enums"]["pipeline_stage_kind"] }
         Returns: Database["public"]["Enums"]["application_status"]
@@ -3793,6 +3797,15 @@ export type Database = {
       }
       create_screening_invite: {
         Args: { p_application_id: string; p_invited_by?: string; p_via: string }
+        Returns: Json
+      }
+      create_screening_invites: {
+        Args: {
+          p_application_ids: string[]
+          p_invited_by?: string
+          p_job_post_id: string
+          p_via: string
+        }
         Returns: Json
       }
       decline_screening_interview: { Args: { p_id: string }; Returns: Json }
@@ -4033,6 +4046,51 @@ export type Database = {
           user_id: string
         }[]
       }
+      lock_my_screening_interview: {
+        Args: { p_id: string }
+        Returns: {
+          accommodation_request: string | null
+          applicant_user_id: string
+          application_id: string
+          attempt_granted: boolean
+          attempts_used: number
+          company_id: string
+          completed_at: string | null
+          config_snapshot: Json
+          consent_version: string | null
+          consented_at: string | null
+          created_at: string
+          credits_charged: boolean
+          credits_cost: number
+          deadline_at: string
+          deadline_extensions: number
+          id: string
+          interview_id: string | null
+          invited_by: string | null
+          invited_via: string
+          job_post_id: string
+          max_attempts: number
+          paused_at: string | null
+          reminder_sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "application_interviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      log_screening_event: {
+        Args: {
+          p_actor: string
+          p_interview: Database["public"]["Tables"]["application_interviews"]["Row"]
+          p_payload?: Json
+          p_type: string
+        }
+        Returns: undefined
+      }
       make_primary_owner: {
         Args: { p_actor_kind?: string; p_user_id: string }
         Returns: Json
@@ -4130,6 +4188,10 @@ export type Database = {
         Args: { target_ids?: string[] }
         Returns: undefined
       }
+      pipeline_emails_pending: {
+        Args: { p_company_id: string }
+        Returns: number
+      }
       pipeline_kind_for_status: {
         Args: { p_status: Database["public"]["Enums"]["application_status"] }
         Returns: Database["public"]["Enums"]["pipeline_stage_kind"]
@@ -4152,6 +4214,12 @@ export type Database = {
       release_interview_session: {
         Args: { p_interview_id: string; p_session_id: string }
         Returns: boolean
+      }
+      release_screening_hold: {
+        Args: {
+          p_interview: Database["public"]["Tables"]["application_interviews"]["Row"]
+        }
+        Returns: undefined
       }
       remove_company_member: {
         Args: { p_actor_kind?: string; p_user_id: string }
@@ -4229,6 +4297,16 @@ export type Database = {
       schedule_company_plan_change: {
         Args: { p_company_id: string; p_tier_slug: string }
         Returns: undefined
+      }
+      screening_start_refusal: {
+        Args: {
+          p_row: Database["public"]["Tables"]["application_interviews"]["Row"]
+        }
+        Returns: string
+      }
+      screening_turn_counts: {
+        Args: { p_turns: Json }
+        Returns: Record<string, unknown>
       }
       seed_company_roles: { Args: { p_company_id: string }; Returns: undefined }
       seed_default_pipeline: {
@@ -4310,6 +4388,11 @@ export type Database = {
         Returns: Json
       }
       set_my_display_name: { Args: { p_name: string }; Returns: Json }
+      sign: {
+        Args: { algorithm?: string; payload: Json; secret: string }
+        Returns: string
+      }
+      slugify_company_name: { Args: { p_name: string }; Returns: string }
       start_screening_attempt: {
         Args: {
           p_id: string
@@ -4318,11 +4401,6 @@ export type Database = {
         }
         Returns: Json
       }
-      sign: {
-        Args: { algorithm?: string; payload: Json; secret: string }
-        Returns: string
-      }
-      slugify_company_name: { Args: { p_name: string }; Returns: string }
       talent_list_company: { Args: { p_list_id: string }; Returns: string }
       team_invite_hash: { Args: { p_token: string }; Returns: string }
       top_skills_search: {

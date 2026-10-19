@@ -2,17 +2,18 @@ import "server-only";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
 import { isUuid } from "@/helpers/agent/auth";
-import { sendCompanyMessage } from "@/helpers/email/send-company-message";
 import type { Database, TablesInsert } from "@/utils/types/database.types";
+import { enqueuePipelineEmails, type PipelineEmailMessage } from "./email-queue";
 import { changesCandidateStatus, statusForKind, type PipelineStageKind } from "./status-map";
 import { renderTemplate, type TemplateVariable } from "./templates";
 
 /** PL-REQ-004 / PL-SEC-005: one action moves and emails at most this many. */
 export const MAX_MOVE_APPLICATIONS = 50;
-/** PL-SEC-005: company emails per day, counted from `email_sent` events since midnight IST. */
+/**
+ * PL-SEC-005: company emails per day, counted from `email_sent` events since
+ * midnight IST plus the emails still waiting in the queue.
+ */
 export const PL_DAILY_EMAIL_CAP = 300;
-/** Sends at once, to stay gentle on the email providers. */
-const SEND_CONCURRENCY = 5;
 
 export type MoveSkipReason = "not_found" | "already_in_stage" | "email_failed";
 
@@ -165,14 +166,17 @@ async function planEmails(
   }
 
   if (recipients.length > 0) {
-    const { count, error: countError } = await supabase
-      .from("application_events")
-      .select("id", { count: "exact", head: true })
-      .eq("company_id", company.id)
-      .eq("type", "email_sent")
-      .gte("created_at", startOfDayIst());
-    if (countError) return { ok: false, error: "Failed to check today's emails." };
-    const left = Math.max(0, PL_DAILY_EMAIL_CAP - (count ?? 0));
+    const [{ count, error: countError }, { data: pending, error: pendingError }] = await Promise.all([
+      supabase
+        .from("application_events")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", company.id)
+        .eq("type", "email_sent")
+        .gte("created_at", startOfDayIst()),
+      supabase.rpc("pipeline_emails_pending", { p_company_id: company.id }),
+    ]);
+    if (countError || pendingError) return { ok: false, error: "Failed to check today's emails." };
+    const left = Math.max(0, PL_DAILY_EMAIL_CAP - (count ?? 0) - (pending ?? 0));
     if (recipients.length > left) {
       return {
         ok: false,
@@ -193,27 +197,38 @@ async function planEmails(
   };
 }
 
-/** Sends each planned message, a few at a time. Returns the ids that went out. */
-async function sendEmails(plan: EmailPlan, apps: LoadedApplication[]): Promise<Set<string>> {
-  const sent = new Set<string>();
-  const queue = apps.filter((app) => plan.messages.has(app.id) && app.email);
-  for (let i = 0; i < queue.length; i += SEND_CONCURRENCY) {
-    await Promise.all(
-      queue.slice(i, i + SEND_CONCURRENCY).map(async (app) => {
-        const message = plan.messages.get(app.id)!;
-        const result = await sendCompanyMessage({
-          toEmail: app.email!,
-          subject: message.subject,
-          bodyMd: message.body,
-          companyName: plan.companyName,
-          companyEmail: plan.companyEmail,
-          logoUrl: plan.logoUrl,
-        });
-        if (result.ok) sent.add(app.id);
-      }),
-    );
+/**
+ * Queues each planned message for /api/worker/pipeline-emails, which sends it
+ * and logs its `email_sent` event. Returns the ids that were queued: none if
+ * the queue can't be reached.
+ */
+async function queueEmails(
+  plan: EmailPlan,
+  apps: LoadedApplication[],
+  actor: { companyId: string; actorUserId: string; actorName: string | null },
+): Promise<Set<string>> {
+  const recipients = apps.filter((app) => plan.messages.has(app.id) && app.email);
+  const messages: PipelineEmailMessage[] = recipients.map((app) => {
+    const message = plan.messages.get(app.id)!;
+    return {
+      ...actor,
+      applicationId: app.id,
+      candidateUserId: app.candidateUserId,
+      templateId: plan.templateId,
+      subject: message.subject,
+      body: message.body,
+      companyName: plan.companyName,
+      companyEmail: plan.companyEmail,
+      logoUrl: plan.logoUrl,
+    };
+  });
+  try {
+    await enqueuePipelineEmails(messages);
+  } catch (err) {
+    console.error("[pipeline/move] couldn't queue the emails", err);
+    return new Set();
   }
-  return sent;
+  return new Set(recipients.map((app) => app.id));
 }
 
 type MoveInput = {
@@ -339,8 +354,11 @@ async function prepareMove(
  * With `email`, the candidates whose status changes (everyone moved, for a
  * `custom` template) get the company's message, to the address loaded from
  * the DB. Every message is rendered and the daily cap checked before
- * anything moves. A failed send is reported as `email_failed`; the move
- * stands. One insert logs the `stage_changed` and `email_sent` events.
+ * anything moves. After the move the messages are queued, not sent: the
+ * worker sends them and logs their `email_sent` events. `emailed` counts the
+ * queued ones; one that couldn't be queued (or has no address) is reported
+ * as `email_failed`, and the move stands. One insert logs the
+ * `stage_changed` events.
  *
  * With `sameStatusIsNoop`, applications whose current stage already shows the
  * target's status are skipped as `already_in_stage` (status-only callers).
@@ -361,14 +379,16 @@ export async function moveApplications(ctx: Ctx, input: MoveInput): Promise<Move
     .in("id", movedIds);
   if (updateError) return { ok: false, error: "Failed to move the applications." };
 
-  const sent = plan ? await sendEmails(plan, toMove) : new Set<string>();
+  const name = actorName(user, company);
+  const queued = plan
+    ? await queueEmails(plan, toMove, { companyId: company.id, actorUserId: user.id, actorName: name })
+    : new Set<string>();
   if (plan) {
     for (const app of toMove) {
-      if (plan.messages.has(app.id) && !sent.has(app.id)) skipped.push({ id: app.id, reason: "email_failed" });
+      if (plan.messages.has(app.id) && !queued.has(app.id)) skipped.push({ id: app.id, reason: "email_failed" });
     }
   }
 
-  const name = actorName(user, company);
   const actor = { company_id: company.id, actor_user_id: user.id, actor_name: name };
   const events: TablesInsert<"application_events">[] = toMove.map((app) => ({
     ...actor,
@@ -382,22 +402,11 @@ export async function moveApplications(ctx: Ctx, input: MoveInput): Promise<Move
       to_kind: stage.kind,
     },
   }));
-  for (const app of toMove) {
-    if (!plan || !sent.has(app.id)) continue;
-    events.push({
-      ...actor,
-      application_id: app.id,
-      candidate_user_id: app.candidateUserId,
-      type: "email_sent",
-      // The subject only: the body stays out of the log.
-      payload: { template_id: plan.templateId, subject: plan.messages.get(app.id)!.subject },
-    });
-  }
   // The move already happened; a missing log line isn't worth failing it.
   const { error: eventsError } = await supabase.from("application_events").insert(events);
   if (eventsError) console.error("[pipeline/move] couldn't log the stage changes", eventsError);
 
-  return { ...result, moved: toMove.length, emailed: sent.size, movedIds };
+  return { ...result, moved: toMove.length, emailed: queued.size, movedIds };
 }
 
 export type MovePreview = {

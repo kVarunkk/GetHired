@@ -140,6 +140,14 @@ const TEMPLATE_DEFAULTS: Record<TemplatePurpose, { subject: string; body_md: str
     subject: "An offer for {{job_title}}",
     body_md: "Hi {{candidate_first_name}},\n\nWe're delighted to offer you the role.\n\n{{sender_name}}",
   },
+  on_hold: {
+    subject: "An update on your application for {{job_title}}",
+    body_md: "Hi {{candidate_first_name}},\n\nWe're pausing our review for now.\n\n{{sender_name}}",
+  },
+  reopen: {
+    subject: "An update on your application for {{job_title}}",
+    body_md: "Hi {{candidate_first_name}},\n\nYour application is back under review.\n\n{{sender_name}}",
+  },
   custom: { subject: "A message from {{company_name}}", body_md: "Hi {{candidate_first_name}},\n\n" },
 };
 
@@ -149,6 +157,8 @@ const PURPOSE_INDEX: Record<TemplatePurpose, number> = {
   interview_invite: 3,
   offer: 4,
   custom: 5,
+  on_hold: 6,
+  reopen: 7,
 };
 
 /** COMPANY_A's seeded default template for `purpose`. */

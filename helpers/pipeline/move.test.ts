@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import { COMPANY_A, COMPANY_B, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
+import { COMPANY_A, COMPANY_B } from "@/test/utils/recruiter";
 import { pipelineAppOf, stageOf, templateOf } from "@/test/utils/pipeline";
-import { sendCompanyMessage } from "@/helpers/email/send-company-message";
+import { enqueuePipelineEmails } from "./email-queue";
 import { MAX_MOVE_APPLICATIONS, PL_DAILY_EMAIL_CAP, actorName, moveApplications, previewMove } from "./move";
 import { MEMBER_A, OWNER_A } from "@/test/utils/team";
 import { mockUser } from "@/test/utils/auth";
 
-vi.mock("@/helpers/email/send-company-message", () => ({ sendCompanyMessage: vi.fn() }));
+vi.mock("./email-queue", () => ({ enqueuePipelineEmails: vi.fn() }));
 
 let supabase: SupabaseMock;
 const ctx = () => ({ supabase: supabase.client, company: OWNER_A.myCompany, user: COMPANY_A.user });
@@ -231,30 +231,32 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
     scheduling_url: null,
   };
 
-  /** Interview is the target; the template, company settings and today's email count. */
+  /** Interview is the target; the template, company settings, today's email count and the queued ones. */
   function setUp({
     template = ADVANCE as ReturnType<typeof templateOf> | null,
     settings = COMPANY_SETTINGS,
     sentToday = 0,
+    pending = 0,
   } = {}) {
     supabase.queue("pipeline_stages", { data: INTERVIEW, error: null });
     supabase.queue("company_email_templates", { data: template, error: null });
     supabase.queue("company_info", { data: settings, error: null });
     supabase.queue("application_events", { data: null, error: null, count: sentToday });
+    supabase.queueRpc("pipeline_emails_pending", { data: pending, error: null });
   }
 
-  const sent = () => vi.mocked(sendCompanyMessage).mock.calls.map(([args]) => args);
+  const sent = () => vi.mocked(enqueuePipelineEmails).mock.calls.flatMap(([messages]) => messages);
   const insertedEvents = () =>
     eventInserts().flatMap((c) => argsOf(c.chain, "insert")?.[0] as Record<string, unknown>[]);
 
   beforeEach(() => {
-    vi.mocked(sendCompanyMessage).mockReset().mockResolvedValue({ ok: true });
+    vi.mocked(enqueuePipelineEmails).mockReset().mockResolvedValue(undefined);
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-15T12:00:00.000Z"));
   });
   afterEach(() => vi.useRealTimers());
 
-  it("emails only the applications whose candidate-facing status changes", async () => {
+  it("queues emails only for the applications whose candidate-facing status changes", async () => {
     setUp();
     const fromApplied = loaded();
     const fromScreening = loaded(pipelineAppOf({ stage_id: SCREENING.id }), "screening");
@@ -268,18 +270,26 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
 
     expect(result).toMatchObject({ ok: true, moved: 2, emailed: 1, skipped: [] });
     expect(sent()).toHaveLength(1);
-    // The recipient comes from user_info loaded from the DB; reply-to is the company's email.
+    // Rendered now, with who moved it; the worker loads the recipient from the DB.
     expect(sent()[0]).toEqual({
-      toEmail: PUBLIC_APPLICANT.info.email,
+      applicationId: fromApplied.id,
+      companyId: COMPANY_A.id,
+      candidateUserId: fromApplied.applicant_user_id,
+      actorUserId: COMPANY_A.user.id,
+      actorName: expect.any(String),
+      templateId: ADVANCE.id,
       subject: "Next steps for Founding Backend Engineer",
-      bodyMd: expect.stringContaining("Hi Ada,"),
+      body: expect.stringContaining("Hi Ada,"),
       companyName: COMPANY_A.info.name,
       companyEmail: COMPANY_A.info.email,
       logoUrl: null,
     });
+    // One batch, after the move.
+    expect(enqueuePipelineEmails).toHaveBeenCalledTimes(1);
+    expect(updates()).toHaveLength(1);
   });
 
-  it("emails every moved application with a custom template", async () => {
+  it("queues an email for every moved application with a custom template", async () => {
     setUp({ template: templateOf("custom") });
     const fromApplied = loaded();
     const fromScreening = loaded(pipelineAppOf({ stage_id: SCREENING.id }), "screening");
@@ -324,7 +334,7 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
       },
     });
 
-    expect(sent()[0]).toMatchObject({ subject: "Hi Ada", bodyMd: "About Founding Backend Engineer" });
+    expect(sent()[0]).toMatchObject({ subject: "Hi Ada", body: "About Founding Backend Engineer" });
   });
 
   it("keeps the template's body when only the subject is overridden (the agent's edits)", async () => {
@@ -340,7 +350,7 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
 
     expect(sent()[0]).toMatchObject({
       subject: "Quick update, Ada",
-      bodyMd: expect.stringContaining("Hi Ada,"),
+      body: expect.stringContaining("Hi Ada,"),
     });
   });
 
@@ -376,7 +386,7 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
       });
       expect(updates()).toHaveLength(0);
       expect(eventInserts()).toHaveLength(0);
-      expect(sendCompanyMessage).not.toHaveBeenCalled();
+      expect(enqueuePipelineEmails).not.toHaveBeenCalled();
     });
 
     it("refuses what the move would refuse", async () => {
@@ -417,7 +427,7 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
 
     expect(result).toMatchObject({ ok: false, unknownVariables: ["salary", "foo"] });
     expect(updates()).toHaveLength(0);
-    expect(sendCompanyMessage).not.toHaveBeenCalled();
+    expect(enqueuePipelineEmails).not.toHaveBeenCalled();
   });
 
   it("refuses an interview invite when the company has no scheduling link", async () => {
@@ -451,7 +461,7 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
       error: `You can send up to ${PL_DAILY_EMAIL_CAP} emails a day. 1 left today.`,
     });
     expect(updates()).toHaveLength(0);
-    expect(sendCompanyMessage).not.toHaveBeenCalled();
+    expect(enqueuePipelineEmails).not.toHaveBeenCalled();
     // Counted from today's email_sent events, since midnight IST.
     const [count] = supabase.callsFor("application_events");
     expect(count.chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
@@ -459,7 +469,27 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
     expect(count.chain).toContainEqual({ method: "gte", args: ["created_at", "2026-10-14T18:30:00.000Z"] });
   });
 
-  it("logs email_sent events in the same single insert as the stage changes", async () => {
+  it("counts the emails still in the queue toward the cap", async () => {
+    setUp({ sentToday: PL_DAILY_EMAIL_CAP - 3, pending: 2 });
+    const apps = [loaded(), loaded()];
+    supabase.queue("applications", { data: apps, error: null });
+
+    const result = await moveApplications(ctx(), {
+      applicationIds: apps.map((a) => a.id),
+      stageId: INTERVIEW.id,
+      email: { templateId: ADVANCE.id },
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: `You can send up to ${PL_DAILY_EMAIL_CAP} emails a day. 1 left today.`,
+    });
+    expect(updates()).toHaveLength(0);
+    const [pending] = supabase.callsFor("pipeline_emails_pending");
+    expect(pending.chain[0].args).toEqual(["pipeline_emails_pending", { p_company_id: COMPANY_A.id }]);
+  });
+
+  it("logs only the stage changes: the worker logs email_sent once it sends", async () => {
     setUp();
     const app = loaded();
     supabase.queue("applications", { data: [app], error: null });
@@ -471,29 +501,16 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
     });
 
     expect(eventInserts()).toHaveLength(1);
-    expect(insertedEvents()).toEqual([
-      expect.objectContaining({ type: "stage_changed", application_id: app.id }),
-      {
-        company_id: COMPANY_A.id,
-        application_id: app.id,
-        candidate_user_id: app.applicant_user_id,
-        actor_user_id: COMPANY_A.user.id,
-        actor_name: expect.any(String),
-        type: "email_sent",
-        payload: { template_id: ADVANCE.id, subject: "Next steps for Founding Backend Engineer" },
-      },
-    ]);
+    expect(insertedEvents()).toEqual([expect.objectContaining({ type: "stage_changed", application_id: app.id })]);
     // Never the body.
     expect(JSON.stringify(insertedEvents())).not.toContain("Hi Ada");
   });
 
-  it("still moves when a send fails, and reports it as email_failed", async () => {
+  it("still moves when the emails can't be queued, and reports them as email_failed", async () => {
     setUp();
     const apps = [loaded(), loaded()];
     supabase.queue("applications", { data: apps, error: null });
-    vi.mocked(sendCompanyMessage)
-      .mockResolvedValueOnce({ ok: false, error: "Failed to send email" })
-      .mockResolvedValueOnce({ ok: true });
+    vi.mocked(enqueuePipelineEmails).mockRejectedValueOnce(new Error("Couldn't queue the emails"));
 
     const result = await moveApplications(ctx(), {
       applicationIds: apps.map((a) => a.id),
@@ -504,10 +521,11 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
     expect(result).toMatchObject({
       ok: true,
       moved: 2,
-      emailed: 1,
-      skipped: [{ id: apps[0].id, reason: "email_failed" }],
+      emailed: 0,
+      skipped: apps.map((a) => ({ id: a.id, reason: "email_failed" })),
     });
-    expect(insertedEvents().filter((e) => e.type === "email_sent")).toHaveLength(1);
+    expect(updates()).toHaveLength(1);
+    expect(insertedEvents().filter((e) => e.type === "stage_changed")).toHaveLength(2);
   });
 
   it("reports an application without an email address as email_failed", async () => {
@@ -527,7 +545,7 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
       emailed: 0,
       skipped: [{ id: app.id, reason: "email_failed" }],
     });
-    expect(sendCompanyMessage).not.toHaveBeenCalled();
+    expect(sent()).toEqual([]);
   });
 });
 

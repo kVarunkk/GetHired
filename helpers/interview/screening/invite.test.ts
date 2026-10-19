@@ -4,7 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendEmail } from "@/utils/email";
 import { flushAfter } from "@/test/utils/after";
 import { ADMIN_A } from "@/test/utils/team";
-import { MAX_BULK_INVITES, inviteApplicants, inviteCostPreview } from "./invite";
+import { MAX_BULK_INVITES, inviteApplicants, inviteCostPreview, sendInterviewInviteEmail } from "./invite";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
@@ -13,7 +13,6 @@ vi.mock("@/utils/email", () => ({ sendEmail: vi.fn() }));
 const JOB = "b0000000-0000-4000-8000-0000000000a1";
 const app = (n: number) => `e0000000-0000-4000-8000-00000000000${n}`;
 const ai = (n: number) => `fa000000-0000-4000-8000-00000000000${n}`;
-const applicant = (n: number) => `a0000000-0000-4000-8000-00000000000${n}`;
 
 const snapshot = {
   questions: [{ text: "Secret question" }],
@@ -37,32 +36,23 @@ beforeEach(() => {
 
 const deps = () => ({ supabase: session.client, company: ADMIN_A.myCompany, user: ADMIN_A.user });
 
-/** The session's view of the applications (RLS), each on JOB unless given. */
-function queueVisible(ids: string[], jobPostId = JOB) {
-  session.queue("applications", { data: ids.map((id) => ({ id, job_post_id: jobPostId })), error: null });
+/** The session's view of the applications (RLS). */
+function queueVisible(ids: string[]) {
+  session.queue("applications", { data: ids.map((id) => ({ id })), error: null });
 }
 
-function queueEmailContext(rows: { n: number }[]) {
-  service.queue("application_interviews", {
-    data: rows.map(({ n }) => ({
-      id: ai(n),
-      applicant_user_id: applicant(n),
-      deadline_at: "2026-10-24T12:00:00.000Z",
-      config_snapshot: snapshot,
-    })),
-    error: null,
-  });
-  service.queue("user_info", {
-    data: rows.map(({ n }) => ({ user_id: applicant(n), email: `cand${n}@example.com`, full_name: `Cand${n} Last` })),
-    error: null,
-  });
-}
+const bulkCalls = () => service.callsFor("create_screening_invites").map((c) => c.chain[0].args[1]);
 
 describe("inviteApplicants (SI-REQ-010/012/013, SI-TEST-002)", () => {
-  it("invites each application through create_screening_invite as the session user", async () => {
+  it("invites the visible applications in one create_screening_invites call as the session user", async () => {
     queueVisible([app(1), app(2)]);
-    service.queueRpc("create_screening_invite", { data: { ok: true, id: ai(1) }, error: null });
-    service.queueRpc("create_screening_invite", { data: { ok: false, reason: "exists" }, error: null });
+    service.queueRpc("create_screening_invites", {
+      data: [
+        { application_id: app(1), ok: true, id: ai(1) },
+        { application_id: app(2), ok: false, reason: "exists" },
+      ],
+      error: null,
+    });
 
     const result = await inviteApplicants(deps(), { jobPostId: JOB, applicationIds: [app(1), app(2)], via: "manual" });
 
@@ -71,38 +61,71 @@ describe("inviteApplicants (SI-REQ-010/012/013, SI-TEST-002)", () => {
       invited: [{ id: ai(1), applicationId: app(1) }],
       skipped: [{ id: app(2), reason: "exists" }],
     });
-    expect(service.callsFor("create_screening_invite").map((c) => c.chain[0].args[1])).toEqual([
-      { p_application_id: app(1), p_via: "manual", p_invited_by: ADMIN_A.user.id },
-      { p_application_id: app(2), p_via: "manual", p_invited_by: ADMIN_A.user.id },
+    expect(bulkCalls()).toEqual([
+      { p_job_post_id: JOB, p_application_ids: [app(1), app(2)], p_via: "manual", p_invited_by: ADMIN_A.user.id },
     ]);
   });
 
   it("passes every refusal reason through", async () => {
-    const reasons = ["disabled", "job_inactive", "insufficient_credits", "member_limit", "not_applicant"];
+    const reasons = ["disabled", "job_inactive", "closed", "insufficient_credits", "member_limit", "not_applicant", "not_found"];
     const ids = reasons.map((_, i) => app(i + 1));
     queueVisible(ids);
-    for (const reason of reasons) {
-      service.queueRpc("create_screening_invite", { data: { ok: false, reason }, error: null });
-    }
+    service.queueRpc("create_screening_invites", {
+      data: reasons.map((reason, i) => ({ application_id: ids[i], ok: false, reason })),
+      error: null,
+    });
 
     const result = await inviteApplicants(deps(), { jobPostId: JOB, applicationIds: ids, via: "agent" });
     expect(result.ok && result.skipped.map((s) => s.reason)).toEqual(reasons);
   });
 
-  it("skips applications the session can't see or that belong to another job", async () => {
-    session.queue("applications", { data: [{ id: app(1), job_post_id: "other-job" }], error: null });
+  it("skips applications the session can't see without sending them", async () => {
+    queueVisible([app(2)]);
+    service.queueRpc("create_screening_invites", {
+      data: [{ application_id: app(2), ok: true, id: ai(2) }],
+      error: null,
+    });
 
     const result = await inviteApplicants(deps(), { jobPostId: JOB, applicationIds: [app(1), app(2)], via: "manual" });
 
     expect(result).toEqual({
       ok: true,
+      invited: [{ id: ai(2), applicationId: app(2) }],
+      skipped: [{ id: app(1), reason: "not_found" }],
+    });
+    expect(bulkCalls()[0]).toMatchObject({ p_application_ids: [app(2)] });
+  });
+
+  it("doesn't call the RPC when the session can see none of them", async () => {
+    queueVisible([]);
+    const result = await inviteApplicants(deps(), { jobPostId: JOB, applicationIds: [app(1)], via: "manual" });
+    expect(result).toEqual({ ok: true, invited: [], skipped: [{ id: app(1), reason: "not_found" }] });
+    expect(bulkCalls()).toHaveLength(0);
+  });
+
+  it("dedupes the ids", async () => {
+    queueVisible([app(1)]);
+    service.queueRpc("create_screening_invites", {
+      data: [{ application_id: app(1), ok: true, id: ai(1) }],
+      error: null,
+    });
+    await inviteApplicants(deps(), { jobPostId: JOB, applicationIds: [app(1), app(1)], via: "manual" });
+    expect(bulkCalls()[0]).toMatchObject({ p_application_ids: [app(1)] });
+  });
+
+  it("marks every application failed when the RPC errors", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    queueVisible([app(1), app(2)]);
+    service.queueRpc("create_screening_invites", { data: null, error: { message: "down" } });
+
+    expect(await inviteApplicants(deps(), { jobPostId: JOB, applicationIds: [app(1), app(2)], via: "manual" })).toEqual({
+      ok: true,
       invited: [],
       skipped: [
-        { id: app(1), reason: "not_found" },
-        { id: app(2), reason: "not_found" },
+        { id: app(1), reason: "failed" },
+        { id: app(2), reason: "failed" },
       ],
     });
-    expect(service.callsFor("create_screening_invite")).toHaveLength(0);
   });
 
   it(`refuses more than ${MAX_BULK_INVITES} at once`, async () => {
@@ -114,34 +137,40 @@ describe("inviteApplicants (SI-REQ-010/012/013, SI-TEST-002)", () => {
     expect(session.calls).toHaveLength(0);
   });
 
-  it("emails only the invites it created, after the response", async () => {
-    queueVisible([app(1), app(2)]);
-    service.queueRpc("create_screening_invite", { data: { ok: true, id: ai(1) }, error: null });
-    service.queueRpc("create_screening_invite", { data: { ok: false, reason: "exists" }, error: null });
-    queueEmailContext([{ n: 1 }]);
-
-    await inviteApplicants(deps(), { jobPostId: JOB, applicationIds: [app(1), app(2)], via: "manual" });
-    expect(sendEmail).not.toHaveBeenCalled();
-
+  it("sends no email itself: the RPC queues it", async () => {
+    queueVisible([app(1)]);
+    service.queueRpc("create_screening_invites", {
+      data: [{ application_id: app(1), ok: true, id: ai(1) }],
+      error: null,
+    });
+    await inviteApplicants(deps(), { jobPostId: JOB, applicationIds: [app(1)], via: "manual" });
     await flushAfter();
-    expect(service.callsFor("application_interviews")[0].chain).toContainEqual({ method: "in", args: ["id", [ai(1)]] });
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("sendInterviewInviteEmail (SI-REQ-013)", () => {
+  const interview = { id: ai(1), deadline_at: "2026-10-24T12:00:00.000Z", config_snapshot: snapshot };
+
+  it("emails the link and the competencies, never the rubric or the questions", async () => {
+    await sendInterviewInviteEmail(interview, { email: "cand1@example.com", full_name: "Cand1 Last" });
+
     expect(sendEmail).toHaveBeenCalledTimes(1);
     const mail = vi.mocked(sendEmail).mock.calls[0][0];
     expect(mail.toEmail).toBe("cand1@example.com");
     expect(mail.subject).toBe("Acme invited you to an AI interview for Backend Engineer");
+    expect(mail.senderName).toBe("Acme via GetHired");
     expect(mail.htmlContent).toContain(`/interview/screening/${ai(1)}`);
     expect(mail.textContent).toContain("Hi Cand1");
     expect(mail.textContent).toContain("System design");
-    // Never the rubric or the must-ask questions.
     expect(mail.textContent).not.toContain("Secret");
   });
 
-  it("sends nothing when nothing was created", async () => {
-    queueVisible([app(1)]);
-    service.queueRpc("create_screening_invite", { data: { ok: false, reason: "disabled" }, error: null });
-    await inviteApplicants(deps(), { jobPostId: JOB, applicationIds: [app(1)], via: "manual" });
-    await flushAfter();
-    expect(sendEmail).not.toHaveBeenCalled();
+  it("throws when the send fails, so the worker retries", async () => {
+    vi.mocked(sendEmail).mockRejectedValueOnce(new Error("all providers down"));
+    await expect(
+      sendInterviewInviteEmail(interview, { email: "cand1@example.com", full_name: "Cand1 Last" }),
+    ).rejects.toThrow("all providers down");
   });
 });
 
