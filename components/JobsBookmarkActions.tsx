@@ -103,7 +103,7 @@ export default function JobsBookmarkActions({
                 setOpenDialog(true);
                 setDialogView("delete");
               }}
-              variant="ghost"
+              variant="destructive-ghost"
               size={"sm"}
             >
               <Trash />

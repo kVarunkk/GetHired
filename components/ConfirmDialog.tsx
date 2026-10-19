@@ -26,6 +26,7 @@ export default function ConfirmDialog({
   description,
   confirmLabel,
   onConfirm,
+  confirmVariant = "destructive",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -33,6 +34,8 @@ export default function ConfirmDialog({
   description: ReactNode;
   confirmLabel: string;
   onConfirm: () => unknown;
+  /** For a confirmation that isn't destructive, e.g. one that spends credits. */
+  confirmVariant?: "destructive" | "brand";
 }) {
   const [busy, setBusy] = useState(false);
 
@@ -56,7 +59,7 @@ export default function ConfirmDialog({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            className={buttonVariants({ variant: "destructive" })}
+            className={buttonVariants({ variant: confirmVariant })}
             disabled={busy}
             onClick={(e) => {
               // Stay open until the action is done.

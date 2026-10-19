@@ -392,7 +392,7 @@ function NoteItem({
             </Button>
             <Button
               size="sm"
-              variant="ghost"
+              variant="destructive-ghost"
               className="h-7 px-2"
               onClick={() => setMode("confirm-delete")}
             >

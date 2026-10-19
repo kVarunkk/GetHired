@@ -15,7 +15,7 @@ import { isStopped, stoppedReply } from "@/helpers/agent/stopped";
 import type { ResumeUploadOutput } from "./ResumeUploadWidget";
 import Composer from "./Composer";
 import ScrollToBottomButton from "./ScrollToBottomButton";
-import MessageParts, { StepNode } from "./MessageParts";
+import MessageParts, { hasVisibleParts, StepNode } from "./MessageParts";
 import { AGENT_ROLE_UI, APPLICANT_STARTERS, type AgentRoleId } from "./roles";
 import { cn } from "@/utils/utils";
 
@@ -253,6 +253,8 @@ export default function ChatPane({
             )}
 
             {messages.map((message, index) => {
+              // An empty reply would add a gap above the loader, then fill it.
+              if (message.id === streamingId && !hasVisibleParts(message)) return null;
               const isLatestReply = message.id === lastAssistantId && !busy;
               const suggestions = isLatestReply ? suggestionsOf(message) : [];
               const parent = isLatestReply
@@ -357,7 +359,13 @@ export default function ChatPane({
           {capLeft} of your {memberCap.limit} agent messages left this month
         </p>
       )}
-      <Composer busy={busy} onSend={send} onStop={handleStop} initialDraft={initialDraft} />
+      <Composer
+        busy={busy}
+        onSend={send}
+        onStop={handleStop}
+        initialDraft={initialDraft}
+        placeholder={ui.placeholder}
+      />
     </div>
   );
 }

@@ -475,7 +475,7 @@ export default function JobsComponent({
               <Button
                 asChild
                 variant="brand"
-                className="flex items-center gap-2 rounded-full text-sm"
+                className="flex items-center gap-2 rounded-full text-sm whitespace-nowrap"
               >
                 <Link href={"/get-started"}>
                   <Search className="w-4 h-4" />
@@ -491,7 +491,7 @@ export default function JobsComponent({
             <Button
               asChild
               variant="brand"
-              className="flex items-center gap-2 rounded-full text-sm"
+              className="flex items-center gap-2 rounded-full text-sm whitespace-nowrap"
             >
               <Link
                 href={`/auth/sign-up?returnTo=/${

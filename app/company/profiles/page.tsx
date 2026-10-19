@@ -104,14 +104,14 @@ export default async function ProfilesPage({
 
   return (
     <div className="flex items-start px-4 h-full gap-5">
-      <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[calc(100vh)] overflow-y-auto">
+      <div className="hidden lg:block w-1/4 px-2 sticky top-0 z-10 max-h-[calc(100vh)] overflow-y-auto">
         <FilterComponent
           dynamicKey={dynamicKey}
           currentPage={"profiles"}
           onboardingComplete={onboarding_complete}
         />
       </div>
-      <div className="w-full md:w-3/4">
+      <div className="w-full lg:w-3/4">
         <div className="flex flex-col gap-6 pt-4">
           <PageHeader
             title="Profiles"

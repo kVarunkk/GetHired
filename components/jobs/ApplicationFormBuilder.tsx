@@ -79,7 +79,7 @@ function QuestionEditor({
           <Button type="button" size="icon" variant="ghost" className="h-7 w-7" aria-label="Move down" disabled={index === count - 1} onClick={() => onMove(1)}>
             <ArrowDown className="h-3.5 w-3.5" />
           </Button>
-          <Button type="button" size="icon" variant="ghost" className="h-7 w-7" aria-label="Remove" onClick={onRemove}>
+          <Button type="button" size="icon" variant="destructive-ghost" className="h-7 w-7" aria-label="Remove" onClick={onRemove}>
             <Trash className="h-3.5 w-3.5" />
           </Button>
         </div>

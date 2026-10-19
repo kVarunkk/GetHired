@@ -18,6 +18,11 @@ const buttonVariants = cva(
         brand: "bg-brand text-brand-foreground hover:bg-brand/90",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        /** A button that starts a destructive action (Delete, Revoke, Cancel interview…), standing alone. */
+        "destructive-outline":
+          "border border-destructive/40 bg-background text-destructive hover:border-destructive/60 hover:bg-destructive/10",
+        /** The same in a row of ghost actions, and for icon-only removes (size="icon"). */
+        "destructive-ghost": "text-destructive hover:bg-destructive/10 hover:text-destructive",
         outline:
           "border border-input bg-background hover:bg-muted/60 hover:text-accent-foreground",
         secondary:

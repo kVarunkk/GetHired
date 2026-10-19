@@ -372,7 +372,7 @@ export default function BillingOverview({
             )}
             {billing.hasPaidSubscription && !billing.cancelAtPeriodEnd && (
               <Button
-                variant="ghost"
+                variant="destructive-ghost"
                 disabled={busy !== null}
                 onClick={confirmCancel}
               >

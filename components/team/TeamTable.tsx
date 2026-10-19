@@ -214,7 +214,7 @@ export default function TeamTable({ members, invites, roles, me, companyName }: 
           <div className="flex items-center justify-end gap-1">
             {canRemoveThem && (
               <Button
-                variant="ghost"
+                variant="destructive-ghost"
                 size="sm"
                 disabled={busy !== null}
                 onClick={() => setPending({ kind: "remove", member })}
@@ -227,7 +227,7 @@ export default function TeamTable({ members, invites, roles, me, companyName }: 
                 <span className="text-xs text-muted-foreground">Make another owner primary to leave.</span>
               ) : (
                 <Button
-                  variant="ghost"
+                  variant="destructive-ghost"
                   size="sm"
                   disabled={busy !== null}
                   onClick={() => setPending({ kind: "leave" })}
@@ -332,7 +332,7 @@ export default function TeamTable({ members, invites, roles, me, companyName }: 
               Resend
             </Button>
             <Button
-              variant="ghost"
+              variant="destructive-ghost"
               size="sm"
               disabled={busy !== null}
               onClick={() => setPending({ kind: "revoke", invite })}
@@ -495,7 +495,7 @@ function DemoteDialog({
           </Select>
         </ResponsiveDialogBody>
         <ResponsiveDialogFooter>
-          <Button variant="default" disabled={!roleId || busy} onClick={() => onConfirm(roleId)}>
+          <Button variant="destructive" disabled={!roleId || busy} onClick={() => onConfirm(roleId)}>
             Remove owner role
           </Button>
         </ResponsiveDialogFooter>

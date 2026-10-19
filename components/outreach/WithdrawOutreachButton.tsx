@@ -14,7 +14,7 @@ export default function WithdrawOutreachButton({ outreachId }: { outreachId: str
 
   return (
     <>
-      <Button size="sm" variant="ghost" onClick={() => setConfirming(true)}>
+      <Button size="sm" variant="destructive-ghost" onClick={() => setConfirming(true)}>
         Withdraw
       </Button>
       <ConfirmDialog

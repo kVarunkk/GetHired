@@ -169,9 +169,9 @@ export default function DynamicActions<T extends Item>({
                 setDialogView("delete");
                 setOpenDialog(true);
               }}
-              variant="ghost"
+              variant="destructive-ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              className="h-8 w-8 p-0"
             >
               <Trash className="h-4 w-4" />
             </Button>

@@ -103,7 +103,7 @@ function SectionEditor({
             <Button
               type="button"
               size="icon"
-              variant="ghost"
+              variant="destructive-ghost"
               aria-label={`Remove perk ${i + 1}`}
               disabled={disabled}
               onClick={() => onChange({ ...section, items: section.items.filter((_, j) => j !== i) })}
@@ -302,7 +302,7 @@ export default function CareersEditor({
                 }}
               />
               {coverUrl && (
-                <Button type="button" variant="ghost" disabled={disabled} onClick={() => setCoverUrl(null)}>
+                <Button type="button" variant="destructive-ghost" disabled={disabled} onClick={() => setCoverUrl(null)}>
                   Remove
                 </Button>
               )}
@@ -342,7 +342,7 @@ export default function CareersEditor({
                     >
                       {section.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                     </Button>
-                    <Button type="button" size="icon" variant="ghost" className="h-7 w-7" aria-label="Remove section" onClick={() => setSections(sections.filter((s) => s.id !== section.id))}>
+                    <Button type="button" size="icon" variant="destructive-ghost" className="h-7 w-7" aria-label="Remove section" onClick={() => setSections(sections.filter((s) => s.id !== section.id))}>
                       <Trash className="h-3.5 w-3.5" />
                     </Button>
                   </div>

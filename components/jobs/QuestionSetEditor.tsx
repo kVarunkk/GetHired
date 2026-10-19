@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Loader2, Trash } from "lucide-react";
 import StickyActionBar from "@/components/StickyActionBar";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -107,7 +107,7 @@ export default function QuestionSetEditor({
           {id ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button type="button" variant="outline" disabled={busy}>
+                <Button type="button" variant="destructive-outline" disabled={busy}>
                   {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash className="mr-2 h-4 w-4" />}
                   Delete set
                 </Button>
@@ -121,7 +121,9 @@ export default function QuestionSetEditor({
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => void remove()}>Delete</AlertDialogAction>
+                  <AlertDialogAction className={buttonVariants({ variant: "destructive" })} onClick={() => void remove()}>
+                    Delete
+                  </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

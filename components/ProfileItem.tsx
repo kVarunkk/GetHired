@@ -104,10 +104,10 @@ const ProfileItem = React.memo(
               <AddToListMenu
                 candidateUserId={profile.user_id}
                 onReachOut={() => setReachingOut(true)}
-                className="flex-1 sm:flex-none"
+                className="grow sm:flex-none"
               />
             )}
-            <Button asChild className="flex-1 sm:flex-none">
+            <Button asChild className="grow sm:flex-none">
               <Link href={profileHref} prefetch={false} target="_blank">
                 View Profile
                 <ArrowRight className="ml-2 h-4 w-4" />

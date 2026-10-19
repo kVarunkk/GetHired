@@ -60,8 +60,7 @@ export default function DeleteJobPosting({
   };
   const trigger = (
     <Button
-      variant={"ghost"}
-      className="text-muted-foreground"
+      variant="destructive-ghost"
       aria-label="Delete Job Post"
       disabled={disabled}
     >

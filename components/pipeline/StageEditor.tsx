@@ -146,7 +146,7 @@ export default function StageEditor({ stages: initial }: { stages: StageOption[]
                 {!PROTECTED.has(stage.kind) && (
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="destructive-ghost"
                     aria-label={`Archive ${stage.name}`}
                     onClick={() => setArchiving(stage)}
                   >

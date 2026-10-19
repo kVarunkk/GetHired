@@ -177,8 +177,8 @@ export default function MemoriesPanel({ role = "applicant" }: { role?: AgentRole
                         </Button>
                         <Button
                           size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                          variant="destructive-ghost"
+                          className="h-7 w-7 shrink-0"
                           aria-label={`Delete: ${memory.content}`}
                           onClick={() => setPendingDelete(memory)}
                         >

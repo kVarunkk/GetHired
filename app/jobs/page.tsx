@@ -212,14 +212,14 @@ export default async function JobsPage({
 
   return (
     <div className="flex items-start px-4  gap-5">
-      <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[100vh] overflow-y-auto">
+      <div className="hidden lg:block w-1/4 px-2 sticky top-0 z-10 max-h-[100vh] overflow-y-auto">
         <FilterComponent
           dynamicKey={params.toString()}
           onboardingComplete={onboardingComplete}
           currentPage="jobs"
         />
       </div>
-      <div className="w-full md:w-3/4 ">
+      <div className="w-full lg:w-3/4 ">
         <div className="flex flex-col gap-6 pt-4">
           <PageHeader
             title="Jobs"

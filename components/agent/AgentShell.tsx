@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { UIMessage } from "ai";
-import { PanelLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -115,39 +115,28 @@ export default function AgentShell({
     if (id === activeSessionId) router.push(basePath);
   };
 
-  const sidebar = (
-    <SessionSidebar
-      sessions={sessions}
-      activeId={activeSessionId}
-      onSelect={openSession}
-      onCreate={createSession}
-      onRename={renameSession}
-      onDelete={deleteSession}
-      creating={creating}
-    />
-  );
+  const sidebarProps = {
+    sessions,
+    activeId: activeSessionId,
+    onSelect: openSession,
+    onCreate: createSession,
+    onRename: renameSession,
+    onDelete: deleteSession,
+    creating,
+  };
 
   // Fills what LayoutWrapper leaves below the navbar (see fullHeightPaths).
   return (
     <div className="flex min-h-0 w-full flex-1">
-      {/* Kept mounted so the width can animate; the inner box keeps a fixed width so items don't reflow mid-animation. */}
+      {/* Collapses to a rail the way EntityNav does: the width animates, the list fades, the toggle sits at the bottom. */}
       <aside
         id="agent-sessions"
-        aria-hidden={!sidebarOpen}
-        inert={!sidebarOpen}
         className={cn(
-          "hidden shrink-0 overflow-hidden transition-[width,border-color] duration-300 ease-in-out md:block",
-          sidebarOpen ? "w-64 border-r" : "w-0 border-r border-transparent",
+          "hidden shrink-0 overflow-hidden border-r transition-[width] duration-300 ease-in-out md:block",
+          sidebarOpen ? "w-64" : "w-16",
         )}
       >
-        <div
-          className={cn(
-            "h-full w-64 transition-opacity duration-300 ease-in-out",
-            sidebarOpen ? "opacity-100" : "opacity-0",
-          )}
-        >
-          {sidebar}
-        </div>
+        <SessionSidebar {...sidebarProps} open={sidebarOpen} onToggle={() => setSidebarOpen((open) => !open)} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -164,24 +153,11 @@ export default function AgentShell({
                 <div className="flex h-12 shrink-0 items-center border-b px-4 pr-12">
                   <SheetTitle className="text-sm font-medium">Chats</SheetTitle>
                 </div>
-                <div className="min-h-0 flex-1">{sidebar}</div>
+                <div className="min-h-0 flex-1">
+                  <SessionSidebar {...sidebarProps} />
+                </div>
               </SheetContent>
             </Sheet>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="hidden shrink-0 md:inline-flex"
-              aria-label={sidebarOpen ? "Hide chats" : "Show chats"}
-              aria-controls="agent-sessions"
-              aria-expanded={sidebarOpen}
-              onClick={() => setSidebarOpen((open) => !open)}
-            >
-              {sidebarOpen ? (
-                <PanelLeftClose className="h-4 w-4" />
-              ) : (
-                <PanelLeftOpen className="h-4 w-4" />
-              )}
-            </Button>
             <h1 className="truncate px-1 text-sm font-medium">
               {sessions.find((s) => s.id === activeSessionId)?.title ?? "Agent"}
             </h1>

@@ -31,7 +31,8 @@ export default function ScrollToTopButton({
       aria-label="Scroll to top"
       onClick={scrollToTop}
       className={cn(
-        "fixed bottom-10 right-10 sm:right-20 z-50 bg-secondary text-secondary-foreground rounded-full p-3 shadow-lg transition-opacity duration-300 border border-border",
+        // Lifted above a StickyActionBar when the page has one.
+        "fixed bottom-[calc(2.5rem+var(--sticky-action-bar-height,0px))] right-10 sm:right-20 z-50 bg-secondary text-secondary-foreground rounded-full p-3 shadow-lg transition-opacity duration-300 border border-border",
         visible
           ? "opacity-100 pointer-events-auto"
           : "opacity-0 pointer-events-none",

@@ -260,11 +260,11 @@ export default function FilterComponent({
 
   return (
     <form
-      className="flex min-h-0 flex-col h-full md:h-screen items-start"
+      className="flex min-h-0 flex-col h-full lg:h-screen items-start"
       onSubmit={handleSubmit}
     >
       {/* No scrollbar: a fade at the bottom (and at the top once scrolled) shows there are more filters. */}
-      <ScrollFade className="w-full flex-1" contentClassName="py-4 md:pr-4">
+      <ScrollFade className="w-full flex-1" contentClassName="py-4 lg:pr-4">
         {FILTER_CONFIG.filter((each) => !each.hidden).map((config) => (
           <label
             key={config.name}
@@ -276,7 +276,7 @@ export default function FilterComponent({
           </label>
         ))}
       </ScrollFade>
-      <div className="w-full shrink-0 py-4 md:pr-4">
+      <div className="w-full shrink-0 py-4 lg:pr-4">
         <FilterActions
           currentPage={currentPage}
           setOpenSheet={setOpenSheet}

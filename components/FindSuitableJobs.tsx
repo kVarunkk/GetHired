@@ -144,7 +144,7 @@ export default function FindSuitableJobs({
           variant="brand"
           disabled={isPending}
           onClick={() => handleAiSearch()}
-          className="rounded-full"
+          className="rounded-full whitespace-nowrap"
         >
           {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           <Search className="w-4 h-4" /> Find Suitable Companies
@@ -159,7 +159,7 @@ export default function FindSuitableJobs({
         variant="brand"
         disabled={isPending}
         onClick={() => handleAiSearch()}
-        className="rounded-full"
+        className="rounded-full whitespace-nowrap"
       >
         {isPending ? (
           <Loader2 className="h-4 w-4 animate-spin" />

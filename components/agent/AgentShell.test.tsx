@@ -83,17 +83,18 @@ describe("AgentShell", () => {
 
     const panel = document.getElementById("agent-sessions")!;
     await userEvent.click(hide);
-    // Stays mounted so the width can animate, but is hidden and unfocusable.
-    expect(panel).toHaveAttribute("inert");
-    expect(panel).toHaveClass("w-0");
-    expect(screen.queryByRole("navigation", { name: "Chat sessions" })).not.toBeInTheDocument();
+    // A rail: "New chat" and the toggle stay, the list is hidden and unfocusable.
+    expect(panel).toHaveClass("w-16");
+    expect(within(panel).getByRole("button", { name: "New chat" })).toBeInTheDocument();
+    expect(within(panel).queryByRole("button", { name: "Second" })).not.toBeInTheDocument();
+    expect(within(panel).getByText("Second").closest("[inert]")).not.toBeNull();
 
-    const show = screen.getByRole("button", { name: "Show chats" });
+    const show = within(panel).getByRole("button", { name: "Show chats" });
     expect(show).toHaveAttribute("aria-expanded", "false");
     await userEvent.click(show);
-    expect(panel).not.toHaveAttribute("inert");
     expect(panel).toHaveClass("w-64");
-    expect(sidebar()).toBeInTheDocument();
+    expect(within(panel).getByRole("button", { name: "Second" })).toBeInTheDocument();
+    expect(within(panel).getByText("Second").closest("[inert]")).toBeNull();
   });
 
   it("switches sessions through the URL", async () => {

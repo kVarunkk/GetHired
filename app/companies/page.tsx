@@ -151,14 +151,14 @@ export default async function JobsPage({
   return (
     // <div>
     <div className="flex items-start px-4  gap-5">
-      <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[calc(100vh)] overflow-y-auto">
+      <div className="hidden lg:block w-1/4 px-2 sticky top-0 z-10 max-h-[calc(100vh)] overflow-y-auto">
         <FilterComponent
           dynamicKey={dynamicKey}
           currentPage="companies"
           onboardingComplete={onboardingComplete}
         />
       </div>
-      <div className="w-full md:w-3/4 ">
+      <div className="w-full lg:w-3/4 ">
         <ClientTabs
           user={user}
           isCompanyUser={isCompanyUser}
