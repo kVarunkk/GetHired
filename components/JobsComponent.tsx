@@ -463,7 +463,7 @@ export default function JobsComponent({
             )}
 
           {!isOnboardingComplete && user && !isCompanyUser && (
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <Button
                 asChild
                 variant="brand"
@@ -483,7 +483,7 @@ export default function JobsComponent({
             <Button
               asChild
               variant="brand"
-              className="flex items-center gap-2 rounded-full text-sm whitespace-nowrap"
+              className="flex shrink-0 items-center gap-2 rounded-full text-sm whitespace-nowrap"
             >
               <Link
                 href={`/auth/sign-up?returnTo=/${
