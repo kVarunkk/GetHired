@@ -77,7 +77,7 @@ describe("AgentHeroDemo", () => {
       expect(screen.getByText(/Find candidates for my Senior Frontend Engineer post/)).toBeInTheDocument();
       expect(screen.getByText("Read the job post")).toBeInTheDocument();
       expect(screen.getByText("Found matched candidates")).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /Priya S/ })).toHaveAttribute("href", "/company/profiles");
+      expect(screen.getByRole("link", { name: /Candidate A/ })).toHaveAttribute("href", "/company/profiles");
       expect(screen.getByText(/Want me to invite them/)).toBeInTheDocument();
     });
 
