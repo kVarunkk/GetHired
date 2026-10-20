@@ -105,7 +105,20 @@ export async function submitApplicationAction(input: SubmitApplicationInput): Pr
     .filter((q) => q.required && isTextType(q.type))
     .map((q) => String(answers[q.id] ?? ""));
 
-  const { data: application, error: insertError } = await supabase
+  // An application to a company whose outreach the candidate answered
+  // Interested counts as outreach (the pipeline trigger did this for inserts
+  // made as the user; this one is the service role's).
+  const { data: interested } = await service
+    .from("candidate_outreach")
+    .select("id")
+    .eq("company_id", job.company_id)
+    .eq("candidate_user_id", user.id)
+    .eq("status", "interested")
+    .limit(1);
+
+  // BW-F02: applicants can't insert platform applications themselves, so the
+  // insert is the service role's, after the checks above.
+  const { data: application, error: insertError } = await service
     .from("applications")
     .insert({
       job_post_id: job.id,
@@ -116,7 +129,7 @@ export async function submitApplicationAction(input: SubmitApplicationInput): Pr
       answers: legacyAnswers,
       answers_v2: answers as Json,
       form_snapshot: publicApplicationForm(form) as unknown as Json,
-      source,
+      source: interested && interested.length > 0 ? "outreach" : source,
       source_detail: ref ? ref.toLowerCase() : null,
     })
     .select("id")

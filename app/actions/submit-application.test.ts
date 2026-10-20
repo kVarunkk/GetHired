@@ -49,7 +49,7 @@ function queueHappyPath({ job = JOB, rules = RULES as unknown, existing = [] as 
   service.queue("job_postings", { data: job, error: null });
   service.queue("job_posting_form_rules", { data: rules ? { rules } : null, error: null });
   service.queue("applications", { data: existing, error: null });
-  user.queue("applications", { data: { id: APPLICATION_ID }, error: null });
+  service.queue("applications", { data: { id: APPLICATION_ID }, error: null });
   service.queue("application_knockouts", { data: null, error: null });
 }
 
@@ -72,7 +72,7 @@ describe("submitApplicationAction (AF-REQ-007, CPT-015)", () => {
     const result = await submitApplicationAction(INPUT);
 
     expect(result).toEqual({ ok: true, applicationId: APPLICATION_ID, creditsDeducted: true, interview: null });
-    const row = insertOf(user, "applications");
+    const row = insertOf(service, "applications");
     expect(row).toEqual({
       job_post_id: JOB.id,
       all_jobs_id: JOB.job_id,
@@ -102,7 +102,7 @@ describe("submitApplicationAction (AF-REQ-007, CPT-015)", () => {
   it("never puts knockout rules in the snapshot the applicant can read (AF-SEC-003)", async () => {
     queueHappyPath();
     await submitApplicationAction(INPUT);
-    expect(JSON.stringify(insertOf(user, "applications"))).not.toContain("knockout");
+    expect(JSON.stringify(insertOf(service, "applications"))).not.toContain("knockout");
   });
 
   it("flags a failed knockout without telling the applicant", async () => {
@@ -171,7 +171,7 @@ describe("submitApplicationAction (AF-REQ-007, CPT-015)", () => {
         [standardAnswerKey("work_authorization")]: "This question is required.",
       },
     });
-    expect(insertOf(user, "applications")).toBeUndefined();
+    expect(insertOf(service, "applications")).toBeUndefined();
     expect(deductUserCreditsHelper).not.toHaveBeenCalled();
   });
 
@@ -181,13 +181,13 @@ describe("submitApplicationAction (AF-REQ-007, CPT-015)", () => {
     const result = await submitApplicationAction({ ...INPUT, answers: { [id(1)]: "Because" } });
 
     expect(result).toMatchObject({ ok: true });
-    expect(insertOf(user, "applications")).toMatchObject({ answers: ["Because"], answers_v2: { [id(1)]: "Because" } });
+    expect(insertOf(service, "applications")).toMatchObject({ answers: ["Because"], answers_v2: { [id(1)]: "Because" } });
   });
 
   it("refuses a second application to the same job", async () => {
     queueHappyPath({ existing: [{ id: "e0000000-0000-4000-8000-000000000099" }] });
     expect(await submitApplicationAction(INPUT)).toEqual({ ok: false, error: "You've already applied to this job." });
-    expect(insertOf(user, "applications")).toBeUndefined();
+    expect(insertOf(service, "applications")).toBeUndefined();
   });
 
   it("refuses a second application that races past the check (unique index)", async () => {
@@ -195,7 +195,7 @@ describe("submitApplicationAction (AF-REQ-007, CPT-015)", () => {
     service.queue("job_postings", { data: JOB, error: null });
     service.queue("job_posting_form_rules", { data: { rules: RULES }, error: null });
     service.queue("applications", { data: [], error: null });
-    user.queue("applications", { data: null, error: { code: "23505", message: "duplicate key" } as never });
+    service.queue("applications", { data: null, error: { code: "23505", message: "duplicate key" } as never });
     expect(await submitApplicationAction(INPUT)).toEqual({ ok: false, error: "You've already applied to this job." });
     expect(insertOf(service, "application_knockouts")).toBeUndefined();
   });
@@ -223,10 +223,28 @@ describe("submitApplicationAction (AF-REQ-007, CPT-015)", () => {
     expect(await submitApplicationAction(INPUT)).toEqual({ ok: false, error: "Sign in with an applicant account to apply." });
   });
 
+  it("inserts with the service role, never the user's client (BW-F02)", async () => {
+    queueHappyPath();
+    await submitApplicationAction(INPUT);
+    expect(insertOf(user, "applications")).toBeUndefined();
+    expect(insertOf(service, "applications")).toMatchObject({ applicant_user_id: PUBLIC_APPLICANT.id, status: "submitted" });
+  });
+
+  it("marks the source as outreach when the candidate answered the company's outreach Interested", async () => {
+    queueHappyPath();
+    service.queue("candidate_outreach", { data: [{ id: "o1" }], error: null });
+    await submitApplicationAction({ ...INPUT, source: "careers_page" });
+
+    expect(insertOf(service, "applications")).toMatchObject({ source: "outreach" });
+    const [lookup] = service.callsFor("candidate_outreach");
+    expect(lookup.chain).toContainEqual({ method: "eq", args: ["candidate_user_id", PUBLIC_APPLICANT.id] });
+    expect(lookup.chain).toContainEqual({ method: "eq", args: ["status", "interested"] });
+  });
+
   it("records a careers-page source and its ref (CP-REQ-013)", async () => {
     queueHappyPath();
     await submitApplicationAction({ ...INPUT, source: "careers_page", ref: "LinkedIn" });
-    expect(insertOf(user, "applications")).toMatchObject({ source: "careers_page", source_detail: "linkedin" });
+    expect(insertOf(service, "applications")).toMatchObject({ source: "careers_page", source_detail: "linkedin" });
   });
 
   it.each([

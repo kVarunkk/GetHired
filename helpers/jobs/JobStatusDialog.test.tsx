@@ -1,25 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { trackExternalApplicationAction } from "@/app/actions/applications/track-external-application";
 import JobStatusDialog from "./JobStatusDialog";
 
 vi.mock("next/navigation", () => ({ useRouter: vi.fn() }));
-vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
+vi.mock("@/app/actions/applications/track-external-application", () => ({
+  trackExternalApplicationAction: vi.fn(),
+}));
 vi.mock("swr", () => ({ mutate: vi.fn() }));
 vi.mock("react-hot-toast", () => ({ default: { error: vi.fn(), success: vi.fn() } }));
 
 const JOB = { id: "j1", job_name: "Frontend Engineer", company_name: "Acme" } as never;
-let insert: ReturnType<typeof vi.fn>;
+const track = vi.mocked(trackExternalApplicationAction);
 
 beforeEach(() => {
-  insert = vi.fn().mockResolvedValue({ error: null });
-  vi.mocked(createClient).mockReturnValue({ from: () => ({ insert }) } as never);
+  vi.clearAllMocks();
+  track.mockResolvedValue({ ok: true });
   vi.mocked(useRouter).mockReturnValue({ push: vi.fn() } as never);
 });
 
 const renderDialog = (onClose = vi.fn()) => {
-  render(<JobStatusDialog job={JOB} showDialog onClose={onClose} userId="u1" />);
+  render(<JobStatusDialog job={JOB} showDialog onClose={onClose} />);
   return onClose;
 };
 
@@ -34,7 +36,7 @@ describe("JobStatusDialog", () => {
     const onClose = renderDialog();
     fireEvent.click(screen.getByRole("button", { name: "No" }));
     expect(onClose).toHaveBeenCalled();
-    expect(insert).not.toHaveBeenCalled();
+    expect(track).not.toHaveBeenCalled();
   });
 
   it("tracks on Yes, then offers the agent with the job in each prompt", async () => {
@@ -42,11 +44,7 @@ describe("JobStatusDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Yes" }));
 
     expect(await screen.findByText("Application tracked")).toBeInTheDocument();
-    expect(insert).toHaveBeenCalledWith({
-      applicant_user_id: "u1",
-      status: "submitted",
-      all_jobs_id: "j1",
-    });
+    expect(track).toHaveBeenCalledWith({ allJobsId: "j1" });
     expect(onClose).not.toHaveBeenCalled();
 
     const links = screen.getAllByRole("link");

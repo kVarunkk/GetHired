@@ -13,9 +13,8 @@ import {
   ResponsiveDialogTrigger,
 } from "@/components/ui/responsive-dialog";
 import { Textarea } from "./ui/textarea";
-import { createClient } from "@/lib/supabase/client";
+import { submitFeedbackAction } from "@/app/actions/submit-feedback";
 import toast from "react-hot-toast";
-import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import {
   Tooltip,
@@ -25,30 +24,20 @@ import {
 import SidebarLabel from "./SidebarLabel";
 
 export default function FeedbackForm({
-  user,
   isMenuOpen,
   isVertical = false,
 }: {
-  user: User;
   isMenuOpen: boolean;
   isVertical?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const submitFeedback = async (formData: FormData) => {
     const content = formData.get("feedback_input");
-    if (!content) return;
+    if (typeof content !== "string" || !content.trim()) return;
 
-    const supabase = createClient();
-
-    const isCompany = user.app_metadata.type === "company";
-
-    const { error } = await supabase.from("feedbacks").insert({
-      content: content as string,
-      ...(isCompany ? { company_user_id: user.id } : { user_id: user.id }),
-    });
-
-    if (error) {
-      toast.error("Some error occured. Please try again later.");
+    const result = await submitFeedbackAction({ content });
+    if (!result.ok) {
+      toast.error(result.error);
       return;
     }
 

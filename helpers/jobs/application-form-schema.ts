@@ -74,8 +74,6 @@ export type StandardFieldKey = keyof typeof STANDARD_FIELDS;
 export const STANDARD_FIELD_KEYS = Object.keys(STANDARD_FIELDS) as StandardFieldKey[];
 export const STANDARD_FIELD_MODES = ["off", "optional", "required"] as const;
 export type StandardFieldMode = (typeof STANDARD_FIELD_MODES)[number];
-/** The yes/no standard fields, the only ones a knockout rule can use. */
-export const KNOCKOUT_STANDARD_FIELDS = STANDARD_FIELD_KEYS.filter((k) => STANDARD_FIELDS[k].kind === "yes_no");
 
 const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a YYYY-MM-DD date.");
 

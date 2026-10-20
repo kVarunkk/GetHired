@@ -137,11 +137,15 @@ describe("ClientTabs: the jobs page's search box", () => {
       </ClientTabs>,
     );
 
-  it.each([
-    ["signed in", USER],
-    ["signed out", null],
-  ])("opens the agent with what was typed (%s)", async (_, user) => {
-    renderJobs(user);
+  // Signed-in users get the tab row instead; the box is commented out there.
+  it("isn't shown to signed-in users", () => {
+    renderJobs(USER);
+
+    expect(screen.queryByRole("search")).not.toBeInTheDocument();
+  });
+
+  it("opens the agent with what was typed (signed out)", async () => {
+    renderJobs(null);
 
     await userEvent.type(
       screen.getByRole("textbox", { name: /What jobs are you looking for/ }),
@@ -154,7 +158,7 @@ describe("ClientTabs: the jobs page's search box", () => {
   });
 
   it("opens the agent with the default job search prompt when sent empty", async () => {
-    renderJobs(USER);
+    renderJobs(null);
 
     await userEvent.click(
       screen.getByRole("button", { name: "Ask the assistant" }),

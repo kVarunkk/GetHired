@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { markInviteDialogsShownAction } from "@/app/actions/invitations/mark-invite-dialogs-shown";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import { useState } from "react";
@@ -15,10 +15,8 @@ import {
 import { Loader2 } from "lucide-react";
 
 export default function CreditDepositDialog({
-  userId,
   pendingDialogEmails,
 }: {
-  userId: string;
   pendingDialogEmails: string[];
 }) {
   const [openDialog, setOpenDialog] = useState(true);
@@ -27,15 +25,10 @@ export default function CreditDepositDialog({
   const updateInvitation = async () => {
     try {
       setLoading(true);
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("invitations")
-        .update({
-          isDialogShown: true,
-        })
-        .eq("referrer_user_id", userId)
-        .in("invited_email", pendingDialogEmails);
-      if (error) throw error;
+      const result = await markInviteDialogsShownAction({
+        emails: pendingDialogEmails,
+      });
+      if (!result.ok) throw new Error(result.error);
     } catch {
       toast.error("Some error occured while updating the invitations.");
     } finally {

@@ -36,12 +36,6 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
 
-    /* Add default values for marquee variables if not set elsewhere */
-    --duration: 30s;
-    /* Example: adjust as needed */
-    --gap: 1rem;
-    /* Example: adjust as needed */
-
     /* Brand Indigo Accents (New Names to avoid collision) */
     --brand: 243.4 75.36% 58.63%;
     /* Indigo-600 */
@@ -127,16 +121,6 @@
     --role-sky: 199 95% 70%;
     --role-violet: 255 92% 78%;
     --role-teal: 172 66% 55%;
-
-
-
-    /* --accent: 239 84% 15%; */
-    /* --accent-foreground: 239 84% 60%; */
-  }
-
-  .theme {
-    --animate-marquee: marquee var(--duration) infinite linear;
-    --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
   }
 }
 
@@ -165,26 +149,6 @@
   }
 }
 
-/* Keyframes should be defined directly, outside of @theme inline */
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(calc(-100% - var(--gap)));
-  }
-}
-
-@keyframes marquee-vertical {
-  from {
-    transform: translateY(0);
-  }
-
-  to {
-    transform: translateY(calc(-100% - var(--gap)));
-  }
-}
 /* Agent status text ("Thinking…", running tool steps): a highlight sweeps
    left to right. The gradient is wider than the text so the highlight starts
    and ends off-screen, and the loop has no visible jump. */

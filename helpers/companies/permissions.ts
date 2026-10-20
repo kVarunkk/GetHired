@@ -532,13 +532,6 @@ export function forbiddenMessage(key: PermissionKey, opts: { forJob?: boolean } 
 /** The message for an owner-only action (billing management, owners, RP-DEC-003). */
 export const OWNER_ONLY_MESSAGE = "Only the company's owners can do this.";
 
-/** Builds grants from a list, for templates and fixtures. */
-export function grantsOf(entries: Iterable<PermissionGrant | PermissionKey>): Map<PermissionKey, PermissionScope> {
-  return expandDependencies(
-    [...entries].map((e) => (typeof e === "string" ? { key: e, scope: "all" as const } : e)),
-  );
-}
-
 /** Grants as the RPCs take them: `[{ key, scope }]`, sorted by catalog order. */
 export function grantList(grants: Grants): PermissionGrant[] {
   return PERMISSION_KEYS.filter((k) => grants.has(k)).map((key) => ({ key, scope: grants.get(key)! }));

@@ -132,9 +132,6 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
                   required: true,
                 },
               ]}
-              selectString={
-                "id, created_at, name, all_jobs(id, job_name), resumes(id, name)"
-              }
               updateLocalItem={updateLocalItem}
               removeLocalItem={removeLocalItem}
             />

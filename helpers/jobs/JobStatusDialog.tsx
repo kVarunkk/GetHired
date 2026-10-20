@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { AllJobWithRelations } from "@/utils/types";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { trackExternalApplicationAction } from "@/app/actions/applications/track-external-application";
 import toast from "react-hot-toast";
 import {
   AlertDialog,
@@ -27,12 +27,10 @@ export default function JobStatusDialog({
   job,
   showDialog,
   onClose,
-  userId,
 }: {
   job: AllJobWithRelations | TJobIdPageData;
   showDialog: boolean;
   onClose: () => void;
-  userId: string | null;
 }) {
   const [loading, setLoading] = useState(false);
   // After "Yes", the dialog shows the agent's next steps instead of closing.
@@ -40,13 +38,8 @@ export default function JobStatusDialog({
   const updateJobApplicationStatus = async () => {
     try {
       setLoading(true);
-      const supabase = createClient();
-      const { error } = await supabase.from("applications").insert({
-        applicant_user_id: userId,
-        status: "submitted",
-        all_jobs_id: job.id,
-      });
-      if (error) throw error;
+      const result = await trackExternalApplicationAction({ allJobsId: job.id });
+      if (!result.ok) throw new Error(result.error);
 
       await mutate(PROFILE_API_KEY);
 

@@ -4,7 +4,7 @@ import { hasEnvVars } from "../../utils/utils";
 import { UserAppMetadata } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { getUserFromRequest } from "./get-user-from-request";
-import { APPLICANT_HOME } from "@/helpers/user/home-path";
+import { APPLICANT_HOME, COMPANY_HOME } from "@/helpers/user/home-path";
 import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 
 export async function updateSession(request: NextRequest) {
@@ -115,8 +115,6 @@ export async function updateSession(request: NextRequest) {
     "/api/ai-search/jobs",
     "/api/ai-search/profiles",
     "/api/dodo/webhook",
-    "/api/internal/jobs/bulk-upsert",
-    "/api/internal/scraper-state",
     // Billing: the public pricing page, the daily cron (X-Internal-Secret) and
     // the admin grant route (x-api-key). Each route checks its own secret.
     "/pricing/companies",
@@ -269,6 +267,20 @@ export async function updateSession(request: NextRequest) {
         }
         return NextResponse.redirect(url);
       }
+    }
+
+    // The landing page at / is the applicant pitch, so signed-in companies go to
+    // their dashboard, or straight to onboarding if they haven't finished it.
+    if (pathname === "/" && isCompany) {
+      const url = request.nextUrl.clone();
+      deleteSearchParams(url);
+      if (isCompanyOnboarded) {
+        url.pathname = COMPANY_HOME;
+      } else {
+        url.pathname = "/get-started";
+        url.searchParams.set("company", "true");
+      }
+      return NextResponse.redirect(url);
     }
 
     // --- The agent API serves applicants and onboarded companies (RA-SEC-001) ---

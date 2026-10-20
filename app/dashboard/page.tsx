@@ -331,7 +331,6 @@ export default async function DashboardPage() {
         {/* --- AI Credits Granted Dialog --- */}
         {pendingCompleteInvitationDialogEmails.length > 0 ? (
           <CreditDepositDialog
-            userId={user.id}
             pendingDialogEmails={pendingCompleteInvitationDialogEmails}
           />
         ) : (

@@ -46,5 +46,3 @@ export default function RoleBadge({
     </Badge>
   );
 }
-
-export const roleColorClass = (color: string) => COLOR_CLASS[color] ?? COLOR_CLASS.slate;

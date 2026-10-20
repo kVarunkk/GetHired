@@ -28,19 +28,6 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
       </Label>
 
       <div className="mt-2">
-        {/* <MultiKeywordSelect
-          name="preferred_locations"
-          placeholder="Select preferred locations"
-          initialKeywords={formData.preferred_locations ?? []}
-          onChange={(name, keywords) =>
-            setFormData((prev) => ({ ...prev, [name]: keywords }))
-          }
-          availableItems={formData.default_locations}
-          isVirtualized={true}
-          loading={loadingLocations}
-          className={cn(errors.preferred_locations ? "border-destructive" : "")}
-        /> */}
-
         <LocationSearchSelect
           name={"preferred_locations"}
           initialLocations={formData.preferred_locations ?? []}

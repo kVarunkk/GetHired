@@ -6,8 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useVoiceAgent } from "./useVoiceAgent";
-import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import { createClient } from "@/lib/supabase/client";
+import { savePracticeTurnsAction } from "@/app/actions/interviews/save-practice-turns";
 import { deductInterviewSessionCreditsAction } from "@/app/actions/deduct-interview-session-credits";
 import {
   heartbeatInterviewSessionAction,
@@ -15,7 +14,9 @@ import {
 } from "@/app/actions/interview-session-lock";
 import { finalizeInterviewSessionAction } from "@/app/actions/finalize-interview-session";
 
-vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
+vi.mock("@/app/actions/interviews/save-practice-turns", () => ({
+  savePracticeTurnsAction: vi.fn(),
+}));
 vi.mock("@/app/actions/deduct-interview-session-credits", () => ({
   deductInterviewSessionCreditsAction: vi.fn(),
 }));
@@ -94,7 +95,6 @@ class FakeAudioWorkletNode {
   disconnect = vi.fn();
 }
 
-let supabase: SupabaseMock;
 let fetchMock: ReturnType<typeof vi.fn>;
 let track: { stop: ReturnType<typeof vi.fn>; label: string; getSettings: () => object };
 
@@ -131,10 +131,7 @@ async function renderLive() {
   return hook;
 }
 
-const savedTurns = () =>
-  supabase
-    .callsFor("interview_sessions")
-    .map((c) => c.chain.find((step) => step.method === "update")?.args[0] as { turns: unknown[] });
+const savedTurns = () => vi.mocked(savePracticeTurnsAction).mock.calls.map(([input]) => input);
 
 beforeEach(() => {
   FakeWebSocket.instances = [];
@@ -154,8 +151,7 @@ beforeEach(() => {
   fetchMock = vi.fn(async () => startResponse());
   vi.stubGlobal("fetch", fetchMock);
 
-  supabase = createSupabaseMock();
-  vi.mocked(createClient).mockReturnValue(supabase.client);
+  vi.mocked(savePracticeTurnsAction).mockResolvedValue({ ok: true });
   vi.mocked(deductInterviewSessionCreditsAction).mockResolvedValue({ success: true } as never);
   vi.mocked(heartbeatInterviewSessionAction).mockResolvedValue({ status: "ok" } as never);
   vi.mocked(releaseInterviewSessionAction).mockResolvedValue({ success: true, error: null } as never);
@@ -258,7 +254,7 @@ describe("useVoiceAgent (practice): turns", () => {
     ]);
   });
 
-  it("saves every finished turn through the browser client, replacing one with the same id", async () => {
+  it("saves every finished turn through the server action, replacing one with the same id", async () => {
     await renderLive();
 
     await act(async () => {
@@ -272,9 +268,7 @@ describe("useVoiceAgent (practice): turns", () => {
       turn(1, "I build APIs.", "Hi, tell me about yourself."),
       turn(2, "Go and Postgres.", "Which stack?"),
     ]);
-    const [first] = supabase.callsFor("interview_sessions");
-    expect(first.chain).toContainEqual({ method: "eq", args: ["id", INTERVIEW_SESSION_ID] });
-    expect(first.chain).toContainEqual({ method: "eq", args: ["interview_id", INTERVIEW_ID] });
+    expect(savedTurns()[0]).toMatchObject({ interviewId: INTERVIEW_ID, sessionId: INTERVIEW_SESSION_ID });
   });
 });
 
@@ -416,7 +410,7 @@ describe("useVoiceAgent (screening, SIT-051)", () => {
     });
     await waitFor(() => expect(result.current.status).toBe("stopped"));
 
-    expect(supabase.callsFor("interview_sessions")).toHaveLength(0);
+    expect(savePracticeTurnsAction).not.toHaveBeenCalled();
     expect(deductInterviewSessionCreditsAction).not.toHaveBeenCalled();
     expect(finalizeInterviewSessionAction).not.toHaveBeenCalled();
     expect(result.current.analysisSession).toBeNull();

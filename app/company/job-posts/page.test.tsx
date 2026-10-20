@@ -10,7 +10,6 @@ vi.mock("@/components/jobs/JobPostButtons", () => ({
   CreateJobPostButton: ({ disabled }: { disabled?: boolean }) => <button disabled={disabled}>Create New Job Post</button>,
 }));
 vi.mock("@/components/JobPostingsTable", () => ({ default: () => null }));
-vi.mock("@/components/BackButton", () => ({ default: () => null }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", async (orig) => ({ ...(await orig()), useRouter: () => ({ push: vi.fn() }) }));
 

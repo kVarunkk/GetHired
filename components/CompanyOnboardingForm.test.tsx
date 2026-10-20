@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import toast from "react-hot-toast";
-import { markMyOnboardingComplete } from "@/app/actions/update-user-metadata";
+import { saveCompanyProfileAction } from "@/app/actions/company/save-company-profile";
 import { createSupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
 import CompanyOnboardingForm from "./CompanyOnboardingForm";
@@ -13,14 +13,12 @@ vi.mock("@/lib/supabase/client", async () => {
   mock.current = createSupabaseMock();
   return { createClient: () => mock.current!.client };
 });
-vi.mock("@/app/actions/update-user-metadata", () => ({ markMyOnboardingComplete: vi.fn() }));
+vi.mock("@/app/actions/company/save-company-profile", () => ({ saveCompanyProfileAction: vi.fn() }));
 vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("./LocationSearchSelect", () => ({ default: () => <div data-testid="location" /> }));
 
 const router = { push: vi.fn(), refresh: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
-
-const BILLING_COLUMNS = ["tier_id", "ai_credits", "job_posts_created"];
 
 const EXISTING = {
   id: COMPANY_A.id,
@@ -48,68 +46,36 @@ function submit() {
   fireEvent.click(screen.getByRole("button", { name: "Complete Onboarding" }));
 }
 
-/** The save chain: the second company_info call (the first is the initial load). */
-const saveCall = () => supabase().callsFor("company_info")[1];
-
 beforeEach(() => {
   vi.clearAllMocks();
   supabase().reset();
-  vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
 });
 
-describe("CompanyOnboardingForm save (TM-SEC-007)", () => {
-  it("updates the company's existing row and never upserts or inserts", async () => {
-    vi.mocked(markMyOnboardingComplete).mockResolvedValue({ error: null });
+/** The FormData of the one save call. */
+const savedForm = () => vi.mocked(saveCompanyProfileAction).mock.calls[0][0];
+
+describe("CompanyOnboardingForm save", () => {
+  it("saves through the server action and never writes from the browser", async () => {
+    vi.mocked(saveCompanyProfileAction).mockResolvedValue({ ok: true, logoUrl: null });
     await renderLoaded();
-    supabase().queue("company_info", { data: { id: COMPANY_A.id }, error: null });
 
     submit();
 
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/company"));
-    const methods = saveCall().chain.map((c) => c.method);
-    expect(methods).toContain("update");
-    expect(methods).not.toContain("upsert");
-    expect(methods).not.toContain("insert");
-    // By the company's id, so any owner or company.profile role saves it (RP-REQ-002).
-    expect(saveCall().chain).toContainEqual({ method: "eq", args: ["id", COMPANY_A.id] });
-    expect(saveCall().chain).not.toContainEqual({ method: "eq", args: ["user_id", COMPANY_A.user.id] });
-    expect(markMyOnboardingComplete).toHaveBeenCalledWith("company");
+    expect(JSON.parse(String(savedForm().get("values")))).toMatchObject({ name: "Acme", industry: "Technology" });
+    expect(savedForm().get("removeLogo")).toBeNull();
+    // Only the initial load reads company_info in the browser.
+    expect(supabase().callsFor("company_info")).toHaveLength(1);
   });
 
-  it("sends no billing column and no user_id in the payload", async () => {
-    vi.mocked(markMyOnboardingComplete).mockResolvedValue({ error: null });
+  it("toasts the action's error and stays on the page", async () => {
+    vi.mocked(saveCompanyProfileAction).mockResolvedValue({ ok: false, error: "Company profile not found." });
     await renderLoaded();
-    supabase().queue("company_info", { data: { id: COMPANY_A.id }, error: null });
 
     submit();
 
-    await waitFor(() => expect(router.push).toHaveBeenCalled());
-    const payload = saveCall().chain.find((c) => c.method === "update")!.args[0] as Record<string, unknown>;
-    for (const column of [...BILLING_COLUMNS, "user_id"]) {
-      expect(payload).not.toHaveProperty(column);
-    }
-    expect(payload).toMatchObject({ name: "Acme", filled: true });
-  });
-
-  it("toasts on a DB error and doesn't mark onboarding complete", async () => {
-    await renderLoaded();
-    supabase().queue("company_info", { data: null, error: { message: "denied" } });
-
-    submit();
-
-    await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    expect(markMyOnboardingComplete).not.toHaveBeenCalled();
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Company profile not found."));
     expect(router.push).not.toHaveBeenCalled();
-  });
-
-  it("treats an update that matched no row as an error", async () => {
-    await renderLoaded();
-    supabase().queue("company_info", { data: null, error: null });
-
-    submit();
-
-    await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    expect(markMyOnboardingComplete).not.toHaveBeenCalled();
   });
 });
 

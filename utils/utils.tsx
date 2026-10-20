@@ -3,16 +3,14 @@ import {
   Bot,
   FileUser,
   Headset,
-  Info,
   ScanSearch,
   Settings,
-  Sparkle,
   UserIcon,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
-import { Briefcase, Building2, Home, Inbox, LayoutDashboard, Send } from "lucide-react";
+import { Briefcase, Home, Inbox, LayoutDashboard, Send } from "lucide-react";
 import { INavItem } from "./types";
 import { User } from "@supabase/supabase-js";
 import { platformsArray } from "./platforms";
@@ -163,42 +161,6 @@ export const commonWorkStyles = [
   "Travel Required",
 ];
 
-/**
- * Calculates the time remaining until the next 00:05 UTC reset, rounded up to the nearest hour.
- * @returns Number of hours remaining (e.g., 10).
- */
-export function getTimeLeftHours(): number {
-  const now = new Date();
-  const nextReset = new Date(
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate() + 1,
-      0, // 00 hours
-      5, // 05 minutes
-      0,
-    ),
-  );
-
-  const diffMs = nextReset.getTime() - now.getTime();
-
-  // Calculate hours and round up (ceil)
-  const hours = Math.ceil(diffMs / (1000 * 60 * 60));
-
-  // Ensure the minimum return value is 0 (or 24 if just reset)
-  return Math.max(0, hours);
-}
-
-export function currentPathEncoded() {
-  if (typeof window === "undefined") return "/";
-
-  // Get the full path including search parameters (e.g., /jobs?filter=true)
-  const fullPath = window.location.pathname + window.location.search;
-
-  // IMPORTANT: Use encodeURIComponent to ensure characters like & or ? don't break the URL.
-  return encodeURIComponent(fullPath);
-}
-
 export function isValidUrl(url_string: string) {
   try {
     new URL(url_string);
@@ -231,39 +193,6 @@ export const copyToClipboard = (content: string, toastMessage: string) => {
     toast.success(toastMessage);
   }
 };
-
-export function getCutOffDateClient(daysAgo: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - daysAgo);
-  date.setUTCHours(0, 0, 0, 0);
-  return date.toISOString();
-}
-
-export function getDaysFromDate(encodedDateStr: string): number {
-  // 1. Decode the URI characters (e.g., %3A -> :)
-  const decodedDate = decodeURIComponent(encodedDateStr);
-
-  // 2. Parse the target date and current date
-  const targetDate = new Date(decodedDate);
-  const today = new Date();
-
-  // 3. Normalize both to UTC midnight to compare full days accurately
-  const utcTarget = Date.UTC(
-    targetDate.getUTCFullYear(),
-    targetDate.getUTCMonth(),
-    targetDate.getUTCDate(),
-  );
-
-  const utcToday = Date.UTC(
-    today.getUTCFullYear(),
-    today.getUTCMonth(),
-    today.getUTCDate(),
-  );
-
-  // 4. Calculate difference in milliseconds and convert to days
-  const diffInMs = utcToday - utcTarget;
-  return Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-}
 
 export const applicantNavbarItems: INavItem[] = [
   {
@@ -322,13 +251,6 @@ export const applicantNavbarItems: INavItem[] = [
     type: "startswith",
     icon: <Settings className="h-4 w-4" />,
   },
-  // {
-  //   id: "companies",
-  //   label: "Companies",
-  //   href: "/companies",
-  //   type: "startswith",
-  //   icon: <Building2 className="h-4 w-4" />,
-  // },
 ];
 
 export const companyNavbarItems: INavItem[] = [
@@ -474,30 +396,6 @@ export const getNavbarVairantByPath = (
   }
 };
 
-export const featureData = {
-  title: "Applying to Jobs Just Got Easier with Ask AI!",
-  description:
-    "Introducing our new Ask AI feature! Get personalized, ready-to-paste answers for tricky application and interview questions. The AI synthesizes your unique profile (skills, projects) directly with the job requirements.",
-  confirmButtonLabel: "Dismiss",
-  // featureHighlight:
-  //   "Instantly generate custom answers that relate your experience directly to the job description.",
-  promoImage: "/Screenshot 2025-12-02 191053.png", // Suggested new path for better context
-  // Provide concrete examples of questions the user can now answer effortlessly
-  customContent: (
-    <div className="flex items-center gap-3 rounded-md bg-secondary p-3 border border-border">
-      <Info className="h-4 w-4 shrink-0" />
-      <p className="text-sm">
-        Use the{" "}
-        <span className="font-bold inline-flex  gap-1">
-          <Sparkle className="h-4 w-4" /> Ask AI
-        </span>{" "}
-        feature on any job listing to get assistance with your application.
-      </p>
-    </div>
-  ),
-  currentDialogId: "AI_PREP_QANDA_V1", // New, unique ID for this feature tour
-};
-
 export const HeroMaskStyle = {
   maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
   WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
@@ -505,8 +403,6 @@ export const HeroMaskStyle = {
 
 export const cloudFrontUrl = process.env.NEXT_PUBLIC_CLOUDFRONT_PATH || "";
 
-export const JOB_SEEKER_DARK = `${cloudFrontUrl}/hero/job-seeker-hero-dark.webp`;
-export const JOB_SEEKER_LIGHT = `${cloudFrontUrl}/hero/job-seeker-hero-light.webp`;
 export const HIRE_PAGE_DARK = `${cloudFrontUrl}/hero/company-hero-dark.webp`;
 export const HIRE_PAGE_LIGHT = `${cloudFrontUrl}/hero/company-hero-light.webp`;
 export const MCP_SERVER_DARK = `${cloudFrontUrl}/hero/mcp-server-hero-dark.webp`;

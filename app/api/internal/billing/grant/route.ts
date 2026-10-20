@@ -4,7 +4,7 @@ import { INTERNAL_API_SECRET } from "@/utils/formatters";
 import { applyBillingGrant, grantSchema, GrantError } from "@/helpers/billing/grant";
 
 // BL-REQ-015: set a company's plan until a date and/or grant credits.
-// Authenticated with x-api-key (the internal secret), like the scraper routes.
+// Authenticated with x-api-key (the internal secret).
 export async function POST(req: NextRequest) {
   if (!INTERNAL_API_SECRET || req.headers.get("x-api-key") !== INTERNAL_API_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

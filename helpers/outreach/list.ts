@@ -214,15 +214,3 @@ export async function listMyOpportunities(supabase: Client, userId: string): Pro
   const now = Date.now();
   return [...items.filter((o) => isOpen(o, now)), ...items.filter((o) => !isOpen(o, now))];
 }
-
-/** Open outreach for the navbar badge. */
-export async function countOpenOpportunities(supabase: Client, userId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from("candidate_outreach")
-    .select("id", { count: "exact", head: true })
-    .eq("candidate_user_id", userId)
-    .eq("status", "sent")
-    .gt("expires_at", new Date().toISOString());
-  if (error) return 0;
-  return count ?? 0;
-}

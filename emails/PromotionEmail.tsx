@@ -69,25 +69,6 @@ export const PromotionEmail = ({
         </Button>
       </Section>
 
-      {/* Footer Text */}
-      {/* <Text className="text-sm text-gray-600 text-color mt-8">
-        If you no longer wish to receive these updates,{" "}
-        <Link
-          href="https://gethired.devhub.co.in/auth/login"
-          className="text-blue-600 underline"
-        >
-          log in
-        </Link>{" "}
-        to the platform and{" "}
-        <Link
-          href="https://gethired.devhub.co.in/get-started"
-          className="text-blue-600 underline"
-        >
-          adjust
-        </Link>{" "}
-        your preferences.
-      </Text> */}
-
       <Text className="text-base text-gray-700 text-color mt-10">
         Best regards,
         <br />

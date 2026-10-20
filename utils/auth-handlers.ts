@@ -108,16 +108,24 @@ export async function grantReferralCredits(
   const referrerId = referrerData.user_id;
   const ai_credits = referrerData.ai_credits;
 
-  const { error: invitationsError } = await supabase
+  // BW-F04: credits only for an invitation the referrer actually sent that is
+  // still pending, so a bare ?ref= link (or a second confirm) grants nothing.
+  const { data: completed, error: invitationsError } = await supabase
     .from("invitations")
     .update({
       status: "complete",
     })
     .eq("referrer_user_id", referrerId)
-    .eq("invited_email", invited_email);
+    .eq("invited_email", invited_email)
+    .eq("status", "pending")
+    .select("id");
 
   if (invitationsError) {
     console.error("Error updating invitation status");
+  } else if (!completed || completed.length === 0) {
+    console.warn(
+      `Referral skipped: no pending invitation from ${referrerId} for this email.`,
+    );
   } else {
     const { error: creditError } = await supabase
       .from("user_info")

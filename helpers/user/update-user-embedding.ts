@@ -1,5 +1,4 @@
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-// import { getVertexClient } from "@/utils/vertex";
 import { TResumeRowContent } from "@/utils/types";
 import { google } from "@ai-sdk/google";
 import { embed } from "ai";
@@ -96,9 +95,8 @@ export async function updateUserEmbedding(userId: string) {
             PREFERRED INDUSTRY:${Array.isArray(userData.industry_preferences) ? userData.industry_preferences.join(", ") : userData.industry_preferences || ""}
           `.trim();
 
-    // const vertex = await getVertexClient();
     const model = google.embedding("gemini-embedding-001");
-    // 3. Generate Embedding using Vertex AI
+    // 3. Generate Embedding
     const { embedding } = await embed({
       model,
       value: textToEmbed,

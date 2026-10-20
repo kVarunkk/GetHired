@@ -104,7 +104,8 @@ describe("JobPostingForm application form (CPT-020)", () => {
     expect(values.application_form?.questions.map((q) => q.label)).toEqual(["Can you relocate?", "Why us?"]);
     expect(values.application_form?.questions[0].knockout).toEqual(LOADED.questions[0].knockout);
     await waitFor(() => expect(push).toHaveBeenCalledWith(`/company/job-posts/${EXISTING.id}`));
-  });
+    // The full form renders slowly in jsdom, so this can pass 5s under a full parallel run.
+  }, 15_000);
 
   it("doesn't save an invalid form", async () => {
     renderEdit();

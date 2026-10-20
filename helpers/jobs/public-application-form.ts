@@ -13,8 +13,6 @@ export type FormRules = {
   standard: { work_authorization?: KnockoutRule };
 };
 
-export const EMPTY_RULES: FormRules = { questions: {}, standard: {} };
-
 /** What applicants see: no knockout rules and no archived questions. */
 export function publicApplicationForm(form: ApplicationForm): ApplicationForm {
   return {

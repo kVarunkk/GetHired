@@ -12,12 +12,10 @@ import OutreachPreferences, {
  * profile disables the outreach switch straight away.
  */
 export default function PrivacySettings({
-  userId,
   initialIsPublic,
   initialAcceptsOutreach,
   initialBlocked,
 }: {
-  userId: string;
   initialIsPublic: boolean;
   initialAcceptsOutreach: boolean;
   initialBlocked: BlockedCompany[];
@@ -28,7 +26,6 @@ export default function PrivacySettings({
     <div className="flex flex-col divide-y">
       <div className="pb-5">
         <ProfileVisibilitySetting
-          userId={userId}
           initialIsPublic={initialIsPublic}
           onChange={setIsPublic}
         />

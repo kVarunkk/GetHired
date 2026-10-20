@@ -5,7 +5,7 @@ import { ChevronDown, Loader2, Save } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "../../utils/utils";
 import { Textarea } from "../ui/textarea";
-import { createClient } from "@/lib/supabase/client";
+import { updateReviewJdAction } from "@/app/actions/resume-review/update-review-jd";
 import toast from "react-hot-toast";
 import { mutate } from "swr";
 
@@ -40,13 +40,9 @@ export default function JdSection({
   const saveJd = async () => {
     if (localJd.trim() === lastSavedJd.current.trim() || isSaving) return;
     setIsSaving(true);
-    const supabase = createClient();
     try {
-      const { error } = await supabase
-        .from("resume_reviews")
-        .update({ target_jd: localJd, updated_at: new Date().toISOString() })
-        .eq("id", reviewId);
-      if (error) throw error;
+      const result = await updateReviewJdAction({ reviewId, targetJd: localJd });
+      if (!result.ok) throw new Error(result.error);
       lastSavedJd.current = localJd;
     } catch {
       toast.error("Some error occured. Progress not saved.");

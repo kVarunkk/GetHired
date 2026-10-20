@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { createClient } from "@/lib/supabase/client";
+import { setEmailPreferenceAction } from "@/app/actions/user/set-email-preference";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
@@ -11,11 +11,9 @@ type EmailPreferenceKey = "is_job_digest_active" | "is_promotion_active";
 
 /** The applicant's email subscriptions on /settings. */
 export default function EmailPreferences({
-  userId,
   initialJobDigest,
   initialPromotions,
 }: {
-  userId: string;
   initialJobDigest: boolean;
   initialPromotions: boolean;
 }) {
@@ -30,15 +28,8 @@ export default function EmailPreferences({
     setPrefs((current) => ({ ...current, [key]: next }));
     setSaving(key);
     try {
-      const { error } = await createClient()
-        .from("user_info")
-        .update(
-          key === "is_job_digest_active"
-            ? { is_job_digest_active: next }
-            : { is_promotion_active: next },
-        )
-        .eq("user_id", userId);
-      if (error) throw error;
+      const result = await setEmailPreferenceAction({ key, value: next });
+      if (!result.ok) throw new Error(result.error);
     } catch {
       setPrefs((current) => ({ ...current, [key]: previous }));
       toast.error("Couldn't save your preference. Please try again.");

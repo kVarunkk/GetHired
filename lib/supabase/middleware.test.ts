@@ -157,6 +157,36 @@ describe("middleware: the agent is the applicant home", () => {
   });
 });
 
+describe("middleware: the landing page", () => {
+  it("sends signed-in companies from / to the company dashboard", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(company);
+
+    expect(redirectTarget(await updateSession(request("/?utm_source=x")))).toBe("/company");
+  });
+
+  it("sends companies that haven't onboarded from / straight to company onboarding", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(mockUser({ type: "company", onboardingComplete: false }));
+
+    expect(redirectTarget(await updateSession(request("/")))).toBe("/get-started?company=true");
+  });
+
+  it("still serves / to signed-out visitors, applicants and users without a role", async () => {
+    expect(passesThrough(await updateSession(request("/")))).toBe(true);
+
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+    expect(passesThrough(await updateSession(request("/")))).toBe(true);
+
+    vi.mocked(getUserFromRequest).mockResolvedValue({ ...applicant, app_metadata: {} });
+    expect(passesThrough(await updateSession(request("/")))).toBe(true);
+  });
+
+  it("still serves /hire to signed-in companies", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(company);
+
+    expect(passesThrough(await updateSession(request("/hire")))).toBe(true);
+  });
+});
+
 describe("middleware: regressions", () => {
   it("sends signed-out visitors from /dashboard to login", async () => {
     expect(redirectTarget(await updateSession(request("/dashboard")))).toBe(

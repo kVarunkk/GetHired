@@ -144,9 +144,6 @@ export default function ResumeReviewsTable({ data }: ResumeReviewsTableProps) {
                   required: true,
                 },
               ]}
-              selectString={
-                "id, created_at, resumes(name), status, job_id, name"
-              }
               updateLocalItem={updateLocalItem}
               removeLocalItem={removeLocalItem}
             />

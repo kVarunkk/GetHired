@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/tooltip";
 import WaitlistCTA from "./WaitlistCTA";
 import ModifiedLink from "./ModifiedLink";
+import { COMPANY_HOME } from "@/helpers/user/home-path";
 import SidebarLabel from "./SidebarLabel";
 import ScrollFade from "./ScrollFade";
 import { useOpenOutreachCount } from "./outreach/useOpenOutreachCount";
@@ -63,6 +64,8 @@ export default function NavbarComponent({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const isCompanyUser = user?.app_metadata?.type === "company";
+  // The landing page at / is for applicants; companies redirect from it anyway.
+  const homeHref = isCompanyUser ? COMPANY_HOME : "/";
   // RP-REQ-016: Billing is hidden from company roles without billing.view.
   const { data: profile } = useSWR(user ? PROFILE_API_KEY : null, fetcher, { revalidateOnFocus: false });
   const showBilling = !isCompanyUser || profile?.profile?.access?.billingView !== false;
@@ -157,7 +160,7 @@ export default function NavbarComponent({
               </LoadingNav>
             )}
             {/* The short logo on very small screens, so the bar fits without scrolling. */}
-            <Link href={"/"} aria-label="GetHired home" className="shrink-0">
+            <Link href={homeHref} aria-label="GetHired home" className="shrink-0">
               <span className="block min-[400px]:hidden">
                 <Brand type="short" />
               </span>
@@ -205,7 +208,7 @@ export default function NavbarComponent({
               />
             ) : user ? (
               <div className="flex items-center gap-1">
-                <FeedbackForm user={user} isMenuOpen={false} />
+                <FeedbackForm isMenuOpen={false} />
                 <ProfileDropdown user={user} isMenuOpen={false} />
               </div>
             ) : (
@@ -242,7 +245,7 @@ export default function NavbarComponent({
             by the sidebar: its left 48px is the short logo, so collapsing hides
             the wordmark without swapping images or moving the mark. */}
           <Link
-            href={"/"}
+            href={homeHref}
             aria-label="GetHired home"
             className="block w-full shrink-0 overflow-hidden"
           >
@@ -367,7 +370,6 @@ export default function NavbarComponent({
                 )}
                 <FeedbackForm
                   isMenuOpen={isMenuOpen}
-                  user={user}
                   isVertical={true}
                 />
                 <ProfileDropdown
@@ -472,7 +474,7 @@ const NavbarSheet = ({
       >
         <SheetHeader>
           <SheetTitle>
-            <Link href={"/"}>
+            <Link href={isCompanyUser ? COMPANY_HOME : "/"}>
               <Brand type="long" />
             </Link>
           </SheetTitle>

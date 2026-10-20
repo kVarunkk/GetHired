@@ -91,8 +91,6 @@ export async function startReviewAnalysis(
 
   after(async () => {
     try {
-      // const vertex = await getVertexClient();
-      // const model = vertex("gemini-2.5-flash");
       const model = injectedModel ?? google("gemini-3.1-flash-lite");
 
       const systemPrompt = `

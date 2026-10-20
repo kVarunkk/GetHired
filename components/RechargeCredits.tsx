@@ -46,7 +46,7 @@ export default function RechargeCredits({
       if (!invitedEmail)
         throw new Error("Please enter a valid email to invite.");
 
-      const result = await sendInviteEmail(invitedEmail, user.id); // Call Server Action
+      const result = await sendInviteEmail(invitedEmail);
 
       if (result.success) {
         toast.success(

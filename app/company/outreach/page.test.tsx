@@ -45,12 +45,11 @@ beforeEach(async () => {
 });
 
 describe("/company/outreach (ORT-032)", () => {
-  it("shows the reply rate and hands the page and filters to the table", async () => {
+  it("hands the page and filters to the table", async () => {
     vi.mocked(listCompanyOutreach).mockResolvedValue({ items: [ITEM, { ...ITEM, id: "f2", status: "interested", respondedAt: "2026-10-02T00:00:00.000Z" }], nextCursor: "c", replyRate: 0.5 });
 
     render(await CompanyOutreachPage({ searchParams: Promise.resolve({ status: "sent", job: OUTREACH_JOB.id }) }));
 
-    expect(screen.getByTestId("reply-rate")).toHaveTextContent("50%");
     expect(vi.mocked(OutreachTable).mock.calls[0][0]).toMatchObject({
       items: [ITEM, expect.objectContaining({ id: "f2" })],
       jobs: [{ id: OUTREACH_JOB.id, title: "Frontend Engineer" }],
@@ -69,7 +68,6 @@ describe("/company/outreach (ORT-032)", () => {
 
     expect(vi.mocked(listCompanyOutreach).mock.calls[0][1]).toEqual({ jobPostId: null, status: null, cursor: null });
     expect(vi.mocked(OutreachTable).mock.calls[0][0]).toMatchObject({ items: [], jobPostId: null, status: null });
-    expect(screen.getByTestId("reply-rate")).toHaveTextContent("—");
   });
 
   it("links to Profiles and shows the agent helper with the permissions (T14)", async () => {

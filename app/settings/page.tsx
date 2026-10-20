@@ -78,7 +78,6 @@ export default async function SettingsPage() {
             description="Who can find your profile and contact you."
           >
             <PrivacySettings
-              userId={user.id}
               initialIsPublic={info.is_public}
               initialAcceptsOutreach={info.accepts_outreach}
               initialBlocked={blockedCompanies}
@@ -87,7 +86,6 @@ export default async function SettingsPage() {
 
           <Section title="Emails" description="What we send to your inbox.">
             <EmailPreferences
-              userId={user.id}
               initialJobDigest={info.is_job_digest_active ?? false}
               initialPromotions={info.is_promotion_active ?? false}
             />

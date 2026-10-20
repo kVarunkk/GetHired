@@ -6,7 +6,7 @@ import {
   releaseInterviewSessionAction,
 } from "@/app/actions/interview-session-lock";
 import { finalizeInterviewSessionAction } from "@/app/actions/finalize-interview-session";
-import { createClient } from "@/lib/supabase/client";
+import { savePracticeTurnsAction } from "@/app/actions/interviews/save-practice-turns";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const SAMPLE_RATE = 16000;
@@ -89,19 +89,18 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
     if (!sessionId) return;
 
     const turns = turnsRef.current;
-    const supabase = createClient();
 
     saveChainRef.current = saveChainRef.current
       .catch(() => {})
       .then(async () => {
-        const { error } = await supabase
-          .from("interview_sessions")
-          .update({ turns, updated_at: new Date().toISOString() })
-          .eq("id", sessionId)
-          .eq("interview_id", interviewId);
+        const result = await savePracticeTurnsAction({
+          interviewId,
+          sessionId,
+          turns,
+        });
 
-        if (error) {
-          throw error;
+        if (!result.ok) {
+          throw new Error(result.error);
         }
       });
 

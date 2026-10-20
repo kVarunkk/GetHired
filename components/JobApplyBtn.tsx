@@ -189,7 +189,6 @@ export default function JobApplyBtn({
           job={job}
           showDialog={showReturnDialog}
           onClose={() => setShowReturnDialog(false)}
-          userId={userId}
         />
       )}
     </>

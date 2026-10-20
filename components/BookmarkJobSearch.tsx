@@ -8,7 +8,7 @@ import { cn } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
 import { usePathname, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { v4 as uuidv4 } from "uuid";
+import { toggleSearchBookmarkAction } from "@/app/actions/bookmarks/toggle-search-bookmark";
 
 export default function BookmarkJobSearch({ user }: { user: User }) {
   const [bookmarked, setBookmarked] = useState(false);
@@ -47,31 +47,16 @@ export default function BookmarkJobSearch({ user }: { user: User }) {
   const handleBookmark = async () => {
     try {
       if (!user || !fullUrl) return;
-      const supabase = createClient();
       setLoading(true);
 
-      if (bookmarked) {
-        // Remove bookmark
-        const { error } = await supabase
-          .from("bookmarks")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("url", fullUrl);
-        if (error) throw error;
-        setBookmarked(false);
-      } else {
-        // Add bookmark
-        const { error } = await supabase.from("bookmarks").insert({
-          user_id: user.id,
-          url: fullUrl,
-          name: `Saved Search ${uuidv4()}`,
-        });
-        if (error) throw error;
-        setBookmarked(true);
-      }
-      toast.success(bookmarked ? "Bookmark removed" : "Bookmark added");
+      const result = await toggleSearchBookmarkAction({ url: fullUrl });
+      if (!result.ok) throw new Error(result.error);
+
+      setBookmarked(result.bookmarked);
+      toast.success(result.bookmarked ? "Bookmark added" : "Bookmark removed");
       setLoading(false);
-    } catch {
+    } catch (err) {
+      if (err instanceof Error) toast.error(err.message);
       setLoading(false);
     }
   };

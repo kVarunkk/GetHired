@@ -31,38 +31,22 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { careersPath } from "@/helpers/careers/slug";
 import { commonIndustries } from "@/utils/utils";
-import { markMyOnboardingComplete } from "@/app/actions/update-user-metadata";
+import { saveCompanyProfileAction } from "@/app/actions/company/save-company-profile";
+import {
+  companyProfileSchema,
+  LOGO_MAX_BYTES,
+  LOGO_TYPES,
+} from "@/helpers/companies/company-profile-schema";
 import LocationSearchSelect from "./LocationSearchSelect";
 import PageHeader from "./PageHeader";
 
-const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Company name must be at least 2 characters.",
-  }),
-  description: z
-    .string()
-    .min(200, { message: "Description is too short(min. 200 characters)." }),
-  website: z
-    .string()
-    .url({ message: "Invalid URL format." })
-    .min(1, { message: "Website is required." }),
-  industry: z.string().min(1, { message: "Industry is required." }),
-  headquarters: z.string().min(1, { message: "Headquarters is required." }),
-  company_size: z.string().min(1, { message: "Company size is required." }),
-  tag_line: z
-    .string()
-    .max(70, {
-      message: "Tagline is too long(max. 70 characters).",
-    })
-    .optional(),
+const formSchema = companyProfileSchema.extend({
   logo_file: z.any().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 const supabase = createClient();
-const BUCKET_NAME = "images";
-const LOGO_FOLDER = "company_logos";
 
 export default function CompanyOnboardingForm({
   user,
@@ -142,38 +126,6 @@ export default function CompanyOnboardingForm({
     })();
   }, [companyId, form]);
 
-  // --- Supabase Storage Helpers ---
-
-  const getFilePath = () => `${LOGO_FOLDER}/${user?.id}/logo.png`;
-
-  const handleUploadStorage = async (file: File) => {
-    const filePath = getFilePath();
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: true, // Overwrite existing file
-      });
-
-    if (uploadError) throw uploadError;
-
-    // Get the public URL for the newly uploaded file
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-
-    return publicUrl;
-  };
-
-  const handleDeleteStorage = async () => {
-    const filePath = getFilePath();
-    const { error: storageError } = await supabase.storage
-      .from(BUCKET_NAME)
-      .remove([filePath]);
-
-    if (storageError) throw storageError;
-  };
-
   const handleDelete = () => {
     setLogoFile(null);
     if (existingLogoUrl) {
@@ -190,75 +142,30 @@ export default function CompanyOnboardingForm({
     if (!canEdit) return;
 
     setLoading(true);
-    let finalLogoUrl = existingLogoUrl;
 
     try {
-      if (deletePending && existingLogoUrl) {
-        await handleDeleteStorage();
-        finalLogoUrl = null;
-      }
-
-      if (logoFile) {
-        finalLogoUrl = await handleUploadStorage(logoFile);
-      }
-
-      const res = await fetch("/api/update-embedding/gemini/company", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: companyId,
-          name: values.name,
-          description: values.description,
-          headquarters: values.headquarters,
-          size: values.company_size,
-          industry: values.industry,
-          table: "company_info",
-          user_id: user.id,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData);
-      }
-
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { logo_file, ...dbValues } = values;
 
-      // TM-SEC-007: sign-up already created the row, and users have no insert
-      // policy, so this is an update. Zero rows matched would otherwise mark
-      // onboarding complete without saving anything.
-      // By the company's id, not company_info.user_id: any owner, or a role
-      // with company.profile, edits it (RLS and the column guard check).
-      const update = supabase.from("company_info").update({
-        ...dbValues,
-        logo_url: finalLogoUrl,
-        filled: true,
-      });
-      const { data: saved, error } = await (companyId
-        ? update.eq("id", companyId)
-        : update.eq("user_id", user.id)
-      )
-        .select("id")
-        .single();
+      const formData = new FormData();
+      formData.append("values", JSON.stringify(dbValues));
+      if (logoFile) formData.append("logo", logoFile);
+      if (deletePending) formData.append("removeLogo", "true");
 
-      if (error) throw error;
-      if (!saved) throw new Error("Company profile not found.");
-
-      const { error: updateAppMetaError } =
-        await markMyOnboardingComplete("company");
-
-      if (updateAppMetaError) throw new Error(updateAppMetaError);
+      const result = await saveCompanyProfileAction(formData);
+      if (!result.ok) throw new Error(result.error);
 
       setLogoFile(null);
       setDeletePending(false);
-      setExistingLogoUrl(finalLogoUrl);
+      setExistingLogoUrl(result.logoUrl);
 
       toast.success("Information Saved Successfully!");
       router.push("/company");
-    } catch {
+    } catch (err) {
       toast.error(
-        "An error occurred while saving information. Please try again.",
+        err instanceof Error
+          ? err.message
+          : "An error occurred while saving information. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -381,9 +288,14 @@ export default function CompanyOnboardingForm({
                   <div className="flex-grow">
                     <Input
                       type="file"
-                      accept="image/*"
+                      accept={LOGO_TYPES.join(",")}
                       onChange={(e) => {
                         const file = e.target.files?.[0] || null;
+                        if (file && file.size > LOGO_MAX_BYTES) {
+                          toast.error("The logo can be at most 900 KB.");
+                          e.target.value = "";
+                          return;
+                        }
                         if (file) {
                           setLogoFile(file);
                           setDeletePending(false);
