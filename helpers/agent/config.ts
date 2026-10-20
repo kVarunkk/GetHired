@@ -32,6 +32,12 @@ export const AGENT_SAFETY_SETTINGS = [
 /** Shown when the safety filter blocks a reply (REQ-030). */
 export const AGENT_CONTENT_FILTER_MESSAGE =
   "I can't help with that. I can help you find jobs, review your resume, track applications and practise interviews.";
+/**
+ * Shown when the safety filter stops a reply that had already started. The
+ * request itself was fine, so "I can't help with that" would mislead.
+ */
+export const AGENT_CUT_OFF_MESSAGE =
+  "\n\nSorry, my reply got cut off. Send your last message again and I'll carry on.";
 
 /** Most recent messages sent to the model verbatim (REQ-007). */
 export const AGENT_CONTEXT_WINDOW = 20;
