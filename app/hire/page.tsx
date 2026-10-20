@@ -1,7 +1,6 @@
 import FootComponent from "@/components/FootComponent";
 import AgentHeroDemo from "@/components/landing-page/AgentHeroDemo";
 import { RECRUITER_DEMO } from "@/components/landing-page/agent-demos";
-import AIFeatures from "@/components/landing-page/AIFeatures";
 import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
 import Hero from "@/components/landing-page/Hero";
@@ -64,7 +63,6 @@ export default async function HirePage() {
         preview={<AgentHeroDemo demo={RECRUITER_DEMO} />}
       />
       <HowWeHelp jobCount={jobCount} />
-      <AIFeatures />
       <PlatformStats
         applicationCount={applicationCount}
         resumeCount={resumeCount}

@@ -1,6 +1,5 @@
 import FootComponent from "@/components/FootComponent";
 import HeroAiInterview from "@/components/HeroAIInterview";
-import AIFeatures from "@/components/landing-page/AIFeatures";
 import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
@@ -54,7 +53,6 @@ export default async function AIInterviewPage() {
     <div className="flex-1 flex flex-col gap-32  w-full">
       <HeroAiInterview />
       <HowWeHelp jobCount={jobCount} />
-      <AIFeatures />
       <PlatformStats
         applicationCount={applicationCount}
         resumeCount={resumeCount}

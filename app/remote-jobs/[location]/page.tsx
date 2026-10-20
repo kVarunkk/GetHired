@@ -1,6 +1,5 @@
 import FootComponent from "@/components/FootComponent";
 import HeroRemotePage from "@/components/HeroRemotePage";
-import AIFeatures from "@/components/landing-page/AIFeatures";
 import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
@@ -106,7 +105,6 @@ export default async function RemoteJobsLocationPage({
     <div className="flex-1 flex flex-col gap-32  w-full">
       <HeroRemotePage location={displayLocation} jobCount={jobCount} />
       <HowWeHelp jobCount={jobCount} />
-      <AIFeatures />
       <PlatformStats
         applicationCount={applicationCount}
         resumeCount={resumeCount}

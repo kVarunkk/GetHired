@@ -1,5 +1,4 @@
 import FootComponent from "@/components/FootComponent";
-import AIFeatures from "@/components/landing-page/AIFeatures";
 import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
 import AgentHeroDemo from "@/components/landing-page/AgentHeroDemo";
@@ -28,7 +27,6 @@ export default async function Home() {
         preview={<AgentHeroDemo />}
       />
       <HowWeHelp jobCount={jobCount} />
-      <AIFeatures />
       <PlatformStats
         applicationCount={applicationCount}
         resumeCount={resumeCount}

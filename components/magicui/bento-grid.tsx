@@ -17,6 +17,8 @@ interface BentoCardProps extends ComponentPropsWithoutRef<"div"> {
   description: string;
   href: string;
   cta: string;
+  /** Runs when the CTA link is clicked, before navigating. */
+  onCtaClick?: () => void;
 }
 
 const BentoGrid = ({ children, className, ...props }: BentoGridProps) => {
@@ -42,6 +44,7 @@ const BentoCard = ({
   description,
   href,
   cta,
+  onCtaClick,
   ...props
 }: BentoCardProps) => (
   <div
@@ -76,7 +79,7 @@ const BentoCard = ({
           size="sm"
           className="pointer-events-auto p-0"
         >
-          <a href={href}>
+          <a href={href} onClick={onCtaClick}>
             {cta}
             <ArrowRightIcon className="ms-2 h-4 w-4 rtl:rotate-180" />
           </a>
@@ -95,7 +98,7 @@ const BentoCard = ({
         size="sm"
         className="pointer-events-auto p-0"
       >
-        <a href={href}>
+        <a href={href} onClick={onCtaClick}>
           {cta}
           <ArrowRightIcon className="ms-2 h-4 w-4 rtl:rotate-180" />
         </a>
