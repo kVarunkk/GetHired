@@ -9,6 +9,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "deleteMemory": "not-applicable",
       "findRelevantJobs": "not-applicable",
       "findSimilarJobs": "not-applicable",
+      "getApplicationForm": "not-applicable",
       "getInterviewAnalysis": "not-applicable",
       "getJobDetails": "not-applicable",
       "getMyProfile": "not-applicable",
@@ -30,6 +31,10 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
         "reason": "Only 2 credit-spending actions can run per message. Ask the user before trying again.",
         "type": "denied",
       },
+      "submitApplication": {
+        "reason": "Only 2 credit-spending actions can run per message. Ask the user before trying again.",
+        "type": "denied",
+      },
       "unknownTool": "not-applicable",
       "unsaveJob": "not-applicable",
       "updateApplicationStatus": "not-applicable",
@@ -44,6 +49,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       },
       "findRelevantJobs": "not-applicable",
       "findSimilarJobs": "not-applicable",
+      "getApplicationForm": "not-applicable",
       "getInterviewAnalysis": "not-applicable",
       "getJobDetails": "not-applicable",
       "getMyProfile": "not-applicable",
@@ -62,6 +68,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "searchJobs": "not-applicable",
       "setPrimaryResume": "not-applicable",
       "startResumeReview": "user-approval",
+      "submitApplication": "user-approval",
       "unknownTool": "not-applicable",
       "unsaveJob": "not-applicable",
       "updateApplicationStatus": "not-applicable",
@@ -73,6 +80,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "deleteMemory": "not-applicable",
       "findRelevantJobs": "not-applicable",
       "findSimilarJobs": "not-applicable",
+      "getApplicationForm": "not-applicable",
       "getInterviewAnalysis": "not-applicable",
       "getJobDetails": "not-applicable",
       "getMyProfile": "not-applicable",
@@ -88,6 +96,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "searchJobs": "not-applicable",
       "setPrimaryResume": "not-applicable",
       "startResumeReview": "user-approval",
+      "submitApplication": "user-approval",
       "unknownTool": "not-applicable",
       "unsaveJob": "not-applicable",
       "updateApplicationStatus": "not-applicable",
@@ -100,6 +109,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
     "deleteMemory",
     "findRelevantJobs",
     "findSimilarJobs",
+    "getApplicationForm",
     "getInterviewAnalysis",
     "getJobDetails",
     "getMyProfile",
@@ -115,6 +125,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
     "searchJobs",
     "setPrimaryResume",
     "startResumeReview",
+    "submitApplication",
     "unsaveJob",
     "updateApplicationStatus",
     "updateMyPreferences",
@@ -130,6 +141,7 @@ You can use tools to:
 - find jobs matched to the user's profile (findRelevantJobs) or similar to a given job (findSimilarJobs)
 - show job details (getJobDetails), save or unsave jobs (saveJob, unsaveJob) and list saved jobs (listSavedJobs)
 - list applications (listApplications) and track the status of applications to external jobs (updateApplicationStatus); for jobs applied to through GetHired the company sets the status
+- apply to jobs on GetHired (isPlatformJob) for the user: read the job's application form (getApplicationForm), fill it from their profile and what they told you, then send it (submitApplication, costs 1 AI credit, with the user's approval)
 - list resumes, set the primary resume, and ask the user to upload one (listResumes, setPrimaryResume, requestResumeUpload)
 - start a resume review against a job or a job description the user pastes, and read reviews (startResumeReview, costs AI credits; getResumeReview)
 - list the user's AI mock interviews (listInterviews), read the feedback from an interview session (getInterviewAnalysis), and set up a new interview for a job (createInterview, free to create; each session uses AI credits when the user starts it). You cannot run the interview itself: give the user the link so they can take it.
@@ -139,7 +151,8 @@ You can use tools to:
 # Rules
 - Never invent jobs, companies, or URLs. Only present jobs and data returned by tools. If a search returns nothing, say so and suggest how to broaden it.
 - Before an action that spends AI credits or changes the user's profile, briefly say what it will do; the app also asks the user to approve it.
-- You cannot apply to jobs. To apply, link the user to /jobs/<id>?apply=true. Never claim you applied on the user's behalf.
+- You can only apply to jobs on GetHired. For other jobs, link the user to /jobs/<id> so they apply on the company's site, and offer to track the application.
+- When applying, never make up an answer to an application question. Fill fields only from what the user told you or their profile; ask them for any required answer you don't have. Before applying, show the answers you'll send and which resume. Only say you applied after the application was sent successfully.
 - Memory policy:
   - Job preferences that fit the profile (desired roles, locations, salary, job type, visa sponsorship, skills, work style) go to updateMyPreferences, not to memory.
   - Use saveMemory only for durable facts the profile has no field for (e.g. companies to avoid, ongoing interviews). Do not save one-off search details.
@@ -191,6 +204,7 @@ You can use tools to:
 - find jobs matched to the user's profile (findRelevantJobs) or similar to a given job (findSimilarJobs)
 - show job details (getJobDetails), save or unsave jobs (saveJob, unsaveJob) and list saved jobs (listSavedJobs)
 - list applications (listApplications) and track the status of applications to external jobs (updateApplicationStatus); for jobs applied to through GetHired the company sets the status
+- apply to jobs on GetHired (isPlatformJob) for the user: read the job's application form (getApplicationForm), fill it from their profile and what they told you, then send it (submitApplication, costs 1 AI credit, with the user's approval)
 - list resumes, set the primary resume, and ask the user to upload one (listResumes, setPrimaryResume, requestResumeUpload)
 - start a resume review against a job or a job description the user pastes, and read reviews (startResumeReview, costs AI credits; getResumeReview)
 - list the user's AI mock interviews (listInterviews), read the feedback from an interview session (getInterviewAnalysis), and set up a new interview for a job (createInterview, free to create; each session uses AI credits when the user starts it). You cannot run the interview itself: give the user the link so they can take it.
@@ -200,7 +214,8 @@ You can use tools to:
 # Rules
 - Never invent jobs, companies, or URLs. Only present jobs and data returned by tools. If a search returns nothing, say so and suggest how to broaden it.
 - Before an action that spends AI credits or changes the user's profile, briefly say what it will do; the app also asks the user to approve it.
-- You cannot apply to jobs. To apply, link the user to /jobs/<id>?apply=true. Never claim you applied on the user's behalf.
+- You can only apply to jobs on GetHired. For other jobs, link the user to /jobs/<id> so they apply on the company's site, and offer to track the application.
+- When applying, never make up an answer to an application question. Fill fields only from what the user told you or their profile; ask them for any required answer you don't have. Before applying, show the answers you'll send and which resume. Only say you applied after the application was sent successfully.
 - Memory policy:
   - Job preferences that fit the profile (desired roles, locations, salary, job type, visa sponsorship, skills, work style) go to updateMyPreferences, not to memory.
   - Use saveMemory only for durable facts the profile has no field for (e.g. companies to avoid, ongoing interviews). Do not save one-off search details.
@@ -233,6 +248,7 @@ You can use tools to:
 - find jobs matched to the user's profile (findRelevantJobs) or similar to a given job (findSimilarJobs)
 - show job details (getJobDetails), save or unsave jobs (saveJob, unsaveJob) and list saved jobs (listSavedJobs)
 - list applications (listApplications) and track the status of applications to external jobs (updateApplicationStatus); for jobs applied to through GetHired the company sets the status
+- apply to jobs on GetHired (isPlatformJob) for the user: read the job's application form (getApplicationForm), fill it from their profile and what they told you, then send it (submitApplication, costs 1 AI credit, with the user's approval)
 - list resumes, set the primary resume, and ask the user to upload one (listResumes, setPrimaryResume, requestResumeUpload)
 - start a resume review against a job or a job description the user pastes, and read reviews (startResumeReview, costs AI credits; getResumeReview)
 - list the user's AI mock interviews (listInterviews), read the feedback from an interview session (getInterviewAnalysis), and set up a new interview for a job (createInterview, free to create; each session uses AI credits when the user starts it). You cannot run the interview itself: give the user the link so they can take it.
@@ -242,7 +258,8 @@ You can use tools to:
 # Rules
 - Never invent jobs, companies, or URLs. Only present jobs and data returned by tools. If a search returns nothing, say so and suggest how to broaden it.
 - Before an action that spends AI credits or changes the user's profile, briefly say what it will do; the app also asks the user to approve it.
-- You cannot apply to jobs. To apply, link the user to /jobs/<id>?apply=true. Never claim you applied on the user's behalf.
+- You can only apply to jobs on GetHired. For other jobs, link the user to /jobs/<id> so they apply on the company's site, and offer to track the application.
+- When applying, never make up an answer to an application question. Fill fields only from what the user told you or their profile; ask them for any required answer you don't have. Before applying, show the answers you'll send and which resume. Only say you applied after the application was sent successfully.
 - Memory policy:
   - Job preferences that fit the profile (desired roles, locations, salary, job type, visa sponsorship, skills, work style) go to updateMyPreferences, not to memory.
   - Use saveMemory only for durable facts the profile has no field for (e.g. companies to avoid, ongoing interviews). Do not save one-off search details.
@@ -609,6 +626,24 @@ No saved memories.",
             "maximum": 20,
             "minimum": 1,
             "type": "integer",
+          },
+        },
+        "required": [
+          "jobId",
+        ],
+        "type": "object",
+      },
+    },
+    "getApplicationForm": {
+      "description": "Read the application form of a job on GetHired (isPlatformJob), before applying with submitApplication: each field's key, label, type, whether it's required and its options or limits, plus suggested answers from the user's profile and the resume that would be sent.",
+      "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "description": "The job id, exactly as returned by another tool.",
+            "format": "uuid",
+            "type": "string",
           },
         },
         "required": [
@@ -1003,6 +1038,64 @@ No saved memories.",
         },
         "required": [
           "resumeId",
+        ],
+        "type": "object",
+      },
+    },
+    "submitApplication": {
+      "description": "Apply to a job on GetHired for the user (Easy Apply) with their answers to its application form. Costs 1 AI credit, and the user approves it first. Read the form with getApplicationForm first. Only use answers the user gave or that come from their profile; ask them for anything else.",
+      "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "answers": {
+            "description": "One entry per field you answer. Leave out optional fields the user has nothing for.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "choices": {
+                  "description": "For multi_select fields only: the chosen options.",
+                  "items": {
+                    "maxLength": 120,
+                    "type": "string",
+                  },
+                  "maxItems": 30,
+                  "type": "array",
+                },
+                "key": {
+                  "description": "The field's key, exactly as getApplicationForm returned it.",
+                  "maxLength": 80,
+                  "minLength": 1,
+                  "type": "string",
+                },
+                "value": {
+                  "description": "The answer as text: yes/no for yes_no, digits for number, YYYY-MM-DD for date, an http(s) link for url, one of the options for single_select, and amount plus 3-letter currency for salary (e.g. 1500000 INR).",
+                  "maxLength": 5000,
+                  "type": "string",
+                },
+              },
+              "required": [
+                "key",
+              ],
+              "type": "object",
+            },
+            "maxItems": 40,
+            "type": "array",
+          },
+          "jobId": {
+            "description": "The job id, exactly as returned by another tool.",
+            "format": "uuid",
+            "type": "string",
+          },
+          "resumeId": {
+            "description": "The resume to send, from listResumes. Leave out to send the primary resume.",
+            "format": "uuid",
+            "type": "string",
+          },
+        },
+        "required": [
+          "jobId",
+          "answers",
         ],
         "type": "object",
       },

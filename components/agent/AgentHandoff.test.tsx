@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useRouter } from "next/navigation";
 import { agentPromptHref, COMPANY_AGENT_PATH, takePendingPrompt } from "@/helpers/agent/prompt-draft";
-import { jobPostHandoffPrompt, outreachHandoffPrompt } from "@/helpers/agent/handoff-prompts";
+import { applyHandoffPrompt, jobPostHandoffPrompt, outreachHandoffPrompt } from "@/helpers/agent/handoff-prompts";
 import AgentHandoff from "./AgentHandoff";
 
 vi.mock("next/navigation", () => ({ useRouter: vi.fn() }));
@@ -45,6 +45,18 @@ describe("AgentHandoff", () => {
     expect(takePendingPrompt()).toBe(prompt);
   });
 
+  it("can be sent with nothing typed when allowEmpty is set", () => {
+    render(
+      <AgentHandoff label="Or apply" placeholder="…" basePath={COMPANY_AGENT_PATH} toPrompt={() => "Apply"} allowEmpty />,
+    );
+
+    const ask = screen.getByRole("button", { name: "Open in the assistant" });
+    expect(ask).toBeEnabled();
+    fireEvent.click(ask);
+
+    expect(push).toHaveBeenCalledWith(agentPromptHref("Apply", COMPANY_AGENT_PATH));
+  });
+
   it("wakes the sparkle up while the user is typing", () => {
     render(<AgentHandoff label="Or describe it" placeholder="…" basePath={COMPANY_AGENT_PATH} toPrompt={(text) => text} />);
 
@@ -72,5 +84,12 @@ describe("handoff prompts", () => {
       'Write an outreach message to candidate c1 about my job post "Backend" (job post j1). Keep it short',
     );
     expect(outreachHandoffPrompt("Keep it short", "c1")).toBe("Write an outreach message to candidate c1. Keep it short");
+    const job = { id: "j1", title: "Backend", company: "Acme" };
+    expect(applyHandoffPrompt("  ", job)).toBe(
+      "Apply to the Backend role at Acme (/jobs/j1) for me. Fill in the application from my profile and ask me for anything you can't answer.",
+    );
+    expect(applyHandoffPrompt(" Use my Go resume ", { ...job, company: null })).toBe(
+      "Apply to the Backend role (/jobs/j1) for me. Fill in the application from my profile and ask me for anything you can't answer. Use my Go resume",
+    );
   });
 });

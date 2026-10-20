@@ -25,6 +25,13 @@ export function resumeReviewHandoffPrompt(text: string) {
   return `Review my resume against this job: ${text.trim()}`;
 }
 
+/** Easy Apply (applicant: getApplicationForm, submitApplication). */
+export function applyHandoffPrompt(text: string, job: { id: string; title: string | null; company: string | null }) {
+  const role = `the ${job.title ?? "this"} role${job.company ? ` at ${job.company}` : ""} (/jobs/${job.id})`;
+  const notes = text.trim();
+  return `Apply to ${role} for me. Fill in the application from my profile and ask me for anything you can't answer.${notes ? ` ${notes}` : ""}`;
+}
+
 /** Create Interview (applicant: createInterview). */
 export function interviewHandoffPrompt(text: string) {
   return `Set up a mock interview for this job: ${text.trim()}`;

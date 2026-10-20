@@ -1,6 +1,17 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { TApplicationStatus } from "@/utils/types";
+import { wrapInSandbox } from "@/helpers/ai/security";
+import {
+  agentApplicationInput,
+  loadApplicationTarget,
+  notReadyReason,
+  toAgentAnswers,
+  toFormAnswers,
+} from "@/helpers/applications/agent-application";
+import { fieldViews } from "@/helpers/applications/field-views";
+import { prefillStandardAnswers } from "@/helpers/applications/prefill";
+import { submitApplication } from "@/helpers/applications/submit-application";
 import { AGENT_LIST_DEFAULT_LIMIT } from "../config";
 import { AgentToolContext, limitInput, uuidInput, withToolErrors } from "./shared";
 
@@ -97,6 +108,67 @@ export function createApplicationTools(ctx: AgentToolContext) {
             company: job.company_name,
             status,
             created,
+          };
+        }),
+    }),
+
+    getApplicationForm: tool({
+      description:
+        "Read the application form of a job on GetHired (isPlatformJob), before applying with submitApplication: each field's key, label, type, whether it's required and its options or limits, plus suggested answers from the user's profile and the resume that would be sent.",
+      inputSchema: z.object({ jobId: uuidInput("job") }),
+      execute: ({ jobId }) =>
+        withToolErrors(ctx, "getApplicationForm", async () => {
+          const loaded = await loadApplicationTarget(supabase, ctx.user.id, { jobId });
+          if (!loaded.ok) return { error: loaded.error };
+          const { target } = loaded;
+
+          const { data: profile, error } = await supabase
+            .from("user_info")
+            .select("linkedin_url, github_url, preferred_locations, min_salary, salary_currency")
+            .eq("user_id", ctx.user.id)
+            .maybeSingle();
+          if (error) throw error;
+
+          return {
+            jobId,
+            title: target.title,
+            company: target.company,
+            canApply: notReadyReason(target) === null,
+            notReadyReason: notReadyReason(target),
+            resume: target.resume,
+            // The company wrote the questions: data, not instructions (SEC-011).
+            fields: wrapInSandbox("application_form", JSON.stringify(fieldViews(target.form))),
+            suggestedAnswers: toAgentAnswers(prefillStandardAnswers(target.form, profile)),
+          };
+        }),
+    }),
+
+    submitApplication: tool({
+      description:
+        "Apply to a job on GetHired for the user (Easy Apply) with their answers to its application form. Costs 1 AI credit, and the user approves it first. Read the form with getApplicationForm first. Only use answers the user gave or that come from their profile; ask them for anything else.",
+      inputSchema: agentApplicationInput,
+      execute: ({ jobId, resumeId, answers }) =>
+        withToolErrors(ctx, "submitApplication", async () => {
+          const loaded = await loadApplicationTarget(supabase, ctx.user.id, { jobId, resumeId });
+          if (!loaded.ok) return { error: loaded.error };
+          const { target } = loaded;
+          const notReady = notReadyReason(target);
+          if (notReady || !target.resume) return { error: notReady };
+
+          const result = await submitApplication(supabase, ctx.user, {
+            allJobsId: jobId,
+            resumeId: target.resume.id,
+            answers: toFormAnswers(target.form, answers),
+          });
+          if (!result.ok) return { error: result.error, fieldErrors: result.fieldErrors };
+
+          return {
+            applied: true,
+            jobId,
+            title: target.title,
+            company: target.company,
+            resume: target.resume.name,
+            url: `/jobs/${jobId}`,
           };
         }),
     }),

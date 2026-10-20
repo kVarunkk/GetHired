@@ -82,14 +82,14 @@ export function createToolApproval(policy: ToolApprovalPolicy): ToolApprovalFn {
 
 /** The applicant agent's policy (REQ-014, SEC-011–013). */
 export const APPLICANT_APPROVAL_POLICY: ToolApprovalPolicy = {
-  // They spend credits or change the profile.
-  alwaysAsk: ["startResumeReview", "updateMyPreferences", "completeOnboarding"],
-  untrustedContentTools: ["getJobDetails", "getResumeReview", "getInterviewAnalysis"],
+  // They spend credits, change the profile or send an application.
+  alwaysAsk: ["startResumeReview", "updateMyPreferences", "completeOnboarding", "submitApplication"],
+  untrustedContentTools: ["getJobDetails", "getApplicationForm", "getResumeReview", "getInterviewAnalysis"],
   // Long-term memory goes into every later prompt.
   gatedWriteTools: ["saveMemory", "deleteMemory"],
   untrustedReason:
     "The assistant read a job posting or report in this reply, so memory changes need your OK.",
-  creditTools: ["naturalLanguageJobSearch", "startResumeReview"],
+  creditTools: ["naturalLanguageJobSearch", "startResumeReview", "submitApplication"],
 };
 
 /** The applicant agent's tool approval policy, passed to `streamText` as `toolApproval`. */
