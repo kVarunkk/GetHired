@@ -58,6 +58,23 @@ describe("AgentShell: starting with a prompt", () => {
     expect(replace).toHaveBeenCalledWith("/agent?prompt=remote%20Go%20jobs");
   });
 
+  it("drops the prompt from the URL when it comes back into the same chat", () => {
+    savePendingPrompt("remote Go jobs");
+    window.history.replaceState(null, "", "/agent");
+    const shell = (initialDraft?: string) => (
+      <AgentShell initialSessions={SESSIONS} activeSessionId="s1" initialMessages={[]} initialDraft={initialDraft} />
+    );
+    const { rerender, getByTestId } = render(shell());
+    expect(replace).toHaveBeenCalledWith("/agent?prompt=remote%20Go%20jobs");
+
+    // The router's reply: the same empty session s1, now with the draft.
+    window.history.replaceState(null, "", "/agent?prompt=remote%20Go%20jobs");
+    rerender(shell("remote Go jobs"));
+
+    expect(getByTestId("chat")).toHaveTextContent("draft: remote Go jobs");
+    expect(window.location.pathname + window.location.search).toBe("/agent?session=s1");
+  });
+
   it("does nothing without a prompt", () => {
     window.history.replaceState(null, "", "/agent");
     renderShell();

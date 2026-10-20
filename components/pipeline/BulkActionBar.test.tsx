@@ -307,3 +307,25 @@ describe("BulkActionBar: AI interview invites (SIT-062)", () => {
     expect(screen.getByRole("button", { name: "Invite to AI interview" })).toBeDisabled();
   });
 });
+
+describe("BulkActionBar without pipeline.move", () => {
+  it("locks Move to… and Reject… but keeps the invite", () => {
+    render(
+      <BulkActionBar
+        selectedIds={ids(2)}
+        stages={STAGES}
+        canMove={false}
+        interviewInvite={{ jobPostId: "job-1", durationMinutes: 15, enabled: true }}
+        onDone={vi.fn()}
+      />,
+    );
+
+    expect(moveTo()).toBeDisabled();
+    expect(reject()).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Invite to AI interview" })).toBeEnabled();
+
+    fireEvent.click(reject());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(moveApplicationsAction).not.toHaveBeenCalled();
+  });
+});

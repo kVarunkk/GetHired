@@ -47,17 +47,24 @@ export default function Composer({
   placeholder: string;
 }) {
   const [input, setInput] = useState(initialDraft);
+  const [draft, setDraft] = useState(initialDraft);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // A draft can also arrive while the box is open: a prompt saved before
+  // logging in reopens the page with ?prompt=, and when that reuses the same
+  // empty chat nothing remounts. Take it, unless it's just being cleared.
+  if (initialDraft !== draft) {
+    setDraft(initialDraft);
+    if (initialDraft) setInput(initialDraft);
+  }
 
   // A prefilled draft gets focus with the caret at the end, ready to send.
   useEffect(() => {
     const textarea = textareaRef.current;
-    if (!initialDraft || !textarea) return;
+    if (!draft || !textarea) return;
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    // Only for the draft the box started with.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [draft]);
 
   // Typing anywhere on the page writes into the message box. Focusing during
   // keydown makes the browser insert this same keystroke into the textarea.

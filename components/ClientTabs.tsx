@@ -1,75 +1,15 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useOptimistic, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProgress } from "react-transition-progress";
 import { User } from "@supabase/supabase-js";
 import BookmarkJobSearch from "./BookmarkJobSearch";
 import JobsPageDropdown from "./JobsPageDropdown";
-import { ArrowUp, Loader2, Sparkles } from "lucide-react";
-import { Button } from "./ui/button";
-import {
-  agentPromptHref,
-  MAX_PROMPT_CHARS,
-  savePendingPrompt,
-} from "@/helpers/agent/prompt-draft";
+import { Loader2 } from "lucide-react";
 import { activeTabFrom, type TalentListTab } from "@/utils/talent-list-tabs";
 import ScrollMaskX from "./ScrollMaskX";
-
-/**
- * What the jobs page's search box puts in the agent's message box when it's
- * sent empty. The user still sends it, and the agent asks for what it doesn't
- * know yet.
- */
-export const JOB_SEARCH_PROMPT =
-  "Help me find jobs that fit me. Use my profile and preferences, and ask me about anything you need, like the role, location or salary I'm after.";
-
-/**
- * The jobs page's search box: opens the agent with what was typed, or with
- * JOB_SEARCH_PROMPT when it's empty.
- */
-function AgentJobSearchBox({ className }: { className?: string }) {
-  const router = useRouter();
-  const [query, setQuery] = useState("");
-
-  return (
-    <form
-      role="search"
-      aria-label="Find jobs with the assistant"
-      className={
-        "flex min-w-0 items-center gap-1 rounded-full border border-input bg-background py-0.5 pl-3 pr-0.5 transition-colors hover:border-foreground/20 focus-within:border-foreground/30 focus-within:ring-2 focus-within:ring-foreground/5 sm:w-72 " +
-        (className ?? "")
-      }
-      onSubmit={(event) => {
-        event.preventDefault();
-        const prompt = query.trim() || JOB_SEARCH_PROMPT;
-        // Logging in drops the query, so the prompt is also kept for after it.
-        savePendingPrompt(prompt);
-        router.push(agentPromptHref(prompt));
-      }}
-    >
-      <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <input
-        aria-label="What jobs are you looking for?"
-        value={query}
-        maxLength={MAX_PROMPT_CHARS}
-        placeholder="Describe your dream job..."
-        className="h-8 min-w-0 flex-1 bg-transparent px-1 text-sm placeholder:text-xs placeholder:text-muted-foreground focus-visible:outline-none"
-        onChange={(event) => setQuery(event.target.value)}
-      />
-      <Button
-        type="submit"
-        size="icon"
-        variant={query.trim() ? "brand" : "ghost"}
-        aria-label="Ask the assistant"
-        className="h-8 w-8 shrink-0 rounded-full"
-      >
-        <ArrowUp className="h-4 w-4" />
-      </Button>
-    </form>
-  );
-}
 
 export function ClientTabs({
   user,
@@ -253,19 +193,11 @@ export function ClientTabs({
             )}
 
             {page === "jobs" && !isCompanyUser && (
-              <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                {/* On a phone the search box takes the full row and the icon buttons go below it. */}
-                {/* <AgentJobSearchBox className="w-full" /> */}
-                <div className="flex items-center gap-2">
-                  <BookmarkJobSearch user={user} />
-                  <JobsPageDropdown user={user} />
-                </div>
+              <div className="flex items-center gap-2">
+                <BookmarkJobSearch user={user} />
+                <JobsPageDropdown user={user} />
               </div>
             )}
-          </div>
-        ) : page === "jobs" ? (
-          <div className="pt-6">
-            <AgentJobSearchBox />
           </div>
         ) : (
           <div className="pt-6" />

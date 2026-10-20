@@ -51,6 +51,14 @@ describe("middleware: /agent", () => {
     expect(redirectTarget(res)).toBe("/auth/login?returnTo=%2Fagent");
   });
 
+  it("sends signed-out visitors of the company agent to the company login with a return path", async () => {
+    // The prompt itself travels in sessionStorage (helpers/agent/prompt-draft.ts).
+    expect(redirectTarget(await updateSession(request("/company/agent?prompt=Hi")))).toBe(
+      "/auth/login?company=true&returnTo=%2Fcompany%2Fagent",
+    );
+    expect(redirectTarget(await updateSession(request("/company")))).toBe("/auth/login?company=true");
+  });
+
   it("lets applicants through", async () => {
     vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
 
@@ -85,7 +93,10 @@ describe("middleware: /agent", () => {
       mockUser({ type: "company", onboardingComplete: false }),
     );
 
-    expect(redirectTarget(await updateSession(request("/company/agent")))).toBe("/get-started?company=true");
+    // Onboarding sends them on to the company agent when it's done.
+    expect(redirectTarget(await updateSession(request("/company/agent?prompt=Hi")))).toBe(
+      "/get-started?company=true&returnTo=%2Fcompany%2Fagent",
+    );
     expect(redirectTarget(await updateSession(request("/agent")))).toBe("/get-started?company=true");
   });
 

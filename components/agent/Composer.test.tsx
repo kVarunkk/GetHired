@@ -108,4 +108,25 @@ describe("Composer: starting with a draft", () => {
     expect(box.selectionStart).toBe("remote Go jobs".length);
     expect(onSend).not.toHaveBeenCalled();
   });
+
+  it("takes a draft that arrives after it opened, e.g. a prompt saved before logging in", () => {
+    const props = { busy: false, onSend: vi.fn(() => true), onStop: vi.fn(), placeholder: "Ask anything" };
+    const { rerender } = render(<Composer {...props} />);
+    expect(message()).toHaveValue("");
+
+    rerender(<Composer {...props} initialDraft="Find Go devs" />);
+
+    expect(message()).toHaveValue("Find Go devs");
+    expect(message()).toHaveFocus();
+  });
+
+  it("keeps what was typed when the draft is cleared from the URL", () => {
+    const props = { busy: false, onSend: vi.fn(() => true), onStop: vi.fn(), placeholder: "Ask anything" };
+    const { rerender } = render(<Composer {...props} initialDraft="Find Go devs" />);
+    fireEvent.change(message(), { target: { value: "Find Go devs in Pune" } });
+
+    rerender(<Composer {...props} initialDraft="" />);
+
+    expect(message()).toHaveValue("Find Go devs in Pune");
+  });
 });

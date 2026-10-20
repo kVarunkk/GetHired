@@ -21,6 +21,22 @@ describe("AuthButton", () => {
     expect(screen.getByRole("link", { name: "Sign up" }).querySelector("svg")).not.toBeNull();
   });
 
+  it("keeps the sidebar labels on one line while the sidebar width animates", () => {
+    const { rerender } = renderButtons("vertical");
+
+    expect(screen.getByText("Sign in")).toHaveClass("whitespace-nowrap", "opacity-100");
+    expect(screen.getByText("Sign up")).toHaveClass("whitespace-nowrap", "opacity-100");
+
+    rerender(
+      <TooltipProvider>
+        <AuthButton isMenuOpen={false} variant="vertical" />
+      </TooltipProvider>,
+    );
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveClass("overflow-hidden", "justify-center");
+    expect(screen.getAllByText("Sign in")[0].parentElement).toHaveClass("max-w-0");
+    expect(screen.getAllByText("Sign in")[0]).toHaveClass("opacity-0");
+  });
+
   it("puts the buttons in a row in the horizontal bar", () => {
     const { container } = renderButtons("horizontal");
 

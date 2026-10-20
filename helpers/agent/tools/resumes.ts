@@ -3,7 +3,23 @@ import { z } from "zod";
 import { setPrimaryResumeAction } from "@/app/actions/set-primary-resume";
 import { createResumeReviewAction } from "@/app/actions/create-resume-review";
 import { startReviewAnalysis } from "@/helpers/resume-review/start-review-analysis";
-import { AgentToolContext, INSUFFICIENT_CREDITS, uuidInput, withToolErrors } from "./shared";
+import {
+  rankResumesForJob,
+  RESUME_PICK_CREDITS,
+  RESUME_PICK_MAX_RESUMES,
+  type ResumeFit,
+} from "@/helpers/resume-review/rank-resumes-for-job";
+import { RESUME_SHORTLIST_MAX, shortlistResumes } from "@/helpers/resume-review/shortlist-resumes";
+import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
+import type { TResumeRowContent } from "@/utils/types";
+import { agentTelemetry } from "../telemetry";
+import {
+  AgentToolContext,
+  compactJob,
+  INSUFFICIENT_CREDITS,
+  uuidInput,
+  withToolErrors,
+} from "./shared";
 
 const MAX_SUGGESTIONS = 5;
 const PRIORITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -21,8 +37,63 @@ type ReviewAnalysis = {
 
 const reviewUrl = (reviewId: string) => `/resume-review/${reviewId}`;
 
+const PICK_DETAIL_ITEMS = 3;
+
+/** A ranked resume as the model sees it: the best one with its evidence. */
+const fitSummary = ({ id, name, score, matched, missing }: ResumeFit, withEvidence: boolean) => ({
+  id,
+  name,
+  score,
+  ...(withEvidence ? { matched: matched.slice(0, PICK_DETAIL_ITEMS) } : {}),
+  missing: missing.slice(0, PICK_DETAIL_ITEMS),
+});
+
 export function createResumeTools(ctx: AgentToolContext) {
   const { supabase } = ctx;
+
+  // Primary first, so it wins a tie. One extra row tells whether any were left out.
+  async function loadDefaultResumes() {
+    const { data, error } = await supabase
+      .from("resumes")
+      .select("id, name, content")
+      .eq("user_id", ctx.user.id)
+      .eq("parsing_failed", false)
+      .not("content", "is", null)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(RESUME_SHORTLIST_MAX + 1);
+    if (error) throw error;
+    const rows = data ?? [];
+    return { resumes: rows.slice(0, RESUME_SHORTLIST_MAX), more: rows.length > RESUME_SHORTLIST_MAX };
+  }
+
+  // In the order the user gave, so a tie goes to the one they named first.
+  async function loadChosenResumes(resumeIds: string[]) {
+    const { data, error } = await supabase
+      .from("resumes")
+      .select("id, name, content, parsing_failed")
+      .eq("user_id", ctx.user.id)
+      .in("id", resumeIds);
+    if (error) throw error;
+
+    const byId = new Map((data ?? []).map((row) => [row.id, row]));
+    const unusable = resumeIds.flatMap((id) => {
+      const row = byId.get(id);
+      if (!row) return [{ resumeId: id, reason: "not found" }];
+      if (row.parsing_failed) return [{ resumeId: id, reason: "couldn't be read; ask the user to upload it again" }];
+      if (!row.content) return [{ resumeId: id, reason: "still being processed" }];
+      return [];
+    });
+    if (unusable.length) return { error: "Some of these resumes can't be compared.", resumes: unusable };
+
+    return {
+      resumes: resumeIds.map((id) => {
+        const { name, content } = byId.get(id)!;
+        return { id, name, content };
+      }),
+      more: false,
+    };
+  }
 
   return {
     listResumes: tool({
@@ -36,7 +107,7 @@ export function createResumeTools(ctx: AgentToolContext) {
             .select("id, name, is_primary, parsing_failed, content, created_at")
             .eq("user_id", ctx.user.id)
             .order("created_at", { ascending: false })
-            .limit(20);
+            .limit(RESUME_SHORTLIST_MAX);
           if (error) throw error;
 
           return {
@@ -158,6 +229,118 @@ export function createResumeTools(ctx: AgentToolContext) {
             url: reviewUrl(reviewId),
             message:
               "The review usually takes about a minute. The user will get an email when it's ready.",
+          };
+        }),
+    }),
+
+    pickResumeForJob: tool({
+      description:
+        `Compare the user's resumes against a job (jobId) or a pasted job description and pick the one that fits best, with the job requirements each covers and misses. Pass resumeIds to compare specific resumes; otherwise all ready resumes are compared. With more than ${RESUME_PICK_MAX_RESUMES}, the closest ${RESUME_PICK_MAX_RESUMES} are shortlisted first and only those are compared in detail. Costs 1 AI credit when two or more resumes are compared; free with one.`,
+      inputSchema: z
+        .object({
+          jobId: uuidInput("job").optional(),
+          jobDescription: z
+            .string()
+            .min(50)
+            .max(4000)
+            .optional()
+            .describe("A job description the user pasted, when there is no jobId."),
+          resumeIds: z
+            .array(uuidInput("resume"))
+            .min(2)
+            .max(RESUME_SHORTLIST_MAX)
+            .optional()
+            .describe(
+              `Only when the user names which resumes to compare (2 to ${RESUME_SHORTLIST_MAX}, from listResumes). Leave out to compare all of them.`,
+            ),
+        })
+        .refine((input) => Boolean(input.jobId) !== Boolean(input.jobDescription), {
+          message: "Provide exactly one of jobId or jobDescription.",
+        })
+        .refine((input) => !input.resumeIds || new Set(input.resumeIds).size === input.resumeIds.length, {
+          message: "resumeIds must not repeat a resume.",
+        }),
+      execute: ({ jobId, jobDescription, resumeIds }) =>
+        withToolErrors(ctx, "pickResumeForJob", async () => {
+          const loaded = resumeIds
+            ? await loadChosenResumes(resumeIds)
+            : await loadDefaultResumes();
+          if ("error" in loaded) return loaded;
+          const { resumes, more } = loaded;
+
+          if (!resumes.length) {
+            return { error: "The user has no ready resumes. Ask them to upload one." };
+          }
+          if (resumes.length === 1) {
+            return {
+              best: { id: resumes[0].id, name: resumes[0].name },
+              others: [],
+              message: "The user has only one ready resume, so there was nothing to compare.",
+            };
+          }
+
+          let job: Parameters<typeof compactJob>[0] | null = null;
+          let description = jobDescription ?? "";
+          if (jobId) {
+            const { data, error } = await supabase
+              .from("all_jobs")
+              .select("id, job_name, company_name, locations, salary_range, job_type, description, created_at")
+              .eq("id", jobId)
+              .maybeSingle();
+            if (error) throw error;
+            if (!data) return { error: "Job not found." };
+            if (!data.description?.trim()) {
+              return { error: "This job has no description to compare the resumes against." };
+            }
+            job = data;
+            description = data.description;
+          }
+
+          const { data: userInfo, error: creditsError } = await supabase
+            .from("user_info")
+            .select("ai_credits")
+            .eq("user_id", ctx.user.id)
+            .single();
+          if (creditsError) throw creditsError;
+          if ((userInfo?.ai_credits ?? 0) < RESUME_PICK_CREDITS) return INSUFFICIENT_CREDITS;
+
+          const rankingJob = { title: job?.job_name ?? null, company: job?.company_name ?? null, description };
+          const shortlist = await shortlistResumes(
+            rankingJob,
+            resumes.map((resume) => ({
+              id: resume.id,
+              name: resume.name,
+              content: resume.content as unknown as TResumeRowContent,
+            })),
+            RESUME_PICK_MAX_RESUMES,
+          );
+          const ranking = await rankResumesForJob(
+            rankingJob,
+            shortlist,
+            { telemetry: agentTelemetry("pickResumeForJob", { sessionId: ctx.sessionId, userId: ctx.user.id }) },
+          );
+
+          const charged = await deductUserCreditsHelper(supabase, ctx.user.id, RESUME_PICK_CREDITS);
+          if (!charged.success && charged.error === "INSUFFICIENT_CREDITS") return INSUFFICIENT_CREDITS;
+
+          const [best, ...others] = ranking.resumes;
+          return {
+            job: job ? compactJob(job) : null,
+            requirementCount: ranking.requirements.length,
+            best: fitSummary(best, true),
+            others: others.map((fit) => fitSummary(fit, false)),
+            ...(shortlist.length < resumes.length
+              ? {
+                  shortlisted: `The ${shortlist.length} closest of the user's ${resumes.length} resumes were compared in detail; the rest fit this job less well.`,
+                }
+              : {}),
+            ...(more
+              ? {
+                  note: `The user has more than ${RESUME_SHORTLIST_MAX} resumes; only the primary and newest ${RESUME_SHORTLIST_MAX} were considered. Say so.`,
+                }
+              : {}),
+            message:
+              "score is the share of the job's requirements the resume shows, must-haves counting double. Offer to review the best resume for this job, make it primary, or use it to apply.",
           };
         }),
     }),

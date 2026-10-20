@@ -5,6 +5,11 @@ import { PlatformGrid } from "./PlatformGrid";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import {
+  agentPromptHref,
+  COMPANY_AGENT_PATH,
+  savePendingPrompt,
+} from "@/helpers/agent/prompt-draft";
+import {
   AgentApplicationsPreview,
   AgentJobSearchPreview,
   AgentPrepPreview,
@@ -15,6 +20,27 @@ import {
   HireComposerPreview,
   HirePipelinePreview,
 } from "./HirePreviews";
+
+// Each card opens the agent (the recruiter agent on /hire) with a prompt for
+// what the card offers. The prompt is also saved, so it survives a detour
+// through login.
+const JOB_SEARCH_PROMPT = "Find jobs that match my profile";
+const TRACKING_PROMPT = "Show my applications, saved jobs and upcoming interviews";
+const BOARD_SEARCH_PROMPT = "Search for remote software engineer jobs posted this week";
+const PREP_PROMPT = "Review my resume and set up a mock interview";
+
+const CANDIDATE_SEARCH_PROMPT = "Find candidates who match my open jobs";
+const APPLICANTS_PROMPT = "Show me the newest applicants across my jobs";
+const JOB_POST_PROMPT = "Draft a job post for a senior backend engineer";
+const PIPELINE_PROMPT = "Summarise my hiring funnel and who's waiting for review";
+
+function agentCta(prompt: string, base?: string) {
+  return { href: agentPromptHref(prompt, base), onCtaClick: () => savePendingPrompt(prompt) };
+}
+
+function hireCta(prompt: string) {
+  return agentCta(prompt, COMPANY_AGENT_PATH);
+}
 
 export function HowWeHelp({ jobCount }: { jobCount: number }) {
   const pathname = usePathname();
@@ -31,7 +57,7 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
         description: isHirePage
           ? "Stop wasting time on irrelevant job seeker profiles. Our advanced AI learns your preferences to bring you candidates you'll actually love"
           : "Describe the role in plain English. It ranks the best matches for you.",
-        href: isHirePage ? "/company/profiles" : "/agent",
+        ...(isHirePage ? hireCta(CANDIDATE_SEARCH_PROMPT) : agentCta(JOB_SEARCH_PROMPT)),
         cta: isHirePage ? "Find your Dream Candidate" : "Ask the agent",
         background: isHirePage ? (
           <HireCandidatesPreview />
@@ -47,8 +73,8 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
         description: isHirePage
           ? "Manage all your applications in one place"
           : "Your applications, saved jobs and interviews, tracked in one chat.",
-        href: isHirePage ? "/company" : "/agent",
-        cta: isHirePage ? "Learn more" : "Start tracking",
+        ...(isHirePage ? hireCta(APPLICANTS_PROMPT) : agentCta(TRACKING_PROMPT)),
+        cta: isHirePage ? "Review applicants" : "Start tracking",
         background: isHirePage ? (
           <HireApplicantsPreview />
         ) : (
@@ -61,8 +87,8 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
         description: isHirePage
           ? "Create high-converting roles instantly. Our templates mandate key data to ensure clarity and attract only the most qualified, focused talent."
           : `Over ${jobCount.toLocaleString("en-US")} listings from Greenhouse, Workday, Ashby and more.`,
-        href: isHirePage ? "/company" : "/jobs",
-        cta: isHirePage ? "Learn more" : "Browse jobs",
+        ...(isHirePage ? hireCta(JOB_POST_PROMPT) : agentCta(BOARD_SEARCH_PROMPT)),
+        cta: isHirePage ? "Draft a job post" : "Search with the agent",
         background: isHirePage ? <HireComposerPreview /> : <PlatformGrid />,
         className: "lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3",
       },
@@ -71,8 +97,8 @@ export function HowWeHelp({ jobCount }: { jobCount: number }) {
         description: isHirePage
           ? "Manage your open roles and review pre-screened talent in one dashboard."
           : "Resume reviews against the job, plus AI mock interviews with feedback.",
-        href: isHirePage ? "/company" : "/agent",
-        cta: isHirePage ? "Learn more" : "Prepare with the agent",
+        ...(isHirePage ? hireCta(PIPELINE_PROMPT) : agentCta(PREP_PROMPT)),
+        cta: isHirePage ? "Check your pipeline" : "Prepare with the agent",
         background: isHirePage ? <HirePipelinePreview /> : <AgentPrepPreview />,
         className: "lg:col-start-1 lg:col-end-3 lg:row-start-3 lg:row-end-4",
       },

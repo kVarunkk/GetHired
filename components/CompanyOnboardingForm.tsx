@@ -39,6 +39,7 @@ import {
 } from "@/helpers/companies/company-profile-schema";
 import LocationSearchSelect from "./LocationSearchSelect";
 import PageHeader from "./PageHeader";
+import { COMPANY_HOME } from "@/helpers/user/home-path";
 
 const formSchema = companyProfileSchema.extend({
   logo_file: z.any().optional(),
@@ -51,10 +52,13 @@ const supabase = createClient();
 export default function CompanyOnboardingForm({
   user,
   company,
+  returnTo,
 }: {
   user: User | null;
   /** The session user's company, through `company_members` (`getMyCompany`). */
   company: { id: string; canEditProfile: boolean } | null;
+  /** Where to go once saved (a safe path, e.g. /company/agent); the dashboard by default. */
+  returnTo?: string | null;
 }) {
   const [loading, setLoading] = useState(false);
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null);
@@ -160,7 +164,7 @@ export default function CompanyOnboardingForm({
       setExistingLogoUrl(result.logoUrl);
 
       toast.success("Information Saved Successfully!");
-      router.push("/company");
+      router.push(returnTo ?? COMPANY_HOME);
     } catch (err) {
       toast.error(
         err instanceof Error

@@ -3,6 +3,7 @@ import { OnboardingForm } from "@/components/OnboardingComponent";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { createClient } from "@/lib/supabase/server";
+import { safeReturnPath } from "@/helpers/user/home-path";
 
 export default async function GetStartedPage({
   searchParams,
@@ -30,6 +31,7 @@ export default async function GetStartedPage({
               ? { id: myCompany.id, canEditProfile: can(myCompany, "company.profile") }
               : null
           }
+          returnTo={safeReturnPath(params.returnTo)}
         />
       ) : (
         <OnboardingForm />

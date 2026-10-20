@@ -54,14 +54,18 @@ export default function AgentShell({
   // in (helpers/agent/prompt-draft.ts) reopens the page with it.
   useEffect(() => {
     const pending = takePendingPrompt();
-    if (initialDraft) {
-      window.history.replaceState(null, "", `${basePath}?session=${activeSessionId}`);
-    } else if (pending) {
-      router.replace(agentPromptHref(pending, basePath));
-    }
+    if (!initialDraft && pending) router.replace(agentPromptHref(pending, basePath));
     // Only on arrival, not when switching chats.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Also when the saved prompt above comes back as ?prompt= into the same
+  // empty chat, which doesn't remount this.
+  useEffect(() => {
+    if (initialDraft) {
+      window.history.replaceState(null, "", `${basePath}?session=${activeSessionId}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDraft]);
 
   const openSession = (id: string) => {
     setMobileOpen(false);

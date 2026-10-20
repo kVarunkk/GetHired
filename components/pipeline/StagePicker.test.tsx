@@ -201,3 +201,19 @@ describe("StagePicker (PLT-032)", () => {
     expect(select()).toHaveValue(stageOf("screening").id);
   });
 });
+
+describe("StagePicker without pipeline.move", () => {
+  it("shows the current stage, locked, with the reason", () => {
+    render(
+      <StagePicker
+        applicationId={APPLICATION_ID}
+        stages={STAGES}
+        currentStageId={stageOf("screening").id}
+        canMove={false}
+      />,
+    );
+
+    expect(select()).toBeDisabled();
+    expect(select()).toHaveValue(stageOf("screening").id);
+  });
+});

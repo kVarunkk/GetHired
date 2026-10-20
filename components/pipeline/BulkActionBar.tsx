@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import RoleLocked from "@/components/team/RoleLocked";
+import { forbiddenMessage } from "@/helpers/companies/permissions";
 import type { MoveEmail } from "@/helpers/pipeline/move";
 import { changesCandidateStatus } from "@/helpers/pipeline/status-map";
 import MoveDialog, { type TemplateOption } from "./MoveDialog";
@@ -36,6 +38,7 @@ export default function BulkActionBar({
   stageIdOf = () => null,
   interviewStatusOf = () => null,
   interviewInvite,
+  canMove = true,
   nameOf,
   onDone,
 }: {
@@ -53,6 +56,8 @@ export default function BulkActionBar({
    * While the job's interview is off the dialog points to its setup.
    */
   interviewInvite?: { jobPostId: string; durationMinutes: number; enabled: boolean };
+  /** Without pipeline.move on the job "Move to…" and "Reject…" show, locked. */
+  canMove?: boolean;
   nameOf?: (applicationId: string) => string;
   /** Called after a successful move, to clear the selection. */
   onDone: () => void;
@@ -66,6 +71,9 @@ export default function BulkActionBar({
 
   const tooMany = selectedIds.length > MAX_SELECTED;
   const disabled = tooMany || isMoving;
+  const moveDisabled = disabled || !canMove;
+  const locked = (control: React.ReactNode) =>
+    canMove ? control : <RoleLocked reason={forbiddenMessage("pipeline.move")}>{control}</RoleLocked>;
   const rejected = stages.find((s) => s.kind === "rejected");
 
   const kindOf = (stageId: string | null) => stages.find((s) => s.id === stageId)?.kind ?? null;
@@ -110,27 +118,30 @@ export default function BulkActionBar({
           <span className="text-destructive">Select up to {MAX_SELECTED} to move them together.</span>
         )}
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Select
-            value=""
-            onValueChange={(id) => setTarget(stages.find((s) => s.id === id) ?? null)}
-            disabled={disabled}
-          >
-            <SelectTrigger className="h-8 w-[150px]" aria-label="Move to…">
-              <SelectValue placeholder="Move to…" />
-            </SelectTrigger>
-            <SelectContent>
-              {stages.map((stage) => (
-                <SelectItem key={stage.id} value={stage.id}>
-                  {stage.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {rejected && (
-            <Button size="sm" variant="destructive-outline" disabled={disabled} onClick={() => setTarget(rejected)}>
-              Reject…
-            </Button>
+          {locked(
+            <Select
+              value=""
+              onValueChange={(id) => setTarget(stages.find((s) => s.id === id) ?? null)}
+              disabled={moveDisabled}
+            >
+              <SelectTrigger className="h-8 w-[150px]" aria-label="Move to…">
+                <SelectValue placeholder="Move to…" />
+              </SelectTrigger>
+              <SelectContent>
+                {stages.map((stage) => (
+                  <SelectItem key={stage.id} value={stage.id}>
+                    {stage.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>,
           )}
+          {rejected &&
+            locked(
+              <Button size="sm" variant="destructive-outline" disabled={moveDisabled} onClick={() => setTarget(rejected)}>
+                Reject…
+              </Button>,
+            )}
           {interviewInvite && (
             <Button size="sm" variant="outline" disabled={disabled} onClick={() => setInviting(true)}>
               Invite to AI interview

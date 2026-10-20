@@ -107,11 +107,12 @@ export const APPLICANT_DEMO: AgentDemo = {
   suggestions: ["Review my resume", "Save the top two", "Only show jobs posted this week"],
 };
 
-// Candidate rows link to the talent pool: the sample profiles don't exist.
+// Candidate rows link to the talent pool: the sample profiles don't exist, so
+// they carry placeholder names rather than people's.
 const SAMPLE_CANDIDATES = [
   {
     id: "sample-c1",
-    name: "Priya S",
+    name: "Candidate A",
     roles: ["Frontend Engineer", "React Developer"],
     experienceYears: 6,
     locations: ["Bengaluru"],
@@ -121,7 +122,7 @@ const SAMPLE_CANDIDATES = [
   },
   {
     id: "sample-c2",
-    name: "Daniel K",
+    name: "Candidate B",
     roles: ["Full Stack Engineer"],
     experienceYears: 5,
     locations: ["Remote"],
@@ -131,7 +132,7 @@ const SAMPLE_CANDIDATES = [
   },
   {
     id: "sample-c3",
-    name: "Maria L",
+    name: "Candidate C",
     roles: ["Senior Frontend Engineer"],
     experienceYears: 7,
     locations: ["Pune"],
@@ -141,7 +142,7 @@ const SAMPLE_CANDIDATES = [
   },
   {
     id: "sample-c4",
-    name: "Arjun M",
+    name: "Candidate D",
     roles: ["React Developer"],
     experienceYears: 5,
     locations: ["Hyderabad", "Remote"],
@@ -153,8 +154,8 @@ const SAMPLE_CANDIDATES = [
 
 const RECRUITER_REPLY = `I found **4 strong matches** for your Senior Frontend Engineer post, all with 5+ years of React. Two stand out:
 
-- **Priya S** has led a design-system rebuild in React and TypeScript, which is the core of this role.
-- **Maria L** has 7 years on large frontend codebases and has mentored a team of four.
+- **Candidate A** has led a design-system rebuild in React and TypeScript, which is the core of this role.
+- **Candidate C** has 7 years on large frontend codebases and has mentored a team of four.
 
 Want me to invite them to the AI screening interview, or send them a message first?`;
 
@@ -196,5 +197,10 @@ export const RECRUITER_DEMO: AgentDemo = {
       ],
     },
   ],
-  suggestions: ["Invite the top two to interview", "Compare Priya and Maria", "Draft a job post"],
+  // Each suggestion opens a fresh chat, so none refers to the sample candidates.
+  suggestions: [
+    "Find candidates for my open roles",
+    "Invite top applicants to an AI interview",
+    "Draft a job post",
+  ],
 };

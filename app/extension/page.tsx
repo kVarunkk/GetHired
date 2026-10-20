@@ -1,5 +1,4 @@
 import FootComponent from "@/components/FootComponent";
-import AIFeatures from "@/components/landing-page/AIFeatures";
 import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
 import Hero from "@/components/landing-page/Hero";
@@ -47,7 +46,6 @@ export default async function MCPServerPage() {
             imgDark={CHROME_EXTENSION_DARK}
           />
           <HowWeHelp jobCount={jobCount} />
-          <AIFeatures />
           <PlatformStats
             applicationCount={applicationCount}
             resumeCount={resumeCount}

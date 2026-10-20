@@ -34,11 +34,14 @@ const EXISTING = {
 
 const supabase = () => mock.current!;
 
-async function renderLoaded(access: "owner" | "admin" | "member" | "profile" = "owner") {
+async function renderLoaded(
+  access: "owner" | "admin" | "member" | "profile" = "owner",
+  returnTo?: string,
+) {
   // RP-REQ-002: owners and roles with company.profile edit; Admin and Member don't.
   const canEditProfile = access === "owner" || access === "profile";
   supabase().queue("company_info", { data: EXISTING, error: null });
-  render(<CompanyOnboardingForm user={COMPANY_A.user} company={{ id: COMPANY_A.id, canEditProfile }} />);
+  render(<CompanyOnboardingForm user={COMPANY_A.user} company={{ id: COMPANY_A.id, canEditProfile }} returnTo={returnTo} />);
   await waitFor(() => expect(screen.getByPlaceholderText("Acme Inc.")).toHaveValue("Acme"));
 }
 
@@ -66,6 +69,15 @@ describe("CompanyOnboardingForm save", () => {
     expect(savedForm().get("removeLogo")).toBeNull();
     // Only the initial load reads company_info in the browser.
     expect(supabase().callsFor("company_info")).toHaveLength(1);
+  });
+
+  it("goes to the page the company was heading for, e.g. the agent from /hire", async () => {
+    vi.mocked(saveCompanyProfileAction).mockResolvedValue({ ok: true, logoUrl: null });
+    await renderLoaded("owner", "/company/agent");
+
+    submit();
+
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/company/agent"));
   });
 
   it("toasts the action's error and stays on the page", async () => {
