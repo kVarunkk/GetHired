@@ -123,6 +123,79 @@ describe("listInterviews tool", () => {
   });
 });
 
+describe("listScreeningInterviews tool", () => {
+  const SCREENING_ID = "66666666-6666-4666-8666-666666666666";
+  const APPLICATION_ID = "77777777-7777-4777-8777-777777777777";
+
+  it("lists the user's screening interviews through my_screening_interviews, newest first", async () => {
+    supabase.queueRpc("my_screening_interviews", {
+      data: [
+        {
+          id: SCREENING_ID,
+          application_id: APPLICATION_ID,
+          interview_id: INTERVIEW_ID,
+          job_post_id: JOB_ID,
+          job_title: "Backend Engineer",
+          company_name: "Acme",
+          competency_names: ["APIs"],
+          status: "invited",
+          created_at: "2026-10-10",
+          deadline_at: "2026-10-17",
+          completed_at: null,
+          duration_minutes: 20,
+          max_attempts: 2,
+          attempts_used: 1,
+          consent_version: null,
+          consented_at: null,
+        },
+      ],
+      error: null,
+    });
+
+    const result = await execTool(tools.listScreeningInterviews, { limit: 5 });
+
+    expect(supabase.callsFor("my_screening_interviews")[0].chain).toEqual([
+      { method: "rpc", args: ["my_screening_interviews"] },
+      { method: "order", args: ["created_at", { ascending: false }] },
+      { method: "limit", args: [5] },
+    ]);
+    expect(result).toEqual({
+      interviews: [
+        {
+          id: SCREENING_ID,
+          applicationId: APPLICATION_ID,
+          job: { id: JOB_ID, title: "Backend Engineer", company: "Acme" },
+          status: "invited",
+          invitedAt: "2026-10-10",
+          deadlineAt: "2026-10-17",
+          completedAt: null,
+          durationMinutes: 20,
+          attemptsLeft: 1,
+          url: `/interview/screening/${SCREENING_ID}`,
+        },
+      ],
+    });
+  });
+
+  it("uses the default limit", async () => {
+    supabase.queueRpc("my_screening_interviews", { data: [], error: null });
+
+    expect(await execTool(tools.listScreeningInterviews, {})).toEqual({ interviews: [] });
+    expect(supabase.callsFor("my_screening_interviews")[0].chain.at(-1)).toEqual({
+      method: "limit",
+      args: [10],
+    });
+  });
+
+  it("reports a failed read instead of an empty list", async () => {
+    supabase.queueRpc("my_screening_interviews", { data: null, error: { message: "boom" } });
+
+    expect(await execTool(tools.listScreeningInterviews, {})).toEqual({
+      error: "Something went wrong while running listScreeningInterviews. Please try again.",
+    });
+  });
+});
+
 describe("getInterviewAnalysis tool", () => {
   const queueInterview = (data: unknown = { id: INTERVIEW_ID, name: "Stripe frontend" }) =>
     supabase.queue("interviews", { data, error: null });

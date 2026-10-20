@@ -5,8 +5,22 @@ import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-moc
 import { setPrimaryResumeAction } from "@/app/actions/set-primary-resume";
 import { createResumeReviewAction } from "@/app/actions/create-resume-review";
 import { startReviewAnalysis } from "@/helpers/resume-review/start-review-analysis";
+import { rankResumesForJob, type ResumeFit } from "@/helpers/resume-review/rank-resumes-for-job";
+import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
+import { shortlistResumes } from "@/helpers/resume-review/shortlist-resumes";
 
 vi.mock("@/app/actions/set-primary-resume", () => ({ setPrimaryResumeAction: vi.fn() }));
+vi.mock("@/helpers/resume-review/rank-resumes-for-job", () => ({
+  rankResumesForJob: vi.fn(),
+  RESUME_PICK_MAX_RESUMES: 5,
+  RESUME_PICK_CREDITS: 1,
+}));
+vi.mock("@/helpers/resume-review/shortlist-resumes", () => ({
+  shortlistResumes: vi.fn(),
+  RESUME_SHORTLIST_MAX: 50,
+}));
+vi.mock("@/helpers/ai/deduct-user-credits", () => ({ deductUserCreditsHelper: vi.fn() }));
+vi.mock("@/helpers/agent/telemetry", () => ({ agentTelemetry: () => ({ isEnabled: false }) }));
 vi.mock("@/app/actions/create-resume-review", () => ({ createResumeReviewAction: vi.fn() }));
 vi.mock("@/helpers/resume-review/start-review-analysis", () => ({ startReviewAnalysis: vi.fn() }));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
@@ -43,7 +57,7 @@ describe("listResumes tool", () => {
       { method: "select", args: ["id, name, is_primary, parsing_failed, content, created_at"] },
       { method: "eq", args: ["user_id", "u1"] },
       { method: "order", args: ["created_at", { ascending: false }] },
-      { method: "limit", args: [20] },
+      { method: "limit", args: [50] },
     ]);
     expect(result).toEqual({
       resumes: [
@@ -306,5 +320,296 @@ describe("getResumeReview tool", () => {
     expect(await execTool(tools.getResumeReview, { reviewId: REVIEW_ID })).toEqual({
       error: "Resume review not found.",
     });
+  });
+});
+
+describe("pickResumeForJob tool", () => {
+  const ready = (id: string, name: string) => ({ id, name, content: { sections: [] } });
+  const fit = (id: string, score: number, extra: Partial<ResumeFit> = {}): ResumeFit => ({
+    id,
+    name: id,
+    score,
+    matched: [],
+    missing: [],
+    ...extra,
+  });
+  const JOB_ROW = {
+    id: JOB_ID,
+    job_name: "Backend Engineer",
+    company_name: "Acme",
+    locations: ["Remote"],
+    salary_range: null,
+    job_type: "Fulltime",
+    description: JD,
+    created_at: "c",
+  };
+
+  beforeEach(() => {
+    vi.mocked(rankResumesForJob).mockReset();
+    vi.mocked(shortlistResumes)
+      .mockReset()
+      .mockImplementation(async (_job, resumes, size) => resumes.slice(0, size));
+    vi.mocked(deductUserCreditsHelper).mockReset().mockResolvedValue({ success: true });
+  });
+
+  it("needs exactly one of jobId or jobDescription", async () => {
+    expect((await validateInput(tools.pickResumeForJob, {})).success).toBe(false);
+    expect(
+      (await validateInput(tools.pickResumeForJob, { jobId: JOB_ID, jobDescription: JD })).success,
+    ).toBe(false);
+  });
+
+  it("ranks the user's ready resumes for a job, then charges 1 credit", async () => {
+    supabase.queue("resumes", { data: [ready("r1", "Primary"), ready("r2", "Backend")], error: null });
+    supabase.queue("all_jobs", { data: JOB_ROW, error: null });
+    supabase.queue("user_info", { data: { ai_credits: 3 }, error: null });
+    vi.mocked(rankResumesForJob).mockResolvedValue({
+      requirements: [{ text: "Go", importance: "must" }],
+      resumes: [
+        fit("r2", 100, { matched: [{ requirement: "Go", quote: "Built APIs in Go" }] }),
+        fit("r1", 0, { missing: [{ text: "Go", importance: "must" }] }),
+      ],
+    });
+
+    const result = await execTool(tools.pickResumeForJob, { jobId: JOB_ID });
+
+    expect(supabase.callsFor("resumes")[0].chain).toEqual([
+      { method: "select", args: ["id, name, content"] },
+      { method: "eq", args: ["user_id", "u1"] },
+      { method: "eq", args: ["parsing_failed", false] },
+      { method: "not", args: ["content", "is", null] },
+      { method: "order", args: ["is_primary", { ascending: false }] },
+      { method: "order", args: ["created_at", { ascending: false }] },
+      { method: "limit", args: [51] },
+    ]);
+    expect(rankResumesForJob).toHaveBeenCalledWith(
+      { title: "Backend Engineer", company: "Acme", description: JD },
+      [
+        { id: "r1", name: "Primary", content: { sections: [] } },
+        { id: "r2", name: "Backend", content: { sections: [] } },
+      ],
+      expect.anything(),
+    );
+    expect(deductUserCreditsHelper).toHaveBeenCalledWith(supabase.client, "u1", 1);
+    expect(result).toMatchObject({
+      job: { id: JOB_ID, title: "Backend Engineer", url: `/jobs/${JOB_ID}` },
+      requirementCount: 1,
+      best: { id: "r2", score: 100, matched: [{ requirement: "Go", quote: "Built APIs in Go" }], missing: [] },
+      others: [{ id: "r1", score: 0, missing: [{ text: "Go", importance: "must" }] }],
+    });
+    expect((result as { others: object[] }).others[0]).not.toHaveProperty("matched");
+    expect(result).not.toHaveProperty("note");
+    expect(result).not.toHaveProperty("shortlisted");
+  });
+
+  it("shortlists the closest 5 of many resumes, then ranks only those", async () => {
+    const all = Array.from({ length: 8 }, (_, i) => `r${i + 1}`);
+    const closest = ["r2", "r4", "r5", "r7", "r8"];
+    supabase.queue("resumes", { data: all.map((id) => ready(id, id)), error: null });
+    supabase.queue("user_info", { data: { ai_credits: 1 }, error: null });
+    vi.mocked(shortlistResumes).mockImplementation(async (_job, resumes) =>
+      resumes.filter((resume) => closest.includes(resume.id)),
+    );
+    vi.mocked(rankResumesForJob).mockResolvedValue({
+      requirements: [{ text: "React", importance: "must" }],
+      resumes: closest.map((id) => fit(id, 0)),
+    });
+
+    const result = await execTool(tools.pickResumeForJob, { jobDescription: JD });
+
+    const [job, candidates, size] = vi.mocked(shortlistResumes).mock.calls[0];
+    expect(job).toEqual({ title: null, company: null, description: JD });
+    expect(candidates.map((r) => r.id)).toEqual(all);
+    expect(size).toBe(5);
+    expect(vi.mocked(rankResumesForJob).mock.calls[0][1].map((r) => r.id)).toEqual(closest);
+    expect(deductUserCreditsHelper).toHaveBeenCalledTimes(1);
+    expect(result).toHaveProperty("shortlisted", expect.stringMatching(/5 closest of the user's 8/));
+    expect(result).not.toHaveProperty("note");
+  });
+
+  it("says when the user has more resumes than one pick looks at", async () => {
+    supabase.queue("resumes", {
+      data: Array.from({ length: 51 }, (_, i) => ready(`r${i}`, `r${i}`)),
+      error: null,
+    });
+    supabase.queue("user_info", { data: { ai_credits: 1 }, error: null });
+    vi.mocked(rankResumesForJob).mockResolvedValue({
+      requirements: [{ text: "React", importance: "must" }],
+      resumes: ["r0", "r1", "r2", "r3", "r4"].map((id) => fit(id, 0)),
+    });
+
+    const result = await execTool(tools.pickResumeForJob, { jobDescription: JD });
+
+    expect(vi.mocked(shortlistResumes).mock.calls[0][1]).toHaveLength(50);
+    expect(result).toHaveProperty("note", expect.stringMatching(/more than 50 resumes/));
+  });
+
+  it("doesn't shortlist or rank without a credit", async () => {
+    supabase.queue("resumes", { data: [ready("r1", "A"), ready("r2", "B")], error: null });
+    supabase.queue("user_info", { data: { ai_credits: 0 }, error: null });
+
+    await execTool(tools.pickResumeForJob, { jobDescription: JD });
+
+    expect(shortlistResumes).not.toHaveBeenCalled();
+    expect(rankResumesForJob).not.toHaveBeenCalled();
+  });
+
+  describe("with resumeIds", () => {
+    const [A, B, C] = [
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    ];
+
+    it("validates the list", async () => {
+      const valid = async (resumeIds: string[]) =>
+        (await validateInput(tools.pickResumeForJob, { jobDescription: JD, resumeIds })).success;
+      expect(await valid([A])).toBe(false);
+      expect(await valid([A, A])).toBe(false);
+      const many = Array.from({ length: 51 }, (_, i) => `${String(i).padStart(8, "0")}-0000-4000-8000-000000000000`);
+      expect(await valid(many)).toBe(false);
+      expect(await valid(many.slice(0, 50))).toBe(true);
+      expect(await valid([A, B, C])).toBe(true);
+    });
+
+    it("compares exactly those resumes, in the user's order", async () => {
+      supabase.queue("resumes", {
+        data: [
+          { ...ready(C, "C"), parsing_failed: false },
+          { ...ready(A, "A"), parsing_failed: false },
+          { ...ready(B, "B"), parsing_failed: false },
+        ],
+        error: null,
+      });
+      supabase.queue("user_info", { data: { ai_credits: 1 }, error: null });
+      vi.mocked(rankResumesForJob).mockResolvedValue({
+        requirements: [{ text: "React", importance: "must" }],
+        resumes: [fit(B, 100), fit(A, 0), fit(C, 0)],
+      });
+
+      const result = await execTool(tools.pickResumeForJob, { jobDescription: JD, resumeIds: [B, A, C] });
+
+      expect(supabase.callsFor("resumes")[0].chain).toEqual([
+        { method: "select", args: ["id, name, content, parsing_failed"] },
+        { method: "eq", args: ["user_id", "u1"] },
+        { method: "in", args: ["id", [B, A, C]] },
+      ]);
+      expect(vi.mocked(rankResumesForJob).mock.calls[0][1].map((r) => r.id)).toEqual([B, A, C]);
+      expect(result).toMatchObject({ best: { id: B } });
+      expect(result).not.toHaveProperty("note");
+    });
+
+    it("refuses resumes that aren't the user's or aren't ready, before spending anything", async () => {
+      supabase.queue("resumes", {
+        data: [
+          { ...ready(A, "A"), parsing_failed: false },
+          { id: B, name: "B", content: null, parsing_failed: true },
+          { id: C, name: "C", content: null, parsing_failed: false },
+        ],
+        error: null,
+      });
+
+      const result = await execTool(tools.pickResumeForJob, {
+        jobDescription: JD,
+        resumeIds: [A, B, C, RESUME_ID],
+      });
+
+      expect(result).toEqual({
+        error: "Some of these resumes can't be compared.",
+        resumes: [
+          { resumeId: B, reason: "couldn't be read; ask the user to upload it again" },
+          { resumeId: C, reason: "still being processed" },
+          { resumeId: RESUME_ID, reason: "not found" },
+        ],
+      });
+      expect(supabase.callsFor("user_info")).toHaveLength(0);
+      expect(rankResumesForJob).not.toHaveBeenCalled();
+    });
+  });
+
+  it("compares against a pasted job description", async () => {
+    supabase.queue("resumes", { data: [ready("r1", "A"), ready("r2", "B")], error: null });
+    supabase.queue("user_info", { data: { ai_credits: 1 }, error: null });
+    vi.mocked(rankResumesForJob).mockResolvedValue({
+      requirements: [{ text: "React", importance: "must" }],
+      resumes: [fit("r1", 50), fit("r2", 0)],
+    });
+
+    const result = await execTool(tools.pickResumeForJob, { jobDescription: JD });
+
+    expect(supabase.callsFor("all_jobs")).toHaveLength(0);
+    expect(vi.mocked(rankResumesForJob).mock.calls[0][0]).toEqual({ title: null, company: null, description: JD });
+    expect(result).toMatchObject({ job: null, best: { id: "r1" } });
+  });
+
+  it("is free with one ready resume", async () => {
+    supabase.queue("resumes", { data: [ready("r1", "Only")], error: null });
+
+    expect(await execTool(tools.pickResumeForJob, { jobId: JOB_ID })).toMatchObject({
+      best: { id: "r1", name: "Only" },
+      others: [],
+    });
+    expect(rankResumesForJob).not.toHaveBeenCalled();
+    expect(deductUserCreditsHelper).not.toHaveBeenCalled();
+  });
+
+  it("asks for an upload when there are no ready resumes", async () => {
+    supabase.queue("resumes", { data: [], error: null });
+
+    expect(await execTool(tools.pickResumeForJob, { jobId: JOB_ID })).toEqual({
+      error: "The user has no ready resumes. Ask them to upload one.",
+    });
+  });
+
+  it("refuses unknown jobs and jobs without a description", async () => {
+    supabase.queue("resumes", { data: [ready("r1", "A"), ready("r2", "B")], error: null });
+    expect(await execTool(tools.pickResumeForJob, { jobId: JOB_ID })).toEqual({ error: "Job not found." });
+
+    supabase.queue("resumes", { data: [ready("r1", "A"), ready("r2", "B")], error: null });
+    supabase.queue("all_jobs", { data: { ...JOB_ROW, description: " " }, error: null });
+    expect(await execTool(tools.pickResumeForJob, { jobId: JOB_ID })).toMatchObject({
+      error: expect.stringMatching(/no description/),
+    });
+    expect(rankResumesForJob).not.toHaveBeenCalled();
+  });
+
+  it("doesn't call the model without a credit", async () => {
+    supabase.queue("resumes", { data: [ready("r1", "A"), ready("r2", "B")], error: null });
+    supabase.queue("user_info", { data: { ai_credits: 0 }, error: null });
+
+    expect(await execTool(tools.pickResumeForJob, { jobDescription: JD })).toMatchObject({
+      error: "INSUFFICIENT_CREDITS",
+    });
+    expect(rankResumesForJob).not.toHaveBeenCalled();
+    expect(deductUserCreditsHelper).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed charge as insufficient credits", async () => {
+    supabase.queue("resumes", { data: [ready("r1", "A"), ready("r2", "B")], error: null });
+    supabase.queue("user_info", { data: { ai_credits: 1 }, error: null });
+    vi.mocked(rankResumesForJob).mockResolvedValue({
+      requirements: [{ text: "React", importance: "must" }],
+      resumes: [fit("r1", 50), fit("r2", 0)],
+    });
+    vi.mocked(deductUserCreditsHelper).mockResolvedValue({
+      success: false,
+      error: "INSUFFICIENT_CREDITS",
+      message: "User does not have enough credits.",
+    });
+
+    expect(await execTool(tools.pickResumeForJob, { jobDescription: JD })).toMatchObject({
+      error: "INSUFFICIENT_CREDITS",
+    });
+  });
+
+  it("hides model errors from the model", async () => {
+    supabase.queue("resumes", { data: [ready("r1", "A"), ready("r2", "B")], error: null });
+    supabase.queue("user_info", { data: { ai_credits: 1 }, error: null });
+    vi.mocked(rankResumesForJob).mockRejectedValue(new Error("Gemini 500"));
+
+    expect(await execTool(tools.pickResumeForJob, { jobDescription: JD })).toEqual({
+      error: "Something went wrong while running pickResumeForJob. Please try again.",
+    });
+    expect(deductUserCreditsHelper).not.toHaveBeenCalled();
   });
 });

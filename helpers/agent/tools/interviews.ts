@@ -12,6 +12,7 @@ const DEFAULT_INTERVIEW_NAME = "AI Interview";
 const interviewUrl = (interviewId: string) => `/interview/${interviewId}`;
 const analysisUrl = (interviewId: string, sessionId: string) =>
   `/interview/${interviewId}/analysis/${sessionId}`;
+const screeningUrl = (id: string) => `/interview/screening/${id}`;
 
 type SessionRow = {
   id: string;
@@ -67,6 +68,37 @@ export function createInterviewTools(ctx: AgentToolContext) {
                       ?.status ?? null,
                 })),
               url: interviewUrl(interview.id),
+            })),
+          };
+        }),
+    }),
+
+    listScreeningInterviews: tool({
+      description:
+        "List the screening interviews companies have invited the user to after they applied, newest first: the job and company, the status (invited, paused, in_progress, completed, expired, declined, cancelled or withdrawn), the deadline, length and attempts left. These are separate from mock interviews. The company keeps the report; the user doesn't see a score.",
+      inputSchema: z.object({ limit: limitInput }),
+      execute: ({ limit }) =>
+        withToolErrors(ctx, "listScreeningInterviews", async () => {
+          // my_screening_interviews() returns the session user's rows only,
+          // without the questions (SI-REQ-020).
+          const { data, error } = await supabase
+            .rpc("my_screening_interviews")
+            .order("created_at", { ascending: false })
+            .limit(limit ?? AGENT_LIST_DEFAULT_LIMIT);
+          if (error) throw error;
+
+          return {
+            interviews: (data ?? []).map((interview) => ({
+              id: interview.id,
+              applicationId: interview.application_id,
+              job: { id: interview.job_post_id, title: interview.job_title, company: interview.company_name },
+              status: interview.status,
+              invitedAt: interview.created_at,
+              deadlineAt: interview.deadline_at,
+              completedAt: interview.completed_at,
+              durationMinutes: interview.duration_minutes,
+              attemptsLeft: Math.max(interview.max_attempts - interview.attempts_used, 0),
+              url: screeningUrl(interview.id),
             })),
           };
         }),

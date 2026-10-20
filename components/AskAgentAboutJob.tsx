@@ -6,8 +6,8 @@ import AskAgentBox from "./agent/AskAgentBox";
 // The job page's AI features, as one entry point to /agent: a question box
 // plus suggested prompts. Each opens the agent with the prompt in its message
 // box (the user still sends it). The job's link goes in the prompt so the
-// agent can pass its id to getJobDetails, createInterview, startResumeReview
-// and findSimilarJobs. The opportunity page uses it too, for the job an
+// agent can pass its id to getJobDetails, createInterview, pickResumeForJob,
+// startResumeReview and findSimilarJobs. The opportunity page uses it too, for the job an
 // outreach is about.
 
 type Job = { id: string; job_name: string | null; company_name: string | null };
@@ -23,6 +23,7 @@ export function jobSuggestions(job: Job) {
   const ref = jobRef(job);
   return [
     { label: "Mock interview", prompt: `Set up a mock interview for ${ref}.` },
+    { label: "Best resume for it", prompt: `Which of my resumes fits ${ref} best?` },
     {
       label: "Tailor my CV",
       prompt: `Review my resume against ${ref} and tell me what to change.`,
