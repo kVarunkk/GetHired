@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { takePendingPrompt } from "@/helpers/agent/prompt-draft";
 import AgentHeroDemo from "./AgentHeroDemo";
 import { RECRUITER_DEMO } from "./agent-demos";
@@ -7,7 +7,15 @@ import { RECRUITER_DEMO } from "./agent-demos";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
+// Signed in unless a test says otherwise.
+const getSession = vi.fn();
+vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth: { getSession } }) }));
+
 describe("AgentHeroDemo", () => {
+  beforeEach(() => {
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     push.mockClear();
@@ -68,6 +76,52 @@ describe("AgentHeroDemo", () => {
     vi.stubGlobal("fetch", fetchSpy);
     render(<AgentHeroDemo />);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  describe("signed out", () => {
+    beforeEach(() => {
+      getSession.mockResolvedValue({ data: { session: null } });
+    });
+
+    // Not through the agent: the router would cache the middleware's redirect
+    // for /agent and replay it after login.
+    it("links straight to login, returning to the agent with the prompt", async () => {
+      render(<AgentHeroDemo />);
+
+      const suggestions = within(screen.getByRole("group", { name: "Suggested replies" }));
+      await waitFor(() =>
+        expect(suggestions.getByRole("link", { name: "Save the top two" })).toHaveAttribute(
+          "href",
+          "/auth/login?returnTo=%2Fagent%3Fprompt%3DSave%2520the%2520top%2520two",
+        ),
+      );
+      expect(screen.getByRole("link", { name: "Memories" })).toHaveAttribute(
+        "href",
+        "/auth/login?returnTo=%2Fagent",
+      );
+
+      fireEvent.change(screen.getByRole("textbox", { name: "Message" }), {
+        target: { value: "Remote Go jobs" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Send" }));
+      expect(push).toHaveBeenCalledWith(
+        "/auth/login?returnTo=%2Fagent%3Fprompt%3DRemote%2520Go%2520jobs",
+      );
+      expect(takePendingPrompt()).toBe("Remote Go jobs");
+    });
+
+    it("sends the recruiter demo to the company login", async () => {
+      render(<AgentHeroDemo demo={RECRUITER_DEMO} />);
+
+      await waitFor(() =>
+        expect(screen.getByRole("link", { name: "Memories" })).toHaveAttribute(
+          "href",
+          "/auth/login?company=true&returnTo=%2Fcompany%2Fagent",
+        ),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Send" }));
+      expect(push).toHaveBeenCalledWith("/auth/login?company=true&returnTo=%2Fcompany%2Fagent");
+    });
   });
 
   describe("recruiter demo", () => {
