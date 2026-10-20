@@ -26,7 +26,9 @@ ENV NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=$NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
 ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
 
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_OPTIONS="--max-old-space-size=1536"
+# Type checking the build needs more than 1.5 GB of heap. Cloud Build's
+# default machine (e2-standard-2) has 8 GB.
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 # RUN npm run build
 RUN mkdir -p .next
 RUN --mount=type=cache,target=/app/.next/cache,uid=1000,gid=1000 npm run build
