@@ -225,7 +225,10 @@ export default async function JobsPage({
             title="Jobs"
             description="Open roles from GetHired companies and across the web. Filter them, or search with AI."
           />
-          {user?.app_metadata.type === "applicant" && <AskAgentAboutJobs />}
+          {/* Signed-out visitors get it too: the agent keeps the prompt through login. */}
+          {(!user || user.app_metadata.type === "applicant") && (
+            <AskAgentAboutJobs />
+          )}
         </div>
         <ClientTabs
           user={user}

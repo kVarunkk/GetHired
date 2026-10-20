@@ -2,8 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { User } from "@supabase/supabase-js";
-import { ClientTabs, JOB_SEARCH_PROMPT } from "./ClientTabs";
-import { agentPromptHref } from "@/helpers/agent/prompt-draft";
+import { ClientTabs } from "./ClientTabs";
 
 const push = vi.fn();
 let search = "";
@@ -125,7 +124,11 @@ describe("ClientTabs: talent lists (PL-TASK-051)", () => {
 });
 
 describe("ClientTabs: the jobs page's search box", () => {
-  const renderJobs = (user: User | null) =>
+  // The page's AskAgentBox is the agent entry point; the tab row has no search box.
+  it.each([
+    ["signed in", USER],
+    ["signed out", null],
+  ])("isn't shown (%s)", (_, user) => {
     render(
       <ClientTabs
         user={user}
@@ -137,33 +140,6 @@ describe("ClientTabs: the jobs page's search box", () => {
       </ClientTabs>,
     );
 
-  // Signed-in users get the tab row instead; the box is commented out there.
-  it("isn't shown to signed-in users", () => {
-    renderJobs(USER);
-
     expect(screen.queryByRole("search")).not.toBeInTheDocument();
-  });
-
-  it("opens the agent with what was typed (signed out)", async () => {
-    renderJobs(null);
-
-    await userEvent.type(
-      screen.getByRole("textbox", { name: /What jobs are you looking for/ }),
-      "Remote React roles in Bangalore{Enter}",
-    );
-
-    expect(push).toHaveBeenCalledWith(
-      agentPromptHref("Remote React roles in Bangalore"),
-    );
-  });
-
-  it("opens the agent with the default job search prompt when sent empty", async () => {
-    renderJobs(null);
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "Ask the assistant" }),
-    );
-
-    expect(push).toHaveBeenCalledWith(agentPromptHref(JOB_SEARCH_PROMPT));
   });
 });
