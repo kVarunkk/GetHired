@@ -22,7 +22,7 @@ import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useProgress } from "react-transition-progress";
 import GoogleAuthBtn from "./GoogleAuthBtn";
-import { COMPANY_HOME, homePathFor } from "@/helpers/user/home-path";
+import { COMPANY_HOME, homePathFor, safeReturnPath } from "@/helpers/user/home-path";
 import { mutate } from "swr";
 
 const loginSchema = z.object({
@@ -42,7 +42,7 @@ export function LoginForm({
   const isCompany = searchParams.get("company") === "true";
   const startProgress = useProgress();
 
-  const returnToPath = searchParams.get("returnTo");
+  const returnToPath = safeReturnPath(searchParams.get("returnTo"));
 
   const form = useForm({
     resolver: zodResolver(loginSchema),
@@ -71,11 +71,9 @@ export function LoginForm({
       await mutate(() => true, undefined, { revalidate: true });
       startTransition(() => {
         startProgress();
-        if (isCompany) {
-          router.push(COMPANY_HOME);
-        } else {
-          router.push(returnToPath ?? homePathFor(data.user?.app_metadata));
-        }
+        router.push(
+          returnToPath ?? (isCompany ? COMPANY_HOME : homePathFor(data.user?.app_metadata)),
+        );
       });
     } catch (error) {
       form.setError("root", {
@@ -185,7 +183,8 @@ export function LoginForm({
                 <Link
                   href={
                     isCompany
-                      ? "/auth/sign-up?company=true"
+                      ? "/auth/sign-up?company=true" +
+                        (returnToPath ? "&returnTo=" + encodeURIComponent(returnToPath) : "")
                       : returnToPath
                         ? "/auth/sign-up?returnTo=" + encodeURIComponent(returnToPath)
                         : "/auth/sign-up"

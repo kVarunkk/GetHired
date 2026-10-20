@@ -23,6 +23,7 @@ import InfoTooltip from "./InfoTooltip";
 import { useProgress } from "react-transition-progress";
 import GoogleAuthBtn from "./GoogleAuthBtn";
 import { sendSignupEmail } from "@/app/actions/sign-up-email";
+import { safeReturnPath } from "@/helpers/user/home-path";
 
 const isGenericEmail = (email: string) => {
   const genericDomains = [
@@ -74,7 +75,7 @@ export function SignUpForm({
   const isCompany = searchParams.get("company") === "true";
   const startProgress = useProgress();
 
-  const returnToPath = searchParams.get("returnTo");
+  const returnToPath = safeReturnPath(searchParams.get("returnTo"));
 
   const form = useForm({
     resolver: zodResolver(signUpSchema(isCompany)),
@@ -97,6 +98,8 @@ export function SignUpForm({
         values.email,
         values.password,
         isCompany,
+        // Applicants' confirm link still goes to the agent, as before.
+        isCompany && returnToPath ? { returnTo: returnToPath } : {},
       );
 
       if (!result.success) throw new Error(result.error);
@@ -241,7 +244,8 @@ export function SignUpForm({
                 <Link
                   href={
                     isCompany
-                      ? "/auth/login?company=true"
+                      ? "/auth/login?company=true" +
+                        (returnToPath ? "&returnTo=" + encodeURIComponent(returnToPath) : "")
                       : returnToPath
                         ? "/auth/login?returnTo=" + encodeURIComponent(returnToPath)
                         : "/auth/login"

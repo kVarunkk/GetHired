@@ -51,6 +51,20 @@ describe("sendSignupEmail: existing sign-ups (characterisation)", () => {
     expect((await confirmLink())?.searchParams.get("next")).toBe("/get-started?company=true");
   });
 
+  it("sends a company back to the page it signed up from once it has onboarded", async () => {
+    await sendSignupEmail("hr@acme.com", "password123", true, { returnTo: "/company/agent" });
+
+    expect((await confirmLink())?.searchParams.get("next")).toBe(
+      "/get-started?company=true&returnTo=%2Fcompany%2Fagent",
+    );
+  });
+
+  it("ignores a return path that leaves the site", async () => {
+    await sendSignupEmail("hr@acme.com", "password123", true, { returnTo: "//evil.example" });
+
+    expect((await confirmLink())?.searchParams.get("next")).toBe("/get-started?company=true");
+  });
+
   it("creates an applicant account with a user_info row", async () => {
     expect(await sendSignupEmail("ada@example.com", "password123", false)).toMatchObject({ success: true });
 

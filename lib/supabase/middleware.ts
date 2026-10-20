@@ -4,7 +4,7 @@ import { hasEnvVars } from "../../utils/utils";
 import { UserAppMetadata } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { getUserFromRequest } from "./get-user-from-request";
-import { APPLICANT_HOME, COMPANY_HOME } from "@/helpers/user/home-path";
+import { APPLICANT_HOME, COMPANY_HOME, companyOnboardingPath } from "@/helpers/user/home-path";
 import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 
 export async function updateSession(request: NextRequest) {
@@ -216,6 +216,11 @@ export async function updateSession(request: NextRequest) {
 
       if (url.pathname.startsWith("/company")) {
         redirectUrl.searchParams.set("company", "true");
+        // e.g. the /hire demo's links into /company/agent. The dashboard is
+        // where companies land anyway.
+        if (url.pathname !== COMPANY_HOME) {
+          redirectUrl.searchParams.set("returnTo", url.pathname);
+        }
       } else {
         redirectUrl.searchParams.set("returnTo", url.pathname + url.search);
       }
@@ -310,12 +315,14 @@ export async function updateSession(request: NextRequest) {
       !isCompanyOnboardingPath &&
       !isPublicPath
     ) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/get-started";
-      deleteSearchParams(url);
-
-      url.searchParams.set("company", "true");
-      return NextResponse.redirect(url);
+      // A company page they were heading for (e.g. /company/agent) is where
+      // onboarding sends them when it's done.
+      return NextResponse.redirect(
+        new URL(
+          companyOnboardingPath(pathname.startsWith("/company/") ? pathname : null),
+          request.nextUrl.origin,
+        ),
+      );
     }
 
     // --- Restrict Access to Company Routes ---
