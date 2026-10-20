@@ -1,5 +1,7 @@
 import CompanyOnboardingForm from "@/components/CompanyOnboardingForm";
 import { OnboardingForm } from "@/components/OnboardingComponent";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { can } from "@/helpers/companies/permissions";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function GetStartedPage({
@@ -14,9 +16,24 @@ export default async function GetStartedPage({
   const params = await searchParams;
   const company = params.company === "true";
 
+  // Through company_members, so every member sees the company's profile, not
+  // only the owner (company_info.user_id).
+  const myCompany = company && user ? await getMyCompany(supabase, user) : null;
+
   return (
     <div>
-      {company ? <CompanyOnboardingForm user={user} /> : <OnboardingForm />}
+      {company ? (
+        <CompanyOnboardingForm
+          user={user}
+          company={
+            myCompany
+              ? { id: myCompany.id, canEditProfile: can(myCompany, "company.profile") }
+              : null
+          }
+        />
+      ) : (
+        <OnboardingForm />
+      )}
     </div>
   );
 }

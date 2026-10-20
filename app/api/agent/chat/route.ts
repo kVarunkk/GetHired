@@ -13,25 +13,23 @@ import {
 } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
-import { internalError, readJson, requireApplicant } from "@/helpers/agent/auth";
+import { internalError, readJson, requireAgentUser } from "@/helpers/agent/auth";
 import {
   AGENT_CONTEXT_WINDOW,
-  AGENT_DAILY_MESSAGE_CAP,
   AGENT_FULL_TOOL_OUTPUT_TURNS,
   AGENT_MAX_MESSAGE_CHARS,
   AGENT_MAX_REGENERATIONS,
   AGENT_MAX_STEPS,
   AGENT_MODEL,
   AGENT_SAFETY_SETTINGS,
-  AGENT_CONTENT_FILTER_MESSAGE,
 } from "@/helpers/agent/config";
-import { agentToolApproval } from "@/helpers/agent/approval";
+import { AGENT_ROLES } from "@/helpers/agent/roles";
+import { EntitlementError, toEntitlementResponse } from "@/helpers/billing/errors";
 import { dropAbandonedToolCalls, selectContextMessages } from "@/helpers/agent/context";
 import { mergeClientUpdates } from "@/helpers/agent/client-updates";
 import { listMemories } from "@/helpers/agent/memory";
 import {
   countUserMessagesToday,
-  loadPromptProfile,
   loadSession,
   setSessionTitle,
   touchSession,
@@ -42,9 +40,7 @@ import { generateSessionTitle, summariseSession } from "@/helpers/agent/summaris
 import { generateFollowUps } from "@/helpers/agent/suggestions";
 import { stoppedReply } from "@/helpers/agent/stopped";
 import { canRegenerate, withRegeneration } from "@/helpers/agent/regenerations";
-import { buildSystemPrompt } from "@/helpers/agent/system-prompt";
 import { agentTelemetry, flushAgentTraces } from "@/helpers/agent/telemetry";
-import { createAgentTools } from "@/helpers/agent/tools";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
@@ -75,11 +71,8 @@ const bodySchema = z
 const badRequest = (error: string) => NextResponse.json({ error }, { status: 400 });
 const tooManyRequests = (error: string) => NextResponse.json({ error }, { status: 429 });
 
-const DAILY_CAP_MESSAGE = `You've reached today's limit of ${AGENT_DAILY_MESSAGE_CAP} messages. Try again tomorrow.`;
-
-/** Whether the user has sent today's allowance; regenerating then is refused too. */
-const dailyCapReached = async (supabase: Parameters<typeof countUserMessagesToday>[0], userId: string) =>
-  (await countUserMessagesToday(supabase, userId, new Date())) >= AGENT_DAILY_MESSAGE_CAP;
+const dailyCapMessage = (cap: number) =>
+  `You've reached today's limit of ${cap} messages. Try again tomorrow.`;
 
 const textOf = (message: UIMessage | undefined) =>
   (message?.parts ?? []).filter(isTextUIPart).map((part) => part.text).join("\n");
@@ -97,9 +90,33 @@ function validateUserMessage(message: UIMessage): string | null {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireApplicant();
+  const auth = await requireAgentUser();
   if (!auth.ok) return auth.response;
-  const { user, supabase } = auth;
+  const { user, supabase, company } = auth;
+  const role = AGENT_ROLES[auth.role];
+  if (!role) {
+    return NextResponse.json({ error: "The agent isn't available for this account." }, { status: 403 });
+  }
+
+  /** Whether the user has sent today's allowance; regenerating then is refused too. */
+  const dailyCapReached = async () =>
+    (await countUserMessagesToday(supabase, user.id, new Date())) >= role.dailyCap;
+  const DAILY_CAP_MESSAGE = dailyCapMessage(role.dailyCap);
+
+  /**
+   * Charges a user message to the company's plan before the model runs
+   * (BL-TASK-035). Returns the 402 to send when the allowance is used up.
+   */
+  const chargeMessage = async (messageId: string) => {
+    if (!role.chargeMessage || !company) return null;
+    try {
+      await role.chargeMessage({ company, userId: user.id, messageId });
+      return null;
+    } catch (error) {
+      if (error instanceof EntitlementError) return toEntitlementResponse(error);
+      throw error;
+    }
+  };
 
   const parsed = bodySchema.safeParse(await readJson(request));
   if (!parsed.success) return badRequest("Invalid request.");
@@ -112,7 +129,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const loaded = await loadSession(supabase, user.id, sessionId);
+    const loaded = await loadSession(supabase, user.id, sessionId, { role: role.id });
     if (!loaded) {
       return NextResponse.json({ error: "Session not found." }, { status: 404 });
     }
@@ -134,13 +151,18 @@ export async function POST(request: NextRequest) {
           `You can regenerate a reply up to ${AGENT_MAX_REGENERATIONS} times.`,
         );
       }
-      if (await dailyCapReached(supabase, user.id)) return tooManyRequests(DAILY_CAP_MESSAGE);
+      if (await dailyCapReached()) return tooManyRequests(DAILY_CAP_MESSAGE);
+      // Same ref as the original message, so a regenerate isn't charged again.
+      const unpaid = await chargeMessage(parent.id);
+      if (unpaid) return unpaid;
 
       await truncateAfter(supabase, sessionId, parent.id, { inclusive: false });
       toSave = withRegeneration(parent);
       history = [...history.slice(0, userIndex), toSave];
     } else if (incoming!.role === "user") {
-      if (await dailyCapReached(supabase, user.id)) return tooManyRequests(DAILY_CAP_MESSAGE);
+      if (await dailyCapReached()) return tooManyRequests(DAILY_CAP_MESSAGE);
+      const unpaid = await chargeMessage(incoming!.id);
+      if (unpaid) return unpaid;
 
       const message: UIMessage = { id: incoming!.id, role: "user", parts: incoming!.parts };
       const existing = history.findIndex((m) => m.id === message.id);
@@ -163,12 +185,12 @@ export async function POST(request: NextRequest) {
 
     if (toSave) await upsertMessages(supabase, sessionId, user.id, [toSave]);
 
-    const [profile, memories] = await Promise.all([
-      loadPromptProfile(supabase, user.id),
+    const [buildPrompt, memories] = await Promise.all([
+      role.loadPrompt({ supabase, user, company }),
       listMemories(supabase, user.id),
     ]);
 
-    const tools = createAgentTools({ supabase, user, sessionId });
+    const tools = role.createTools({ supabase, user, sessionId, company });
     const contextMessages = selectContextMessages(
       dropAbandonedToolCalls(history),
       session.summary_upto_message_id,
@@ -176,20 +198,23 @@ export async function POST(request: NextRequest) {
     );
 
     // Agent-only tracing to Arize AX; off when it isn't configured (spec §13).
-    const traceContext = { sessionId, userId: user.id };
+    const traceContext = company
+      ? { sessionId, userId: user.id, companyId: company.id }
+      : { sessionId, userId: user.id };
+    const traceId = (name: string) => `${role.telemetryPrefix}-${name}`;
 
     const result = streamText({
       model: google(AGENT_MODEL),
-      system: buildSystemPrompt({
-        profile,
+      system: buildPrompt({
         memories,
         now: new Date(),
         summary: session.summary,
+        toolNames: Object.keys(tools),
       }),
       messages: await convertToModelMessages(contextMessages, { tools }),
       tools,
       // Which tool calls the user approves, and which are denied (spec §14).
-      toolApproval: agentToolApproval,
+      toolApproval: role.toolApproval,
       providerOptions: { google: { safetySettings: [...AGENT_SAFETY_SETTINGS] } },
       stopWhen: stepCountIs(AGENT_MAX_STEPS),
       // Gemini sends text in large bursts; release it word by word so the
@@ -198,7 +223,7 @@ export async function POST(request: NextRequest) {
       // Stop pressed (or the connection dropped): end the model call and the
       // tool loop too, instead of finishing the turn nobody is reading.
       abortSignal: request.signal,
-      telemetry: agentTelemetry("agent-chat", traceContext),
+      telemetry: agentTelemetry(traceId("chat"), traceContext),
     });
 
     // Read the result to its end (or the abort) even with no client reading.
@@ -235,7 +260,7 @@ export async function POST(request: NextRequest) {
         // or cut off. It's saved with the message.
         if (finishReason === "content-filter" && !stopped) {
           writer.write({ type: "text-start", id: "content-filter" });
-          writer.write({ type: "text-delta", id: "content-filter", delta: AGENT_CONTENT_FILTER_MESSAGE });
+          writer.write({ type: "text-delta", id: "content-filter", delta: role.contentFilterMessage });
           writer.write({ type: "text-end", id: "content-filter" });
         }
 
@@ -245,7 +270,11 @@ export async function POST(request: NextRequest) {
               userText: textOf(history.findLast((m) => m.role === "user")),
               replyText: await result.text,
             },
-            { telemetry: agentTelemetry("agent-suggestions", traceContext) },
+            {
+              telemetry: agentTelemetry(traceId("suggestions"), traceContext),
+              // Only set for companies, so the applicant call is unchanged.
+              ...(role.id === "company" ? { role: role.id } : {}),
+            },
           );
           if (suggestions.length > 0) {
             writer.write({ type: "data-suggestions", id: "suggestions", data: { suggestions } });
@@ -276,6 +305,7 @@ export async function POST(request: NextRequest) {
                   output_tokens: usage.outputTokens ?? null,
                   cached_input_tokens: usage.inputTokenDetails?.cacheReadTokens ?? null,
                   memory_count: memories.length,
+                  ...(company ? { role: role.id, company_id: company.id } : {}),
                 },
               }),
             );
@@ -312,7 +342,7 @@ export async function POST(request: NextRequest) {
           try {
             if (session.title === DEFAULT_TITLE) {
               const title = await generateSessionTitle(messages, {
-                telemetry: agentTelemetry("agent-title", traceContext),
+                telemetry: agentTelemetry(traceId("title"), traceContext),
               });
               if (title !== DEFAULT_TITLE) {
                 await setSessionTitle(service, user.id, sessionId, title);
@@ -327,7 +357,7 @@ export async function POST(request: NextRequest) {
                 summary: session.summary,
                 uptoId: session.summary_upto_message_id,
               },
-              { telemetry: agentTelemetry("agent-summary", traceContext) },
+              { telemetry: agentTelemetry(traceId("summary"), traceContext) },
             );
           } catch (error) {
             await eventCaptureServerException({

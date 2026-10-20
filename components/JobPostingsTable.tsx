@@ -1,52 +1,48 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
-} from "@tanstack/react-table";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { useMemo } from "react";
+import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, ChevronRight, XCircle } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { useJobPostingStatus } from "@/hooks/useJobPostingStatus";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import RoleLocked from "./team/RoleLocked";
+import { forbiddenMessage } from "@/helpers/companies/permissions";
+import DataTable, { SelectFilter, SortableHeader, TextFilter } from "./DataTable";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 import { IJobPost } from "@/utils/types";
 import { TCompanyIdPageData } from "@/utils/types/jobs.types";
 
 interface JobPostingsTableProps {
   data: IJobPost[];
+  /** Job ids whose status switch the viewer may use (jobs.publish, RP-REQ-016). Omitted: all. */
+  publishable?: string[];
 }
+
+const JOB_STATUSES = ["active", "inactive"];
 
 export const JobStatusSwitch = ({
   job,
+  disabled = false,
 }: {
   job: IJobPost | TCompanyIdPageData;
+  /** Without jobs.publish on this job (RP-REQ-016). */
+  disabled?: boolean;
 }) => {
-  const { checkedState, handleUpdateStatus } = useJobPostingStatus(
-    job.status,
-    job,
-  );
+  const { checkedState, handleUpdateStatus, upgradeDialog } =
+    useJobPostingStatus(job.status, job);
+
+  if (disabled) {
+    return (
+      <RoleLocked reason={forbiddenMessage("jobs.publish")}>
+        <Switch
+          checked={checkedState}
+          disabled
+          aria-label={checkedState ? "Job is active" : "Job is inactive"}
+        />
+      </RoleLocked>
+    );
+  }
 
   return (
     <div className="flex items-center">
@@ -55,55 +51,41 @@ export const JobStatusSwitch = ({
         checked={checkedState}
         onCheckedChange={handleUpdateStatus}
       />
+      {upgradeDialog}
     </div>
   );
 };
 
-export default function JobPostingsTable({ data }: JobPostingsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<
-    import("@tanstack/react-table").ColumnFiltersState
-  >([]);
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-
-  useEffect(() => {
-    setPage(1);
-  }, [columnFilters, sorting]);
-
+export default function JobPostingsTable({
+  data,
+  publishable,
+}: JobPostingsTableProps) {
   const jobTypes = useMemo(() => {
     const types = data.map((item) => item.job_type);
 
-    return ["All Types", ...new Set(types)];
+    return [...new Set(types)];
   }, [data]);
-
-  const jobStatuses = useMemo(() => {
-    return ["All Statuses", "active", "inactive"];
-  }, []);
 
   const columns: ColumnDef<IJobPost>[] = useMemo(
     () => [
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ row }) => <JobStatusSwitch job={row.original} />,
+        cell: ({ row }) => (
+          <JobStatusSwitch job={row.original} disabled={publishable ? !publishable.includes(row.original.id) : false} />
+        ),
         filterFn: "equals",
       },
       {
         accessorKey: "title",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Job Title
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <SortableHeader column={column} label="Job Title" />
         ),
         cell: ({ row }) => (
           <ModifiedLink
             href={`/company/job-posts/${row.original.id}`}
-            className="font-medium hover:underline"
+            className="block max-w-[16rem] truncate font-medium hover:underline"
+            title={row.original.title}
           >
             {row.original.title}
           </ModifiedLink>
@@ -114,19 +96,18 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
         accessorKey: "location",
         header: "Location",
         cell: ({ row }) => (
-          <div className="text-sm ">{row.original.location.join(", ")}</div>
+          <div
+            className="max-w-[12rem] truncate text-sm"
+            title={row.original.location.join(", ")}
+          >
+            {row.original.location.join(", ")}
+          </div>
         ),
       },
       {
         accessorKey: "job_type",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Job Type
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <SortableHeader column={column} label="Job Type" />
         ),
         cell: ({ row }) => (
           <div className="text-sm ">{row.original.job_type}</div>
@@ -136,13 +117,7 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
       {
         accessorKey: "applications",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Applicants
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <SortableHeader column={column} label="Applications" />
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
@@ -169,194 +144,33 @@ export default function JobPostingsTable({ data }: JobPostingsTableProps) {
         ),
       },
     ],
-    [],
+    [publishable],
   );
 
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    state: {
-      sorting,
-      columnFilters,
-    },
-  });
-
-  const clearFilters = () => {
-    setColumnFilters([]);
-    setPage(1);
-  };
-
-  const hasFilters = useMemo(() => {
-    return columnFilters.length > 0;
-  }, [columnFilters]);
-  // const getRowModelRows = table.getRowModel().rows;
-
-  const paginatedRows = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return table.getRowModel().rows.slice(start, start + pageSize);
-  }, [page, pageSize, table, table.getRowModel().rows]);
-
-  const totalRecords = table.getRowModel().rows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-
   return (
-    <div className="space-y-4">
-      {/* Filters Section */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-4 overflow-x-auto p-1">
-          <Input
-            placeholder="Job Title"
-            value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("title")?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm text-sm shrink-0 w-[150px]"
+    <DataTable
+      data={data}
+      columns={columns}
+      noun="job postings"
+      filters={(table) => (
+        <>
+          <TextFilter table={table} column="title" placeholder="Job Title" />
+          <SelectFilter
+            table={table}
+            column="job_type"
+            allLabel="All Types"
+            options={jobTypes}
+            label="Filter by job type"
           />
-
-          <Select
-            onValueChange={(value) =>
-              table
-                .getColumn("job_type")
-                ?.setFilterValue(value === "All Types" ? undefined : value)
-            }
-            value={
-              (table.getColumn("job_type")?.getFilterValue() as string) ??
-              "All Types"
-            }
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Job Type" />
-            </SelectTrigger>
-            <SelectContent>
-              {jobTypes.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            onValueChange={(value) =>
-              table
-                .getColumn("status")
-                ?.setFilterValue(value === "All Statuses" ? undefined : value)
-            }
-            value={
-              (table.getColumn("status")?.getFilterValue() as string) ??
-              "All Statuses"
-            }
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {jobStatuses.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {status}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {hasFilters && (
-          <Button
-            variant="ghost"
-            onClick={clearFilters}
-            className="text-muted-foreground"
-          >
-            <XCircle className="w-4 h-4 mr-2" />
-            Clear Filters
-          </Button>
-        )}
-      </div>
-
-      {/* Table Section */}
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {paginatedRows?.length ? (
-              paginatedRows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No job postings found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <div className="my-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-muted-foreground sm:text-sm">
-        <div>
-          Showing {paginatedRows.length ? (page - 1) * pageSize + 1 : 0}-
-          {(page - 1) * pageSize + paginatedRows.length} of {totalRecords} job
-          postings
-        </div>
-        <div className="flex min-w-0 max-w-full items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="min-w-0"
-          >
-            <span className="truncate">Previous</span>
-          </Button>
-          <span className="whitespace-nowrap">
-            {/* "Page" is dropped on the narrowest phones so the footer fits. */}
-            <span className="max-[400px]:hidden">Page </span>
-            {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="min-w-0"
-          >
-            <span className="truncate">Next</span>
-          </Button>
-        </div>
-      </div>
-    </div>
+          <SelectFilter
+            table={table}
+            column="status"
+            allLabel="All Statuses"
+            options={JOB_STATUSES}
+            label="Filter by status"
+          />
+        </>
+      )}
+    />
   );
 }

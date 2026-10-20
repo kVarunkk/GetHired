@@ -1,28 +1,35 @@
 import ResumePreviewDialog from "@/components/ResumePreviewDialog";
+import { Loader2 } from "lucide-react";
 
+/**
+ * Stays mounted while the selection changes: only the name and the View
+ * button swap, so picking another resume doesn't make the layout jump.
+ */
 export const ResumePreview = ({
   previewUrl,
-  file,
-  activeResumeName,
+  name,
 }: {
-  previewUrl: string;
-  file: File | null;
-  activeResumeName: string | null;
+  /** null while the signed URL loads. */
+  previewUrl: string | null;
+  name: string | null;
 }) => {
   return (
-    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-between transition-all animate-in fade-in zoom-in duration-300">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="shrink-0 bg-background p-2 rounded-lg border">
+    <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Selected resume
+        </span>
+        <span className="truncate text-sm font-medium">{name}</span>
+      </div>
+      <div className="shrink-0 rounded-md border bg-background px-2 py-1 text-xs">
+        {previewUrl ? (
           <ResumePreviewDialog displayUrl={previewUrl} />
-        </div>
-        <div className="flex min-w-0 flex-col">
-          <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">
-            Selected Resume Preview
+        ) : (
+          <span className="inline-flex items-center gap-1 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            View
           </span>
-          <span className="truncate text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            {file?.name || activeResumeName}
-          </span>
-        </div>
+        )}
       </div>
     </div>
   );

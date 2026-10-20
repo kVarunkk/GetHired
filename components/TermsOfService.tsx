@@ -132,29 +132,6 @@ export default function TermsOfService() {
               SERVICE.
             </p>
           </section>
-
-          {/* Add more sections as needed, e.g.,
-          <section>
-            <h2 className="text-lg font-semibold tracking-tight mb-3">7. Indemnification</h2>
-            <p>You agree to indemnify and hold GetHired, its subsidiaries, affiliates, officers, agents, employees, partners and licensors harmless from any claim or demand, including reasonable attorneys' fees, made by any third party due to or arising out of Content you submit, post, transmit or otherwise make available through the Service, your use of the Service, your connection to the Service, your violation of the Terms of Service, or your violation of any rights of another.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold tracking-tight mb-3">8. Modifications to Service</h2>
-            <p>GetHired reserves the right at any time and from time to time to modify or discontinue, temporarily or permanently, the Service (or any part thereof) with or without notice.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold tracking-tight mb-3">9. Governing Law</h2>
-            <p>These Terms of Service shall be governed by and construed in accordance with the laws of [Your State/Country], without regard to its conflict of law principles.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold tracking-tight mb-3">10. Severability</h2>
-            <p>If any provision of these Terms of Service is found to be invalid or unenforceable by a court of competent jurisdiction, the invalidity or unenforceability of such provision shall not affect the validity or enforceability of the remaining provisions of these Terms of Service, which shall remain in full force and effect.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold tracking-tight mb-3">11. Contact Information</h2>
-            <p>Questions about the Terms of Service should be sent to us at [Your Contact Email/Method].</p>
-          </section>
-          */}
         </CardContent>
       </Card>
     </div>

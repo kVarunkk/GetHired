@@ -40,6 +40,39 @@ beforeEach(() => {
   supabase = createSupabaseMock();
 });
 
+describe("loadSession with a role (RA spec §3)", () => {
+  it("filters company sessions by role", async () => {
+    supabase.queue("agent_sessions", { data: { ...SESSION, role: "company" }, error: null });
+    supabase.queue("agent_messages", { data: [], error: null });
+
+    const result = await loadSession(supabase.client, "u1", "s1", { role: "company" });
+
+    expect(result?.session.id).toBe("s1");
+    expect(supabase.callsFor("agent_sessions")[0].chain).toContainEqual({
+      method: "eq",
+      args: ["role", "company"],
+    });
+  });
+
+  it("returns null for a session of the other role", async () => {
+    supabase.queue("agent_sessions", { data: { ...SESSION, role: "company" }, error: null });
+
+    expect(await loadSession(supabase.client, "u1", "s1", { role: "applicant" })).toBeNull();
+    expect(supabase.callsFor("agent_messages")).toHaveLength(0);
+  });
+
+  it("keeps the applicant's query as it was", async () => {
+    supabase.queue("agent_sessions", { data: { ...SESSION, role: "applicant" }, error: null });
+    supabase.queue("agent_messages", { data: [], error: null });
+
+    expect(await loadSession(supabase.client, "u1", "s1", { role: "applicant" })).not.toBeNull();
+    expect(supabase.callsFor("agent_sessions")[0].chain).not.toContainEqual({
+      method: "eq",
+      args: ["role", "applicant"],
+    });
+  });
+});
+
 describe("loadSession", () => {
   it("returns the session and its messages ordered by seq", async () => {
     supabase.queue("agent_sessions", { data: SESSION, error: null });

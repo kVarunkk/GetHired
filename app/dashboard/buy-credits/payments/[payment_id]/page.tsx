@@ -1,4 +1,4 @@
-import BackButton from "@/components/BackButton";
+import PageHeader from "@/components/PageHeader";
 import Error from "@/components/Error";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,32 +48,30 @@ export default async function PaymentIdPage({
     const plan = paymentData.price_plan;
 
     return (
-      <div className="flex flex-col w-full gap-8 p-4">
-        <div>
-          <BackButton />
-        </div>
-
-        <div className="flex items-center justify-between flex-wrap gap-5">
-          <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight">
-            Payment Details
-          </h1>
-          <div className="flex items-center gap-4 flex-wrap">
-            <Link href="mailto:varun@devhub.co.in">
-              <Button variant="link" className="w-full ">
-                <Headset className="w-4 h-4 mr-2" />
-                Contact Support
-              </Button>
-            </Link>
-            {paymentData.payment_id ? (
-              <DownloadInvoiceButton
-                paymentId={paymentData.payment_id}
-                isPaymentStatusPage={false}
-              />
-            ) : (
-              ""
-            )}
-          </div>
-        </div>
+      <div className="flex flex-col w-full gap-6 p-4">
+        <PageHeader
+          backHref="/dashboard/buy-credits/payments"
+          backLabel="Back to purchases"
+          title="Payment details"
+          actions={
+            <>
+              <Link href="mailto:varun@devhub.co.in">
+                <Button variant="link" className="w-full ">
+                  <Headset className="w-4 h-4 mr-2" />
+                  Contact Support
+                </Button>
+              </Link>
+              {paymentData.payment_id ? (
+                <DownloadInvoiceButton
+                  paymentId={paymentData.payment_id}
+                  isPaymentStatusPage={false}
+                />
+              ) : (
+                ""
+              )}
+            </>
+          }
+        />
 
         {paymentData.status === "pending" ? (
           <div className="flex gap-2 text-sm text-muted-foreground border rounded-lg bg-muted/40 px-3 py-2.5">
@@ -96,22 +94,22 @@ export default async function PaymentIdPage({
         {/* --- Main Content Grid --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left Panel */}
-          <div className="md:col-span-1 space-y-4">
+          <div className="min-w-0 space-y-4 [overflow-wrap:anywhere] md:col-span-1">
             <Card className=" ">
               <CardContent className="p-0">
                 <Tabs defaultValue="fulfillment" className="w-full">
                   <TabsList className="grid w-full grid-cols-2 !rounded-b-none">
                     <TabsTrigger
                       value="fulfillment"
-                      className="data-[state=active]:!bg-muted data-[state=active]:!shadow-none"
+                      className="min-w-0 data-[state=active]:!bg-muted data-[state=active]:!shadow-none"
                     >
-                      Fulfillment Details
+                      <span className="truncate">Fulfillment</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="billing"
-                      className="data-[state=active]:!bg-muted data-[state=active]:!shadow-none"
+                      className="min-w-0 data-[state=active]:!bg-muted data-[state=active]:!shadow-none"
                     >
-                      Billing Details
+                      <span className="truncate">Billing</span>
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="fulfillment" className="p-6">

@@ -1,6 +1,8 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { updateOwnedItemAction } from "@/app/actions/update-owned-item";
+import { deleteOwnedItemAction } from "@/app/actions/delete-owned-item";
+import type { OwnedItemTable } from "@/helpers/owned-items/owned-items";
 import { SubmitEvent, useState } from "react";
 import toast from "react-hot-toast";
 import {
@@ -20,7 +22,6 @@ import { Input } from "./ui/input";
 import { BookmarkRow, UserApiTokensRow } from "@/utils/types";
 import { TResumeReviewTableData } from "./ResumeReviewsTable";
 import { TResumeReviewResume } from "@/utils/types/review.types";
-import { Database } from "@/utils/types/database.types";
 import { TInterviewPageServer } from "@/utils/types/interview.types";
 
 interface FormField {
@@ -37,17 +38,14 @@ type Item =
   | BookmarkRow
   | UserApiTokensRow
   | TInterviewPageServer;
-type TableName = keyof Database["public"]["Tables"];
 
 interface DynamicActionsProps<T extends Item> {
-  tableName: TableName;
+  tableName: OwnedItemTable;
   item: T;
   fields: FormField[];
   updateLocalItem: (updatedItem: T) => void;
   removeLocalItem: (id: string) => void;
   entityName?: string;
-  identifierKey?: keyof T;
-  selectString?: string;
 }
 
 export default function DynamicActions<T extends Item>({
@@ -57,18 +55,13 @@ export default function DynamicActions<T extends Item>({
   updateLocalItem,
   removeLocalItem,
   entityName = "Item",
-  identifierKey = "id",
-  selectString = "*",
 }: DynamicActionsProps<T>) {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogView, setDialogView] = useState<"edit" | "delete">("edit");
 
-  const supabase = createClient();
-
-  const idKey = (identifierKey ?? "id") as keyof Item;
-  const itemId = String(item[idKey]);
+  const itemId = String(item.id);
 
   // --- UPDATE LOGIC ---
   const handleUpdate = async (e: SubmitEvent<HTMLFormElement>) => {
@@ -86,22 +79,22 @@ export default function DynamicActions<T extends Item>({
         }
       });
 
-      const { data, error } = await supabase
-        .from(tableName)
-        .update(
-          updates as Database["public"]["Tables"][typeof tableName]["Update"],
-        )
-        .eq(String(idKey), itemId)
-        .select(selectString)
-        .single();
+      const result = await updateOwnedItemAction({
+        table: tableName,
+        id: itemId,
+        values: updates,
+      });
+      if (!result.ok) throw new Error(result.error);
 
-      if (error) throw error;
-
-      updateLocalItem(data as unknown as T);
+      updateLocalItem({ ...item, ...result.values });
       toast.success(`${entityName} updated successfully`);
       setOpenDialog(false);
-    } catch {
-      toast.error(`Error updating ${entityName.toLowerCase()}`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : `Error updating ${entityName.toLowerCase()}`,
+      );
     } finally {
       setFormLoading(false);
     }
@@ -111,12 +104,11 @@ export default function DynamicActions<T extends Item>({
   const handleDelete = async () => {
     setDeleteLoading(true);
     try {
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .eq(String(idKey), itemId);
-
-      if (error) throw error;
+      const result = await deleteOwnedItemAction({
+        table: tableName,
+        id: itemId,
+      });
+      if (!result.ok) throw new Error(result.error);
 
       removeLocalItem(itemId);
       toast.success(`${entityName} removed successfully`);
@@ -169,9 +161,9 @@ export default function DynamicActions<T extends Item>({
                 setDialogView("delete");
                 setOpenDialog(true);
               }}
-              variant="ghost"
+              variant="destructive-ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              className="h-8 w-8 p-0"
             >
               <Trash className="h-4 w-4" />
             </Button>

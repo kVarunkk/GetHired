@@ -11,22 +11,52 @@ import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { after } from "next/server";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { APPLICANT_HOME } from "@/helpers/user/home-path";
+import { findOpenInvite, joinPath } from "@/helpers/team/invite-token";
+import { INVALID_INVITE_MESSAGE } from "@/helpers/team/errors";
 
 const URL = deploymentUrl();
+
+type SignupOptions = {
+  /**
+   * Invite mode (recruiter teams, difference 5): sign up from
+   * `/company/join?token=…`. The account is a company account with no company
+   * of its own; accepting the invite adds the membership.
+   */
+  inviteToken?: string;
+  /** Stored as `user_metadata.full_name`; acceptance uses it as the display name. */
+  fullName?: string;
+};
 
 export async function sendSignupEmail(
   email: string,
   password: string,
   isCompany: boolean,
+  options: SignupOptions = {},
 ) {
   const serviceRoleSupabase = createServiceRoleClient();
+  const inviteToken = options.inviteToken;
 
-  const finalRedirectUrl = isCompany ? "/get-started?company=true" : APPLICANT_HOME;
+  // Invite mode needs an open invite for this email, or it would be a way to
+  // create a company account with no company.
+  if (inviteToken !== undefined) {
+    const invite = await findOpenInvite(serviceRoleSupabase, inviteToken);
+    if (!invite || invite.email.toLowerCase() !== email.trim().toLowerCase()) {
+      return { success: false, error: INVALID_INVITE_MESSAGE };
+    }
+  }
+
+  const finalRedirectUrl = inviteToken
+    ? joinPath(inviteToken)
+    : isCompany
+      ? "/get-started?company=true"
+      : APPLICANT_HOME;
+  const fullName = options.fullName?.trim().slice(0, 80);
 
   const { data, error } = await serviceRoleSupabase.auth.admin.generateLink({
     type: "signup",
     email: email,
     password: password,
+    ...(fullName ? { options: { data: { full_name: fullName } } } : {}),
   });
 
   try {
@@ -39,14 +69,19 @@ export async function sendSignupEmail(
     const { error: updateAppMetaError } = await setUserAppMetadata(
       data.user?.id,
       {
-        type: isCompany ? "company" : "applicant",
+        type: isCompany || inviteToken ? "company" : "applicant",
+        // Invitees too: acceptance sets it (TM-SEC-004), so an account that
+        // never accepts can't reach /company.
         onboarding_complete: false,
       },
     );
 
     if (updateAppMetaError) throw new Error(updateAppMetaError);
 
-    if (isCompany) {
+    if (inviteToken) {
+      // No company_info and no user_info: the membership comes from
+      // accept_company_invite.
+    } else if (isCompany) {
       const { error: signupUserError } = await serviceRoleSupabase
         .from("company_info")
         .insert({ user_id: data.user.id, email });
@@ -73,11 +108,12 @@ export async function sendSignupEmail(
           event: PostHogEvent.SignupRequested,
           distinctId: data.user?.id,
           properties: {
-            user_type: isCompany ? "company" : "applicant",
+            user_type: isCompany || inviteToken ? "company" : "applicant",
+            invited: !!inviteToken,
           },
         });
 
-        const signupUrl = `${URL}/auth/confirm?token_hash=${data.properties.hashed_token}&type=signup&next=${finalRedirectUrl}`;
+        const signupUrl = `${URL}/auth/confirm?token_hash=${data.properties.hashed_token}&type=signup&next=${encodeURIComponent(finalRedirectUrl)}`;
 
         const emailHtml = await render(
           <AuthConfirmationEmail signupUrl={signupUrl} />,

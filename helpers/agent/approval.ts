@@ -1,24 +1,28 @@
 import type { ModelMessage, ToolApprovalStatus } from "ai";
 import { AGENT_MAX_CREDIT_CALLS_PER_TURN } from "./config";
 
-/** Tools the user always approves: they spend credits or change the profile (REQ-014). */
-const ALWAYS_ASK = new Set(["startResumeReview", "updateMyPreferences", "completeOnboarding"]);
+export type ToolApprovalFn = (options: {
+  toolCall: { toolName: string; toolCallId: string };
+  messages: ModelMessage[];
+}) => ToolApprovalStatus;
 
-/** Tools whose output carries text the user didn't write in this chat (SEC-011). */
-const UNTRUSTED_CONTENT_TOOLS = new Set([
-  "getJobDetails",
-  "getResumeReview",
-  "getInterviewAnalysis",
-]);
+/** A group of tools that can run at most `max` times per turn between them. */
+export type PerTurnCap = { tools: readonly string[]; max: number; reason: string };
 
-/** Tools that write long-term memory, which goes into every later prompt. */
-const MEMORY_TOOLS = new Set(["saveMemory", "deleteMemory"]);
+export type ToolApprovalPolicy = {
+  /** Tools the user always approves. */
+  alwaysAsk: readonly string[];
+  /** Tools whose output carries text the user didn't write in this chat (SEC-011). */
+  untrustedContentTools: readonly string[];
+  /** Tools that need approval once untrusted content was read this turn. */
+  gatedWriteTools: readonly string[];
+  untrustedReason: string;
+  /** Tools that spend credits, capped at AGENT_MAX_CREDIT_CALLS_PER_TURN per turn (SEC-013). */
+  creditTools: readonly string[];
+  /** Further per-turn caps, e.g. email-sending actions (RA-SEC-006). */
+  perTurnCaps?: readonly PerTurnCap[];
+};
 
-/** Tools that spend AI credits (SEC-013). */
-const CREDIT_TOOLS = new Set(["naturalLanguageJobSearch", "startResumeReview"]);
-
-const UNTRUSTED_REASON =
-  "The assistant read a job posting or report in this reply, so memory changes need your OK.";
 const CREDIT_LIMIT_REASON = `Only ${AGENT_MAX_CREDIT_CALLS_PER_TURN} credit-spending actions can run per message. Ask the user before trying again.`;
 
 /**
@@ -43,33 +47,50 @@ function ranThisTurn(messages: ModelMessage[], excludeCallId: string) {
 }
 
 /**
- * The agent's tool approval policy (spec §14, SEC-012, SEC-013), passed to
- * `streamText` as `toolApproval`. Pure.
+ * Builds a tool approval policy for `streamText`'s `toolApproval` (spec §14,
+ * RA spec §4.4). Pure. Caps are checked first, so a call over a cap is denied
+ * rather than put to the user.
  */
-export function agentToolApproval({
-  toolCall,
-  messages,
-}: {
-  toolCall: { toolName: string; toolCallId: string };
-  messages: ModelMessage[];
-}): ToolApprovalStatus {
-  const { toolName, toolCallId } = toolCall;
+export function createToolApproval(policy: ToolApprovalPolicy): ToolApprovalFn {
+  const alwaysAsk = new Set(policy.alwaysAsk);
+  const untrusted = new Set(policy.untrustedContentTools);
+  const gatedWrites = new Set(policy.gatedWriteTools);
+  const caps: PerTurnCap[] = [
+    { tools: policy.creditTools, max: AGENT_MAX_CREDIT_CALLS_PER_TURN, reason: CREDIT_LIMIT_REASON },
+    ...(policy.perTurnCaps ?? []),
+  ];
 
-  if (CREDIT_TOOLS.has(toolName)) {
-    const spent = ranThisTurn(messages, toolCallId).filter((name) => CREDIT_TOOLS.has(name));
-    if (spent.length >= AGENT_MAX_CREDIT_CALLS_PER_TURN) {
-      return { type: "denied", reason: CREDIT_LIMIT_REASON };
+  return ({ toolCall, messages }) => {
+    const { toolName, toolCallId } = toolCall;
+
+    for (const cap of caps) {
+      if (!cap.tools.includes(toolName)) continue;
+      const used = ranThisTurn(messages, toolCallId).filter((name) => cap.tools.includes(name));
+      if (used.length >= cap.max) return { type: "denied", reason: cap.reason };
     }
-  }
 
-  if (ALWAYS_ASK.has(toolName)) return "user-approval";
+    if (alwaysAsk.has(toolName)) return "user-approval";
 
-  if (MEMORY_TOOLS.has(toolName)) {
-    const readUntrusted = ranThisTurn(messages, toolCallId).some((name) =>
-      UNTRUSTED_CONTENT_TOOLS.has(name),
-    );
-    if (readUntrusted) return { type: "user-approval", reason: UNTRUSTED_REASON };
-  }
+    if (gatedWrites.has(toolName)) {
+      const readUntrusted = ranThisTurn(messages, toolCallId).some((name) => untrusted.has(name));
+      if (readUntrusted) return { type: "user-approval", reason: policy.untrustedReason };
+    }
 
-  return "not-applicable";
+    return "not-applicable";
+  };
 }
+
+/** The applicant agent's policy (REQ-014, SEC-011–013). */
+export const APPLICANT_APPROVAL_POLICY: ToolApprovalPolicy = {
+  // They spend credits or change the profile.
+  alwaysAsk: ["startResumeReview", "updateMyPreferences", "completeOnboarding"],
+  untrustedContentTools: ["getJobDetails", "getResumeReview", "getInterviewAnalysis"],
+  // Long-term memory goes into every later prompt.
+  gatedWriteTools: ["saveMemory", "deleteMemory"],
+  untrustedReason:
+    "The assistant read a job posting or report in this reply, so memory changes need your OK.",
+  creditTools: ["naturalLanguageJobSearch", "startResumeReview"],
+};
+
+/** The applicant agent's tool approval policy, passed to `streamText` as `toolApproval`. */
+export const agentToolApproval = createToolApproval(APPLICANT_APPROVAL_POLICY);

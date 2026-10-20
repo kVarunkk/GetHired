@@ -79,6 +79,14 @@ describe("agentTelemetry with Arize credentials", () => {
     expect(options.integrations).toHaveLength(1);
   });
 
+  it("lets a call turn content recording off", () => {
+    configure();
+
+    const options = agentTelemetry("screening-interview-analysis", CONTEXT, { recordContent: false });
+
+    expect(options).toMatchObject({ recordInputs: false, recordOutputs: false });
+  });
+
   it("exports to Arize AX with the space id and API key headers", () => {
     configure();
 

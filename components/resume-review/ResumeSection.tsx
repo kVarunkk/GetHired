@@ -7,6 +7,7 @@ import DigitalTwinMirror from "./DigitalTwinMirror";
 import { useEffect, useState } from "react";
 import { uploadResumeAction } from "@/app/actions/upload-resume-file";
 import { createClient } from "@/lib/supabase/client";
+import { linkReviewResumeAction } from "@/app/actions/resume-review/link-review-resume";
 import toast from "react-hot-toast";
 import { Button } from "../ui/button";
 import OriginalResumeWrapper from "../OriginalResumeWrapper";
@@ -70,14 +71,11 @@ export default function ResumeSection({
         false,
       );
 
-      const { error } = await supabase
-        .from("resume_reviews")
-        .update({ resume_id: resumeId, updated_at: new Date().toISOString() })
-        .eq("id", reviewId);
+      const result = await linkReviewResumeAction({ reviewId, resumeId });
 
-      if (error) {
-        toast.error("Failed to link resume asset.");
-        throw error;
+      if (!result.ok) {
+        toast.error(result.error);
+        throw new Error(result.error);
       } else {
         toast.success("Resume linked successfully.");
         mutate(`/api/resume-review/${reviewId}`);

@@ -1,5 +1,6 @@
 "use client";
 
+import { useSignUpToApplyHref } from "./jobs/ApplicationSourceContext";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import JobApplicationDialog from "./JobApplicationDialog";
@@ -41,6 +42,7 @@ export default function JobApplyBtn({
 }) {
   const [showReturnDialog, setShowReturnDialog] = useState(false);
   // Apply is the main action on the job page (brand); in a list every row has one, so it stays default there.
+  const signUpHref = useSignUpToApplyHref(job.id);
   const applyVariant = isJobIdPage ? "brand" : "default";
 
   return (
@@ -173,7 +175,7 @@ export default function JobApplyBtn({
       ) : (
         <Link
           onClick={(e) => e.stopPropagation()}
-          href={"/auth/sign-up?returnTo=/jobs/" + job.id}
+          href={signUpHref}
           rel="noopener noreferrer"
         >
           <Button variant={applyVariant}>
@@ -187,7 +189,6 @@ export default function JobApplyBtn({
           job={job}
           showDialog={showReturnDialog}
           onClose={() => setShowReturnDialog(false)}
-          userId={userId}
         />
       )}
     </>

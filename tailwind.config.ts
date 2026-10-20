@@ -44,6 +44,16 @@ export default {
           foreground: "hsl(var(--brand-soft-foreground))",
         },
         // Status colours (design-system.md §1)
+        role: {
+          slate: "hsl(var(--role-slate))",
+          indigo: "hsl(var(--role-indigo))",
+          emerald: "hsl(var(--role-emerald))",
+          amber: "hsl(var(--role-amber))",
+          rose: "hsl(var(--role-rose))",
+          sky: "hsl(var(--role-sky))",
+          violet: "hsl(var(--role-violet))",
+          teal: "hsl(var(--role-teal))",
+        },
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
@@ -70,22 +80,6 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
-        marquee: {
-          from: {
-            transform: "translateX(0)",
-          },
-          to: {
-            transform: "translateX(calc(-100% - var(--gap)))",
-          },
-        },
-        "marquee-vertical": {
-          from: {
-            transform: "translateY(0)",
-          },
-          to: {
-            transform: "translateY(calc(-100% - var(--gap)))",
-          },
-        },
         "accordion-down": {
           from: {
             height: "0",
@@ -104,8 +98,6 @@ export default {
         },
       },
       animation: {
-        marquee: "marquee var(--duration) linear infinite",
-        "marquee-vertical": "marquee-vertical var(--duration) linear infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },

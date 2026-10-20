@@ -5,19 +5,30 @@ import { cn } from "@/utils/utils";
 import React from "react";
 import AvatarComponent from "./AvatarComponent";
 import SidebarLabel from "@/components/SidebarLabel";
+import { Badge } from "@/components/ui/badge";
 
 type MenuTriggerProps = React.ComponentPropsWithoutRef<"button"> & {
   user: React.ComponentProps<typeof AvatarComponent>["user"];
   open?: boolean;
   isMenuOpen: boolean;
   isCompanyUser: boolean;
+  /** A company member's role ("Owner", "Admin", "Member"), shown in the vertical sidebar. */
+  roleLabel?: string | null;
   /** In the vertical sidebar the trigger is a full-width row with a label. */
   isVertical?: boolean;
 };
 
 const MenuTrigger = React.forwardRef<HTMLButtonElement, MenuTriggerProps>(
   (
-    { user, open, isMenuOpen, isCompanyUser, isVertical = false, ...props },
+    {
+      user,
+      open,
+      isMenuOpen,
+      isCompanyUser,
+      roleLabel,
+      isVertical = false,
+      ...props
+    },
     ref,
   ) => {
     return (
@@ -39,7 +50,20 @@ const MenuTrigger = React.forwardRef<HTMLButtonElement, MenuTriggerProps>(
             open={open}
             isCompanyUser={isCompanyUser}
           />
-          {isVertical && <SidebarLabel open={isMenuOpen}>Profile</SidebarLabel>}
+          {isVertical && (
+            <SidebarLabel open={isMenuOpen}>
+              {roleLabel ? (
+                <span className="flex items-center gap-2">
+                  Profile
+                  <Badge variant="brand" className="px-1.5 py-0 text-[10px]">
+                    {roleLabel}
+                  </Badge>
+                </span>
+              ) : (
+                "Profile"
+              )}
+            </SidebarLabel>
+          )}
         </button>
       </DropdownMenuTrigger>
     );

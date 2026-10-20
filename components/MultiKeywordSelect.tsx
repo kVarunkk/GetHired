@@ -10,7 +10,7 @@ import React, {
   useEffect,
 } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { X, Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { X, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/utils/utils";
 import { VariableSizeList } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -33,7 +33,6 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "./ui/drawer";
-import { Badge } from "./ui/badge";
 
 export interface GenericFormData {
   [key: string]: string | number | string[];
@@ -118,40 +117,28 @@ export default function MultiKeywordSelect({
       {isDesktop ? (
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
-            {name === "profile" ? (
-              <Button
-                variant="brand"
-                role="combobox"
-                aria-expanded={open}
-                className="rounded-full relative"
-                disabled={loading}
-              >
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                <Badge className="absolute -top-2 -right-2 rounded-full border-background">
-                  {initialKeywords.length}
-                </Badge>
-                <span className="truncate">{placeholder}</span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />{" "}
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className={cn(
-                  "w-full justify-between font-normal text-muted-foreground",
-                  !showKeywords &&
-                    "rounded-l-none border-y-0 border-r-0 bg-transparent shadow-none",
-                )}
-              >
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className={cn(
+                "w-full justify-between font-normal text-muted-foreground",
+                !showKeywords &&
+                  "rounded-l-none border-y-0 border-r-0 bg-transparent shadow-none",
+              )}
+            >
+              {/* Next to an input, the chips under it already show what's selected. */}
+              {showKeywords ? (
                 <span className="truncate">
                   {initialKeywords.length > 0
                     ? `${initialKeywords.length} items selected`
                     : placeholder}
                 </span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            )}
+              ) : (
+                <span className="sr-only">Choose from the list</span>
+              )}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
           </PopoverTrigger>
 
           <PopoverContent className="p-0 " style={{ pointerEvents: "auto" }}>
@@ -173,83 +160,46 @@ export default function MultiKeywordSelect({
       ) : (
         <Drawer open={open} onOpenChange={setOpen}>
           <DrawerTrigger asChild>
-            {name === "profile" ? (
-              <Button
-                variant="brand"
-                role="combobox"
-                aria-expanded={open}
-                className="rounded-full relative"
-              >
-                <Badge className="absolute -top-2 -right-2 rounded-full border-background">
-                  {initialKeywords.length}
-                </Badge>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className={cn(
+                "w-full justify-between font-normal text-muted-foreground",
+                !showKeywords &&
+                  "rounded-l-none border-y-0 border-r-0 bg-transparent shadow-none",
+              )}
+            >
+              {showKeywords ? (
                 <span className="truncate">{placeholder}</span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className={cn(
-                  "w-full justify-between font-normal text-muted-foreground",
-                  !showKeywords &&
-                    "rounded-l-none border-y-0 border-r-0 bg-transparent shadow-none",
-                )}
-              >
-                <span className="truncate">{placeholder}</span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            )}
+              ) : (
+                <span className="sr-only">Choose from the list</span>
+              )}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
           </DrawerTrigger>
-          {name !== "profile" ? (
-            <DrawerContent className="p-0 ">
-              <DrawerHeader>
-                <DrawerTitle></DrawerTitle>
-                <DrawerDescription>
-                  {initialKeywords.length} items selected
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className=" border-t">
-                <ItemsList
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                  isVirtualized={isVirtualized}
-                  filteredAvailableItems={filteredAvailableItems}
-                  Row={Row}
-                  initialKeywords={initialKeywords}
-                  addKeyword={addKeyword}
-                  removeKeyword={removeKeyword}
-                  name={name}
-                  loading={loading}
-                />
-              </div>
-            </DrawerContent>
-          ) : (
-            <DrawerContent>
-              <DrawerHeader>
-                <DrawerTitle></DrawerTitle>
-                <DrawerDescription>
-                  {initialKeywords.length} items selected
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className=" border-t">
-                <ItemsList
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                  isVirtualized={isVirtualized}
-                  filteredAvailableItems={filteredAvailableItems}
-                  Row={Row}
-                  initialKeywords={initialKeywords}
-                  addKeyword={addKeyword}
-                  removeKeyword={removeKeyword}
-                  name={name}
-                  header={header}
-                  loading={loading}
-                />
-              </div>
-            </DrawerContent>
-          )}
+          <DrawerContent className="p-0 ">
+            <DrawerHeader>
+              <DrawerTitle></DrawerTitle>
+              <DrawerDescription className={cn(!showKeywords && "sr-only")}>
+                {initialKeywords.length} items selected
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className=" border-t">
+              <ItemsList
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                isVirtualized={isVirtualized}
+                filteredAvailableItems={filteredAvailableItems}
+                Row={Row}
+                initialKeywords={initialKeywords}
+                addKeyword={addKeyword}
+                removeKeyword={removeKeyword}
+                name={name}
+                loading={loading}
+              />
+            </div>
+          </DrawerContent>
         </Drawer>
       )}
 

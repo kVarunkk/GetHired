@@ -1,7 +1,7 @@
 import ApiKeysTable from "@/components/ApiKeysTable";
-import BackButton from "@/components/BackButton";
 import CreateApiKeyDialog from "@/components/CreateApiKeyDialog";
 import ErrorComponent from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ApiKeysPage() {
@@ -28,21 +28,14 @@ export default async function ApiKeysPage() {
     const tableKey = `${apiKeys?.length || 0}-${apiKeys?.[0]?.id || "empty"}`;
 
     return (
-      <div className="flex flex-col w-full gap-8 p-4">
-        <div>
-          <BackButton />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h1 className="text-3xl font-medium ">API keys</h1>
-            <CreateApiKeyDialog />
-          </div>
-          <p className="text-lg text-muted-foreground">
-            Create API keys for MCP clients, CLI tools, and external
-            integrations
-          </p>
-        </div>
+      <div className="flex flex-col w-full gap-6 p-4">
+        <PageHeader
+          title="API keys"
+          description="Create API keys for MCP clients, CLI tools, and external integrations."
+          actions={<CreateApiKeyDialog />}
+          backHref="/dashboard"
+          backLabel="Back to dashboard"
+        />
         <ApiKeysTable key={tableKey} data={apiKeys || []} />
       </div>
     );

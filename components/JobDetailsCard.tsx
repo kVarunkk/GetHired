@@ -1,15 +1,14 @@
 "use client";
 
+import { useSignUpToApplyHref } from "./jobs/ApplicationSourceContext";
 import { useState } from "react";
 import { ArrowDown, Copy, Loader2, Sparkle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, copyToClipboard } from "@/utils/utils";
-import { JobPostingsRow, TAICredits } from "@/utils/types";
+import { JobPostingsRow } from "@/utils/types";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import InfoTooltip from "./InfoTooltip";
-import Link from "next/link";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { Skeleton } from "./ui/skeleton";
 import { SummarizeJobAction } from "@/app/actions/summarize-job";
@@ -51,6 +50,7 @@ export default function JobDescriptionCard({
   );
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const signUpHref = useSignUpToApplyHref(job.id);
 
   const toggleDescription = () => {
     setIsExpanded(!isExpanded);
@@ -72,7 +72,7 @@ export default function JobDescriptionCard({
 
   const handleAISummary = () => {
     if (!userId) {
-      router.push("/auth/sign-up?returnTo=/jobs/" + job.id);
+      router.push(signUpHref);
       return;
     }
     if (!isAllJobsJob(job)) return;
@@ -99,7 +99,8 @@ export default function JobDescriptionCard({
   }
 
   return (
-    <div className="min-w-0 md:col-span-2">
+    // The company job page sits next to two sidebars, so its grid only splits at xl.
+    <div className={cn("min-w-0", page === "job-posts" ? "xl:col-span-2" : "md:col-span-2")}>
       <Card>
         <CardHeader>
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1">
@@ -143,20 +144,6 @@ export default function JobDescriptionCard({
                     )}
                   </Button>
 
-                  <InfoTooltip
-                    content={
-                      <p>
-                        This feature uses {TAICredits.AI_SUMMARY} AI credits per
-                        use.{" "}
-                        <Link
-                          href={"/dashboard/buy-credits"}
-                          className="font-medium underline underline-offset-4"
-                        >
-                          Recharge Credits
-                        </Link>
-                      </p>
-                    }
-                  />
                 </div>
               )
             )}

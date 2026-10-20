@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getNavbarVairantByPath, getNavItemsByPath } from "./utils";
+import { fullHeightPaths, getNavbarVairantByPath, getNavItemsByPath } from "./utils";
 import { mockUser } from "@/test/utils/auth";
 
 describe("Agent navigation (TASK-071)", () => {
@@ -13,14 +13,33 @@ describe("Agent navigation (TASK-071)", () => {
     });
   });
 
-  it("hides it from company users", () => {
+  it("gives /company/agent the full-height sidebar layout", () => {
+    expect(getNavbarVairantByPath("/company/agent")).toBe("vertical");
+    expect(fullHeightPaths.some((p) => "/company/agent".startsWith(p))).toBe(true);
+  });
+
+  it("shows the Agent link to company users, after Home (RA-REQ-009)", () => {
     const items = getNavItemsByPath("/company", true, mockUser({ type: "company" }));
 
-    expect(items.some((item) => item.href === "/agent")).toBe(false);
+    expect(items.map((item) => item.id).slice(0, 2)).toEqual(["home", "agent"]);
+    expect(items.find((item) => item.id === "agent")).toMatchObject({
+      label: "Agent",
+      href: "/company/agent",
+      type: "startswith",
+    });
   });
 
   it("uses the sidebar layout on /agent", () => {
     expect(getNavbarVairantByPath("/agent")).toBe("vertical");
+  });
+
+  it("uses the sidebar layout on /opportunities", () => {
+    expect(getNavbarVairantByPath("/opportunities")).toBe("vertical");
+    expect(getNavbarVairantByPath("/opportunities/abc")).toBe("vertical");
+  });
+
+  it("uses the sidebar layout on /settings", () => {
+    expect(getNavbarVairantByPath("/settings")).toBe("vertical");
   });
 });
 

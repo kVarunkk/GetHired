@@ -1,28 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-  SortingState,
-} from "@tanstack/react-table";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
-import { ChevronRight, ArrowUpDown, XCircle } from "lucide-react";
+import { formatDate } from "@/utils/date";
+import { ChevronRight } from "lucide-react";
+import DataTable, { SortableHeader, TextFilter } from "./DataTable";
 import DynamicActions from "./DynamicTableActions";
-import { Input } from "./ui/input";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 import { useRouter } from "next/navigation";
 import { TInterviewPageServer } from "@/utils/types/interview.types";
@@ -38,15 +22,8 @@ type TInterviewWithFlattenedFields = TInterviewPageServer & {
 };
 
 export default function InterviewsTable({ data }: InterviewsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<
-    import("@tanstack/react-table").ColumnFiltersState
-  >([]);
-  const [page, setPage] = useState(1);
   const [items, setItems] = useState<TInterviewPageServer[]>(data);
   const router = useRouter();
-
-  const pageSize = 10;
 
   const updateLocalItem = (updatedItem: TInterviewPageServer) => {
     setItems((prev) =>
@@ -75,17 +52,11 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
       {
         accessorKey: "created_at",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Created At
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <SortableHeader column={column} label="Created At" />
         ),
         cell: ({ row }) => (
           <div className="text-sm ">
-            {format(new Date(row.original.created_at || ""), "PPP")}
+            {formatDate(row.original.created_at)}
           </div>
         ),
       },
@@ -94,8 +65,11 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
         accessorKey: "name",
         header: "Name",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <div className="text-sm font-medium">{row.original.name}</div>
+          <div
+            className="max-w-[14rem] truncate text-sm font-medium"
+            title={row.original.name ?? undefined}
+          >
+            {row.original.name}
           </div>
         ),
       },
@@ -104,17 +78,14 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
         accessorKey: "job_name",
         header: "Job",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <div className="text-sm font-medium">
-              <Link
-                className="underline"
-                href={"/jobs/" + row.original.all_jobs?.id}
-                target="_blank"
-              >
-                {row.original.all_jobs?.job_name}
-              </Link>
-            </div>
-          </div>
+          <Link
+            className="block max-w-[16rem] truncate text-sm font-medium underline"
+            href={"/jobs/" + row.original.all_jobs?.id}
+            target="_blank"
+            title={row.original.all_jobs?.job_name ?? undefined}
+          >
+            {row.original.all_jobs?.job_name}
+          </Link>
         ),
       },
 
@@ -122,17 +93,14 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
         accessorKey: "resume_name",
         header: "Resume",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <div className="text-sm font-medium">
-              <Link
-                className="underline"
-                href={"/resume/" + row.original.resumes?.id}
-                target="_blank"
-              >
-                {row.original.resumes?.name}
-              </Link>
-            </div>
-          </div>
+          <Link
+            className="block max-w-[14rem] truncate text-sm font-medium underline"
+            href={"/resume/" + row.original.resumes?.id}
+            target="_blank"
+            title={row.original.resumes?.name ?? undefined}
+          >
+            {row.original.resumes?.name}
+          </Link>
         ),
       },
 
@@ -164,9 +132,6 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
                   required: true,
                 },
               ]}
-              selectString={
-                "id, created_at, name, all_jobs(id, job_name), resumes(id, name)"
-              }
               updateLocalItem={updateLocalItem}
               removeLocalItem={removeLocalItem}
             />
@@ -177,173 +142,18 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
     [],
   );
 
-  const table = useReactTable<TInterviewWithFlattenedFields>({
-    data: flattenedData as unknown as TInterviewWithFlattenedFields[],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    onSortingChange: (updater) => {
-      setSorting((old) =>
-        updater instanceof Function ? updater(old) : updater,
-      );
-      setPage(1);
-    },
-    onColumnFiltersChange: (updater) => {
-      setColumnFilters((old) =>
-        updater instanceof Function ? updater(old) : updater,
-      );
-      setPage(1);
-    },
-    state: {
-      sorting,
-      columnFilters,
-    },
-  });
-
-  const paginatedRows = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return table.getRowModel().rows.slice(start, start + pageSize);
-  }, [table, page, pageSize, table.getRowModel().rows]);
-
-  const totalRecords = table.getRowModel().rows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-
-  const clearFilters = () => {
-    setColumnFilters([]);
-  };
-
-  const hasFilters = useMemo(() => {
-    return columnFilters.length > 0;
-  }, [columnFilters]);
-
   return (
-    <div className="space-y-4">
-      {/* Filters Section */}
-      <div className="flex items-center justify-between gap-4 flex-wrap ">
-        <div className="flex items-center gap-4 overflow-x-auto p-1">
-          <Input
-            placeholder="Interview Name"
-            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("name")?.setFilterValue(event.target.value)
-            }
-            className="w-[150px] shrink-0 text-sm"
-          />
-          <Input
-            placeholder="Job Name"
-            value={
-              (table.getColumn("job_name")?.getFilterValue() as string) ?? ""
-            }
-            onChange={(event) =>
-              table.getColumn("job_name")?.setFilterValue(event.target.value)
-            }
-            className="w-[150px] shrink-0 text-sm"
-          />
-          <Input
-            placeholder="Resume Name"
-            value={
-              (table.getColumn("resume_name")?.getFilterValue() as string) ?? ""
-            }
-            onChange={(event) =>
-              table.getColumn("resume_name")?.setFilterValue(event.target.value)
-            }
-            className="w-[150px] shrink-0 text-sm"
-          />
-        </div>
-        {hasFilters && (
-          <Button
-            variant="ghost"
-            onClick={clearFilters}
-            className="text-muted-foreground"
-          >
-            <XCircle className="w-4 h-4 mr-2" />
-            Clear Filters
-          </Button>
-        )}
-      </div>
-
-      {/* Table Section */}
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {paginatedRows.length ? (
-              paginatedRows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No Interviews found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="my-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-muted-foreground sm:text-sm">
-        <div>
-          Showing {paginatedRows.length ? (page - 1) * pageSize + 1 : 0}-
-          {(page - 1) * pageSize + paginatedRows.length} of {totalRecords}{" "}
-          interviews
-        </div>
-        <div className="flex min-w-0 max-w-full items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="min-w-0"
-          >
-            <span className="truncate">Previous</span>
-          </Button>
-          <span className="whitespace-nowrap">
-            {/* "Page" is dropped on the narrowest phones so the footer fits. */}
-            <span className="max-[400px]:hidden">Page </span>
-            {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="min-w-0"
-          >
-            <span className="truncate">Next</span>
-          </Button>
-        </div>
-      </div>
-    </div>
+    <DataTable
+      data={flattenedData as unknown as TInterviewWithFlattenedFields[]}
+      columns={columns}
+      noun="interviews"
+      filters={(table) => (
+        <>
+          <TextFilter table={table} column="name" placeholder="Interview Name" />
+          <TextFilter table={table} column="job_name" placeholder="Job Name" />
+          <TextFilter table={table} column="resume_name" placeholder="Resume Name" />
+        </>
+      )}
+    />
   );
 }

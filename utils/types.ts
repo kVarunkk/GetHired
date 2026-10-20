@@ -1,4 +1,5 @@
 import { Enums, Json, Tables } from "./types/database.types";
+import type { JobPostingInput } from "@/helpers/jobs/job-posting-schema";
 
 type AllJobsRow = Tables<"all_jobs">;
 type UserRelevantJobsRow = Tables<"user_relevant_jobs">;
@@ -24,8 +25,15 @@ export type TCompanyInfo = CompanyInfoRow & {
 
 export type AllProfileWithRelations = UserInfoRow & {
   company_favorites?: UserFavoritesCompanyInfoRow[];
-  resumes?: ResumesRow[];
+  resumes?: (Partial<ResumesRow> & {
+    /** The scrubbed sections (OR-REQ-010); one-to-one, so PostgREST may return an object. */
+    resume_public_sections?: { sections: unknown } | { sections: unknown }[] | null;
+  })[];
   job_relevant_profiles?: JobRelevantProfilesRow[];
+  /** From candidate_directory: the scrubbed resume sections. */
+  resume_sections?: unknown;
+  /** The session company's latest outreach to this candidate (OR-REQ-007). */
+  outreach_status?: import("@/utils/types/outreach.types").OutreachStatus | null;
 };
 
 export type ProfilesBuildQueryResult = {
@@ -105,22 +113,8 @@ export interface ICountry {
   iso: string;
 }
 
-export interface ICreateJobPostingFormData {
-  id?: string;
-  title: string;
-  description: string;
-  job_type: TJobTypeEnum;
-  salary_currency: string;
-  min_salary: number;
-  max_salary: number;
-  min_experience: number;
-  visa_sponsorship: "Not Required" | "Required" | "Will Sponsor";
-  location: string[];
-  max_experience?: number;
-  min_equity?: number;
-  max_equity?: number;
-  questions?: string[];
-}
+/** The job posting form's values, derived from the server schema so they can't drift. */
+export type ICreateJobPostingFormData = JobPostingInput & { id?: string };
 
 export interface INavItem {
   id: string;
@@ -128,6 +122,8 @@ export interface INavItem {
   href: string;
   type: "equals" | "includes" | "startswith";
   icon?: React.ReactNode;
+  /** A count shown next to the label, e.g. open outreach. */
+  count?: number;
 }
 
 export interface INavItemWithActive extends INavItem {
@@ -183,6 +179,7 @@ export type FiltersState = {
   companyName: string[];
   jobTitleKeywords: string[];
   jobRole: string[];
+  search?: string;
   industryPreference: string[];
   workStylePreference: string[];
   skills: string[];
@@ -271,10 +268,24 @@ export type JobListing = {
   locations: string | string[];
 };
 
+/** One candidate's jev scores in `relevant_profiles` mode (MT-REQ-001). */
+export type ProfileMatchScores = {
+  /** 0–4 */
+  skills: number;
+  /** 0–4 */
+  experience: number;
+  /** P(preference conflict), 0–1 */
+  preferenceConflict: number;
+  /** 0.6·skills + 0.4·experience, 0–4 */
+  aggregate: number;
+};
+
 export type RerankResult = {
   reranked_jobs?: Array<{ id: string; reason: string }>;
   reranked_job_ids?: string[];
   filtered_out_ids: string[];
+  /** Kept ids only; set in `relevant_profiles` mode. */
+  scores?: Record<string, ProfileMatchScores>;
 };
 
 export type RerankMode =
@@ -306,6 +317,43 @@ export enum PostHogEvent {
 
   AgentChatTurn = "agent_chat_turn",
   AgentLocationNoResults = "agent_location_no_results",
+
+  BillingWebhookError = "billing_webhook_error",
+  BillingPricingViewed = "billing_pricing_viewed",
+  BillingUpgradeDialogShown = "billing_upgrade_dialog_shown",
+  BillingCheckoutStarted = "billing_checkout_started",
+  BillingSubscriptionActivated = "billing_subscription_activated",
+  BillingPlanChanged = "billing_plan_changed",
+  BillingCancelled = "billing_cancelled",
+  BillingResumed = "billing_resumed",
+  BillingPortalOpened = "billing_portal_opened",
+  BillingCreditsPurchased = "billing_credits_purchased",
+  BillingLimitHit = "billing_limit_hit",
+  // Recruiter pipeline (pipeline spec §4.6)
+  PipelineStageMoved = "pipeline_stage_moved",
+  PipelineNoteAdded = "pipeline_note_added",
+  PipelineTemplateSaved = "pipeline_template_saved",
+  PipelineBoardViewed = "pipeline_board_viewed",
+  // Recruiter outreach (outreach spec)
+  OutreachSent = "outreach_sent",
+  OutreachReplied = "outreach_replied",
+  OutreachWithdrawn = "outreach_withdrawn",
+  OutreachDrafted = "outreach_drafted",
+  ApplicationSignalShared = "application_signal_shared",
+  // Recruiter teams (teams spec)
+  TeamMemberInvited = "team_member_invited",
+  TeamInviteAccepted = "team_invite_accepted",
+  TeamMemberRemoved = "team_member_removed",
+  TeamRoleChanged = "team_role_changed",
+  TeamOwnershipTransferred = "team_ownership_transferred",
+  TeamOwnerChanged = "team_owner_changed",
+  TeamPrimaryOwnerChanged = "team_primary_owner_changed",
+  CompanyRoleCreated = "company_role_created",
+  CompanyRoleUpdated = "company_role_updated",
+  CompanyRoleDeleted = "company_role_deleted",
+  CompanyDefaultRoleChanged = "company_default_role_changed",
+  JobAssigned = "job_assigned",
+  JobUnassigned = "job_unassigned",
 }
 
 export type JobUrlPatch = {

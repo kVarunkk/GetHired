@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ModelMessage } from "ai";
-import { agentToolApproval } from "./approval";
+import { agentToolApproval, createToolApproval } from "./approval";
 
 const user = (text: string): ModelMessage => ({ role: "user", content: text });
 
@@ -121,5 +121,71 @@ describe("agentToolApproval: credit cap per turn (SEC-013)", () => {
       ...ran("naturalLanguageJobSearch", "current"),
     ];
     expect(decide("naturalLanguageJobSearch", messages)).toBe("not-applicable");
+  });
+});
+
+describe("createToolApproval (RA-TEST-002)", () => {
+  const policy = createToolApproval({
+    alwaysAsk: ["postJob", "emailCandidate"],
+    untrustedContentTools: ["readResume"],
+    gatedWriteTools: ["saveNote"],
+    untrustedReason: "The assistant read a resume, so notes need your OK.",
+    creditTools: ["screen"],
+    perTurnCaps: [
+      { tools: ["emailCandidate", "moveStage"], max: 3, reason: "Only 3 email actions per message." },
+    ],
+  });
+  const decideWith = (toolName: string, messages: ModelMessage[], toolCallId = "current") =>
+    policy({ toolCall: { toolName, toolCallId }, messages });
+
+  it("always asks for the always-ask tools and leaves the rest alone", () => {
+    expect(decideWith("postJob", [user("x")])).toBe("user-approval");
+    expect(decideWith("listJobs", [user("x")])).toBe("not-applicable");
+  });
+
+  it("asks before a gated write only after untrusted content in the same turn", () => {
+    expect(decideWith("saveNote", [user("x")])).toBe("not-applicable");
+    const status = decideWith("saveNote", [user("x"), ...ran("readResume", "c1")]);
+    expect(status).toEqual({
+      type: "user-approval",
+      reason: "The assistant read a resume, so notes need your OK.",
+    });
+    expect(
+      decideWith("saveNote", [user("a"), ...ran("readResume", "c1"), user("b")]),
+    ).toBe("not-applicable");
+    expect(decideWith("saveNote", [user("x"), ...ran("readResume", "c1", true)])).toBe(
+      "not-applicable",
+    );
+  });
+
+  it("denies credit tools past the per-turn credit cap", () => {
+    const messages = [user("x"), ...ran("screen", "c1"), ...ran("screen", "c2")];
+    expect(typeOf(decideWith("screen", messages))).toBe("denied");
+    expect(decideWith("screen", [user("x"), ...ran("screen", "c1")])).toBe("not-applicable");
+  });
+
+  it("denies a capped group's tools past its max, counting only that group", () => {
+    const three = [
+      user("x"),
+      ...ran("emailCandidate", "c1"),
+      ...ran("moveStage", "c2"),
+      ...ran("emailCandidate", "c3"),
+    ];
+    const status = decideWith("moveStage", three);
+    expect(status).toEqual({ type: "denied", reason: "Only 3 email actions per message." });
+
+    const others = [user("x"), ...ran("screen", "c1"), ...ran("postJob", "c2"), ...ran("moveStage", "c3")];
+    expect(decideWith("moveStage", others)).toBe("not-applicable");
+  });
+
+  it("denies before asking when a capped tool is also always-ask", () => {
+    const three = [
+      user("x"),
+      ...ran("emailCandidate", "c1"),
+      ...ran("emailCandidate", "c2"),
+      ...ran("emailCandidate", "c3"),
+    ];
+    expect(typeOf(decideWith("emailCandidate", three))).toBe("denied");
+    expect(decideWith("emailCandidate", three.slice(0, 5))).toBe("user-approval");
   });
 });

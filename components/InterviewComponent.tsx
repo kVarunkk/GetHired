@@ -13,13 +13,32 @@ import {
   ChevronDown,
   FileUser,
   Briefcase,
+  CheckCircle2,
+  ListChecks,
+  Search,
 } from "lucide-react";
-import BackButton from "./BackButton";
+import { BackLink } from "./PageHeader";
 import { TInterviewServer } from "@/utils/types/interview.types";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import ModifiedLink from "./ModifiedLink";
+
+/** A company's screening interview (SI-REQ-025): the server decides what happens after each attempt. */
+type ScreeningProps = {
+  applicationInterviewId: string;
+  companyName: string;
+  jobTitle: string;
+  durationMinutes: number;
+  /** application_interviews.status, as the page last read it. */
+  status: string;
+  attemptsUsed: number;
+  maxAttempts: number;
+  /** The page is reading the status again after an attempt ended. */
+  checking?: boolean;
+  /** Called when an attempt ends here, so the page can read what the server made of it. */
+  onEnded?: () => void;
+};
 
 interface InterviewComponentProps {
   interviewId: string;
@@ -30,22 +49,51 @@ interface InterviewComponentProps {
     status: string;
     analysisStatus: string | null;
   }[];
+  screening?: ScreeningProps;
 }
+
+const PRACTICE_SECONDS = 5 * 60;
 
 export default function InterviewComponent({
   interviewId,
   interview,
   sessionHistory,
+  screening,
 }: InterviewComponentProps) {
+  const voiceArgs: Parameters<typeof useVoiceAgent> = screening
+    ? [interviewId, { mode: "screening", applicationInterviewId: screening.applicationInterviewId }]
+    : [interviewId];
   const { status, errorMessage, lines, analysisSession, start, stop } =
-    useVoiceAgent(interviewId);
+    useVoiceAgent(...voiceArgs);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [timeLeft, setTimeLeft] = useState(5 * 60);
+  const totalSeconds = screening ? screening.durationMinutes * 60 : PRACTICE_SECONDS;
+  const [timeLeft, setTimeLeft] = useState(totalSeconds);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   const isActive = status === "connecting" || status === "live";
+
+  // Screening states. The voice server reports the transcript, so an ended
+  // attempt is "saving" until the page reads a new status.
+  const submitted = screening?.status === "completed";
+  const saving =
+    !!screening && !submitted && !isActive && (!!screening.checking || screening.status === "in_progress");
+  const attemptsLeft = screening ? screening.maxAttempts - screening.attemptsUsed : 0;
+  const interrupted =
+    !!screening && screening.status === "invited" && screening.attemptsUsed > 0 && status !== "error";
+  const retryable =
+    !!screening && screening.status === "invited" && (status === "error" || status === "stopped" || interrupted);
+
+  const onEnded = screening?.onEnded;
+  const wasActiveRef = useRef(false);
+  useEffect(() => {
+    if (isActive) wasActiveRef.current = true;
+    else if (wasActiveRef.current) {
+      wasActiveRef.current = false;
+      onEnded?.();
+    }
+  }, [isActive, onEnded]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -106,11 +154,13 @@ export default function InterviewComponent({
       .filter((line): line is NonNullable<typeof line> => line !== null);
   }, [interview?.turns, interview.interview_sessions, sessionHistory]);
 
-  const latestAnalysisSessionId =
-    analysisSession?.sessionId ??
-    [...sessionHistory]
-      .reverse()
-      .find((session) => session.analysisStatus !== null)?.id;
+  // SI-DEC-003: candidates never see a screening analysis.
+  const latestAnalysisSessionId = screening
+    ? undefined
+    : (analysisSession?.sessionId ??
+      [...sessionHistory]
+        .reverse()
+        .find((session) => session.analysisStatus !== null)?.id);
 
   // Auto scroll transcript to bottom as new messages arrive
   useEffect(() => {
@@ -121,7 +171,7 @@ export default function InterviewComponent({
 
   useEffect(() => {
     if (status === "idle" || status === "stopped" || status === "error") {
-      setTimeLeft(5 * 60);
+      setTimeLeft(totalSeconds);
     }
 
     if (status !== "live") {
@@ -133,7 +183,7 @@ export default function InterviewComponent({
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [status]);
+  }, [status, totalSeconds]);
 
   useEffect(() => {
     if (errorMessage) {
@@ -159,7 +209,18 @@ export default function InterviewComponent({
       {/* Top Header Bar */}
       <header className="flex-none border-b border-border bg-card px-4 py-3 sm:px-6 flex items-center justify-between gap-3 z-10">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <BackButton />
+          <BackLink
+            href={screening ? "/dashboard" : "/interview"}
+            label={screening ? "Back to dashboard" : "Back to interviews"}
+          />
+          {screening ? (
+            <div className="min-w-0 flex-1">
+              <h1 className="text-base sm:text-lg font-semibold tracking-tight leading-tight truncate">
+                AI interview: {screening.jobTitle}
+              </h1>
+              <p className="mt-0.5 text-xs text-muted-foreground truncate">{screening.companyName}</p>
+            </div>
+          ) : (
           <div className="min-w-0 flex-1">
             <h1
               className="text-base sm:text-lg font-semibold tracking-tight leading-tight truncate"
@@ -196,6 +257,7 @@ export default function InterviewComponent({
               )}
             </div>
           </div>
+          )}
         </div>
 
         {/* Status Badge */}
@@ -227,7 +289,7 @@ export default function InterviewComponent({
                 <Radio
                   className={`w-3.5 h-3.5 shrink-0 ${status === "live" ? "text-success animate-pulse" : ""}`}
                 />
-                {status === "live" ? "Voice Session Active" : "Session Offline"}
+                {status === "live" ? "Voice Session Active" : submitted ? "Interview submitted" : "Session Offline"}
               </span>
               <span>16 kHz / Mono PCM</span>
             </div>
@@ -251,14 +313,18 @@ export default function InterviewComponent({
                 {/* Central Avatar Box */}
                 <div
                   className={`relative w-20 h-20 sm:w-36 sm:h-36 rounded-full flex items-center justify-center transition-all duration-300 border-2 ${
-                    status === "live"
+                    screening && submitted
+                      ? "bg-success/10 text-success border-success/30"
+                      : status === "live"
                       ? "bg-brand text-brand-foreground border-white/20 scale-105"
                       : status === "connecting"
                         ? "bg-card text-brand border-brand"
                         : "bg-muted text-muted-foreground border-border"
                   }`}
                 >
-                  {status === "connecting" ? (
+                  {screening && submitted ? (
+                    <CheckCircle2 className="w-10 h-10 sm:w-16 sm:h-16" />
+                  ) : status === "connecting" ? (
                     <Loader2 className="w-10 h-10 sm:w-16 sm:h-16 animate-spin text-brand" />
                   ) : (
                     <Bot className="w-10 h-10 sm:w-16 sm:h-16" />
@@ -267,6 +333,24 @@ export default function InterviewComponent({
               </div>
 
               {/* AI Status Text */}
+              {screening && submitted ? (
+                <StageText
+                  title="Interview submitted"
+                  body={`You're all done. ${screening.companyName} will review your interview, and any update shows on your application.`}
+                />
+              ) : screening && saving ? (
+                <StageText title="Saving your interview…" body="This takes a few seconds. You can stay on this page." />
+              ) : screening && interrupted && !isActive ? (
+                <StageText
+                  title="Interview interrupted"
+                  body={
+                    attemptsLeft === 1
+                      ? "Your connection dropped. You have one more attempt."
+                      : `Your connection dropped. You have ${attemptsLeft} more attempts.`
+                  }
+                />
+              ) : (
+              <>
               <h2 className="mt-4 sm:mt-6 text-lg sm:text-2xl font-semibold tracking-tight text-balance">
                 {status === "idle" && "Ready to start interview"}
                 {status === "connecting" && "Establishing connection..."}
@@ -287,6 +371,8 @@ export default function InterviewComponent({
                   (errorMessage ??
                     "Failed to connect. Please check mic permissions and try again.")}
               </p>
+              </>
+              )}
 
               {/* Waveform Visualization Placeholder (Live feedback) */}
               {status === "live" && (
@@ -305,11 +391,13 @@ export default function InterviewComponent({
             </div>
 
             {/* Bottom Stage Instructions */}
+            {!(screening && submitted) && (
             <div className="w-full text-center text-xs text-muted-foreground border-t border-border/50 pt-3 sm:pt-4">
               <p>
                 Ensure your microphone is enabled and ambient noise is minimal.
               </p>
             </div>
+            )}
           </div>
         </section>
 
@@ -335,7 +423,8 @@ export default function InterviewComponent({
               onScroll={handleScroll}
               className="h-full overflow-y-auto p-4 sm:p-6 space-y-4"
             >
-              {historyLines.length > 0 && !isActive ? (
+              {/* Screening: this visit's attempt over the last saved one, which may be older. */}
+              {historyLines.length > 0 && !isActive && !(screening && lines.length > 0) ? (
                 historyLines.map((each) => (
                   <TranscriptBubble line={each} key={each.id} />
                 ))
@@ -377,8 +466,13 @@ export default function InterviewComponent({
 
           {/* Controls Dock Bar */}
           <div className="flex-none p-3 sm:p-6 border-t border-border bg-card">
+            {screening && submitted ? (
+              <SubmittedNextSteps />
+            ) : (
             <div className="flex items-center justify-center gap-3 max-w-md mx-auto">
-              {!isActive ? (
+              {screening && saving ? (
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" aria-label="Saving" />
+              ) : !isActive ? (
                 /* START INTERVIEW BUTTON */
                 <Button
                   variant="brand"
@@ -387,9 +481,13 @@ export default function InterviewComponent({
                   className="w-full h-11 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Play className="w-4 h-4" />
-                  {status === "stopped" || status === "error"
-                    ? "Restart Interview"
-                    : "Start Interview"}
+                  {screening
+                    ? retryable
+                      ? "Try again"
+                      : "Start Interview"
+                    : status === "stopped" || status === "error"
+                      ? "Restart Interview"
+                      : "Start Interview"}
                 </Button>
               ) : (
                 /* LIVE CONTROLS (MUTE / END) */
@@ -405,9 +503,45 @@ export default function InterviewComponent({
                 </div>
               )}
             </div>
+            )}
           </div>
         </section>
       </main>
+    </div>
+  );
+}
+
+function StageText({ title, body }: { title: string; body: string }) {
+  return (
+    <>
+      <h2 className="mt-4 sm:mt-6 text-lg sm:text-2xl font-semibold tracking-tight text-balance">{title}</h2>
+      <p className="mt-1 text-sm text-muted-foreground max-w-xs text-pretty break-words">{body}</p>
+    </>
+  );
+}
+
+/** Where a candidate goes once their screening interview is submitted. */
+function SubmittedNextSteps() {
+  return (
+    <div className="max-w-xl mx-auto rounded-xl border border-success/30 bg-success/10 p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center gap-3">
+      <p className="hidden lg:flex items-center gap-2 text-sm font-semibold flex-1 min-w-0">
+        <CheckCircle2 className="w-5 h-5 shrink-0 text-success" />
+        Your interview has been submitted
+      </p>
+      <div className="flex flex-col lg:flex-row gap-2 lg:shrink-0">
+        <Button asChild variant="outline" className="w-full lg:w-auto lg:shrink-0">
+          <Link href="/jobs">
+            <Search />
+            Find jobs
+          </Link>
+        </Button>
+        <Button asChild variant="brand" className="w-full lg:w-auto lg:shrink-0 border border-transparent">
+          <Link href="/jobs?tab=applied">
+            <ListChecks />
+            View applications
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }

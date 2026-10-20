@@ -1,8 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
+import { getMyCareersLink } from "@/helpers/careers/my-careers-link";
+import CareersLinkBar from "@/components/careers/CareersLinkBar";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { can, canAny } from "@/helpers/companies/permissions";
+import { jobControls, scopeToJobs } from "@/helpers/companies/job-scope";
 import ErrorComponent from "@/components/Error";
-import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
+import { CreateJobPostButton } from "@/components/jobs/JobPostButtons";
 import JobPostingsTable from "@/components/JobPostingsTable";
-import BackButton from "@/components/BackButton";
+import PageHeader from "@/components/PageHeader";
+import { AskAgentAboutJobPosts } from "@/components/agent/recruiter/AskAgentOnMainPages";
 
 export default async function CompanyJobPostsPage() {
   try {
@@ -16,28 +22,30 @@ export default async function CompanyJobPostsPage() {
     if (!user) throw new Error("User not found");
 
     // Fetch company info to get the company_id
-    const { data: companyInfo, error: companyInfoError } = await supabase
-      .from("company_info")
-      .select("id, name")
-      .eq("user_id", user.id)
-      .single();
+    const companyInfo = await getMyCompany(supabase, user);
 
-    if (companyInfoError || !companyInfo) {
+    if (!companyInfo) {
       throw new Error("Company profile not found");
     }
+    const canCreateJobs = can(companyInfo, "jobs.create");
+    // CP-REQ-014: the careers page link above the list.
+    const careersLink = await getMyCareersLink(supabase, companyInfo.id).catch(() => null);
 
     // Fetch all job postings for the company, along with a count of applications
-    const { data: jobPosts, error: jobPostsError } = await supabase
-      .from("job_postings")
-      .select(
-        `
+    // RP-REQ-010: only the jobs the viewer's role covers.
+    const { data: jobPosts, error: jobPostsError } = await scopeToJobs(
+      supabase
+        .from("job_postings")
+        .select(
+          `
           *,
           applications(count),
           company_info(name, website)
         `,
-      )
-      .eq("company_id", companyInfo.id)
-      .order("created_at", { ascending: false });
+        )
+        .eq("company_id", companyInfo.id),
+      companyInfo,
+    ).order("created_at", { ascending: false });
 
     if (jobPostsError) {
       // console.error("Error fetching job postings:", jobPostsError);
@@ -45,15 +53,27 @@ export default async function CompanyJobPostsPage() {
     }
 
     return (
-      <div className="flex flex-col w-full gap-8  p-4 mb-20">
-        <div>
-          <BackButton />
-        </div>
-        <div className="flex flex-wrap items-center gap-4 justify-between">
-          <h1 className="text-3xl font-medium">Your Job Postings</h1>
-          <CreateJobPostingDialog companyId={companyInfo.id} />
-        </div>
-        <JobPostingsTable data={jobPosts || []} />
+      <div className="flex flex-col w-full gap-6 p-4 mb-20">
+        <PageHeader
+          title="Job posts"
+          description="Your company's job posts, their status and applicants."
+          actions={
+            <CreateJobPostButton disabled={!canCreateJobs} />
+          }
+        />
+        {can(companyInfo, "agent.use") && (
+          <AskAgentAboutJobPosts
+            canCreate={canCreateJobs}
+            canViewApplicants={canAny(companyInfo, "applicants.view")}
+            canPublish={canAny(companyInfo, "jobs.publish")}
+            canMatch={canAny(companyInfo, "matching.run")}
+          />
+        )}
+        {careersLink && <CareersLinkBar slug={careersLink.slug} published={careersLink.published} />}
+        <JobPostingsTable
+          data={jobPosts || []}
+          publishable={(jobPosts ?? []).filter((j) => jobControls(companyInfo, j.id).publish).map((j) => j.id)}
+        />
       </div>
     );
   } catch {

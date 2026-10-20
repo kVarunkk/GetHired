@@ -131,4 +131,17 @@ describe("loadAgentPageData", () => {
       "insert failed",
     );
   });
+
+  it("lists and creates only company sessions for a company user", async () => {
+    supabase.queue("agent_sessions", { data: [], error: null });
+    supabase.queue("agent_sessions", { data: S1, error: null });
+    supabase.queue("agent_sessions", { data: { ...FULL(S1), role: "company" }, error: null });
+
+    const data = await loadAgentPageData(supabase.client, "u1", undefined, { role: "company" });
+
+    expect(data?.activeSessionId).toBe("s1");
+    const [list, insert] = supabase.callsFor("agent_sessions");
+    expect(list.chain).toContainEqual({ method: "eq", args: ["role", "company"] });
+    expect(insert.chain[0]).toEqual({ method: "insert", args: [{ user_id: "u1", role: "company" }] });
+  });
 });

@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
     const tempUrl = new URL(nextPathWithParams, origin);
     referralCode = tempUrl.searchParams.get("ref");
     tempUrl.searchParams.delete("ref");
-    nextRedirectPath = tempUrl.pathname;
+    // Same-origin paths only. The query is kept (minus ref), so an invite
+    // sign-up lands back on /company/join?token=… (recruiter teams).
+    nextRedirectPath =
+      tempUrl.origin === origin ? `${tempUrl.pathname}${tempUrl.search}` : DEFAULT_REDIRECT_PATH;
   } catch (e) {
     console.warn("Could not parse 'next' parameter for ref code:", e);
     nextPathWithParams = DEFAULT_REDIRECT_PATH;
@@ -30,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   let next = nextRedirectPath;
 
-  if (!next.startsWith("/")) {
+  if (!next.startsWith("/") || next.startsWith("//")) {
     next = DEFAULT_REDIRECT_PATH;
   }
 

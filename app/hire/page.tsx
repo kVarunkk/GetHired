@@ -10,6 +10,7 @@ import { getPlatformStats } from "@/utils/platform-stats";
 import { HIRE_PAGE_DARK } from "@/utils/utils";
 import { HIRE_PAGE_LIGHT } from "@/utils/utils";
 import { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "AI Recruiting Software to Hire Tech Talent",
@@ -71,6 +72,15 @@ export default async function HirePage() {
           />
           <TheGetHiredAdvantageSection jobCount={jobCount} />
           <FAQSection topic="hiring" />
+          <p className="px-4 text-center text-[15px] leading-7 text-muted-foreground">
+            Start hiring free.{" "}
+            <Link
+              href="/pricing/companies"
+              className="font-medium text-foreground underline underline-offset-4 hover:text-brand"
+            >
+              See plans and pricing
+            </Link>
+          </p>
           <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
             <FootComponent />
           </div>

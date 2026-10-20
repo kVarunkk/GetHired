@@ -1,5 +1,5 @@
 -- /agent feature: chat sessions, persisted UI messages, and long-term user memories.
--- See plan/feature-agent-spec.md §3.
+-- See plan/agent/feature-agent-spec.md §3.
 
 CREATE TABLE public.agent_sessions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

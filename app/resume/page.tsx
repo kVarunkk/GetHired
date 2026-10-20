@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import ResumesTable from "@/components/ResumesTable";
 import CreateResumeDialog from "@/components/CreateResumeDialog";
+import PageHeader from "@/components/PageHeader";
+import { AskAgentAboutResumes } from "@/components/agent/AskAgentOnApplicantPages";
 
 export default async function ResumePage() {
   try {
@@ -27,11 +29,13 @@ export default async function ResumePage() {
     const tableKey = `${resumes?.length || 0}-${resumes?.[0]?.id || "empty"}`;
 
     return (
-      <div className="flex flex-col w-full gap-8 p-4 mb-20">
-        <div className="flex items-center justify-between flex-wrap gap-4 w-full">
-          <h1 className="text-3xl font-medium ">All Resumes</h1>
-          <CreateResumeDialog />
-        </div>
+      <div className="flex flex-col w-full gap-6 p-4 mb-20">
+        <PageHeader
+          title="Resumes"
+          description="Resumes you've built, tailored to the jobs you want."
+          actions={<CreateResumeDialog />}
+        />
+        {user.app_metadata.type === "applicant" && <AskAgentAboutResumes />}
         <ResumesTable key={tableKey} data={resumes || []} />
       </div>
     );

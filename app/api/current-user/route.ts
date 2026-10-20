@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getPlanSummary } from "@/helpers/billing/entitlements";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { can } from "@/helpers/companies/permissions";
+import { roleLabel } from "@/helpers/companies/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +31,11 @@ export async function GET() {
   if (userRole === "applicant") {
     tableName = "user_info";
     selectString =
-      "user_id, ai_credits, relevant_jobs_update_status, user_favorites(job_id), user_favorites_companies(company_id), applications(all_jobs_id, status), filled, resumes(id, name, created_at, is_primary, resume_path, parsing_failed), job_feedback(job_id, vote_type)";
+      "user_id, ai_credits, relevant_jobs_update_status, linkedin_url, github_url, preferred_locations, min_salary, salary_currency, user_favorites(job_id), user_favorites_companies(company_id), applications(all_jobs_id, status), filled, resumes(id, name, created_at, is_primary, resume_path, parsing_failed), job_feedback(job_id, vote_type)";
   } else if (userRole === "company") {
     tableName = "company_info";
     selectString =
-      "id, user_id, company_favorites(user_id), company_tiers(name, allowed_profiles), job_postings(id, title, job_id)";
+      "id, user_id, company_favorites(user_id)";
   } else {
     return NextResponse.json(
       { profile: null, role: null, message: "Profile role not set." },
@@ -40,11 +44,15 @@ export async function GET() {
   }
 
   try {
-    const { data, error } = await supabase
-      .from(tableName)
-      .select(selectString)
-      .eq("user_id", userId)
-      .single();
+    // A company user's company comes from their membership (recruiter teams),
+    // so every member gets the company's favorites and job posts.
+    const company = userRole === "company" ? await getMyCompany(supabase, user) : null;
+    const { data, error } =
+      userRole === "company"
+        ? company
+          ? await supabase.from("company_info").select(selectString).eq("id", company.id).single()
+          : { data: null, error: null }
+        : await supabase.from(tableName).select(selectString).eq("user_id", userId).single();
 
     if (error || !data) {
       return NextResponse.json(
@@ -58,6 +66,23 @@ export async function GET() {
     }
 
     profileData = data;
+
+    if (userRole === "company") {
+      // "Plan: Startup · 1,240 credits" in the profile menu.
+      const companyId = (data as unknown as { id: string }).id;
+      const plan = await getPlanSummary(companyId).catch((err) => {
+        console.error("[current-user] couldn't load the plan", err);
+        return null;
+      });
+      // The role's name and what the menus may show (RP-REQ-016); the server
+      // checks every permission again on each request.
+      profileData = {
+        ...(data as object),
+        plan: company && can(company, "billing.view") ? plan : null,
+        roleLabel: roleLabel(company),
+        access: { billingView: can(company, "billing.view"), isOwner: Boolean(company?.isOwner) },
+      };
+    }
   } catch {
     return NextResponse.json(
       { error: "Server error fetching profile data." },

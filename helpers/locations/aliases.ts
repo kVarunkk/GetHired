@@ -100,3 +100,13 @@ export async function canonicalizeLocations(names: string[]): Promise<string[]> 
   }
   return result;
 }
+
+/**
+ * Location names to filter profiles by. Profiles saved before canonicalization
+ * keep the spelling they were typed with, and newer ones store the canonical
+ * name as written, so this matches both: every lowercased spelling in the
+ * group plus the canonical name.
+ */
+export async function expandProfileLocations(names: string[]): Promise<string[]> {
+  return [...new Set([...(await expandLocations(names)), ...(await canonicalizeLocations(names))])];
+}

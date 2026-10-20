@@ -12,15 +12,15 @@ import {
   ResponsiveDialogTrigger,
 } from "@/components/ui/responsive-dialog";
 import { Button } from "./ui/button";
+import AgentHandoff from "./agent/AgentHandoff";
+import { AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import { resumeUploadHandoffPrompt } from "@/helpers/agent/handoff-prompts";
 import ResumeSourceSelector from "./ResumeSourceSelector";
 import { startTransition, useState } from "react";
 import toast from "react-hot-toast";
-import { TAICredits } from "@/utils/types";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
-import InfoTooltip from "./InfoTooltip";
-import Link from "next/link";
 import { uploadResumeAction } from "@/app/actions/upload-resume-file";
 import { useProgress } from "react-transition-progress";
 import { TResumeReviewResume } from "@/utils/types/review.types";
@@ -37,7 +37,6 @@ export default function CreateResumeDialog() {
     revalidateOnReconnect: false,
     staleTime: 5 * 60 * 1000,
   });
-  const creditsState = data && data.profile ? data.profile.ai_credits : 0;
   const existingResumes: TResumeReviewResume[] =
     data && data.profile ? data.profile.resumes : [];
 
@@ -78,28 +77,14 @@ export default function CreateResumeDialog() {
       <ResponsiveDialogTrigger asChild>
         <Button variant="brand" className="max-w-full">
           <Plus className="w-4 h-4" />
-          <span className="truncate">Add Resume</span>
+          <span>Add Resume</span>
         </Button>
       </ResponsiveDialogTrigger>
 
       <ResponsiveDialogContent className="sm:max-w-[440px] ">
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>
-            Add New Resume{" "}
-            <InfoTooltip
-              content={
-                <p>
-                  This feature uses {TAICredits.AI_SEARCH_ASK_AI_RESUME} AI
-                  Credits. {creditsState} AI Credits available.{" "}
-                  <Link
-                    href={"/dashboard/buy-credits"}
-                    className="font-medium underline underline-offset-4"
-                  >
-                    Recharge Credits
-                  </Link>
-                </p>
-              }
-            />
+            Add New Resume
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
             Upload a PDF version of your resume. Our AI will index it for
@@ -115,14 +100,23 @@ export default function CreateResumeDialog() {
               <p className="text-sm text-muted-foreground">Processing Upload</p>
             </div>
           ) : (
-            <ResumeSourceSelector
-              existingResumes={existingResumes}
-              selectedId={null}
-              onSelectExisting={() => {}}
-              file={selectedFile}
-              onFileChange={(file) => setSelectedFile(file)}
-              view="upload"
-            />
+            <div className="flex flex-col gap-4">
+              <AgentHandoff
+                label="Or upload it in chat and let the agent use it"
+                placeholder="Then make it my primary resume and find matching jobs…"
+                basePath={AGENT_PATH}
+                toPrompt={resumeUploadHandoffPrompt}
+                onHandoff={() => setIsOpen(false)}
+              />
+              <ResumeSourceSelector
+                existingResumes={existingResumes}
+                selectedId={null}
+                onSelectExisting={() => {}}
+                file={selectedFile}
+                onFileChange={(file) => setSelectedFile(file)}
+                view="upload"
+              />
+            </div>
           )}
         </ResponsiveDialogBody>
         <ResponsiveDialogFooter>

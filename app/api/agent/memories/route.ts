@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { internalError, requireApplicant } from "@/helpers/agent/auth";
+import { internalError, requireAgentUser } from "@/helpers/agent/auth";
 import { listMemories } from "@/helpers/agent/memory";
 
 export async function GET() {
-  const auth = await requireApplicant();
+  const auth = await requireAgentUser();
   if (!auth.ok) return auth.response;
   const { user, supabase } = auth;
 

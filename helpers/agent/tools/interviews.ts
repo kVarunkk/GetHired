@@ -36,6 +36,7 @@ export function createInterviewTools(ctx: AgentToolContext) {
               "id, name, created_at, all_jobs(id, job_name, company_name), resumes(id, name), interview_sessions(id, started_at, status, interview_analyses(status, perspective))",
             )
             .eq("user_id", ctx.user.id)
+            .eq("kind", "practice")
             .order("created_at", { ascending: false })
             .limit(limit ?? AGENT_LIST_DEFAULT_LIMIT);
           if (error) throw error;
@@ -87,6 +88,7 @@ export function createInterviewTools(ctx: AgentToolContext) {
             .select("id, name")
             .eq("id", interviewId)
             .eq("user_id", ctx.user.id)
+            .eq("kind", "practice")
             .maybeSingle();
           if (interviewError) throw interviewError;
           if (!interview) return { error: "Interview not found." };

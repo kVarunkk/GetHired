@@ -1,37 +1,13 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-  SortingState,
-} from "@tanstack/react-table";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
 // import { IBookmark } from "@/utils/types";
-import { ArrowUpDown, ExternalLink, XCircle } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import AlertStatusSwitch from "./AlertStatusSwitch";
 import InfoTooltip from "./InfoTooltip";
-import { Input } from "./ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import DataTable, { FilterSelect, SortableHeader, TextFilter } from "./DataTable";
 import DynamicActions from "./DynamicTableActions";
 import { BookmarkRow } from "@/utils/types";
 
@@ -40,19 +16,12 @@ interface JobsBookmarkTableProps {
 }
 
 const alertStatuses = [
-  { title: "All", value: "all" },
-  { title: "Active", value: "true" },
-  { title: "Disabled", value: "false" },
+  { label: "Active", value: "true" },
+  { label: "Disabled", value: "false" },
 ];
 
 export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<
-    import("@tanstack/react-table").ColumnFiltersState
-  >([]);
-  const [page, setPage] = useState(1);
   const [items, setItems] = useState<BookmarkRow[]>(data);
-  const pageSize = 10;
   const alertCount = data.filter((each) => each.is_alert_on).length;
 
   const updateLocalItem = useCallback(
@@ -98,13 +67,7 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
       {
         accessorKey: "name",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Name
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
+          <SortableHeader column={column} label="Name" />
         ),
         cell: ({ row }) => (
           <Link
@@ -166,186 +129,38 @@ export default function JobsBookmarkTable({ data }: JobsBookmarkTableProps) {
     [removeLocalItem, updateLocalItem, alertCount],
   );
 
-  const table = useReactTable({
-    data: items,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    onSortingChange: (updater) => {
-      setSorting((old) =>
-        updater instanceof Function ? updater(old) : updater,
-      );
-      setPage(1);
-    },
-    onColumnFiltersChange: (updater) => {
-      setColumnFilters((old) =>
-        updater instanceof Function ? updater(old) : updater,
-      );
-      setPage(1);
-    },
-    state: {
-      sorting,
-      columnFilters,
-    },
-  });
-
-  const paginatedRows = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return table.getRowModel().rows.slice(start, start + pageSize);
-  }, [table, page, pageSize, table.getRowModel().rows]);
-
-  const totalRecords = table.getRowModel().rows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-
-  const clearFilters = () => {
-    setColumnFilters([]);
-    table.getColumn("name")?.setFilterValue("");
-    table.getColumn("is_alert_on")?.setFilterValue(undefined);
-  };
-
-  const hasFilters = useMemo(() => {
-    return columnFilters.length > 0;
-  }, [columnFilters]);
-
   return (
-    <div className="space-y-4">
-      {/* Filters Section */}
-      <div className="flex items-center justify-between gap-4 flex-wrap ">
-        <div className="flex items-center gap-4 overflow-x-auto p-1">
-          <Input
+    <DataTable
+      data={items}
+      columns={columns}
+      noun="bookmarks"
+      fixedLayout
+      cellClassName="px-6"
+      filters={(table) => (
+        <>
+          <TextFilter
+            table={table}
+            column="name"
             placeholder="Bookmark Name"
-            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("name")?.setFilterValue(event.target.value)
-            }
-            className="w-[160px] shrink-0 text-sm"
+            className="w-[160px]"
           />
-
-          <Select
-            onValueChange={(val) => {
-              const filterValue =
-                val === "true" ? true : val === "false" ? false : undefined;
-              table.getColumn("is_alert_on")?.setFilterValue(filterValue);
-            }}
+          <FilterSelect
             value={
               table.getColumn("is_alert_on")?.getFilterValue()?.toString() ??
-              "all"
+              null
             }
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Filter by Alert Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {alertStatuses.map(({ title, value }) => (
-                <SelectItem key={title} value={String(value)}>
-                  {title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {hasFilters && (
-          <Button
-            variant="ghost"
-            onClick={clearFilters}
-            className="text-muted-foreground"
-          >
-            <XCircle className="w-4 h-4 mr-2" />
-            Clear Filters
-          </Button>
-        )}
-      </div>
-
-      {/* Table Section */}
-      <div className="overflow-x-auto rounded-md border">
-        <Table className="table-fixed">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    style={{ width: header.getSize() }}
-                    className="px-6"
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {paginatedRows.length ? (
-              paginatedRows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      style={{ width: cell.column.getSize() }}
-                      className="px-6"
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No bookmarks found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="my-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-muted-foreground sm:text-sm">
-        <div>
-          Showing {paginatedRows.length ? (page - 1) * pageSize + 1 : 0}-
-          {(page - 1) * pageSize + paginatedRows.length} of {totalRecords}{" "}
-          bookmarks
-        </div>
-        <div className="flex min-w-0 max-w-full items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="min-w-0"
-          >
-            <span className="truncate">Previous</span>
-          </Button>
-          <span className="whitespace-nowrap">
-            {/* "Page" is dropped on the narrowest phones so the footer fits. */}
-            <span className="max-[400px]:hidden">Page </span>
-            {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="min-w-0"
-          >
-            <span className="truncate">Next</span>
-          </Button>
-        </div>
-      </div>
-    </div>
+            onChange={(value) =>
+              table
+                .getColumn("is_alert_on")
+                ?.setFilterValue(value === null ? undefined : value === "true")
+            }
+            allLabel="All"
+            options={alertStatuses}
+            label="Filter by alert status"
+            className="w-[120px]"
+          />
+        </>
+      )}
+    />
   );
 }

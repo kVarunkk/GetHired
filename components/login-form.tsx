@@ -23,39 +23,14 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { useProgress } from "react-transition-progress";
 import GoogleAuthBtn from "./GoogleAuthBtn";
 import { COMPANY_HOME, homePathFor } from "@/helpers/user/home-path";
+import { mutate } from "swr";
 
-const isGenericEmail = (email: string) => {
-  const genericDomains = [
-    "gmail.com",
-    "yahoo.com",
-    "outlook.com",
-    "hotmail.com",
-    "aol.com",
-  ];
-  const domain = email.split("@")[1];
-  return genericDomains.includes(domain);
-};
-
-const loginSchema = (isCompany: boolean) =>
-  z.object({
-    email: z
-      .string()
-      .email({ message: "Invalid email address." })
-      .refine(
-        (email) => {
-          if (isCompany) {
-            return !isGenericEmail(email);
-          }
-          return true;
-        },
-        {
-          message: "Company email cannot be a generic public domain.",
-        },
-      ),
-    password: z
-      .string()
-      .min(6, { message: "Password must be at least 6 characters." }),
-  });
+const loginSchema = z.object({
+  email: z.string().email({ message: "Invalid email address." }),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters." }),
+});
 
 export function LoginForm({
   className,
@@ -70,7 +45,7 @@ export function LoginForm({
   const returnToPath = searchParams.get("returnTo");
 
   const form = useForm({
-    resolver: zodResolver(loginSchema(isCompany)),
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",
@@ -88,6 +63,12 @@ export function LoginForm({
       });
       if (error) throw error;
       form.reset();
+      // The signed-out profile (and anything else per-user) is still cached by SWR
+      // and deduped for minutes, so the page we return to would render as signed out
+      // (e.g. no Apply dialog for ?apply=true). Drop it so it refetches on mount.
+      // revalidate must stay true: only that clears SWR's dedupe markers, otherwise
+      // the next mount reuses the signed-out request for the rest of the interval.
+      await mutate(() => true, undefined, { revalidate: true });
       startTransition(() => {
         startProgress();
         if (isCompany) {
@@ -206,7 +187,7 @@ export function LoginForm({
                     isCompany
                       ? "/auth/sign-up?company=true"
                       : returnToPath
-                        ? "/auth/sign-up?returnTo=" + returnToPath
+                        ? "/auth/sign-up?returnTo=" + encodeURIComponent(returnToPath)
                         : "/auth/sign-up"
                   }
                   className="font-medium underline underline-offset-4 transition-colors hover:text-brand"

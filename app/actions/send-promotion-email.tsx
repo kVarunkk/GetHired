@@ -4,9 +4,12 @@ import { render } from "react-email";
 import { PromotionEmail } from "@/emails/PromotionEmail";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendEmail } from "@/utils/email";
+import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
+import { isAdmin } from "@/helpers/user/is-admin";
 
 /**
  * Sends a promotional email to all users who have 'is_promotion_active' set to true.
+ * Admin-only (RS-F12): it emails users arbitrary content from our domain.
  * @param promoDetails Object containing the content for the email.
  * @returns Object indicating success or failure.
  */
@@ -17,6 +20,11 @@ export async function sendPromotionEmails(promoDetails: {
   ctaLabel: string;
   imageLink?: string;
 }): Promise<{ success: boolean; count: number; error?: string }> {
+  const user = await getUserFromRequest();
+  if (!isAdmin(user)) {
+    return { success: false, count: 0, error: "Unauthorized" };
+  }
+
   const supabase = createServiceRoleClient();
 
   const { data: users, error: fetchError } = await supabase
@@ -78,59 +86,3 @@ export async function sendPromotionEmails(promoDetails: {
 
   return { success: true, count: successCount };
 }
-
-// LAST PROMOTION CONTENT
-
-// export default function Test() {
-//   const htmlContent = `<Section
-//       style={{
-//         paddingLeft: "20px",
-//         backgroundColor: "#f9fafb",
-//         borderRadius: "8px",
-//       }}
-//         className="text-base"
-//       // className="py-4 px-6 border border-gray-200"
-//     >
-//       <Text>
-//         We’ve completely re-engineered our recommendation engine to help you
-//         find your dream role faster than ever.
-//       </Text>
-
-//       <ul style={{ margin: "0", paddingLeft: "20px", listStyleType: "disc" }}>
-//         <li style={{ paddingBottom: "10px" }}>
-//           <Text className="m-0">
-//             <b>Instant Results:</b> No more waiting for "AI is thinking." We now
-//             pre-compute your matches so your personalized feed loads instantly.
-//           </Text>
-//         </li>
-
-//         <li style={{ paddingBottom: "10px" }}>
-//           <Text className="m-0">
-//             <b>Higher Precision:</b> By increasing our embedding dimensions, our
-//             AI now understands the nuances of your skills and experience with
-//             pinpoint accuracy.
-//           </Text>
-//         </li>
-
-//         <li style={{ paddingBottom: "10px" }}>
-//           <Text className="m-0">
-//             <b>Zero-Latency Discovery:</b> Explore hundereds of jobs with a feed
-//             that adapts to you in real-time.
-//           </Text>
-//         </li>
-//       </ul>
-//     </Section>`.replace(/\n/g, "");
-//   const sendemail = async () => {
-//     const promoDetails = {
-//       title: "AI Smart Search is now 10x Faster and 5x More Relevant!",
-//       content: htmlContent,
-//       ctaLink: "https://gethired.devhub.co.in/jobs?sortBy=relevance",
-//       ctaLabel: "View My Matches",
-//       imageLink:
-//         "https://vehnycoyrmqdfywybboc.supabase.co/storage/v1/object/public/images/promotional_emails/Screenshot%202026-01-03%20205319.png",
-//     };
-//     await sendPromotionEmails(promoDetails);
-//   };
-
-//   return <button onClick={sendemail}>send email</button>;
-// }

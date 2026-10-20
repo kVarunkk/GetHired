@@ -21,6 +21,7 @@ import { Laptop, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Badge } from "./ui/badge";
+import CompanyPlanLink from "./billing/CompanyPlanLink";
 import SocialsComponent from "./SocialsComponent";
 import {
   Tooltip,
@@ -60,6 +61,11 @@ export default function ProfileDropdown({
     staleTime: 5 * 60 * 1000,
   });
 
+  // "Owner" or the member's role name (/api/current-user, from company_members).
+  const roleLabel: string | null = isCompanyUser ? (data?.profile?.roleLabel ?? null) : null;
+  // RP-REQ-016: no plan link without billing.view.
+  const showPlan = !isCompanyUser || data?.profile?.access?.billingView !== false;
+
   return (
     <DropdownMenu>
       {isVertical ? (
@@ -70,6 +76,7 @@ export default function ProfileDropdown({
               open={open}
               isMenuOpen={isMenuOpen}
               isCompanyUser={isCompanyUser}
+              roleLabel={roleLabel}
               isVertical
             />
           </TooltipTrigger>
@@ -94,12 +101,18 @@ export default function ProfileDropdown({
           >
             {user?.user_metadata.full_name || user?.email || "User"}
           </div>
-          <Badge className="w-fit">
-            {isCompanyUser ? "Company" : "Applicant"}
-          </Badge>
+          {roleLabel ? (
+            <Badge variant="brand" className="w-fit">
+              {roleLabel}
+            </Badge>
+          ) : (
+            <Badge className="w-fit">
+              {isCompanyUser ? "Company" : "Applicant"}
+            </Badge>
+          )}
         </DropdownMenuLabel>
 
-        {data?.profile && data?.role && (
+        {data?.profile && data?.role && showPlan && (
           <DropdownMenuItem
             asChild
             className="text-muted-foreground text-xs focus:bg-transparent focus:text-muted-foreground cursor-pointer data-[highlighted]:bg-transparent"
@@ -112,15 +125,10 @@ export default function ProfileDropdown({
                 </span>
               </Link>
             ) : (
-              <Link
-                href="mailto:varun@devhub.co.in"
+              <CompanyPlanLink
+                plan={data.profile?.plan ?? null}
                 className="w-full text-left"
-              >
-                Active Plan: {data.profile?.company_tiers?.name}.{" "}
-                <span className="underline font-medium text-foreground">
-                  Upgrade
-                </span>
-              </Link>
+              />
             )}
           </DropdownMenuItem>
         )}

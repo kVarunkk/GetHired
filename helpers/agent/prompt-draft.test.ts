@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   agentPromptHref,
+  COMPANY_AGENT_PATH,
   MAX_PROMPT_CHARS,
   readPromptParam,
   savePendingPrompt,
@@ -35,6 +36,13 @@ describe("agentPromptHref", () => {
       `/agent?prompt=${encodeURIComponent("React & Go, ₹30L?")}`,
     );
     expect(agentPromptHref("   ")).toBe("/agent");
+  });
+
+  it("links to the company agent when given its path", () => {
+    expect(agentPromptHref("Find Go engineers", COMPANY_AGENT_PATH)).toBe(
+      `/company/agent?prompt=${encodeURIComponent("Find Go engineers")}`,
+    );
+    expect(agentPromptHref("", COMPANY_AGENT_PATH)).toBe("/company/agent");
   });
 });
 

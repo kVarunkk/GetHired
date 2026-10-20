@@ -1,5 +1,6 @@
 "use client";
 
+import { describeApplicationForm } from "@/helpers/jobs/describe-application-form";
 import { memo, useEffect, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown, { type Components } from "react-markdown";
@@ -9,6 +10,21 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 import ResumeUploadWidget, { type ResumeUploadOutput } from "./ResumeUploadWidget";
 import { rehypeAnimateWords } from "./animate-words";
+import { inlineLink, isInAppHref, NEW_TAB } from "./links";
+import {
+  ApplicantResults,
+  type ApplicantRowData,
+  CandidateResults,
+  type CandidateRowData,
+} from "./recruiter/RecruiterResults";
+import { FunnelResult, type FunnelResultData } from "./recruiter/FunnelResult";
+import { JobDeleteApprovalDetails } from "./recruiter/JobDeleteApprovalCard";
+import { MoveApprovalDetails } from "./recruiter/MoveApprovalCard";
+import { OutreachApprovalDetails } from "./recruiter/OutreachApprovalCard";
+import { InterviewConfigApprovalDetails, InterviewInviteApprovalDetails } from "./recruiter/InterviewApprovalCard";
+import { isRoleApprovalTool, RoleApprovalDetails } from "./recruiter/RoleApprovalCard";
+
+export { isInAppHref };
 
 type MessagePart = UIMessage["parts"][number];
 type ToolPart = Extract<MessagePart, { toolCallId: string }>;
@@ -40,6 +56,80 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   completeOnboarding: { running: "Setting up your profile…", done: "Profile set up", action: "set up your profile" },
   saveMemory: { running: "Remembering…", done: "Saved to memory", action: "save a memory" },
   deleteMemory: { running: "Forgetting…", done: "Removed from memory", action: "remove a memory" },
+  // Recruiter tools (RA spec §4.7).
+  getMyCompany: { running: "Checking your plan…", done: "Checked your plan", action: "check your plan" },
+  listMyJobs: { running: "Loading your job posts…", done: "Loaded your job posts", action: "load your job posts" },
+  getJobPost: { running: "Reading the job post…", done: "Read the job post", action: "read the job post" },
+  createJobPost: { running: "Saving the job post…", done: "Saved the job post", action: "create the job post" },
+  updateJobPost: { running: "Updating the job post…", done: "Updated the job post", action: "update the job post" },
+  setJobPostStatus: { running: "Updating the job post…", done: "Updated the job post", action: "change the job post's status" },
+  deleteJobPost: { running: "Deleting the job post…", done: "Deleted the job post", action: "delete the job post" },
+  listQuestionSets: { running: "Loading question sets…", done: "Loaded question sets", action: "load question sets" },
+  applyQuestionSet: { running: "Applying the question set…", done: "Applied the question set", action: "apply the question set" },
+  saveQuestionSet: { running: "Saving the question set…", done: "Saved the question set", action: "save the question set" },
+  deleteQuestionSet: { running: "Deleting the question set…", done: "Deleted the question set", action: "delete the question set" },
+  searchCandidates: { running: "Searching candidates…", done: "Searched candidates", action: "search candidates" },
+  findMatchesForJob: { running: "Finding matched candidates…", done: "Found matched candidates", action: "find matched candidates" },
+  runMatchingForJob: { running: "Starting matching…", done: "Started matching", action: "start matching" },
+  getCandidateProfile: { running: "Reading the profile…", done: "Read the profile", action: "read the profile" },
+  compareCandidates: { running: "Comparing candidates…", done: "Compared candidates", action: "compare candidates" },
+  explainMatch: { running: "Explaining the match…", done: "Explained the match", action: "explain the match" },
+  saveCandidate: { running: "Saving the candidate…", done: "Saved the candidate", action: "save the candidate" },
+  unsaveCandidate: { running: "Removing the candidate…", done: "Removed the saved candidate", action: "remove the saved candidate" },
+  listApplicants: { running: "Loading applicants…", done: "Loaded applicants", action: "load applicants" },
+  getApplication: { running: "Reading the application…", done: "Read the application", action: "read the application" },
+  screenApplicants: { running: "Queueing screenings…", done: "Queued screenings", action: "screen applicants" },
+  listStages: { running: "Loading your pipeline…", done: "Loaded your pipeline", action: "load your pipeline" },
+  createStage: { running: "Adding the stage…", done: "Added the stage", action: "add a pipeline stage" },
+  renameStage: { running: "Renaming the stage…", done: "Renamed the stage", action: "rename the stage" },
+  reorderStages: { running: "Reordering your stages…", done: "Reordered your stages", action: "reorder your stages" },
+  archiveStage: { running: "Archiving the stage…", done: "Archived the stage", action: "archive the stage" },
+  listEmailTemplates: { running: "Loading email templates…", done: "Loaded email templates", action: "load your email templates" },
+  createEmailTemplate: { running: "Saving the template…", done: "Saved the template", action: "add an email template" },
+  updateEmailTemplate: { running: "Updating the template…", done: "Updated the template", action: "edit the email template" },
+  deleteEmailTemplate: { running: "Deleting the template…", done: "Deleted the template", action: "delete the email template" },
+  moveApplications: { running: "Moving applications…", done: "Moved applications", action: "move applications" },
+  addNote: { running: "Saving the note…", done: "Saved the note", action: "add a note" },
+  listNotes: { running: "Reading notes…", done: "Read the notes", action: "read the notes" },
+  updateNote: { running: "Updating the note…", done: "Updated the note", action: "edit the note" },
+  deleteNote: { running: "Deleting the note…", done: "Deleted the note", action: "delete the note" },
+  addToTalentList: { running: "Adding to the list…", done: "Added to the list", action: "add the candidate to a list" },
+  listTalentLists: { running: "Checking your talent lists…", done: "Checked your talent lists", action: "read your talent lists" },
+  renameTalentList: { running: "Renaming the list…", done: "Renamed the list", action: "rename the list" },
+  removeFromTalentList: { running: "Removing from the list…", done: "Removed from the list", action: "take the candidate off the list" },
+  deleteTalentList: { running: "Deleting the list…", done: "Deleted the list", action: "delete the list" },
+  getHiringFunnel: { running: "Loading the funnel…", done: "Loaded the hiring funnel", action: "load the hiring funnel" },
+  sendOutreach: { running: "Sending the message…", done: "Sent the message", action: "message the candidate" },
+  listOutreach: { running: "Loading your outreach…", done: "Loaded your outreach", action: "load your outreach" },
+  getOutreach: { running: "Reading the message…", done: "Read the message", action: "read the message" },
+  withdrawOutreach: { running: "Withdrawing the message…", done: "Withdrew the message", action: "withdraw the message" },
+  // Team and roles (RP-REQ-032).
+  listTeam: { running: "Loading your team…", done: "Loaded your team", action: "load your team" },
+  listRoles: { running: "Loading roles…", done: "Loaded roles", action: "load roles" },
+  getRole: { running: "Reading the role…", done: "Read the role", action: "read the role" },
+  createRole: { running: "Creating the role…", done: "Created the role", action: "create the role" },
+  updateRole: { running: "Updating the role…", done: "Updated the role", action: "update the role" },
+  deleteRole: { running: "Deleting the role…", done: "Deleted the role", action: "delete the role" },
+  assignRole: { running: "Changing the role…", done: "Changed the member's role", action: "change the member's role" },
+  setDefaultRole: { running: "Changing the default role…", done: "Changed the default role", action: "change the default role" },
+  removeTeamMember: { running: "Removing the member…", done: "Removed them from the team", action: "remove them from the team" },
+  assignToJob: { running: "Updating the hiring team…", done: "Added to the hiring team", action: "add them to the hiring team" },
+  unassignFromJob: { running: "Updating the hiring team…", done: "Removed from the hiring team", action: "remove them from the hiring team" },
+  listInvites: { running: "Loading invites…", done: "Loaded invites", action: "load invites" },
+  inviteTeamMember: { running: "Sending the invite…", done: "Sent the invite", action: "invite them to the team" },
+  resendInvite: { running: "Resending the invite…", done: "Resent the invite", action: "resend the invite" },
+  revokeInvite: { running: "Revoking the invite…", done: "Revoked the invite", action: "revoke the invite" },
+  // Careers page.
+  getCareersPage: { running: "Reading the careers page…", done: "Read the careers page", action: "read the careers page" },
+  updateCareersPage: { running: "Updating the careers page…", done: "Updated the careers page", action: "update the careers page" },
+  setCareersAddress: { running: "Changing the address…", done: "Changed the careers page address", action: "change the careers page address" },
+  setCareersPublished: { running: "Updating the careers page…", done: "Updated the careers page", action: "publish the careers page" },
+  // Screening interviews (SIT-071).
+  getInterviewSetup: { running: "Reading the interview setup…", done: "Read the interview setup", action: "read the interview setup" },
+  configureScreeningInterview: { running: "Saving the interview setup…", done: "Saved the interview setup", action: "set up the AI interview" },
+  inviteToInterview: { running: "Sending interview invites…", done: "Sent interview invites", action: "invite applicants to the AI interview" },
+  getInterviewReport: { running: "Reading the interview report…", done: "Read the interview report", action: "read the interview report" },
+  compareInterviewReports: { running: "Comparing interviews…", done: "Compared interviews", action: "compare interview reports" },
 };
 
 const labelsFor = (name: string) =>
@@ -197,7 +287,7 @@ function JobResults({ jobs, totalCount }: { jobs: CompactJob[]; totalCount?: num
       )}
       {typeof totalCount === "number" && totalCount > jobs.length && (
         <p className="border-t bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
-          Showing {jobs.length} of {totalCount.toLocaleString()} jobs. Ask for more to see the
+          Showing {jobs.length} of {totalCount.toLocaleString("en-US")} jobs. Ask for more to see the
           next page.
         </p>
       )}
@@ -226,6 +316,18 @@ const FIELD_LABELS: Record<string, string> = {
   visaSponsorshipRequired: "Needs visa sponsorship",
   jobDescription: "Job description",
   name: "Name",
+  // Recruiter job posts.
+  title: "Title",
+  description: "Description",
+  locations: "Locations",
+  jobType: "Job type",
+  minExperience: "Min experience (years)",
+  maxExperience: "Max experience (years)",
+  visaSponsorship: "Visa sponsorship",
+  skills: "Skills",
+  questions: "Screening questions",
+  applicationForm: "Application form",
+  status: "Status",
 };
 
 const formatValue = (value: unknown) =>
@@ -240,8 +342,11 @@ const formatValue = (value: unknown) =>
 /** Label and value pairs for an approval card. Ids mean nothing to the user, so they're left out. */
 const describeInput = (input: unknown) =>
   Object.entries((input ?? {}) as Record<string, unknown>)
-    .filter(([key]) => !key.endsWith("Id"))
-    .map(([key, value]) => [FIELD_LABELS[key] ?? key, formatValue(value)] as const);
+    .filter(([key]) => !/Ids?$/.test(key))
+    .map(
+      ([key, value]) =>
+        [FIELD_LABELS[key] ?? key, key === "applicationForm" ? describeApplicationForm(value) : formatValue(value)] as const,
+    );
 
 /** Indigo: the agent is waiting on the user. */
 function ActionCard({ children }: { children: React.ReactNode }) {
@@ -305,6 +410,106 @@ function OnboardingResume({ resumeId }: { resumeId?: string }) {
   }
 }
 
+/** What the approval card asks: exactly what will happen (RA-REQ-005). */
+function approvalTitle(name: string, input: unknown) {
+  const values = (input ?? {}) as Record<string, unknown>;
+  switch (name) {
+    case "startResumeReview":
+      return "Start a resume review? This uses 5 AI credits once the analysis succeeds.";
+    case "updateMyPreferences":
+      return "Update your job preferences?";
+    case "completeOnboarding":
+      return "Set up your profile with these details?";
+    case "createJobPost":
+      return "Create this job post as a draft?";
+    case "updateJobPost":
+      return "Update this job post?";
+    case "setJobPostStatus":
+      return values.status === "active" ? "Publish this job post?" : "Unpublish this job post?";
+    case "deleteJobPost":
+      return "Delete this job post?";
+    case "applyQuestionSet":
+      return "Apply this question set to the job? It replaces the job's application form; answered questions stay, archived.";
+    case "saveQuestionSet":
+      return values.questionSetId ? "Overwrite this question set?" : "Save this question set?";
+    case "deleteQuestionSet":
+      return "Delete this question set? Jobs it was applied to keep their copy.";
+    case "updateCareersPage":
+      return "Update your public careers page?";
+    case "setCareersAddress":
+      return typeof values.slug === "string"
+        ? `Change your careers page address to /careers/${values.slug}? The old address will redirect for 90 days.`
+        : "Change your careers page address?";
+    case "setCareersPublished":
+      return values.published ? "Publish your careers page?" : "Unpublish your careers page?";
+    case "runMatchingForJob":
+      return "Start matching candidates to this job? It runs in the background, and you'll get an email when it's done.";
+    case "screenApplicants":
+      return "Screen this job's unscreened applicants? Each new screening uses one from your plan.";
+    case "configureScreeningInterview":
+      return "Set up this AI interview?";
+    case "inviteToInterview":
+      if (Array.isArray(values.applicationIds)) {
+        const count = values.applicationIds.length;
+        return `Invite ${count} ${count === 1 ? "applicant" : "applicants"} to the AI interview?`;
+      }
+      return `Allow the assistant to ${labelsFor(name).action}?`;
+    case "moveApplications":
+      if (Array.isArray(values.applicationIds)) {
+        const count = values.applicationIds.length;
+        const what = `${count} ${count === 1 ? "application" : "applications"}`;
+        return values.email ? `Move ${what} and email the candidates?` : `Move ${what}?`;
+      }
+      return `Allow the assistant to ${labelsFor(name).action}?`;
+    case "sendOutreach":
+      return "Send this message on GetHired?";
+    case "archiveStage":
+      return "Archive this stage? It leaves your pipeline and can't be brought back.";
+    case "deleteEmailTemplate":
+      return "Delete this email template? This can't be undone.";
+    case "deleteNote":
+      return "Delete this note? This can't be undone.";
+    case "deleteTalentList":
+      return "Delete this talent list? Its candidates stay in the talent pool, but the list can't be brought back.";
+    case "withdrawOutreach":
+      return "Withdraw this message? The candidate won't be able to answer it, and this can't be undone.";
+    case "createRole":
+      return "Create this role?";
+    case "updateRole":
+      return "Change this role?";
+    case "deleteRole":
+      return "Delete this role?";
+    case "assignRole":
+      return "Change this team member's role?";
+    case "setDefaultRole":
+      return "Make this the default role for new invites?";
+    case "removeTeamMember":
+      return "Remove this person from your team? They lose access right away.";
+    case "assignToJob":
+      return "Add this team member to the job's hiring team?";
+    case "unassignFromJob":
+      return "Remove this team member from the job's hiring team?";
+    case "inviteTeamMember":
+      return "Invite this person to your team? They'll get an email with a link to join.";
+    case "resendInvite":
+      return "Resend this invite? The old link stops working.";
+    case "revokeInvite":
+      return "Revoke this invite? Its link stops working.";
+    default:
+      return `Allow the assistant to ${labelsFor(name).action}?`;
+  }
+}
+
+function approvalDetails(name: string, input: unknown) {
+  // Deletes, moves and outreach show a server preview (JobDeleteApprovalDetails, MoveApprovalDetails, OutreachApprovalDetails).
+  if (["setJobPostStatus", "deleteJobPost", "moveApplications", "sendOutreach"].includes(name)) return [];
+  // The interview setup and invites have their own details (InterviewApprovalCard).
+  if (["configureScreeningInterview", "inviteToInterview"].includes(name)) return [];
+  // Role changes show a server preview with the exact diff (RoleApprovalDetails).
+  if (isRoleApprovalTool(name)) return [];
+  return describeInput(input);
+}
+
 function ApprovalCard({
   name,
   part,
@@ -314,15 +519,8 @@ function ApprovalCard({
   part: ToolPart & { approval: { id: string } };
   onApprove: ApprovalHandler;
 }) {
-  const title =
-    name === "startResumeReview"
-      ? "Start a resume review? This uses 5 AI credits once the analysis succeeds."
-      : name === "updateMyPreferences"
-        ? "Update your job preferences?"
-        : name === "completeOnboarding"
-          ? "Set up your profile with these details?"
-          : `Allow the assistant to ${labelsFor(name).action}?`;
-  const details = describeInput(part.input);
+  const title = approvalTitle(name, part.input);
+  const details = approvalDetails(name, part.input);
   const isOnboarding = name === "completeOnboarding";
   const reason = (part.approval as { requestReason?: string }).requestReason;
 
@@ -330,6 +528,12 @@ function ApprovalCard({
     <ActionCard>
       <p className="text-sm font-medium text-foreground">{title}</p>
       {reason && <p className="text-xs text-muted-foreground">{reason}</p>}
+      {name === "deleteJobPost" && <JobDeleteApprovalDetails input={part.input} />}
+      {name === "moveApplications" && <MoveApprovalDetails input={part.input} />}
+      {name === "sendOutreach" && <OutreachApprovalDetails input={part.input} />}
+      {name === "configureScreeningInterview" && <InterviewConfigApprovalDetails input={part.input} />}
+      {name === "inviteToInterview" && <InterviewInviteApprovalDetails input={part.input} />}
+      {isRoleApprovalTool(name) && <RoleApprovalDetails tool={name} input={part.input} />}
       {(details.length > 0 || isOnboarding) && (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
           {details.map(([key, value]) => (
@@ -371,22 +575,6 @@ function ApprovalCard({
   );
 }
 
-/** Links in agent replies open in a new tab, so the chat stays put. */
-const NEW_TAB = { target: "_blank", rel: "noopener noreferrer" } as const;
-
-const APP_ORIGIN = "https://gethired.devhub.co.in";
-
-/** A link into the app: a relative path, or the app's own origin (SEC-014). */
-export function isInAppHref(href: string | undefined) {
-  if (!href) return false;
-  if (href.startsWith("/")) return !href.startsWith("//") && !href.startsWith("/\\");
-  try {
-    return new URL(href).origin === APP_ORIGIN;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Markdown links get the same treatment as the app's own links. Replies only
  * link into the app, so a link planted in a job posting can't be clicked,
@@ -408,7 +596,6 @@ const MARKDOWN_COMPONENTS: Components = {
 /** Plugins for a reply that is still streaming: new words fade in. */
 const STREAMING_REHYPE_PLUGINS = [rehypeAnimateWords];
 
-const inlineLink = "font-medium text-foreground underline underline-offset-4 hover:text-brand";
 
 /** A finished tool call: its label, plus any results worth showing. */
 function OutputStep({ name, output }: { name: string; output: unknown }) {
@@ -435,12 +622,39 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
     );
   }
 
+  if (result.error === "PLAN_LIMIT") {
+    return (
+      <Step
+        tone="yours"
+        label={
+          <span className="flex flex-wrap items-center gap-x-2">
+            <span>{String(result.message ?? "Your plan's limit is reached.")}</span>
+            {isInAppHref(String(result.upgradeUrl)) && (
+              <Link {...NEW_TAB} href={String(result.upgradeUrl)} className={inlineLink}>
+                See plans
+              </Link>
+            )}
+          </span>
+        }
+      />
+    );
+  }
+
   if (typeof result.error === "string") {
     return (
       <Step
         tone="failed"
         label={typeof result.message === "string" ? result.message : result.error}
       />
+    );
+  }
+
+  // Before the generic lists: the company funnel also has `jobs`.
+  if (name === "getHiringFunnel" && Array.isArray(result.stages)) {
+    return (
+      <Step tone="done" label={labelsFor(name).done}>
+        <FunnelResult funnel={result as unknown as FunnelResultData} />
+      </Step>
     );
   }
 
@@ -452,6 +666,137 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
           totalCount={typeof result.totalCount === "number" ? result.totalCount : undefined}
         />
       </Step>
+    );
+  }
+
+  if (Array.isArray(result.candidates)) {
+    // A comparison can include candidates it couldn't load; they have no URL.
+    const rows = (result.candidates as Partial<CandidateRowData>[]).filter(
+      (c): c is CandidateRowData => typeof c.url === "string",
+    );
+    return (
+      <Step tone="done" label={labelsFor(name).done}>
+        <CandidateResults candidates={rows} />
+      </Step>
+    );
+  }
+
+  if (Array.isArray(result.applicants)) {
+    return (
+      <Step tone="done" label={labelsFor(name).done}>
+        <ApplicantResults applicants={result.applicants as ApplicantRowData[]} />
+      </Step>
+    );
+  }
+
+  if (
+    ["createJobPost", "updateJobPost", "setJobPostStatus"].includes(name) &&
+    typeof result.url === "string" &&
+    isInAppHref(result.url)
+  ) {
+    const what =
+      name === "createJobPost"
+        ? `Saved “${String(result.title ?? "the job post")}” as a draft.`
+        : name === "setJobPostStatus"
+          ? result.status === "active"
+            ? "Published the job post."
+            : "Unpublished the job post."
+          : "Updated the job post.";
+    return (
+      <Step
+        tone="done"
+        label={
+          <>
+            {what}{" "}
+            <Link {...NEW_TAB} href={result.url} className={inlineLink}>
+              Open the job post
+            </Link>
+          </>
+        }
+      />
+    );
+  }
+
+  if (name === "deleteJobPost" && result.deleted === true) {
+    return <Step tone="done" label={`Deleted “${String(result.title ?? "the job post")}”.`} />;
+  }
+
+  if (name === "moveApplications" && typeof result.moved === "number") {
+    const stage = (result.stage as { name?: string } | undefined)?.name ?? "the stage";
+    const moved = result.moved;
+    const emailed = typeof result.emailed === "number" ? result.emailed : 0;
+    const skipped = Array.isArray(result.skipped) ? result.skipped.length : 0;
+    const parts = [
+      moved === 0
+        ? `No applications moved to ${stage}`
+        : `Moved ${moved} ${moved === 1 ? "application" : "applications"} to ${stage}`,
+      emailed > 0 && `emailing ${emailed}`,
+      skipped > 0 && `${skipped} skipped`,
+    ].filter(Boolean);
+    return <Step tone="done" label={parts.join(", ")} />;
+  }
+
+  if (name === "sendOutreach" && result.sent === true) {
+    const href = typeof result.outreachUrl === "string" && isInAppHref(result.outreachUrl) ? result.outreachUrl : null;
+    return (
+      <Step
+        tone="done"
+        label={
+          <>
+            {result.emailed ? "Message sent and emailed." : "Message sent. They'll see it on GetHired."}{" "}
+            {href && (
+              <Link {...NEW_TAB} href={href} className={inlineLink}>
+                Open message
+              </Link>
+            )}
+          </>
+        }
+      />
+    );
+  }
+
+  if (name === "addToTalentList" && typeof result.url === "string" && isInAppHref(result.url)) {
+    const list = (result.list as { name?: string } | undefined)?.name ?? "the list";
+    return (
+      <Step
+        tone="done"
+        label={
+          <>
+            {result.added ? `Added to “${list}”.` : `Already in “${list}”.`}{" "}
+            <Link {...NEW_TAB} href={result.url} className={inlineLink}>
+              Open the list
+            </Link>
+          </>
+        }
+      />
+    );
+  }
+
+  if (name === "findMatchesForJob" && typeof result.status === "string") {
+    const label =
+      result.status === "processing"
+        ? "Matching is still running for this job"
+        : result.status === "failed"
+          ? "Matching failed for this job"
+          : "Matching hasn't run for this job yet";
+    return <Step tone="declined" label={label} />;
+  }
+
+  if (name === "runMatchingForJob" && result.status === "processing") {
+    return <Step tone="done" label="Matching started. You'll get an email when it's done." />;
+  }
+
+  if (name === "screenApplicants" && typeof result.queued === "number") {
+    const count = result.queued;
+    return (
+      <Step
+        tone="done"
+        label={
+          count === 0
+            ? "Every application is already screened or in the queue"
+            : `Queued ${count} ${count === 1 ? "screening" : "screenings"}`
+        }
+      />
     );
   }
 
@@ -632,6 +977,12 @@ function toBlocks(parts: MessagePart[]): Block[] {
   });
   return blocks;
 }
+
+/**
+ * True once a message has something to show. A reply starts with only
+ * step markers, and rendering it then would push the loader down a gap.
+ */
+export const hasVisibleParts = (message: UIMessage) => toBlocks(message.parts).length > 0;
 
 /**
  * Renders one chat message's parts: text, tool steps, approvals, uploads.

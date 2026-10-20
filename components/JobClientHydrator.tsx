@@ -1,8 +1,9 @@
 "use client";
 
+import { useSignUpToApplyHref } from "./jobs/ApplicationSourceContext";
 import useSWR from "swr";
 import Link from "next/link";
-import { format } from "date-fns";
+import { formatDate } from "@/utils/date";
 import { ExternalLink, MapPin, DollarSign, Briefcase } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -59,6 +60,7 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
     [job, jobUrlsData],
   );
 
+  const signUpHref = useSignUpToApplyHref(job.id);
   const isCompanyUser = currentUserData?.role === "company";
   const onboardingComplete = currentUserData?.profile?.filled ?? false;
 
@@ -111,7 +113,7 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
             )}
           </p>
           <p className="text-sm text-muted-foreground mt-2">
-            Posted on {format(new Date(jobData.created_at || ""), "PPP")}
+            Posted on {formatDate(jobData.created_at, { dateStyle: "long" }, "en-US")}
           </p>
 
           {isLoading ? (
@@ -157,7 +159,7 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
                     href={
                       userId
                         ? jobData.job_url
-                        : "/auth/sign-up?returnTo=/jobs/" + jobData.id
+                        : signUpHref
                     }
                   >
                     Original Job

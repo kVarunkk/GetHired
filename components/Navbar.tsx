@@ -11,9 +11,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ChevronRight, Menu, Wallet } from "lucide-react";
+import { ChevronRight, CreditCard, Menu, Wallet } from "lucide-react";
 import Brand from "./Brand";
-import { cn, getNavItemsByPath } from "@/utils/utils";
+import { cn, fetcher, getNavItemsByPath, PROFILE_API_KEY } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import FeedbackForm from "./FeedbackForm";
@@ -28,8 +28,25 @@ import {
 } from "@/components/ui/tooltip";
 import WaitlistCTA from "./WaitlistCTA";
 import ModifiedLink from "./ModifiedLink";
+import { COMPANY_HOME } from "@/helpers/user/home-path";
 import SidebarLabel from "./SidebarLabel";
 import ScrollFade from "./ScrollFade";
+import { useOpenOutreachCount } from "./outreach/useOpenOutreachCount";
+import useSWR from "swr";
+
+
+/** The count next to a nav label (open outreach), hidden at 0. */
+function NavCount({ count }: { count?: number }) {
+  if (!count) return null;
+  return (
+    <span
+      aria-label={`${count} open`}
+      className="ml-1 inline-flex min-w-5 items-center justify-center rounded-full border border-brand/30 bg-brandSoft px-1.5 text-[11px] font-medium text-brandSoft-foreground"
+    >
+      {count}
+    </span>
+  );
+}
 
 export default function NavbarComponent({
   variant = "vertical",
@@ -47,9 +64,17 @@ export default function NavbarComponent({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const isCompanyUser = user?.app_metadata?.type === "company";
+  // The landing page at / is for applicants; companies redirect from it anyway.
+  const homeHref = isCompanyUser ? COMPANY_HOME : "/";
+  // RP-REQ-016: Billing is hidden from company roles without billing.view.
+  const { data: profile } = useSWR(user ? PROFILE_API_KEY : null, fetcher, { revalidateOnFocus: false });
+  const showBilling = !isCompanyUser || profile?.profile?.access?.billingView !== false;
+  const openOutreach = useOpenOutreachCount(user);
   const navItems = useMemo(() => {
-    return getNavItemsByPath(pathname, isCompanyUser, user);
-  }, [pathname, user, isCompanyUser]);
+    return getNavItemsByPath(pathname, isCompanyUser, user).map((item) =>
+      item.id === "opportunities" ? { ...item, count: openOutreach } : item,
+    );
+  }, [pathname, user, isCompanyUser, openOutreach]);
 
   const navbarItems = navItems.map((each) => {
     let isActive = false;
@@ -112,13 +137,22 @@ export default function NavbarComponent({
               pathname.startsWith("/company") ||
               pathname.startsWith("/interview") ||
               pathname.startsWith("/agent") ||
-              pathname.startsWith("/dashboard")) &&
+              pathname.startsWith("/dashboard") ||
+              pathname.startsWith("/opportunities") ||
+              pathname.startsWith("/settings") ||
+              pathname.startsWith("/get-started")) &&
               "mb-0",
           )}
         >
           <div className="flex min-w-0 items-center gap-1 justify-start">
             {authResolved ? (
-              <NavbarSheet items={navbarItems} />
+              <NavbarSheet
+                items={navbarItems}
+                signedIn={user !== null}
+                isCompanyUser={isCompanyUser}
+                billingActive={pathname.startsWith("/company/billing")}
+                showBilling={showBilling}
+              />
             ) : (
               // Same 40px footprint as the menu button, so the logo doesn't shift.
               <LoadingNav className="lg:hidden p-2">
@@ -126,7 +160,7 @@ export default function NavbarComponent({
               </LoadingNav>
             )}
             {/* The short logo on very small screens, so the bar fits without scrolling. */}
-            <Link href={"/"} aria-label="GetHired home" className="shrink-0">
+            <Link href={homeHref} aria-label="GetHired home" className="shrink-0">
               <span className="block min-[400px]:hidden">
                 <Brand type="short" />
               </span>
@@ -160,6 +194,7 @@ export default function NavbarComponent({
                     )}
                   >
                     {item.label}
+                    <NavCount count={item.count} />
                   </ModifiedLink>
                 ))}
             </nav>
@@ -173,7 +208,7 @@ export default function NavbarComponent({
               />
             ) : user ? (
               <div className="flex items-center gap-1">
-                <FeedbackForm user={user} isMenuOpen={false} />
+                <FeedbackForm isMenuOpen={false} />
                 <ProfileDropdown user={user} isMenuOpen={false} />
               </div>
             ) : (
@@ -210,7 +245,7 @@ export default function NavbarComponent({
             by the sidebar: its left 48px is the short logo, so collapsing hides
             the wordmark without swapping images or moving the mark. */}
           <Link
-            href={"/"}
+            href={homeHref}
             aria-label="GetHired home"
             className="block w-full shrink-0 overflow-hidden"
           >
@@ -231,9 +266,15 @@ export default function NavbarComponent({
                           item.active && "bg-secondary",
                         )}
                       >
-                        <span className="shrink-0">{item.icon}</span>
+                        <span className="relative shrink-0">
+                          {item.icon}
+                          {!!item.count && !isMenuOpen && (
+                            <span aria-hidden className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-brand" />
+                          )}
+                        </span>
                         <SidebarLabel open={isMenuOpen}>
                           {item.label}
+                          <NavCount count={item.count} />
                         </SidebarLabel>
                       </ModifiedLink>
                     </TooltipTrigger>
@@ -295,27 +336,40 @@ export default function NavbarComponent({
               />
             ) : user ? (
               <div className="flex flex-col items-center gap-5">
-                {!isCompanyUser && (
+                {/* Applicants top up credits; companies manage their plan (billing.view). */}
+                {showBilling && (
                   <Tooltip delayDuration={100}>
                     <TooltipTrigger asChild>
                       <Link
-                        href="/dashboard/buy-credits"
+                        href={
+                          isCompanyUser
+                            ? "/company/billing"
+                            : "/dashboard/buy-credits"
+                        }
                         className={cn(
                           "text-brand flex px-4 py-2 items-center w-full gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden",
+                          isCompanyUser &&
+                            pathname.startsWith("/company/billing") &&
+                            "bg-secondary",
                         )}
                       >
-                        <Wallet className="h-4 w-4 shrink-0" />
-                        <SidebarLabel open={isMenuOpen}>Recharge</SidebarLabel>
+                        {isCompanyUser ? (
+                          <CreditCard className="h-4 w-4 shrink-0" />
+                        ) : (
+                          <Wallet className="h-4 w-4 shrink-0" />
+                        )}
+                        <SidebarLabel open={isMenuOpen}>
+                          {isCompanyUser ? "Billing" : "Recharge"}
+                        </SidebarLabel>
                       </Link>
                     </TooltipTrigger>
                     <TooltipContent side="right" hidden={isMenuOpen}>
-                      <p>{isMenuOpen ? "" : "Recharge"}</p>
+                      <p>{isCompanyUser ? "Billing" : "Recharge"}</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
                 <FeedbackForm
                   isMenuOpen={isMenuOpen}
-                  user={user}
                   isVertical={true}
                 />
                 <ProfileDropdown
@@ -390,7 +444,19 @@ function SkeletonBar({ className }: { className?: string }) {
   return <div aria-hidden className={cn("rounded-md bg-muted", className)} />;
 }
 
-const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
+const NavbarSheet = ({
+  items,
+  signedIn,
+  isCompanyUser,
+  billingActive,
+  showBilling = true,
+}: {
+  items: INavItemWithActive[];
+  signedIn: boolean;
+  isCompanyUser: boolean;
+  billingActive: boolean;
+  showBilling?: boolean;
+}) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -408,7 +474,7 @@ const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
       >
         <SheetHeader>
           <SheetTitle>
-            <Link href={"/"}>
+            <Link href={isCompanyUser ? COMPANY_HOME : "/"}>
               <Brand type="long" />
             </Link>
           </SheetTitle>
@@ -427,9 +493,23 @@ const NavbarSheet = ({ items }: { items: INavItemWithActive[] }) => {
                 onClick={() => setOpen(false)}
               >
                 {item.label}
+                <NavCount count={item.count} />
               </ModifiedLink>
             );
           })}
+          {/* Same as the sidebar: applicants top up credits; companies manage their plan. */}
+          {signedIn && showBilling && (
+            <Link
+              href={isCompanyUser ? "/company/billing" : "/dashboard/buy-credits"}
+              className={cn(
+                "text-brand hover:underline underline-offset-2 p-2 w-full",
+                isCompanyUser && billingActive && "underline underline-offset-2",
+              )}
+              onClick={() => setOpen(false)}
+            >
+              {isCompanyUser ? "Billing" : "Recharge"}
+            </Link>
+          )}
         </div>
 
         <SheetFooter className="mt-4">

@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import InterviewsTable from "@/components/InterviewsTable";
 import CreateInterviewDialog from "@/components/CreateInterviewDialog";
+import PageHeader from "@/components/PageHeader";
+import { AskAgentAboutInterviews } from "@/components/agent/AskAgentOnApplicantPages";
 
 export default async function InterviewPage({
   searchParams,
@@ -23,6 +25,8 @@ export default async function InterviewPage({
       .from("interviews")
       .select("id, created_at, name, all_jobs(id, job_name), resumes(id, name)")
       .eq("user_id", user.id)
+      // Company screening interviews live on the dashboard, not here (SIT-054).
+      .eq("kind", "practice")
       .order("created_at", { ascending: false });
 
     if (interviewsError) {
@@ -32,14 +36,18 @@ export default async function InterviewPage({
     const tableKey = `${interviews?.length || 0}-${interviews?.[0]?.id || "empty"}`;
 
     return (
-      <div className="flex flex-col w-full gap-8 p-4 mb-20">
-        <div className="flex items-center justify-between flex-wrap gap-4 w-full">
-          <h1 className="text-3xl font-medium ">All Interviews</h1>
-          <CreateInterviewDialog
-            initialOpen={create === "true"}
-            initialJobUrl={jobUrl ?? ""}
-          />
-        </div>
+      <div className="flex flex-col w-full gap-6 p-4 mb-20">
+        <PageHeader
+          title="Interviews"
+          description="Mock interviews for the jobs you're preparing for, with feedback on each session."
+          actions={
+            <CreateInterviewDialog
+              initialOpen={create === "true"}
+              initialJobUrl={jobUrl ?? ""}
+            />
+          }
+        />
+        <AskAgentAboutInterviews />
         <InterviewsTable key={tableKey} data={interviews || []} />
       </div>
     );

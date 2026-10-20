@@ -2,13 +2,14 @@
 
 import type { InterviewAnalysisResult } from "@/helpers/interview/interview-analysis";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Clock3, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, Clock3, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ModifiedLink from "./ModifiedLink";
+import PageHeader from "./PageHeader";
+import { AskAgentAboutInterviewAnalysis } from "./agent/AskAgentOnApplicantIdPages";
 
 type SessionReportLink = {
   id: string;
@@ -59,35 +60,38 @@ export function InterviewAnalysisReport({
 
   return (
     <main className="mb-20 flex w-full flex-col gap-6 p-4">
-      <Link
-        href={`/interview/${interviewId}`}
-        aria-label="Back to interview"
-        className="w-fit rounded-md p-2 pl-0 text-muted-foreground transition-colors hover:text-primary"
-      >
-        <ArrowLeft className="h-4 w-4" />
-      </Link>
-
-      <header className="mt-1 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-[28px]">
-            Interview analysis
-          </h1>
-          <p className="text-sm text-muted-foreground">{interviewName}</p>
-
-          <p className="mt-2 text-sm text-muted-foreground">
+      <PageHeader
+        backHref={`/interview/${interviewId}`}
+        backLabel="Back to interview"
+        eyebrow={interviewName}
+        title="Interview analysis"
+        description={
+          <>
             Session {sessionNumber || 1} ·{" "}
             <LocalDateTime value={sessionStartedAt} />
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
+          </>
+        }
+        actions={
           <ModifiedLink href={`/interview/${interviewId}`}>
             <Button>
               View interview
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </ModifiedLink>
-        </div>
-      </header>
+        }
+      />
+
+      {/* Only once there's feedback to ask about. */}
+      {result && (
+        <AskAgentAboutInterviewAnalysis
+          session={{
+            interviewId,
+            sessionId,
+            interviewName,
+            hasEarlier: sessionNumber > 1,
+          }}
+        />
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="grid content-start gap-4 lg:col-span-2">

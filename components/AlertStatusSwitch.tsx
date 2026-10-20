@@ -1,12 +1,10 @@
 "use client";
 
 import { Switch } from "./ui/switch";
-import { createClient } from "@/lib/supabase/client";
+import { setBookmarkAlertAction } from "@/app/actions/bookmarks/set-bookmark-alert";
+import { canAlertOnUrl, MAX_BOOKMARK_ALERTS } from "@/helpers/bookmarks/limits";
 import { BookmarkRow } from "@/utils/types";
-// import { TBookmark } from "@/utils/types";
 import toast from "react-hot-toast";
-
-const MAX_ALERTS = 5;
 
 export default function AlertStatusSwitch({
   bookmark,
@@ -20,11 +18,11 @@ export default function AlertStatusSwitch({
   const checked = bookmark.is_alert_on;
 
   const handleUpdateStatus = async () => {
-    if (!bookmark || bookmark.url?.includes("sortBy=relevance")) return;
+    if (!bookmark || !canAlertOnUrl(bookmark.url)) return;
 
-    if (!checked && alertCount >= MAX_ALERTS) {
+    if (!checked && alertCount >= MAX_BOOKMARK_ALERTS) {
       return toast.error(
-        `You can only create a maximum of ${MAX_ALERTS} Alerts.`,
+        `You can only create a maximum of ${MAX_BOOKMARK_ALERTS} Alerts.`,
       );
     }
 
@@ -32,20 +30,13 @@ export default function AlertStatusSwitch({
     updateLocalItem({ ...bookmark, is_alert_on: newStatus });
 
     try {
-      const supabase = createClient();
+      const result = await setBookmarkAlertAction({
+        bookmarkId: bookmark.id,
+        on: newStatus,
+      });
+      if (!result.ok) throw new Error(result.error);
 
-      const { data, error } = await supabase
-        .from("bookmarks")
-        .update({
-          is_alert_on: newStatus,
-        })
-        .eq("id", bookmark.id)
-        .select("*")
-        .single();
-
-      if (error) throw error;
-
-      updateLocalItem(data);
+      updateLocalItem(result.bookmark);
 
       toast.success(
         newStatus ? (
@@ -66,15 +57,19 @@ export default function AlertStatusSwitch({
           duration: 6000,
         },
       );
-    } catch {
+    } catch (err) {
       updateLocalItem(bookmark);
-      toast.error("Some error occured while updating the Alert Status.");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Some error occured while updating the Alert Status.",
+      );
     }
   };
 
   return (
     <div className="flex items-center">
-      {bookmark.url && !bookmark.url.includes("sortBy=relevance") ? (
+      {canAlertOnUrl(bookmark.url) ? (
         <Switch
           title={`${checked ? "Deactivate" : "Activate"}`}
           checked={checked}

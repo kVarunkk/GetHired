@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { setFavoriteAction } from "@/app/actions/favorites/set-favorite";
 import { Star } from "lucide-react";
 import Link from "next/link";
 import PropagationStopper from "./StopPropagation";
@@ -77,35 +77,12 @@ export default function JobFavoriteBtn({
     );
 
     try {
-      const supabase = createClient();
-
-      if (!nextFavoriteState) {
-        // DELETE Paths
-        if (isCompanyMode) {
-          await supabase
-            .from("user_favorites_companies")
-            .delete()
-            .eq("user_id", userId)
-            .eq("company_id", targetId);
-        } else {
-          await supabase
-            .from("user_favorites")
-            .delete()
-            .eq("user_id", userId)
-            .eq("job_id", targetId);
-        }
-      } else {
-        // INSERT Paths
-        if (isCompanyMode) {
-          await supabase
-            .from("user_favorites_companies")
-            .insert([{ user_id: userId, company_id: targetId }]);
-        } else {
-          await supabase
-            .from("user_favorites")
-            .insert([{ user_id: userId, job_id: targetId }]);
-        }
-      }
+      const result = await setFavoriteAction({
+        kind: isCompanyMode ? "company" : "job",
+        targetId,
+        favorite: nextFavoriteState,
+      });
+      if (!result.ok) throw new Error(result.error);
 
       mutate(PROFILE_API_KEY);
     } catch {
@@ -131,7 +108,7 @@ export default function JobFavoriteBtn({
           onClick={(e) => e.stopPropagation()}
           href={
             "/auth/sign-up?returnTo=" +
-            (isCompanyMode ? "/companies/" + company_id : "/jobs/" + job_id)
+            (isCompanyMode ? "/companies" : "/jobs/" + job_id)
           }
         >
           <Star className="h-5 w-5" />

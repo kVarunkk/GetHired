@@ -11,12 +11,23 @@ const applicantsServerQuery = supabase
         created_at,
         status,
         resume_url,
+        answers_v2,
         job_postings(
           id,
           title
         ),
         user_info(
           full_name
+        ),
+        application_screenings(
+          status,
+          fit_score,
+          recommendation
+        ),
+        application_knockouts(
+          failed,
+          reasons,
+          action_taken
         )
       `,
   )

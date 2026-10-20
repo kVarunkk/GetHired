@@ -11,7 +11,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "./ui/card";
@@ -22,7 +21,6 @@ import { Progress } from "./ui/progress";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
-import UserOnboardingPersonalization from "./UserOnboardingPersonalization";
 import { Step1JobRole } from "./onboarding-steps/Step1";
 import { Step2LocationSalary } from "./onboarding-steps/Step2";
 import { Step3SkillsExperience } from "./onboarding-steps/Step3";
@@ -33,9 +31,12 @@ import { Step7ReviewSubmit } from "./onboarding-steps/Step7";
 import { isValidUrl } from "@/utils/utils";
 import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
+import PageHeader from "./PageHeader";
+import StickyActionBar from "./StickyActionBar";
 import {
   agentPromptHref,
   ONBOARDING_PROMPT,
+  PROFILE_UPDATE_PROMPT,
   savePendingPrompt,
 } from "@/helpers/agent/prompt-draft";
 import { submitOnboardingAction } from "@/app/actions/submit-onboarding";
@@ -65,9 +66,6 @@ type IFormData = {
   no_of_resumes?: number;
   job_type: string[];
   user_id?: string;
-  is_promotion_active?: boolean;
-  is_job_digest_active?: boolean;
-  is_public?: boolean;
 };
 
 export interface StepProps {
@@ -209,9 +207,6 @@ export const OnboardingForm: React.FC = () => {
             career_goals_short_term: data.career_goals_long_term || "",
             career_goals_long_term: data.career_goals_long_term || "",
             company_size_preference: data.company_size_preference || "",
-            is_promotion_active: data.is_promotion_active || false,
-            is_job_digest_active: data.is_job_digest_active || false,
-            is_public: data.is_public || false,
             no_of_resumes: noOfResumes,
             resume_file: null,
           }));
@@ -431,29 +426,11 @@ export const OnboardingForm: React.FC = () => {
     }
   };
 
-  const preferences = useMemo(() => {
-    const hasRequiredData =
-      !!formData.user_id &&
-      formData.is_promotion_active !== undefined &&
-      formData.is_job_digest_active !== undefined &&
-      formData.is_public !== undefined;
-
-    if (!hasRequiredData) return null;
-
-    return {
-      id: formData.user_id as string,
-      is_promotion_active: formData.is_promotion_active as boolean,
-      is_job_digest_active: formData.is_job_digest_active as boolean,
-      is_public: formData.is_public as boolean,
-    };
-  }, [
-    formData.user_id,
-    formData.is_promotion_active,
-    formData.is_job_digest_active,
-    formData.is_public,
-  ]);
-
   const CurrentStepComponent = steps[currentStep].component;
+
+  // Onboarded users get help improving the profile instead of setting it up.
+  const isOnboarded = user?.app_metadata?.onboarding_complete === true;
+  const agentPrompt = isOnboarded ? PROFILE_UPDATE_PROMPT : ONBOARDING_PROMPT;
 
   if (error && !user) {
     return (
@@ -476,40 +453,51 @@ export const OnboardingForm: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col gap-10 items-center justify-center  mb-20 p-4">
+    <div className="flex flex-col w-full gap-6 mb-20 p-4">
+      <PageHeader
+        title="Profile"
+        description={
+          <>
+            Your roles, skills and resume. Visibility, outreach and email
+            preferences are in{" "}
+            <Link
+              href="/settings"
+              className="font-medium text-foreground underline underline-offset-4 transition-colors hover:text-brand"
+            >
+              Settings
+            </Link>
+            .
+          </>
+        }
+      />
       <div className="flex flex-col gap-5 max-w-2xl w-full">
-        <p className="text-2xl sm:text-[28px] font-semibold tracking-tight">
-          Let&apos;s get you Hired, quickly.
-        </p>
         <div className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
-            Rather chat? The agent can set up your profile for you.
+            {isOnboarded
+              ? "Want a second opinion? The agent can review your profile and suggest improvements."
+              : "Rather chat? The agent can set up your profile for you."}
           </p>
           <Button asChild variant="brand" className="shrink-0">
             <Link
-              href={agentPromptHref(ONBOARDING_PROMPT)}
-              onClick={() => savePendingPrompt(ONBOARDING_PROMPT)}
+              href={agentPromptHref(agentPrompt)}
+              onClick={() => savePendingPrompt(agentPrompt)}
             >
               <Sparkles className="h-4 w-4" />
-              Complete with the Agent
+              {isOnboarded
+                ? "Improve with the Agent"
+                : "Complete with the Agent"}
             </Link>
           </Button>
         </div>
-        {preferences ? (
-          <UserOnboardingPersonalization
-            initialPreferences={preferences}
-            disabled={isLoading}
-          />
-        ) : null}
       </div>
 
       {stepLoading ? (
-        <div className="h-20 flex items-center justify-center">
+        <div className="h-20 w-full max-w-2xl flex items-center justify-center">
           <Loader2 className="animate-spin h-5 w-5 text-muted-foreground" />
         </div>
       ) : (
-        <Card className="w-full max-w-2xl !border-none !p-0 shadow-none">
-          <CardHeader className="!p-0 mb-5">
+        <Card className="flex w-full max-w-2xl flex-col gap-6 !border-none !p-0 shadow-none">
+          <CardHeader className="!p-0">
             <Progress value={progress} className="mt-4" />
           </CardHeader>
           <CurrentStepComponent
@@ -519,17 +507,17 @@ export const OnboardingForm: React.FC = () => {
             setErrors={setFormErrors}
             // loadingLocations={isLoadingLocations}
           />
-          {error && (
-            <p
-              role="alert"
-              className="mt-2 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
-            >
-              <AlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
-              {error}
-            </p>
-          )}
-
-          <CardFooter className="flex items-center justify-between !p-0 mt-5">
+          {/* In the sticky bar, so the error shows wherever Next was clicked. */}
+          <StickyActionBar className="justify-between">
+            {error && (
+              <p
+                role="alert"
+                className="flex w-full items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+              >
+                <AlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+                {error}
+              </p>
+            )}
             <Button
               variant={"outline"}
               onClick={handleBack}
@@ -544,8 +532,8 @@ export const OnboardingForm: React.FC = () => {
                   ? "Submit"
                   : "Next"}
             </Button>
-          </CardFooter>
-          <p className="text-muted-foreground text-xs text-center mt-5">
+          </StickyActionBar>
+          <p className="text-muted-foreground text-xs text-center">
             No need to panic, you can always update this information.
           </p>
         </Card>

@@ -8,6 +8,10 @@
  */
 
 export const PROMPT_PARAM = "prompt";
+
+/** Where each role's agent lives: applicants at /agent, companies under /company. */
+export const AGENT_PATH = "/agent";
+export const COMPANY_AGENT_PATH = "/company/agent";
 export const MAX_PROMPT_CHARS = 2000;
 
 const STORAGE_KEY = "gethired:agent-prompt";
@@ -20,10 +24,10 @@ export function readPromptParam(value: unknown): string {
   return typeof text === "string" ? text.trim().slice(0, MAX_PROMPT_CHARS) : "";
 }
 
-/** The /agent link that opens a new chat with `text` in the message box. */
-export function agentPromptHref(text: string) {
+/** The agent link (`base`, /agent by default) that opens a new chat with `text` in the message box. */
+export function agentPromptHref(text: string, base: string = AGENT_PATH) {
   const prompt = readPromptParam(text);
-  return prompt ? `/agent?${PROMPT_PARAM}=${encodeURIComponent(prompt)}` : "/agent";
+  return prompt ? `${base}?${PROMPT_PARAM}=${encodeURIComponent(prompt)}` : base;
 }
 
 export function savePendingPrompt(text: string) {
@@ -54,3 +58,7 @@ export function takePendingPrompt(): string {
 /** Opens the agent ready to set up the user's profile (see ONBOARDING in system-prompt.ts). */
 export const ONBOARDING_PROMPT =
   "Help me complete my onboarding. Ask me for the missing profile details a few at a time, then set up my profile.";
+
+/** Opens the agent ready to review and update an onboarded user's profile. */
+export const PROFILE_UPDATE_PROMPT =
+  "Review my profile with me. Summarise what it says now, suggest changes that would improve my job matches, and update it once I agree.";

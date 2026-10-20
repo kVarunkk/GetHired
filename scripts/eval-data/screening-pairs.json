@@ -1,0 +1,1108 @@
+{
+  "_readme": "Anonymised application/job pairs for scripts/eval-screening.ts (MT-TEST-008). Each label is the recommendation a human reviewer expects. {{NAME}} and {{HOME}} are filled with a different identity per run; nothing else changes between runs.",
+  "jobs": {
+    "frontend": {
+      "title": "Senior Frontend Engineer",
+      "description": "We're a 40-person B2B SaaS company building a logistics dashboard used by 2,000 warehouses. You'll own our React and TypeScript web app: design the component system, improve performance on large data tables, and mentor two mid-level engineers. Must have: 4+ years of production React, strong TypeScript, and experience writing automated tests (unit and end-to-end). Nice to have: Next.js, data visualisation, accessibility work. Hybrid in Bengaluru, 3 days a week in the office.",
+      "skills": ["React", "TypeScript", "Testing", "Next.js", "Performance"],
+      "min_experience": 4,
+      "max_experience": 8,
+      "location": ["bengaluru"],
+      "job_type": "Fulltime",
+      "visa_sponsorship": "Not Required",
+      "salary_currency": "₹",
+      "min_salary": 3000000,
+      "max_salary": 4500000,
+      "questions": ["Tell us about a frontend performance problem you fixed.", "What's your notice period?"]
+    },
+    "backend": {
+      "title": "Backend Engineer (Go)",
+      "description": "Our payments platform processes 3 million transactions a day. You'll build and run Go microservices on Kubernetes, design PostgreSQL schemas, and take part in a weekly on-call rotation. Must have: 3+ years building backend services in Go, solid PostgreSQL, experience running services in production on Kubernetes or a similar orchestrator. Nice to have: Kafka, payments or fintech experience. Fully remote within India.",
+      "skills": ["Go", "PostgreSQL", "Kubernetes", "Kafka", "Microservices"],
+      "min_experience": 3,
+      "max_experience": 6,
+      "location": ["remote"],
+      "job_type": "Fulltime",
+      "visa_sponsorship": "Not Required",
+      "salary_currency": "₹",
+      "min_salary": 2500000,
+      "max_salary": 4000000,
+      "questions": ["Describe an outage you were involved in and what you changed afterwards.", "Why payments?"]
+    },
+    "analyst": {
+      "title": "Data Analyst",
+      "description": "Join the growth team of a consumer fintech app. You'll write SQL against our warehouse, build Tableau dashboards for the marketing and product teams, and run A/B test analyses in Python. Must have: 1+ years as an analyst, advanced SQL (window functions, CTEs), and a dashboarding tool (Tableau preferred). Nice to have: Python (pandas), experimentation and statistics. Onsite in Mumbai.",
+      "skills": ["SQL", "Tableau", "Python", "A/B testing", "Statistics"],
+      "min_experience": 1,
+      "max_experience": 3,
+      "location": ["mumbai"],
+      "job_type": "Fulltime",
+      "visa_sponsorship": "Not Required",
+      "salary_currency": "₹",
+      "min_salary": 900000,
+      "max_salary": 1500000,
+      "questions": ["Walk us through an analysis that changed a decision.", "Are you able to work onsite in Mumbai?"]
+    },
+    "ml": {
+      "title": "Machine Learning Engineer",
+      "description": "We build fraud detection models for banks. You'll train and ship PyTorch models, own the training and serving pipelines (feature store, model registry, monitoring), and work with data scientists to get models from notebook to production. Must have: 3+ years of ML engineering, PyTorch, and experience deploying models to production with monitoring. Nice to have: tabular/graph models, MLflow, Kubernetes. Remote, with overlap with IST working hours.",
+      "skills": ["PyTorch", "MLOps", "Python", "MLflow", "Kubernetes"],
+      "min_experience": 3,
+      "max_experience": 7,
+      "location": ["remote"],
+      "job_type": "Fulltime",
+      "visa_sponsorship": "Not Required",
+      "questions": ["Describe a model you took to production and how you monitored it.", "How do you handle class imbalance?"]
+    },
+    "designer": {
+      "title": "Product Designer",
+      "description": "Design the mobile and web experience of a healthcare booking app used by 500 clinics. You'll run user research with patients and clinic staff, design flows in Figma, and maintain our design system with engineering. Must have: 2+ years of product design for shipped apps, strong Figma skills, a portfolio showing end-to-end work including research. Nice to have: design systems, healthcare. Onsite in Pune, 4 days a week.",
+      "skills": ["Figma", "User research", "Design systems", "Prototyping", "Mobile design"],
+      "min_experience": 2,
+      "max_experience": 5,
+      "location": ["pune"],
+      "job_type": "Fulltime",
+      "visa_sponsorship": "Not Required",
+      "questions": ["Share a project where research changed your design.", "Link to your portfolio."]
+    },
+    "sre": {
+      "title": "Site Reliability Engineer",
+      "description": "Keep a high-traffic e-commerce platform up during sale events with 50x normal traffic. You'll manage AWS infrastructure with Terraform, run Kubernetes clusters, build observability (Prometheus, Grafana), and lead incident response. Must have: 4+ years in SRE/DevOps, AWS, Terraform, Kubernetes in production, and on-call experience. Nice to have: capacity planning, chaos engineering. Hybrid in Hyderabad.",
+      "skills": ["AWS", "Terraform", "Kubernetes", "Prometheus", "Incident response"],
+      "min_experience": 4,
+      "max_experience": 8,
+      "location": ["hyderabad"],
+      "job_type": "Fulltime",
+      "visa_sponsorship": "Not Required",
+      "questions": ["Describe the worst incident you led and the follow-ups.", "How do you approach capacity planning for a sale event?"]
+    }
+  },
+  "pairs": [
+    {
+      "id": "fe-1",
+      "jobId": "frontend",
+      "label": "strong_yes",
+      "profile": {
+        "desired_roles": ["Senior Frontend Engineer"],
+        "experience_years": 6,
+        "top_skills": ["React", "TypeScript", "Next.js", "Playwright", "Web performance"],
+        "preferred_locations": ["bengaluru"],
+        "work_style_preferences": ["Hybrid"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false,
+        "career_goals_short_term": "Lead frontend architecture for a data-heavy product.",
+        "career_goals_long_term": "Become a staff engineer focused on web performance."
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}", "bullets": [{ "text": "{{HOME}}" }] }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Senior Frontend Engineer",
+                "subheading": "Tradeloop (B2B SaaS), 2021–present",
+                "bullets": [
+                  { "text": "Led the rebuild of a 300-component React/TypeScript design system used by 4 product teams." },
+                  { "text": "Virtualised data tables with 100k rows; cut interaction latency from 900ms to 80ms." },
+                  { "text": "Introduced Playwright end-to-end tests and raised unit coverage from 35% to 80%." },
+                  { "text": "Mentored 3 engineers, two promoted to senior." }
+                ]
+              },
+              {
+                "heading": "Frontend Engineer",
+                "subheading": "Kitebyte, {{HOME}}, 2018–2021",
+                "bullets": [{ "text": "Migrated a jQuery app to React and Next.js; improved LCP by 45%." }]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "React, TypeScript, Next.js, Jest, Playwright, D3, accessibility (WCAG 2.1)" }] }] },
+          { "type": "projects", "items": [{ "heading": "Open-source table library", "bullets": [{ "text": "Maintainer of a virtualised React table library with 3k GitHub stars." }] }] }
+        ]
+      },
+      "answers": [
+        "Our warehouse grid froze with 100k rows. I profiled it, virtualised rows, memoised cell renderers and moved sorting to a web worker. Interaction latency went from 900ms to 80ms.",
+        "30 days."
+      ]
+    },
+    {
+      "id": "fe-2",
+      "jobId": "frontend",
+      "label": "yes",
+      "profile": {
+        "desired_roles": ["Frontend Engineer"],
+        "experience_years": 4,
+        "top_skills": ["React", "TypeScript", "Jest", "Redux"],
+        "preferred_locations": ["bengaluru", "remote"],
+        "work_style_preferences": ["Hybrid", "Remote"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false,
+        "career_goals_short_term": "Move into a senior role owning a product area."
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Frontend Engineer",
+                "subheading": "Shopwise, {{HOME}}, 2021–present",
+                "bullets": [
+                  { "text": "Built checkout and account pages in React and TypeScript for an e-commerce site with 1M monthly users." },
+                  { "text": "Wrote Jest and React Testing Library tests for all new features." },
+                  { "text": "Reduced bundle size by 30% with code splitting." }
+                ]
+              },
+              { "heading": "Junior Developer", "subheading": "Pixelcraft, 2020–2021", "bullets": [{ "text": "Built marketing sites in React." }] }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "React, TypeScript, Redux, Jest, React Testing Library, Webpack" }] }] }
+        ]
+      },
+      "answers": [
+        "Our product listing page was slow on low-end phones. I split the bundle by route and lazy-loaded images, which cut load time by about 40%.",
+        "60 days, negotiable."
+      ]
+    },
+    {
+      "id": "fe-3",
+      "jobId": "frontend",
+      "label": "maybe",
+      "profile": {
+        "desired_roles": ["Frontend Developer", "Full Stack Developer"],
+        "experience_years": 3,
+        "top_skills": ["Vue", "JavaScript", "React", "Node.js"],
+        "preferred_locations": ["bengaluru"],
+        "work_style_preferences": ["Hybrid"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Frontend Developer",
+                "subheading": "Ledgerly, 2021–present",
+                "bullets": [
+                  { "text": "Built dashboard features in Vue 3 and JavaScript." },
+                  { "text": "Started migrating two internal tools to React in 2023." }
+                ]
+              },
+              { "heading": "Intern", "subheading": "Bytewise, {{HOME}}, 2020", "bullets": [{ "text": "Built a Node.js REST API." }] }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Vue, JavaScript, React (1 year), Node.js, Cypress basics" }] }] }
+        ]
+      },
+      "answers": ["I fixed a memory leak in a Vue chart component that crashed the tab after an hour.", "Immediate."]
+    },
+    {
+      "id": "fe-4",
+      "jobId": "frontend",
+      "label": "no",
+      "profile": {
+        "desired_roles": ["Backend Developer"],
+        "experience_years": 2,
+        "top_skills": ["Java", "Spring Boot", "MySQL"],
+        "preferred_locations": ["bengaluru"],
+        "work_style_preferences": ["Onsite"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Java Developer",
+                "subheading": "Finserve, {{HOME}}, 2022–present",
+                "bullets": [{ "text": "Built Spring Boot REST APIs for loan processing." }, { "text": "Wrote SQL queries and stored procedures in MySQL." }]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Java, Spring Boot, MySQL, basic HTML/CSS" }] }] }
+        ]
+      },
+      "answers": ["I haven't done frontend performance work yet but I'm keen to learn.", "90 days."]
+    },
+    {
+      "id": "fe-5",
+      "jobId": "frontend",
+      "label": "yes",
+      "profile": {
+        "desired_roles": ["Senior Frontend Engineer"],
+        "experience_years": 7,
+        "top_skills": ["React", "TypeScript", "GraphQL", "Storybook"],
+        "preferred_locations": ["bengaluru"],
+        "work_style_preferences": ["Hybrid"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false,
+        "career_goals_short_term": "Return to work after a two-year career break and lead a frontend team."
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              { "heading": "Career break", "subheading": "2022–2024", "bullets": [{ "text": "Family care. Completed an accessibility course and contributed to an open-source React component library." }] },
+              {
+                "heading": "Senior Frontend Engineer",
+                "subheading": "Mapleworks, {{HOME}}, 2017–2022",
+                "bullets": [
+                  { "text": "Owned a React/TypeScript analytics dashboard; built a Storybook design system with 120 components." },
+                  { "text": "Set up Jest and Cypress testing across the frontend." },
+                  { "text": "Led a team of 4 frontend engineers." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "React, TypeScript, GraphQL, Storybook, Jest, Cypress, accessibility" }] }] }
+        ]
+      },
+      "answers": ["Our analytics charts re-rendered on every websocket tick. I batched updates and memoised selectors, dropping CPU use by half.", "Available immediately."]
+    },
+    {
+      "id": "be-1",
+      "jobId": "backend",
+      "label": "strong_yes",
+      "profile": {
+        "desired_roles": ["Backend Engineer"],
+        "experience_years": 5,
+        "top_skills": ["Go", "PostgreSQL", "Kubernetes", "Kafka"],
+        "preferred_locations": ["remote"],
+        "work_style_preferences": ["Remote"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false,
+        "career_goals_short_term": "Work on high-throughput payment systems."
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}", "bullets": [{ "text": "Based in {{HOME}}" }] }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Backend Engineer",
+                "subheading": "Paystream (payments), 2020–present",
+                "bullets": [
+                  { "text": "Built Go microservices handling 1.5M payment transactions a day on Kubernetes." },
+                  { "text": "Designed PostgreSQL schemas with partitioning; cut p99 query latency by 70%." },
+                  { "text": "Introduced Kafka-based event sourcing for the ledger." },
+                  { "text": "On the on-call rotation for 4 years; wrote 12 postmortems." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Go, PostgreSQL, Kubernetes, Kafka, gRPC, Prometheus" }] }] }
+        ]
+      },
+      "answers": [
+        "A connection pool exhaustion took settlements down for 20 minutes. I added circuit breakers, per-tenant pool limits and an alert on pool saturation.",
+        "Payments are unforgiving about correctness, which is the kind of engineering I enjoy."
+      ]
+    },
+    {
+      "id": "be-2",
+      "jobId": "backend",
+      "label": "yes",
+      "profile": {
+        "desired_roles": ["Backend Engineer"],
+        "experience_years": 4,
+        "top_skills": ["Go", "Python", "PostgreSQL", "Docker"],
+        "preferred_locations": ["remote"],
+        "work_style_preferences": ["Remote"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Software Engineer",
+                "subheading": "Cartly, {{HOME}}, 2021–present",
+                "bullets": [
+                  { "text": "Rewrote the order service from Python to Go, serving 200k orders a day." },
+                  { "text": "Maintained PostgreSQL databases and wrote migrations." },
+                  { "text": "Deployed services on Amazon ECS." }
+                ]
+              },
+              { "heading": "Python Developer", "subheading": "Dataflux, 2020–2021", "bullets": [{ "text": "Built Django APIs." }] }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Go, Python, PostgreSQL, Docker, ECS, Redis" }] }] }
+        ]
+      },
+      "answers": ["A bad migration locked the orders table. We now run migrations with lock timeouts and test them on a production snapshot.", "I want to work on systems where reliability matters."]
+    },
+    {
+      "id": "be-3",
+      "jobId": "backend",
+      "label": "maybe",
+      "profile": {
+        "desired_roles": ["Backend Engineer"],
+        "experience_years": 4,
+        "top_skills": ["Java", "Spring Boot", "PostgreSQL", "Kubernetes"],
+        "preferred_locations": ["remote"],
+        "work_style_preferences": ["Remote"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Backend Developer",
+                "subheading": "Insurely, {{HOME}}, 2020–present",
+                "bullets": [
+                  { "text": "Built Java/Spring Boot services on Kubernetes." },
+                  { "text": "Wrote one internal CLI tool in Go." },
+                  { "text": "Tuned PostgreSQL queries for the claims service." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Java, Spring Boot, PostgreSQL, Kubernetes, some Go" }] }] }
+        ]
+      },
+      "answers": ["A memory leak in a Spring service caused repeated pod restarts; I found it with heap dumps.", "Payments is a domain I'd like to learn."]
+    },
+    {
+      "id": "be-4",
+      "jobId": "backend",
+      "label": "no",
+      "profile": {
+        "desired_roles": ["Frontend Developer"],
+        "experience_years": 1,
+        "top_skills": ["HTML", "CSS", "JavaScript"],
+        "preferred_locations": ["remote"],
+        "work_style_preferences": ["Remote"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [{ "heading": "Web Developer Intern", "subheading": "Brightpage, {{HOME}}, 2024", "bullets": [{ "text": "Built landing pages in HTML, CSS and JavaScript." }] }]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "HTML, CSS, JavaScript, WordPress" }] }] }
+        ]
+      },
+      "answers": ["", "Looking for any remote role."]
+    },
+    {
+      "id": "be-5",
+      "jobId": "backend",
+      "label": "strong_yes",
+      "profile": {
+        "desired_roles": ["Senior Backend Engineer"],
+        "experience_years": 6,
+        "top_skills": ["Go", "PostgreSQL", "Kubernetes", "Kafka", "Distributed systems"],
+        "preferred_locations": ["remote"],
+        "work_style_preferences": ["Remote"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Senior Software Engineer",
+                "subheading": "Cross-border payments startup, 2019–present",
+                "bullets": [
+                  { "text": "Tech lead for the transfers platform: 20 Go services on Kubernetes, 2M transfers a day." },
+                  { "text": "Designed idempotent payment APIs and the double-entry ledger in PostgreSQL." },
+                  { "text": "Ran Kafka clusters for event streaming; led incident response as on-call lead." }
+                ]
+              },
+              { "heading": "Software Engineer", "subheading": "Telcox, {{HOME}}, 2017–2019", "bullets": [{ "text": "Built billing services in Go." }] }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Go, PostgreSQL, Kubernetes, Kafka, Terraform, gRPC" }] }] }
+        ]
+      },
+      "answers": [
+        "A Kafka consumer lag spike delayed 40k transfers. I led the incident, added lag-based autoscaling and an idempotency check that let us replay safely.",
+        "I've spent six years in payments; I like the mix of correctness and scale."
+      ]
+    },
+    {
+      "id": "da-1",
+      "jobId": "analyst",
+      "label": "strong_yes",
+      "profile": {
+        "desired_roles": ["Data Analyst", "Product Analyst"],
+        "experience_years": 2,
+        "top_skills": ["SQL", "Tableau", "Python", "A/B testing"],
+        "preferred_locations": ["mumbai"],
+        "work_style_preferences": ["Onsite", "Hybrid"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Product Analyst",
+                "subheading": "Coinnest (consumer fintech), 2023–present",
+                "bullets": [
+                  { "text": "Built 15 Tableau dashboards for growth and product teams." },
+                  { "text": "Wrote SQL with window functions and CTEs against a Snowflake warehouse." },
+                  { "text": "Analysed 20 A/B tests in Python (pandas, statsmodels); one changed the onboarding flow and lifted activation 8%." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "SQL, Tableau, Python (pandas, statsmodels), Snowflake, experimentation" }] }] }
+        ]
+      },
+      "answers": [
+        "Our referral campaign looked successful, but cohort analysis showed referred users churned twice as fast. We moved budget to a different channel.",
+        "Yes, I live in Mumbai."
+      ]
+    },
+    {
+      "id": "da-2",
+      "jobId": "analyst",
+      "label": "yes",
+      "profile": {
+        "desired_roles": ["Data Analyst"],
+        "experience_years": 1,
+        "top_skills": ["SQL", "Power BI", "Excel"],
+        "preferred_locations": ["mumbai"],
+        "work_style_preferences": ["Onsite"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Data Analyst",
+                "subheading": "Retailmax, {{HOME}}, 2024–present",
+                "bullets": [
+                  { "text": "Wrote SQL reports using CTEs and window functions for weekly sales reviews." },
+                  { "text": "Built Power BI dashboards for store managers." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "SQL, Power BI, Excel, basic Python" }] }] }
+        ]
+      },
+      "answers": ["I found that two regions double-counted returns, which changed the quarterly bonus calculation.", "Yes, I'm relocating from {{HOME}} to Mumbai next month."]
+    },
+    {
+      "id": "da-3",
+      "jobId": "analyst",
+      "label": "maybe",
+      "profile": {
+        "desired_roles": ["Data Analyst", "Business Analyst"],
+        "experience_years": 1,
+        "top_skills": ["Excel", "SQL", "Google Sheets"],
+        "preferred_locations": ["mumbai"],
+        "work_style_preferences": ["Onsite"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Business Analyst",
+                "subheading": "Logix Services, {{HOME}}, 2024–present",
+                "bullets": [{ "text": "Maintained Excel reports and pivot tables." }, { "text": "Wrote basic SQL SELECT queries to pull data." }]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Excel, Google Sheets, basic SQL" }] }] }
+        ]
+      },
+      "answers": ["I built a pivot table that showed late deliveries by vendor.", "Yes."]
+    },
+    {
+      "id": "da-4",
+      "jobId": "analyst",
+      "label": "no",
+      "profile": {
+        "desired_roles": ["Graphic Designer"],
+        "experience_years": 2,
+        "top_skills": ["Photoshop", "Illustrator"],
+        "preferred_locations": ["mumbai"],
+        "work_style_preferences": ["Onsite"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [{ "heading": "Graphic Designer", "subheading": "Adwave, {{HOME}}, 2023–present", "bullets": [{ "text": "Designed social media creatives and print ads." }] }]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Photoshop, Illustrator, Canva" }] }] }
+        ]
+      },
+      "answers": ["", "Yes."]
+    },
+    {
+      "id": "da-5",
+      "jobId": "analyst",
+      "label": "yes",
+      "profile": {
+        "desired_roles": ["Data Analyst"],
+        "experience_years": 3,
+        "top_skills": ["SQL", "Python", "Looker", "Statistics"],
+        "preferred_locations": ["mumbai", "remote"],
+        "work_style_preferences": ["Hybrid"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false,
+        "career_goals_short_term": "Move from academic research into product analytics."
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Research Analyst",
+                "subheading": "Public health institute, {{HOME}}, 2021–2024",
+                "bullets": [
+                  { "text": "Analysed survey data of 50k respondents in Python and SQL." },
+                  { "text": "Designed randomised field trials and reported effect sizes." },
+                  { "text": "Built Looker dashboards for program managers." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "SQL, Python, R, Looker, experimental design, statistics" }] }] }
+        ]
+      },
+      "answers": ["Our trial analysis showed SMS reminders didn't increase vaccination; the program dropped them and saved budget.", "Yes, I can work onsite in Mumbai."]
+    },
+    {
+      "id": "ml-1",
+      "jobId": "ml",
+      "label": "strong_yes",
+      "profile": {
+        "desired_roles": ["ML Engineer"],
+        "experience_years": 5,
+        "top_skills": ["PyTorch", "MLflow", "Kubernetes", "Python", "Feature stores"],
+        "preferred_locations": ["remote"],
+        "work_style_preferences": ["Remote"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "ML Engineer",
+                "subheading": "Riskwise (fraud detection), 2020–present",
+                "bullets": [
+                  { "text": "Trained PyTorch tabular and graph models for card fraud; deployed to 6 bank clients." },
+                  { "text": "Built the training pipeline with a Feast feature store and MLflow registry." },
+                  { "text": "Set up drift and performance monitoring with Evidently and Prometheus." }
+                ]
+              },
+              { "heading": "Data Scientist", "subheading": "Analytico, {{HOME}}, 2019–2020", "bullets": [{ "text": "Built churn models in scikit-learn." }] }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "PyTorch, Python, MLflow, Feast, Kubernetes, Airflow" }] }] }
+        ]
+      },
+      "answers": [
+        "Our transaction fraud model went live for a bank; we monitored feature drift weekly and precision daily, and retrained when PSI crossed 0.2.",
+        "Focal loss and class weights, careful threshold tuning on a precision/recall target, and evaluation with PR-AUC instead of accuracy."
+      ]
+    },
+    {
+      "id": "ml-2",
+      "jobId": "ml",
+      "label": "yes",
+      "profile": {
+        "desired_roles": ["ML Engineer"],
+        "experience_years": 3,
+        "top_skills": ["PyTorch", "Python", "Docker", "FastAPI"],
+        "preferred_locations": ["remote"],
+        "work_style_preferences": ["Remote"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Machine Learning Engineer",
+                "subheading": "Visionly, {{HOME}}, 2022–present",
+                "bullets": [
+                  { "text": "Trained PyTorch image classifiers for retail shelf monitoring." },
+                  { "text": "Served models with FastAPI in Docker; added latency and accuracy dashboards." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "PyTorch, Python, Docker, FastAPI, Grafana" }] }] }
+        ]
+      },
+      "answers": ["A shelf-gap detector served via FastAPI; we tracked per-store accuracy and alerted on drops.", "Oversampling and class-weighted loss."]
+    },
+    {
+      "id": "ml-3",
+      "jobId": "ml",
+      "label": "maybe",
+      "profile": {
+        "desired_roles": ["Data Scientist", "ML Engineer"],
+        "experience_years": 3,
+        "top_skills": ["scikit-learn", "Python", "SQL", "XGBoost"],
+        "preferred_locations": ["remote"],
+        "work_style_preferences": ["Remote"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Data Scientist",
+                "subheading": "Lendo, {{HOME}}, 2021–present",
+                "bullets": [
+                  { "text": "Built XGBoost credit risk models in notebooks; handed off to an engineering team for deployment." },
+                  { "text": "Took a PyTorch course and built a small text classifier." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Python, scikit-learn, XGBoost, SQL, basic PyTorch" }] }] }
+        ]
+      },
+      "answers": ["I built the model; deployment and monitoring were done by another team.", "SMOTE and class weights."]
+    },
+    {
+      "id": "ml-4",
+      "jobId": "ml",
+      "label": "no",
+      "profile": {
+        "desired_roles": ["Software Engineer"],
+        "experience_years": 2,
+        "top_skills": ["PHP", "Laravel", "MySQL"],
+        "preferred_locations": ["remote"],
+        "work_style_preferences": ["Remote"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [{ "heading": "PHP Developer", "subheading": "Webnest, {{HOME}}, 2023–present", "bullets": [{ "text": "Built Laravel admin panels." }] }]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "PHP, Laravel, MySQL, jQuery" }] }] }
+        ]
+      },
+      "answers": ["I haven't deployed a model.", ""]
+    },
+    {
+      "id": "ml-5",
+      "jobId": "ml",
+      "label": "yes",
+      "profile": {
+        "desired_roles": ["ML Engineer"],
+        "experience_years": 4,
+        "top_skills": ["TensorFlow", "Python", "Kubeflow", "Kubernetes"],
+        "preferred_locations": ["remote"],
+        "work_style_preferences": ["Remote"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "ML Engineer",
+                "subheading": "Adtech company, {{HOME}}, 2021–present",
+                "bullets": [
+                  { "text": "Trained TensorFlow click-through models on 1B rows; deployed with Kubeflow on Kubernetes." },
+                  { "text": "Built model monitoring for calibration and drift." },
+                  { "text": "Ported one model to PyTorch for an experiment." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "TensorFlow, some PyTorch, Python, Kubeflow, Kubernetes, BigQuery" }] }] }
+        ]
+      },
+      "answers": ["Our CTR model ran on Kubeflow; we monitored calibration hourly and rolled back on a 5% drop.", "Downsampling negatives and recalibrating probabilities afterwards."]
+    },
+    {
+      "id": "pd-1",
+      "jobId": "designer",
+      "label": "strong_yes",
+      "profile": {
+        "desired_roles": ["Product Designer"],
+        "experience_years": 4,
+        "top_skills": ["Figma", "User research", "Design systems", "Prototyping"],
+        "preferred_locations": ["pune"],
+        "work_style_preferences": ["Onsite", "Hybrid"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}", "bullets": [{ "text": "Portfolio: {{NAME}}.design" }] }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Product Designer",
+                "subheading": "Clinicly (healthtech), 2021–present",
+                "bullets": [
+                  { "text": "Designed the patient booking app end to end (iOS, Android, web) in Figma." },
+                  { "text": "Ran 40 interviews with patients and clinic staff; redesigned rescheduling, cutting no-shows 18%." },
+                  { "text": "Built and maintained a design system with engineering." }
+                ]
+              },
+              { "heading": "UI Designer", "subheading": "Studio Nine, {{HOME}}, 2020–2021", "bullets": [{ "text": "Designed marketing sites." }] }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Figma, user research, usability testing, design systems, prototyping" }] }] }
+        ]
+      },
+      "answers": [
+        "Interviews showed clinic staff rebooked patients by phone, so we added a staff-side reschedule flow before the patient one.",
+        "See the portfolio link on my resume."
+      ]
+    },
+    {
+      "id": "pd-2",
+      "jobId": "designer",
+      "label": "yes",
+      "profile": {
+        "desired_roles": ["Product Designer", "UX Designer"],
+        "experience_years": 2,
+        "top_skills": ["Figma", "Prototyping", "Usability testing"],
+        "preferred_locations": ["pune"],
+        "work_style_preferences": ["Onsite"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "UX Designer",
+                "subheading": "Edulearn, {{HOME}}, 2023–present",
+                "bullets": [
+                  { "text": "Designed the mobile learning app's onboarding and lesson flows in Figma." },
+                  { "text": "Ran usability tests with 15 students each quarter." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Figma, prototyping, usability testing, Maze" }] }] }
+        ]
+      },
+      "answers": ["Students skipped onboarding; tests showed the quiz felt like an exam, so we made it optional and completion rose.", "Portfolio is on my profile."]
+    },
+    {
+      "id": "pd-3",
+      "jobId": "designer",
+      "label": "maybe",
+      "profile": {
+        "desired_roles": ["UI Designer"],
+        "experience_years": 3,
+        "top_skills": ["Figma", "Visual design", "Illustration"],
+        "preferred_locations": ["pune"],
+        "work_style_preferences": ["Onsite"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "UI Designer",
+                "subheading": "Agency, {{HOME}}, 2022–present",
+                "bullets": [{ "text": "Designed high-fidelity screens for client apps from product managers' wireframes." }, { "text": "Created illustration sets and icons." }]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Figma, visual design, illustration, motion" }] }] }
+        ]
+      },
+      "answers": ["Research was done by the client, so I haven't run it myself.", "Portfolio on request."]
+    },
+    {
+      "id": "pd-4",
+      "jobId": "designer",
+      "label": "no",
+      "profile": {
+        "desired_roles": ["Marketing Manager"],
+        "experience_years": 5,
+        "top_skills": ["SEO", "Content marketing", "Google Ads"],
+        "preferred_locations": ["pune"],
+        "work_style_preferences": ["Onsite"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [{ "heading": "Marketing Manager", "subheading": "Growthly, {{HOME}}, 2020–present", "bullets": [{ "text": "Ran SEO and paid campaigns." }] }]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "SEO, Google Ads, content strategy, Canva" }] }] }
+        ]
+      },
+      "answers": ["", ""]
+    },
+    {
+      "id": "pd-5",
+      "jobId": "designer",
+      "label": "yes",
+      "profile": {
+        "desired_roles": ["Product Designer"],
+        "experience_years": 3,
+        "top_skills": ["Figma", "User research", "Accessibility"],
+        "preferred_locations": ["pune"],
+        "work_style_preferences": ["Onsite"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false,
+        "career_goals_short_term": "Design for healthcare after three years in fintech."
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Product Designer",
+                "subheading": "Fintech startup, {{HOME}}, 2022–present",
+                "bullets": [
+                  { "text": "Owned the loan application flow on mobile and web; ran research with 25 borrowers." },
+                  { "text": "Led an accessibility audit and fixed 60 issues." },
+                  { "text": "Contributed components to the design system." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Figma, user research, accessibility, design systems" }] }] }
+        ]
+      },
+      "answers": ["Borrowers abandoned at document upload; research showed they didn't have the papers at hand, so we added save-and-resume.", "Portfolio on my profile."]
+    },
+    {
+      "id": "sre-1",
+      "jobId": "sre",
+      "label": "strong_yes",
+      "profile": {
+        "desired_roles": ["Site Reliability Engineer"],
+        "experience_years": 6,
+        "top_skills": ["AWS", "Terraform", "Kubernetes", "Prometheus", "Incident response"],
+        "preferred_locations": ["hyderabad"],
+        "work_style_preferences": ["Hybrid"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Senior SRE",
+                "subheading": "Shopmart (e-commerce), 2020–present",
+                "bullets": [
+                  { "text": "Ran 12 EKS clusters on AWS, all managed with Terraform." },
+                  { "text": "Prepared infrastructure for annual sale events at 40x traffic; zero downtime for 3 years." },
+                  { "text": "Built Prometheus/Grafana observability and SLO alerting; incident commander for 30+ incidents." }
+                ]
+              },
+              { "heading": "DevOps Engineer", "subheading": "Hostly, {{HOME}}, 2018–2020", "bullets": [{ "text": "Automated deployments with Ansible and Jenkins." }] }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "AWS, Terraform, Kubernetes, Prometheus, Grafana, chaos engineering" }] }] }
+        ]
+      },
+      "answers": [
+        "During a sale, a misconfigured autoscaler capped checkout pods. I led the incident, raised limits, and we added load tests of autoscaling to the pre-sale checklist.",
+        "Load-test at 2x the forecast peak, pre-scale stateful tiers, and run a game day a week before."
+      ]
+    },
+    {
+      "id": "sre-2",
+      "jobId": "sre",
+      "label": "yes",
+      "profile": {
+        "desired_roles": ["DevOps Engineer", "SRE"],
+        "experience_years": 4,
+        "top_skills": ["AWS", "Terraform", "Kubernetes", "Jenkins"],
+        "preferred_locations": ["hyderabad"],
+        "work_style_preferences": ["Hybrid"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "DevOps Engineer",
+                "subheading": "Mediastream, {{HOME}}, 2021–present",
+                "bullets": [
+                  { "text": "Managed AWS infrastructure with Terraform modules." },
+                  { "text": "Migrated services from EC2 to EKS." },
+                  { "text": "Member of the on-call rotation; set up CloudWatch alarms." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "AWS, Terraform, Kubernetes, Jenkins, CloudWatch" }] }] }
+        ]
+      },
+      "answers": ["An expired certificate took our API down; I added certificate expiry monitoring and automated renewal.", "Look at last year's peaks, load test, and pre-scale."]
+    },
+    {
+      "id": "sre-3",
+      "jobId": "sre",
+      "label": "maybe",
+      "profile": {
+        "desired_roles": ["Cloud Engineer"],
+        "experience_years": 3,
+        "top_skills": ["Azure", "ARM templates", "Docker"],
+        "preferred_locations": ["hyderabad"],
+        "work_style_preferences": ["Hybrid"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Cloud Engineer",
+                "subheading": "IT services firm, {{HOME}}, 2022–present",
+                "bullets": [{ "text": "Provisioned Azure VMs with ARM templates for clients." }, { "text": "Containerised two apps with Docker." }]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Azure, ARM, Docker, basic Terraform" }] }] }
+        ]
+      },
+      "answers": ["I haven't led an incident, but I helped restore a VM from backup.", "I'd ask the team about past traffic."]
+    },
+    {
+      "id": "sre-4",
+      "jobId": "sre",
+      "label": "no",
+      "profile": {
+        "desired_roles": ["QA Engineer"],
+        "experience_years": 2,
+        "top_skills": ["Manual testing", "Selenium"],
+        "preferred_locations": ["hyderabad"],
+        "work_style_preferences": ["Onsite"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [{ "heading": "QA Engineer", "subheading": "Appify, {{HOME}}, 2023–present", "bullets": [{ "text": "Wrote manual test cases and some Selenium scripts." }] }]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "Manual testing, Selenium, JIRA" }] }] }
+        ]
+      },
+      "answers": ["", ""]
+    },
+    {
+      "id": "sre-5",
+      "jobId": "sre",
+      "label": "yes",
+      "profile": {
+        "desired_roles": ["SRE"],
+        "experience_years": 5,
+        "top_skills": ["GCP", "Terraform", "Kubernetes", "Prometheus"],
+        "preferred_locations": ["hyderabad"],
+        "work_style_preferences": ["Hybrid"],
+        "job_type": ["Fulltime"],
+        "visa_sponsorship_required": false
+      },
+      "resume": {
+        "sections": [
+          { "type": "contact", "items": [{ "heading": "{{NAME}}" }] },
+          {
+            "type": "experience",
+            "items": [
+              {
+                "heading": "Site Reliability Engineer",
+                "subheading": "Ridehail company, {{HOME}}, 2020–present",
+                "bullets": [
+                  { "text": "Ran GKE clusters with Terraform for a ride-hailing platform with evening traffic peaks." },
+                  { "text": "Built Prometheus alerting and SLOs; on-call primary one week a month." },
+                  { "text": "Ran quarterly chaos experiments." }
+                ]
+              }
+            ]
+          },
+          { "type": "skills", "items": [{ "bullets": [{ "text": "GCP, Terraform, Kubernetes, Prometheus, Grafana, some AWS" }] }] }
+        ]
+      },
+      "answers": ["A DNS change broke service discovery at peak; I rolled it back and we added staged DNS rollouts.", "Model peaks from history, load test, and keep a buffer of pre-warmed nodes."]
+    }
+  ]
+}

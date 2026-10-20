@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -32,49 +31,62 @@ export default function ResumeSourceSelector({
   showManageResumes = true,
 }: ResumeSourceSelectorProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [activeResumeName, setActiveResumeName] = useState<string | null>(null);
-  const [isLoadingSignedUrl, setIsLoadingSignedUrl] = useState(false);
+  const [fetchedName, setFetchedName] = useState<string | null>(null);
+
+  const selectedResume = selectedId
+    ? existingResumes.find((r) => r.id === selectedId)
+    : undefined;
+  const knownPath = selectedResume?.resume_path ?? null;
+  const selectedName = file
+    ? file.name
+    : selectedResume?.name || fetchedName || null;
+  const hasSelection = Boolean(file || selectedId);
 
   useEffect(() => {
-    const handlePreviewUrl = async () => {
-      if (file) {
-        if (previewUrl) URL.revokeObjectURL(previewUrl);
-        setActiveResumeName(null);
-        setPreviewUrl(URL.createObjectURL(file));
-      } else if (selectedId) {
-        setIsLoadingSignedUrl(true);
-        setPreviewUrl(null);
-        setActiveResumeName(null);
+    // Set when the selection changes again, so a slow signed URL for an
+    // earlier pick can't replace the current one.
+    let ignore = false;
+    setPreviewUrl(null);
+    setFetchedName(null);
 
-        try {
-          const supabase = createClient();
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      return () => {
+        ignore = true;
+        URL.revokeObjectURL(url);
+      };
+    }
+    if (!selectedId) return;
 
+    (async () => {
+      try {
+        const supabase = createClient();
+        let path = knownPath;
+        if (!path) {
           const { data: resumeData, error: fetchError } = await supabase
             .from("resumes")
             .select("resume_path, name")
             .eq("id", selectedId)
             .single();
-
-          if (fetchError || !resumeData || !resumeData.resume_path)
+          if (fetchError || !resumeData?.resume_path)
             throw new Error("Resume not found");
-
-          const { data, error: signedError } = await supabase.storage
-            .from("resumes")
-            .createSignedUrl(resumeData.resume_path, 3600);
-
-          if (signedError) throw signedError;
-          setActiveResumeName(resumeData?.name || null);
-          setPreviewUrl(data?.signedUrl || null);
-        } catch {
-        } finally {
-          setIsLoadingSignedUrl(false);
+          path = resumeData.resume_path;
+          if (!ignore) setFetchedName(resumeData.name || null);
         }
-      } else {
-        setPreviewUrl(null);
-      }
+
+        const { data, error: signedError } = await supabase.storage
+          .from("resumes")
+          .createSignedUrl(path, 3600);
+        if (signedError) throw signedError;
+        if (!ignore) setPreviewUrl(data?.signedUrl || null);
+      } catch {}
+    })();
+
+    return () => {
+      ignore = true;
     };
-    handlePreviewUrl();
-  }, [file, selectedId]);
+  }, [file, selectedId, knownPath]);
 
   // min-w-0 so a grid or flex-row parent can't size it to its longest
   // (truncated) resume name.
@@ -87,14 +99,12 @@ export default function ResumeSourceSelector({
           onSelectExisting={onSelectExisting}
         />
       ) : view === "select" ? (
-        <div className="max-h-[300px] overflow-y-auto">
-          <SelectResumeParent
-            existingResumes={existingResumes}
-            onFileChange={onFileChange}
-            onSelectExisting={onSelectExisting}
-            selectedId={selectedId}
-          />
-        </div>
+        <SelectResumeParent
+          existingResumes={existingResumes}
+          onFileChange={onFileChange}
+          onSelectExisting={onSelectExisting}
+          selectedId={selectedId}
+        />
       ) : (
         <Tabs defaultValue="upload" className="w-full">
           <TabsList className="grid w-full grid-cols-2 ">
@@ -115,14 +125,12 @@ export default function ResumeSourceSelector({
             />
           </TabsContent>
           <TabsContent value="existing">
-            <div className="max-h-[300px] overflow-y-auto">
-              <SelectResumeParent
-                existingResumes={existingResumes}
-                onFileChange={onFileChange}
-                onSelectExisting={onSelectExisting}
-                selectedId={selectedId}
-              />
-            </div>
+            <SelectResumeParent
+              existingResumes={existingResumes}
+              onFileChange={onFileChange}
+              onSelectExisting={onSelectExisting}
+              selectedId={selectedId}
+            />
           </TabsContent>
         </Tabs>
       )}
@@ -136,27 +144,12 @@ export default function ResumeSourceSelector({
           </Link>
         </div>
       )}
-      {isLoadingSignedUrl ? (
-        <div className="p-4 flex items-center justify-center">
-          <Loader2 className="h-4 w-4 animate-spin" />
+      {/* Switching resumes only swaps the card's contents, so the fade plays
+          when it first appears and not on every pick. */}
+      {hasSelection && (
+        <div className="animate-in fade-in duration-200">
+          <ResumePreview previewUrl={previewUrl} name={selectedName} />
         </div>
-      ) : previewUrl ? (
-        <div
-          ref={(el) => {
-            if (el) {
-              el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-            }
-          }}
-          className="animate-in fade-in slide-in-from-bottom-4 duration-500"
-        >
-          <ResumePreview
-            previewUrl={previewUrl}
-            file={file}
-            activeResumeName={activeResumeName}
-          />
-        </div>
-      ) : (
-        ""
       )}
     </div>
   );

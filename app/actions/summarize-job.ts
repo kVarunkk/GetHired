@@ -6,8 +6,7 @@ import { google } from "@ai-sdk/google";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { PostHogEvent, TAICredits } from "@/utils/types";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
-import { revalidatePathAction } from "./revalidate-path";
-import { revalidateCacheAction } from "./revalidate-tag";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { after } from "next/server";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
@@ -99,8 +98,8 @@ export async function SummarizeJobAction(jobId: string) {
 
     if (updateError) throw new Error("Failed to save summary to database.");
 
-    await revalidateCacheAction(`job-${jobId}`);
-    await revalidatePathAction(`/jobs/${jobId}`);
+    revalidateTag(`job-${jobId}`);
+    revalidatePath(`/jobs/${jobId}`);
 
     after(async () => {
       try {

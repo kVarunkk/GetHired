@@ -4,6 +4,8 @@ import { TabsContent } from "@/components/ui/tabs";
 import { AllJobWithRelations, JobListingSearchParams } from "@/utils/types";
 import { headers } from "next/headers";
 import { ClientTabs } from "@/components/ClientTabs";
+import PageHeader from "@/components/PageHeader";
+import { AskAgentAboutJobs } from "@/components/agent/AskAgentOnApplicantPages";
 import { Metadata } from "next";
 import JobsComponent from "@/components/JobsComponent";
 import {
@@ -133,11 +135,13 @@ export default async function JobsPage({
         .single();
 
       if (jobSeekerDataError) {
+        // No account type yet: getMyCompany would skip the lookup, so check
+        // the membership directly (a company user is anyone with a row).
         const { data: companyData } = await supabase
-          .from("company_info")
-          .select("id, ai_credits, filled")
-          .eq("user_id", user?.id)
-          .single();
+          .from("company_members")
+          .select("company_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
 
         if (companyData) {
           isCompanyUser = true;
@@ -208,14 +212,21 @@ export default async function JobsPage({
 
   return (
     <div className="flex items-start px-4  gap-5">
-      <div className="hidden md:block w-1/4 px-2 sticky top-0 z-10 max-h-[100vh] overflow-y-auto">
+      <div className="hidden lg:block w-1/4 px-2 sticky top-0 z-10 max-h-[100vh] overflow-y-auto">
         <FilterComponent
           dynamicKey={params.toString()}
           onboardingComplete={onboardingComplete}
           currentPage="jobs"
         />
       </div>
-      <div className="w-full md:w-3/4 ">
+      <div className="w-full lg:w-3/4 ">
+        <div className="flex flex-col gap-6 pt-4">
+          <PageHeader
+            title="Jobs"
+            description="Open roles from GetHired companies and across the web. Filter them, or search with AI."
+          />
+          {user?.app_metadata.type === "applicant" && <AskAgentAboutJobs />}
+        </div>
         <ClientTabs
           user={user}
           isCompanyUser={isCompanyUser}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { internalError, isUuid, readJson, requireApplicant } from "@/helpers/agent/auth";
+import { internalError, isUuid, readJson, requireAgentUser } from "@/helpers/agent/auth";
 import { deleteMemory, upsertMemory } from "@/helpers/agent/memory";
 import {
   AGENT_MEMORY_CATEGORIES,
@@ -20,7 +20,7 @@ const editSchema = z
   .refine((body) => body.content !== undefined || body.category !== undefined);
 
 export async function PATCH(request: NextRequest, { params }: Params) {
-  const auth = await requireApplicant();
+  const auth = await requireAgentUser();
   if (!auth.ok) return auth.response;
   const { user, supabase } = auth;
 
@@ -62,7 +62,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
-  const auth = await requireApplicant();
+  const auth = await requireAgentUser();
   if (!auth.ok) return auth.response;
   const { user, supabase } = auth;
 

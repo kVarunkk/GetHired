@@ -2,10 +2,19 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import type { UIMessage } from "ai";
 import { Database, Json, Tables } from "@/utils/types/database.types";
 import type { AgentProfileSummary } from "./system-prompt";
+import type { AgentRoleId } from "./roles/types";
 
 type Client = SupabaseClient<Database>;
 
 export type AgentSession = Tables<"agent_sessions">;
+
+/**
+ * Session fields that tie a session to a role (RA spec §3). Applicant sessions
+ * use the column default, so the applicant's queries stay as they were; a
+ * company user's sessions are written and read with `role = 'company'`.
+ */
+export const sessionRoleFields = (role: AgentRoleId | undefined) =>
+  role === "company" ? { role } : {};
 
 /**
  * The user's session and its messages ordered by `seq`, or null when the
@@ -15,16 +24,20 @@ export async function loadSession(
   supabase: Client,
   userId: string,
   sessionId: string,
+  { role }: { role?: AgentRoleId } = {},
 ): Promise<{ session: AgentSession; messages: UIMessage[] } | null> {
-  const { data: session, error: sessionError } = await supabase
+  let query = supabase
     .from("agent_sessions")
     .select("*")
     .eq("id", sessionId)
-    .eq("user_id", userId)
-    .maybeSingle();
+    .eq("user_id", userId);
+  if (role === "company") query = query.eq("role", role);
+  const { data: session, error: sessionError } = await query.maybeSingle();
 
   if (sessionError) throw sessionError;
   if (!session) return null;
+  // A session of the other role isn't continued with this role's tools.
+  if (role && session.role && session.role !== role) return null;
 
   const { data: rows, error } = await supabase
     .from("agent_messages")

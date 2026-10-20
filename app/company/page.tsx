@@ -1,13 +1,28 @@
 import { createClient } from "@/lib/supabase/server";
+import { getMyCareersLink } from "@/helpers/careers/my-careers-link";
+import CareersLinkBar from "@/components/careers/CareersLinkBar";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { can } from "@/helpers/companies/permissions";
+import { jobControls, scopeToJobs } from "@/helpers/companies/job-scope";
+import { NO_MEMBERSHIP } from "@/helpers/companies/require-company";
 import ErrorComponent from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import CreateJobPostingDialog from "@/components/CreateJobPostingDialog";
+import { CreateJobPostButton } from "@/components/jobs/JobPostButtons";
 import { Button } from "@/components/ui/button";
 import CompanyJobPostingCard from "@/components/CompanyJobPostingCard";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import { TApplicationStatus } from "@/utils/types";
+import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
+import AskRecruiterAgent from "@/components/agent/recruiter/AskRecruiterAgent";
+import FunnelStrip from "@/components/pipeline/FunnelStrip";
+import {
+  NEEDS_ATTENTION_DAYS,
+  getCompanyFunnel,
+  type CompanyFunnel,
+} from "@/helpers/pipeline/funnel";
 
 export default async function CompanyPage() {
   try {
@@ -20,19 +35,31 @@ export default async function CompanyPage() {
     if (error) throw error;
     if (!user) throw new Error("User not found");
 
-    const { data: companyInfo, error: companyInfoError } = await supabase
-      .from("company_info")
-      .select("id, name")
-      .eq("user_id", user.id)
-      .single();
-
-    if (companyInfoError || !companyInfo) {
+    const companyInfo = await getMyCompany(supabase, user);
+    if (!companyInfo) {
+      // Onboarded but no membership: removed from their company (teams
+      // difference 14). A new invite works, since the account is free again.
+      if (user.app_metadata?.onboarding_complete) {
+        return (
+          <div className="mx-auto w-full max-w-md p-4 py-12">
+            <div className="rounded-xl border p-6">
+              <h1 className="text-2xl font-semibold tracking-tight">No company</h1>
+              <p className="mt-3 text-sm text-muted-foreground">{NO_MEMBERSHIP}</p>
+            </div>
+          </div>
+        );
+      }
       throw new Error("Company profile not found");
     }
+    // RP-REQ-016: job controls follow the viewer's permissions; the server refuses them too.
+    const canCreateJobs = can(companyInfo, "jobs.create");
+    // CP-REQ-014: the careers page link on the dashboard.
+    const careersLink = await getMyCareersLink(supabase, companyInfo.id).catch(() => null);
 
     const [metricsRes, jobsRes, applicantsRes] = await Promise.all([
       supabase.rpc("get_company_metrics", { company_id: companyInfo.id }),
-      supabase
+      scopeToJobs(
+        supabase
         .from("job_postings")
         .select(
           `
@@ -54,6 +81,8 @@ export default async function CompanyPage() {
           min_equity,
           max_equity,
           questions,
+          department,
+          workplace_type,
           status,
           job_id,
           updated_at,
@@ -61,7 +90,9 @@ export default async function CompanyPage() {
           company_info(name, website)
         `,
         )
-        .eq("company_id", companyInfo.id)
+        .eq("company_id", companyInfo.id),
+        companyInfo,
+      )
         .order("created_at", { ascending: false })
         .limit(5),
       supabase
@@ -71,9 +102,9 @@ export default async function CompanyPage() {
           id,
           status,
           created_at,
-          user_info(*),
+          user_info(${RECRUITER_CANDIDATE_COLUMNS}),
           job_postings(id, title)
-        `,
+        ` as const,
         )
         .eq("job_postings.company_id", companyInfo.id)
         .order("created_at", { ascending: false })
@@ -92,14 +123,30 @@ export default async function CompanyPage() {
     const jobPosts = jobsData || [];
     const recentApplicants = applicantsData || [];
 
+    // The pipeline section (PL-TASK-050). It's extra: a failure hides it
+    // instead of the whole dashboard.
+    let funnel: CompanyFunnel | null = null;
+    try {
+      funnel = await getCompanyFunnel({
+        supabase,
+        company: companyInfo,
+      });
+    } catch (err) {
+      console.error("Failed to load the company funnel:", err);
+    }
+
     return (
       <div className="flex flex-col w-full gap-5 p-4 mb-20">
-        <div className="flex items-center justify-between flex-wrap gap-5">
-          <h2 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-start">
-            How are you doing today, {companyInfo.name}?
-          </h2>
-          <CreateJobPostingDialog companyId={companyInfo.id} />
-        </div>
+        <PageHeader
+          title={`How are you doing today, ${companyInfo.name}?`}
+          actions={
+            <CreateJobPostButton disabled={!canCreateJobs} />
+          }
+        />
+
+        {can(companyInfo, "agent.use") && <AskRecruiterAgent />}
+
+        {careersLink && <CareersLinkBar slug={careersLink.slug} published={careersLink.published} />}
 
         {/* --- Metrics Section --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -140,6 +187,57 @@ export default async function CompanyPage() {
           </Card>
         </div>
 
+        {/* --- Pipeline Section --- */}
+        {funnel && funnel.jobs.length > 0 && (
+          <div className="mt-8 flex flex-col gap-4">
+            <h3 className="text-lg font-semibold tracking-tight">
+              Pipeline across active jobs
+            </h3>
+            <FunnelStrip stages={funnel.stages} />
+            {funnel.needsAttention.length > 0 && (
+              <section
+                aria-label="Needs attention"
+                className="flex flex-col gap-2"
+              >
+                <h4 className="text-sm font-semibold">Needs attention</h4>
+                <p className="text-sm text-muted-foreground">
+                  In Applied for more than {NEEDS_ATTENTION_DAYS} days with
+                  nothing logged since.
+                </p>
+                <ul className="divide-y rounded-xl border">
+                  {funnel.needsAttention.map((item) => (
+                    <li
+                      key={item.applicationId}
+                      className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
+                    >
+                      <span>
+                        <Link
+                          href={`/company/applications/${item.applicationId}`}
+                          className="font-medium hover:underline"
+                        >
+                          {item.name}
+                        </Link>
+                        <span className="text-muted-foreground">
+                          {" for "}
+                          <Link
+                            href={`/company/job-posts/${item.jobPostId}/applications`}
+                            className="hover:underline"
+                          >
+                            {item.jobTitle}
+                          </Link>
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        {item.daysInApplied} days in Applied
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
+        )}
+
         {/* --- Active Job Posts Section --- */}
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
@@ -153,7 +251,11 @@ export default async function CompanyPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {jobPosts.length > 0 ? (
               jobPosts.map((job) => (
-                <CompanyJobPostingCard key={job.id} job={job} />
+                <CompanyJobPostingCard
+                  key={job.id}
+                  job={job}
+                  controls={jobControls(companyInfo, job.id)}
+                />
               ))
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -163,13 +265,13 @@ export default async function CompanyPage() {
           </div>
         </div>
 
-        {/* --- Recent Applicants Section --- */}
+        {/* --- Recent Applications Section --- */}
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold tracking-tight">
-              Recent Applicants
+              Recent Applications
             </h3>
-            <Link href={"/company/applicants"}>
+            <Link href={"/company/applications"}>
               <Button variant={"ghost"}>View all</Button>
             </Link>
           </div>
@@ -182,7 +284,7 @@ export default async function CompanyPage() {
                 >
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <Link
-                      href={`/company/applicants/${applicant.id}`}
+                      href={`/company/applications/${applicant.id}`}
                       className="font-medium underline underline-offset-4 transition-colors hover:text-brand sm:no-underline"
                     >
                       {applicant.user_info?.full_name || "New Applicant"}

@@ -49,7 +49,7 @@ export default function FilterComponentSheet({
 
   return (
     <Sheet open={openSheet} onOpenChange={setOpenSheet}>
-      <SheetTrigger className="md:hidden underline underline-offset-2 text-primary py-2 pr-2">
+      <SheetTrigger className="lg:hidden shrink-0 whitespace-nowrap text-sm underline underline-offset-2 text-primary py-2 pr-2">
         {filtersApplied.length > 0
           ? `${filtersApplied.length} Filter${
               filtersApplied.length > 1 ? "s" : ""

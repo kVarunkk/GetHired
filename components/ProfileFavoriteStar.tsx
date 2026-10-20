@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { setProfileFavoriteAction } from "@/app/actions/favorites/set-profile-favorite";
 import { PROFILE_API_KEY } from "@/utils/utils";
 import { Star } from "lucide-react";
 import toast from "react-hot-toast";
@@ -53,19 +53,11 @@ export default function ProfileFavoriteStar({
     );
 
     try {
-      const supabase = createClient();
-
-      if (!nextFavoriteState) {
-        await supabase
-          .from("company_favorites")
-          .delete()
-          .eq("user_id", profileId)
-          .eq("company_id", companyId);
-      } else {
-        await supabase
-          .from("company_favorites")
-          .insert([{ user_id: profileId, company_id: companyId }]);
-      }
+      const result = await setProfileFavoriteAction({
+        candidateId: profileId,
+        favorite: nextFavoriteState,
+      });
+      if (!result.ok) throw new Error(result.error);
 
       mutate(PROFILE_API_KEY);
     } catch {

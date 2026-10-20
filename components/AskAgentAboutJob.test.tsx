@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useRouter } from "next/navigation";
 import { agentPromptHref, takePendingPrompt } from "@/helpers/agent/prompt-draft";
-import AskAgentAboutJob, { jobQuestionPrompt, jobSuggestions } from "./AskAgentAboutJob";
+import AskAgentAboutJob, {
+  appliedQuestionPrompt,
+  appliedSuggestions,
+  jobQuestionPrompt,
+  jobSuggestions,
+} from "./AskAgentAboutJob";
 
 vi.mock("next/navigation", () => ({ useRouter: vi.fn() }));
 
@@ -24,6 +29,13 @@ describe("AskAgentAboutJob", () => {
     for (const { prompt } of jobSuggestions(JOB)) expect(prompt).toContain("(/jobs/j1)");
   });
 
+  it("puts the job's link in the after-applying prompts too", () => {
+    expect(appliedQuestionPrompt(JOB, " Why Acme? ")).toBe(
+      "I just applied to the Frontend Engineer role at Acme (/jobs/j1). Why Acme?",
+    );
+    for (const { prompt } of appliedSuggestions(JOB)) expect(prompt).toContain("(/jobs/j1)");
+  });
+
   it("leaves out a missing company", () => {
     expect(jobQuestionPrompt({ ...JOB, company_name: null }, "Hi")).toBe(
       "About the Frontend Engineer role (/jobs/j1): Hi",
@@ -34,7 +46,7 @@ describe("AskAgentAboutJob", () => {
     render(<AskAgentAboutJob job={JOB} />);
     const prompt = jobQuestionPrompt(JOB, "Am I a fit?");
 
-    fireEvent.change(screen.getByLabelText("Question about this job"), {
+    fireEvent.change(screen.getByLabelText("Question for the assistant"), {
       target: { value: "Am I a fit?" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Ask" }));

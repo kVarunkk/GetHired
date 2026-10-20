@@ -3,6 +3,7 @@ import keystaticConfig from "@/app/keystatic.config";
 import { createPublicClient } from "@/lib/supabase/public";
 
 const PAGE_SIZE = 1000;
+const SITEMAP_CAREERS_LIMIT = 5000;
 
 const STATIC_PATHS = [
   "/",
@@ -58,11 +59,23 @@ export async function getSitemapData() {
     if (data.length < PAGE_SIZE) break;
   }
 
+  // CP-REQ-011: published careers pages only.
+  const { data: careers, error: careersError } = await supabase
+    .from("company_info")
+    .select("careers_slug")
+    .eq("careers_published", true)
+    .not("careers_slug", "is", null)
+    .limit(SITEMAP_CAREERS_LIMIT);
+  if (careersError) {
+    throw new Error(`Failed to fetch careers pages for sitemap: ${careersError.message}`);
+  }
+
   return {
     jobCount: jobCount ?? 0,
     staticPaths: [
       ...STATIC_PATHS,
       ...posts.map((post) => `/blog/${post.slug}`),
+      ...(careers ?? []).flatMap((c) => (c.careers_slug ? [`/careers/${c.careers_slug}`] : [])),
     ],
     locationSlugs: [...locationSlugs],
   };

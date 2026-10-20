@@ -97,8 +97,6 @@ export async function POST(request: NextRequest) {
     `;
 
     // Step 3: Call the AI with the augmented prompt
-    // const vertex = await getVertexClient();
-    // const model = vertex("gemini-2.5-flash-lite");
     const model = google("gemini-3.1-flash-lite");
 
     const rerankPrompt = `

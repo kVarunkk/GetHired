@@ -1,7 +1,8 @@
 "use server";
 
 import InviteUserEmail from "@/emails/InviteUserEmail";
-import { createClient } from "@/lib/supabase/server";
+import { z } from "zod";
+import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { render } from "react-email";
 import { v4 as uuidv4 } from "uuid";
@@ -13,12 +14,22 @@ import { APPLICANT_HOME } from "@/helpers/user/home-path";
 
 const URL = deploymentUrl();
 
-export async function sendInviteEmail(
-  invitedEmail: string,
-  referrerUserId: string,
-) {
+/**
+ * SERVER ACTION: invites `invitedEmail` on behalf of the session user. The
+ * referrer always comes from the session, and the invitation and counter are
+ * written with the service role (the user can't write either: BW-F01, BW-F04).
+ */
+export async function sendInviteEmail(invitedEmail: string) {
+  let referrerUserId = "anonymous";
   try {
-    const supabase = await createClient();
+    const user = await getUserFromRequest();
+    if (!user) throw new Error("Sign in first.");
+    referrerUserId = user.id;
+
+    const parsedEmail = z.string().trim().toLowerCase().email().safeParse(invitedEmail);
+    if (!parsedEmail.success) throw new Error("Enter a valid email address.");
+    invitedEmail = parsedEmail.data;
+
     const serviceRoleSupabase = createServiceRoleClient();
 
     const { data: existingUsers } = await serviceRoleSupabase
@@ -29,7 +40,7 @@ export async function sendInviteEmail(
       throw new Error("This user is already registered on GetHired.");
     }
 
-    const { data: referrerData, error: refError } = await supabase
+    const { data: referrerData, error: refError } = await serviceRoleSupabase
       .from("user_info")
       .select("referral_code, full_name, email, invitations_count")
       .eq("user_id", referrerUserId)
@@ -106,7 +117,7 @@ export async function sendInviteEmail(
         textContent: emailText,
       });
 
-      const { error: userInfoError } = await supabase
+      const { error: userInfoError } = await serviceRoleSupabase
         .from("invitations")
         .insert({
           referrer_user_id: referrerUserId,
@@ -115,7 +126,7 @@ export async function sendInviteEmail(
 
       if (userInfoError) throw new Error("Error inserting Invitation record.");
 
-      const { error: userUpdateError } = await supabase
+      const { error: userUpdateError } = await serviceRoleSupabase
         .from("user_info")
         .update({
           invitations_count: referrerData.invitations_count + 1,

@@ -6,7 +6,7 @@ import MenuTrigger from "./MenuTrigger";
 
 const user = { id: "u1", user_metadata: {} } as unknown as User;
 
-const renderTrigger = (props: { isVertical?: boolean; isMenuOpen: boolean }) =>
+const renderTrigger = (props: { isVertical?: boolean; isMenuOpen: boolean; roleLabel?: string }) =>
   render(
     <DropdownMenu>
       <MenuTrigger user={user} open={false} isCompanyUser={false} {...props} />
@@ -26,5 +26,17 @@ describe("MenuTrigger", () => {
     renderTrigger({ isVertical: true, isMenuOpen: false });
 
     expect(screen.getByText("Profile")).toHaveClass("opacity-0");
+  });
+
+  it("shows a company member's role next to the label in the vertical sidebar", () => {
+    renderTrigger({ isVertical: true, isMenuOpen: true, roleLabel: "Admin" });
+
+    expect(screen.getByText("Admin")).toBeInTheDocument();
+  });
+
+  it("shows no role in the compact navbar button", () => {
+    renderTrigger({ isMenuOpen: false, roleLabel: "Admin" });
+
+    expect(screen.queryByText("Admin")).not.toBeInTheDocument();
   });
 });

@@ -6,8 +6,57 @@ import { createClient } from "../../lib/supabase/server";
 import { PostgrestError } from "@supabase/supabase-js";
 import { parseMultiSelectParam } from "@/utils/formatters";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { DIRECTORY_CANDIDATE_COLUMNS } from "./candidate-columns";
 
-const userInfoSelectString = `user_id, desired_roles, preferred_locations, min_salary, max_salary, experience_years, industry_preferences, visa_sponsorship_required, top_skills, work_style_preferences, career_goals_short_term, career_goals_long_term, company_size_preference, created_at, updated_at, job_type, ai_credits, filled, full_name, email, salary_currency, is_public`;
+// RS-SEC-004 and OR-REQ-010: directory columns only. No contact details, never
+// `*` or credits/referral data.
+const userInfoSelectString = DIRECTORY_CANDIDATE_COLUMNS;
+
+// MT-REQ-004: what a card needs in job context (rank, score, explanation).
+const JOB_MATCH_COLUMNS =
+  "relevance_rank, match_score, explanation, explanation_status";
+
+// The digest's rerank reads the scrubbed resume sections (OR-REQ-010), never
+// the raw resume: from the view directly, or per resume for the service role.
+const DIGEST_RESUME_COLUMNS = {
+  candidate_directory: ",resume_sections",
+  user_info: ",resumes(is_primary, resume_public_sections(sections))",
+} as const;
+
+// The free-text columns the "Search" filter matches (case-insensitive substring).
+const PROFILE_SEARCH_COLUMNS = [
+  "full_name",
+  "career_goals_short_term",
+  "career_goals_long_term",
+] as const;
+
+const SEARCH_MAX_LENGTH = 100;
+
+/**
+ * Array filters that match by substring when `matchText` is on: the param, the
+ * text[] column it otherwise overlaps, and the computed field (see migration
+ * 20261015180000_profile_text_filters) that substring matching reads.
+ */
+const TEXT_MATCH_FILTERS = [
+  { param: "jobRoles", column: "desired_roles", searchField: "desired_roles_search" },
+  { param: "skills", column: "top_skills", searchField: "top_skills_search" },
+  { param: "workStyle", column: "work_style_preferences", searchField: "work_style_preferences_search" },
+  { param: "industry", column: "industry_preferences", searchField: "industry_preferences_search" },
+] as const;
+
+/**
+ * Makes a search box value safe inside a PostgREST `or()` filter: drops the
+ * characters that would end the quoted value or change the filter (`,()"\`)
+ * and the ilike wildcards (`%`, `*`, `_`), collapses whitespace and caps it.
+ */
+export function sanitizeSearchTerm(raw: string | null): string {
+  if (!raw) return "";
+  return raw
+    .replace(/[,()"\\%*_]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, SEARCH_MAX_LENGTH);
+}
 
 export async function buildProfileQuery({
   searchQuery,
@@ -32,6 +81,9 @@ export async function buildProfileQuery({
   jobId,
   companyId,
   isInternalCall,
+  budget = null,
+  matchText = false,
+  talentListId = null,
 }: {
   searchQuery: string | null;
   jobRoles: string | null;
@@ -55,30 +107,59 @@ export async function buildProfileQuery({
   jobId: string | null;
   companyId: string;
   isInternalCall: boolean;
+  /** Keeps candidates whose minimum salary is at most this (the agent's "who'd take X"). */
+  budget?: number | null;
+  /**
+   * Match roles, skills, work styles and industries by case-insensitive
+   * substring (any of the terms) instead of exact values. The filter UI turns
+   * this on; the agent keeps exact matching.
+   */
+  matchText?: boolean;
+  /** Show this talent list's members (its tab) instead of everyone or the favorites. */
+  talentListId?: string | null;
 }): Promise<ProfilesBuildQueryResult> {
   try {
     const supabase = isInternalCall
       ? createServiceRoleClient()
       : await createClient();
+    // OR-SEC-001: company users read talent-pool candidates through
+    // candidate_directory (user_info no longer opens to them). The service
+    // role has no company, so internal calls read user_info, with the same
+    // columns. The cast is for typing: both expose these columns.
+    const table: keyof typeof DIGEST_RESUME_COLUMNS = isInternalCall ? "user_info" : "candidate_directory";
 
     let query;
     let selectString;
+    // The total of this query, with the tab and every filter applied, on the
+    // first page only (later pages keep the first page's total).
+    const countOption = cursor ? undefined : { count: "exact" as const };
 
-    if (isFavoriteTabActive) {
+    if (talentListId) {
+      // A talent list's members (PL-TASK-051). RLS limits the join to the
+      // company's own lists.
+      selectString = `${userInfoSelectString}, talent_list_members!inner(list_id)`;
+      query = supabase
+        .from(table as "user_info")
+        .select(selectString, countOption)
+        .eq("talent_list_members.list_id", talentListId)
+        .eq("filled", true)
+        .eq("is_public", true);
+    } else if (isFavoriteTabActive) {
       selectString = `${userInfoSelectString}, company_favorites!inner(company_id)`;
       query = supabase
-        .from("user_info")
-        .select(selectString)
+        .from(table as "user_info")
+        .select(selectString, countOption)
         .eq("company_favorites.company_id", companyId)
         .eq("filled", true)
         .eq("is_public", true);
     } else if (relevanceSearchType === "standard") {
       query = supabase
-        .from("user_info")
+        .from(table as "user_info")
         .select(
           `
-          ${userInfoSelectString}, job_relevant_profiles!inner(*)
+          ${userInfoSelectString}, job_relevant_profiles!inner(${JOB_MATCH_COLUMNS})
         `,
+          countOption,
         )
         .eq("job_relevant_profiles.job_posting_id", jobId!)
         .eq("filled", true)
@@ -87,11 +168,12 @@ export async function buildProfileQuery({
     // for normal search and digest
     else {
       query = supabase
-        .from("user_info")
+        .from(table as "user_info")
         .select(
           `
-          ${userInfoSelectString} ${relevanceSearchType === "digest" ? ",resumes(content, is_primary)" : ""}
+          ${userInfoSelectString} ${relevanceSearchType === "digest" ? DIGEST_RESUME_COLUMNS[table] : ""}
         `,
+          countOption,
         )
         .eq("filled", true)
         .eq("is_public", true);
@@ -122,7 +204,7 @@ export async function buildProfileQuery({
 
     // --- NEW: VECTOR SEARCH LOGIC ---
     if (relevanceSearchType === "digest" && jobEmbedding) {
-      query.eq("resumes.is_primary", true);
+      if (table === "user_info") query.eq("resumes.is_primary", true);
       // Re-build the query to include the similarity score and order by it
       const { data: searchData, error: searchError } = await supabase.rpc(
         "match_user_profiles",
@@ -151,12 +233,28 @@ export async function buildProfileQuery({
     // --- END NEW LOGIC ---
 
     // Apply filters
-    if (searchQuery) {
-      query = query.ilike("full_name", `%${searchQuery}%`);
+    const searchTerm = sanitizeSearchTerm(searchQuery);
+    if (searchTerm) {
+      query = query.or(
+        PROFILE_SEARCH_COLUMNS.map(
+          (column) => `${column}.ilike."%${searchTerm}%"`,
+        ).join(","),
+      );
     }
-    const jobRolesArray = parseMultiSelectParam(jobRoles);
-    if (jobRolesArray.length > 0) {
-      query = query.overlaps("desired_roles", jobRolesArray);
+    const textFilterValues = { jobRoles, skills, workStyle, industry };
+    for (const { param, column, searchField } of TEXT_MATCH_FILTERS) {
+      const values = parseMultiSelectParam(textFilterValues[param]);
+      if (values.length === 0) continue;
+      if (!matchText) {
+        query = query.overlaps(column, values);
+        continue;
+      }
+      const terms = [
+        ...new Set(values.map((v) => sanitizeSearchTerm(v).toLowerCase()).filter(Boolean)),
+      ];
+      if (terms.length > 0) {
+        query = query.or(terms.map((term) => `${searchField}.ilike."%${term}%"`).join(","));
+      }
     }
     const jobTypesArray = parseMultiSelectParam(jobTypes);
     if (jobTypesArray.length > 0) {
@@ -178,20 +276,11 @@ export async function buildProfileQuery({
     if (maxSalary) {
       query = query.lte("max_salary", parseInt(maxSalary));
     }
-    const skillsArray = parseMultiSelectParam(skills);
-    if (skillsArray.length > 0) {
-      query = query.overlaps("top_skills", skillsArray);
-    }
-    const workStyleArray = parseMultiSelectParam(workStyle);
-    if (workStyleArray.length > 0) {
-      query = query.overlaps("work_style_preferences", workStyleArray);
+    if (budget !== null && budget !== undefined) {
+      query = query.lte("min_salary", budget);
     }
     if (companySize) {
       query = query.eq("company_size_preference", companySize);
-    }
-    const industryArray = parseMultiSelectParam(industry);
-    if (industryArray.length > 0) {
-      query = query.overlaps("industry_preferences", industryArray);
     }
 
     // Apply sorting
@@ -207,9 +296,10 @@ export async function buildProfileQuery({
       query = query.limit(limit);
     }
 
-    const { data, error } = (await query) as unknown as {
+    const { data, error, count } = (await query) as unknown as {
       data: AllProfileWithRelations[] | null;
       error: PostgrestError | null;
+      count: number | null;
     };
 
     if (relevanceSearchType === "standard" && data) {
@@ -220,16 +310,7 @@ export async function buildProfileQuery({
       });
     }
 
-    let totalCount = 0;
-    if (!cursor) {
-      const { count } = await supabase
-        .from("user_info")
-        .select("user_id", { count: "exact", head: true })
-        .eq("filled", true)
-        .eq("is_public", true);
-
-      totalCount = count || 0;
-    }
+    const totalCount = count ?? 0;
 
     let nextCursor = null;
     if (data && data.length === limit && !relevanceSearchType) {

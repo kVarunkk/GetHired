@@ -1,5 +1,9 @@
 import { headers } from "next/headers";
-import { AllProfileWithRelations, TResumeRowContent } from "../../utils/types";
+import {
+  AllProfileWithRelations,
+  ProfileMatchScores,
+  TResumeRowContent,
+} from "../../utils/types";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
 import { getBaseUrl } from "@/utils/get-base-url";
 import { extractSectionText } from "@/utils/extract-resume-content";
@@ -7,6 +11,8 @@ import { extractSectionText } from "@/utils/extract-resume-content";
 interface RerankResult {
   initialProfiles: AllProfileWithRelations[];
   totalCount: number;
+  /** Per-candidate rerank scores, only when the rerank succeeded. */
+  matchScores?: Record<string, ProfileMatchScores>;
 }
 
 export async function rerankProfilesIfApplicable({
@@ -33,6 +39,7 @@ export async function rerankProfilesIfApplicable({
   let finalProfiles = initialProfiles;
   let finalCount = initialCount;
   let removedProfiles: AllProfileWithRelations[] = [];
+  let matchScores: Record<string, ProfileMatchScores> | undefined;
 
   const headersList = await headers();
 
@@ -71,8 +78,7 @@ export async function rerankProfilesIfApplicable({
         jobId,
         companyId,
         profiles: initialProfiles.map((profile) => {
-          const resumeContent = profile.resumes?.[0]
-            ?.content as TResumeRowContent;
+          const resumeContent = publicResumeContent(profile);
           const { experience, skills, projects } = extractSectionText(
             ["experience", "skills", "projects"],
             resumeContent,
@@ -80,7 +86,6 @@ export async function rerankProfilesIfApplicable({
 
           return {
             user_id: profile.user_id,
-            full_name: profile.full_name,
             desired_roles: profile.desired_roles,
             experience_years: profile.experience_years,
             preferred_locations: profile.preferred_locations,
@@ -105,6 +110,7 @@ export async function rerankProfilesIfApplicable({
     const aiRerankResult: {
       rerankedProfiles: string[];
       filteredOutProfiles: string[];
+      scores?: Record<string, ProfileMatchScores>;
     } = await aiRerankRes.json();
 
     if (aiRerankRes.ok && aiRerankResult.rerankedProfiles) {
@@ -127,10 +133,25 @@ export async function rerankProfilesIfApplicable({
 
       finalProfiles = reorderedJobs;
       finalCount = reorderedJobs.length;
+      matchScores = aiRerankResult.scores ?? {};
     }
   } catch (e) {
     console.error("Error during AI Rerank fetch:", e);
   }
 
-  return { initialProfiles: finalProfiles, totalCount: finalCount };
+  return { initialProfiles: finalProfiles, totalCount: finalCount, matchScores };
+}
+
+/**
+ * The scrubbed resume sections of a profile (OR-REQ-010), as resume content:
+ * `resume_sections` from candidate_directory, or the primary resume's stored
+ * public sections. Never the raw resume, which can hold contact details.
+ */
+export function publicResumeContent(profile: AllProfileWithRelations): TResumeRowContent {
+  const fromView = profile.resume_sections;
+  if (Array.isArray(fromView)) return { sections: fromView } as TResumeRowContent;
+
+  const stored = profile.resumes?.find((r) => r.is_primary !== false)?.resume_public_sections;
+  const row = Array.isArray(stored) ? stored[0] : stored;
+  return { sections: Array.isArray(row?.sections) ? row.sections : [] } as TResumeRowContent;
 }

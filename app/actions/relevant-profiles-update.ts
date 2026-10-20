@@ -1,75 +1,95 @@
 "use server";
 
+import { requireCompanyForAction } from "@/helpers/companies/require-company";
+import { isUuid } from "@/helpers/agent/auth";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
-import { processJobPostingRelevance } from "@/helpers/profiles/relevant-profiles-utils";
-import { createClient } from "@/lib/supabase/server";
-import { after } from "next/server";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import {
+  isMatchingInProgress,
+  RELEVANCE_PROFILES_QUEUE,
+  type RelevanceProfilesMessage,
+} from "@/helpers/profiles/relevance-queue";
 
-export async function triggerJobPostingRelevanceUpdate(jobId: string) {
-  if (!jobId) {
-    return { success: false, error: "User ID is required" };
+/**
+ * SERVER ACTION: queues a relevant-profiles run for one of the session
+ * company's job postings (RS-F08), the same way triggerRelevanceUpdate queues
+ * an applicant's relevant jobs. It marks the posting `progress` itself and
+ * refuses while a recent run is still going, since each run makes paid rerank
+ * calls. The worker does the matching, retries it and emails the company.
+ */
+export async function triggerJobPostingRelevanceUpdate(
+  jobId: string,
+): Promise<{ success: true; message: string } | { success: false; error: string }> {
+  const auth = await requireCompanyForAction({
+    permission: "matching.run",
+    jobId: typeof jobId === "string" ? jobId : null,
+  });
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { supabase, company, user } = auth;
+
+  if (typeof jobId !== "string" || !isUuid(jobId)) {
+    return { success: false, error: "Job posting not found." };
   }
-  const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: posting, error: loadError } = await supabase
+    .from("job_postings")
+    .select("id, matching_status, updated_at")
+    .eq("id", jobId)
+    .eq("company_id", company.id)
+    .maybeSingle();
 
-  if (!user?.id) {
-    return {
-      success: false,
-      error: "User id not found",
-    };
+  if (loadError) return { success: false, error: "Failed to load the job posting." };
+  if (!posting) return { success: false, error: "Job posting not found." };
+
+  if (isMatchingInProgress(posting)) {
+    return { success: false, error: "Matching is already in progress for this job." };
   }
 
-  const userId = user.id;
+  // Ownership is settled above. Any member may run matching, but job_postings
+  // writes are owner/admin under RLS (TM-REQ-004), so the status marks use the
+  // service role, scoped to the session company.
+  const service = createServiceRoleClient();
 
-  try {
-    after(async () => {
-      try {
-        processJobPostingRelevance(userId, jobId);
-      } catch (err) {
-        await supabase
-          .from("job_postings")
-          .update({
-            matching_status: "failed",
-            matching_error: "unknown error occured",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", jobId);
+  // Marked before queueing, so a fast worker's completed/failed isn't overwritten.
+  const { error: markError } = await service
+    .from("job_postings")
+    .update({
+      matching_status: "progress",
+      matching_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", jobId)
+    .eq("company_id", company.id);
+  if (markError) return { success: false, error: "Failed to start matching." };
 
-        await eventCaptureServerException({
-          error: err,
-          distinctId: userId,
-          properties: { flow: "trigger_job_posting_relevance_after_block" },
-        });
-      }
+  // The worker looks the company up by its owner's user id (TM-CON-001), which
+  // comes from the session's membership, never from the client.
+  const { error: sendError } = await service
+    .schema("pgmq_public")
+    .rpc("send", {
+      queue_name: RELEVANCE_PROFILES_QUEUE,
+      message: { userId: company.ownerUserId ?? user.id, jobId } satisfies RelevanceProfilesMessage,
+      sleep_seconds: 0,
     });
 
-    return { success: true, message: "processing started" };
-  } catch (err) {
-    await supabase
+  if (sendError) {
+    await service
       .from("job_postings")
       .update({
         matching_status: "failed",
-        matching_error: "unknown error occured",
+        matching_error: "Couldn't queue matching.",
         updated_at: new Date().toISOString(),
       })
-      .eq("id", jobId);
-    const error =
-      err instanceof Error
-        ? err.message
-        : "An unexpected error occured while triggering job posting relevance update.";
+      .eq("id", jobId)
+      .eq("company_id", company.id);
 
     await eventCaptureServerException({
-      error: err,
-      distinctId: userId,
-      properties: { flow: "trigger_job_posting_relevance" },
+      error: new Error(sendError.message),
+      distinctId: user.id,
+      properties: { flow: "trigger_job_posting_relevance_enqueue", jobId },
     });
-
-    return {
-      success: false,
-      error,
-    };
+    return { success: false, error: "Failed to start matching." };
   }
+
+  return { success: true, message: "processing started" };
 }

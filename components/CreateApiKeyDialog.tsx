@@ -84,7 +84,7 @@ export default function CreateApiKeyDialog() {
       <ResponsiveDialogTrigger asChild>
         <Button variant="brand" className="max-w-full">
           <Plus className="w-4 h-4" />
-          <span className="truncate">Create API key</span>
+          <span>Create API key</span>
         </Button>
       </ResponsiveDialogTrigger>
 

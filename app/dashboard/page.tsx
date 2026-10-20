@@ -11,6 +11,12 @@ import { ArrowRight } from "lucide-react";
 import RechargeCredits from "@/components/RechargeCredits";
 import DashboardDropdown from "@/components/DashboardDropdown";
 import CreditDepositDialog from "@/components/CreditDepositDialog";
+import ProfileViewsCard from "@/components/ProfileViewsCard";
+import { PROFILE_VIEW_WINDOW_DAYS } from "@/helpers/outreach/config";
+import AskApplicantAgent from "@/components/agent/AskApplicantAgent";
+import PageHeader from "@/components/PageHeader";
+import MyScreeningInterviews from "@/components/interviews/MyScreeningInterviews";
+import { listMyScreeningInterviews } from "@/helpers/interview/screening/my-interviews";
 
 export default async function DashboardPage() {
   try {
@@ -42,7 +48,7 @@ export default async function DashboardPage() {
       .map((each) => each.invited_email)
       .filter((email): email is string => email !== null);
 
-    const [metricsRes, appliedJobsRes] = await Promise.all([
+    const [metricsRes, appliedJobsRes, viewsRes, screeningInterviews] = await Promise.all([
       supabase.rpc("get_applicant_weekly_metrics", { p_user_id: user.id }),
       supabase
         .from("applications")
@@ -52,6 +58,9 @@ export default async function DashboardPage() {
         .eq("applicant_user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(3),
+      supabase.rpc("get_my_profile_view_count", { p_days: PROFILE_VIEW_WINDOW_DAYS }),
+      // An extra too: a failure reads as no interviews.
+      listMyScreeningInterviews(supabase),
     ]);
 
     const { data: metricsData, error: metricsError } = metricsRes;
@@ -59,6 +68,9 @@ export default async function DashboardPage() {
 
     if (metricsError) throw metricsError;
     if (appliedJobsError) throw appliedJobsError;
+
+    // The view count is an extra: a failure hides it, not the page.
+    const profileViews = viewsRes.error ? 0 : (viewsRes.data ?? 0);
 
     const metrics = metricsData?.[0] || {};
     const jobPosts =
@@ -72,17 +84,17 @@ export default async function DashboardPage() {
 
     return (
       <div className="flex flex-col w-full gap-5 mb-20 p-4">
-        <div className="flex items-center justify-between flex-wrap gap-5">
-          <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-start capitalize">
-            How are you doing today,{" "}
-            {userInfoData.full_name ?? userInfoData.email?.split("@")[0]}?
-          </h1>
-          <Button asChild variant="brand">
-            <Link href={"/agent"}>
-              Find your next Job <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
+        <PageHeader
+          title={
+            <span className="capitalize">
+              How are you doing today,{" "}
+              {userInfoData.full_name ?? userInfoData.email?.split("@")[0]}?
+            </span>
+          }
+        />
+
+        <AskApplicantAgent />
+
         {/* --- Metrics Section --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="flex flex-col items-center p-6 text-center hover:bg-muted/60 transition-colors">
@@ -154,6 +166,8 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        <MyScreeningInterviews interviews={screeningInterviews} />
 
         {/* --- Active Job Posts Section --- */}
         <div className="mt-8">
@@ -309,13 +323,14 @@ export default async function DashboardPage() {
                 </Button>
               </CardContent>
             </Card>
+
+            <ProfileViewsCard count={profileViews} />
           </div>
         </div>
 
         {/* --- AI Credits Granted Dialog --- */}
         {pendingCompleteInvitationDialogEmails.length > 0 ? (
           <CreditDepositDialog
-            userId={user.id}
             pendingDialogEmails={pendingCompleteInvitationDialogEmails}
           />
         ) : (

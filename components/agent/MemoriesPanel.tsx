@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Brain, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   Sheet,
   SheetContent,
@@ -13,6 +14,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { AGENT_MEMORY_MAX_CHARS } from "@/helpers/agent/config";
+import { AGENT_ROLE_UI, type AgentRoleId } from "./roles";
 
 type Memory = { id: string; content: string; category: string };
 
@@ -49,12 +51,14 @@ function MemoriesSkeleton() {
 }
 
 /** Lets the user review, edit and delete what the agent remembers (REQ-012). */
-export default function MemoriesPanel() {
+export default function MemoriesPanel({ role = "applicant" }: { role?: AgentRoleId } = {}) {
+  const ui = AGENT_ROLE_UI[role];
   const [memories, setMemories] = useState<Memory[] | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Memory | null>(null);
 
   const load = async () => {
     setError(null);
@@ -110,11 +114,8 @@ export default function MemoriesPanel() {
       </SheetTrigger>
       <SheetContent className="flex w-full flex-col gap-4 overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>What the assistant remembers</SheetTitle>
-          <SheetDescription>
-            Facts the assistant saved about you across chats. Your job preferences live on your
-            profile.
-          </SheetDescription>
+          <SheetTitle>{ui.memoriesTitle}</SheetTitle>
+          <SheetDescription>{ui.memoriesDescription}</SheetDescription>
         </SheetHeader>
 
         {error && (
@@ -176,10 +177,10 @@ export default function MemoriesPanel() {
                         </Button>
                         <Button
                           size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                          variant="destructive-ghost"
+                          className="h-7 w-7 shrink-0"
                           aria-label={`Delete: ${memory.content}`}
-                          onClick={() => remove(memory.id)}
+                          onClick={() => setPendingDelete(memory)}
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -191,6 +192,14 @@ export default function MemoriesPanel() {
             </section>
           );
         })}
+        <ConfirmDialog
+          open={pendingDelete !== null}
+          onOpenChange={(open) => !open && setPendingDelete(null)}
+          title="Delete this memory?"
+          description={<>&ldquo;{pendingDelete?.content}&rdquo; will be forgotten. This can&apos;t be undone.</>}
+          confirmLabel="Delete"
+          onConfirm={() => pendingDelete && remove(pendingDelete.id)}
+        />
       </SheetContent>
     </Sheet>
   );

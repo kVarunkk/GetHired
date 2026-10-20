@@ -29,10 +29,12 @@ import {
   JOB_POSTING_API_KEY,
 } from "@/utils/utils";
 import useSWR, { mutate } from "swr";
-import { createClient } from "@/lib/supabase/client";
+import toast from "react-hot-toast";
 import { triggerRelevanceUpdate } from "@/app/actions/relevant-jobs-update";
 import ModifiedLink from "./ModifiedLink";
 import FootComponent from "./FootComponent";
+import HiddenCandidatesNotice from "./billing/HiddenCandidatesNotice";
+import type { SuggestedTier } from "@/helpers/billing/errors";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useRelevantJobPoller } from "@/hooks/useRelevantJobPoller";
 import ProfileCompletionBanner from "./ProfileCompletionBanner";
@@ -51,6 +53,9 @@ export default function JobsComponent({
   initialCursor,
   error,
   dynamicKey,
+  profilesPerSearch = null,
+  hiddenCount = 0,
+  upgradePlan = null,
 }: {
   initialJobs:
     AllJobWithRelations[] | AllProfileWithRelations[] | TCompanyInfo[];
@@ -65,6 +70,11 @@ export default function JobsComponent({
   initialCursor: string | null;
   error: string | null;
   dynamicKey: string;
+  /** Talent search: the plan's cap per search (null = none), from /api/profiles. */
+  profilesPerSearch?: number | null;
+  /** Talent search: matches beyond the cap (BL-REQ-023). */
+  hiddenCount?: number;
+  upgradePlan?: SuggestedTier | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -135,8 +145,7 @@ export default function JobsComponent({
   );
 
   // for companyUsers
-  const isLimitOnProfiles =
-    currentUserData?.profile?.company_tiers?.allowed_profiles !== null;
+  const isLimitOnProfiles = profilesPerSearch !== null;
 
   const isGenerated = isRelevantProfileSearch
     ? data?.data?.matching_status === "completed"
@@ -219,30 +228,17 @@ export default function JobsComponent({
 
   const generateAIFeed = async (type: "job" | "profile") => {
     setAiGenBtnLoading(true);
-    const supabase = createClient();
     if (type === "job") {
-      await supabase
-        .from("user_info")
-        .update({
-          relevant_jobs_update_status: "progress",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", currentUserData.profile.user_id);
-
+      // The action marks the profile in progress before queueing.
+      const result = await triggerRelevanceUpdate();
+      if (!result.success) toast.error(result.error);
       await mutate(PROFILE_API_KEY);
-      triggerRelevanceUpdate(currentUserData.profile.user_id);
     } else if (type === "profile" && jobPostingId) {
       const key = `${JOB_POSTING_API_KEY}?jobId=${jobPostingId}`;
-      await supabase
-        .from("job_postings")
-        .update({
-          matching_status: "progress",
-          matching_error: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", jobPostingId);
+      // The action marks the posting in progress after checking ownership.
+      const result = await triggerJobPostingRelevanceUpdate(jobPostingId);
+      if (!result.success) toast.error(result.error);
       await mutate(key);
-      triggerJobPostingRelevanceUpdate(jobPostingId);
     }
     setAiGenBtnLoading(false);
   };
@@ -300,6 +296,7 @@ export default function JobsComponent({
             isFavorite={
               !!favoriteProfiles?.some((fav) => fav.user_id === profile.user_id)
             }
+            jobPostId={jobPostingId}
           />
         ));
     }
@@ -386,6 +383,7 @@ export default function JobsComponent({
     currentUserData,
     initialJobUrlMap,
     isInitialJobUrlsLoading,
+    jobPostingId,
   ]);
 
   return (
@@ -452,11 +450,11 @@ export default function JobsComponent({
                 companyId={companyId}
               />
             )}
+          {/* On every tab (All, Saved, each talent list), like the applicant's button. */}
           {user &&
             isOnboardingComplete &&
             isCompanyUser &&
-            current_page === "profiles" &&
-            isAllJobsTab && (
+            current_page === "profiles" && (
               <FindSuitableJobs
                 user={user}
                 currentPage={current_page}
@@ -469,7 +467,7 @@ export default function JobsComponent({
               <Button
                 asChild
                 variant="brand"
-                className="flex items-center gap-2 rounded-full text-sm"
+                className="flex items-center gap-2 rounded-full text-sm whitespace-nowrap"
               >
                 <Link href={"/get-started"}>
                   <Search className="w-4 h-4" />
@@ -485,7 +483,7 @@ export default function JobsComponent({
             <Button
               asChild
               variant="brand"
-              className="flex items-center gap-2 rounded-full text-sm"
+              className="flex items-center gap-2 rounded-full text-sm whitespace-nowrap"
             >
               <Link
                 href={`/auth/sign-up?returnTo=/${
@@ -637,7 +635,13 @@ export default function JobsComponent({
       jobs.length !== 0 &&
       !error &&
       isLimitOnProfiles ? (
-        <FootComponent />
+        <>
+          <HiddenCandidatesNotice
+            hiddenCount={hiddenCount}
+            upgradePlan={upgradePlan}
+          />
+          <FootComponent />
+        </>
       ) : (
         ""
       )}

@@ -7,6 +7,8 @@ interface JobDigestEmailProps {
   userName: string;
   jobs: AllJobWithRelations[];
   insufficientCredits: boolean;
+  /** Distinct companies that viewed the profile in the last 30 days (OR-REQ-021). */
+  profileViews?: number;
 }
 
 const truncateString = (str: string, maxLength: number): string => {
@@ -20,6 +22,7 @@ export const JobDigestEmail = ({
   userName,
   jobs = [],
   insufficientCredits,
+  profileViews = 0,
 }: JobDigestEmailProps) => {
   const mockJobs = [
     {
@@ -62,6 +65,19 @@ export const JobDigestEmail = ({
               Here are ${jobsToDisplay.length} top jobs our AI found
         just for you this week, matching your skills, experience, and career
         goals.`}
+        </Text>
+      )}
+
+      {profileViews > 0 && (
+        <Text className="text-base text-gray-700 text-color mb-6">
+          {profileViews === 1 ? "1 company" : `${profileViews} companies`} viewed
+          your profile in the last 30 days.{" "}
+          <Link
+            href="https://gethired.devhub.co.in/dashboard"
+            className="text-blue-600 underline"
+          >
+            See your dashboard
+          </Link>
         </Text>
       )}
 

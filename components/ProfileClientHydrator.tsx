@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import ProfileFavoriteStar from "@/components/ProfileFavoriteStar";
 import ProfileActiveApplication from "@/components/ProfileActiveApplications";
-import SelectProfile from "@/components/SelectProfile";
 import { GitHubLogoIcon, LinkedInLogoIcon } from "@radix-ui/react-icons";
 import { Mail } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
@@ -36,60 +35,45 @@ export default function ProfileClientHydrator({
     (fav: { user_id: string }) => fav.user_id === applicantProfile?.user_id,
   );
   const companyId = currentUserData?.profile?.id;
-  const jobPostings = currentUserData?.profile?.job_postings;
+  const applications = applicantProfile?.applications ?? [];
 
   return (
-    <div className="flex flex-col w-full p-4 gap-8">
-      <div className="flex items-center justify-between flex-wrap gap-5">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1">
-            <h1 className="text-3xl font-medium">
-              {applicantProfile?.full_name}
-            </h1>
-            {isLoading ? (
-              <Skeleton className="h-5 w-5" />
-            ) : (
-              <ProfileFavoriteStar
-                profileId={applicantProfile?.user_id}
-                companyId={companyId}
-                isFavorite={isFavorite}
-              />
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href={`mailto:${applicantProfile?.email}`}
-              className=" text-muted-foreground hover:text-primary transition-colors"
-            >
-              <Mail className="h-6 w-6" />
-            </Link>
-            {applicantProfile?.linkedin_url && (
-              <Link
-                target="_blank"
-                href={applicantProfile?.linkedin_url}
-                className=" text-muted-foreground hover:text-primary transition-colors"
-              >
-                <LinkedInLogoIcon className="h-6 w-6" />
-              </Link>
-            )}
-            {applicantProfile?.github_url && (
-              <Link
-                target="_blank"
-                href={applicantProfile?.github_url}
-                className=" text-muted-foreground hover:text-primary transition-colors"
-              >
-                <GitHubLogoIcon className="h-6 w-6" />
-              </Link>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-5">
-          <SelectProfile
-            jobPostings={jobPostings}
+    <div className="flex flex-col w-full min-w-0 gap-6">
+      {/* The name is in the page's header. */}
+      <div className="flex items-center gap-2">
+        <Link
+          href={`mailto:${applicantProfile?.email}`}
+          className=" text-muted-foreground hover:text-primary transition-colors"
+        >
+          <Mail className="h-6 w-6" />
+        </Link>
+        {applicantProfile?.linkedin_url && (
+          <Link
+            target="_blank"
+            href={applicantProfile?.linkedin_url}
+            className=" text-muted-foreground hover:text-primary transition-colors"
+          >
+            <LinkedInLogoIcon className="h-6 w-6" />
+          </Link>
+        )}
+        {applicantProfile?.github_url && (
+          <Link
+            target="_blank"
+            href={applicantProfile?.github_url}
+            className=" text-muted-foreground hover:text-primary transition-colors"
+          >
+            <GitHubLogoIcon className="h-6 w-6" />
+          </Link>
+        )}
+        {isLoading ? (
+          <Skeleton className="h-5 w-5" />
+        ) : (
+          <ProfileFavoriteStar
+            profileId={applicantProfile?.user_id}
             companyId={companyId}
-            applicantProfile={applicantProfile}
+            isFavorite={isFavorite}
           />
-        </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -204,19 +188,28 @@ export default function ProfileClientHydrator({
         {/* Right Panel: Job and Application History */}
         <div className="md:col-span-2 space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Application History</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+              <CardTitle className="text-base font-semibold">
+                Applications to your jobs
+              </CardTitle>
+              {applications.length > 0 && (
+                <Badge variant="secondary" className="tabular-nums">
+                  {applications.length}
+                </Badge>
+              )}
             </CardHeader>
-            <CardContent className="space-y-6">
-              {applicantProfile?.applications &&
-              applicantProfile?.applications.length > 0 ? (
-                applicantProfile?.applications.map((app) => (
-                  <ProfileActiveApplication key={app.id} app={app} />
-                ))
+            <CardContent>
+              {applications.length > 0 ? (
+                <ul className="divide-y">
+                  {applications.map((app) => (
+                    <ProfileActiveApplication key={app.id} app={app} />
+                  ))}
+                </ul>
               ) : (
-                <p className="text-muted-foreground w-full text-center text-sm">
-                  No application history found.
-                </p>
+                <div className="rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+                  {applicantProfile?.full_name || "This candidate"} hasn&apos;t
+                  applied to any of your jobs yet.
+                </div>
               )}
             </CardContent>
           </Card>

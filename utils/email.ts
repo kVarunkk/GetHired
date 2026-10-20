@@ -7,11 +7,17 @@ export async function sendEmail({
   subject,
   htmlContent,
   textContent,
+  replyTo,
+  senderName,
 }: {
   toEmail: string;
   subject: string;
   htmlContent: string;
   textContent: string;
+  /** Where replies go, e.g. a company's contact email (PL-REQ-007). */
+  replyTo?: string;
+  /** The From name; the address is always GetHired's. */
+  senderName?: string;
 }) {
   const brevo = new BrevoClient({ apiKey: process.env.BREVO_API_KEY || "" });
 
@@ -30,8 +36,9 @@ export async function sendEmail({
     const result = await brevo.transactionalEmails.sendTransacEmail({
       subject,
       htmlContent,
-      sender: { name: "Varun from GetHired", email: "varun@devhub.co.in" },
+      sender: { name: senderName ?? "Varun from GetHired", email: "varun@devhub.co.in" },
       to: [{ email: toEmail }],
+      ...(replyTo ? { replyTo: { email: replyTo } } : {}),
     });
     console.log("Sent via Brevo:", result);
     return; // Exit on success
@@ -56,9 +63,10 @@ export async function sendEmail({
           {
             From: {
               Email: "varun@devhub.co.in",
-              Name: "Varun from GetHired",
+              Name: senderName ?? "Varun from GetHired",
             },
             To: [{ Email: toEmail }],
+            ...(replyTo ? { ReplyTo: { Email: replyTo } } : {}),
             Subject: subject,
             HTMLPart: htmlContent,
             TextPart: textContent,
@@ -90,8 +98,9 @@ export async function sendEmail({
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const resendResult = await resend.emails.send({
-      from: "GetHired <varun@devhub.co.in>",
+      from: `${(senderName ?? "GetHired").replace(/[<>"\r\n]/g, "")} <varun@devhub.co.in>`,
       to: [toEmail],
+      ...(replyTo ? { replyTo } : {}),
       subject,
       html: htmlContent,
       text: textContent,

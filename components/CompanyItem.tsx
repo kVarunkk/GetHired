@@ -8,6 +8,7 @@ import { Button } from "./ui/button";
 import { ArrowRight } from "lucide-react";
 import React from "react";
 import { TCompanyInfo } from "@/utils/types";
+import { careersPath } from "@/helpers/careers/slug";
 
 const CompanyItem = React.memo(
   ({
@@ -23,6 +24,7 @@ const CompanyItem = React.memo(
     isCompanyUser: boolean;
     isFavorite: boolean;
   }) => {
+    const careersHref = careersPath(company.careers_slug ?? "");
     return (
       <div
         className={cn(
@@ -40,7 +42,7 @@ const CompanyItem = React.memo(
                     alt="Company Logo"
                     width={40}
                   />
-                  <Link href={`/companies/${company.id}`} target="_blank">
+                  <Link href={careersHref} target="_blank">
                     <h3 className="inline text-lg sm:text-xl font-semibold">
                       {company.name}
                     </h3>
@@ -60,7 +62,7 @@ const CompanyItem = React.memo(
             <CompanyDetailBadges company={company} isSuitable={isSuitable} />
           </div>
           <Link
-            href={`/companies/${company.id}`}
+            href={careersHref}
             target="_blank"
             className="text-start"
           >

@@ -1,18 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowUp, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { agentPromptHref, savePendingPrompt } from "@/helpers/agent/prompt-draft";
+import { AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import AskAgentBox from "./agent/AskAgentBox";
 
 // The job page's AI features, as one entry point to /agent: a question box
 // plus suggested prompts. Each opens the agent with the prompt in its message
 // box (the user still sends it). The job's link goes in the prompt so the
 // agent can pass its id to getJobDetails, createInterview, startResumeReview
-// and findSimilarJobs.
+// and findSimilarJobs. The opportunity page uses it too, for the job an
+// outreach is about.
 
 type Job = { id: string; job_name: string | null; company_name: string | null };
 
@@ -35,72 +31,30 @@ export function jobSuggestions(job: Job) {
   ];
 }
 
+// For the dialog shown once the user says they applied on the company's site:
+// next steps for that application. createInterview, findSimilarJobs and
+// getJobDetails back these.
+export function appliedQuestionPrompt(job: Job, question: string) {
+  return `I just applied to ${jobRef(job)}. ${question.trim()}`;
+}
+
+export function appliedSuggestions(job: Job) {
+  const ref = jobRef(job);
+  return [
+    { label: "Prep for the interview", prompt: `I just applied to ${ref}. Set up a mock interview for it.` },
+    { label: "What to expect next", prompt: `I just applied to ${ref}. What should I prepare for in their hiring process?` },
+    { label: "Similar jobs", prompt: `I just applied to ${ref}. Find similar jobs I should apply to.` },
+  ];
+}
+
 export default function AskAgentAboutJob({ job }: { job: Job }) {
-  const router = useRouter();
-  const [question, setQuestion] = useState("");
-
-  // Saved too, so the prompt survives a detour through login or sign-up.
-  const open = (prompt: string) => {
-    savePendingPrompt(prompt);
-    router.push(agentPromptHref(prompt));
-  };
-
   return (
-    <section
-      aria-label="Ask the agent about this job"
-      className="flex flex-col gap-3 rounded-xl border p-4"
-    >
-      <h2 className="flex items-center gap-2 text-sm font-medium">
-        <Sparkles className="h-4 w-4 text-muted-foreground" />
-        Ask the agent about this job
-      </h2>
-
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (question.trim()) open(jobQuestionPrompt(job, question));
-        }}
-      >
-        <div className="flex items-end gap-2 rounded-2xl border bg-background p-2 shadow-sm transition-colors focus-within:border-foreground/30">
-          <Textarea
-            aria-label="Question about this job"
-            value={question}
-            rows={1}
-            placeholder="Am I a good fit? What does this team work on?…"
-            className="max-h-48 min-h-10 resize-none border-0 bg-transparent px-2 py-2 text-[15px] leading-6 shadow-none [field-sizing:content] focus-visible:ring-0 focus-visible:ring-offset-0"
-            onChange={(event) => setQuestion(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
-          />
-          <Button
-            type="submit"
-            size="icon"
-            variant="brand"
-            aria-label="Ask"
-            disabled={!question.trim()}
-            className="shrink-0 rounded-xl"
-          >
-            <ArrowUp className="h-4 w-4" />
-          </Button>
-        </div>
-      </form>
-
-      <div role="group" aria-label="Suggested prompts" className="flex flex-wrap gap-2">
-        {jobSuggestions(job).map(({ label, prompt }) => (
-          <Link
-            key={label}
-            href={agentPromptHref(prompt)}
-            onClick={() => savePendingPrompt(prompt)}
-            className="rounded-full border px-3.5 py-1.5 text-sm transition-colors hover:border-brand/40 hover:bg-brandSoft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
-    </section>
+    <AskAgentBox
+      title="Ask the agent about this job"
+      placeholder="Am I a good fit? What does this team work on?…"
+      basePath={AGENT_PATH}
+      suggestions={jobSuggestions(job)}
+      toPrompt={(question) => jobQuestionPrompt(job, question)}
+    />
   );
 }

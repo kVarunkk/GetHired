@@ -6,7 +6,7 @@ const renderComposer = (busy = false, extra?: React.ReactNode) =>
   render(
     <>
       {extra}
-      <Composer busy={busy} onSend={vi.fn(() => true)} onStop={vi.fn()} />
+      <Composer busy={busy} onSend={vi.fn(() => true)} onStop={vi.fn()} placeholder="Ask anything" />
     </>,
   );
 
@@ -99,7 +99,7 @@ describe("Composer: starting with a draft", () => {
   it("prefills the box, focused with the caret at the end, without sending", () => {
     const onSend = vi.fn(() => true);
     render(
-      <Composer busy={false} onSend={onSend} onStop={vi.fn()} initialDraft="remote Go jobs" />,
+      <Composer busy={false} onSend={onSend} onStop={vi.fn()} initialDraft="remote Go jobs" placeholder="Ask anything" />,
     );
 
     const box = message() as HTMLTextAreaElement;

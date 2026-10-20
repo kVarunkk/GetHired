@@ -18,8 +18,9 @@ import ResumeSourceSelector from "./ResumeSourceSelector";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { TAICredits } from "@/utils/types";
-import InfoTooltip from "./InfoTooltip";
+import AgentHandoff from "./agent/AgentHandoff";
+import { AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import { resumeReviewHandoffPrompt } from "@/helpers/agent/handoff-prompts";
 import { createResumeReviewAction } from "@/app/actions/create-resume-review";
 import { useProgress } from "react-transition-progress";
 import useSWR from "swr";
@@ -83,7 +84,7 @@ export default function CreateResumeReviewDialog() {
       <ResponsiveDialogTrigger asChild>
         <Button variant="brand" className="max-w-full">
           <Plus className="w-4 h-4" />
-          <span className="truncate">Create CV Review</span>
+          <span>Create CV Review</span>
         </Button>
       </ResponsiveDialogTrigger>
 
@@ -92,17 +93,16 @@ export default function CreateResumeReviewDialog() {
           <ResponsiveDialogTitle>Create AI Review</ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
             Tailor your experience by choosing an existing asset or uploading a
-            new PDF.{" "}
-            <InfoTooltip
-              content={
-                <p>
-                  This analysis consumes {TAICredits.AI_SEARCH_ASK_AI_RESUME}{" "}
-                  Credits.
-                </p>
-              }
-            />
+            new PDF.
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
+        <AgentHandoff
+          label="Or tell the agent which job to review it against"
+          placeholder="The frontend role at Razorpay I saved yesterday…"
+          basePath={AGENT_PATH}
+          toPrompt={resumeReviewHandoffPrompt}
+          onHandoff={() => setIsOpen(false)}
+        />
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-4">
           {/* Flex columns, not grids: an auto grid track grows to fit a long
               resume name and pushes the list wider than the drawer. */}

@@ -7,6 +7,7 @@ import {
   sendJobDigestEmail,
 } from "@/helpers/jobs/digest-utils";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
+import { countProfileViews } from "@/helpers/outreach/profile-views";
 
 export type RelevanceJobMessage = {
   msg_id: number;
@@ -80,12 +81,14 @@ export async function GET() {
           });
 
           if ((result.jobs?.length || 0) > 0) {
+            const profileViews = await countProfileViews(supabase, msg.message.user_id);
             await sendJobDigestEmail(
               email,
               full_name!,
               result.jobs || [],
               digestDate,
               result.isInsufficientCredits,
+              profileViews,
             );
           }
         } else {

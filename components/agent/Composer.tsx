@@ -36,6 +36,7 @@ export default function Composer({
   onSend,
   onStop,
   initialDraft = "",
+  placeholder,
 }: {
   busy: boolean;
   /** Returns false when the message wasn't sent, so the draft is kept. */
@@ -43,6 +44,7 @@ export default function Composer({
   onStop: () => void;
   /** Text the box starts with, ready to edit and send. */
   initialDraft?: string;
+  placeholder: string;
 }) {
   const [input, setInput] = useState(initialDraft);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -94,7 +96,7 @@ export default function Composer({
             value={input}
             disabled={busy}
             rows={1}
-            placeholder="Ask about jobs, your resume or applications…"
+            placeholder={placeholder}
             className="max-h-48 min-h-10 resize-none border-0 bg-transparent px-2 py-2 text-[15px] leading-6 shadow-none [field-sizing:content] focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-default disabled:bg-transparent"
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={(event) => {

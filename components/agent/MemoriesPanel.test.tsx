@@ -129,6 +129,11 @@ describe("MemoriesPanel", () => {
     await within(dialog).findByText("Interviewing at Stripe");
 
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete: Interviewing at Stripe" }));
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/agent/memories/m2", { method: "DELETE" });
+
+    const confirm = await screen.findByRole("alertdialog");
+    expect(confirm).toHaveTextContent("Interviewing at Stripe");
+    await userEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
 
     expect(fetchMock).toHaveBeenCalledWith("/api/agent/memories/m2", { method: "DELETE" });
     await waitFor(() =>

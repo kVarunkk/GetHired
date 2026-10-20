@@ -13,9 +13,12 @@ import { Button } from "./ui/button";
 import { Check, File, MoreHorizontal, Share2, Trash } from "lucide-react";
 import toast from "react-hot-toast";
 import { TApplicationStatus } from "@/utils/types";
-import { createClient } from "@/lib/supabase/client";
+import { setExternalApplicationStatusAction } from "@/app/actions/applications/set-external-application-status";
+import { removeExternalApplicationAction } from "@/app/actions/applications/remove-external-application";
 import { copyToClipboard, PROFILE_API_KEY } from "@/utils/utils";
 import { mutate } from "swr";
+import { useState } from "react";
+import ConfirmDialog from "./ConfirmDialog";
 
 const applicationStatuses = Object.values(TApplicationStatus);
 
@@ -32,6 +35,7 @@ export default function JobPageDropdown({
   applicationStatus: TApplicationStatus | null;
   isPlatformJob: boolean;
 }) {
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   const updateApplicationStatus = async (status: TApplicationStatus) => {
     try {
       if (!userId || isCompanyUser || !applicationStatus || isPlatformJob) {
@@ -65,20 +69,21 @@ export default function JobPageDropdown({
         false,
       );
 
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("applications")
-        .update({ status: status, updated_at: new Date().toISOString() })
-        .eq("all_jobs_id", jobId)
-        .eq("applicant_user_id", userId);
-
-      if (error) throw error;
+      const result = await setExternalApplicationStatusAction({
+        allJobsId: jobId,
+        status,
+      });
+      if (!result.ok) throw new Error(result.error);
 
       mutate(PROFILE_API_KEY);
 
       toast.success("Application status updated.");
-    } catch {
-      toast.error("An unexpected error occurred.");
+    } catch (err) {
+      // Undo the optimistic change.
+      mutate(PROFILE_API_KEY);
+      toast.error(
+        err instanceof Error ? err.message : "An unexpected error occurred.",
+      );
     }
   };
 
@@ -109,20 +114,18 @@ export default function JobPageDropdown({
         false,
       );
 
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("applications")
-        .delete()
-        .eq("all_jobs_id", jobId)
-        .eq("applicant_user_id", userId);
-
-      if (error) throw error;
+      const result = await removeExternalApplicationAction({ allJobsId: jobId });
+      if (!result.ok) throw new Error(result.error);
 
       mutate(PROFILE_API_KEY);
 
       toast.success("Application removed succesfully.");
-    } catch {
-      toast.error("An unexpected error occurred.");
+    } catch (err) {
+      // Undo the optimistic change.
+      mutate(PROFILE_API_KEY);
+      toast.error(
+        err instanceof Error ? err.message : "An unexpected error occurred.",
+      );
     }
   };
 
@@ -167,10 +170,8 @@ export default function JobPageDropdown({
           )}
           {!isCompanyUser && userId && applicationStatus && !isPlatformJob && (
             <DropdownMenuItem
-              onClick={() => {
-                removeApplication();
-              }}
-              className=" focus:bg-destructive/70 cursor-pointer"
+              onClick={() => setConfirmingRemove(true)}
+              className="cursor-pointer text-destructive focus:text-destructive"
             >
               <Trash className="h-4 w-4" />
               Remove Application
@@ -189,6 +190,14 @@ export default function JobPageDropdown({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ConfirmDialog
+        open={confirmingRemove}
+        onOpenChange={setConfirmingRemove}
+        title="Remove this application?"
+        description="It's removed from your tracked applications, along with its status. This can't be undone."
+        confirmLabel="Remove"
+        onConfirm={removeApplication}
+      />
     </>
   );
 }

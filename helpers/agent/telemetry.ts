@@ -54,25 +54,30 @@ function getProvider(): NodeTracerProvider | null {
   return provider;
 }
 
-export type AgentTraceContext = { sessionId: string; userId: string };
+export type AgentTraceContext = { sessionId: string; userId: string; companyId?: string };
+
+/** The span attribute for the recruiter's company (RA spec §4.9). */
+const COMPANY_ID_ATTRIBUTE = "gethired.company_id";
 
 /**
  * Per-call `telemetry` options for an agent model call (REQ-025). Each call
  * gets its own integration so every span it creates carries the chat's
  * `session.id` and `user.id` (REQ-026). Without Arize credentials, telemetry
- * is off (REQ-028).
+ * is off (REQ-028). `recordContent` overrides `AGENT_TRACE_CONTENT`, for
+ * calls whose prompts must stay out of traces (screening analysis, SI-SEC-007).
  */
 export function agentTelemetry(
   functionId: string,
-  { sessionId, userId }: AgentTraceContext,
+  { sessionId, userId, companyId }: AgentTraceContext,
+  { recordContent = AGENT_TRACE_CONTENT }: { recordContent?: boolean } = {},
 ): TelemetryOptions {
   const tracerProvider = getProvider();
   if (!tracerProvider) return { isEnabled: false };
 
   return {
     functionId,
-    recordInputs: AGENT_TRACE_CONTENT,
-    recordOutputs: AGENT_TRACE_CONTENT,
+    recordInputs: recordContent,
+    recordOutputs: recordContent,
     integrations: [
       new OpenTelemetry({
         tracer: tracerProvider.getTracer(TRACER_NAME),
@@ -81,6 +86,7 @@ export function agentTelemetry(
           ...enrichSpanWithOpenInference(options),
           [SemanticConventions.SESSION_ID]: sessionId,
           [SemanticConventions.USER_ID]: userId,
+          ...(companyId ? { [COMPANY_ID_ATTRIBUTE]: companyId } : {}),
         }),
       }),
     ],

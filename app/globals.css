@@ -36,12 +36,6 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
 
-    /* Add default values for marquee variables if not set elsewhere */
-    --duration: 30s;
-    /* Example: adjust as needed */
-    --gap: 1rem;
-    /* Example: adjust as needed */
-
     /* Brand Indigo Accents (New Names to avoid collision) */
     --brand: 243.4 75.36% 58.63%;
     /* Indigo-600 */
@@ -58,6 +52,16 @@
     --warning: 26 90% 37%;
     /* amber-700 */
     --warning-foreground: 0 0% 98%;
+
+    /* Role badges (RP-GUD-001): text on a 10% tint */
+    --role-slate: 215 16% 40%;
+    --role-indigo: 243 75% 55%;
+    --role-emerald: 160 84% 26%;
+    --role-amber: 32 95% 35%;
+    --role-rose: 347 77% 45%;
+    --role-sky: 200 98% 33%;
+    --role-violet: 263 70% 50%;
+    --role-teal: 175 84% 27%;
 
 
 
@@ -83,7 +87,7 @@
     --muted-foreground: 0 0% 63.9%;
     --accent: 0 0% 14.9%;
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
@@ -108,15 +112,15 @@
     /* amber-400 */
     --warning-foreground: 0 0% 9%;
 
-
-
-    /* --accent: 239 84% 15%; */
-    /* --accent-foreground: 239 84% 60%; */
-  }
-
-  .theme {
-    --animate-marquee: marquee var(--duration) infinite linear;
-    --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+    /* Role badges (Dark) */
+    --role-slate: 215 20% 70%;
+    --role-indigo: 234 89% 74%;
+    --role-emerald: 156 72% 60%;
+    --role-amber: 43 96% 60%;
+    --role-rose: 351 95% 75%;
+    --role-sky: 199 95% 70%;
+    --role-violet: 255 92% 78%;
+    --role-teal: 172 66% 55%;
   }
 }
 
@@ -145,26 +149,6 @@
   }
 }
 
-/* Keyframes should be defined directly, outside of @theme inline */
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(calc(-100% - var(--gap)));
-  }
-}
-
-@keyframes marquee-vertical {
-  from {
-    transform: translateY(0);
-  }
-
-  to {
-    transform: translateY(calc(-100% - var(--gap)));
-  }
-}
 /* Agent status text ("Thinking…", running tool steps): a highlight sweeps
    left to right. The gradient is wider than the text so the highlight starts
    and ends off-screen, and the loop has no visible jump. */
@@ -194,12 +178,30 @@
   }
 }
 
-/* Agent replies: each streamed word fades in (components/agent/animate-words.ts). */
+/* Agent replies: each streamed word fades in (components/agent/animate-words.ts).
+   Opacity only by default: a filter on every word span is too heavy for phone
+   GPUs (it janks and the text shimmers), so the blur is for mouse devices. */
 .agent-word {
   animation: agent-word-in 0.4s ease-out both;
 }
 
 @keyframes agent-word-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .agent-word {
+    animation-name: agent-word-in-blur;
+  }
+}
+
+@keyframes agent-word-in-blur {
   from {
     opacity: 0;
     filter: blur(3px);
@@ -208,5 +210,110 @@
   to {
     opacity: 1;
     filter: blur(0);
+  }
+}
+
+/* Agent helpers (AskAgentBox, AgentHandoff): a brand-tinted gradient border
+   that slowly drifts. The inner layers paint the background over the padding
+   box, so only the 1px border shows the moving gradient. */
+.agent-glow {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(hsl(var(--brand) / 0.035), hsl(var(--brand) / 0.035)) padding-box,
+    linear-gradient(hsl(var(--background)), hsl(var(--background))) padding-box,
+    linear-gradient(
+        110deg,
+        hsl(var(--border)) 0%,
+        hsl(var(--brand) / 0.55) 25%,
+        hsl(var(--brand-soft) / 0.35) 40%,
+        hsl(var(--border)) 55%,
+        hsl(var(--border)) 70%,
+        hsl(var(--brand) / 0.45) 85%,
+        hsl(var(--border)) 100%
+      )
+      border-box;
+  background-size: 100% 100%, 100% 100%, 300% 100%;
+  animation: agent-glow 8s ease-in-out infinite alternate;
+}
+
+@keyframes agent-glow {
+  from {
+    background-position: 0 0, 0 0, 0% 50%;
+  }
+
+  to {
+    background-position: 0 0, 0 0, 100% 50%;
+  }
+}
+
+/* The agent mark: a ring breathes out from the icon tile. */
+.agent-mark {
+  position: relative;
+}
+
+.agent-mark::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid hsl(var(--brand) / 0.45);
+  animation: agent-mark-ring 2.8s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes agent-mark-ring {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+}
+
+/* A small dot circling the agent mark. */
+.agent-orbit {
+  animation: agent-orbit 6s linear infinite;
+}
+
+@keyframes agent-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Suggestion chips rise in one after another (the delay is set inline). */
+.agent-chip-in {
+  animation: agent-chip-in 0.35s ease-out both;
+}
+
+@keyframes agent-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* AgentHandoff: the sparkle twinkles while the user is typing. */
+.agent-spark {
+  animation: agent-spark 1.2s ease-in-out infinite;
+}
+
+@keyframes agent-spark {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+
+  50% {
+    transform: scale(1.2) rotate(18deg);
   }
 }

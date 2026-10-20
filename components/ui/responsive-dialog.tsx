@@ -138,7 +138,10 @@ function ResponsiveDialogHeader({
 // The scrolling middle. No scrollbar, like the sidebar: a fade shows there's
 // more. It sizes to its content and shrinks once the dialog hits its height
 // cap. The negative margins run it edge to edge so focus rings and the fades
-// aren't clipped; `className` styles the wrapper around the children.
+// aren't clipped; `className` styles the wrapper around the children. The
+// top margin also cancels the column's gap-4, so content scrolls right up to
+// the header's band instead of being cut off a gap below it. The header's
+// border-b already marks that edge, so the top fade drops its own hairline.
 function ResponsiveDialogBody({
   className,
   children,
@@ -149,9 +152,16 @@ function ResponsiveDialogBody({
   const isDesktop = React.useContext(IsDesktopContext);
   return (
     <ScrollFade
-      className={cn("-my-1 flex flex-col", isDesktop ? "-mx-6" : "-mx-4")}
+      className={cn(
+        "-mb-1 -mt-4 flex flex-col [&>[data-edge=top]]:border-t-0",
+        isDesktop ? "-mx-6" : "-mx-4",
+      )}
       scrollerClassName="h-auto min-h-0"
-      contentClassName={cn("py-1", isDesktop ? "px-6" : "px-4", className)}
+      contentClassName={cn(
+        "pb-1 pt-4",
+        isDesktop ? "px-6" : "px-4",
+        className,
+      )}
     >
       {children}
     </ScrollFade>

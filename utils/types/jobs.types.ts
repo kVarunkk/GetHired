@@ -1,6 +1,7 @@
 import { allJobsSelectString } from "@/helpers/jobs/filterQueryBuilder";
 import { createClient } from "@/lib/supabase/client";
 import { QueryData } from "@supabase/supabase-js";
+import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 
 const supabase = createClient();
 
@@ -15,9 +16,7 @@ const applicationQuery = supabase
         resumes(resume_path),
         answers,
         job_post_id,
-        user_info(
-          *
-        ),
+        user_info(${RECRUITER_CANDIDATE_COLUMNS}),
         job_postings(
           id,
           title,
@@ -28,7 +27,7 @@ const applicationQuery = supabase
           location,
           company_info(name)
         )
-      `,
+      ` as const,
   )
   .eq("id", "")
   .single();
@@ -69,6 +68,8 @@ const companyIdSelectString = supabase
           min_equity,
           max_equity,
           questions,
+          department,
+          workplace_type,
           status,
           job_id,
           updated_at,

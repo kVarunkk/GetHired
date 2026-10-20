@@ -87,4 +87,18 @@ describe("generateFollowUps telemetry (REQ-025)", () => {
       expect.objectContaining({ functionId: "agent-suggestions" }),
     );
   });
+
+  it("suggests a job seeker's next steps by default and a recruiter's for companies", async () => {
+    const applicant = mockGenerateModel(JSON.stringify({ suggestions: [] }));
+    await generateFollowUps({ userText: "a", replyText: "b" }, { model: applicant });
+    expect(promptOf(applicant)).toContain("job seeker");
+    expect(promptOf(applicant)).not.toContain("recruiter");
+
+    const recruiter = mockGenerateModel(JSON.stringify({ suggestions: [] }));
+    await generateFollowUps({ userText: "a", replyText: "b" }, { model: recruiter, role: "company" });
+    const prompt = promptOf(recruiter);
+    expect(prompt).toContain("recruiter");
+    expect(prompt).toContain("candidates");
+    expect(prompt).not.toContain("job seeker");
+  });
 });

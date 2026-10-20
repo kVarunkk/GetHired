@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import { canonicalizeLocations, expandLocations } from "./aliases";
+import { canonicalizeLocations, expandLocations, expandProfileLocations } from "./aliases";
 
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
@@ -91,5 +91,15 @@ describe("canonicalizeLocations (for saved profiles)", () => {
 
   it("keeps a canonical name as stored", async () => {
     expect(await canonicalizeLocations(["Gurgaon"])).toEqual(["gurugram"]);
+  });
+});
+
+describe("expandProfileLocations (for profile filters)", () => {
+  it("matches every lowercased spelling and the canonical name as stored", async () => {
+    service.queue("location_aliases", { data: ALIASES, error: null });
+
+    expect(sorted(await expandProfileLocations(["Bangalore"]))).toEqual(
+      sorted(["bangalore", "bengaluru", "bengaluru, karnataka", "Bengaluru"]),
+    );
   });
 });

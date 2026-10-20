@@ -16,7 +16,10 @@ type RelevanceJobMessage = {
 };
 
 const BATCH_SIZE = 5;
-const VISIBILITY_TIMEOUT = 60; // seconds before a failed message is requeued
+// Seconds before an unfinished message is read again. Longer than one run
+// (the digest's rerank can take minutes), so the per-minute schedule doesn't
+// start a second, paid run of the same job while the first is still going.
+const VISIBILITY_TIMEOUT = 300;
 const MAX_RETRIES = 3;
 
 export async function GET() {

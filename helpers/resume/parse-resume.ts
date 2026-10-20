@@ -1,4 +1,3 @@
-// import { getVertexClient } from "@/utils/vertex";
 import { z } from "zod";
 import { wrapInSandbox } from "../ai/security";
 import { generateText, Output } from "ai";
@@ -59,9 +58,6 @@ async function extractTextFromPdf(url: string): Promise<string[]> {
 
 async function generateStructuredProfile(lines: string[]) {
   try {
-    // const vertex = await getVertexClient();
-    // using flash here instead of flash-lite
-    // const model = vertex("gemini-2.5-flash");
     const model = google("gemini-3.1-flash-lite");
 
     const systemPrompt = `
