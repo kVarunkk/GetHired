@@ -403,8 +403,6 @@ export const HeroMaskStyle = {
 
 export const cloudFrontUrl = process.env.NEXT_PUBLIC_CLOUDFRONT_PATH || "";
 
-export const HIRE_PAGE_DARK = `${cloudFrontUrl}/hero/company-hero-dark.webp`;
-export const HIRE_PAGE_LIGHT = `${cloudFrontUrl}/hero/company-hero-light.webp`;
 export const MCP_SERVER_DARK = `${cloudFrontUrl}/hero/mcp-server-hero-dark.webp`;
 export const MCP_SERVER_LIGHT = `${cloudFrontUrl}/hero/mcp-server-hero-light.webp`;
 export const CHROME_EXTENSION_DARK = `${cloudFrontUrl}/hero/chrome-extension-hero-dark.webp`;

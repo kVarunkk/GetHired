@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { takePendingPrompt } from "@/helpers/agent/prompt-draft";
 import AgentHeroDemo from "./AgentHeroDemo";
+import { RECRUITER_DEMO } from "./agent-demos";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -67,5 +68,34 @@ describe("AgentHeroDemo", () => {
     vi.stubGlobal("fetch", fetchSpy);
     render(<AgentHeroDemo />);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  describe("recruiter demo", () => {
+    it("renders the sample shortlist with the agent's own candidate rows", () => {
+      render(<AgentHeroDemo demo={RECRUITER_DEMO} />);
+
+      expect(screen.getByText(/Find candidates for my Senior Frontend Engineer post/)).toBeInTheDocument();
+      expect(screen.getByText("Read the job post")).toBeInTheDocument();
+      expect(screen.getByText("Found matched candidates")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Priya S/ })).toHaveAttribute("href", "/company/profiles");
+      expect(screen.getByText(/Want me to invite them/)).toBeInTheDocument();
+    });
+
+    it("sends suggested replies and typed text to the company agent", () => {
+      render(<AgentHeroDemo demo={RECRUITER_DEMO} />);
+
+      const suggestions = within(screen.getByRole("group", { name: "Suggested replies" }));
+      expect(suggestions.getByRole("link", { name: "Draft a job post" })).toHaveAttribute(
+        "href",
+        "/company/agent?prompt=Draft%20a%20job%20post",
+      );
+
+      fireEvent.change(screen.getByRole("textbox", { name: "Message" }), {
+        target: { value: "Find Go engineers" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Send" }));
+      expect(push).toHaveBeenCalledWith("/company/agent?prompt=Find%20Go%20engineers");
+      expect(takePendingPrompt()).toBe("Find Go engineers");
+    });
   });
 });
