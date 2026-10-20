@@ -4,7 +4,7 @@ import { Heading, Text, Section, Button, Link } from "react-email";
 
 export const AuthConfirmationEmail = ({ signupUrl }: { signupUrl: string }) => {
   return (
-    <BaseEmailLayout previewText={""}>
+    <BaseEmailLayout previewText="">
       <Heading className="text-2xl font-bold text-gray-800 my-6 ">
         Confirm Your Signup
       </Heading>

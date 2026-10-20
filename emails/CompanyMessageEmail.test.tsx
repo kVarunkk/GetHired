@@ -27,7 +27,7 @@ describe("CompanyMessageEmail (PLT-062)", () => {
     expect(html).toContain('src="https://acme.dev/logo.png"');
     for (const out of [html, text]) {
       expect(out).toContain("Acme");
-      expect(out).toContain("Sent via GetHired on behalf of Acme. Replies go to hr@acme.dev.");
+      expect(out).toContain("Sent by Acme. Replies go to hr@acme.dev.");
     }
   });
 
@@ -60,7 +60,7 @@ describe("CompanyMessageEmail (PLT-062)", () => {
     );
 
     expect(html).not.toContain("<img");
-    expect(text).toContain("Sent via GetHired on behalf of Acme.");
+    expect(text).toContain("Sent by Acme.");
     expect(text).not.toContain("Replies go to");
   });
 });

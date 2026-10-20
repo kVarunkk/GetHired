@@ -23,7 +23,7 @@ export default function NoteMentionEmail({
   const heading = `${authorName} mentioned you in a note on ${candidateFirstName}`;
 
   return (
-    <BaseEmailLayout previewText={heading}>
+    <BaseEmailLayout previewText="">
       <Text className="text-xl font-semibold">{heading}</Text>
       {jobTitle && <Text className="text-sm text-gray-500">{`For ${jobTitle}.`}</Text>}
 

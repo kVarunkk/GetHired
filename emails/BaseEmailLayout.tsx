@@ -16,11 +16,17 @@ import * as React from "react";
 interface BaseEmailLayoutProps {
   previewText: string;
   children: React.ReactNode;
+  /**
+   * Set for mail a company sends to a candidate: the company's name and logo
+   * replace the GetHired header and footer, so only one brand shows.
+   */
+  company?: { name: string; logoUrl?: string | null };
 }
 
 export const BaseEmailLayout = ({
   previewText,
   children,
+  company,
 }: BaseEmailLayoutProps) => {
   const containerPadding = "2.5rem";
 
@@ -32,71 +38,92 @@ export const BaseEmailLayout = ({
         <Body className="bg-gray-50 font-sans text-gray-800 main-body-bg">
           <Container className="mx-auto my-0 max-w-[600px] bg-white border border-gray-200 rounded-lg shadow-lg content-container-bg">
             <Section className="p-10" style={{ padding: containerPadding }}>
-              <Row>
-                <Column className="w-full">
-                  <Link href="https://gethired.devhub.co.in">
-                    <Img
-                      src="https://gethired.devhub.co.in/images/brand/short-light.png"
-                      width="50"
-                      alt="GetHired"
-                      className="max-w-[50px]"
-                    />
-                  </Link>
-                </Column>
-                <Column align="right">
-                  <Row align="right">
-                    <Column className="px-[8px]">
-                      <Link
-                        className="text-gray-800  [text-decoration:none]"
-                        href="https://gethired.devhub.co.in/jobs"
-                      >
-                        Jobs
-                      </Link>
-                    </Column>
-                    <Column className="px-[8px]">
-                      <Link
-                        className="text-gray-800  [text-decoration:none]"
-                        href="https://gethired.devhub.co.in/hire"
-                      >
-                        Hire
-                      </Link>
-                    </Column>
-                  </Row>
-                </Column>
-              </Row>
+              {company ? (
+                <Row>
+                  <Column className="w-full">
+                    {company.logoUrl && (
+                      <Img
+                        src={company.logoUrl}
+                        width="40"
+                        height="40"
+                        alt=""
+                        className="mb-2 rounded-md"
+                      />
+                    )}
+                    <Text className="m-0 text-base font-semibold">
+                      {company.name}
+                    </Text>
+                  </Column>
+                </Row>
+              ) : (
+                <Row>
+                  <Column className="w-full">
+                    <Link href="https://gethired.devhub.co.in">
+                      <Img
+                        src="https://gethired.devhub.co.in/images/brand/short-light.png"
+                        width="50"
+                        alt="GetHired"
+                        className="max-w-[50px]"
+                      />
+                    </Link>
+                  </Column>
+                  <Column align="right">
+                    <Row align="right">
+                      <Column className="px-[8px]">
+                        <Link
+                          className="text-gray-800  [text-decoration:none]"
+                          href="https://gethired.devhub.co.in/jobs"
+                        >
+                          Jobs
+                        </Link>
+                      </Column>
+                      <Column className="px-[8px]">
+                        <Link
+                          className="text-gray-800  [text-decoration:none]"
+                          href="https://gethired.devhub.co.in/hire"
+                        >
+                          Hire
+                        </Link>
+                      </Column>
+                    </Row>
+                  </Column>
+                </Row>
+              )}
 
               <Section className="py-4 text-color">{children}</Section>
 
-              <Section className="mt-8 pt-6 border-t border-gray-200 text-center border-color">
-                <Text className="text-xs text-gray-500 mb-2">
-                  &copy; {new Date().getFullYear()} GetHired DevHub. All rights
-                  reserved.
-                </Text>
-                <Text className="text-xs text-gray-500 mb-2">
-                  <Link
-                    href="https://gethired.devhub.co.in/privacy-policy"
-                    className="text-blue-600 underline"
-                  >
-                    Privacy Policy
-                  </Link>
-                  {" | "}
-                  <Link
-                    href="https://gethired.devhub.co.in/terms-of-service"
-                    className="text-blue-600 underline"
-                  >
-                    Terms of Service
-                  </Link>
-                </Text>
-                <Text className="text-xs text-gray-500">
-                  To no longer receive these, manage your preferences{" "}
-                  <Link
-                    href="https://gethired.devhub.co.in/settings"
-                    className="text-blue-600 underline"
-                  >
-                    here
-                  </Link>
-                </Text>
-              </Section>
+              {!company && (
+                <Section className="mt-8 pt-6 border-t border-gray-200 text-center border-color">
+                  <Text className="text-xs text-gray-500 mb-2">
+                    &copy; {new Date().getFullYear()} GetHired DevHub. All rights
+                    reserved.
+                  </Text>
+                  <Text className="text-xs text-gray-500 mb-2">
+                    <Link
+                      href="https://gethired.devhub.co.in/privacy-policy"
+                      className="text-blue-600 underline"
+                    >
+                      Privacy Policy
+                    </Link>
+                    {" | "}
+                    <Link
+                      href="https://gethired.devhub.co.in/terms-of-service"
+                      className="text-blue-600 underline"
+                    >
+                      Terms of Service
+                    </Link>
+                  </Text>
+                  <Text className="text-xs text-gray-500">
+                    To no longer receive these, manage your preferences{" "}
+                    <Link
+                      href="https://gethired.devhub.co.in/settings"
+                      className="text-blue-600 underline"
+                    >
+                      here
+                    </Link>
+                  </Text>
+                </Section>
+              )}
             </Section>
           </Container>
         </Body>

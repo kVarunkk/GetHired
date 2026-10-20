@@ -23,7 +23,7 @@ export default function WeeklyMatchesEmail({ companyName, jobs, settingsUrl }: W
   const heading = `${plural(total)} this week for ${companyName}`;
 
   return (
-    <BaseEmailLayout previewText={heading}>
+    <BaseEmailLayout previewText="">
       <Text className="text-xl font-semibold">{heading}</Text>
       {jobs.map((job) => (
         <Section key={job.url} className="mb-6">

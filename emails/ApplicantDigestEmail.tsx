@@ -24,7 +24,7 @@ export default function ApplicantDigestEmail({ companyName, kind, jobs, settings
   const heading = kind === "daily" ? `${count(total)} for ${companyName}` : `${count(total)} for ${jobs[0]?.title}`;
 
   return (
-    <BaseEmailLayout previewText={heading}>
+    <BaseEmailLayout previewText="">
       <Text className="text-xl font-semibold">{heading}</Text>
       {jobs.map((job) => (
         <Section key={job.url} className="mb-6">

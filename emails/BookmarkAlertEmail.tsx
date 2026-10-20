@@ -49,7 +49,7 @@ export const BookmarkAlertEmail = ({
   const jobsToDisplay = jobs.length > 0 ? jobs : mockJobs;
 
   return (
-    <BaseEmailLayout previewText={""}>
+    <BaseEmailLayout previewText="">
       <Heading className="text-2xl font-bold text-gray-800 my-6 text-color">
         Hi {userName}, your weekly job alert for your bookmark{" "}
         <Link href={bookmarkUrl}>{bookmarkName}</Link> is here!

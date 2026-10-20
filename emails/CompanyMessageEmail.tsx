@@ -40,7 +40,7 @@ export default function CompanyMessageEmail({
   return (
     <Html>
       <Head />
-      <Preview>{subject}</Preview>
+      <Preview>{""}</Preview>
       <Body style={{ backgroundColor: "#f9fafb", fontFamily: "Helvetica, Arial, sans-serif", margin: 0 }}>
         <Container
           style={{
@@ -65,7 +65,7 @@ export default function CompanyMessageEmail({
 
           <Section style={{ borderTop: "1px solid #e5e7eb", marginTop: "24px", paddingTop: "16px" }}>
             <Text style={muted}>
-              {`Sent via GetHired on behalf of ${companyName}.` +
+              {`Sent by ${companyName}.` +
                 (companyEmail ? ` Replies go to ${companyEmail}.` : "")}
             </Text>
           </Section>

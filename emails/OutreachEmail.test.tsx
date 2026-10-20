@@ -64,4 +64,14 @@ describe("OutreachEmail (ORT-023)", () => {
     const { text } = await both(<OutreachEmail {...PROPS} jobTitle={null} message="Hi" />);
     expect(text).not.toContain("About:");
   });
+
+  it("carries only the company's brand", async () => {
+    const { html, text } = await both(
+      <OutreachEmail {...PROPS} logoUrl="https://acme.dev/logo.png" message="Hi" />,
+    );
+
+    expect(html).toContain('src="https://acme.dev/logo.png"');
+    expect(html).not.toContain("images/brand/");
+    expect(text).not.toContain("GetHired");
+  });
 });

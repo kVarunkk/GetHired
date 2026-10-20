@@ -17,7 +17,7 @@ export const ApplicationStatusUpdateEmail = ({
   //   const previewText = `Update: Your application for ${jobTitle} at ${companyName} is now ${newStatus}.`;
 
   return (
-    <BaseEmailLayout previewText={""}>
+    <BaseEmailLayout previewText="">
       <Heading className="text-2xl font-bold text-gray-800 my-6">
         Application Status Update
       </Heading>

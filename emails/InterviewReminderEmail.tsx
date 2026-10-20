@@ -20,7 +20,7 @@ export default function InterviewReminderEmail({
   interviewUrl,
 }: InterviewReminderEmailProps) {
   return (
-    <BaseEmailLayout previewText={`Your AI interview for ${jobTitle} is due soon`}>
+    <BaseEmailLayout previewText="" company={{ name: companyName }}>
       <Text className="text-xl font-semibold">{`Your AI interview for ${jobTitle} is due soon`}</Text>
       <Text className="text-sm">
         {`${companyName} is waiting for your interview. It takes about ${durationMinutes} minutes, and the deadline is ${formatInterviewDeadline(deadlineAt)}.`}

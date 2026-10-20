@@ -23,10 +23,8 @@ describe("billing emails (BLT-094)", () => {
         canUseCredits={false}
       />,
     );
-    for (const out of [html, text]) {
-      expect(out).toContain("40 of 50 screenings");
-      expect(out).toContain(BILLING_URL);
-    }
+    expect(text).toContain("40 of 50 screenings");
+    for (const out of [html, text]) expect(out).toContain(BILLING_URL);
     expect(text).toMatch(/80% of your screenings/i);
   });
 

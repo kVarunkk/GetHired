@@ -161,3 +161,33 @@ describe("candidate emails never show a score", () => {
     expect(await text(node)).not.toMatch(/score|\/5\b|rating/i);
   });
 });
+
+describe("candidate interview emails", () => {
+  it("carry only the company's brand", async () => {
+    for (const email of [
+      <InterviewInviteEmail
+        key="invite"
+        firstName="Priya"
+        companyName="Acme"
+        jobTitle="Backend Engineer"
+        durationMinutes={15}
+        competencyNames={["System design"]}
+        deadlineAt={DEADLINE}
+        interviewUrl={URL}
+      />,
+      <InterviewReminderEmail
+        key="reminder"
+        companyName="Acme"
+        jobTitle="Backend Engineer"
+        durationMinutes={15}
+        deadlineAt={DEADLINE}
+        interviewUrl={URL}
+      />,
+      <InterviewExpiredEmail key="expired" audience="candidate" companyName="Acme" jobTitle="Backend Engineer" />,
+    ]) {
+      const html = await render(email);
+      expect(html).not.toContain("images/brand/");
+      expect(await text(email)).not.toContain("GetHired");
+    }
+  });
+});

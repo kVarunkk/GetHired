@@ -270,7 +270,7 @@ export const PaymentUpdateEmail = ({
   }
 
   return (
-    <BaseEmailLayout previewText={""}>
+    <BaseEmailLayout previewText="">
       <Heading
         className="text-3xl font-bold my-6"
         style={{

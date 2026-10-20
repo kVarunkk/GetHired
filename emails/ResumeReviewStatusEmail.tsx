@@ -16,7 +16,7 @@ export const ResumeReviewStatusEmail = ({
   const isSuccess = status === "success";
 
   return (
-    <BaseEmailLayout previewText={""}>
+    <BaseEmailLayout previewText="">
       <Heading className="text-2xl font-bold text-gray-800 my-6">
         {isSuccess ? "Resume Indexing Complete" : "Resume Parsing Update"}
       </Heading>

@@ -6,20 +6,18 @@ export const BILLING_URL = "https://gethired.devhub.co.in/company/billing";
 
 /** The shared frame of the company billing emails (BL-TASK-023). */
 export function BillingEmail({
-  previewText,
   heading,
   children,
   ctaLabel,
   ctaHref = BILLING_URL,
 }: {
-  previewText: string;
   heading: string;
   children: React.ReactNode;
   ctaLabel: string;
   ctaHref?: string;
 }) {
   return (
-    <BaseEmailLayout previewText={previewText}>
+    <BaseEmailLayout previewText="">
       <Heading className="text-2xl font-bold text-gray-800 my-6">{heading}</Heading>
       {children}
       <Section className="my-8">
