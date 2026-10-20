@@ -13,7 +13,6 @@ export type PlanChangedEmailProps = {
 
 export const PlanChangedEmail = ({ companyName, fromPlan, toPlan, effectiveAt, scheduled }: PlanChangedEmailProps) => (
   <BillingEmail
-    previewText={`${companyName}: ${fromPlan} → ${toPlan}`}
     heading={scheduled ? `Your plan changes to ${toPlan} on ${formatEmailDate(effectiveAt)}` : `You're now on ${toPlan}`}
     ctaLabel="See your plan"
   >

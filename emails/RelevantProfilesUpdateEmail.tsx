@@ -18,7 +18,7 @@ export const RelevantProfilesUpdateEmail = ({
   const isSuccess = status === "success";
 
   return (
-    <BaseEmailLayout previewText={""}>
+    <BaseEmailLayout previewText="">
       {/* --- Dynamic Heading --- */}
       <Heading className="text-2xl font-bold text-gray-800 my-6 ">
         {isSuccess

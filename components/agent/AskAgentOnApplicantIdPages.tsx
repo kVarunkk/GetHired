@@ -1,6 +1,7 @@
 "use client";
 
 import { AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import AgentHandoff from "./AgentHandoff";
 import AskAgentBox, { type AgentSuggestion } from "./AskAgentBox";
 
 // The applicant id pages' entry points to the job search agent (resume,
@@ -48,32 +49,19 @@ export function AskAgentAboutResume({ resume }: { resume: Resume }) {
   );
 }
 
-type Review = { id: string; name: string | null; jobId: string | null };
+type Review = { id: string; name: string | null };
 
 const reviewRef = (review: Review) =>
   `my resume review${review.name ? ` "${review.name}"` : ""} (review ${review.id})`;
 
-export function resumeReviewSuggestions(review: Review): AgentSuggestion[] {
-  const ref = reviewRef(review);
-  return [
-    // getResumeReview
-    { label: "Summarise this review", prompt: `Summarise ${ref}: the score and the overall feedback.` },
-    { label: "What should I fix first?", prompt: `Go through ${ref} and tell me what to fix first.` },
-    // findSimilarJobs
-    ...when(review.jobId !== null, {
-      label: "Similar jobs",
-      prompt: `Find jobs similar to the one in ${ref} (/jobs/${review.jobId}).`,
-    }),
-  ];
-}
-
+// The review's left pane is narrow, so it gets the small one-line handoff
+// instead of the full question box with chips.
 export function AskAgentAboutResumeReview({ review }: { review: Review }) {
   return (
-    <AskAgentBox
-      title="Ask the agent about this review"
-      placeholder="Rewrite my summary using these suggestions…"
+    <AgentHandoff
+      label="Ask the agent about this review"
+      placeholder="What should I fix first?…"
       basePath={AGENT_PATH}
-      suggestions={resumeReviewSuggestions(review)}
       toPrompt={(question) => `About ${reviewRef(review)}: ${question.trim()}`}
     />
   );

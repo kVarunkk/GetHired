@@ -21,7 +21,7 @@ export default function CompanyInviteEmail({
   const heading = `Join ${companyName} on GetHired`;
 
   return (
-    <BaseEmailLayout previewText={``}>
+    <BaseEmailLayout previewText="">
       <Text className="text-xl font-semibold">{heading}</Text>
       <Text className="text-sm">
         {`${inviterName} invited you to join ${companyName}'s hiring team on GetHired with the ${roleName} role.`}

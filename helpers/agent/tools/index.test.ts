@@ -22,6 +22,8 @@ describe("createAgentTools", () => {
         "listSavedJobs",
         "listApplications",
         "updateApplicationStatus",
+        "getApplicationForm",
+        "submitApplication",
         "listResumes",
         "setPrimaryResume",
         "requestResumeUpload",
@@ -57,7 +59,7 @@ describe("createAgentTools", () => {
     }
   });
 
-  it("asks for approval only for credit-spending or profile-changing tools (REQ-014)", () => {
+  it("asks for approval only for credit-spending, profile-changing or applying tools (REQ-014)", () => {
     const needingApproval = Object.keys(tools)
       .filter(
         (name) =>
@@ -68,7 +70,12 @@ describe("createAgentTools", () => {
       )
       .sort();
 
-    expect(needingApproval).toEqual(["completeOnboarding", "startResumeReview", "updateMyPreferences"]);
+    expect(needingApproval).toEqual([
+      "completeOnboarding",
+      "startResumeReview",
+      "submitApplication",
+      "updateMyPreferences",
+    ]);
   });
 
   it("leaves requestResumeUpload to the client (REQ-015)", () => {

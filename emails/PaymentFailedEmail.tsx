@@ -11,7 +11,6 @@ export type PaymentFailedEmailProps = {
 /** BL-REQ-013: sent on days 0, 3 and 6 of the grace period. */
 export const PaymentFailedEmail = ({ companyName, planName, graceUntil }: PaymentFailedEmailProps) => (
   <BillingEmail
-    previewText={`We couldn't renew ${companyName}'s ${planName} plan`}
     heading={`We couldn't take payment for your ${planName} plan`}
     ctaLabel="Update payment method"
   >

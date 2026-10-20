@@ -19,10 +19,8 @@ export const PromotionEmail = ({
   ctaLabel,
   gifPreviewImageUrl,
 }: PromotionEmailProps) => {
-  const previewText = ``;
-
   return (
-    <BaseEmailLayout previewText={previewText}>
+    <BaseEmailLayout previewText="">
       <Heading className="text-2xl font-bold text-gray-800 my-6 text-color">
         Hi {userName}!
       </Heading>

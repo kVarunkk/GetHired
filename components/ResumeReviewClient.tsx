@@ -150,7 +150,7 @@ export default function ResumeReviewClient({
         {review?.ai_response && !review.analysis_failed && (
           <div className="border-b p-4">
             <AskAgentAboutResumeReview
-              review={{ id: review.id, name: review.name, jobId: review.job_id }}
+              review={{ id: review.id, name: review.name }}
             />
           </div>
         )}

@@ -59,6 +59,8 @@ interface JobApplicationFormProps {
   /** CP-REQ-013: where the application started, and a `?ref=` tag (else from context). */
   source?: "applied" | "careers_page";
   sourceRef?: string;
+  /** Rendered under the step indicator, e.g. the agent handoff. */
+  belowSteps?: React.ReactNode;
 }
 
 export default function JobApplicationForm({
@@ -67,6 +69,7 @@ export default function JobApplicationForm({
   onSuccess,
   source,
   sourceRef,
+  belowSteps,
 }: JobApplicationFormProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
@@ -267,6 +270,8 @@ export default function JobApplicationForm({
           </span>
         </div>
       </div>
+
+      {belowSteps && <div className="px-4">{belowSteps}</div>}
 
       <div className="flex-1 overflow-y-auto">
         {step === 1 ? (

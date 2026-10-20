@@ -26,7 +26,7 @@ export default function InterviewInviteEmail({
   interviewUrl,
 }: InterviewInviteEmailProps) {
   return (
-    <BaseEmailLayout previewText={`${companyName} invited you to a ${durationMinutes}-minute AI interview`}>
+    <BaseEmailLayout previewText="" company={{ name: companyName }}>
       <Text className="text-xl font-semibold">{`Your AI interview for ${jobTitle}`}</Text>
       <Text className="text-sm">{firstName ? `Hi ${firstName},` : "Hi,"}</Text>
       <Text className="text-sm">

@@ -19,7 +19,7 @@ export default function InterviewCompletedCompanyEmail({
   scored,
 }: InterviewCompletedCompanyEmailProps) {
   return (
-    <BaseEmailLayout previewText={`${candidateName} finished the AI interview for ${jobTitle}`}>
+    <BaseEmailLayout previewText="">
       <Text className="text-xl font-semibold">{`${candidateName} finished the AI interview`}</Text>
       <Text className="text-sm">
         {scored

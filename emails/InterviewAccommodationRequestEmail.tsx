@@ -19,13 +19,7 @@ export default function InterviewAccommodationRequestEmail(props: InterviewAccom
   const accommodation = props.kind === "accommodation";
 
   return (
-    <BaseEmailLayout
-      previewText={
-        accommodation
-          ? `${candidateName} asked for an alternative interview format`
-          : `${candidateName} declined the AI interview`
-      }
-    >
+    <BaseEmailLayout previewText="">
       <Text className="text-xl font-semibold">
         {accommodation ? "An interview accommodation request" : "An AI interview was declined"}
       </Text>

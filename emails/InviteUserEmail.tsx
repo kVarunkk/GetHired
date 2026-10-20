@@ -10,7 +10,7 @@ export const InviteUserEmail = ({
   inviteUrl: string;
 }) => {
   return (
-    <BaseEmailLayout previewText={""}>
+    <BaseEmailLayout previewText="">
       <Heading className="text-2xl font-bold text-gray-800 my-6 ">
         You are Invited by {userName} to join GetHired
       </Heading>

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Button, Img, Link, Section, Text } from "react-email";
+import { Button, Link, Section, Text } from "react-email";
 import { linkify, paragraphs } from "@/helpers/outreach/linkify";
 import { BaseEmailLayout } from "./BaseEmailLayout";
 
@@ -31,9 +31,8 @@ export default function OutreachEmail({
   settingsUrl,
 }: OutreachEmailProps) {
   return (
-    <BaseEmailLayout previewText={`${companyName}: ${subject}`}>
+    <BaseEmailLayout previewText="" company={{ name: companyName, logoUrl }}>
       <Section className="mb-4">
-        {logoUrl && <Img src={logoUrl} width="40" height="40" alt="" className="mb-2 rounded-md" />}
         <Text className="m-0 text-xl font-semibold">{subject}</Text>
         {jobTitle && <Text className="m-0 text-sm text-gray-500">{`About: ${jobTitle}`}</Text>}
       </Section>
@@ -67,7 +66,7 @@ export default function OutreachEmail({
       </Section>
 
       <Text className="text-xs text-gray-500">
-        {`${companyName} found your public GetHired profile. Your contact details stay hidden until you answer Interested or apply. `}
+        {`${companyName} found your public profile. Your contact details stay hidden until you answer Interested or apply. `}
         <Link href={settingsUrl} className="text-gray-500 underline">
           Stop receiving outreach
         </Link>

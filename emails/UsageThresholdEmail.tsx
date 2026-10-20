@@ -27,7 +27,6 @@ export const UsageThresholdEmail = ({
   const full = threshold >= 100;
   return (
     <BillingEmail
-      previewText={`${companyName} has used ${used} of ${amount} ${label} this month`}
       heading={full ? `You've used all your ${label} this month` : `You've used ${threshold}% of your ${label}`}
       ctaLabel={full ? "Upgrade or buy credits" : "See your usage"}
     >

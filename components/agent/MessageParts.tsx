@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 import ResumeUploadWidget, { type ResumeUploadOutput } from "./ResumeUploadWidget";
 import { rehypeAnimateWords } from "./animate-words";
+import { ApplicationApprovalDetails } from "./ApplicationApprovalCard";
 import { inlineLink, isInAppHref, NEW_TAB } from "./links";
 import {
   ApplicantResults,
@@ -45,6 +46,8 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   listSavedJobs: { running: "Loading saved jobs…", done: "Loaded saved jobs", action: "load saved jobs" },
   listApplications: { running: "Loading applications…", done: "Loaded applications", action: "load applications" },
   updateApplicationStatus: { running: "Updating the application…", done: "Updated the application", action: "update the application" },
+  getApplicationForm: { running: "Reading the application form…", done: "Read the application form", action: "read the application form" },
+  submitApplication: { running: "Sending the application…", done: "Sent the application", action: "apply to the job" },
   listResumes: { running: "Loading resumes…", done: "Loaded resumes", action: "load resumes" },
   setPrimaryResume: { running: "Setting the primary resume…", done: "Set the primary resume", action: "set the primary resume" },
   requestResumeUpload: { running: "Waiting for your upload…", done: "Resume upload finished", action: "upload a resume" },
@@ -418,6 +421,8 @@ function approvalTitle(name: string, input: unknown) {
       return "Start a resume review? This uses 5 AI credits once the analysis succeeds.";
     case "updateMyPreferences":
       return "Update your job preferences?";
+    case "submitApplication":
+      return "Send this application? It uses 1 AI credit, and the company sees these answers.";
     case "completeOnboarding":
       return "Set up your profile with these details?";
     case "createJobPost":
@@ -505,6 +510,8 @@ function approvalDetails(name: string, input: unknown) {
   if (["setJobPostStatus", "deleteJobPost", "moveApplications", "sendOutreach"].includes(name)) return [];
   // The interview setup and invites have their own details (InterviewApprovalCard).
   if (["configureScreeningInterview", "inviteToInterview"].includes(name)) return [];
+  // Applications show a server preview with each question's own label (ApplicationApprovalDetails).
+  if (name === "submitApplication") return [];
   // Role changes show a server preview with the exact diff (RoleApprovalDetails).
   if (isRoleApprovalTool(name)) return [];
   return describeInput(input);
@@ -533,6 +540,7 @@ function ApprovalCard({
       {name === "sendOutreach" && <OutreachApprovalDetails input={part.input} />}
       {name === "configureScreeningInterview" && <InterviewConfigApprovalDetails input={part.input} />}
       {name === "inviteToInterview" && <InterviewInviteApprovalDetails input={part.input} />}
+      {name === "submitApplication" && <ApplicationApprovalDetails input={part.input} />}
       {isRoleApprovalTool(name) && <RoleApprovalDetails tool={name} input={part.input} />}
       {(details.length > 0 || isOnboarding) && (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
@@ -809,6 +817,22 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
             Review started.{" "}
             <Link {...NEW_TAB} href={result.url} className={inlineLink}>
               Open the review
+            </Link>
+          </>
+        }
+      />
+    );
+  }
+
+  if (name === "submitApplication" && result.applied === true && typeof result.url === "string") {
+    return (
+      <Step
+        tone="done"
+        label={
+          <>
+            Application sent.{" "}
+            <Link {...NEW_TAB} href={result.url} className={inlineLink}>
+              View the job
             </Link>
           </>
         }

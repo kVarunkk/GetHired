@@ -41,7 +41,7 @@ export default function OutreachReplyEmail({
     : `${candidateFirstName} isn't interested right now`;
 
   return (
-    <BaseEmailLayout previewText={heading}>
+    <BaseEmailLayout previewText="">
       <Text className="text-xl font-semibold">{heading}</Text>
       <Text className="text-sm text-gray-500">
         {`In reply to "${subject}"${jobTitle ? ` about ${jobTitle}` : ""}.`}

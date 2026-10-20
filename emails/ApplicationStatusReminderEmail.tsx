@@ -20,7 +20,7 @@ export const ApplicationStatusReminderEmail = ({
   appliedJobs,
 }: ApplicationStatusReminderEmailProps) => {
   return (
-    <BaseEmailLayout previewText={""}>
+    <BaseEmailLayout previewText="">
       <Heading className="text-2xl font-bold text-gray-800 my-6 text-color">
         Hi {userName},
       </Heading>

@@ -11,7 +11,6 @@ export type CreditsExpiringEmailProps = {
 /** Sent once, 30 days before a credit lot expires (BL-REQ-004). */
 export const CreditsExpiringEmail = ({ companyName, credits, expiresAt }: CreditsExpiringEmailProps) => (
   <BillingEmail
-    previewText={`${credits} credits expire on ${formatEmailDate(expiresAt)}`}
     heading={`${credits} credits expire on ${formatEmailDate(expiresAt)}`}
     ctaLabel="See your credits"
   >

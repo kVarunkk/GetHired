@@ -60,8 +60,9 @@ describe("buildSystemPrompt", () => {
     const prompt = build();
 
     expect(prompt).toContain("Never invent jobs, companies, or URLs");
-    expect(prompt).toContain("/jobs/<id>?apply=true");
-    expect(prompt).toContain("Never claim you applied");
+    expect(prompt).toContain("You can only apply to jobs on GetHired");
+    expect(prompt).toContain("never make up an answer to an application question");
+    expect(prompt).toContain("Only say you applied after the application was sent successfully");
     expect(prompt).toContain("updateMyPreferences");
     expect(prompt).toContain("saveMemory");
     expect(prompt).toContain("memoryId");

@@ -12,7 +12,7 @@ export const RelevantJobsSetupUpdateEmail = ({
   insufficientCredits: boolean;
 }) => {
   return (
-    <BaseEmailLayout previewText={""}>
+    <BaseEmailLayout previewText="">
       <Heading className="text-2xl font-bold text-gray-800 my-6 ">
         {insufficientCredits
           ? `Hi, ${userName}, please top up your AI credits to access your AI Smart Search Job Feed!`

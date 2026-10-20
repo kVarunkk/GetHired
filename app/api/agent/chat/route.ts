@@ -16,6 +16,7 @@ import { z } from "zod";
 import { internalError, readJson, requireAgentUser } from "@/helpers/agent/auth";
 import {
   AGENT_CONTEXT_WINDOW,
+  AGENT_CUT_OFF_MESSAGE,
   AGENT_FULL_TOOL_OUTPUT_TURNS,
   AGENT_MAX_MESSAGE_CHARS,
   AGENT_MAX_REGENERATIONS,
@@ -257,10 +258,17 @@ export async function POST(request: NextRequest) {
         const stopped = request.signal.aborted;
 
         // The safety filter blocked the reply: say so instead of ending empty
-        // or cut off. It's saved with the message.
+        // or cut off. It's saved with the message. A reply that had already
+        // started was cut off mid-answer (often a false positive such as
+        // Gemini's SPII check), so it isn't presented as a refusal.
         if (finishReason === "content-filter" && !stopped) {
+          const started = (await Promise.resolve(result.text).catch(() => "")).trim() !== "";
           writer.write({ type: "text-start", id: "content-filter" });
-          writer.write({ type: "text-delta", id: "content-filter", delta: role.contentFilterMessage });
+          writer.write({
+            type: "text-delta",
+            id: "content-filter",
+            delta: started ? AGENT_CUT_OFF_MESSAGE : role.contentFilterMessage,
+          });
           writer.write({ type: "text-end", id: "content-filter" });
         }
 
@@ -287,9 +295,10 @@ export async function POST(request: NextRequest) {
         // Skipped when the model failed, since there's no usage to report.
         const loggedReason = stopped ? "aborted" : finishReason;
         if (loggedReason && loggedReason !== "error") {
-          const [usage, steps] = await Promise.all([
+          const [usage, steps, rawFinishReason] = await Promise.all([
             Promise.resolve(result.totalUsage).catch(() => null),
             Promise.resolve(result.steps).catch(() => null),
+            Promise.resolve(result.rawFinishReason).catch(() => undefined),
           ]);
           if (usage) {
             after(() =>
@@ -301,6 +310,8 @@ export async function POST(request: NextRequest) {
                   model: AGENT_MODEL,
                   steps: steps?.length ?? null,
                   finish_reason: loggedReason,
+                  // Gemini's own reason (SAFETY, SPII, RECITATION…), to tell which filter fired.
+                  raw_finish_reason: rawFinishReason ?? null,
                   input_tokens: usage.inputTokens ?? null,
                   output_tokens: usage.outputTokens ?? null,
                   cached_input_tokens: usage.inputTokenDetails?.cacheReadTokens ?? null,

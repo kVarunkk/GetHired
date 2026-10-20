@@ -28,6 +28,9 @@ import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { mutate } from "swr";
 import { PROFILE_API_KEY } from "@/utils/utils";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import AgentHandoff from "./agent/AgentHandoff";
+import { AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import { applyHandoffPrompt } from "@/helpers/agent/handoff-prompts";
 
 export default function JobApplicationDialog({
   jobPost,
@@ -144,8 +147,8 @@ export default function JobApplicationDialog({
         drawerClassName="h-[85dvh] gap-0 overflow-hidden p-0"
       >
         <div className="flex flex-col md:flex-row h-full">
-          {/* left pane */}
-          <div className="flex-[0.4] sm:flex-[0.6] overflow-y-auto p-4 sm:p-6 bg-muted/30 border-b md:border-b-0 md:border-r">
+          {/* left pane: min-w-0 and overflow-wrap so long links and unbroken text in the JD wrap instead of widening the pane */}
+          <div className="min-w-0 flex-[0.4] sm:flex-[0.6] overflow-y-auto overflow-x-hidden p-4 sm:p-6 bg-muted/30 border-b md:border-b-0 md:border-r [overflow-wrap:anywhere]">
             <ResponsiveDialogHeader className="-mt-4 sm:-mt-6">
               <ResponsiveDialogTitle className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]">
                 Apply for {jobPost.job_name}
@@ -231,12 +234,28 @@ export default function JobApplicationDialog({
             </div>
           </div>
           {/* right pane */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">
             {userId && (
               <JobApplicationForm
                 jobPost={jobPost}
                 userId={userId}
                 onSuccess={jobApplicationFormSuccess}
+                belowSteps={
+                  <AgentHandoff
+                    label="Or let the agent fill this in and apply"
+                    placeholder="Anything to add? e.g. use my backend resume…"
+                    basePath={AGENT_PATH}
+                    allowEmpty
+                    toPrompt={(text) =>
+                      applyHandoffPrompt(text, {
+                        id: jobPost.id,
+                        title: jobPost.job_name,
+                        company: jobPost.company_name,
+                      })
+                    }
+                    onHandoff={() => setIsDialogOpen(false)}
+                  />
+                }
               />
             )}
           </div>

@@ -50,7 +50,7 @@ export const JobDigestEmail = ({
   const jobsToDisplay = jobs.length > 0 ? jobs : mockJobs;
 
   return (
-    <BaseEmailLayout previewText={""}>
+    <BaseEmailLayout previewText="">
       <Heading className="text-2xl font-bold text-gray-800 my-6 text-color">
         {insufficientCredits
           ? `Hi ${userName}, please top up your AI credits to receive personalized job matches!`

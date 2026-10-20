@@ -18,6 +18,7 @@ import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { agentTelemetry, flushAgentTraces } from "@/helpers/agent/telemetry";
 import {
   AGENT_CONTENT_FILTER_MESSAGE,
+  AGENT_CUT_OFF_MESSAGE,
   AGENT_DAILY_MESSAGE_CAP,
   AGENT_MAX_REGENERATIONS,
   AGENT_MAX_STEPS,
@@ -523,6 +524,7 @@ describe("POST /api/agent/chat: token usage", () => {
         model: AGENT_MODEL,
         steps: 2,
         finish_reason: "stop",
+        raw_finish_reason: null,
         input_tokens: 20,
         output_tokens: 10,
         cached_input_tokens: null,
@@ -808,6 +810,46 @@ describe("POST /api/agent/chat: guardrails (spec §14)", () => {
     expect(reply.role).toBe("assistant");
     expect(reply.parts).toContainEqual(
       expect.objectContaining({ type: "text", text: AGENT_CONTENT_FILTER_MESSAGE }),
+    );
+  });
+
+  it("says a reply was cut off, not refused, when the filter stops it partway", async () => {
+    queueSession();
+    model = new MockLanguageModelV4({
+      doStream: async () => ({
+        stream: new ReadableStream<LanguageModelV4StreamPart>({
+          start(controller) {
+            controller.enqueue({ type: "text-start", id: "t1" });
+            controller.enqueue({ type: "text-delta", id: "t1", delta: "I need your phone number and " });
+            controller.enqueue({ type: "text-end", id: "t1" });
+            controller.enqueue({
+              type: "finish",
+              finishReason: { unified: "content-filter", raw: "SPII" },
+              usage: {
+                inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+                outputTokens: { total: 5, text: 5, reasoning: undefined },
+              },
+            });
+            controller.close();
+          },
+        }),
+      }),
+    });
+    vi.mocked(google).mockReturnValue(model as never);
+
+    const res = await submit(text("u1", "user", "apply to this job for me"));
+    const body = await res.text();
+    await flushAfter();
+
+    expect(body).not.toContain(AGENT_CONTENT_FILTER_MESSAGE);
+    const reply = upserts(supabase).at(-1)![0];
+    expect(reply.parts).toContainEqual(
+      expect.objectContaining({ type: "text", text: AGENT_CUT_OFF_MESSAGE }),
+    );
+    expect(eventCaptureServer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        properties: expect.objectContaining({ finish_reason: "content-filter", raw_finish_reason: "SPII" }),
+      }),
     );
   });
 });

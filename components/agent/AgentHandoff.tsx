@@ -22,6 +22,7 @@ export default function AgentHandoff({
   basePath,
   toPrompt,
   onHandoff,
+  allowEmpty = false,
 }: {
   label: string;
   placeholder: string;
@@ -31,10 +32,13 @@ export default function AgentHandoff({
   toPrompt: (text: string) => string;
   /** Called before navigating, e.g. to close the dialog. */
   onHandoff?: () => void;
+  /** Lets it be sent with nothing typed, when the prompt makes sense alone. */
+  allowEmpty?: boolean;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
   const typing = text.trim().length > 0;
+  const canSend = typing || allowEmpty;
 
   return (
     <form
@@ -44,7 +48,7 @@ export default function AgentHandoff({
         // Dialog forms can sit around this one in the React tree (portals).
         event.preventDefault();
         event.stopPropagation();
-        if (!typing) return;
+        if (!canSend) return;
         const prompt = toPrompt(text);
         savePendingPrompt(prompt);
         onHandoff?.();
@@ -76,7 +80,7 @@ export default function AgentHandoff({
           variant="outline"
           aria-label="Open in the assistant"
           title="Open in the assistant"
-          disabled={!typing}
+          disabled={!canSend}
           className="h-9 w-9 shrink-0 transition-colors enabled:border-brand/40 enabled:text-brand"
         >
           <ArrowRight className="h-4 w-4" />

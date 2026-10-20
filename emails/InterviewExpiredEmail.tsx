@@ -18,7 +18,7 @@ export default function InterviewExpiredEmail(props: InterviewExpiredEmailProps)
 
   if (props.audience === "candidate") {
     return (
-      <BaseEmailLayout previewText={`Your AI interview for ${jobTitle} expired`}>
+      <BaseEmailLayout previewText="" company={{ name: companyName }}>
         <Text className="text-xl font-semibold">Your interview invite expired</Text>
         <Text className="text-sm">
           {`Your AI interview for ${jobTitle} at ${companyName} has expired. Your application is still with ${companyName}; they decide what happens next.`}
@@ -28,7 +28,7 @@ export default function InterviewExpiredEmail(props: InterviewExpiredEmailProps)
   }
 
   return (
-    <BaseEmailLayout previewText={`${props.candidateName}'s AI interview invite expired`}>
+    <BaseEmailLayout previewText="">
       <Text className="text-xl font-semibold">An interview invite expired</Text>
       <Text className="text-sm">
         {`${props.candidateName} didn't take the AI interview for ${jobTitle} before the deadline. You can extend it from their application.`}
