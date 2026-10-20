@@ -4,11 +4,30 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { LogIn, UserLock } from "lucide-react";
 import { cn } from "@/utils/utils";
+import SidebarLabel from "./SidebarLabel";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+// Centred content that never wraps while the sidebar width animates: the
+// label fades on one line and its width (and the gap before it) grows from
+// zero, so the icon is centred in the collapsed rail too.
+const sidebarButton = "w-full gap-0 overflow-hidden";
+
+function ButtonLabel({ open, children }: { open: boolean; children: string }) {
+  return (
+    <span
+      className={cn(
+        "overflow-hidden transition-[max-width,margin] duration-300 ease-in-out",
+        open ? "ml-2 max-w-24" : "ml-0 max-w-0",
+      )}
+    >
+      <SidebarLabel open={open}>{children}</SidebarLabel>
+    </span>
+  );
+}
 
 export function AuthButton({
   isMenuOpen,
@@ -34,11 +53,11 @@ export function AuthButton({
               asChild
               size="sm"
               variant={"outline"}
-              className={cn("w-full")}
+              className={cn(sidebarButton)}
             >
               <Link href="/auth/login" aria-label="Sign in">
                 <LogIn className="h-4 w-4" />
-                {isMenuOpen ? "Sign in" : ""}
+                <ButtonLabel open={isMenuOpen}>Sign in</ButtonLabel>
               </Link>
             </Button>
           </TooltipTrigger>
@@ -59,11 +78,11 @@ export function AuthButton({
               asChild
               size="sm"
               variant={"default"}
-              className={cn("w-full")}
+              className={cn(sidebarButton)}
             >
               <Link href="/auth/sign-up" aria-label="Sign up">
                 <UserLock className="h-4 w-4" />
-                {isMenuOpen ? "Sign up" : ""}
+                <ButtonLabel open={isMenuOpen}>Sign up</ButtonLabel>
               </Link>
             </Button>
           </TooltipTrigger>
