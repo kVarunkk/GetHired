@@ -8,6 +8,7 @@ import type { EntityNavItem } from "@/components/EntityNav";
 import PageHeader from "@/components/PageHeader";
 import ScreeningInterviewActions from "@/components/interviews/ScreeningInterviewActions";
 import StagePicker from "@/components/pipeline/StagePicker";
+import { can } from "@/helpers/companies/permissions";
 import {
   applicationPath,
   loadApplicationFrame,
@@ -32,7 +33,7 @@ export default async function ApplicationLayout({
     const { application_id } = await params;
     const frame = await loadApplicationFrame(application_id);
     if (!frame) notFound();
-    const { supabase, application, jobId } = frame;
+    const { supabase, company, application, jobId } = frame;
 
     // RLS: only the company's members can read its stages and templates.
     const companyId = application.job_postings?.company_id;
@@ -106,6 +107,7 @@ export default async function ApplicationLayout({
                     currentStageId={application.stage_id}
                     templates={templates ?? []}
                     hasOpenInterview={isOpenInterview(screeningInterview?.status)}
+                    canMove={can(company, "pipeline.move", jobId)}
                   />
                 )}
                 {interview.canManage && jobId && (

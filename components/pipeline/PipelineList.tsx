@@ -19,6 +19,7 @@ export default function PipelineList({
   answerQuestions = [],
   interviews,
   interviewInvite,
+  canMove = true,
 }: {
   data: (TApplicationServer & { stage_id: string | null })[];
   jobPostId: string;
@@ -33,6 +34,8 @@ export default function PipelineList({
   interviews?: Record<string, InterviewSummary>;
   /** SIT-062: bulk invites, when the member has interviews.manage (on or off). */
   interviewInvite?: { durationMinutes: number; enabled: boolean };
+  /** pipeline.move on the job. Without it the bulk moves are locked. */
+  canMove?: boolean;
 }) {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
@@ -48,6 +51,7 @@ export default function PipelineList({
         stageIdOf={(id) => stageIds.get(id) ?? null}
         interviewStatusOf={(id) => interviews?.[id]?.status ?? null}
         interviewInvite={interviewInvite && { jobPostId, ...interviewInvite }}
+        canMove={canMove}
         nameOf={(id) => names.get(id) ?? "Applicant"}
         onDone={() => setRowSelection({})}
       />

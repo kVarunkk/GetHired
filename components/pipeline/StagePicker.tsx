@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import RoleLocked from "@/components/team/RoleLocked";
+import { forbiddenMessage } from "@/helpers/companies/permissions";
 import {
   changesCandidateStatus,
   statusForKind,
@@ -38,6 +40,7 @@ export default function StagePicker({
   currentStageId,
   templates = [],
   hasOpenInterview = false,
+  canMove = true,
 }: {
   applicationId: string;
   /** Active stages, in position order. */
@@ -47,6 +50,8 @@ export default function StagePicker({
   templates?: TemplateOption[];
   /** An open AI interview invite, which a move to Rejected or Hired cancels. */
   hasOpenInterview?: boolean;
+  /** Without pipeline.move on the job the stage shows, locked. */
+  canMove?: boolean;
 }) {
   const router = useRouter();
   const [current, setCurrent] = useState(currentStageId ?? "");
@@ -98,21 +103,25 @@ export default function StagePicker({
     else void move(target);
   };
 
+  const select = (
+    <Select value={current} onValueChange={choose} disabled={!canMove || isMoving || pending !== null}>
+      <SelectTrigger className={cn("w-[180px]", isMoving && "opacity-50")} aria-label="Stage">
+        <SelectValue placeholder="Choose a stage" />
+      </SelectTrigger>
+      <SelectContent>
+        {stages.map((stage) => (
+          <SelectItem key={stage.id} value={stage.id}>
+            {stage.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm font-medium">Stage</span>
-      <Select value={current} onValueChange={choose} disabled={isMoving || pending !== null}>
-        <SelectTrigger className={cn("w-[180px]", isMoving && "opacity-50")} aria-label="Stage">
-          <SelectValue placeholder="Choose a stage" />
-        </SelectTrigger>
-        <SelectContent>
-          {stages.map((stage) => (
-            <SelectItem key={stage.id} value={stage.id}>
-              {stage.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {canMove ? select : <RoleLocked reason={forbiddenMessage("pipeline.move")}>{select}</RoleLocked>}
       {isMoving && (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Moving" />
       )}

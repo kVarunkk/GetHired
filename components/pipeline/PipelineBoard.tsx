@@ -36,6 +36,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import RoleLocked from "@/components/team/RoleLocked";
+import { forbiddenMessage } from "@/helpers/companies/permissions";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { changesCandidateStatus } from "@/helpers/pipeline/status-map";
 import { PostHogEvent } from "@/utils/types";
@@ -60,11 +62,14 @@ export default function PipelineBoard({
   jobPostId,
   initial,
   templates = [],
+  canMove = true,
 }: {
   jobPostId: string;
   initial: PipelineBoardData;
   /** The company's email templates, for the move dialog. */
   templates?: TemplateOption[];
+  /** Without pipeline.move on the job the cards can't be moved. */
+  canMove?: boolean;
 }) {
   const [board, setBoard] = useState(initial);
   const [pending, setPending] = useState<PendingMove | null>(null);
@@ -129,7 +134,7 @@ export default function PipelineBoard({
   const requestMove = (appId: string, stageId: string | null) => {
     const app = appById.get(appId);
     const stage = stageId ? stageById.get(stageId) : undefined;
-    if (!app || !stage || app.stageId === stage.id) return;
+    if (!canMove || !app || !stage || app.stageId === stage.id) return;
     const fromKind = (app.stageId && stageById.get(app.stageId)?.kind) || null;
     if (changesCandidateStatus(fromKind, stage.kind)) setPending({ app, stage });
     else void commit({ app, stage });
@@ -153,7 +158,7 @@ export default function PipelineBoard({
   if (!isDesktop) {
     return (
       <>
-        <MobileBoard board={board} cardsIn={cardsIn} onMove={requestMove} />
+        <MobileBoard board={board} cardsIn={cardsIn} onMove={requestMove} canMove={canMove} />
         {dialog}
       </>
     );
@@ -167,6 +172,7 @@ export default function PipelineBoard({
         appName={(id) => appById.get(id)?.name ?? "Application"}
         stageName={(id) => (id && stageById.get(id)?.name) || null}
         onMove={requestMove}
+        canMove={canMove}
       />
       {dialog}
     </>
@@ -177,7 +183,10 @@ type BoardProps = {
   board: PipelineBoardData;
   cardsIn: (stageId: string) => BoardApplication[];
   onMove: (appId: string, stageId: string | null) => void;
+  canMove: boolean;
 };
+
+const MOVE_LOCKED = forbiddenMessage("pipeline.move");
 
 function DesktopBoard({
   board,
@@ -185,6 +194,7 @@ function DesktopBoard({
   appName,
   stageName,
   onMove,
+  canMove,
 }: BoardProps & {
   appName: (id: string) => string;
   stageName: (id: string | null) => string | null;
@@ -233,6 +243,7 @@ function DesktopBoard({
             index={index}
             cards={cardsIn(stage.id)}
             total={board.truncated?.[stage.id]}
+            canMove={canMove}
           />
         ))}
       </div>
@@ -245,12 +256,14 @@ function BoardColumn({
   index,
   cards,
   total,
+  canMove,
 }: {
   stage: BoardStage;
   index: number;
   cards: BoardApplication[];
   /** Set when the column shows only the newest cards. */
   total?: number;
+  canMove: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id, data: { stageId: stage.id } });
 
@@ -271,7 +284,7 @@ function BoardColumn({
       <SortableContext items={cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
         <div className="flex min-h-16 flex-col gap-2">
           {cards.map((card) => (
-            <BoardCard key={card.id} card={card} />
+            <BoardCard key={card.id} card={card} canMove={canMove} />
           ))}
         </div>
       </SortableContext>
@@ -310,9 +323,28 @@ function CardDetails({ card }: { card: BoardApplication }) {
   );
 }
 
-function BoardCard({ card }: { card: BoardApplication }) {
+function BoardCard({ card, canMove }: { card: BoardApplication; canMove: boolean }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({ id: card.id, data: { stageId: card.stageId } });
+    useSortable({ id: card.id, data: { stageId: card.stageId }, disabled: !canMove });
+
+  const handle = canMove ? (
+    <button
+      ref={setActivatorNodeRef}
+      type="button"
+      {...attributes}
+      {...listeners}
+      aria-label={`Move ${card.name}`}
+      className="mt-0.5 cursor-grab touch-none text-muted-foreground"
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  ) : (
+    <RoleLocked reason={MOVE_LOCKED}>
+      <button type="button" disabled aria-label={`Move ${card.name}`} className="mt-0.5 text-muted-foreground/50">
+        <GripVertical className="h-4 w-4" />
+      </button>
+    </RoleLocked>
+  );
 
   return (
     <div
@@ -324,16 +356,7 @@ function BoardCard({ card }: { card: BoardApplication }) {
         isDragging && "relative z-10 opacity-80",
       )}
     >
-      <button
-        ref={setActivatorNodeRef}
-        type="button"
-        {...attributes}
-        {...listeners}
-        aria-label={`Move ${card.name}`}
-        className="mt-0.5 cursor-grab touch-none text-muted-foreground"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
+      {handle}
       <div className="min-w-0 flex-1">
         <Link href={`/company/applications/${card.id}`} className="block truncate font-medium hover:underline">
           {card.name}
@@ -344,7 +367,7 @@ function BoardCard({ card }: { card: BoardApplication }) {
   );
 }
 
-function MobileBoard({ board, cardsIn, onMove }: BoardProps) {
+function MobileBoard({ board, cardsIn, onMove, canMove }: BoardProps) {
   const [stageId, setStageId] = useState(board.stages[0]?.id ?? "");
   const cards = cardsIn(stageId);
   const total = board.truncated?.[stageId];
@@ -381,20 +404,31 @@ function MobileBoard({ board, cardsIn, onMove }: BoardProps) {
                 </Link>
                 <CardDetails card={card} />
               </div>
-              <Select value="" onValueChange={(id) => onMove(card.id, id)}>
-                <SelectTrigger className="h-8 w-[120px]" aria-label={`Move ${card.name} to…`}>
-                  <SelectValue placeholder="Move to…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {board.stages
-                    .filter((s) => s.id !== stageId)
-                    .map((stage) => (
-                      <SelectItem key={stage.id} value={stage.id}>
-                        {stage.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              {canMove ? (
+                <Select value="" onValueChange={(id) => onMove(card.id, id)}>
+                  <SelectTrigger className="h-8 w-[120px]" aria-label={`Move ${card.name} to…`}>
+                    <SelectValue placeholder="Move to…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {board.stages
+                      .filter((s) => s.id !== stageId)
+                      .map((stage) => (
+                        <SelectItem key={stage.id} value={stage.id}>
+                          {stage.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <RoleLocked reason={MOVE_LOCKED}>
+                  <Select value="" disabled>
+                    <SelectTrigger className="h-8 w-[120px]" aria-label={`Move ${card.name} to…`}>
+                      <SelectValue placeholder="Move to…" />
+                    </SelectTrigger>
+                    <SelectContent />
+                  </Select>
+                </RoleLocked>
+              )}
             </li>
           ))}
         </ul>

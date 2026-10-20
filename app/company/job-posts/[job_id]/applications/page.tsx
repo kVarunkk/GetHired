@@ -64,6 +64,7 @@ export default async function JobApplicationsPage({
     if (!job) notFound();
 
     const canViewInterviews = can(company, "interviews.view", job.id);
+    const canMove = can(company, "pipeline.move", job.id);
     const [{ data: stages, error: stagesError }, { data: templates }, funnel, screeningCap, interviewData] = await Promise.all([
       supabase
         .from("pipeline_stages")
@@ -140,7 +141,12 @@ export default async function JobApplicationsPage({
         {funnel && funnel.total > 0 && <FunnelStrip stages={funnel.stages} />}
 
         {board ? (
-          <PipelineBoard jobPostId={job.id} initial={board} templates={templates ?? []} />
+          <PipelineBoard
+            jobPostId={job.id}
+            initial={board}
+            templates={templates ?? []}
+            canMove={canMove}
+          />
         ) : (
           <PipelineList
             data={applications}
@@ -151,6 +157,7 @@ export default async function JobApplicationsPage({
             answerQuestions={answerFilterQuestions(readApplicationForm(job.application_form, job.questions))}
             interviews={showInterviews ? interviews : undefined}
             interviewInvite={interviewInvite}
+            canMove={canMove}
           />
         )}
       </div>

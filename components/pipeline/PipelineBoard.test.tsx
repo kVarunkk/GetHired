@@ -45,10 +45,12 @@ vi.mock("@/components/ui/select", () => {
     Select: ({
       value,
       onValueChange,
+      disabled,
       children,
     }: {
       value: string;
-      onValueChange: (v: string) => void;
+      onValueChange?: (v: string) => void;
+      disabled?: boolean;
       children: ReactNode;
     }) => {
       const trigger = Children.toArray(children).find(
@@ -58,7 +60,8 @@ vi.mock("@/components/ui/select", () => {
         <select
           aria-label={trigger?.props["aria-label"]}
           value={value}
-          onChange={(e) => onValueChange(e.target.value)}
+          disabled={disabled}
+          onChange={(e) => onValueChange?.(e.target.value)}
         >
           <option value="" />
           {children}
@@ -398,5 +401,36 @@ describe("PipelineBoard below md (PLT-045)", () => {
 
     expect(screen.getByRole("dialog", { name: "Move to Rejected" })).toBeInTheDocument();
     expect(moveApplicationsAction).not.toHaveBeenCalled();
+  });
+});
+
+describe("PipelineBoard without pipeline.move", () => {
+  it("locks the drag handles, so the keyboard can't move a card", async () => {
+    render(
+      <PipelineBoard
+        jobPostId={PIPELINE_JOB.id}
+        initial={boardOf([cardOf(1, { name: "Priya Sharma", stageId: stageOf("screening").id })])}
+        canMove={false}
+      />,
+    );
+
+    expect(handle("Priya Sharma")).toBeDisabled();
+    await keyboardMoveRight("Priya Sharma");
+
+    expect(moveApplicationsAction).not.toHaveBeenCalled();
+    expect(within(column("Screening")).getByText("Priya Sharma")).toBeInTheDocument();
+  });
+
+  it("locks the Move to… menu below md", () => {
+    setViewport(false);
+    render(
+      <PipelineBoard
+        jobPostId={PIPELINE_JOB.id}
+        initial={boardOf([cardOf(1, { name: "Priya Sharma" })])}
+        canMove={false}
+      />,
+    );
+
+    expect(screen.getByRole("combobox", { name: "Move Priya Sharma to…" })).toBeDisabled();
   });
 });
