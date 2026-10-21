@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUp, Brain } from "lucide-react";
 import MessageParts from "@/components/agent/MessageParts";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { agentPromptHref, savePendingPrompt } from "@/helpers/agent/prompt-draft";
+import {
+  COMPANY_AGENT_PATH,
+  agentPromptHref,
+  savePendingPrompt,
+} from "@/helpers/agent/prompt-draft";
+import { createClient } from "@/lib/supabase/client";
 import { APPLICANT_DEMO, type AgentDemo } from "./agent-demos";
 
 // A sample agent conversation for a landing-page hero. It renders the
@@ -18,9 +23,43 @@ import { APPLICANT_DEMO, type AgentDemo } from "./agent-demos";
 
 const noop = () => {};
 
+/**
+ * The login page for a signed-out visitor, returning to `href` afterwards.
+ * Linking there directly matters: going through the agent would make the
+ * middleware redirect to login, and the client router would cache that
+ * redirect for the agent's path, so the soft push back to it after login
+ * would land on the login page again.
+ */
+function loginHref(agentPath: string, href: string) {
+  const params = new URLSearchParams();
+  if (agentPath === COMPANY_AGENT_PATH) params.set("company", "true");
+  params.set("returnTo", href);
+  return `/auth/login?${params}`;
+}
+
 export default function AgentHeroDemo({ demo = APPLICANT_DEMO }: { demo?: AgentDemo }) {
   const router = useRouter();
   const [input, setInput] = useState("");
+  // null until the session is read (from cookies, no request).
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    createClient()
+      .auth.getSession()
+      .then(({ data }) => {
+        if (!cancelled) setSignedIn(!!data.session);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hrefFor = (text: string) => {
+    const href = agentPromptHref(text, demo.agentPath);
+    return signedIn === false ? loginHref(demo.agentPath, href) : href;
+  };
 
   return (
     <section
@@ -35,7 +74,7 @@ export default function AgentHeroDemo({ demo = APPLICANT_DEMO }: { demo?: AgentD
           size="sm"
           className="text-muted-foreground hover:text-foreground"
         >
-          <Link href={demo.agentPath}>
+          <Link href={hrefFor("")} prefetch={false}>
             <Brain className="h-4 w-4" />
             Memories
           </Link>
@@ -63,7 +102,8 @@ export default function AgentHeroDemo({ demo = APPLICANT_DEMO }: { demo?: AgentD
                   {demo.suggestions.map((suggestion) => (
                     <Link
                       key={suggestion}
-                      href={agentPromptHref(suggestion, demo.agentPath)}
+                      href={hrefFor(suggestion)}
+                      prefetch={false}
                       onClick={() => savePendingPrompt(suggestion)}
                       className="rounded-full border px-3.5 py-1.5 text-left text-sm transition-colors hover:border-brand/40 hover:bg-brandSoft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
                     >
@@ -83,7 +123,7 @@ export default function AgentHeroDemo({ demo = APPLICANT_DEMO }: { demo?: AgentD
           event.preventDefault();
           // Saved too, so the text survives a detour through login.
           savePendingPrompt(input);
-          router.push(agentPromptHref(input, demo.agentPath));
+          router.push(hrefFor(input));
         }}
       >
         <div className="mx-auto flex max-w-[46rem] items-end gap-2 rounded-2xl border bg-background p-2 shadow-sm transition-colors focus-within:border-foreground/30">

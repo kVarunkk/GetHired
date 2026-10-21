@@ -24,6 +24,7 @@ import { useProgress } from "react-transition-progress";
 import GoogleAuthBtn from "./GoogleAuthBtn";
 import { COMPANY_HOME, homePathFor, safeReturnPath } from "@/helpers/user/home-path";
 import { mutate } from "swr";
+import { clearRouterCacheAction } from "@/app/actions/clear-router-cache";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -57,10 +58,18 @@ export function LoginForm({
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
+      const [{ data, error }] = await Promise.all([
+        supabase.auth.signInWithPassword({
+          email: values.email,
+          password: values.password,
+        }),
+        // The client router kept what it cached while signed out: for a
+        // prefetched protected page (e.g. the landing banner's /agent link),
+        // the middleware's redirect to login, which the push below would replay,
+        // also for /agent?prompt=…. Cleared while still signed out, because once
+        // signed in the middleware redirects this request away from /auth/login.
+        clearRouterCacheAction(),
+      ]);
       if (error) throw error;
       form.reset();
       // The signed-out profile (and anything else per-user) is still cached by SWR
