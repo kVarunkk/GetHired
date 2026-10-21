@@ -8,6 +8,11 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { actorName } from "@/helpers/pipeline/move";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Email Templates",
+};
 
 /**
  * Settings → Email templates (PL-TASK-032): what candidates get when they're

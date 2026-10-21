@@ -25,6 +25,11 @@ import type { AllProfileWithRelations } from "@/utils/types";
 import type { ResumeSectionsPublic } from "@/utils/types/outreach.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Candidate Profile",
+};
 
 // CACHE 1: the directory profile (OR-REQ-010), identical for every company:
 // directory columns and the scrubbed resume sections, never contact details

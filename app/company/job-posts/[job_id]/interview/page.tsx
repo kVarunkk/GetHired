@@ -10,6 +10,11 @@ import { can } from "@/helpers/companies/permissions";
 import { getInterviewConfig } from "@/helpers/interview/screening/config";
 import { countUninvitedAboveThreshold, getInterviewFunnel } from "@/helpers/interview/screening/funnel";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "AI Interview",
+};
 
 /**
  * A job's AI interview (SIT-060/061): the funnel and the config, for

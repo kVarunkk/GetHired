@@ -12,6 +12,11 @@ import { listRoles } from "@/helpers/companies/list-roles";
 import { inviteRoleOptions } from "@/helpers/team/invite-roles";
 import { listTeam } from "@/helpers/team/list-team";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Team",
+};
 
 export const dynamic = "force-dynamic";
 

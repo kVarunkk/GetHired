@@ -13,6 +13,13 @@ import { listCompanyOutreach } from "@/helpers/outreach/list";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
 import type { OutreachStatus } from "@/utils/types/outreach.types";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Outreach",
+  description:
+    "Messages to candidates in the talent pool.",
+};
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

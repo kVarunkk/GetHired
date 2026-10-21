@@ -4,6 +4,11 @@ import SectionHeader from "@/components/SectionHeader";
 import NotesPanel from "@/components/pipeline/NotesPanel";
 import { loadApplicationFrame } from "@/helpers/applications/application-page";
 import { listNotes } from "@/helpers/pipeline/notes";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Notes",
+};
 
 /** An application's Notes section. */
 export default async function ApplicationNotesPage({ params }: { params: Promise<{ application_id: string }> }) {

@@ -13,6 +13,11 @@ import { loadSharedSignals, markSharedSignalsViewed } from "@/helpers/applicatio
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 import type { TApplicationStatus } from "@/utils/types";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Candidate",
+};
 
 /** An application's Candidate section: who applied, their resume and what they shared. */
 export default async function ApplicationCandidatePage({ params }: { params: Promise<{ application_id: string }> }) {

@@ -3,6 +3,14 @@ import CreateApiKeyDialog from "@/components/CreateApiKeyDialog";
 import ErrorComponent from "@/components/Error";
 import PageHeader from "@/components/PageHeader";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "API Keys",
+  description:
+    "Create API keys for MCP clients, CLI tools, and external integrations.",
+  robots: { index: false, follow: false },
+};
 
 export default async function ApiKeysPage() {
   try {

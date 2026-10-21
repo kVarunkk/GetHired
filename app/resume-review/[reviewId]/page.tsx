@@ -3,6 +3,12 @@ import ErrorComponent from "@/components/Error";
 import ResumeReviewClient from "@/components/ResumeReviewClient";
 import { notFound } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Resume Review",
+  robots: { index: false, follow: false },
+};
 /**
  * SERVER COMPONENT: Resume Review Detail Page
  * Path: /resume-review/[reviewId]?job_id=xxx

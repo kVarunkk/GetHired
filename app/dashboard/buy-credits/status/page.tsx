@@ -19,6 +19,12 @@ import { getDodoClient } from "@/lib/dodo/initialize";
 import { Payment } from "dodopayments/resources/payments.mjs";
 import { formatCurrency } from "@/utils/utils";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceBtn";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Payment Status",
+  robots: { index: false, follow: false },
+};
 
 export default async function CreditsStatusPage({
   searchParams,

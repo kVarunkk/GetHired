@@ -9,6 +9,11 @@ import { toSearchParams } from "@/helpers/careers/params";
 import { parseCareersFilters, searchCompanyJobs, toSearchView } from "@/helpers/careers/search-company-jobs";
 import { careersPath } from "@/helpers/careers/slug";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Careers Page Preview",
+};
 
 export const dynamic = "force-dynamic";
 

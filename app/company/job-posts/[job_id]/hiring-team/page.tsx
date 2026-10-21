@@ -7,6 +7,11 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { listJobHiringTeam } from "@/helpers/team/list-job-hiring-team";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Hiring Team",
+};
 
 /**
  * RP-REQ-011: a job's hiring team, for jobs.assign on this job only. A section

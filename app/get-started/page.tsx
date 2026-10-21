@@ -4,6 +4,19 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { safeReturnPath } from "@/helpers/user/home-path";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}): Promise<Metadata> {
+  const { company } = await searchParams;
+  return {
+    title: company === "true" ? "Set Up Your Company" : "Complete Your Profile",
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function GetStartedPage({
   searchParams,

@@ -9,6 +9,11 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { listRoles } from "@/helpers/companies/list-roles";
 import { can } from "@/helpers/companies/permissions";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Roles",
+};
 
 export const dynamic = "force-dynamic";
 

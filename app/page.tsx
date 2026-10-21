@@ -7,6 +7,23 @@ import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
 import { getPlatformStats } from "@/utils/platform-stats";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: { absolute: "Find Tech & Remote Jobs | GetHired" },
+  description:
+    "Find developer and tech jobs, including remote roles. Search current openings by role and location, then use GetHired's AI tools to focus your job search.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "GetHired",
+    title: "Find Tech & Remote Jobs | GetHired",
+    description:
+      "Search developer and tech jobs, including remote roles, and use AI tools to focus your job search.",
+    url: "/",
+    images: ["/opengraph-image.jpg"],
+  },
+};
 
 export const revalidate = 86400;
 export const dynamic = "force-static";

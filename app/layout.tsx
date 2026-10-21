@@ -22,23 +22,17 @@ export const metadata: Metadata = {
   description:
     "Find developer and tech jobs, including remote roles. Search current openings by role and location, then use GetHired's AI tools to focus your job search.",
   metadataBase: new URL("https://gethired.devhub.co.in"),
-  alternates: {
-    canonical: "/",
-  },
+  // Site-wide defaults only. No canonical, URL, title or description here:
+  // every page inherits these, and Next fills og:title/og:description (and
+  // Twitter's) from the page's own title and description only when the
+  // inherited openGraph leaves them out. The homepage's are in app/page.tsx.
   openGraph: {
     type: "website",
     siteName: "GetHired",
-    title: "Find Tech & Remote Jobs | GetHired",
-    description:
-      "Search developer and tech jobs, including remote roles, and use AI tools to focus your job search.",
-    url: "/",
     images: ["/opengraph-image.jpg"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Find Tech & Remote Jobs | GetHired",
-    description:
-      "Search developer and tech jobs, including remote roles, and use AI tools to focus your job search.",
     images: ["/opengraph-image.jpg"],
   },
   robots: {

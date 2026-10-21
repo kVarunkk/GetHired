@@ -9,6 +9,11 @@ import { can } from "@/helpers/companies/permissions";
 import { emptyApplicationForm } from "@/helpers/jobs/application-form-schema";
 import { QUESTION_SETS_PATH } from "@/helpers/jobs/question-sets";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "New Question Set",
+};
 
 export const dynamic = "force-dynamic";
 

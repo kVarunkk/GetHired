@@ -17,6 +17,11 @@ import { getCompanyOutreach, type CompanyOutreachDetail } from "@/helpers/outrea
 import { isOpen } from "@/helpers/outreach/list";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Outreach Message",
+};
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });

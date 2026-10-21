@@ -5,6 +5,11 @@ import NotificationSettings from "@/components/pipeline/NotificationSettings";
 import SettingsCard from "@/components/pipeline/SettingsCard";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Notification Settings",
+};
 
 /**
  * Settings → Notifications (PL-TASK-040): the new-applicant and weekly-match

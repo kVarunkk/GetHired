@@ -8,6 +8,11 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can, canAny } from "@/helpers/companies/permissions";
 import { listCompanyHiringTeams } from "@/helpers/team/list-company-hiring-teams";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Hiring Teams",
+};
 
 export const dynamic = "force-dynamic";
 

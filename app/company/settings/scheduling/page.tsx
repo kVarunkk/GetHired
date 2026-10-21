@@ -5,6 +5,11 @@ import SchedulingLinkForm from "@/components/pipeline/SchedulingLinkForm";
 import SettingsCard from "@/components/pipeline/SettingsCard";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Scheduling Link",
+};
 
 /**
  * Settings → Scheduling link (PL-TASK-040). Read-only without

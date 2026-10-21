@@ -7,6 +7,13 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { formFromLegacyQuestions } from "@/helpers/jobs/application-form-schema";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "New Job Post",
+  description:
+    "Fill in the details for your new job opening.",
+};
 
 export const dynamic = "force-dynamic";
 

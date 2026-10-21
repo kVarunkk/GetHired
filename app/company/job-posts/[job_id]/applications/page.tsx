@@ -20,6 +20,11 @@ import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-column
 import { createClient } from "@/lib/supabase/server";
 import type { PipelineBoardData } from "@/utils/types/pipeline.types";
 import { cn } from "@/utils/utils";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Applications",
+};
 
 /**
  * A job's applications (PL-TASK-004, PL-TASK-010): the funnel strip and the

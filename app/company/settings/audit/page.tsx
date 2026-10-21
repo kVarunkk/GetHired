@@ -10,6 +10,11 @@ import { listAudit } from "@/helpers/companies/list-audit";
 import { can } from "@/helpers/companies/permissions";
 import { listTeam } from "@/helpers/team/list-team";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Audit Log",
+};
 
 export const dynamic = "force-dynamic";
 

@@ -13,6 +13,13 @@ import type { SuggestedTier } from "@/helpers/billing/errors";
 import { listTalentLists } from "@/helpers/pipeline/talent-lists";
 import { can, canAny } from "@/helpers/companies/permissions";
 import { AskAgentAboutProfiles } from "@/components/agent/recruiter/AskAgentOnMainPages";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Profiles",
+  description:
+    "Candidates in the talent pool. Search, save them to lists and reach out.",
+};
 
 export default async function ProfilesPage({
   searchParams,

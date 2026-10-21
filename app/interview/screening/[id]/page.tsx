@@ -4,6 +4,12 @@ import ErrorComponent from "@/components/Error";
 import ScreeningInterviewView from "@/components/interviews/ScreeningInterviewView";
 import { getMyScreeningInterview } from "@/helpers/interview/screening/my-interviews";
 import { isUuid } from "@/helpers/agent/auth";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Screening Interview",
+  robots: { index: false, follow: false },
+};
 
 /**
  * The candidate's screening interview (SIT-053). Applicant-only (middleware).

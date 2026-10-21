@@ -17,6 +17,14 @@ import AskApplicantAgent from "@/components/agent/AskApplicantAgent";
 import PageHeader from "@/components/PageHeader";
 import MyScreeningInterviews from "@/components/interviews/MyScreeningInterviews";
 import { listMyScreeningInterviews } from "@/helpers/interview/screening/my-interviews";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description:
+    "Your applications, saved jobs and AI-matched openings.",
+  robots: { index: false, follow: false },
+};
 
 export default async function DashboardPage() {
   try {

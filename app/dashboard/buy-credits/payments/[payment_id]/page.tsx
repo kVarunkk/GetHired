@@ -14,6 +14,12 @@ import { TPaymentStatus } from "@/utils/types";
 import { TPaymentIdRecord } from "@/utils/types/payments.types";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Payment Details",
+  robots: { index: false, follow: false },
+};
 
 export default async function PaymentIdPage({
   params,

@@ -8,6 +8,14 @@ import { Button } from "@/components/ui/button";
 import PrivacySettings from "@/components/settings/PrivacySettings";
 import EmailPreferences from "@/components/settings/EmailPreferences";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Settings",
+  description:
+    "Your privacy, email preferences and profile.",
+  robots: { index: false, follow: false },
+};
 
 function Section({
   title,

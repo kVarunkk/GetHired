@@ -8,6 +8,11 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { listStages } from "@/helpers/pipeline/stages";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Pipeline Stages",
+};
 
 /**
  * Settings → Pipeline stages, the settings index (PL-TASK-032): the columns

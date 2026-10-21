@@ -3,6 +3,12 @@ import ErrorComponent from "@/components/Error";
 import InterviewComponent from "@/components/InterviewComponent";
 import { notFound, redirect, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Mock Interview",
+  robots: { index: false, follow: false },
+};
 
 type SessionSummary = {
   id: string;

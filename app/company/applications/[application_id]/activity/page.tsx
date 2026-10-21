@@ -3,6 +3,11 @@ import Error from "@/components/Error";
 import SectionHeader from "@/components/SectionHeader";
 import ActivityTimeline from "@/components/pipeline/ActivityTimeline";
 import { loadApplicationFrame } from "@/helpers/applications/application-page";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Activity",
+};
 
 /** An application's Activity section: its event timeline. */
 export default async function ApplicationActivityPage({ params }: { params: Promise<{ application_id: string }> }) {

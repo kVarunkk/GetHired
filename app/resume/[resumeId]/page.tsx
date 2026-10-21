@@ -10,6 +10,12 @@ import ResumeStatusBadge from "@/components/ResumeStatusBadge";
 import { AskAgentAboutResume } from "@/components/agent/AskAgentOnApplicantIdPages";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Resume",
+  robots: { index: false, follow: false },
+};
 
 export default async function ResumeIdPage({
   params,

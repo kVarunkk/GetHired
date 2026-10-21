@@ -8,6 +8,11 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { QUESTION_SETS_PATH, toQuestionSet } from "@/helpers/jobs/question-sets";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Question Set",
+};
 
 export const dynamic = "force-dynamic";
 

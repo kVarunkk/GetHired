@@ -8,6 +8,11 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { loadJobForm } from "@/helpers/jobs/load-job-form";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Edit",
+};
 
 /**
  * A job's Edit section: the job post form with the stored values, the full

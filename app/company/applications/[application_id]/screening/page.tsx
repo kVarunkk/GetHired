@@ -4,6 +4,11 @@ import SectionHeader from "@/components/SectionHeader";
 import ScreeningCard from "@/components/matching/ScreeningCard";
 import { loadApplicationFrame } from "@/helpers/applications/application-page";
 import { SCREENING_VIEW_COLUMNS, toScreeningView } from "@/helpers/matching/screening-view";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Fit Screening",
+};
 
 /** An application's Fit screening section: the AI fit screening against the job. */
 export default async function ApplicationScreeningPage({ params }: { params: Promise<{ application_id: string }> }) {

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
@@ -16,6 +17,23 @@ import {
 } from "@/helpers/applications/application-page";
 import { isOpenInterview } from "@/helpers/interview/screening/summary-view";
 import { DEFAULT_DURATION_MINUTES } from "@/helpers/interview/screening/schemas";
+
+/**
+ * The candidate's name names the answers tab, and the sections' titles get it
+ * as a suffix ("Notes · <name>"). The frame load is request-cached, so this
+ * shares the layout's query.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ application_id: string }>;
+}): Promise<Metadata> {
+  const { application_id } = await params;
+  const frame = await loadApplicationFrame(application_id).catch(() => null);
+  const name = frame?.application.user_info?.full_name;
+  if (!name) return { title: "Application" };
+  return { title: { default: name, template: `%s · ${name} | GetHired` } };
+}
 
 /**
  * An application's frame: the sections sidebar (answers, candidate, fit

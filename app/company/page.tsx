@@ -23,6 +23,13 @@ import {
   getCompanyFunnel,
   type CompanyFunnel,
 } from "@/helpers/pipeline/funnel";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Company Dashboard",
+  description:
+    "Your job posts, applicants and matched candidates.",
+};
 
 export default async function CompanyPage() {
   try {

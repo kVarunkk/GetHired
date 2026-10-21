@@ -1,6 +1,14 @@
 import FootComponent from "@/components/FootComponent";
 import Footer from "@/components/landing-page/Footer";
 import TermsOfService from "@/components/TermsOfService";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description:
+    "The terms that govern your use of GetHired.",
+  alternates: { canonical: "/terms-of-service" },
+};
 
 export const dynamic = "force-static";
 

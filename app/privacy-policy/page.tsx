@@ -1,6 +1,14 @@
 import FootComponent from "@/components/FootComponent";
 import Footer from "@/components/landing-page/Footer";
 import PrivacyPolicy from "@/components/PrivacyPolicy";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "How GetHired collects, uses and protects your personal data.",
+  alternates: { canonical: "/privacy-policy" },
+};
 
 export const dynamic = "force-static";
 

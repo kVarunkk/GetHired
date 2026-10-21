@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { format } from "date-fns";
@@ -16,6 +17,24 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { jobControls } from "@/helpers/companies/job-scope";
 import { can } from "@/helpers/companies/permissions";
 import { createClient } from "@/lib/supabase/server";
+
+/**
+ * The job's title names the overview tab, and the sections' titles get it as
+ * a suffix ("Applications · <job>"). Job posts are world-readable, so this
+ * only reads the title; the layout below does the access checks.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ job_id: string }>;
+}): Promise<Metadata> {
+  const { job_id } = await params;
+  if (!isUuid(job_id)) return { title: "Job Post" };
+  const supabase = await createClient();
+  const { data: job } = await supabase.from("job_postings").select("title").eq("id", job_id).maybeSingle();
+  if (!job?.title) return { title: "Job Post" };
+  return { title: { default: job.title, template: `%s · ${job.title} | GetHired` } };
+}
 
 /**
  * A job post's frame: the sections sidebar (overview, applications, AI
