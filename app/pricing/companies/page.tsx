@@ -3,12 +3,19 @@ import PlanCards from "@/components/billing/PlanCards";
 import PricingViewed from "@/components/billing/PricingViewed";
 import Footer from "@/components/landing-page/Footer";
 import { listPublicPlans, type Plan } from "@/helpers/billing/plans";
+import {
+  markdownAlternate,
+  PRICING_DESCRIPTION,
+  PRICING_INTRO,
+} from "@/helpers/marketing/content";
 
 export const metadata: Metadata = {
   title: "Pricing for Companies",
-  description:
-    "Start hiring free on GetHired. Paid plans add more job posts, AI screening, outreach and AI interviews.",
-  alternates: { canonical: "/pricing/companies" },
+  description: PRICING_DESCRIPTION,
+  alternates: {
+    canonical: "/pricing/companies",
+    types: markdownAlternate("/pricing/companies"),
+  },
 };
 
 // Plans are cached under the billing-plans tag; the page itself every hour.
@@ -29,8 +36,7 @@ export default async function CompanyPricingPage() {
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight">Pricing for companies</h1>
           <p className="max-w-2xl text-[15px] leading-7 text-muted-foreground">
-            Post a job, see matched candidates and screen applicants for free. Paid plans add volume, team seats and
-            AI interviews. Usage beyond your plan&apos;s allowances is paid with credits.
+            {PRICING_INTRO}
           </p>
         </div>
         {plans.length > 0 ? (

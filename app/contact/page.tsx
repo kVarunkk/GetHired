@@ -2,12 +2,12 @@ import ContactComponent from "@/components/ContactComponent";
 import FootComponent from "@/components/FootComponent";
 import Footer from "@/components/landing-page/Footer";
 import type { Metadata } from "next";
+import { CONTACT_DESCRIPTION, markdownAlternate } from "@/helpers/marketing/content";
 
 export const metadata: Metadata = {
   title: "Contact Us",
-  description:
-    "Questions, feedback or partnership ideas? Get in touch with the GetHired team.",
-  alternates: { canonical: "/contact" },
+  description: CONTACT_DESCRIPTION,
+  alternates: { canonical: "/contact", types: markdownAlternate("/contact") },
 };
 
 export const dynamic = "force-static";

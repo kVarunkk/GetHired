@@ -4,23 +4,23 @@ import FootComponent from "@/components/FootComponent";
 import BlogPostList from "@/components/blog/BlogPostList";
 import type { BlogPostSummary } from "@/helpers/blog/post-types";
 import { Metadata } from "next";
+import { BLOG_DESCRIPTION, markdownAlternate } from "@/helpers/marketing/content";
 
 export const revalidate = 86400;
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "Job Search Advice, Career Tips & Hiring Insights",
-  description:
-    "Practical job-search advice, career guidance, and product updates from GetHired.",
+  description: BLOG_DESCRIPTION,
   alternates: {
     canonical: "/blog",
+    types: markdownAlternate("/blog"),
   },
   openGraph: {
     type: "website",
     siteName: "GetHired",
     title: "Job Search Advice, Career Tips & Hiring Insights",
-    description:
-      "Practical job-search advice, career guidance, and product updates from GetHired.",
+    description: BLOG_DESCRIPTION,
     url: "/blog",
   },
 };

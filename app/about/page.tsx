@@ -2,12 +2,12 @@ import AboutComponent from "@/components/AboutComponent";
 import FootComponent from "@/components/FootComponent";
 import Footer from "@/components/landing-page/Footer";
 import type { Metadata } from "next";
+import { ABOUT_DESCRIPTION, markdownAlternate } from "@/helpers/marketing/content";
 
 export const metadata: Metadata = {
   title: "About GetHired",
-  description:
-    "GetHired is an AI job platform for tech jobs: an agent that searches openings, matches them to your resume, reviews your CV and preps you for interviews, plus hiring tools for companies.",
-  alternates: { canonical: "/about" },
+  description: ABOUT_DESCRIPTION,
+  alternates: { canonical: "/about", types: markdownAlternate("/about") },
 };
 
 export const dynamic = "force-static";

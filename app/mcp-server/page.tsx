@@ -8,13 +8,16 @@ import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAd
 import { getPlatformStats } from "@/utils/platform-stats";
 import { MCP_SERVER_DARK, MCP_SERVER_LIGHT } from "@/utils/utils";
 import { Metadata } from "next";
+import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
+
+const page = LANDING_PAGES["mcp-server"];
 
 export const metadata: Metadata = {
   title: "MCP Server for AI-Powered Job Search",
-  description:
-    "Connect Claude to GetHired job-search tools for personalized job recommendations and resume support with the GetHired MCP Server.",
+  description: page.description,
   alternates: {
     canonical: "/mcp-server",
+    types: markdownAlternate(page.path),
   },
   openGraph: {
     type: "website",
@@ -50,12 +53,12 @@ export default async function MCPServerPage() {
       <div className="flex-1 w-full flex flex-col gap-20 items-center">
         <div className="flex-1 flex flex-col gap-32  w-full">
           <Hero
-            heading="GetHired MCP Server"
-            subheading="Discover the GetHired MCP Server, a powerful tool designed to enhance your job search experience."
-            ctaText="Get Started"
-            ctaText2="Learn More"
-            ctaLink="https://github.com/kVarunkk/GetHired-mcp-server"
-            ctaLink2="/blog/introducing-the-get-hired-mcp-server"
+            heading={page.heading}
+            subheading={page.subheading(jobCount)}
+            ctaText={page.ctas[0].label}
+            ctaText2={page.ctas[1].label}
+            ctaLink={page.ctas[0].href}
+            ctaLink2={page.ctas[1].href}
             imgLight={MCP_SERVER_LIGHT}
             imgDark={MCP_SERVER_DARK}
           />
@@ -66,7 +69,7 @@ export default async function MCPServerPage() {
             userCount={userCount}
           />
           <TheGetHiredAdvantageSection jobCount={jobCount} />
-          <FAQSection topic="mcp" />
+          <FAQSection topic={page.faq} />
           <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
             <FootComponent />
           </div>

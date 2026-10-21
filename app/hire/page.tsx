@@ -8,16 +8,18 @@ import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
 import { getPlatformStats } from "@/utils/platform-stats";
-import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 import { Metadata } from "next";
 import Link from "next/link";
+import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
+
+const page = LANDING_PAGES.hire;
 
 export const metadata: Metadata = {
   title: "AI Recruiting Software to Hire Tech Talent",
-  description:
-    "Post tech roles, review applicants, and use AI recruiting tools to help identify qualified candidates with GetHired.",
+  description: page.description,
   alternates: {
     canonical: "/hire",
+    types: markdownAlternate(page.path),
   },
   openGraph: {
     type: "website",
@@ -54,12 +56,12 @@ export default async function HirePage() {
   return (
     <div className="flex-1 flex flex-col gap-32 w-full">
       <Hero
-        heading="Your AI Recruiter for Tech Hiring"
-        subheading="Tell it who you need. It drafts your job post, ranks matched candidates, screens applicants with AI interviews and keeps your pipeline moving, all in one chat."
-        ctaText="Start hiring free"
-        ctaLink="/auth/sign-up?company=true"
-        ctaText2="Chat with the agent"
-        ctaLink2={COMPANY_AGENT_PATH}
+        heading={page.heading}
+        subheading={page.subheading(jobCount)}
+        ctaText={page.ctas[0].label}
+        ctaLink={page.ctas[0].href}
+        ctaText2={page.ctas[1].label}
+        ctaLink2={page.ctas[1].href}
         preview={<AgentHeroDemo demo={RECRUITER_DEMO} />}
       />
       <HowWeHelp jobCount={jobCount} />
@@ -69,7 +71,7 @@ export default async function HirePage() {
         userCount={userCount}
       />
       <TheGetHiredAdvantageSection jobCount={jobCount} />
-      <FAQSection topic="hiring" />
+      <FAQSection topic={page.faq} />
       <p className="px-4 text-center text-[15px] leading-7 text-muted-foreground">
         Start hiring free.{" "}
         <Link

@@ -16,6 +16,7 @@ import {
   formatPublishedAt,
 } from "@/helpers/blog/post-types";
 import { deploymentUrl } from "@/utils/formatters";
+import { markdownAlternate } from "@/helpers/marketing/content";
 
 const reader = createReader(process.cwd(), keystaticConfig);
 
@@ -80,7 +81,10 @@ export async function generateMetadata({
   return {
     title: post.title,
     description: `Read the latest blog post "${post.title}" on GetHired.`,
-    alternates: { canonical: `/blog/${slug}` },
+    alternates: {
+      canonical: `/blog/${slug}`,
+      types: markdownAlternate(`/blog/${slug}`),
+    },
 
     openGraph: {
       title: post.title,

@@ -6,6 +6,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
+import {
+  ABOUT_UPDATED,
+  CONTACT_EMAIL,
+  FOUNDER,
+  FOUNDER_INTRO,
+} from "@/helpers/marketing/content";
 
 export default function ContactComponent() {
   return (
@@ -16,7 +22,7 @@ export default function ContactComponent() {
             Contact
           </CardTitle>
           <CardDescription className="text-center">
-            Last updated: October 9, 2026
+            Last updated: {ABOUT_UPDATED}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 text-[15px] leading-7">
@@ -25,18 +31,14 @@ export default function ContactComponent() {
               Hi, I&apos;m{" "}
               <Link
                 className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
-                href={"https://varun.devhub.co.in"}
+                href={FOUNDER.url}
                 target="_blank"
               >
-                Varun
+                {FOUNDER.name}
               </Link>
-              . I&apos;m the founder of GetHired, a platform dedicated to
-              helping job seekers find their dream jobs. With a passion for
-              technology and a deep understanding of the job market, I created
-              GetHired to provide users with the tools and resources they need
-              to succeed in their careers.
+              . {FOUNDER_INTRO}
             </p>
-            <p>You can contact me here on my email: varun@devhub.co.in</p>
+            <p>You can contact me here on my email: {CONTACT_EMAIL}</p>
           </section>
         </CardContent>
       </Card>

@@ -7,13 +7,16 @@ import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
 import { getPlatformStats } from "@/utils/platform-stats";
 import { Metadata } from "next";
+import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
+
+const page = LANDING_PAGES["ai-interview"];
 
 export const metadata: Metadata = {
   title: "AI Interview",
-  description:
-    "Prepare for your next interview with our AI-powered practice sessions. Get personalized feedback and improve your chances of landing the job.",
+  description: page.description,
   alternates: {
     canonical: "https://gethired.devhub.co.in/ai-interview",
+    types: markdownAlternate(page.path),
   },
   openGraph: {
     title: "AI Interview",
@@ -59,7 +62,7 @@ export default async function AIInterviewPage() {
         userCount={userCount}
       />
       <TheGetHiredAdvantageSection jobCount={jobCount} />
-      <FAQSection topic="ai-interview" />
+      <FAQSection topic={page.faq} />
       <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
         <FootComponent />
       </div>

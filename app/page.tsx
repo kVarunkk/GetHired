@@ -8,12 +8,14 @@ import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
 import { getPlatformStats } from "@/utils/platform-stats";
 import type { Metadata } from "next";
+import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
+
+const page = LANDING_PAGES.home;
 
 export const metadata: Metadata = {
   title: { absolute: "Find Tech & Remote Jobs | GetHired" },
-  description:
-    "Find developer and tech jobs, including remote roles. Search current openings by role and location, then use GetHired's AI tools to focus your job search.",
-  alternates: { canonical: "/" },
+  description: page.description,
+  alternates: { canonical: "/", types: markdownAlternate(page.path) },
   openGraph: {
     type: "website",
     siteName: "GetHired",
@@ -35,12 +37,12 @@ export default async function Home() {
   return (
     <div className="flex-1 flex flex-col gap-32 w-full">
       <Hero
-        heading="Your AI Agent for the Job Hunt"
-        subheading={`Tell it what you're after. It searches ${jobCount.toLocaleString()} tech jobs, matches them to your resume, reviews your CV and preps you for interviews, all in one chat.`}
-        ctaText="Chat with the agent"
-        ctaText2="Hire Talent"
-        ctaLink="/agent"
-        ctaLink2="/hire"
+        heading={page.heading}
+        subheading={page.subheading(jobCount)}
+        ctaText={page.ctas[0].label}
+        ctaText2={page.ctas[1].label}
+        ctaLink={page.ctas[0].href}
+        ctaLink2={page.ctas[1].href}
         preview={<AgentHeroDemo />}
       />
       <HowWeHelp jobCount={jobCount} />
@@ -50,7 +52,7 @@ export default async function Home() {
         userCount={userCount}
       />
       <TheGetHiredAdvantageSection jobCount={jobCount} />
-      <FAQSection topic="job-search" />
+      <FAQSection topic={page.faq} />
       <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
         <FootComponent />
       </div>
