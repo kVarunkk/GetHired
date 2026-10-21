@@ -5,7 +5,7 @@ import { isOpenInterview } from "@/helpers/interview/screening/summary-view";
 import KnockoutBadge from "@/components/applications/KnockoutBadge";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import posthog from "posthog-js";
+import posthog from "@/lib/posthog/client";
 import toast from "react-hot-toast";
 import { GripVertical, Star } from "lucide-react";
 import {

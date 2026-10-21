@@ -7,7 +7,6 @@ import { ProgressBar, ProgressBarProvider } from "react-transition-progress";
 import MetadataUpdateRefresh from "@/components/MetadataUpdateRefresh";
 import { Suspense } from "react";
 import ThemeAwareToaster from "@/components/ToasterComponent";
-import { GoogleAnalytics } from "@next/third-parties/google";
 import LayoutWrapper from "@/components/LayoutWrapper";
 import { createClient } from "@/lib/supabase/server";
 import { hasEnvVars } from "@/utils/utils";
@@ -96,7 +95,6 @@ export default async function RootLayout({
           </ThemeProvider>
         </ProgressBarProvider>
       </body>
-      <GoogleAnalytics gaId="G-4704XKQWMK" />
     </html>
   );
 }

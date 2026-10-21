@@ -21,7 +21,7 @@ import { useProgress } from "react-transition-progress";
 import { Button } from "./ui/button";
 import { PostHogEvent } from "@/utils/types";
 import useSWR from "swr";
-import posthog from "posthog-js";
+import posthog from "@/lib/posthog/client";
 
 const fetchCompanyJobs = async (companyId: string) => {
   const supabase = createClient();

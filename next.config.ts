@@ -20,6 +20,9 @@ const nextConfig: NextConfig = {
   cacheMaxMemorySize: 32 * 1024 * 1024,
   experimental: {
     isrFlushToDisk: false,
+    // Inline the (small) Tailwind CSS into the HTML, so first paint doesn't
+    // wait on separate render-blocking stylesheet requests.
+    inlineCss: true,
   },
   serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
   outputFileTracingIncludes: {

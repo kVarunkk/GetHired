@@ -32,10 +32,10 @@ export default function ScrollToTopButton({
       onClick={scrollToTop}
       className={cn(
         // Lifted above a StickyActionBar when the page has one.
-        "fixed bottom-[calc(2.5rem+var(--sticky-action-bar-height,0px))] right-10 sm:right-20 z-50 bg-secondary text-secondary-foreground rounded-full p-3 shadow-lg transition-opacity duration-300 border border-border",
-        visible
-          ? "opacity-100 pointer-events-auto"
-          : "opacity-0 pointer-events-none",
+        "fixed bottom-[calc(2.5rem+var(--sticky-action-bar-height,0px))] right-10 sm:right-20 z-50 bg-secondary text-secondary-foreground rounded-full p-3 shadow-lg transition-[opacity,visibility] duration-300 border border-border",
+        // invisible, not just transparent: hidden, it must not cover the
+        // links under it or take keyboard focus.
+        visible ? "visible opacity-100" : "invisible opacity-0",
         className,
       )}
     >

@@ -22,7 +22,7 @@ import { filterConfigBuilder } from "@/helpers/filter-component/filterConfigBuil
 import { getInitialState } from "@/helpers/filter-component/getInitialState";
 import LocationSearchSelect from "./LocationSearchSelect";
 import ScrollFade from "./ScrollFade";
-import posthog from "posthog-js";
+import posthog from "@/lib/posthog/client";
 
 export default function FilterComponent({
   setOpenSheet,

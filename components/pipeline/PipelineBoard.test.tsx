@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Children, isValidElement, type ReactNode } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import toast from "react-hot-toast";
-import posthog from "posthog-js";
+import posthog from "@/lib/posthog/client";
 import { moveApplicationsAction } from "@/app/actions/pipeline/move-applications";
 import { DEFAULT_STAGES, PIPELINE_JOB, stageOf } from "@/test/utils/pipeline";
 import type { BoardApplication, PipelineBoardData } from "@/utils/types/pipeline.types";
@@ -12,7 +12,7 @@ vi.mock("@/app/actions/pipeline/move-applications", () => ({
   moveApplicationsAction: vi.fn(),
 }));
 vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() } }));
-vi.mock("posthog-js", () => ({ default: { capture: vi.fn() } }));
+vi.mock("@/lib/posthog/client", () => ({ default: { capture: vi.fn() } }));
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import posthog from "posthog-js";
+import posthog from "@/lib/posthog/client";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "../supabase/client";
 

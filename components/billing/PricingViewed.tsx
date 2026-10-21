@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import posthog from "posthog-js";
+import posthog from "@/lib/posthog/client";
 import { PostHogEvent } from "@/utils/types";
 
 /** Captures billing_pricing_viewed once per visit to the pricing page. */
