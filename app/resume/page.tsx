@@ -4,6 +4,14 @@ import ResumesTable from "@/components/ResumesTable";
 import CreateResumeDialog from "@/components/CreateResumeDialog";
 import PageHeader from "@/components/PageHeader";
 import { AskAgentAboutResumes } from "@/components/agent/AskAgentOnApplicantPages";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Resumes",
+  description:
+    "Resumes you've built, tailored to the jobs you want.",
+  robots: { index: false, follow: false },
+};
 
 export default async function ResumePage() {
   try {

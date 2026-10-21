@@ -379,3 +379,22 @@ describe("middleware: /company/join (TM-TEST-004, teams difference 4)", () => {
     expect(passesThrough(await updateSession(request(JOIN)))).toBe(true);
   });
 });
+
+describe("middleware: markdown versions of public pages", () => {
+  const rewriteTarget = (res: Response) => {
+    const target = res.headers.get("x-middleware-rewrite");
+    return target ? new URL(target).pathname : null;
+  };
+
+  it("rewrites .md pages to the markdown route for signed-out visitors", async () => {
+    expect(rewriteTarget(await updateSession(request("/hire.md")))).toBe("/md/hire");
+    expect(rewriteTarget(await updateSession(request("/index.md")))).toBe("/md/index");
+    expect(rewriteTarget(await updateSession(request("/pricing/companies.md")))).toBe("/md/pricing/companies");
+    expect(rewriteTarget(await updateSession(request("/blog/some-post.md")))).toBe("/md/blog/some-post");
+    expect(getUserFromRequest).not.toHaveBeenCalled();
+  });
+
+  it("leaves other .md paths to the usual rules", async () => {
+    expect(redirectTarget(await updateSession(request("/dashboard.md")))).toMatch(/^\/auth\/login/);
+  });
+});

@@ -9,6 +9,13 @@ import { getEntitlements } from "@/helpers/billing/entitlements";
 import { listPublicPlans } from "@/helpers/billing/plans";
 import BillingOverview from "@/components/billing/BillingOverview";
 import ErrorComponent from "@/components/Error";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Billing",
+  description:
+    "Your plan, usage and credits.",
+};
 
 export const dynamic = "force-dynamic";
 

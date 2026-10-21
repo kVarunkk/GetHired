@@ -1,5 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Sign-in Error",
+  description:
+    "Something went wrong while signing you in to GetHired.",
+};
 
 export default async function Page({
   searchParams,

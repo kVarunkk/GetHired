@@ -4,6 +4,14 @@ import InterviewsTable from "@/components/InterviewsTable";
 import CreateInterviewDialog from "@/components/CreateInterviewDialog";
 import PageHeader from "@/components/PageHeader";
 import { AskAgentAboutInterviews } from "@/components/agent/AskAgentOnApplicantPages";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Interviews",
+  description:
+    "Mock interviews for the jobs you're preparing for, with feedback on each session.",
+  robots: { index: false, follow: false },
+};
 
 export default async function InterviewPage({
   searchParams,

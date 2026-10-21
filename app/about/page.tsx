@@ -1,6 +1,14 @@
 import AboutComponent from "@/components/AboutComponent";
 import FootComponent from "@/components/FootComponent";
 import Footer from "@/components/landing-page/Footer";
+import type { Metadata } from "next";
+import { ABOUT_DESCRIPTION, markdownAlternate } from "@/helpers/marketing/content";
+
+export const metadata: Metadata = {
+  title: "About GetHired",
+  description: ABOUT_DESCRIPTION,
+  alternates: { canonical: "/about", types: markdownAlternate("/about") },
+};
 
 export const dynamic = "force-static";
 

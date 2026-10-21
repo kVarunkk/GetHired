@@ -33,6 +33,7 @@ import SidebarLabel from "./SidebarLabel";
 import ScrollFade from "./ScrollFade";
 import { useOpenOutreachCount } from "./outreach/useOpenOutreachCount";
 import useSWR from "swr";
+import { Button } from "./ui/button";
 
 
 /** The count next to a nav label (open outreach), hidden at 0. */
@@ -511,6 +512,18 @@ const NavbarSheet = ({
             </Link>
           )}
         </div>
+
+        {/* The top bar keeps only Sign in on very small phones, so both live here. */}
+        {!signedIn && (
+          <div className="flex w-full flex-col gap-2">
+            <Button asChild variant="outline" onClick={() => setOpen(false)}>
+              <Link href="/auth/login">Sign in</Link>
+            </Button>
+            <Button asChild onClick={() => setOpen(false)}>
+              <Link href="/auth/sign-up">Sign up</Link>
+            </Button>
+          </div>
+        )}
 
         <SheetFooter className="mt-4">
           <SocialsComponent />

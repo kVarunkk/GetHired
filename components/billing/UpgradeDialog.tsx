@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import posthog from "posthog-js";
+import posthog from "@/lib/posthog/client";
 import { ArrowUpRight, Coins } from "lucide-react";
 import {
   ResponsiveDialog,

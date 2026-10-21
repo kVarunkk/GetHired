@@ -14,6 +14,14 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import CreditCostList from "@/components/CreditCostList";
 import { APPLICANT_CREDIT_COSTS } from "@/utils/credit-costs";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Buy AI Credits",
+  description:
+    "Top up your account to keep using GetHired's AI features.",
+  robots: { index: false, follow: false },
+};
 
 export default async function BuyCreditsPage() {
   const supabase = await createClient();

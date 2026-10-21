@@ -99,7 +99,8 @@
     --chart-5: 340 75% 55%;
 
     /* Brand Indigo Accents (Dark) */
-    --brand: 242 85% 67%;
+    /* 65%, not 67%: white button text needs 4.5:1 (4.76 here, 4.30 at 67%). */
+    --brand: 242 85% 65%;
     --brand-foreground: 0 0% 98%;
     --brand-soft: 238.73 83.53% 66.67%;
     --brand-soft-foreground: 239 84% 85%;

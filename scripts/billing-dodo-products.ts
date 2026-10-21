@@ -7,8 +7,12 @@
  *   npx tsx --env-file=.env scripts/billing-dodo-products.ts --apply    # create in test mode
  *   npx tsx --env-file=.env scripts/billing-dodo-products.ts --apply --live
  *
- * Products that already have an id are skipped, so it's safe to rerun.
+ * Products whose id exists in the mode being run are skipped, so it's safe to
+ * rerun. An id from the other mode (e.g. test ids when running --live) is
+ * replaced, which is how test products are moved to live.
  * Uses DODO_PAYMENTS_API_KEY, NEXT_PUBLIC_SUPABASE_URL and SERVICE_ROLE_KEY.
+ * With --live, DODO_PAYMENTS_API_KEY must be the live key: .env keeps it as
+ * DODO_PAYMENTS_API_KEY_PROD, so pass it in front of the command.
  * Requires the company_billing and billing_subscriptions migrations.
  */
 import DodoPayments from "dodopayments";
@@ -35,6 +39,18 @@ const supabase = createClient<Database>(
   { auth: { persistSession: false, autoRefreshToken: false } },
 );
 
+/** Whether `id` is a product in the mode being run (test ids aren't in live mode). */
+async function exists(id: string | null) {
+  if (!id) return false;
+  try {
+    await dodo.products.retrieve(id);
+    return true;
+  } catch (err) {
+    if (err instanceof DodoPayments.NotFoundError) return false;
+    throw err;
+  }
+}
+
 async function createProduct(name: string, description: string, price: DodoPayments.ProductCreateParams["price"]) {
   if (!apply) {
     console.log(`[dry run] would create "${name}" (${JSON.stringify(price)})`);
@@ -56,7 +72,7 @@ async function plans() {
     const prices = (tier.prices as unknown as Price[]) ?? [];
     let changed = false;
     for (const p of prices) {
-      if (p.dodo_product_id) continue;
+      if (await exists(p.dodo_product_id)) continue;
       const interval = p.interval === "month" ? "Month" : "Year";
       const id = await createProduct(
         `GetHired ${tier.name} (${p.interval === "month" ? "monthly" : "annual"}, ${p.currency})`,
@@ -96,7 +112,7 @@ async function creditPacks() {
   if (error) throw error;
 
   for (const pack of packs ?? []) {
-    if (pack.product_id || !pack.amount) continue;
+    if (!pack.amount || (await exists(pack.product_id))) continue;
     const id = await createProduct(
       `GetHired ${pack.credit_amount} company credits`,
       "Company credits for usage beyond your plan's allowances.",

@@ -8,11 +8,14 @@ import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAd
 import { getPlatformStats } from "@/utils/platform-stats";
 import { CHROME_EXTENSION_DARK, CHROME_EXTENSION_LIGHT } from "@/utils/utils";
 import { Metadata } from "next";
+import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
+
+const page = LANDING_PAGES.extension;
 
 export const metadata: Metadata = {
   title: "GetHired Chrome Extension",
-  description:
-    "Discover the GetHired Chrome Extension that fills Job Applications on any platform in a single click",
+  description: page.description,
+  alternates: { types: markdownAlternate(page.path) },
   keywords: [
     "GetHired Chrome Extension",
     "AI-powered job search",
@@ -36,12 +39,10 @@ export default async function MCPServerPage() {
       <div className="flex-1 w-full flex flex-col gap-20 items-center">
         <div className="flex-1 flex flex-col gap-32  w-full">
           <Hero
-            heading="GetHired Chrome Extension"
-            subheading="Discover the GetHired Chrome Extension, a powerful tool designed to enhance your job application experience."
-            ctaText="Coming Soon"
-            // ctaText2="Learn More"
-            ctaLink="#"
-            // ctaLink2="#"
+            heading={page.heading}
+            subheading={page.subheading(jobCount)}
+            ctaText={page.ctas[0].label}
+            ctaLink={page.ctas[0].href}
             imgLight={CHROME_EXTENSION_LIGHT}
             imgDark={CHROME_EXTENSION_DARK}
           />
@@ -52,7 +53,7 @@ export default async function MCPServerPage() {
             userCount={userCount}
           />
           <TheGetHiredAdvantageSection jobCount={jobCount} />
-          <FAQSection topic="extension" />
+          <FAQSection topic={page.faq} />
           <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
             <FootComponent />
           </div>

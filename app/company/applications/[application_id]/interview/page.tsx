@@ -3,6 +3,11 @@ import Error from "@/components/Error";
 import SectionHeader from "@/components/SectionHeader";
 import InterviewReport from "@/components/interviews/InterviewReport";
 import { loadApplicationInterview } from "@/helpers/applications/application-page";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "AI Interview",
+};
 
 /**
  * SIT-063: an application's AI interview section, for interviews.view on the

@@ -4,6 +4,14 @@ import ResumeReviewsTable from "@/components/ResumeReviewsTable";
 import CreateResumeReviewDialog from "@/components/CreateResumeReviewDialog";
 import PageHeader from "@/components/PageHeader";
 import { AskAgentAboutResumeReviews } from "@/components/agent/AskAgentOnApplicantPages";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Resume Reviews",
+  description:
+    "AI reviews of your resume against a job, with a score and what to fix.",
+  robots: { index: false, follow: false },
+};
 
 export default async function ResumeReviewPage() {
   try {

@@ -9,6 +9,13 @@ import { CreateJobPostButton } from "@/components/jobs/JobPostButtons";
 import JobPostingsTable from "@/components/JobPostingsTable";
 import PageHeader from "@/components/PageHeader";
 import { AskAgentAboutJobPosts } from "@/components/agent/recruiter/AskAgentOnMainPages";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Job Posts",
+  description:
+    "Your company's job posts, their status and applicants.",
+};
 
 export default async function CompanyJobPostsPage() {
   try {

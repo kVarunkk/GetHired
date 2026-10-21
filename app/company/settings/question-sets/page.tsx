@@ -12,6 +12,11 @@ import { can } from "@/helpers/companies/permissions";
 import { loadQuestionSets } from "@/helpers/jobs/load-question-sets";
 import { MAX_QUESTION_SETS, QUESTION_SETS_PATH } from "@/helpers/jobs/question-sets";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Question Sets",
+};
 
 export const dynamic = "force-dynamic";
 

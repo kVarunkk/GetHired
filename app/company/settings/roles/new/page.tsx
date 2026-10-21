@@ -9,6 +9,11 @@ import { listRoles } from "@/helpers/companies/list-roles";
 import { can, grantList } from "@/helpers/companies/permissions";
 import { grantsWithinCeiling, ROLE_COLORS, roleTemplate, type RoleColor } from "@/helpers/companies/role-templates";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "New Role",
+};
 
 export const dynamic = "force-dynamic";
 

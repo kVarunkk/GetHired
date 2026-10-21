@@ -2,6 +2,7 @@ import { Sparkles } from "lucide-react";
 import Image from "next/image";
 import { Button } from "./ui/button";
 import Link from "next/link";
+import { LANDING_PAGES } from "@/helpers/marketing/content";
 import {
   AI_INTERVIEW_DARK,
   AI_INTERVIEW_LIGHT,
@@ -9,6 +10,8 @@ import {
 } from "@/utils/utils";
 
 export default function HeroAiInterview() {
+  const page = LANDING_PAGES["ai-interview"];
+  const cta = page.ctas[0];
   return (
     <div className="flex flex-col gap-5 w-full items-center text-center px-4 py-3 lg:px-20 xl:px-40 2xl:px-80">
       <div className="space-y-4 max-w-3xl">
@@ -19,24 +22,22 @@ export default function HeroAiInterview() {
           </div>
 
           <h1 className="text-5xl sm:text-7xl font-semibold tracking-tight leading-[1.1]">
-            AI Interview
+            {page.heading}
           </h1>
 
           <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-            Prepare for your next interview with our AI-powered practice
-            sessions. Get personalized feedback and improve your chances of
-            landing the job.
+            {page.subheading(0)}
           </p>
         </div>
       </div>
 
       <div>
-        <Link href={"/interview"}>
+        <Link href={cta.href}>
           <Button
             variant="brand"
             className="w-full sm:w-auto h-11 px-8 transition-all active:scale-95"
           >
-            Start Practicing
+            {cta.label}
           </Button>
         </Link>
       </div>

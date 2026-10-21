@@ -6,6 +6,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
+import {
+  ABOUT_PARAGRAPHS,
+  ABOUT_UPDATED,
+  FOUNDER,
+  FOUNDER_INTRO,
+} from "@/helpers/marketing/content";
 
 export default function AboutComponent() {
   return (
@@ -16,7 +22,7 @@ export default function AboutComponent() {
             About Us
           </CardTitle>
           <CardDescription className="text-center">
-            Last updated: October 9, 2026
+            Last updated: {ABOUT_UPDATED}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 text-[15px] leading-7">
@@ -25,31 +31,16 @@ export default function AboutComponent() {
               Hi, I&apos;m{" "}
               <Link
                 className="font-medium underline underline-offset-4 transition-colors hover:text-brand"
-                href={"https://varun.devhub.co.in"}
+                href={FOUNDER.url}
                 target="_blank"
               >
-                Varun
+                {FOUNDER.name}
               </Link>
-              . I&apos;m the founder of GetHired, a platform dedicated to
-              helping job seekers find their dream jobs. With a passion for
-              technology and a deep understanding of the job market, I created
-              GetHired to provide users with the tools and resources they need
-              to succeed in their careers.
+              . {FOUNDER_INTRO}
             </p>
-            <p>
-              Why did I create GetHired? Summer of 2025 when I was job hunting,
-              I realized how challenging it can be to navigate the job market. I
-              wanted to create a platform that would simplify the process and
-              provide users with valuable insights and resources to help them
-              succeed.
-            </p>
-            <p>
-              What&apos;s the future of GetHired? Currently we have AI
-              integrated into the platform to help the users at each step of
-              their job search journey. Moving forward I aim to make this
-              platform truly agentic. We recently incorporated the AI Interview
-              feature which is a positive step in that direction.
-            </p>
+            {ABOUT_PARAGRAPHS.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
           </section>
         </CardContent>
       </Card>

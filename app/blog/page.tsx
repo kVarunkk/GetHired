@@ -1,27 +1,26 @@
 import { createReader } from "@keystatic/core/reader";
 import keystaticConfig from "../keystatic.config";
-import Link from "next/link";
-import Image from "next/image";
-import { Newspaper } from "lucide-react";
 import FootComponent from "@/components/FootComponent";
+import BlogPostList from "@/components/blog/BlogPostList";
+import type { BlogPostSummary } from "@/helpers/blog/post-types";
 import { Metadata } from "next";
+import { BLOG_DESCRIPTION, markdownAlternate } from "@/helpers/marketing/content";
 
 export const revalidate = 86400;
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "Job Search Advice, Career Tips & Hiring Insights",
-  description:
-    "Practical job-search advice, career guidance, and product updates from GetHired.",
+  description: BLOG_DESCRIPTION,
   alternates: {
     canonical: "/blog",
+    types: markdownAlternate("/blog"),
   },
   openGraph: {
     type: "website",
     siteName: "GetHired",
     title: "Job Search Advice, Career Tips & Hiring Insights",
-    description:
-      "Practical job-search advice, career guidance, and product updates from GetHired.",
+    description: BLOG_DESCRIPTION,
     url: "/blog",
   },
 };
@@ -30,10 +29,13 @@ const reader = createReader(process.cwd(), keystaticConfig);
 
 export default async function Page() {
   const posts = await reader.collections.posts.all();
-  // Posts with a cover image first; otherwise keep the reader's order.
-  const sortedPosts = [...posts].sort(
-    (a, b) => Number(Boolean(b.entry.image)) - Number(Boolean(a.entry.image)),
-  );
+  const summaries: BlogPostSummary[] = posts.map((post) => ({
+    slug: post.slug,
+    title: post.entry.title,
+    image: post.entry.image,
+    publishedAt: post.entry.publishedAt,
+    type: post.entry.type,
+  }));
 
   return (
     <div>
@@ -41,36 +43,7 @@ export default async function Page() {
         <h1 className="text-5xl sm:text-7xl font-semibold tracking-tight leading-[1.1] mb-12 text-center">
           Blog
         </h1>
-        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {sortedPosts.map((post, index) => (
-            <li key={post.slug}>
-              <Link
-                href={`/blog/${post.slug}`}
-                className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card transition-colors hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
-                  {post.entry.image ? (
-                    <Image
-                      src={post.entry.image}
-                      alt={post.entry.title}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 384px"
-                      priority={index < 3}
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-brandSoft">
-                      <Newspaper className="h-10 w-10 text-brand" />
-                    </div>
-                  )}
-                </div>
-                <h2 className="p-4 text-lg font-semibold tracking-tight leading-snug group-hover:underline">
-                  {post.entry.title}
-                </h2>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <BlogPostList posts={summaries} />
       </div>
       <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
         <FootComponent />

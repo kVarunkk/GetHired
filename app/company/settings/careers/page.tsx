@@ -8,6 +8,11 @@ import { parseCareersFilters, searchCompanyJobs, toSearchView } from "@/helpers/
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can, forbiddenMessage } from "@/helpers/companies/permissions";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Careers Page Settings",
+};
 
 export const dynamic = "force-dynamic";
 

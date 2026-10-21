@@ -91,7 +91,9 @@ export function AuthButton({
           </TooltipContent>
         </Tooltip>
       ) : (
-        <Button asChild size="sm" variant={"default"}>
+        // Only Sign in on very small phones, so the bar fits; the login page
+        // links to sign up.
+        <Button asChild size="sm" variant={"default"} className="max-[400px]:hidden">
           <Link href="/auth/sign-up">{isMenuOpen ? "Sign up" : ""}</Link>
         </Button>
       )}

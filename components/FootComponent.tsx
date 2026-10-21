@@ -70,23 +70,29 @@ export default function FootComponent() {
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-6">
-        <Link className="w-full" href={content.primaryButtonHref} passHref>
-          <Button size="lg" variant="brand" className="w-full sm:w-auto px-8">
+        <Button
+          asChild
+          size="lg"
+          variant="brand"
+          className="w-full sm:w-auto sm:whitespace-nowrap px-8"
+        >
+          <Link href={content.primaryButtonHref}>
             {content.primaryButtonText}
-          </Button>
-        </Link>
+          </Link>
+        </Button>
 
         {content.secondaryButtonHref.length &&
         content.secondaryButtonText.length ? (
-          <Link className="w-full" href={content.secondaryButtonHref} passHref>
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full sm:w-auto px-8"
-            >
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="w-full sm:w-auto sm:whitespace-nowrap px-8"
+          >
+            <Link href={content.secondaryButtonHref}>
               {content.secondaryButtonText}
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         ) : (
           ""
         )}

@@ -5,6 +5,13 @@ import ErrorComponent from "@/components/Error";
 import PageHeader from "@/components/PageHeader";
 import ApplicantsTable from "@/components/ApplicantsTable";
 import { AskAgentAboutApplicants } from "@/components/agent/recruiter/AskAgentOnMainPages";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Applications",
+  description:
+    "Every application to your job posts.",
+};
 
 export default async function CompanyApplicationsPage() {
   try {

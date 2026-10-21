@@ -1,0 +1,101 @@
+---
+title: 'Hiring as a Team: Custom Roles, Permissions and Hiring Teams on GetHired'
+publishedAt: 2026-10-21
+type: companies
+---
+**Quick answer:** On GetHired you can invite your cofounders, hiring managers and interviewers to your company account and decide exactly what each person can do. Owners have full access. Everyone else gets a role built from a list of permissions, and most permissions can be limited to the jobs a person is assigned to. Usage limits per member and an audit log keep things under control as the team grows.
+
+Hiring starts as a one-person job, usually a founder's. It rarely stays that way. A cofounder wants to review engineering candidates, a design lead runs the design role, and an interviewer needs to leave notes without being able to email every applicant.
+
+Shared logins and "admin or nothing" roles don't work for that. Here's how GetHired handles it.
+
+## Invite your team
+
+Go to **Settings → Team** and invite people by email. They get an invite link, create or sign in to their GetHired account and join your company. You can resend or revoke invites that haven't been accepted.
+
+You can also ask the [recruiter agent](https://gethired.devhub.co.in/blog/meet-the-gethired-recruiter-agent-hire-tech-talent-from-one-chat): "Invite priya@acme.com as a hiring manager for the backend role." It always asks before sending an invite.
+
+Your plan includes a number of team seats. See [pricing](https://gethired.devhub.co.in/pricing/companies).
+
+## Owners
+
+Owners can do everything, including managing billing. A company can have several owners. One of them is the **primary owner**, the billing contact for the account.
+
+Plan changes, checkout and credit packs are always owner-only. Other members can be allowed to view the plan and usage.
+
+## Roles built from permissions
+
+Every other member has exactly one **role**. A role is a named set of permissions, grouped by area: jobs, applications, candidates, outreach, interviews, team, careers page, the agent and so on. For example:
+
+- view jobs, create jobs, edit jobs;
+- view applications, move applications, email candidates;
+- search the talent pool, send outreach;
+- view and manage AI interviews;
+- manage the team and roles;
+- use the recruiter agent.
+
+Some permissions depend on others. Editing a job needs viewing jobs, for instance, and GetHired adds the dependencies for you.
+
+### Start from a template
+
+You don't have to build roles from scratch. Templates such as **Admin**, **Member** and **Hiring manager** give you a sensible starting point. Copy one and adjust it in **Settings → Roles**.
+
+## Hiring teams: access to assigned jobs only
+
+Most permissions can be granted in one of two scopes:
+
+- **All jobs**: across the whole company.
+- **Assigned jobs**: only the jobs this person is on the hiring team for.
+
+Assign people to a job from its **Hiring team** section, or in bulk from **Settings → Hiring teams**.
+
+A typical setup for a 10-person startup:
+
+{% table %}
+- Person
+- Role
+- Scope
+---
+- Founders
+- Owner
+- Everything
+---
+- Engineering lead
+- Hiring manager
+- Assigned jobs: backend and frontend roles
+---
+- Senior engineer
+- Interviewer (view applications, add notes)
+- Assigned jobs: backend role
+---
+- Ops lead
+- Admin
+- All jobs
+{% /table %}
+
+The engineering lead sees and manages only the engineering roles. The senior engineer can read applications and leave notes and ratings for the backend role, but can't move candidates or email anyone.
+
+## Usage limits per member
+
+Some actions use your plan's allowances: outreach, AI interviews and agent messages, for example. You can set a monthly cap per role so one enthusiastic recruiter doesn't use the whole company's outreach allowance in the first week.
+
+## An audit log
+
+**Settings → Audit log** records changes that matter: who changed a role, invited or removed a member, changed permissions or edited important settings. It's there when you need to answer "who changed this?"
+
+## The agent follows the same rules
+
+The recruiter agent acts as the person using it. If your role can't send outreach, your agent can't either, and it tells you which permission is missing. If you only have access to two jobs, the agent only sees those two jobs.
+
+## Clear messages when something isn't allowed
+
+When a team member tries something their role doesn't allow, they see what's missing ("Your role can't send outreach") rather than a generic error, so they know exactly what to ask an owner for.
+
+## Getting started
+
+1. Invite your cofounders as owners.
+2. Create a hiring manager role from the template.
+3. Assign each hiring manager to their jobs.
+4. Invite interviewers with a notes-only role on the jobs they interview for.
+
+New to GetHired for Companies? Read [the overview](https://gethired.devhub.co.in/blog/introducing-gethired-for-companies-an-ai-recruiter-for-startup-tech-hiring), then [create your company account](https://gethired.devhub.co.in/auth/sign-up?company=true).

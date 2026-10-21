@@ -1,4 +1,11 @@
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Reset Your Password",
+  description:
+    "Get a link to reset your GetHired password.",
+};
 
 export default function Page() {
   return (

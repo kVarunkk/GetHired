@@ -6,7 +6,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/utils/utils";
-import { KEY_LABELS, type EntitlementKey } from "@/helpers/billing/keys";
+import { amountLine, ENTERPRISE_HREF, SHOWN_KEYS, SIGNUP_HREF } from "@/helpers/billing/plan-lines";
 import {
   formatPrice,
   priceFor,
@@ -14,20 +14,6 @@ import {
   type BillingInterval,
   type Plan,
 } from "@/helpers/billing/plans";
-
-/** The keys shown on each card, in order. */
-const SHOWN_KEYS: EntitlementKey[] = [
-  "active_job_posts",
-  "seats",
-  "profiles_per_search",
-  "screenings",
-  "outreach",
-  "interview_minutes",
-  "agent_messages",
-];
-
-export const SIGNUP_HREF = "/auth/sign-up?company=true";
-export const ENTERPRISE_HREF = "mailto:varun@devhub.co.in?subject=GetHired%20Enterprise";
 
 type PlanCardsProps = {
   plans: Plan[];
@@ -40,15 +26,6 @@ type PlanCardsProps = {
   defaultCurrency?: BillingCurrency;
   busySlug?: string | null;
 };
-
-function amountLine(plan: Plan, key: EntitlementKey) {
-  const e = plan.entitlements[key];
-  if (!e) return null;
-  const label = KEY_LABELS[key].many;
-  if (e.amount === null) return `∞ ${label}`;
-  const perMonth = e.kind === "allowance" ? " / month" : "";
-  return `${e.amount.toLocaleString("en-US")} ${label}${perMonth}`;
-}
 
 export default function PlanCards({
   plans,

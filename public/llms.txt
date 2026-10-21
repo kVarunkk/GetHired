@@ -1,19 +1,45 @@
 # GetHired
 
-> GetHired is a job board at gethired.devhub.co.in where job seekers can browse current job openings. It focuses on developer and tech roles from startups and companies.
+> GetHired (https://gethired.devhub.co.in) is an AI job platform for tech roles. Job seekers chat with an AI agent that searches thousands of developer and tech openings, matches them to their resume, reviews their CV and runs mock interviews. Companies get an AI recruiter that drafts job posts, ranks matched candidates, screens applicants with AI interviews and runs a lightweight ATS.
 
-## Main pages
+Every page listed here has a markdown version: add `.md` to the URL (the home page is `/index.md`). The links below point to the markdown versions.
 
-- [Browse jobs](https://gethired.devhub.co.in/jobs): Current job listings, searchable by role, skill, and location
-- [Hire candidates](https://gethired.devhub.co.in/hire): Page for recuirters who want to hire candidates suiting their needs.
-- [About](https://gethired.devhub.co.in/about): What GetHired is and who runs it
-- [Contact](https://gethired.devhub.co.in/contact): How to reach the team for support or partnerships
+## Job seekers
 
-## Policies
+- [Home](https://gethired.devhub.co.in/index.md): The AI job-search agent and what it does
+- [AI resume checker](https://gethired.devhub.co.in/ai-resume-checker.md): Resume feedback for a target role
+- [AI interview practice](https://gethired.devhub.co.in/ai-interview.md): Mock interviews with feedback
+- [Browse jobs](https://gethired.devhub.co.in/jobs): Current job listings, searchable by role, skill and location (HTML only)
 
-- [Privacy policy](https://gethired.devhub.co.in/privacy): How user data and cookies are handled
-- [Terms of use](https://gethired.devhub.co.in/terms): Rules for job seekers and employers
+## Companies
+
+- [Hire tech talent](https://gethired.devhub.co.in/hire.md): The AI recruiter, candidate matching, screening and pipeline
+- [Pricing for companies](https://gethired.devhub.co.in/pricing/companies.md): Plans, prices and what each includes
+
+## Integrations
+
+- [MCP server](https://gethired.devhub.co.in/mcp-server.md): Connect Claude to GetHired job search and resume tools
+- [Introducing the GetHired MCP Server](https://gethired.devhub.co.in/blog/introducing-the-get-hired-mcp-server.md): What the MCP server does and how to set it up
+- [Chrome extension](https://gethired.devhub.co.in/extension.md): Fills in job applications from your GetHired profile (coming soon)
+
+## Product guides
+
+- [Meet the GetHired Recruiter Agent](https://gethired.devhub.co.in/blog/meet-the-gethired-recruiter-agent-hire-tech-talent-from-one-chat.md)
+- [A Lightweight ATS for Startups](https://gethired.devhub.co.in/blog/a-lightweight-ats-for-startups-pipeline-stages-boards-notes-and-email-templates.md)
+- [AI Screening Interviews](https://gethired.devhub.co.in/blog/ai-screening-interviews-replace-30-phone-screens-with-one-page-reports.md)
+- [AI Applicant Screening](https://gethired.devhub.co.in/blog/ai-applicant-screening-how-to-sort-200-applicants-by-fit-without-reading-them-all.md)
+- [Fair AI Hiring](https://gethired.devhub.co.in/blog/fair-ai-hiring-how-gethired-keeps-bias-out-of-candidate-screening.md)
+- [Hiring as a Team](https://gethired.devhub.co.in/blog/hiring-as-a-team-custom-roles-permissions-and-hiring-teams-on-gethired.md)
+- [Branded Careers Pages and Application Forms](https://gethired.devhub.co.in/blog/build-a-branded-careers-page-and-custom-application-form-in-minutes.md)
+
+## About
+
+- [About](https://gethired.devhub.co.in/about.md): What GetHired is and who runs it
+- [Contact](https://gethired.devhub.co.in/contact.md): How to reach the team for support or partnerships
 
 ## Optional
 
+- [Blog](https://gethired.devhub.co.in/blog.md): Every post, newest first, with links to their markdown versions
+- [Privacy policy](https://gethired.devhub.co.in/privacy-policy): How user data and cookies are handled
+- [Terms of service](https://gethired.devhub.co.in/terms-of-service): Rules for job seekers and employers
 - [Sitemap](https://gethired.devhub.co.in/sitemap/0.xml): Full list of pages on the site

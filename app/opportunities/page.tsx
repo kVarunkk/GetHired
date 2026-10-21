@@ -9,6 +9,14 @@ import { isOpen, listMyOpportunities } from "@/helpers/outreach/list";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
 import { simpleTimeAgo } from "@/utils/date";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Opportunities",
+  description:
+    "Companies that found your public profile and want to talk.",
+  robots: { index: false, follow: false },
+};
 
 /** The candidate's outreach from companies (OR-REQ-003): open first, then answered. */
 export default async function OpportunitiesPage() {

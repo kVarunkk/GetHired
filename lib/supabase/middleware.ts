@@ -6,8 +6,19 @@ import { headers } from "next/headers";
 import { getUserFromRequest } from "./get-user-from-request";
 import { APPLICANT_HOME, COMPANY_HOME, companyOnboardingPath } from "@/helpers/user/home-path";
 import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import { pageForMarkdownPath } from "@/helpers/marketing/content";
 
 export async function updateSession(request: NextRequest) {
+  // Markdown versions of public pages, for AI agents: /hire.md, /index.md,
+  // /blog/<slug>.md. Public, so they skip the auth checks below.
+  const markdownPage = pageForMarkdownPath(request.nextUrl.pathname);
+  if (markdownPage) {
+    const url = request.nextUrl.clone();
+    url.pathname = markdownPage === "/" ? "/md/index" : `/md${markdownPage}`;
+    url.search = "";
+    return NextResponse.rewrite(url);
+  }
+
   const supabaseResponse = NextResponse.next({
     request,
   });

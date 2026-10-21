@@ -7,13 +7,16 @@ import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
 import { getPlatformStats } from "@/utils/platform-stats";
 import { Metadata } from "next";
+import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
+
+const page = LANDING_PAGES["ai-resume-checker"];
 
 export const metadata: Metadata = {
   title: "AI Resume Checker",
-  description:
-    "Get a deep semantic analysis of your resume. GetHired's AI Resume Checker optimizes your technical presence for modern ATS systems to help you land more interviews.",
+  description: page.description,
   alternates: {
     canonical: "https://gethired.devhub.co.in/ai-resume-checker",
+    types: markdownAlternate(page.path),
   },
   openGraph: {
     title: "AI Resume Checker",
@@ -60,7 +63,7 @@ export default async function AIResumeChecker() {
         userCount={userCount}
       />
       <TheGetHiredAdvantageSection jobCount={jobCount} />
-      <FAQSection topic="resume" />
+      <FAQSection topic={page.faq} />
       <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
         <FootComponent />
       </div>
