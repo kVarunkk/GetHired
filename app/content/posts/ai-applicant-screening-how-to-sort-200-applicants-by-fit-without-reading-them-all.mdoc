@@ -1,0 +1,99 @@
+---
+title: 'AI Applicant Screening: How to Sort 200 Applicants by Fit Without Reading Them All'
+publishedAt: 2026-10-21
+type: companies
+---
+**Quick answer:** On GetHired, every application to your job is screened automatically in the background. Each applicant gets a fit score from 0 to 100, a recommendation (strong yes, yes, maybe or no), a short summary, a check of each must-have requirement with evidence from their resume, and feedback on their screening answers. You sort the applicants table by fit, start at the top, and still make every decision yourself.
+
+A good remote engineering role can get two hundred applications in its first week. Reading each resume carefully takes three to five minutes, which is over ten hours of screening per role. Most founders skim instead, and good candidates with an unusual background get missed.
+
+AI screening doesn't replace your judgement. It puts the applicants in a sensible order and tells you what to look at.
+
+## What each screening contains
+
+When someone applies to one of your jobs, GetHired compares their profile, resume and answers with the job post and produces:
+
+{% table %}
+- Part
+- What it tells you
+---
+- **Fit score (0–100)**
+- How well the applicant matches the job's stated requirements.
+---
+- **Recommendation**
+- Strong yes, yes, maybe or no. It always agrees with the score band.
+---
+- **Summary**
+- Two or three sentences on who this person is relative to the role.
+---
+- **Strengths and gaps**
+- Up to four of each, specific to this job.
+---
+- **Must-have coverage**
+- Each key requirement marked met, partial, not met or unknown, with a short piece of evidence from the resume.
+---
+- **Answer feedback**
+- For each screening question: strong, ok, weak or missing, with a note.
+---
+- **Flags**
+- A few job-related things to check, such as salary expectations above your range.
+{% /table %}
+
+## How the score is calibrated
+
+A score is only useful if 80 means the same thing every time. The model scores against a fixed rubric:
+
+- **90 and above:** exceptional fit, a strong yes.
+- **75–89:** strong fit, a yes.
+- **60–74:** plausible, a maybe.
+- **40–59:** weak fit.
+- **Below 40:** poor fit.
+
+Recommendations below 60 are a no. If the model's recommendation disagrees with its own score, it's corrected in code, so the two never contradict each other.
+
+## Screening the way you'd screen
+
+### Must-haves first
+
+The most useful part of a screening is usually the must-have coverage. "Go in production: met, *'Built and ran the payments API in Go for 3 years'*" tells you more than a score does. When a requirement is marked **unknown**, the resume doesn't say either way, and that's a good question for the first call.
+
+### Answers count
+
+If your application form asks questions, the screening grades each answer. Short or generic answers are marked weak or missing, so you can tell who put effort in. You can add typed questions (yes/no, single choice, numbers and more) with the [application form builder](https://gethired.devhub.co.in/blog/build-a-branded-careers-page-and-custom-application-form-in-minutes).
+
+### Re-screening when the job changes
+
+If you edit the job description, skills or experience range, existing screenings are marked **stale** rather than deleted, and you can re-screen them against the new version. You never compare applicants scored against two different job posts without knowing it.
+
+## Working through applicants
+
+On a job's applications page:
+
+1. **Sort by Fit** to put the strongest matches first.
+2. **Filter by recommendation** to see only strong yes and yes, for example.
+3. **Open an applicant** to see the screening card above their resume.
+4. **Move them** to the next stage, singly or in bulk, from the list or the [pipeline board](https://gethired.devhub.co.in/blog/a-lightweight-ats-for-startups-pipeline-stages-boards-notes-and-email-templates).
+
+Or ask the [recruiter agent](https://gethired.devhub.co.in/blog/meet-the-gethired-recruiter-agent-hire-tech-talent-from-one-chat): "Summarise this week's applicants for the backend role and tell me who to talk to first."
+
+If you'd like a deeper signal than a resume, set the job to invite everyone above a fit score to an [AI screening interview](https://gethired.devhub.co.in/blog/ai-screening-interviews-replace-30-phone-screens-with-one-page-reports).
+
+## What the AI doesn't see
+
+The screening model never sees an applicant's name, email, phone number, links, photo, age or date of birth, gender, marital status, religion, caste or nationality. These are removed before the model sees anything, and email addresses, phone numbers and URLs are also scrubbed from the resume text.
+
+The prompt also tells the model that employment gaps, school prestige and where a name or location comes from are not negatives on their own. Read more in [fair AI hiring on GetHired](https://gethired.devhub.co.in/blog/fair-ai-hiring-how-gethired-keeps-bias-out-of-candidate-screening).
+
+## What applicants see
+
+Nothing about their score. Candidates never see their fit score or recommendation. They see the status of their application as you move it through your pipeline.
+
+## AI suggests, you decide
+
+Screening never rejects anyone. Every score and summary is labelled as AI-generated, and every move between stages is made by a person on your team. Treat the screening like a careful first read from a colleague: useful, usually right, worth checking.
+
+## Pricing
+
+Screening is included on the free plan, with a monthly allowance. Paid plans include more. See the [pricing page](https://gethired.devhub.co.in/pricing/companies).
+
+[Post your first job](https://gethired.devhub.co.in/auth/sign-up?company=true) and your applicants will be screened as they arrive.

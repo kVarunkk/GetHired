@@ -9,6 +9,12 @@ import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import FootComponent from "@/components/FootComponent";
 import BlogSidebarCTA from "@/components/BlogSidebarCTA";
+import BlogSidebarCompanyCTA from "@/components/BlogSidebarCompanyCTA";
+import { Badge } from "@/components/ui/badge";
+import {
+  BLOG_POST_TYPE_LABELS,
+  formatPublishedAt,
+} from "@/helpers/blog/post-types";
 import { deploymentUrl } from "@/utils/formatters";
 
 const reader = createReader(process.cwd(), keystaticConfig);
@@ -27,6 +33,21 @@ const markdocConfig = {
             node.transformChildren(config),
           ),
         ]);
+      },
+    },
+    // Inline code: prose's default code colour is a fixed dark gray (unreadable
+    // on the dark theme) and it wraps code in literal backticks.
+    code: {
+      ...Markdoc.nodes.code,
+      transform(node: Node) {
+        return new Markdoc.Tag(
+          "code",
+          {
+            class:
+              "rounded bg-muted px-1.5 py-0.5 text-[0.85em] font-medium text-primary before:content-none after:content-none",
+          },
+          [node.attributes.content],
+        );
       },
     },
   },
@@ -76,6 +97,7 @@ export async function generateMetadata({
       ],
       locale: "en_US",
       type: "article",
+      publishedTime: post.publishedAt,
     },
 
     twitter: {
@@ -144,11 +166,19 @@ export default async function Post({
               />
             </div>
           )}
-          <h1 className="text-5xl leading-[3.5rem] font-semibold tracking-tight mt-4 text-center">
+          <h1 className="text-3xl font-semibold tracking-tight mt-4 text-center [overflow-wrap:anywhere] sm:text-4xl lg:text-5xl lg:leading-[3.5rem]">
             {post.title}
           </h1>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
+            <Badge variant="outline">{BLOG_POST_TYPE_LABELS[post.type]}</Badge>
+            <time dateTime={post.publishedAt}>
+              {formatPublishedAt(post.publishedAt)}
+            </time>
+          </div>
 
-          <div className="prose prose-xl mt-8 mb-12 leading-8 text-lg !text-primary prose-headings:text-primary prose-strong:text-primary prose-a:text-primary lg:mb-20">
+          {/* overflow-wrap: anywhere lets bare URLs and other long strings
+              wrap instead of pushing the page sideways on small screens. */}
+          <div className="prose prose-xl [overflow-wrap:anywhere] mt-8 mb-12 leading-8 text-lg !text-primary prose-headings:text-primary prose-strong:text-primary prose-a:text-primary lg:mb-20">
             {Markdoc.renderers.react(renderable, React)}
           </div>
         </article>
@@ -156,7 +186,11 @@ export default async function Post({
         {/* Below the article on small screens; a sticky right rail on lg+. */}
         <aside className="mb-20">
           <div className="lg:sticky lg:top-8 lg:mt-14">
-            <BlogSidebarCTA />
+            {post.type === "companies" ? (
+              <BlogSidebarCompanyCTA />
+            ) : (
+              <BlogSidebarCTA />
+            )}
           </div>
         </aside>
       </div>
