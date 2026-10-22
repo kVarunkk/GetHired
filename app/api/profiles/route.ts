@@ -35,17 +35,21 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  // The company comes from the user's membership (recruiter teams); internal
-  // digest calls pass the owner's id.
-  const company = await getMyCompany(supabase, user).catch(() => null);
-  const { data: companyData, error: companyError } = company
-    ? await supabase
-        .from("company_info")
-        .select("id, ai_credits, filled, job_postings(id, embedding_new)")
-        .eq("id", company.id)
-        .single()
-    : { data: null, error: null };
-  if (!company || companyError || !companyData) {
+  // The company comes from the user's membership (recruiter teams). Internal
+  // digest calls pass the owner's id and run as the service role, where
+  // my_company_access() has no auth.uid(), so they look the owner up directly.
+  const company = isInternalCall
+    ? null
+    : await getMyCompany(supabase, user).catch(() => null);
+  const companyQuery = supabase
+    .from("company_info")
+    .select("id, ai_credits, filled, job_postings(id, embedding_new)");
+  const { data: companyData, error: companyError } = isInternalCall
+    ? await companyQuery.eq("user_id", user.id).single()
+    : company
+      ? await companyQuery.eq("id", company.id).single()
+      : { data: null, error: null };
+  if (companyError || !companyData) {
     return NextResponse.json(
       { error: "Unauthorized: Not a company user" },
       { status: 403 },
@@ -95,7 +99,7 @@ export async function GET(request: NextRequest) {
   // A talent list's tab is its slug (PL-TASK-051). An unknown one shows
   // everyone, like the page's All tab.
   const talentListId =
-    tab && !isFavoriteTabActive && tab !== "all"
+    company && tab && !isFavoriteTabActive && tab !== "all"
       ? await findTalentListIdBySlug(
           { supabase, company },
           tab,

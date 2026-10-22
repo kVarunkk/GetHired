@@ -110,7 +110,12 @@ export async function processJobPostingRelevance(
       },
     );
 
-    if (!response.ok) throw new Error(`Failed to fetch relevant profiles.`);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(
+        `Failed to fetch relevant profiles (${response.status}): ${body?.error ?? response.statusText}`,
+      );
+    }
 
     const json = await response.json();
     const profiles: AllProfileWithRelations[] = json.data || [];
