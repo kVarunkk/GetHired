@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
@@ -149,7 +150,7 @@ export async function attachToApplicationAction(input: AttachInput): Promise<Att
       p_session: data.interviewSessionId,
     });
     if (queueError) {
-      console.error("[attachments] couldn't queue the company analysis", queueError.message);
+      reportError("[attachments] couldn't queue the company analysis", queueError.message);
     } else {
       analysisQueued = (queued as { queued?: boolean } | null)?.queued === true;
     }

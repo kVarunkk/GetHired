@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { render } from "react-email";
@@ -142,6 +143,6 @@ async function notifyAfterResponse(outreach: CandidateOutreach) {
       textContent,
     });
   } catch (err) {
-    console.error("[outreach] reply notification failed:", err);
+    reportError("[outreach] reply notification failed:", err);
   }
 }

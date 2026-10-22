@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import { PROFILE_VIEW_WINDOW_DAYS } from "./config";
@@ -22,12 +23,12 @@ export async function countProfileViews(
       .eq("candidate_user_id", userId)
       .gt("viewed_on", since);
     if (error) {
-      console.error("[profile-views] couldn't count the views", error.message);
+      reportError("[profile-views] couldn't count the views", error.message);
       return 0;
     }
     return new Set((data ?? []).map((row) => row.company_id)).size;
   } catch (err) {
-    console.error("[profile-views] couldn't count the views", err);
+    reportError("[profile-views] couldn't count the views", err);
     return 0;
   }
 }

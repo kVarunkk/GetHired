@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
     n: BATCH_SIZE,
   });
   if (error) {
-    console.error("[applicant digest worker] couldn't read the queue", error.message);
+    reportError("[applicant digest worker] couldn't read the queue", error.message);
     return NextResponse.json({ message: "Couldn't read the queue." }, { status: 500 });
   }
 
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
       sent++;
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
-      console.error(`[applicant digest worker] message ${msg_id} failed`, reason);
+      reportError(`[applicant digest worker] message ${msg_id} failed`, reason);
       if (read_ct >= DIGEST_MAX_READS) {
         failures.push(`company ${message.companyId}: ${reason}`);
         await archive(msg_id).catch(() => {});

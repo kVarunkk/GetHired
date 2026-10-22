@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextResponse } from "next/server";
 import { embedMany } from "ai";
 import { headers } from "next/headers";
@@ -47,7 +48,7 @@ export async function POST() {
     });
 
     if (readError) {
-      console.error("Error reading from pgmq:", readError);
+      reportError("Error reading from pgmq:", readError);
       return NextResponse.json({ error: "Failed to read queue." }, { status: 500 });
     }
 
@@ -235,7 +236,7 @@ export async function POST() {
       skipped_count: skippedCount,
     });
   } catch (error) {
-    console.error("Error in batch embedding route:", error);
+    reportError("Error in batch embedding route:", error);
     return NextResponse.json({ error: "Internal server error." }, { status: 500 });
   }
 }

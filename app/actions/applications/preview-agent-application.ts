@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -67,7 +68,7 @@ export async function previewAgentApplicationAction(input: unknown): Promise<Pre
       ),
     };
   } catch (error) {
-    console.error("[agent apply preview]", error);
+    reportError("[agent apply preview]", error);
     return { ok: false, error: "Couldn't load the preview." };
   }
 }

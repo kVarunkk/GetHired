@@ -1,5 +1,6 @@
 "use client";
 
+import { reportClientError } from "@/lib/posthog/report-client-error";
 import React, { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
@@ -80,7 +81,9 @@ export default function ResumeSourceSelector({
           .createSignedUrl(path, 3600);
         if (signedError) throw signedError;
         if (!ignore) setPreviewUrl(data?.signedUrl || null);
-      } catch {}
+      } catch (error) {
+        reportClientError("[resume preview] couldn't load the preview", error);
+      }
     })();
 
     return () => {

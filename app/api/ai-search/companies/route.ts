@@ -1,5 +1,6 @@
 // TODO: MIGRATE TO JEV
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
@@ -160,7 +161,8 @@ export async function POST(request: NextRequest) {
       rerankedcompanies: output.reranked_company_ids,
       filteredOutcompanies: output.filtered_out_company_ids,
     });
-  } catch {
+  } catch (error) {
+    reportError("[ai-search/companies] search failed", error);
     return NextResponse.json(
       {
         error: "An error occurred",

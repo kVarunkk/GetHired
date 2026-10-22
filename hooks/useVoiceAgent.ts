@@ -1,5 +1,6 @@
 "use client";
 
+import { reportClientError } from "@/lib/posthog/report-client-error";
 import { deductInterviewSessionCreditsAction } from "@/app/actions/deduct-interview-session-credits";
 import {
   heartbeatInterviewSessionAction,
@@ -127,7 +128,7 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
       });
     } catch (error) {
       finalizingRef.current = false;
-      console.error("[INTERVIEW_ANALYSIS_FINALIZE_FAILED]:", error);
+      reportClientError("[INTERVIEW_ANALYSIS_FINALIZE_FAILED]:", error);
     }
   }, [interviewId, saveTurns, screening]);
 
@@ -139,11 +140,11 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
     void releaseInterviewSessionAction(interviewId, sessionId)
       .then((result) => {
         if (!result.success) {
-          console.error("[INTERVIEW_SESSION_RELEASE_FAILED]:", result.error);
+          reportClientError("[INTERVIEW_SESSION_RELEASE_FAILED]:", result.error);
         }
       })
       .catch((error: unknown) => {
-        console.error("[INTERVIEW_SESSION_RELEASE_FAILED]:", error);
+        reportClientError("[INTERVIEW_SESSION_RELEASE_FAILED]:", error);
       });
   }, [interviewId]);
 
@@ -475,7 +476,7 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
 
           setStatus("live");
         } catch (err) {
-          console.error(err);
+          reportClientError(err);
 
           if (!stale()) {
             setErrorMessage(
@@ -642,13 +643,13 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
 
           if (!screening) {
             void saveTurns().catch((error: unknown) => {
-              console.error("Failed to save interview turns:", error);
+              reportClientError("Failed to save interview turns:", error);
             });
           }
         }
       };
     } catch (err) {
-      console.error(err);
+      reportClientError(err);
 
       if (!stale()) {
         setErrorMessage(
@@ -698,12 +699,12 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
             result.error ?? "The interview session lock was lost.",
           );
         } else if (result.status === "error") {
-          console.error("[INTERVIEW_SESSION_HEARTBEAT_RETRY]:", result.error);
+          reportClientError("[INTERVIEW_SESSION_HEARTBEAT_RETRY]:", result.error);
         }
       } catch (error) {
         if (!active || sessionIdRef.current !== sessionId) return;
 
-        console.error("[INTERVIEW_SESSION_HEARTBEAT_RETRY]:", error);
+        reportClientError("[INTERVIEW_SESSION_HEARTBEAT_RETRY]:", error);
       } finally {
         heartbeatInFlight = false;
       }
@@ -724,7 +725,7 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
         try {
           ws.close();
         } catch (error) {
-          console.error("[INTERVIEW_SOCKET_CLOSE_FAILED]:", error);
+          reportClientError("[INTERVIEW_SOCKET_CLOSE_FAILED]:", error);
         }
         wsRef.current = null;
       }

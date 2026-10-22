@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendEmailForStatusUpdate } from "@/utils/email";
@@ -102,6 +103,7 @@ export async function POST(req: NextRequest) {
         if (error) throw new Error(`mark_usage_notified: ${error.message}`);
         report.notified += 1;
       } catch (err) {
+        reportError("[billing cron] usage alert failed", err);
         report.failures.push(`usage ${alert.company_id}/${alert.key}: ${message(err)}`);
       }
     }
@@ -131,6 +133,7 @@ export async function POST(req: NextRequest) {
         });
         report.graceEmails += 1;
       } catch (err) {
+        reportError("[billing cron] grace email failed", err);
         report.failures.push(`grace ${sub.company_id}: ${message(err)}`);
       }
     }
@@ -159,6 +162,7 @@ export async function POST(req: NextRequest) {
         await sendCreditsExpiringEmail(emails, { companyName, credits, expiresAt });
         report.expiryWarnings += 1;
       } catch (err) {
+        reportError("[billing cron] expiry email failed", err);
         report.failures.push(`expiry ${companyId}: ${message(err)}`);
       }
     }
@@ -170,6 +174,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(report);
   } catch (err) {
+    reportError("[billing cron] critical failure", err);
     await sendEmailForStatusUpdate(`BILLING CRON CRITICAL FAILURE:\n${message(err)}`);
     return NextResponse.json({ error: message(err) }, { status: 500 });
   }

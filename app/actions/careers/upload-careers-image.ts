@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { randomUUID } from "node:crypto";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -29,7 +30,7 @@ export async function uploadCareersImageAction(
   const storage = createServiceRoleClient().storage.from("careers");
   const { error } = await storage.upload(path, file, { contentType: file.type, upsert: false });
   if (error) {
-    console.error("[careers] upload failed", error.message);
+    reportError("[careers] upload failed", error.message);
     return { ok: false, error: "Couldn't upload the image. Please try again." };
   }
   return { ok: true, url: storage.getPublicUrl(path).data.publicUrl };

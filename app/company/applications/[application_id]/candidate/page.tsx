@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { after } from "next/server";
 import { format } from "date-fns";
@@ -40,7 +41,7 @@ export default async function ApplicationCandidatePage({ params }: { params: Pro
     // not the page. Opening it ends the candidate's right to un-share.
     const [shared, { data: signedUrlData }] = await Promise.all([
       loadSharedSignals(supabase, application.id).catch((err) => {
-        console.error("[application] couldn't load shared items", err);
+        reportError("[application] couldn't load shared items", err);
         return null;
       }),
       supabase.storage.from("resumes").createSignedUrl(application.resumes?.resume_path ?? "", 3600),

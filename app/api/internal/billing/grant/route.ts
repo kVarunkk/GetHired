@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
     if (err instanceof GrantError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
-    console.error("[billing] grant failed", err);
+    reportError("[billing] grant failed", err);
     return NextResponse.json({ error: "Grant failed." }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendInterviewInviteEmail } from "@/helpers/interview/screening/invite";
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     n: BATCH_SIZE,
   });
   if (error) {
-    console.error("[screening invite emails worker] couldn't read the queue", error.message);
+    reportError("[screening invite emails worker] couldn't read the queue", error.message);
     return NextResponse.json({ message: "Couldn't read the queue." }, { status: 500 });
   }
   const messages = (data ?? []) as QueueMessage[];
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       message_id: msgId,
     });
     if (archiveError) {
-      console.error(`[screening invite emails worker] couldn't archive ${msgId}`, archiveError.message);
+      reportError(`[screening invite emails worker] couldn't archive ${msgId}`, archiveError.message);
     }
   };
 
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
     .select("id, status, applicant_user_id, deadline_at, config_snapshot")
     .in("id", ids);
   if (loadError) {
-    console.error("[screening invite emails worker] couldn't load the interviews", loadError.message);
+    reportError("[screening invite emails worker] couldn't load the interviews", loadError.message);
     return NextResponse.json({ message: "Couldn't load the interviews." }, { status: 500 });
   }
   const { data: people, error: peopleError } = await admin
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
     .select("user_id, email, full_name")
     .in("user_id", [...new Set((interviews ?? []).map((i) => i.applicant_user_id))]);
   if (peopleError) {
-    console.error("[screening invite emails worker] couldn't load the applicants", peopleError.message);
+    reportError("[screening invite emails worker] couldn't load the applicants", peopleError.message);
     return NextResponse.json({ message: "Couldn't load the applicants." }, { status: 500 });
   }
   const interviewOf = new Map((interviews ?? []).map((i) => [i.id, i]));
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
       await sendInterviewInviteEmail(interview, { email: person.email, full_name: person.full_name });
     } catch (err) {
       // Left in the queue: it comes back after the visibility timeout.
-      console.error("[screening invite emails worker] send failed", interview.id, err);
+      reportError("[screening invite emails worker] send failed", interview.id, err);
       if (read_ct >= SCREENING_INVITE_EMAIL_MAX_READS) {
         failures.push(`interview ${interview.id}: ${err instanceof Error ? err.message : String(err)}`);
         await archive(msg_id);

@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 
@@ -34,7 +35,7 @@ export async function inviteAboveFitThreshold(
     });
     const result = data as { ok: boolean; id?: string; reason?: string } | null;
     if (error || !result) {
-      console.error("[screening] fit-threshold invite failed", applicationId, error?.message);
+      reportError("[screening] fit-threshold invite failed", applicationId, error?.message);
       return { invited: false, reason: "failed" };
     }
     if (!result.ok || !result.id) {
@@ -47,7 +48,7 @@ export async function inviteAboveFitThreshold(
 
     return { invited: true, id: result.id };
   } catch (err) {
-    console.error("[screening] fit-threshold invite threw", applicationId, err);
+    reportError("[screening] fit-threshold invite threw", applicationId, err);
     return { invited: false, reason: "failed" };
   }
 }

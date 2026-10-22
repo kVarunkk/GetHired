@@ -1,5 +1,6 @@
 "use client";
 
+import { reportClientError } from "@/lib/posthog/report-client-error";
 import { Bookmark } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
@@ -34,7 +35,8 @@ export default function BookmarkJobSearch({ user }: { user: User }) {
           .maybeSingle();
 
         setBookmarked(!!data);
-      } catch {
+      } catch (error) {
+        reportClientError("[bookmarks] couldn't check the bookmark", error);
         setBookmarked(false);
       } finally {
         setLoading(false);

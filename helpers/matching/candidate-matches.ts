@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import { parseStoredExplanation, type MatchExplanation } from "./schemas";
@@ -33,7 +34,7 @@ export async function getCandidateMatches(
     .eq("user_id", candidateId)
     .eq("job_postings.company_id", companyId);
   if (error) {
-    console.error("[profile matches] couldn't load matches", error.message);
+    reportError("[profile matches] couldn't load matches", error.message);
     return [];
   }
 

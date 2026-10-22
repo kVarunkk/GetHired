@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { handleUserUpsert } from "@/utils/auth-handlers";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
@@ -46,7 +47,8 @@ export async function GET(request: Request) {
         );
       }
       return NextResponse.redirect(`${origin}${finalRedirectPath}`);
-    } catch {
+    } catch (error) {
+      reportError("[auth/callback] failed", error);
       return NextResponse.redirect(`${origin}/auth/error`);
     }
   }

@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
@@ -103,7 +104,7 @@ export async function explainCandidateMatch(
         explained_at: new Date().toISOString(),
       })
       .eq("id", match.id);
-    if (error) console.error("[matches/explain] couldn't store the explanation", error.message);
+    if (error) reportError("[matches/explain] couldn't store the explanation", error.message);
   }
 
   return { ok: true, explanation: result.explanation, cached: false };

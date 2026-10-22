@@ -1,5 +1,6 @@
 "use client";
 
+import { reportClientError } from "@/lib/posthog/report-client-error";
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { cn } from "@/utils/utils";
 import {
@@ -86,6 +87,7 @@ export default function OriginalResumeViewer({
 
         if (isCurrent) setPdfBlob(blob);
       } catch (err) {
+        reportClientError("[resume viewer] couldn't load the PDF", err);
         if (isCurrent) {
           setDebugError(
             err instanceof Error ? err.message : JSON.stringify(err),

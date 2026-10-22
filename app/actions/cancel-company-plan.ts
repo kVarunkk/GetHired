@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { BILLING_FORBIDDEN, canManageBilling } from "@/helpers/billing/access";
@@ -24,7 +25,7 @@ export async function cancelCompanyPlanAction(): Promise<Result> {
   try {
     await cancelAtPeriodEnd(sub.dodoSubscriptionId, true);
   } catch (err) {
-    console.error("[billing] cancel failed", err);
+    reportError("[billing] cancel failed", err);
     return { ok: false, error: "Couldn't cancel your plan. Please try again." };
   }
 
@@ -32,7 +33,7 @@ export async function cancelCompanyPlanAction(): Promise<Result> {
     p_company_id: company.id,
     p_cancel: true,
   });
-  if (error) console.error("[billing] couldn't record the cancellation", error);
+  if (error) reportError("[billing] couldn't record the cancellation", error);
 
   await eventCaptureServer({
     event: PostHogEvent.BillingCancelled,

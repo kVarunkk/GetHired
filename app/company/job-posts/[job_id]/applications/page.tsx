@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import Link from "next/link";
 import { answerFilterQuestions } from "@/helpers/applications/answer-filters";
 import { readApplicationForm } from "@/helpers/jobs/application-form-schema";
@@ -84,7 +85,7 @@ export default async function JobApplicationsPage({
         .order("name", { ascending: true }),
       // The funnel strip (PL-TASK-050). It's extra: a failure only hides it.
       getJobFunnel(supabase, job.id).catch((err) => {
-        console.error("Failed to load the job funnel:", err);
+        reportError("Failed to load the job funnel:", err);
         return null;
       }),
       // RP-REQ-044: the member's own cap, next to the Screen button.
@@ -92,7 +93,7 @@ export default async function JobApplicationsPage({
       // SIT-062: the Interview column and bulk invites. Extra: a failure hides them.
       canViewInterviews
         ? Promise.all([getInterviewConfig(supabase, job.id), getInterviewSummaries(supabase, job.id)]).catch((err) => {
-            console.error("Failed to load the job's interviews:", err);
+            reportError("Failed to load the job's interviews:", err);
             return null;
           })
         : null,

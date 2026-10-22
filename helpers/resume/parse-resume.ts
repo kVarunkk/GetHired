@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { z } from "zod";
 import { wrapInSandbox } from "../ai/security";
 import { generateText, Output } from "ai";
@@ -99,7 +100,7 @@ async function generateStructuredProfile(lines: string[]) {
 
     return { sections: processedSections };
   } catch (err) {
-    console.error("[RESUME_STRUCTURE_ERROR]:", err);
+    reportError("[RESUME_STRUCTURE_ERROR]:", err);
     throw new Error("AI engine failed to generate a valid document structure.");
   }
 }
@@ -146,7 +147,7 @@ export async function parseResume(userId: string, resumeId: string) {
         .createSignedUrl(resumeData.resume_path, 120);
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
-      console.error("Storage signed URL generation failed:", signedUrlError);
+      reportError("Storage signed URL generation failed:", signedUrlError);
       throw new Error(
         signedUrlError?.message ||
           "Failed to generate signed URL for resume file.",
@@ -201,7 +202,7 @@ export async function parseResume(userId: string, resumeId: string) {
       );
     } catch (postError) {
       // Log notification/billing errors but DO NOT mark the resume processing as failed
-      console.error(
+      reportError(
         "[POST_PROCESSING_WARNING]: Email or credit deduction failed:",
         postError,
       );
@@ -209,7 +210,7 @@ export async function parseResume(userId: string, resumeId: string) {
   } catch (e) {
     const errorMessage =
       e instanceof Error ? e.message : "Unknown error occurred";
-    console.error(`[RESUME_PARSING_FAILED] ID: ${resumeId}:`, errorMessage);
+    reportError(`[RESUME_PARSING_FAILED] ID: ${resumeId}:`, errorMessage);
 
     // Update database state safely to inform UI that parsing stopped
     await supabase
@@ -231,7 +232,7 @@ export async function parseResume(userId: string, resumeId: string) {
         userId,
       );
     } catch (emailErr) {
-      console.error(
+      reportError(
         "[EMAIL_NOTIFICATION_FAILED]: Failed to send failure email:",
         emailErr,
       );

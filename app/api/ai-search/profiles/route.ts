@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { AiSearchProfileBody } from "@/utils/types/api.types";
@@ -83,7 +84,8 @@ export async function POST(request: NextRequest) {
       filteredOutProfiles: object.filtered_out_ids,
       scores: object.scores ?? {},
     });
-  } catch {
+  } catch (error) {
+    reportError("[ai-search/profiles] search failed", error);
     return NextResponse.json(
       {
         message: "An error occurred",

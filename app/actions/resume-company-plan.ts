@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { BILLING_FORBIDDEN, canManageBilling } from "@/helpers/billing/access";
@@ -25,7 +26,7 @@ export async function resumeCompanyPlanAction(): Promise<Result> {
   try {
     await cancelAtPeriodEnd(sub.dodoSubscriptionId, false);
   } catch (err) {
-    console.error("[billing] resume failed", err);
+    reportError("[billing] resume failed", err);
     return { ok: false, error: "Couldn't resume your plan. Please try again." };
   }
 
@@ -33,7 +34,7 @@ export async function resumeCompanyPlanAction(): Promise<Result> {
     p_company_id: company.id,
     p_cancel: false,
   });
-  if (error) console.error("[billing] couldn't record the resume", error);
+  if (error) reportError("[billing] couldn't record the resume", error);
 
   await eventCaptureServer({
     event: PostHogEvent.BillingResumed,

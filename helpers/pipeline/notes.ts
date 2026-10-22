@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import { after } from "next/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
@@ -108,7 +109,7 @@ export async function addNote(
     payload: { note_id: note.id, rated: rating !== null },
   });
   // The note is saved; a missing timeline line isn't worth failing it.
-  if (eventError) console.error("Failed to log note_added:", eventError.message);
+  if (eventError) reportError("Failed to log note_added:", eventError.message);
 
   // TM-REQ-009: email the teammates it mentions, after the response.
   const mentioned = await mentionedTeammates(supabase, note.body, user.id);
@@ -132,7 +133,7 @@ async function mentionedTeammates(
   if (!body.includes("@")) return [];
   const { data, error } = await supabase.rpc("list_mentionable_members");
   if (error) {
-    console.error("Failed to load teammates for mentions:", error.message);
+    reportError("Failed to load teammates for mentions:", error.message);
     return [];
   }
   const members = (data ?? []).map((m) => ({ userId: m.user_id, name: m.name ?? "" }));

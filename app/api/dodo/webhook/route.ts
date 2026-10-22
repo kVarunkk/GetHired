@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse, after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { WebhookPayload } from "dodopayments/resources/webhook-events.mjs";
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
       },
     }) as DodoEvent;
   } catch (err) {
-    console.error("⚠️ Webhook signature verification failed.", err);
+    reportError("⚠️ Webhook signature verification failed.", err);
     return NextResponse.json(
       { error: "Webhook Error: Invalid Signature" },
       { status: 400 },
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
   if (insertError?.code === UNIQUE_VIOLATION) return reply("duplicate");
   if (insertError) {
     // Nothing is stored yet, so let Dodo retry.
-    console.error("Failed to store webhook event:", insertError);
+    reportError("Failed to store webhook event:", insertError);
     return NextResponse.json({ error: "Couldn't store the event." }, { status: 500 });
   }
 
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     return reply(status);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`Webhook ${webhookId} (${event.type}) failed:`, err);
+    reportError(`Webhook ${webhookId} (${event.type}) failed:`, err);
     await supabase
       .from("billing_webhook_events")
       .update({ error: message })
@@ -242,7 +243,7 @@ async function notifyPlanChanged(companyId: string, fromTierId: string | null, t
       scheduled: false,
     });
   } catch (err) {
-    console.error("[billing] plan changed email failed", err);
+    reportError("[billing] plan changed email failed", err);
   }
 }
 

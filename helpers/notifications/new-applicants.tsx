@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { render } from "react-email";
 import ApplicantDigestEmail, { type DigestJob } from "@/emails/ApplicantDigestEmail";
@@ -99,7 +100,7 @@ export async function sendApplicantDigest({
     });
     return { ok: true };
   } catch (err) {
-    console.error("Error sending an applicant digest:", err);
+    reportError("Error sending an applicant digest:", err);
     return { ok: false, error: "Failed to send email" };
   }
 }

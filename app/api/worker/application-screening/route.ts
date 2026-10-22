@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { consumeEntitlement } from "@/helpers/billing/entitlements";
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
     n: MATCH_WORKER_BATCH_SIZE,
   });
   if (error) {
-    console.error("[screening worker] couldn't read the queue", error.message);
+    reportError("[screening worker] couldn't read the queue", error.message);
     return NextResponse.json({ message: "Couldn't read the queue." }, { status: 500 });
   }
 
@@ -201,7 +202,7 @@ export async function GET(request: NextRequest) {
         previous_fit_score: typeof previousFitScore === "number" ? previousFitScore : null,
       },
     });
-    if (eventError) console.error("[screening worker] screened event failed", eventError.message);
+    if (eventError) reportError("[screening worker] screened event failed", eventError.message);
 
     // SI-REQ-010: invite to the job's AI interview when the score reaches its
     // bar. Never throws, so it can't fail the screening.
@@ -232,7 +233,7 @@ export async function GET(request: NextRequest) {
     } catch (err) {
       failed++;
       failures.push(`${applicationId}: ${err instanceof Error ? err.message : "error"}`);
-      console.error(`[screening worker] message ${message.msg_id} failed`, err);
+      reportError(`[screening worker] message ${message.msg_id} failed`, err);
 
       // Don't retry a message that keeps throwing forever.
       if (message.read_ct >= MATCH_MAX_ATTEMPTS) {
@@ -244,7 +245,7 @@ export async function GET(request: NextRequest) {
             .neq("status", "completed");
           await archive(message.msg_id);
         } catch (giveUpError) {
-          console.error(`[screening worker] couldn't give up on ${message.msg_id}`, giveUpError);
+          reportError(`[screening worker] couldn't give up on ${message.msg_id}`, giveUpError);
         }
       }
     }

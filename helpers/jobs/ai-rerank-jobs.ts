@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { headers } from "next/headers";
 import { AllJobWithRelations, TAICredits } from "../../utils/types";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
@@ -170,7 +171,7 @@ export async function rerankJobsIfApplicable({
       }
     }
   } catch (e) {
-    console.error("Error during AI Rerank fetch:", e);
+    reportError("Error during AI Rerank fetch:", e);
   }
 
   return { initialJobs: finalJobs, totalCount: finalCount };

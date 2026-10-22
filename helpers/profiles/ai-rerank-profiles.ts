@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { headers } from "next/headers";
 import {
   AllProfileWithRelations,
@@ -136,7 +137,7 @@ export async function rerankProfilesIfApplicable({
       matchScores = aiRerankResult.scores ?? {};
     }
   } catch (e) {
-    console.error("Error during AI Rerank fetch:", e);
+    reportError("Error during AI Rerank fetch:", e);
   }
 
   return { initialProfiles: finalProfiles, totalCount: finalCount, matchScores };

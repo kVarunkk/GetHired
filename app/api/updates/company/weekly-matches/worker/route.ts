@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
     n: BATCH_SIZE,
   });
   if (error) {
-    console.error("[weekly matches worker] couldn't read the queue", error.message);
+    reportError("[weekly matches worker] couldn't read the queue", error.message);
     return NextResponse.json({ message: "Couldn't read the queue." }, { status: 500 });
   }
 
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
       sent++;
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
-      console.error(`[weekly matches worker] message ${msg_id} failed`, reason);
+      reportError(`[weekly matches worker] message ${msg_id} failed`, reason);
       if (read_ct >= WEEKLY_MAX_READS) {
         failures.push(`company ${message.companyId}: ${reason}`);
         await archive(msg_id).catch(() => {});

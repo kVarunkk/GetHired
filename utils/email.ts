@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { BrevoClient } from "@getbrevo/brevo";
 import { Resend } from "resend";
 import Mailjet from "node-mailjet";
@@ -43,7 +44,7 @@ export async function sendEmail({
     console.log("Sent via Brevo:", result);
     return; // Exit on success
   } catch (brevoError) {
-    console.error(
+    reportError(
       "Brevo failed or limit reached, trying Mailjet fallback:",
       brevoError,
     );
@@ -88,7 +89,7 @@ export async function sendEmail({
       `Mailjet returned non-success status: ${messageData?.Status || "Unknown"}`,
     );
   } catch (mailjetError) {
-    console.error(
+    reportError(
       "Mailjet failed or limit reached, trying Resend fallback:",
       mailjetError,
     );
@@ -112,7 +113,7 @@ export async function sendEmail({
 
     console.log("Successfully sent via Resend fallback");
   } catch (resendError) {
-    console.error("Resend fallback also failed:", resendError);
+    reportError("Resend fallback also failed:", resendError);
     throw new Error(`Email delivery failed to ${toEmail}: ${resendError}`);
   }
 }
@@ -126,7 +127,7 @@ export const sendEmailForStatusUpdate = async (emailText: string) => {
       textContent: emailText,
     });
   } catch {
-    console.error(
+    reportError(
       "Some error occured while sending status update email to Varun Kumawat",
     );
   }

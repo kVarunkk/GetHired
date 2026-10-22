@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendCompanyMessage } from "@/helpers/email/send-company-message";
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
     n: BATCH_SIZE,
   });
   if (error) {
-    console.error("[pipeline emails worker] couldn't read the queue", error.message);
+    reportError("[pipeline emails worker] couldn't read the queue", error.message);
     return NextResponse.json({ message: "Couldn't read the queue." }, { status: 500 });
   }
   const messages = (data ?? []) as QueueMessage[];
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       queue_name: PIPELINE_EMAIL_QUEUE,
       message_id: msgId,
     });
-    if (archiveError) console.error(`[pipeline emails worker] couldn't archive ${msgId}`, archiveError.message);
+    if (archiveError) reportError(`[pipeline emails worker] couldn't archive ${msgId}`, archiveError.message);
   };
 
   const ids = [...new Set(messages.map((m) => m.message.applicationId))];
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
     .select("id, user_info(email), job_postings!inner(company_id)")
     .in("id", ids);
   if (loadError) {
-    console.error("[pipeline emails worker] couldn't load the applications", loadError.message);
+    reportError("[pipeline emails worker] couldn't load the applications", loadError.message);
     return NextResponse.json({ message: "Couldn't load the applications." }, { status: 500 });
   }
   const byId = new Map((rows ?? []).map((row) => [row.id, row]));
@@ -115,7 +116,7 @@ export async function GET(request: NextRequest) {
   if (events.length > 0) {
     // The emails already went out; a missing log line isn't worth resending them.
     const { error: eventsError } = await admin.from("application_events").insert(events);
-    if (eventsError) console.error("[pipeline emails worker] couldn't log the emails", eventsError.message);
+    if (eventsError) reportError("[pipeline emails worker] couldn't log the emails", eventsError.message);
   }
 
   if (failures.length > 0) {

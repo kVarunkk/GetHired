@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { after } from "next/server";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { generateText, LanguageModel, Output } from "ai";
@@ -215,7 +216,7 @@ CONSTRAINTS:
 
       console.log(`[BG_SUCCESS]: Review ${reviewId} analysis completed.`);
     } catch (err) {
-      console.error("[BG_ERROR]: Resume review analysis failed:", err);
+      reportError("[BG_ERROR]: Resume review analysis failed:", err);
       await updateReviewAnalysisStatus(true, reviewId, "failed");
       await sendResumeReviewStatusEmail(
         userInfo.email,

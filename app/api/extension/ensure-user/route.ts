@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { handleUserUpsert } from "@/utils/auth-handlers"; // reuse as-is, no changes needed there
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true, newUser: metadataUpdated });
   } catch (err) {
-    console.error("[ensure-user] failed", err);
+    reportError("[ensure-user] failed", err);
     return NextResponse.json({ message: "An error occurred" }, { status: 500 });
   }
 }

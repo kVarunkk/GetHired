@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import { render } from "react-email";
 import NoteMentionEmail from "@/emails/NoteMentionEmail";
 import { firstName } from "@/helpers/outreach/linkify";
@@ -87,11 +88,11 @@ export async function sendNoteMentionEmails({
             textContent,
           });
         } catch (err) {
-          console.error("[notes] mention email failed for note", note.id, err);
+          reportError("[notes] mention email failed for note", note.id, err);
         }
       }),
     );
   } catch (err) {
-    console.error("[notes] mention emails failed for note", note.id, err);
+    reportError("[notes] mention emails failed for note", note.id, err);
   }
 }

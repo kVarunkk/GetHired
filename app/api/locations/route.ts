@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { DEFAULT_CITIES } from "@/utils/utils";
 import { unstable_cache } from "next/cache";
@@ -52,6 +53,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: finalLocations });
   } catch (err: unknown) {
+    reportError("[locations] failed", err);
     return NextResponse.json(
       {
         error:

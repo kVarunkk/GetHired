@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { createHash, timingSafeEqual } from "crypto";
 import { after, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     .eq("voice_session_id", voiceSessionId)
     .maybeSingle();
   if (lookupError) {
-    console.error("[interview-transcript] lookup failed", lookupError.message);
+    reportError("[interview-transcript] lookup failed", lookupError.message);
     return NextResponse.json({ message: "Couldn't record the transcript." }, { status: 500 });
   }
   if (!session) return NextResponse.json({ message: "Unknown session." }, { status: 404 });
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
     p_duration_seconds: durationSeconds,
   });
   if (error || !data) {
-    console.error("[interview-transcript] finish failed", session.id, error?.message);
+    reportError("[interview-transcript] finish failed", session.id, error?.message);
     return NextResponse.json({ message: "Couldn't record the transcript." }, { status: 500 });
   }
   // A scored interview's email comes from the analysis worker.

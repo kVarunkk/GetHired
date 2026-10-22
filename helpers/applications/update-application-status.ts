@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { after } from "next/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
@@ -60,7 +61,8 @@ export async function updateApplicationStatus(
   let stages: PipelineStage[];
   try {
     stages = await listStages(ctx);
-  } catch {
+  } catch (error) {
+    reportError("[application status] couldn't load the pipeline stages", error);
     return { ok: false, error: "Failed to load the pipeline stages." };
   }
   const stage = stageForStatus(stages, status);

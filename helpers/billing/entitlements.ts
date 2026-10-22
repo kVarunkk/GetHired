@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { EntitlementError, MemberLimitError, type EntitlementPayload, type SuggestedTier } from "./errors";
 import {
@@ -201,7 +202,7 @@ async function entitlementError(
   try {
     plans = await listPublicPlans();
   } catch (err) {
-    console.error("[billing] couldn't load plans for the upgrade suggestion", err);
+    reportError("[billing] couldn't load plans for the upgrade suggestion", err);
   }
   return new EntitlementError({
     key,

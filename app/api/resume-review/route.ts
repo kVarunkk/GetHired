@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
+    reportError("[resume-review] failed", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Some error occured" },
       { status: 500 },
@@ -73,7 +75,8 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ data: reviews });
-  } catch {
+  } catch (error) {
+    reportError("[resume-review] couldn't list the reviews", error);
     return NextResponse.json(
       { error: "Error fetching your resume reviews." },
       { status: 405 },

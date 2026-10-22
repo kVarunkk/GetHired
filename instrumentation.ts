@@ -1,3 +1,29 @@
+import type { Instrumentation } from "next";
+
+// Uncaught errors in pages, layouts, route handlers and server actions. Errors
+// a route catches itself are reported with reportError
+// (helpers/posthog/report-error.ts).
+export const onRequestError: Instrumentation.onRequestError = async (
+  error,
+  request,
+  context,
+) => {
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  const { captureServerException } = await import(
+    "@/helpers/posthog/report-error"
+  );
+  await captureServerException(error, {
+    source: "onRequestError",
+    path: request.path,
+    method: request.method,
+    router_kind: context.routerKind,
+    route_path: context.routePath,
+    route_type: context.routeType,
+    render_source: context.renderSource,
+    digest: (error as { digest?: string }).digest,
+  });
+};
+
 export async function register() {
   if (
     process.env.NEXT_RUNTIME === "nodejs" &&

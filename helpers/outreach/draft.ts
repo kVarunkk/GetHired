@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import { generateText, Output, type LanguageModel } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
@@ -173,7 +174,7 @@ export async function draftOutreach(
     if (!message) return { ok: false, error: "Couldn't draft a message. Try again." };
     return { ok: true, subject: output.subject.trim().slice(0, OUTREACH_SUBJECT_MAX), message };
   } catch (err) {
-    console.error("[outreach] draft failed:", err);
+    reportError("[outreach] draft failed:", err);
     return { ok: false, error: "Couldn't draft a message. Try again." };
   }
 }

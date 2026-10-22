@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -84,7 +85,7 @@ export async function GET() {
               })
               .eq("id", msg.message.jobId);
 
-            console.error(
+            reportError(
               `[WORKER] Message ${msg.msg_id} exceeded max retries (${MAX_RETRIES}). Evicting...`,
             );
 
@@ -112,6 +113,7 @@ export async function GET() {
       message: `Processed ${results.length} messages. Success: ${successful}, Failed: ${failed}.`,
     });
   } catch (error) {
+    reportError("[relevant profiles worker] critical failure", error);
     const errorMsg = error instanceof Error ? error.message : String(error);
     await sendEmailForStatusUpdate(
       `PROFILE RELEVANCE WORKER CRITICAL FAILURE:\n${errorMsg}`,

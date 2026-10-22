@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import RechargeEmail from "@/emails/RechargeEmail";
 import { sendEmail } from "@/utils/email";
 import { render } from "react-email";
@@ -21,7 +22,7 @@ export const sendEmailForRecharge = async (email: string, name: string) => {
       success: true,
     };
   } catch {
-    console.error(
+    reportError(
       "Some error occured while sending status update email to Varun Kumawat",
     );
     return {

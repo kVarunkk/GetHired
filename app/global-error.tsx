@@ -9,7 +9,8 @@ export default function GlobalError({
   error: Error & { digest?: string };
 }) {
   useEffect(() => {
-    posthog.captureException(error);
+    // A server error arrives redacted; its digest matches the server's report.
+    posthog.captureException(error, { source: "global-error", digest: error.digest });
   }, [error]);
   return (
     // global-error must include html and body tags

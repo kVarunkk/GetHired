@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import FilterComponent from "@/components/FilterComponent";
 import { createClient } from "@/lib/supabase/server";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
@@ -146,7 +147,9 @@ export default async function JobsPage({
       initialCompanies = companiesData || [];
       totalCount = companiesData.length || 0;
     }
-  } catch {}
+  } catch (error) {
+    reportError("[companies] page failed", error);
+  }
 
   return (
     // <div>

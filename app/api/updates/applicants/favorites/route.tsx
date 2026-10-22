@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { after, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 // import { Resend } from "resend";
@@ -27,7 +28,7 @@ export async function GET() {
   const cronSecret = headersList.get("x-internal-secret");
 
   if (cronSecret !== INTERNAL_API_SECRET) {
-    console.error("CRON Unauthorized Access Attempt: Secret Mismatch");
+    reportError("CRON Unauthorized Access Attempt: Secret Mismatch");
     return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
   }
 
@@ -178,6 +179,7 @@ export async function GET() {
 
             results.push({ email: user.email, success: true });
           } catch (err: unknown) {
+            reportError("[favorites update] email failed", err);
             results.push({
               email: user.email,
               success: false,
@@ -212,7 +214,7 @@ export async function GET() {
       message: `Background processing started for ${totalUsers} users.`,
     });
   } catch (e) {
-    console.error("Critical processing error:", e);
+    reportError("Critical processing error:", e);
     await sendEmailForStatusUpdate(
       [
         `FAVORITED JOB APPLICATION REMINDER:`,

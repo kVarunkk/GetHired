@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json({ data: resumes });
   } catch (e) {
-    console.log(e);
+    reportError("[resumes] couldn't list the resumes", e);
     return NextResponse.json(
       { error: "An error occurred while fetching resumes." },
       { status: 500 },

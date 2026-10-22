@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { expireInterviews, sendReminders, sweepSessions } from "@/helpers/interview/screening/lifecycle-cron";
@@ -22,7 +23,7 @@ async function run(request: NextRequest) {
     return NextResponse.json({ expired, reminded, swept });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[screening cron]", message);
+    reportError("[screening cron]", message);
     await sendEmailForStatusUpdate(`SCREENING INTERVIEWS CRON FAILURE:\n${message}`);
     return NextResponse.json({ success: false, message: "Internal Server Error" }, { status: 500 });
   }

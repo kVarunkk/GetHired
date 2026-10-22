@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { rerankProfilesIfApplicable } from "@/helpers/profiles/ai-rerank-profiles";
 import {
   getEntitlements,
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
     profilesPerSearch = entitlements.entitlements.profiles_per_search.amount;
     tierSlug = entitlements.tier.slug;
   } catch (err) {
-    console.error("[profiles] couldn't load entitlements", err);
+    reportError("[profiles] couldn't load entitlements", err);
     return NextResponse.json(
       { error: "Couldn't load your plan. Please try again." },
       { status: 500 },
@@ -208,6 +209,7 @@ export async function GET(request: NextRequest) {
         : {}),
     });
   } catch (err: unknown) {
+    reportError("[profiles] failed", err);
     return NextResponse.json(
       {
         error:

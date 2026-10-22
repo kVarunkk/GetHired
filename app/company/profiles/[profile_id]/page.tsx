@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import PageHeader from "@/components/PageHeader";
@@ -149,7 +150,7 @@ export default async function ProfilePage({
       try {
         await supabase.rpc("record_profile_view", { p_candidate: profile_id });
       } catch (err) {
-        console.error("[profile] couldn't record the view", err);
+        reportError("[profile] couldn't record the view", err);
       }
     });
 

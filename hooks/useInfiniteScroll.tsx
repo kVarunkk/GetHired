@@ -1,3 +1,4 @@
+import { reportClientError } from "@/lib/posthog/report-client-error";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface FetchPageResult<T> {
@@ -55,7 +56,8 @@ export function useInfiniteScroll<T>({
 
       // If the API returns a null cursor, we've reached the end of the list
       setHasMore(!!result.nextCursor);
-    } catch {
+    } catch (error) {
+      reportClientError("[infinite scroll] couldn't load the next page", error);
     } finally {
       setIsLoading(false);
     }

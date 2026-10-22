@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { tool } from "ai";
 import { after } from "next/server";
 import { z } from "zod";
@@ -247,7 +248,7 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
           // OR-REQ-020: the agent reading a profile is a view, like the page.
           after(async () => {
             const { error } = await supabase.rpc("record_profile_view", { p_candidate: candidateId });
-            if (error) console.error("[agent] couldn't record the profile view", error.message);
+            if (error) reportError("[agent] couldn't record the profile view", error.message);
           });
 
           const [matches, { data: applications, error: applicationsError }, { data: saved }, outreach] =

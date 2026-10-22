@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { TResumeRowContent } from "@/utils/types";
 import { google } from "@ai-sdk/google";
@@ -122,13 +123,13 @@ export async function updateUserEmbedding(userId: string) {
       .eq("user_id", userData.user_id);
 
     if (updateError) {
-      console.error("Supabase update error:", updateError);
+      reportError("Supabase update error:", updateError);
       throw new Error("Failed to update user embedding");
     }
 
     return { success: true };
   } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
+    reportError(error instanceof Error ? error.message : String(error));
     return {
       success: false,
       error:

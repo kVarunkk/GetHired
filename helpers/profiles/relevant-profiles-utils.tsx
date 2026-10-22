@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { RelevantProfilesUpdateEmail } from "@/emails/RelevantProfilesUpdateEmail";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -55,7 +56,7 @@ export const sendEmailForRelevantProfilesStatusUpdate = async (
       textContent: emailText,
     });
   } catch {
-    console.error(
+    reportError(
       "Some error occured while sending status update email to " +
         email +
         "for relevant profile update.",
@@ -195,7 +196,7 @@ export async function processJobPostingRelevance(
     try {
       await enqueueTopExplanations(admin, jobPostingId, rowsToUpsert);
     } catch (err) {
-      console.error("[relevant profiles] couldn't queue explanations", err);
+      reportError("[relevant profiles] couldn't queue explanations", err);
     }
 
     const { error: updateError } = await supabase
@@ -222,6 +223,7 @@ export async function processJobPostingRelevance(
 
     return { success: true };
   } catch (error) {
+    reportError("[relevant profiles] update failed", error);
     const msg =
       error instanceof Error ? error.message : "Unknown error occured.";
 

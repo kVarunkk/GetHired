@@ -1,5 +1,6 @@
 "use client";
 
+import { reportClientError } from "@/lib/posthog/report-client-error";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -28,7 +29,8 @@ export function useOpenOutreachCount(user: User | null): number {
           .eq("status", "sent")
           .gt("expires_at", new Date().toISOString());
         if (!cancelled) setCount(error ? 0 : (open ?? 0));
-      } catch {
+      } catch (error) {
+        reportClientError("[outreach] couldn't count open outreach", error);
         if (!cancelled) setCount(0);
       }
     })();
