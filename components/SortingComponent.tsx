@@ -48,6 +48,8 @@ export default function SortingComponent({
               ? "jobs"
               : "companies"
         }?${params.toString()}`,
+        // Keep the reader's place: changing the sort shouldn't jump to the page top.
+        { scroll: false },
       );
     });
   };

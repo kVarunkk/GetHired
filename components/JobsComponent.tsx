@@ -219,7 +219,8 @@ export default function JobsComponent({
     startTransition(() => {
       startProgress();
       if (isSimilarSearch) {
-        router.push("/jobs");
+        // Keep the reader's place: leaving the search shouldn't jump to the page top.
+        router.push("/jobs", { scroll: false });
       } else {
         router.back();
       }

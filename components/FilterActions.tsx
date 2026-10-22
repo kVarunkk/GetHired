@@ -38,7 +38,9 @@ export default function FilterActions({
             : currentPage === "jobs"
               ? "jobs"
               : "companies"
-        }?${params.toString()}`
+        }?${params.toString()}`,
+        // Keep the reader's place: clearing filters shouldn't jump to the page top.
+        { scroll: false },
       );
     });
   }, [
