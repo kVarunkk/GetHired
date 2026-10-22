@@ -35,6 +35,7 @@ describe("parseJobSearchParams", () => {
       visaRequirement: null,
       minSalary: null,
       minExperience: null,
+      maxExperience: null,
       platform: null,
       companyName: null,
       sortBy: "created_at",
@@ -60,6 +61,7 @@ describe("parseJobSearchParams", () => {
         visaRequirement: "Required",
         minSalary: "1",
         minExperience: "2",
+        maxExperience: "6",
         platform: "lever",
         companyName: "Acme",
         sortBy: "relevance",
@@ -79,6 +81,8 @@ describe("parseJobSearchParams", () => {
 
     expect(params).toMatchObject({
       jobType: "Intern",
+      minExperience: "2",
+      maxExperience: "6",
       tab: "applied",
       createdAfterDays: "14",
       applicantUserId: "u9",

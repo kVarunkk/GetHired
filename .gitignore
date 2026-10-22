@@ -54,5 +54,7 @@ plan
 # agent instructions (local only)
 CLAUDE.md
 
+.claude
+
 # offline eval output (record results in the spec)
 /evals/screening-interview/results/

@@ -21,6 +21,7 @@ const JOB = {
   locations: ["Remote"],
   salary_range: "$120k",
   job_type: "Fulltime",
+  experience: "2+ years",
   created_at: "2026-10-01T00:00:00.000Z",
 };
 const COMPACT_JOB = {
@@ -30,6 +31,7 @@ const COMPACT_JOB = {
   locations: ["Remote"],
   salary: "$120k",
   jobType: "Fulltime",
+  experience: "2+ years",
   postedAt: "2026-10-01T00:00:00.000Z",
   url: `/jobs/${JOB.id}`,
 };
@@ -57,6 +59,7 @@ describe("searchJobs tool", () => {
       jobTypes: ["Fulltime", "Contract"],
       minSalary: 100000,
       minExperience: 3,
+      maxExperience: 6,
       visaRequirements: ["Will Sponsor"],
       platforms: ["greenhouse"],
       companies: ["Acme"],
@@ -71,6 +74,7 @@ describe("searchJobs tool", () => {
       jobType: "Fulltime|Contract",
       minSalary: "100000",
       minExperience: "3",
+      maxExperience: "6",
       visaRequirement: "Will Sponsor",
       platform: "greenhouse",
       companyName: "Acme",
@@ -127,6 +131,7 @@ describe("naturalLanguageJobSearch tool", () => {
         jobTitleKeywords: ["react"],
         location: ["Remote"],
         minSalary: 120000,
+        maxExperience: 2,
         createdAfter: "7",
         sortBy: "salary_min",
         tab: "saved",
@@ -145,6 +150,7 @@ describe("naturalLanguageJobSearch tool", () => {
       jobTitleKeywords: "react",
       location: "Remote",
       minSalary: "120000",
+      maxExperience: "2",
       createdAfterDays: "7",
       sortBy: "salary_min",
       limit: 10,

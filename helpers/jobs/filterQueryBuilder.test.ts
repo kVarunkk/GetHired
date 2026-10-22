@@ -6,7 +6,11 @@ import {
   createSupabaseMock,
   type SupabaseMock,
 } from "@/test/utils/supabase-mock";
-import { buildQuery } from "./filterQueryBuilder";
+import {
+  buildQuery,
+  titleKeywordConditions,
+  titleWords,
+} from "./filterQueryBuilder";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/service-role", () => ({
@@ -23,6 +27,7 @@ const BASE_ARGS = {
   location: null,
   minSalary: null,
   minExperience: null,
+  maxExperience: null,
   platform: null,
   companyName: null,
   cursor: null,
@@ -178,5 +183,177 @@ describe("buildQuery: cursor", () => {
         'company_name.gt."Acme, Inc_Café",and(company_name.eq."Acme, Inc_Café",id.gt.j9),company_name.is.null',
       ],
     });
+  });
+});
+
+describe("buildQuery: experience filter", () => {
+  const experienceCalls = () =>
+    supabase
+      .callsFor("all_jobs")[0]
+      ?.chain.filter((step) => String(step.args[0]).startsWith("experience_"));
+
+  it("matches jobs whose range overlaps the applicant's, open-ended jobs included", async () => {
+    await buildQuery({ ...BASE_ARGS, minExperience: "1", maxExperience: "3" });
+
+    expect(experienceCalls()).toEqual([
+      { method: "not", args: ["experience_min", "is", null] },
+      { method: "or", args: ["experience_max.gte.1,experience_max.is.null"] },
+      { method: "lte", args: ["experience_min", 3] },
+    ]);
+  });
+
+  it("applies a max on its own", async () => {
+    await buildQuery({ ...BASE_ARGS, maxExperience: "0" });
+
+    expect(experienceCalls()).toEqual([
+      { method: "not", args: ["experience_min", "is", null] },
+      { method: "lte", args: ["experience_min", 0] },
+    ]);
+  });
+
+  it("adds no experience filter when none is requested", async () => {
+    await buildQuery({ ...BASE_ARGS });
+
+    expect(experienceCalls()).toEqual([]);
+  });
+});
+
+describe("titleKeywordConditions", () => {
+  // The column value, as public.job_title_search_text builds it in SQL.
+  const searchText = (title: string) => {
+    const words = titleWords(title);
+    if (words.length === 0) return "";
+    const pairs = words.slice(1).map((word, i) => words[i] + word);
+    return `${words.join(" ")} | ${pairs.join(" ")}`;
+  };
+  // Reads each PostgREST condition back into a regex, the way imatch runs it.
+  const matchers = (keyword: string) =>
+    titleKeywordConditions(keyword).map((condition) => {
+      const quoted = condition.replace(/^job_name_search\.imatch\./, "");
+      const pattern = quoted.slice(1, -1).replace(/\\(["\\])/g, "$1");
+      return new RegExp(pattern, "i");
+    });
+  const matches = (keyword: string, titles: string[]) =>
+    titles.filter((title) =>
+      matchers(keyword).some((re) => re.test(searchText(title))),
+    );
+
+  it("builds the column value the way the SQL function does", () => {
+    expect(searchText("Full-Stack Developer (React/Node.js)")).toBe(
+      "full stack developer react node js | fullstack stackdeveloper developerreact reactnode nodejs",
+    );
+    expect(searchText("C++ / C# Engineer")).toBe(
+      "c++ c# engineer | c++c# c#engineer",
+    );
+    expect(searchText("Engineer")).toBe("engineer | ");
+  });
+
+  it("matches every spelling of a compound word", () => {
+    const titles = [
+      "Fullstack Developer",
+      "FullStack Engineer",
+      "Full Stack Developer",
+      "Full-Stack Engineer",
+      "Stack Engineer",
+    ];
+    const allButLast = titles.slice(0, 4);
+    expect(matches("fullstack", titles)).toEqual(allButLast);
+    expect(matches("full stack", titles)).toEqual(allButLast);
+    expect(matches("Full-Stack", titles)).toEqual(allButLast);
+    expect(
+      matches("frontend", ["Front End Engineer", "Front-end Dev", "Frontend"]),
+    ).toHaveLength(3);
+    expect(
+      matches("nodejs", ["Node.js Developer", "NodeJS Engineer", "Node Dev"]),
+    ).toEqual(["Node.js Developer", "NodeJS Engineer"]);
+  });
+
+  it("matches short keywords as whole words only", () => {
+    expect(
+      matches("ai", [
+        "AI Engineer",
+        "Senior Gen AI Developer",
+        "AI/ML Engineer",
+        "Airspace Information Center (AIC) Training Supervisor",
+        "Air Traffic Control (ATC) Facility Chief",
+      ]),
+    ).toEqual(["AI Engineer", "Senior Gen AI Developer", "AI/ML Engineer"]);
+    expect(
+      matches("rag", ["RAG Engineer", "Storage Admin", "Leverage Lead"]),
+    ).toEqual(["RAG Engineer"]);
+  });
+
+  it("matches longer keywords at the start of a word", () => {
+    expect(
+      matches("developer", [
+        "Python Developers",
+        "Senior Developer",
+        "Redeveloper",
+      ]),
+    ).toEqual(["Python Developers", "Senior Developer"]);
+    expect(
+      matches("script", ["Script Writer", "JavaScript Developer"]),
+    ).toEqual(["Script Writer"]);
+  });
+
+  it("handles symbols in keywords", () => {
+    expect(matches("c++", ["C++ Developer", "C Developer"])).toEqual([
+      "C++ Developer",
+    ]);
+    expect(
+      matches("c#", ["C# Developer", "C#/.NET Lead", "C Developer"]),
+    ).toEqual(["C# Developer", "C#/.NET Lead"]);
+    expect(
+      matches(".net", [
+        ".NET Engineer",
+        "ASP.NET Developer",
+        "Network Engineer",
+      ]),
+    ).toEqual([".NET Engineer", "ASP.NET Developer"]);
+    expect(
+      matches("node.js", ["Node.js Developer", "NodeJS Engineer", "Node Dev"]),
+    ).toEqual(["Node.js Developer", "NodeJS Engineer"]);
+  });
+
+  it("escapes and quotes the pattern for the or filter", () => {
+    expect(titleKeywordConditions("ai")).toEqual([
+      'job_name_search.imatch."(^| )ai( |$)"',
+    ]);
+    expect(titleKeywordConditions("C++")).toEqual([
+      'job_name_search.imatch."(^| )c\\\\+\\\\+( |$)"',
+    ]);
+    expect(titleKeywordConditions("full-stack")).toEqual([
+      'job_name_search.imatch."(^| )full stack"',
+      'job_name_search.imatch."(^| )fullstack"',
+    ]);
+  });
+
+  it("returns nothing for a keyword with no words", () => {
+    expect(titleKeywordConditions(" - / ")).toEqual([]);
+  });
+});
+
+describe("buildQuery: title keywords", () => {
+  it("ors every keyword's conditions together", async () => {
+    await buildQuery({ ...BASE_ARGS, jobTitleKeywords: "ai|full stack" });
+
+    expect(supabase.callsFor("all_jobs")[0]?.chain).toContainEqual({
+      method: "or",
+      args: [
+        [
+          ...titleKeywordConditions("ai"),
+          ...titleKeywordConditions("full stack"),
+        ].join(","),
+      ],
+    });
+  });
+
+  it("adds no title filter when the keywords have no words", async () => {
+    await buildQuery({ ...BASE_ARGS, jobTitleKeywords: "-" });
+
+    const orCalls = supabase
+      .callsFor("all_jobs")[0]
+      ?.chain.filter((step) => step.method === "or");
+    expect(orCalls).toEqual([]);
   });
 });

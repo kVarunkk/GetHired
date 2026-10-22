@@ -96,6 +96,12 @@ export const filterConfigBuilder = (
           placeholder: "e.g., 2",
         },
         {
+          name: "maxExperience",
+          label: "Maximum Experience (years)",
+          type: "number",
+          placeholder: "e.g., 5",
+        },
+        {
           name: "createdAfter",
           label: "Date Posted",
           type: "multi-select",
