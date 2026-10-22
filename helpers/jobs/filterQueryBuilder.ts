@@ -13,12 +13,53 @@ import { getCutOffDate } from "@/utils/date";
 import { expandLocations } from "@/helpers/locations/aliases";
 export const allJobsSelectString = `id, created_at, updated_at, job_name, job_type, platform, locations, salary_range, visa_requirement, salary_min, salary_max, company_name, experience, experience_min, experience_max, equity_range, equity_min, equity_max, status, ai_summary, is_platform_job`;
 
+/**
+ * Splits text into lowercase words the way `public.job_title_search_text`
+ * does in SQL (migration 20261022120000_job_title_search): anything but a
+ * letter, digit, "+" or "#" separates words. Keep the two in sync.
+ */
+export function titleWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9+#]+/)
+    .filter(Boolean);
+}
+
+/**
+ * PostgREST `or` conditions matching a title keyword against
+ * `all_jobs.job_name_search` (the title's words plus each adjacent pair
+ * joined). The keyword is split the same way, and a two-word keyword is also
+ * searched joined, so "fullstack", "full stack" and "full-stack" all find each
+ * other.
+ *
+ * Each variant must match at the start of a word, so "react" finds "React
+ * Native" and "developer" finds "Developers", but "ai" doesn't find
+ * "Airspace". Variants of up to 3 characters are mostly acronyms (AI, ML, RAG,
+ * SDE, QA) and must match a whole word.
+ */
+export function titleKeywordConditions(keyword: string): string[] {
+  const words = titleWords(keyword);
+  if (words.length === 0) return [];
+
+  const variants = [words.join(" ")];
+  if (words.length === 2) variants.push(words.join(""));
+
+  return variants.map((variant) => {
+    const term = variant.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const end = variant.length <= 3 ? "( |$)" : "";
+    const pattern = `(^| )${term}${end}`;
+    // Quoted so commas and parentheses stay inside the value.
+    return `job_name_search.imatch."${pattern.replace(/["\\]/g, "\\$&")}"`;
+  });
+}
+
 export const buildQuery = async ({
   jobType,
   visaRequirement,
   location,
   minSalary,
   minExperience,
+  maxExperience,
   platform,
   companyName,
   cursor,
@@ -41,6 +82,7 @@ export const buildQuery = async ({
   location: string | null;
   minSalary: string | null;
   minExperience: string | null;
+  maxExperience: string | null;
   platform: string | null;
   companyName: string | null;
   cursor: string | null;
@@ -159,22 +201,23 @@ export const buildQuery = async ({
     }
 
     if (cursor && sortBy !== "relevance") {
-      const decoded = Buffer.from(cursor, "base64").toString("ascii");
+      const decoded = Buffer.from(cursor, "base64").toString("utf8");
 
       const parts = decoded.split("_");
       const lastId = parts.pop();
       const lastValue = parts.join("_");
+      // Rows come in (sortBy, id) order, both in the same direction, with
+      // nulls last either way (see the order below).
       const operator = sortOrder === "desc" ? "lt" : "gt";
-      const tieOperator = "lt";
-      if (lastValue === "null" || lastValue === null) {
-        // Last item had null salary - everything with null salary after this id
-        // and all non-null salaries (they come before nulls)
-        query = query.or(
-          `${sortBy}.not.is.null,and(${sortBy}.is.null,id.lt.${lastId})`,
-        );
+      if (lastValue === "null") {
+        // Already into the nulls: only the nulls after this id are left.
+        query = query.is(sortBy, null).filter("id", operator, lastId);
       } else {
+        // Quoted so commas and parentheses (e.g. in company names) stay
+        // inside the value.
+        const value = `"${lastValue.replace(/["\\]/g, "\\$&")}"`;
         query = query.or(
-          `${sortBy}.${operator}.${lastValue},and(${sortBy}.eq.${lastValue},id.${tieOperator}.${lastId})`,
+          `${sortBy}.${operator}.${value},and(${sortBy}.eq.${value},id.${operator}.${lastId}),${sortBy}.is.null`,
         );
       }
     }
@@ -247,11 +290,11 @@ export const buildQuery = async ({
       query = query.in("company_name", companyNamesArray);
     }
 
-    if (jobTitleKeywordsArray.length > 0) {
-      const orConditions = jobTitleKeywordsArray
-        .map((keyword) => `job_name.ilike.%${keyword}%`)
-        .join(",");
-      query = query.or(orConditions);
+    const titleConditions = jobTitleKeywordsArray.flatMap(
+      titleKeywordConditions,
+    );
+    if (titleConditions.length > 0) {
+      query = query.or(titleConditions.join(","));
     }
 
     if (applicationStatusArray.length > 0) {
@@ -261,8 +304,19 @@ export const buildQuery = async ({
     if (minSalary) {
       query = query.gte("salary_min", parseInt(minSalary));
     }
+    // The filter is the applicant's experience range; a job matches when its
+    // range overlaps it. A job without a max ("2+ years") is open-ended, and
+    // one without a min is unknown, so it's left out.
+    if (minExperience || maxExperience) {
+      query = query.not("experience_min", "is", null);
+    }
     if (minExperience) {
-      query = query.gte("experience_min", parseInt(minExperience));
+      query = query.or(
+        `experience_max.gte.${parseInt(minExperience)},experience_max.is.null`,
+      );
+    }
+    if (maxExperience) {
+      query = query.lte("experience_min", parseInt(maxExperience));
     }
 
     if (sortBy && sortBy !== "relevance") {

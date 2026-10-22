@@ -31,7 +31,7 @@ export const jobFilterSchema = z.object({
   jobTitleKeywords: preprocessArray(z.array(z.string()))
     .optional()
     .describe(
-      "List of keywords for the job title. Examples: for 'frontend', include ['front end', 'front-end', 'frontend']; for 'backend', include ['back end', 'back-end', 'backend']; for 'SDE', include ['software engineer', 'SDE', 'software developer'].",
+      "List of keywords for the job title. Examples: for 'frontend', include ['front end', 'front-end', 'frontend']; for 'backend', include ['back end', 'back-end', 'backend']; for 'SDE', include ['software engineer', 'SDE', 'software developer']. Leave out seniority words such as junior, senior, lead or fresher: they go in minExperience/maxExperience.",
     ),
 
   location: preprocessArray(z.array(z.string()))
@@ -65,7 +65,15 @@ export const jobFilterSchema = z.object({
     .min(0)
     .optional()
     .describe(
-      "Minimum years of experience required. Add 3 for a Senior postition. 2 for Mid level. 0 for Junior/Fresher position.",
+      "Lower end of the user's experience range in years: jobs open to someone with this much experience. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+    ),
+
+  maxExperience: z.coerce
+    .number()
+    .min(0)
+    .optional()
+    .describe(
+      "Upper end of the user's experience range in years: jobs that require at most this much (e.g. 'I have 2 years', 'up to 5 years of experience'). Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
     ),
 
   createdAfter: z

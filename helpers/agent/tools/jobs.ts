@@ -35,7 +35,7 @@ const jobFiltersInput = z.object({
     .max(10)
     .optional()
     .describe(
-      "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end'].",
+      "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end']. Leave out seniority words such as junior, senior, lead or fresher: use minExperience/maxExperience.",
     ),
   locations: z
     .array(z.string().min(1).max(60))
@@ -55,7 +55,18 @@ const jobFiltersInput = z.object({
     .min(0)
     .max(30)
     .optional()
-    .describe("Minimum years of experience (0 junior, 2 mid, 3+ senior)."),
+    .describe(
+      "Lower end of the user's experience range in years. Jobs match when their experience range overlaps the user's. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+    ),
+  maxExperience: z
+    .number()
+    .int()
+    .min(0)
+    .max(30)
+    .optional()
+    .describe(
+      "Upper end of the user's experience range in years: only jobs requiring at most this much. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+    ),
   visaRequirements: z
     .array(z.enum(["Will Sponsor", "Not Required", "Required"]))
     .optional(),
@@ -90,6 +101,7 @@ function filtersToParams(filters: JobFilters = {}): Partial<SearchJobsParams> {
     jobType: join(filters.jobTypes),
     minSalary: filters.minSalary?.toString(),
     minExperience: filters.minExperience?.toString(),
+    maxExperience: filters.maxExperience?.toString(),
     visaRequirement: join(filters.visaRequirements),
     platform: join(filters.platforms),
     companyName: join(filters.companies),
@@ -109,6 +121,7 @@ function parsedFiltersToParams(
     companyName: join(filters.companyName),
     minSalary: filters.minSalary?.toString(),
     minExperience: filters.minExperience?.toString(),
+    maxExperience: filters.maxExperience?.toString(),
     createdAfterDays: filters.createdAfter,
     sortBy: filters.sortBy === "relevance" ? undefined : filters.sortBy,
     sortOrder: filters.sortOrder,

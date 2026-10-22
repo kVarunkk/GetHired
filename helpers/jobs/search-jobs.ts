@@ -18,6 +18,7 @@ export type SearchJobsParams = {
   visaRequirement: string | null;
   minSalary: string | null;
   minExperience: string | null;
+  maxExperience: string | null;
   platform: string | null;
   companyName: string | null;
   sortBy: string;
@@ -59,6 +60,7 @@ const DEFAULT_PARAMS: SearchJobsParams = {
   visaRequirement: null,
   minSalary: null,
   minExperience: null,
+  maxExperience: null,
   platform: null,
   companyName: null,
   sortBy: "created_at",
@@ -87,6 +89,7 @@ export function parseJobSearchParams(
     visaRequirement: searchParams.get("visaRequirement"),
     minSalary: searchParams.get("minSalary"),
     minExperience: searchParams.get("minExperience"),
+    maxExperience: searchParams.get("maxExperience"),
     platform: searchParams.get("platform"),
     companyName: searchParams.get("companyName"),
     sortBy: searchParams.get("sortBy") ?? DEFAULT_PARAMS.sortBy,
@@ -198,6 +201,7 @@ export async function searchJobs(
     visaRequirement: params.visaRequirement,
     minSalary: params.minSalary,
     minExperience: params.minExperience,
+    maxExperience: params.maxExperience,
     platform: params.platform,
     companyName: params.companyName,
     cursor: params.cursor,

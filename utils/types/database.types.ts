@@ -196,6 +196,7 @@ export type Database = {
           id: string
           is_platform_job: boolean
           job_name: string | null
+          job_name_search: string | null
           job_type: Database["public"]["Enums"]["job_type_enum"]
           job_url: string | null
           locations: string[]
@@ -225,6 +226,7 @@ export type Database = {
           id?: string
           is_platform_job?: boolean
           job_name?: string | null
+          job_name_search?: string | null
           job_type?: Database["public"]["Enums"]["job_type_enum"]
           job_url?: string | null
           locations?: string[]
@@ -254,6 +256,7 @@ export type Database = {
           id?: string
           is_platform_job?: boolean
           job_name?: string | null
+          job_name_search?: string | null
           job_type?: Database["public"]["Enums"]["job_type_enum"]
           job_url?: string | null
           locations?: string[]
@@ -3064,36 +3067,6 @@ export type Database = {
           },
         ]
       }
-      scraper_state: {
-        Row: {
-          created_at: string
-          historical_scraped_urls: string[]
-          id: string
-          newest_company_url: string | null
-          oldest_company_url: string | null
-          type: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string
-          historical_scraped_urls?: string[]
-          id?: string
-          newest_company_url?: string | null
-          oldest_company_url?: string | null
-          type?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string
-          historical_scraped_urls?: string[]
-          id?: string
-          newest_company_url?: string | null
-          oldest_company_url?: string | null
-          type?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       talent_list_members: {
         Row: {
           added_at: string
@@ -4023,6 +3996,7 @@ export type Database = {
         } & "the function public.industry_preferences_search with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
       is_company_member: { Args: { p_company_id: string }; Returns: boolean }
+      job_title_search_text: { Args: { title: string }; Returns: string }
       legacy_question_id: { Args: { p_index: number }; Returns: string }
       list_company_audit: {
         Args: {

@@ -175,6 +175,7 @@ export type FiltersState = {
   visaRequirement: string[];
   minSalary: string;
   minExperience: string;
+  maxExperience?: string;
   platform: string[];
   companyName: string[];
   jobTitleKeywords: string[];

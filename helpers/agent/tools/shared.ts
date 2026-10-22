@@ -40,6 +40,7 @@ type JobLike = {
   locations?: string[] | null;
   salary_range?: string | null;
   job_type?: string | null;
+  experience?: string | null;
   created_at?: string | null;
 };
 
@@ -52,6 +53,7 @@ export function compactJob(job: JobLike) {
     locations: job.locations ?? [],
     salary: job.salary_range ?? null,
     jobType: job.job_type ?? null,
+    experience: job.experience ?? null,
     postedAt: job.created_at ?? null,
     url: `/jobs/${job.id}`,
   };

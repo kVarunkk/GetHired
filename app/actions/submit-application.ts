@@ -8,8 +8,6 @@ import {
   type SubmitApplicationResult,
 } from "@/helpers/applications/submit-application";
 
-export type { SubmitApplicationInput, SubmitApplicationResult };
-
 const NOT_APPLICANT = "Sign in with an applicant account to apply.";
 
 /** SERVER ACTION (AF-REQ-007): applies to a platform job as the session's applicant. */

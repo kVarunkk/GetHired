@@ -284,7 +284,7 @@ export function createResumeTools(ctx: AgentToolContext) {
           if (jobId) {
             const { data, error } = await supabase
               .from("all_jobs")
-              .select("id, job_name, company_name, locations, salary_range, job_type, description, created_at")
+              .select("id, job_name, company_name, locations, salary_range, job_type, experience, description, created_at")
               .eq("id", jobId)
               .maybeSingle();
             if (error) throw error;

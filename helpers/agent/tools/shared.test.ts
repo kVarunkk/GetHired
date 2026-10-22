@@ -17,6 +17,7 @@ describe("compactJob", () => {
       locations: ["Remote"],
       salary_range: "$100k - $140k",
       job_type: "Fulltime",
+      experience: "2-4 years",
       created_at: "2026-10-01T00:00:00.000Z",
       description: "very long text",
       ai_summary: "summary",
@@ -29,6 +30,7 @@ describe("compactJob", () => {
       locations: ["Remote"],
       salary: "$100k - $140k",
       jobType: "Fulltime",
+      experience: "2-4 years",
       postedAt: "2026-10-01T00:00:00.000Z",
       url: "/jobs/j1",
     });
@@ -40,6 +42,7 @@ describe("compactJob", () => {
       company: null,
       locations: [],
       salary: null,
+      experience: null,
     });
   });
 });
