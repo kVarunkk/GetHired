@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import {
   Card,
   CardContent,
@@ -69,7 +70,8 @@ export default async function CreditsStatusPage({
         icon = <XCircle className="w-12 h-12 text-destructive" />;
         cardBorderClass = "border-t-destructive";
       }
-    } catch {
+    } catch (error) {
+      reportError("[buy-credits] couldn't load the payment", error);
       fetchError =
         "Could not retrieve payment details. Check payment_id or contact support.";
       title = "Lookup Error";

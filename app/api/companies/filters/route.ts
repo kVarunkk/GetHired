@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
@@ -23,7 +24,8 @@ export async function GET() {
       { uniqueLocations: locations, companies },
       { status: 200 },
     );
-  } catch {
+  } catch (error) {
+    reportError("[companies/filters] failed", error);
     return NextResponse.json(
       { error: "Failed to fetch filters" },
       { status: 500 },

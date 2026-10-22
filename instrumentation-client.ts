@@ -1,4 +1,8 @@
 import { loadPostHog } from "@/lib/posthog/client";
+import { listenForUncaughtErrors } from "@/lib/posthog/report-client-error";
+
+// Errors are reported from the start; captureException loads PostHog itself.
+listenForUncaughtErrors();
 
 // Analytics (PostHog, Google Analytics) load on the visitor's first
 // interaction, or after FALLBACK_MS, not with the page. Together they were

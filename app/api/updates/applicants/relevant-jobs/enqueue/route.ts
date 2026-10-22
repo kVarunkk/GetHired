@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -62,6 +63,7 @@ export async function GET() {
       message: `Enqueued ${messages.length} users.`,
     });
   } catch (error) {
+    reportError("[relevant jobs enqueue] critical failure", error);
     const errorMsg = error instanceof Error ? error.message : String(error);
     await sendEmailForStatusUpdate(
       `RELEVANCE CRON CRITICAL FAILURE:\n${errorMsg}`,

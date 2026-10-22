@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -31,7 +32,7 @@ export async function deductUserCreditsHelper(
 
     return { success: true };
   } catch (err: any) {
-    console.error("[CREDIT_HELPER_ERROR]:", err.message);
+    reportError("[CREDIT_HELPER_ERROR]:", err.message);
     return {
       success: false,
       error: "INTERNAL_ERROR",

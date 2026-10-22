@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 
@@ -13,7 +14,7 @@ export type ScreeningInviteSummary = { id: string; durationMinutes: number; dead
 export async function listMyScreeningInterviews(supabase: SupabaseClient<Database>): Promise<MyScreeningInterview[]> {
   const { data, error } = await supabase.rpc("my_screening_interviews");
   if (error) {
-    console.error("[screening] couldn't list my interviews", error.message);
+    reportError("[screening] couldn't list my interviews", error.message);
     return [];
   }
   return data ?? [];

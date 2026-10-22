@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { requireCompany } from "@/helpers/companies/require-company";
 import { isUuid } from "@/helpers/agent/auth";
@@ -28,7 +29,7 @@ export async function GET(
     .eq("job_postings.company_id", company.id)
     .maybeSingle();
   if (error) {
-    console.error("[applications/screening] couldn't load the application", error.message);
+    reportError("[applications/screening] couldn't load the application", error.message);
     return NextResponse.json({ error: "Couldn't load the screening." }, { status: 500 });
   }
   if (!application) return notFound();
@@ -40,7 +41,7 @@ export async function GET(
     .eq("company_id", company.id)
     .maybeSingle();
   if (screeningError) {
-    console.error("[applications/screening] couldn't load the screening", screeningError.message);
+    reportError("[applications/screening] couldn't load the screening", screeningError.message);
     return NextResponse.json({ error: "Couldn't load the screening." }, { status: 500 });
   }
 

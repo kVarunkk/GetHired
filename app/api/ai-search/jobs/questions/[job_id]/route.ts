@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { after, NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateText } from "ai";
@@ -154,7 +155,7 @@ Generate the response now. Do not include any introductory text like "Here is yo
 
     return NextResponse.json({ success: true, answer: answer });
   } catch (e) {
-    console.error("Error processing AI question:", e);
+    reportError("Error processing AI question:", e);
     return NextResponse.json(
       { error: "Server processing failed. Try again." },
       { status: 500 },

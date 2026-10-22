@@ -15,6 +15,9 @@ export function loadPostHog(): Promise<PostHog> {
     posthog.init(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN!, {
       api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
       defaults: "2026-05-30",
+      // listenForUncaughtErrors (report-client-error.ts) already reports
+      // these, from page load on. This also overrides the project setting.
+      capture_exceptions: false,
     });
     instance = posthog;
     for (const call of queue.splice(0)) call(posthog);

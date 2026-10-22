@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { createClient } from "@/lib/supabase/server";
 import { getMyCareersLink } from "@/helpers/careers/my-careers-link";
 import CareersLinkBar from "@/components/careers/CareersLinkBar";
@@ -139,7 +140,7 @@ export default async function CompanyPage() {
         company: companyInfo,
       });
     } catch (err) {
-      console.error("Failed to load the company funnel:", err);
+      reportError("Failed to load the company funnel:", err);
     }
 
     return (
@@ -327,8 +328,8 @@ export default async function CompanyPage() {
         </div>
       </div>
     );
-  } catch {
-    // console.error("Error in CompanyPage:", err);
+  } catch (error) {
+    reportError("[company] dashboard failed", error);
     return <ErrorComponent />;
   }
 }

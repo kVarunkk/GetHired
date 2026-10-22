@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getPlanSummary } from "@/helpers/billing/entitlements";
@@ -71,7 +72,7 @@ export async function GET() {
       // "Plan: Startup · 1,240 credits" in the profile menu.
       const companyId = (data as unknown as { id: string }).id;
       const plan = await getPlanSummary(companyId).catch((err) => {
-        console.error("[current-user] couldn't load the plan", err);
+        reportError("[current-user] couldn't load the plan", err);
         return null;
       });
       // The role's name and what the menus may show (RP-REQ-016); the server
@@ -83,7 +84,8 @@ export async function GET() {
         access: { billingView: can(company, "billing.view"), isOwner: Boolean(company?.isOwner) },
       };
     }
-  } catch {
+  } catch (error) {
+    reportError("[current-user] failed", error);
     return NextResponse.json(
       { error: "Server error fetching profile data." },
       { status: 500 },

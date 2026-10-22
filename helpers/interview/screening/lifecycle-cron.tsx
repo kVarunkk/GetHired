@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import { render } from "react-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import InterviewExpiredEmail from "@/emails/InterviewExpiredEmail";
@@ -77,7 +78,7 @@ export async function expireInterviews(admin: Admin): Promise<number> {
         );
       }
     } catch (err) {
-      console.error("[screening cron] expiry email failed", interview.id, err);
+      reportError("[screening cron] expiry email failed", interview.id, err);
     }
   }
   return expired.length;
@@ -121,7 +122,7 @@ export async function sendReminders(admin: Admin): Promise<number> {
         />,
       );
     } catch (err) {
-      console.error("[screening cron] reminder failed", interview.id, err);
+      reportError("[screening cron] reminder failed", interview.id, err);
     }
   }
   return claimed.length;
@@ -185,7 +186,7 @@ export async function sweepSessions(admin: Admin): Promise<number> {
       p_duration_seconds: (result?.durationSeconds ?? null) as number,
     });
     if (finishError) {
-      console.error("[screening cron] sweep failed", session.id, finishError.message);
+      reportError("[screening cron] sweep failed", session.id, finishError.message);
       continue;
     }
     const applicationInterviewId = session.interviews?.application_interview_id;

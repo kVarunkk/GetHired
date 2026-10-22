@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (insertError || !payment) {
-    console.error("Failed to insert pending payment record:", insertError);
+    reportError("Failed to insert pending payment record:", insertError);
     return NextResponse.json(
       { error: "Couldn't start the checkout." },
       { status: 500 },
@@ -84,12 +85,12 @@ export async function POST(request: NextRequest) {
 
     if (sessionError) {
       // The webhook finds the row by payment_row_id, so this is recoverable.
-      console.error("Failed to store the checkout session id:", sessionError);
+      reportError("Failed to store the checkout session id:", sessionError);
     }
 
     return NextResponse.json({ checkoutUrl: session.checkout_url });
   } catch (error) {
-    console.error("Dodo Checkout Error:", error);
+    reportError("Dodo Checkout Error:", error);
     await serviceRoleSupabase
       .from("payments")
       .update({

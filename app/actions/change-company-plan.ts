@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { BILLING_FORBIDDEN, canManageBilling } from "@/helpers/billing/access";
@@ -54,7 +55,7 @@ export async function changeCompanyPlanAction({ tierSlug }: { tierSlug: string }
       atPeriodEnd: !isUpgrade,
     });
   } catch (err) {
-    console.error("[billing] change plan failed", err);
+    reportError("[billing] change plan failed", err);
     return { ok: false, error: "Couldn't change your plan. Please try again." };
   }
 
@@ -63,7 +64,7 @@ export async function changeCompanyPlanAction({ tierSlug }: { tierSlug: string }
       p_company_id: company.id,
       p_tier_slug: target.slug,
     });
-    if (error) console.error("[billing] couldn't record the scheduled downgrade", error);
+    if (error) reportError("[billing] couldn't record the scheduled downgrade", error);
   }
 
   await eventCaptureServer({

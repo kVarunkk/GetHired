@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/helpers/user/get-profile";
@@ -14,6 +15,7 @@ export async function GET() {
 
     return NextResponse.json({ data: await getProfile(supabase, user) });
   } catch (err) {
+    reportError("[user/profile] failed", err);
     return NextResponse.json(
       {
         error:

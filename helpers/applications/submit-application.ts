@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { after } from "next/server";
 import { z } from "zod";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
@@ -74,7 +75,7 @@ export async function submitApplication(
     .eq("job_id", allJobsId)
     .maybeSingle();
   if (jobError) {
-    console.error("[apply] couldn't load the job", jobError.message);
+    reportError("[apply] couldn't load the job", jobError.message);
     return { ok: false, error: "Couldn't send your application. Please try again." };
   }
   if (!job || job.status !== "active") return { ok: false, error: NOT_OPEN };
@@ -134,7 +135,7 @@ export async function submitApplication(
   // The unique index catches a second submit racing past the check above.
   if (insertError?.code === "23505") return { ok: false, error: ALREADY_APPLIED };
   if (insertError || !application) {
-    console.error("[apply] insert failed", insertError?.message);
+    reportError("[apply] insert failed", insertError?.message);
     return { ok: false, error: "Couldn't send your application. Please try again." };
   }
 
@@ -162,14 +163,14 @@ export async function submitApplication(
       ? { reject_email_due_at: new Date(Date.now() + KNOCKOUT_EMAIL_DELAY_MS).toISOString() }
       : {}),
   });
-  if (knockoutError) console.error("[apply] couldn't record knockouts", knockoutError.message);
+  if (knockoutError) reportError("[apply] couldn't record knockouts", knockoutError.message);
 
   let creditsDeducted = false;
   try {
     await deductUserCreditsHelper(supabase, user.id, TAICredits.JOB_APPLICATION);
     creditsDeducted = true;
   } catch (err) {
-    console.error("[apply] credit deduction failed", err);
+    reportError("[apply] credit deduction failed", err);
   }
 
   // SIT-050: invites usually come later, from the fit-threshold screening

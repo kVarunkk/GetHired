@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -96,5 +97,5 @@ export async function markSharedSignalsViewed(applicationId: string, ids: string
     .eq("application_id", applicationId)
     .in("id", ids)
     .is("first_viewed_at", null);
-  if (error) console.error("[shared-signals] couldn't mark as viewed", error.message);
+  if (error) reportError("[shared-signals] couldn't mark as viewed", error.message);
 }

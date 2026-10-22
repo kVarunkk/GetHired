@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { createClient } from "@/lib/supabase/server";
 import { getMyCareersLink } from "@/helpers/careers/my-careers-link";
 import CareersLinkBar from "@/components/careers/CareersLinkBar";
@@ -83,8 +84,8 @@ export default async function CompanyJobPostsPage() {
         />
       </div>
     );
-  } catch {
-    // console.error("Error in CompanyJobPostsPage:", err);
+  } catch (error) {
+    reportError("[company/job-posts] page failed", error);
     return <ErrorComponent />;
   }
 }

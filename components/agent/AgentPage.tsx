@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
@@ -82,7 +83,8 @@ export default async function AgentPage({
         );
       }
     }
-  } catch {
+  } catch (error) {
+    reportError("[agent] page failed", error);
     return <ErrorComponent />;
   }
   // redirect() and notFound() throw, so they're called outside the try,

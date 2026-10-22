@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { render } from "react-email";
 import WeeklyMatchesEmail, { type WeeklyMatchesJob } from "@/emails/WeeklyMatchesEmail";
@@ -90,7 +91,7 @@ export async function sendWeeklyMatches({
     });
     return { ok: true };
   } catch (err) {
-    console.error("Error sending the weekly matches email:", err);
+    reportError("Error sending the weekly matches email:", err);
     return { ok: false, error: "Failed to send email" };
   }
 }

@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { companyAllows, requireCompany } from "@/helpers/companies/require-company";
 import { isUuid } from "@/helpers/agent/auth";
@@ -27,7 +28,7 @@ export async function GET(
     if (!result.ok) return notFound();
     return NextResponse.json(result.data);
   } catch (error) {
-    console.error("Failed to load the pipeline board:", error);
+    reportError("Failed to load the pipeline board:", error);
     return NextResponse.json({ error: "Couldn't load the pipeline." }, { status: 500 });
   }
 }

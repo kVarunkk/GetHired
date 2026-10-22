@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { render } from "react-email";
 import React from "react";
 import ResumeReviewStatusEmail from "@/emails/ResumeReviewStatusEmail";
@@ -22,7 +23,7 @@ export async function sendResumeReviewStatusEmail(
   userId: string,
 ) {
   if (!process.env.RESEND_API_KEY) {
-    console.error("Missing RESEND_API_KEY");
+    reportError("Missing RESEND_API_KEY");
     return { success: false, error: "Email service not configured" };
   }
 

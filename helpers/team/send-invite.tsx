@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import { render } from "react-email";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import CompanyInviteEmail from "@/emails/CompanyInviteEmail";
@@ -88,7 +89,7 @@ export async function createAndSendInvite(
     });
   } catch {
     // The invite stays; resending makes a new token. Never log the token.
-    console.error("[team] invite email failed for invite", id);
+    reportError("[team] invite email failed for invite", id);
     return { ok: false, error: "The invite was created but the email didn't send. Resend it." };
   }
 

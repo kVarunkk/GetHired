@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextResponse } from "next/server";
 import { requireCompany } from "@/helpers/companies/require-company";
 import { getEntitlements } from "@/helpers/billing/entitlements";
@@ -25,7 +26,7 @@ export async function GET() {
       hasPaidSubscription: e.hasPaidSubscription,
     });
   } catch (err) {
-    console.error("[billing] GET /api/company/billing", err);
+    reportError("[billing] GET /api/company/billing", err);
     return NextResponse.json({ error: "Couldn't load billing." }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
@@ -71,7 +72,7 @@ export async function queueJobScreenings(
     .select("application_id, status")
     .eq("job_post_id", jobPostId);
   if (applicationsError || screeningsError) {
-    console.error("[job-posts/screen] couldn't load applications", applicationsError ?? screeningsError);
+    reportError("[job-posts/screen] couldn't load applications", applicationsError ?? screeningsError);
     return { ok: false, reason: "load_failed" };
   }
 
@@ -118,7 +119,7 @@ export async function queueJobScreenings(
     { onConflict: "application_id" },
   );
   if (upsertError) {
-    console.error("[job-posts/screen] couldn't queue screenings", upsertError.message);
+    reportError("[job-posts/screen] couldn't queue screenings", upsertError.message);
     return { ok: false, reason: "queue_failed" };
   }
 
@@ -127,7 +128,7 @@ export async function queueJobScreenings(
   } catch (err) {
     // Don't leave rows "queued" with no message: failed rows get picked up
     // by the next "Screen unscreened".
-    console.error("[job-posts/screen] couldn't send screening messages", err);
+    reportError("[job-posts/screen] couldn't send screening messages", err);
     await admin
       .from("application_screenings")
       .update({ status: "failed", error_code: "worker_error", updated_at: now })

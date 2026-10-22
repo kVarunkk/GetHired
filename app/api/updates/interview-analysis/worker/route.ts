@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { render } from "react-email";
 import * as React from "react";
 import { NextResponse } from "next/server";
@@ -347,7 +348,7 @@ export async function GET() {
         completed++;
       } catch (error) {
         failed++;
-        console.error(
+        reportError(
           `[INTERVIEW_ANALYSIS_WORKER] Message ${message.msg_id} failed:`,
           error,
         );
@@ -389,7 +390,7 @@ export async function GET() {
       failed,
     });
   } catch (error) {
-    console.error("[INTERVIEW_ANALYSIS_WORKER_CRITICAL_FAILURE]:", error);
+    reportError("[INTERVIEW_ANALYSIS_WORKER_CRITICAL_FAILURE]:", error);
     await eventCaptureServerException({
       error,
       properties: { flow: "interview_analysis_worker" },

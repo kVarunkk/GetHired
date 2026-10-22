@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import { MATCH_EXPLAIN_TOP_N } from "./config";
@@ -33,7 +34,7 @@ export async function enqueueTopExplanations(
       if (error) throw new Error(error.message);
       sent.push(row.user_id);
     } catch (err) {
-      console.error(`[match explanations] couldn't queue ${row.user_id}`, err);
+      reportError(`[match explanations] couldn't queue ${row.user_id}`, err);
     }
   }
 

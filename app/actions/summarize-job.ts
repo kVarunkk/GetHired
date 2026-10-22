@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { generateText } from "ai";
 import { createClient } from "@/lib/supabase/server";
 import { google } from "@ai-sdk/google";
@@ -113,7 +114,9 @@ export async function SummarizeJobAction(jobId: string) {
           event: PostHogEvent.AiSummarizerUsed,
           distinctId: user?.id,
         });
-      } catch {}
+      } catch (error) {
+        reportError("[summarize] credit deduction failed", error);
+      }
     });
 
     return {

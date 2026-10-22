@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendCompanyMessage } from "@/helpers/email/send-company-message";
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     .order("reject_email_due_at", { ascending: true })
     .limit(KNOCKOUT_WORKER_BATCH);
   if (error) {
-    console.error("[knockouts] couldn't read due emails", error.message);
+    reportError("[knockouts] couldn't read due emails", error.message);
     return NextResponse.json({ message: "Couldn't read due emails." }, { status: 500 });
   }
 
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
       });
       return "sent";
     })().catch((err) => {
-      console.error("[knockouts] failed for", row.application_id, err);
+      reportError("[knockouts] failed for", row.application_id, err);
       return "failed" as const;
     });
     counts[outcome] += 1;

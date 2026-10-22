@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import { cache } from "react";
 import { isUuid } from "@/helpers/agent/auth";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
@@ -59,7 +60,7 @@ export const loadApplicationInterview = cache(async (applicationId: string) => {
     ]);
     return { canView, canManage, interview, config };
   } catch (err) {
-    console.error("[application] couldn't load the AI interview", err);
+    reportError("[application] couldn't load the AI interview", err);
     return { canView, canManage, interview: null, config: null };
   }
 });

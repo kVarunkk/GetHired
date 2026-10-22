@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import { render } from "react-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import InterviewAccommodationRequestEmail from "@/emails/InterviewAccommodationRequestEmail";
@@ -112,7 +113,7 @@ export async function notifyCompanyOfCandidateResponse(
       await sendEmail({ toEmail, subject, htmlContent, textContent });
     }
   } catch (err) {
-    console.error("[screening] company notification failed", applicationInterviewId, err);
+    reportError("[screening] company notification failed", applicationInterviewId, err);
   }
 }
 
@@ -169,6 +170,6 @@ export async function notifyCompanyOfCompletedInterview(
       await sendEmail({ toEmail, subject, htmlContent, textContent });
     }
   } catch (err) {
-    console.error("[screening] completion notification failed", applicationInterviewId, err);
+    reportError("[screening] completion notification failed", applicationInterviewId, err);
   }
 }

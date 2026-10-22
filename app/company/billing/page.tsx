@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -85,7 +86,7 @@ export default async function CompanyBillingPage({
       />
     );
   } catch (err) {
-    console.error("[billing] page", err);
+    reportError("[billing] page", err);
     return <ErrorComponent />;
   }
 }

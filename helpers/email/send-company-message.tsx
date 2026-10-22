@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { render } from "react-email";
 import CompanyMessageEmail from "@/emails/CompanyMessageEmail";
 import { sendEmail } from "@/utils/email";
@@ -49,7 +50,7 @@ export async function sendCompanyMessage({
 
     return { ok: true };
   } catch (err) {
-    console.error("Error sending a company message:", err);
+    reportError("Error sending a company message:", err);
     return { ok: false, error: "Failed to send email" };
   }
 }

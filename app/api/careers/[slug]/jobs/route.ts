@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { getCareersJobs, getCareersPage } from "@/helpers/careers/get-careers-page";
 import { parseCareersFilters, searchCompanyJobs, toSearchView } from "@/helpers/careers/search-company-jobs";
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const jobs = await getCareersJobs(result.page);
     return NextResponse.json(toSearchView(searchCompanyJobs(jobs, parseCareersFilters(request.nextUrl.searchParams))));
   } catch (err) {
-    console.error("[careers] jobs route failed", err);
+    reportError("[careers] jobs route failed", err);
     return NextResponse.json({ error: "Couldn't load the jobs." }, { status: 500 });
   }
 }

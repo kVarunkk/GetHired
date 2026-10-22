@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import { generateText, Output, type LanguageModel } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
@@ -68,7 +69,7 @@ export async function suggestInterviewConfig(
       output: Output.object({ schema: draftSchema }),
     }));
   } catch (err) {
-    console.error("[screening] config suggestion failed:", err);
+    reportError("[screening] config suggestion failed:", err);
     return { ok: false, error: "Couldn't suggest an interview. Try again, or write it yourself." };
   }
 

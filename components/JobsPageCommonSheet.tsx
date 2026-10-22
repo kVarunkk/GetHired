@@ -1,4 +1,5 @@
 "use client";
+import { reportClientError } from "@/lib/posthog/report-client-error";
 import { User } from "@supabase/supabase-js";
 import {
   SheetContent,
@@ -28,7 +29,8 @@ export default function JobsPageCommonSheet({ user }: { user: User | null }) {
       if (data) {
         setItems(data);
       }
-    } catch {
+    } catch (error) {
+      reportClientError("[bookmarks] couldn't load the bookmarks", error);
     } finally {
       setLoading(false);
     }

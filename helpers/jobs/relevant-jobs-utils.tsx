@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { render } from "react-email";
 import RelevantJobsSetupUpdateEmail from "@/emails/RelevantJobsSetupUpdateEmail";
 import { sendEmail, sendEmailForStatusUpdate } from "@/utils/email";
@@ -42,7 +43,7 @@ export const sendEmailForRelevantJobsStatusUpdate = async (
       textContent: emailText,
     });
   } catch {
-    console.error(
+    reportError(
       "Some error occured while sending status update email to Varun Kumawat",
     );
   }
@@ -143,6 +144,7 @@ export async function processUserRelevance(
 
     return { success: true };
   } catch (error) {
+    reportError("[relevant jobs] update failed", error);
     await supabase
       .from("user_info")
       .update({

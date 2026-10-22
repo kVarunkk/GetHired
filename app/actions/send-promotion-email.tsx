@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { render } from "react-email";
 import { PromotionEmail } from "@/emails/PromotionEmail";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -35,7 +36,7 @@ export async function sendPromotionEmails(promoDetails: {
     .eq("email", "varunkumawatleap2@gmail.com");
 
   if (fetchError) {
-    console.error("Error fetching promotional users:", fetchError);
+    reportError("Error fetching promotional users:", fetchError);
     return { success: false, count: 0, error: fetchError.message };
   }
 
@@ -76,7 +77,7 @@ export async function sendPromotionEmails(promoDetails: {
 
       return { success: true, email: user.email, emailHtml: emailHtml };
     } catch (err) {
-      console.error(`Failed to send email to ${user.email}:`, err);
+      reportError(`Failed to send email to ${user.email}:`, err);
       return { success: false, email: user.email };
     }
   });

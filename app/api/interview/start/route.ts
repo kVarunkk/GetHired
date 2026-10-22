@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { loadInterviewData } from "@/helpers/interview/loadInterviewData";
 import { createClient } from "@/lib/supabase/server";
 import { randomUUID } from "crypto";
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
     });
 
   if (reservationError) {
-    console.error("[INTERVIEW_SESSION_RESERVATION_ERROR]:", reservationError);
+    reportError("[INTERVIEW_SESSION_RESERVATION_ERROR]:", reservationError);
     return NextResponse.json(
       { error: "Unable to reserve an interview session." },
       { status: 500 },
@@ -112,7 +113,7 @@ export async function POST(req: Request) {
 
     if (activationError || !activated) {
       if (activationError) {
-        console.error("[INTERVIEW_SESSION_ACTIVATION_ERROR]:", activationError);
+        reportError("[INTERVIEW_SESSION_ACTIVATION_ERROR]:", activationError);
       }
       throw new Error(
         "The interview session reservation expired. Please try again.",
@@ -148,13 +149,13 @@ export async function POST(req: Request) {
       },
     );
     if (releaseError) {
-      console.error(
+      reportError(
         "[INTERVIEW_SESSION_RESERVATION_RELEASE_ERROR]:",
         releaseError,
       );
     }
 
-    console.error("[INTERVIEW_SESSION_START_ERROR]:", error);
+    reportError("[INTERVIEW_SESSION_START_ERROR]:", error);
     return NextResponse.json(
       { error: "Failed to create a voice session. Please try again." },
       { status: 502 },

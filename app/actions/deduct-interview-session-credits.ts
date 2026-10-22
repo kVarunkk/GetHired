@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { createClient } from "@/lib/supabase/server";
 
 export async function deductInterviewSessionCreditsAction(
@@ -39,7 +40,9 @@ export async function deductInterviewSessionCreditsAction(
   );
 
   if (error) {
-    // console.error("[INTERVIEW_CREDIT_DEDUCTION_ERROR]:", error);
+    if (!error.message.includes("Insufficient AI credits")) {
+      reportError("[INTERVIEW_CREDIT_DEDUCTION_ERROR]:", error);
+    }
     return {
       success: false as const,
       error: error.message.includes("Insufficient AI credits")

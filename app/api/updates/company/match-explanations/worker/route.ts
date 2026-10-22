@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { consumeEntitlement } from "@/helpers/billing/entitlements";
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
     n: MATCH_WORKER_BATCH_SIZE,
   });
   if (error) {
-    console.error("[match explanations worker] couldn't read the queue", error.message);
+    reportError("[match explanations worker] couldn't read the queue", error.message);
     return NextResponse.json({ message: "Couldn't read the queue." }, { status: 500 });
   }
 
@@ -161,7 +162,7 @@ export async function GET(request: NextRequest) {
       failures.push(
         `${message.message?.jobPostId}/${message.message?.userId}: ${err instanceof Error ? err.message : "error"}`,
       );
-      console.error(`[match explanations worker] message ${message.msg_id} failed`, err);
+      reportError(`[match explanations worker] message ${message.msg_id} failed`, err);
 
       // Don't retry a message that keeps throwing forever.
       if (message.read_ct >= MATCH_MAX_ATTEMPTS) {
@@ -174,7 +175,7 @@ export async function GET(request: NextRequest) {
             .neq("explanation_status", "completed");
           await archive(message.msg_id);
         } catch (giveUpError) {
-          console.error(`[match explanations worker] couldn't give up on ${message.msg_id}`, giveUpError);
+          reportError(`[match explanations worker] couldn't give up on ${message.msg_id}`, giveUpError);
         }
       }
     }

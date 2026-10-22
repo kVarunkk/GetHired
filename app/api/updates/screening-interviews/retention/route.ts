@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendEmailForStatusUpdate } from "@/utils/email";
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ jobs: jobIds.length, sessions: count ?? 0 });
   } catch (err) {
+    reportError("[screening retention] failed", err);
     const message = err instanceof Error ? err.message : String(err);
     await sendEmailForStatusUpdate(`SCREENING RETENTION CRON FAILURE:\n${message}`);
     return NextResponse.json({ success: false, message: "Internal Server Error" }, { status: 500 });

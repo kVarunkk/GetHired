@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import type { Metadata } from "next";
 import PlanCards from "@/components/billing/PlanCards";
 import PricingViewed from "@/components/billing/PricingViewed";
@@ -26,7 +27,7 @@ export default async function CompanyPricingPage() {
   try {
     plans = await listPublicPlans();
   } catch (err) {
-    console.error("[pricing] couldn't load plans", err);
+    reportError("[pricing] couldn't load plans", err);
   }
 
   return (

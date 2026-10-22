@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -128,7 +129,7 @@ export async function GET() {
             message_id: msg.msg_id,
           });
         } catch (err) {
-          console.log(err instanceof Error ? err.message : String(err));
+          reportError("[onboarding worker] message failed", err);
           return;
         }
       }),
@@ -139,6 +140,7 @@ export async function GET() {
       message: `Processed ${results.length} messages.`,
     });
   } catch (error) {
+    reportError("[onboarding worker] critical failure", error);
     const errorMsg = error instanceof Error ? error.message : String(error);
     await sendEmailForStatusUpdate(
       `ONBOARDING WORKER CRITICAL FAILURE:\n${errorMsg}`,

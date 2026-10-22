@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
@@ -146,7 +147,7 @@ Respond with only the answer text, no preamble, no quotation marks.
 
     return NextResponse.json({ answers });
   } catch (err) {
-    console.error("[generate-answer] failed", err);
+    reportError("[generate-answer] failed", err);
     return NextResponse.json({ message: "An error occurred" }, { status: 500 });
   }
 }

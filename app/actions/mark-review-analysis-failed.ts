@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { createClient } from "../../lib/supabase/server";
 import { updateReviewAnalysisStatus } from "@/helpers/resume-review/update-review-analysis";
 
@@ -20,8 +21,8 @@ export async function markAnalysisAsFailedAction(reviewId: string) {
     await updateReviewAnalysisStatus(true, reviewId, "failed");
 
     return { success: true };
-  } catch {
-    // console.error("[MARK_FAILED_ACTION_ERROR]:", err.message);
+  } catch (error) {
+    reportError("[MARK_FAILED_ACTION_ERROR]:", error);
     return { error: "Failed to update analysis status." };
   }
 }

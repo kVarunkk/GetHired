@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { render } from "react-email";
 import ApplicationStatusUpdateEmail from "@/emails/ApplicationStatusUpdateEmail";
 import { sendEmail } from "@/utils/email";
@@ -40,7 +41,7 @@ export async function sendApplicationStatusEmail({
 
     return { ok: true };
   } catch (err) {
-    console.error("Error sending application status email:", err);
+    reportError("Error sending application status email:", err);
     return { ok: false, error: "Failed to send email" };
   }
 }

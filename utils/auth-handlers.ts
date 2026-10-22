@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { setUserAppMetadata } from "@/helpers/user/set-app-metadata";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -49,7 +50,7 @@ export async function handleUserUpsert(user: User) {
           .insert(newUserInfo);
 
         if (insertError) {
-          console.error(
+          reportError(
             "CRITICAL DB ERROR: Failed to insert new user_info row:",
             insertError,
           );
@@ -76,7 +77,7 @@ export async function handleUserUpsert(user: User) {
     };
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
-    console.error(
+    reportError(
       `Fatal error during user upsert for ${user.id}: ${errorMessage}`,
     );
     return {
@@ -121,7 +122,7 @@ export async function grantReferralCredits(
     .select("id");
 
   if (invitationsError) {
-    console.error("Error updating invitation status");
+    reportError("Error updating invitation status");
   } else if (!completed || completed.length === 0) {
     console.warn(
       `Referral skipped: no pending invitation from ${referrerId} for this email.`,
@@ -134,7 +135,7 @@ export async function grantReferralCredits(
       })
       .eq("user_id", referrerId);
     if (creditError) {
-      console.error("Error granting credits to referrer");
+      reportError("Error granting credits to referrer");
     } else {
       await eventCaptureServer({
         event: PostHogEvent.ReferralCreditsGranted,

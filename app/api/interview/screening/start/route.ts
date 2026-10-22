@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
   });
   const reservation = reserved as { ok: boolean; reason?: string; interview_id?: string } | null;
   if (reserveError || !reservation) {
-    console.error("[SCREENING_RESERVE_ERROR]:", reserveError);
+    reportError("[SCREENING_RESERVE_ERROR]:", reserveError);
     return NextResponse.json({ error: "Unable to start the interview." }, { status: 500 });
   }
   if (!reservation.ok || !reservation.interview_id) return refusal(reservation.reason ?? "not_found");
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
       p_interview_id: interviewId,
       p_session_id: reservationId,
     });
-    if (error) console.error("[SCREENING_RELEASE_ERROR]:", error);
+    if (error) reportError("[SCREENING_RELEASE_ERROR]:", error);
   };
 
   // The snapshot holds the questions, which the applicant can't read directly.
@@ -86,7 +87,7 @@ export async function POST(req: Request) {
   const snapshot = invite.config_snapshot as ConfigSnapshot;
   const { data: job } = await admin.from("job_postings").select("description").eq("id", invite.job_post_id).maybeSingle();
   const candidate = await loadCandidateContext(admin, invite.application_id);
-  if (!candidate.ok) console.error("[SCREENING_CONTEXT]:", id, candidate.error);
+  if (!candidate.ok) reportError("[SCREENING_CONTEXT]:", id, candidate.error);
 
   let sessionId: string;
   try {
@@ -120,7 +121,7 @@ export async function POST(req: Request) {
     }
     sessionId = response.session_id;
   } catch (error) {
-    console.error("[SCREENING_VOICE_ERROR]:", error);
+    reportError("[SCREENING_VOICE_ERROR]:", error);
     await release();
     return NextResponse.json({ error: "Failed to create a voice session. Please try again." }, { status: 502 });
   }
@@ -132,13 +133,13 @@ export async function POST(req: Request) {
   });
   const start = started as { ok: boolean; reason?: string; session_id?: string } | null;
   if (startError || !start?.ok || !start.session_id) {
-    if (startError) console.error("[SCREENING_START_ERROR]:", startError);
+    if (startError) reportError("[SCREENING_START_ERROR]:", startError);
     // The voice session exists but no attempt was recorded: take it down.
     await fetch(`${process.env.VOICE_BACKEND_URL}/sessions/${encodeURIComponent(sessionId)}`, {
       method: "DELETE",
       headers: voiceHeaders(),
       signal: AbortSignal.timeout(10_000),
-    }).catch((err) => console.error("[SCREENING_VOICE_DELETE_ERROR]:", err));
+    }).catch((err) => reportError("[SCREENING_VOICE_DELETE_ERROR]:", err));
     await release();
     return startError ? NextResponse.json({ error: "Unable to start the interview." }, { status: 500 }) : refusal(start?.reason ?? "not_invited");
   }

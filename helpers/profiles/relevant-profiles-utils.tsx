@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { RelevantProfilesUpdateEmail } from "@/emails/RelevantProfilesUpdateEmail";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -55,7 +56,7 @@ export const sendEmailForRelevantProfilesStatusUpdate = async (
       textContent: emailText,
     });
   } catch {
-    console.error(
+    reportError(
       "Some error occured while sending status update email to " +
         email +
         "for relevant profile update.",
@@ -110,7 +111,12 @@ export async function processJobPostingRelevance(
       },
     );
 
-    if (!response.ok) throw new Error(`Failed to fetch relevant profiles.`);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(
+        `Failed to fetch relevant profiles (${response.status}): ${body?.error ?? response.statusText}`,
+      );
+    }
 
     const json = await response.json();
     const profiles: AllProfileWithRelations[] = json.data || [];
@@ -190,7 +196,7 @@ export async function processJobPostingRelevance(
     try {
       await enqueueTopExplanations(admin, jobPostingId, rowsToUpsert);
     } catch (err) {
-      console.error("[relevant profiles] couldn't queue explanations", err);
+      reportError("[relevant profiles] couldn't queue explanations", err);
     }
 
     const { error: updateError } = await supabase
@@ -217,6 +223,7 @@ export async function processJobPostingRelevance(
 
     return { success: true };
   } catch (error) {
+    reportError("[relevant profiles] update failed", error);
     const msg =
       error instanceof Error ? error.message : "Unknown error occured.";
 

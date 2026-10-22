@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import { randomUUID } from "node:crypto";
 import { render } from "react-email";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
@@ -73,7 +74,7 @@ export async function sendOutreach(
     await holdEntitlement(company.id, "outreach", 1, ref, user.id);
   } catch (err) {
     if (err instanceof EntitlementError) return { ok: false, ...toEntitlementActionError(err) };
-    console.error("[outreach] hold failed:", err);
+    reportError("[outreach] hold failed:", err);
     return { ok: false, error: "Something went wrong. Try again.", code: "UNKNOWN", status: 500 };
   }
 
@@ -91,10 +92,10 @@ export async function sendOutreach(
     try {
       await releaseHold(company.id, "outreach", ref);
     } catch (releaseErr) {
-      console.error("[outreach] release failed:", releaseErr);
+      reportError("[outreach] release failed:", releaseErr);
     }
     const mapped = mapOutreachError(error);
-    if (mapped.code === "UNKNOWN") console.error("[outreach] send failed:", error);
+    if (mapped.code === "UNKNOWN") reportError("[outreach] send failed:", error);
     return { ok: false, error: mapped.message, code: mapped.code, status: mapped.status };
   }
 
@@ -104,7 +105,7 @@ export async function sendOutreach(
     await consumeEntitlement(company.id, "outreach", 1, ref, user.id);
   } catch (err) {
     // The hold already reserved the unit; log rather than fail a sent message.
-    console.error("[outreach] consume failed:", err);
+    reportError("[outreach] consume failed:", err);
   }
 
   const emailed = await emailCandidate(company, outreach);
@@ -158,7 +159,7 @@ async function emailCandidate(company: MyCompany, outreach: CandidateOutreach): 
     });
     return true;
   } catch (err) {
-    console.error("[outreach] email failed:", err);
+    reportError("[outreach] email failed:", err);
     return false;
   }
 }

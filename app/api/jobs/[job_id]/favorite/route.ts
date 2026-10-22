@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
@@ -43,6 +44,7 @@ export async function POST(
       message: "Job favorited successfully",
     });
   } catch (error) {
+    reportError("[jobs/favorite] failed", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
@@ -82,6 +84,7 @@ export async function DELETE(
       message: "Job unfavorited successfully",
     });
   } catch (error) {
+    reportError("[jobs/favorite] failed", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

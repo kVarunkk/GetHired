@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 
@@ -42,7 +43,7 @@ export async function rejectForKnockout(
     .update({ stage_id: stage.id, updated_at: new Date().toISOString() })
     .eq("id", applicationId);
   if (error) {
-    console.error("[knockout] couldn't move the application to rejected", error.message);
+    reportError("[knockout] couldn't move the application to rejected", error.message);
     return false;
   }
 
@@ -61,6 +62,6 @@ export async function rejectForKnockout(
       reason: "knockout",
     },
   });
-  if (eventError) console.error("[knockout] couldn't log the move", eventError.message);
+  if (eventError) reportError("[knockout] couldn't log the move", eventError.message);
   return true;
 }

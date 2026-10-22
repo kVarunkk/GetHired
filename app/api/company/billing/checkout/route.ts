@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireCompany } from "@/helpers/companies/require-company";
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
     .select("id")
     .single();
   if (insertError || !row) {
-    console.error("[billing] couldn't create the payment row", insertError);
+    reportError("[billing] couldn't create the payment row", insertError);
     return bad("Couldn't start the checkout.", 500);
   }
 
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ checkoutUrl: session.checkoutUrl });
   } catch (err) {
-    console.error("[billing] Dodo checkout failed", err);
+    reportError("[billing] Dodo checkout failed", err);
     await service
       .from("payments")
       .update({ status: "failed", failure_reason: "checkout_session_failed", updated_at: new Date().toISOString() })

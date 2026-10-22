@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import { render } from "react-email";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import InterviewInviteEmail from "@/emails/InterviewInviteEmail";
@@ -79,7 +80,7 @@ export async function inviteApplicants(
       p_invited_by: user.id,
     });
     // The call is one transaction: on an error nothing was created.
-    if (rpcError) console.error("[screening] bulk invite failed", rpcError.message);
+    if (rpcError) reportError("[screening] bulk invite failed", rpcError.message);
     for (const row of (data as InviteRpcResult[] | null) ?? []) results.set(row.application_id, row);
   }
 

@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { createClient } from "@/lib/supabase/server";
 
 type SessionFinalization = {
@@ -39,7 +40,7 @@ export async function finalizeInterviewSessionAction(
   );
 
   if (error) {
-    console.error("[INTERVIEW_ANALYSIS_FINALIZE_ERROR]:", error);
+    reportError("[INTERVIEW_ANALYSIS_FINALIZE_ERROR]:", error);
     return { success: false, error: "Unable to finalize interview session." };
   }
 

@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { revalidatePath } from "next/cache";
 import { markMyOnboardingComplete } from "@/app/actions/update-user-metadata";
 import {
@@ -55,7 +56,7 @@ export async function saveCompanyProfileAction(formData: FormData): Promise<Save
   try {
     embedding = await embedCompanyProfile(values);
   } catch (err) {
-    console.error("[company-profile] embedding failed", err);
+    reportError("[company-profile] embedding failed", err);
     return { ok: false, error: "An error occurred while saving information. Please try again." };
   }
 
@@ -71,7 +72,7 @@ export async function saveCompanyProfileAction(formData: FormData): Promise<Save
       upsert: true,
     });
     if (error) {
-      console.error("[company-profile] logo upload failed", error.message);
+      reportError("[company-profile] logo upload failed", error.message);
       return { ok: false, error: "Couldn't upload the logo. Please try again." };
     }
     // A new query string, so the CDN and browsers don't keep the old logo.
@@ -97,7 +98,7 @@ export async function saveCompanyProfileAction(formData: FormData): Promise<Save
     .from("company_info")
     .update({ embedding_new: embedding as unknown as string, updated_at: new Date().toISOString() })
     .eq("id", company.id);
-  if (embedError) console.error("[company-profile] embedding save failed", embedError.message);
+  if (embedError) reportError("[company-profile] embedding save failed", embedError.message);
 
   const { error: metadataError } = await markMyOnboardingComplete("company");
   if (metadataError) return { ok: false, error: metadataError };

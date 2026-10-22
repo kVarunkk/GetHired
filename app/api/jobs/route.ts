@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
     const errorForPostHog =
       err instanceof Error ? err : new Error(errorMessage);
 
-    console.error(`[JOBS API] Failed during ${trace.stage}:`, err);
+    reportError(`[JOBS API] Failed during ${trace.stage}:`, err);
     await eventCaptureServerException({
       error: errorForPostHog,
       distinctId: trace.distinctId,

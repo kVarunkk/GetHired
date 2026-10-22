@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import { knockoutReasons } from "@/components/applications/KnockoutBadge";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
@@ -67,7 +68,7 @@ export async function loadBoard(
   // SIT-062: the interview badge. Extra: a failure only hides it.
   const interviews = can(company, "interviews.view", jobPostId)
     ? await getInterviewSummaries(supabase, jobPostId).catch((err) => {
-        console.error("Failed to load the board's interviews:", err);
+        reportError("Failed to load the board's interviews:", err);
         return {} as Awaited<ReturnType<typeof getInterviewSummaries>>;
       })
     : {};

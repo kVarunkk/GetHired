@@ -1,4 +1,5 @@
 import "server-only";
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
 import { isUuid } from "@/helpers/agent/auth";
@@ -225,7 +226,7 @@ async function queueEmails(
   try {
     await enqueuePipelineEmails(messages);
   } catch (err) {
-    console.error("[pipeline/move] couldn't queue the emails", err);
+    reportError("[pipeline/move] couldn't queue the emails", err);
     return new Set();
   }
   return new Set(recipients.map((app) => app.id));
@@ -404,7 +405,7 @@ export async function moveApplications(ctx: Ctx, input: MoveInput): Promise<Move
   }));
   // The move already happened; a missing log line isn't worth failing it.
   const { error: eventsError } = await supabase.from("application_events").insert(events);
-  if (eventsError) console.error("[pipeline/move] couldn't log the stage changes", eventsError);
+  if (eventsError) reportError("[pipeline/move] couldn't log the stage changes", eventsError);
 
   return { ...result, moved: toMove.length, emailed: queued.size, movedIds };
 }

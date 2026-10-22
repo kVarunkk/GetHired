@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import { ALLOWANCE_KEYS, type AllowanceKey } from "./keys";
@@ -39,7 +40,7 @@ function allowances(value: Record<string, number> | null): Partial<Record<Allowa
 export async function listMemberUsage(supabase: SupabaseClient<Database>): Promise<MemberUsageRow[] | null> {
   const { data, error } = await supabase.rpc("member_usage", {});
   if (error) {
-    console.error("[billing] member_usage", error);
+    reportError("[billing] member_usage", error);
     return null;
   }
   if (!Array.isArray(data)) return null;

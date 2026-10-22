@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { revalidateTag } from "next/cache";
 import { careersCompanyTag } from "@/helpers/careers/cache-tags";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -174,7 +175,7 @@ export async function upsertJobPosting(
         p_job_post_id: posting.id,
         p_user_id: user.id,
       });
-      if (assignError) console.error(`[job posting] couldn't assign the creator to ${posting.id}`, assignError);
+      if (assignError) reportError(`[job posting] couldn't assign the creator to ${posting.id}`, assignError);
     }
 
     // MT-REQ-008: an edit to what screening reads makes old results stale.
@@ -185,7 +186,7 @@ export async function upsertJobPosting(
       try {
         await markJobResultsStale(service, posting.id);
       } catch (err) {
-        console.error(`[job posting] couldn't re-screen ${posting.id}`, err);
+        reportError(`[job posting] couldn't re-screen ${posting.id}`, err);
       }
     }
 
@@ -290,6 +291,7 @@ export async function upsertJobPosting(
 
     return { success: true, isUpdate, postingId: posting.id };
   } catch (error: unknown) {
+    reportError("[job posting] save failed", error);
     return {
       success: false,
       error:

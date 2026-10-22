@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { Buffer } from "buffer";
@@ -35,7 +36,7 @@ export async function GET(
       .single();
 
     if (dbError || !paymentRecord) {
-      console.error(
+      reportError(
         `Invoice fetch failed for payment ${paymentId}: User ${user.id} does not own it.`,
       );
       return NextResponse.json(
@@ -67,7 +68,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Invoice retrieval failed:", error);
+    reportError("Invoice retrieval failed:", error);
     return NextResponse.json(
       { error: "Failed to retrieve invoice file." },
       { status: 500 },

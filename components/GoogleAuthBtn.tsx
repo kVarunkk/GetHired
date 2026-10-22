@@ -1,5 +1,6 @@
 "use client";
 
+import { reportClientError } from "@/lib/posthog/report-client-error";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "./ui/button";
 import Image from "next/image";
@@ -28,7 +29,8 @@ export default function GoogleAuthBtn() {
           redirectTo: callbackUrl,
         },
       });
-    } catch {
+    } catch (error) {
+      reportClientError("[auth] Google sign-in failed", error);
     } finally {
       setTimeout(() => {
         setLoading(false);

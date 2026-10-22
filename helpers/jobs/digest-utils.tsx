@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import JobDigestEmail from "@/emails/JobDigestEmail";
 import { createServiceRoleClient } from "../../lib/supabase/service-role";
 import { render } from "react-email";
@@ -31,7 +32,7 @@ export async function getAllDigestUsers() {
     .lt("created_at", threeDaysAgoISO);
 
   if (error) {
-    console.error("Supabase Error fetching digest users:", error);
+    reportError("Supabase Error fetching digest users:", error);
     throw new Error("Failed to fetch eligible users for digest.");
   }
 
@@ -89,7 +90,7 @@ export async function processUserDigest(user: RelevanceJobMessage["message"]) {
 
     return { success: true, userEmail: user.email, jobs: finalJobs };
   } catch (e) {
-    console.error(`Error processing digest for user ${user?.email}:`, e);
+    reportError(`Error processing digest for user ${user?.email}:`, e);
     return {
       success: false,
       userEmail: user.email ?? "Unknown",
@@ -136,7 +137,7 @@ export async function sendJobDigestEmail(
     console.log(`Successfully sent ${jobs.length} jobs to ${email}.`);
     return { success: true };
   } catch (e) {
-    console.error(`Error sending email to ${email}:`, e);
+    reportError(`Error sending email to ${email}:`, e);
     return { success: false, error: (e as Error).message };
   }
 }

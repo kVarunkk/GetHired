@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { requireCompany } from "@/helpers/companies/require-company";
 import { OUTREACH_STATUSES } from "@/helpers/outreach/config";
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json(page);
   } catch (err) {
-    console.error("[outreach] list failed:", err);
+    reportError("[outreach] list failed:", err);
     return NextResponse.json({ error: "Couldn't load outreach." }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { getAllDigestUsers } from "@/helpers/jobs/digest-utils";
@@ -48,7 +49,7 @@ export async function GET() {
       message: `Enqueued ${users.length} users.`,
     });
   } catch (error) {
-    console.error("Global Job Digest Execution Failed:", error);
+    reportError("Global Job Digest Execution Failed:", error);
     const errorMsg = error instanceof Error ? error.message : String(error);
 
     await sendEmailForStatusUpdate(

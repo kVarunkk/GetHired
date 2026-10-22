@@ -1,3 +1,4 @@
+import { reportError } from "@/helpers/posthog/report-error";
 import { createClient } from "@/lib/supabase/server";
 import { PostgrestError } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
@@ -42,8 +43,8 @@ export async function GET() {
       },
       { status: 200 },
     );
-  } catch {
-    // console.error("Error fetching filters:", e);
+  } catch (error) {
+    reportError("[profiles/filters] failed", error);
     return NextResponse.json(
       { error: "Failed to fetch filters" },
       { status: 500 },

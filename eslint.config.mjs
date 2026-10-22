@@ -31,6 +31,22 @@ const eslintConfig = [
       ],
     },
   },
+  {
+    // Every logged error also goes to PostHog error tracking.
+    files: ["{app,helpers,lib,utils,hooks,components}/**/*.{ts,tsx}", "middleware.ts"],
+    ignores: ["**/*.test.{ts,tsx}", "helpers/posthog/**", "lib/posthog/**"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "console",
+          property: "error",
+          message:
+            "Use reportError (helpers/posthog/report-error) on the server or reportClientError (lib/posthog/report-client-error) in the browser, so the error reaches PostHog.",
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

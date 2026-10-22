@@ -1,5 +1,6 @@
 "use server";
 
+import { reportError } from "@/helpers/posthog/report-error";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import { BILLING_FORBIDDEN, canManageBilling } from "@/helpers/billing/access";
 import { getCompanySubscription } from "@/helpers/billing/subscription";
@@ -31,7 +32,7 @@ export async function openBillingPortalAction(): Promise<Result> {
     });
     return { ok: true, url };
   } catch (err) {
-    console.error("[billing] portal failed", err);
+    reportError("[billing] portal failed", err);
     return { ok: false, error: "Couldn't open the billing portal. Please try again." };
   }
 }
