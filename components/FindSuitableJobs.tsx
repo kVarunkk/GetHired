@@ -79,6 +79,8 @@ export default function FindSuitableJobs({
                 ? "job"
                 : "companie"
           }s?${params.toString()}`,
+          // Keep the reader's place: starting a search shouldn't jump to the page top.
+          { scroll: false },
         );
       });
     } catch {
