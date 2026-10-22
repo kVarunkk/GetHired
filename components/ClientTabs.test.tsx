@@ -70,6 +70,7 @@ describe("ClientTabs: talent lists (PL-TASK-051)", () => {
 
     expect(push).toHaveBeenCalledWith(
       "/company/profiles?tab=backend-shortlist&skills=react",
+      { scroll: false },
     );
   });
 
@@ -81,9 +82,9 @@ describe("ClientTabs: talent lists (PL-TASK-051)", () => {
     expect(tab(/Saved/)).toHaveAttribute("data-state", "inactive");
 
     await userEvent.click(tab(/Saved/));
-    expect(push).toHaveBeenLastCalledWith("/company/profiles?tab=saved");
+    expect(push).toHaveBeenLastCalledWith("/company/profiles?tab=saved", { scroll: false });
     await userEvent.click(tab(/All/));
-    expect(push).toHaveBeenLastCalledWith("/company/profiles?");
+    expect(push).toHaveBeenLastCalledWith("/company/profiles?", { scroll: false });
   });
 
   it("falls back to All for a list that no longer exists", () => {

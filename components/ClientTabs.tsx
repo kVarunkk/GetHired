@@ -62,6 +62,8 @@ export function ClientTabs({
               ? "companies"
               : "company/profiles"
         }?${newSearchParams.toString()}`,
+        // Keep the tabs in view: a tab change shouldn't jump to the page top.
+        { scroll: false },
       );
     });
   };
