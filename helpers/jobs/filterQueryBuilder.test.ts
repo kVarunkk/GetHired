@@ -107,3 +107,76 @@ describe("buildQuery: total", () => {
     expect(selectOf().args[1]).toBeUndefined();
   });
 });
+
+describe("buildQuery: cursor", () => {
+  const cursorOf = (value: string, id: string) =>
+    Buffer.from(`${value}_${id}`).toString("base64");
+  const chain = () => supabase.callsFor("all_jobs")[0]!.chain;
+
+  it("continues after the last row, ties by id, then the nulls", async () => {
+    await buildQuery({
+      ...BASE_ARGS,
+      sortBy: "salary_min",
+      sortOrder: "desc",
+      cursor: cursorOf("50000", "j9"),
+    });
+
+    expect(chain()).toContainEqual({
+      method: "or",
+      args: [
+        'salary_min.lt."50000",and(salary_min.eq."50000",id.lt.j9),salary_min.is.null',
+      ],
+    });
+  });
+
+  it("breaks ties by id in the sort direction when ascending", async () => {
+    await buildQuery({
+      ...BASE_ARGS,
+      sortBy: "salary_min",
+      sortOrder: "asc",
+      cursor: cursorOf("50000", "j9"),
+    });
+
+    expect(chain()).toContainEqual({
+      method: "or",
+      args: [
+        'salary_min.gt."50000",and(salary_min.eq."50000",id.gt.j9),salary_min.is.null',
+      ],
+    });
+  });
+
+  it("only returns later nulls once the last row was null, so no row repeats", async () => {
+    await buildQuery({
+      ...BASE_ARGS,
+      sortBy: "salary_min",
+      sortOrder: "desc",
+      cursor: cursorOf("null", "j9"),
+    });
+
+    expect(chain()).toContainEqual({
+      method: "is",
+      args: ["salary_min", null],
+    });
+    expect(chain()).toContainEqual({
+      method: "filter",
+      args: ["id", "lt", "j9"],
+    });
+    expect(chain().filter((step) => step.method === "or")).toEqual([]);
+  });
+
+  it("quotes values with commas and keeps non-ASCII text", async () => {
+    await buildQuery({
+      ...BASE_ARGS,
+      sortBy: "company_name",
+      sortOrder: "asc",
+      cursor: cursorOf("Acme, Inc_Café", "j9"),
+    });
+
+    expect(chain()).toContainEqual({
+      method: "or",
+      args: [
+        'company_name.gt."Acme, Inc_Café",and(company_name.eq."Acme, Inc_Café",id.gt.j9),company_name.is.null',
+      ],
+    });
+  });
+});

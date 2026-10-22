@@ -159,22 +159,23 @@ export const buildQuery = async ({
     }
 
     if (cursor && sortBy !== "relevance") {
-      const decoded = Buffer.from(cursor, "base64").toString("ascii");
+      const decoded = Buffer.from(cursor, "base64").toString("utf8");
 
       const parts = decoded.split("_");
       const lastId = parts.pop();
       const lastValue = parts.join("_");
+      // Rows come in (sortBy, id) order, both in the same direction, with
+      // nulls last either way (see the order below).
       const operator = sortOrder === "desc" ? "lt" : "gt";
-      const tieOperator = "lt";
-      if (lastValue === "null" || lastValue === null) {
-        // Last item had null salary - everything with null salary after this id
-        // and all non-null salaries (they come before nulls)
-        query = query.or(
-          `${sortBy}.not.is.null,and(${sortBy}.is.null,id.lt.${lastId})`,
-        );
+      if (lastValue === "null") {
+        // Already into the nulls: only the nulls after this id are left.
+        query = query.is(sortBy, null).filter("id", operator, lastId);
       } else {
+        // Quoted so commas and parentheses (e.g. in company names) stay
+        // inside the value.
+        const value = `"${lastValue.replace(/["\\]/g, "\\$&")}"`;
         query = query.or(
-          `${sortBy}.${operator}.${lastValue},and(${sortBy}.eq.${lastValue},id.${tieOperator}.${lastId})`,
+          `${sortBy}.${operator}.${value},and(${sortBy}.eq.${value},id.${operator}.${lastId}),${sortBy}.is.null`,
         );
       }
     }
