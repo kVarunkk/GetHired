@@ -13,10 +13,18 @@ export type FitThresholdInviteResult = { invited: true; id: string } | { invited
  * Never throws: a failed invite mustn't fail the screening. When the
  * allowance is out nobody is invited; the job page derives its banner from
  * screened-above-the-bar applications without an interview.
+ *
+ * An imported application (`imported`) is invited only when its batch had
+ * "Auto-invite" on (BI-REQ-015b); a hand-added one never is.
  */
 export async function inviteAboveFitThreshold(
   admin: SupabaseClient<Database>,
-  { applicationId, jobPostId, fitScore }: { applicationId: string; jobPostId: string; fitScore: number },
+  {
+    applicationId,
+    jobPostId,
+    fitScore,
+    imported,
+  }: { applicationId: string; jobPostId: string; fitScore: number; imported?: { batchId: string | null } },
 ): Promise<FitThresholdInviteResult> {
   try {
     const { data: config } = await admin
@@ -28,6 +36,16 @@ export async function inviteAboveFitThreshold(
       return { invited: false, reason: "disabled" };
     }
     if (fitScore < config.fit_threshold) return { invited: false, reason: "below_threshold" };
+
+    if (imported) {
+      if (!imported.batchId) return { invited: false, reason: "imported" };
+      const { data: batch } = await admin
+        .from("candidate_import_batches")
+        .select("auto_invite")
+        .eq("id", imported.batchId)
+        .maybeSingle();
+      if (!batch?.auto_invite) return { invited: false, reason: "imported" };
+    }
 
     const { data, error } = await admin.rpc("create_screening_invite", {
       p_application_id: applicationId,

@@ -86,6 +86,11 @@ export const ALLOWANCE_FEATURES: Record<
     detail: "Each minute of a candidate's interview.",
     unit: "minute",
   },
+  resume_imports: {
+    feature: "Resume import",
+    detail: "AI reads an imported resume into a candidate record.",
+    unit: "resume",
+  },
 };
 
 /**

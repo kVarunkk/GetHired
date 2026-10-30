@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setRequestUser } from "@/test/utils/auth";
 import { ADMIN_A, MEMBER_A, OWNER_A, type MemberFixture } from "@/test/utils/team";
 import { PERMISSION_MATRIX, PastAuth, pastAuthClient, runEntry } from "@/test/utils/permission-matrix";
-import { ADMIN_KEYS, MEMBER_KEYS } from "@/helpers/companies/role-templates";
+import { ADMIN_KEYS, MEMBER_ASSIGNED_KEYS, MEMBER_KEYS } from "@/helpers/companies/role-templates";
 import type { PermissionKey } from "@/helpers/companies/permissions";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
@@ -41,6 +41,29 @@ const EXPECTED: Record<string, [owner: boolean, admin: boolean, member: boolean]
   "action:listTalentLists": [true, true, true],
   "action:saveTalentList": [true, true, true],
   "action:triggerJobPostingRelevanceUpdate": [true, true, true],
+  // Bulk import (BIT-020). Member has applicants.import for assigned jobs only,
+  // and MEMBER_A has none: only the any-scope actions get past the check.
+  "action:createCandidate": [true, true, false],
+  "action:checkCandidateEmail": [true, true, true],
+  "action:updateCandidate": [true, true, true],
+  "action:deleteCandidates": [true, true, false],
+  "action:addCandidatesToJob": [true, true, false],
+  "action:getImportMapping": [true, true, true],
+  "action:checkImportEmails": [true, true, true],
+  "action:startImport": [true, true, true],
+  "action:confirmSpreadsheetImport": [true, true, false],
+  "action:createResumeUploadUrls": [true, true, false],
+  "action:submitResumeBatch": [true, true, true],
+  "action:createResumeUploadUrls (pool)": [true, true, false],
+  "action:createCandidate (list)": [true, true, false],
+  "action:submitResumeBatch (list)": [true, true, true],
+  "action:importStatus": [true, true, true],
+  "action:updateImportRow": [true, true, true],
+  "action:retryImportRow": [true, true, true],
+  "action:removeImportRow": [true, true, true],
+  "action:confirmResumeImport": [true, true, true],
+  "action:createCandidateResumeUpload": [true, true, true],
+  "action:uploadCandidateResume": [true, true, true],
   "route:POST /api/company/matches/explain": [true, true, true],
   "route:GET /api/company/outreach": [true, true, true],
   "route:POST /api/company/outreach": [true, true, true],
@@ -87,6 +110,8 @@ const EXPECTED: Record<string, [owner: boolean, admin: boolean, member: boolean]
   "tool:compareCandidates": [true, true, true],
   "tool:saveCandidate": [true, true, true],
   "tool:unsaveCandidate": [true, true, true],
+  "tool:findPoolCandidates": [true, true, true],
+  "tool:addCandidatesToJob": [true, true, false],
   "tool:listApplicants": [true, true, true],
   "tool:getApplication": [true, true, true],
   "tool:getHiringFunnel": [true, true, true],
@@ -165,7 +190,9 @@ describe("the permission matrix (RP-TEST-004)", () => {
       p === null ? true : p === "owner" ? false : keys.includes(p);
     const mismatches = PERMISSION_MATRIX.filter((e) => {
       const [, admin, member] = EXPECTED[e.name];
-      return admin !== has(ADMIN_KEYS, e.permission) || member !== has(MEMBER_KEYS, e.permission);
+      // An any-scope entry also passes on the Member template's assigned keys.
+      const memberKeys = e.anyScope ? [...MEMBER_KEYS, ...MEMBER_ASSIGNED_KEYS] : MEMBER_KEYS;
+      return admin !== has(ADMIN_KEYS, e.permission) || member !== has(memberKeys, e.permission);
     }).map((e) => e.name);
     expect(mismatches).toEqual([]);
   });

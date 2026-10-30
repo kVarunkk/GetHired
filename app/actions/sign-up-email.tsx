@@ -10,7 +10,7 @@ import { PostHogEvent } from "@/utils/types";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { after } from "next/server";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
-import { APPLICANT_HOME, companyOnboardingPath } from "@/helpers/user/home-path";
+import { APPLICANT_HOME, claimReturnPath, companyOnboardingPath } from "@/helpers/user/home-path";
 import { findOpenInvite, joinPath } from "@/helpers/team/invite-token";
 import { INVALID_INVITE_MESSAGE } from "@/helpers/team/errors";
 
@@ -25,7 +25,10 @@ type SignupOptions = {
   inviteToken?: string;
   /** Stored as `user_metadata.full_name`; acceptance uses it as the display name. */
   fullName?: string;
-  /** Companies: where onboarding sends them once it's done, e.g. /company/agent. */
+  /**
+   * Companies: where onboarding sends them once it's done, e.g. /company/agent.
+   * Applicants: only a claim link (`/claim/…`, BI-REQ-041); otherwise the agent.
+   */
   returnTo?: string;
 };
 
@@ -51,7 +54,7 @@ export async function sendSignupEmail(
     ? joinPath(inviteToken)
     : isCompany
       ? companyOnboardingPath(options.returnTo)
-      : APPLICANT_HOME;
+      : (claimReturnPath(options.returnTo) ?? APPLICANT_HOME);
   const fullName = options.fullName?.trim().slice(0, 80);
 
   const { data, error } = await serviceRoleSupabase.auth.admin.generateLink({

@@ -1,4 +1,5 @@
 import "server-only";
+import { applicationPersonOrNull } from "@/helpers/applications/application-person";
 import { reportError } from "@/helpers/posthog/report-error";
 import { knockoutReasons } from "@/components/applications/KnockoutBadge";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -19,9 +20,10 @@ const BOARD_MAX_ROWS = 1000;
 
 const DAY_MS = 86_400_000;
 
-// Only what a card shows. No contact details (PL-SEC-002).
+// Only what a card shows. No contact details (PL-SEC-002): a company
+// candidate's resume_path only becomes `hasResume`.
 const CARD_COLUMNS =
-  "id, stage_id, stage_entered_at, created_at, user_info(full_name), application_screenings(status, fit_score), application_knockouts(failed, reasons)";
+  "id, stage_id, stage_entered_at, created_at, applicant_user_id, company_candidate_id, user_info(full_name), company_candidates(id, full_name, resume_path), application_screenings(status, fit_score), application_knockouts(failed, reasons)";
 
 type Ctx = { supabase: SupabaseClient<Database>; company: MyCompany };
 
@@ -52,6 +54,8 @@ export async function loadBoard(
     .from("applications")
     .select(CARD_COLUMNS)
     .eq("job_post_id", jobPostId)
+    // BI-REQ-042: a merged import shows through the application it joined.
+    .is("merged_into_application_id", null)
     .order("created_at", { ascending: false })
     .limit(BOARD_MAX_ROWS);
   if (error) throw new Error(`Failed to load the applications: ${error.message}`);
@@ -85,10 +89,11 @@ export async function loadBoard(
   const all: BoardApplication[] = (rows ?? []).map((row) => {
     const screening = row.application_screenings;
     const stats = noteStats.get(row.id);
+    const person = applicationPersonOrNull(row);
     return {
       id: row.id,
       stageId: row.stage_id,
-      name: row.user_info?.full_name?.trim() || "Applicant",
+      name: person?.name ?? "Applicant",
       fitScore: screening?.status === "completed" ? screening.fit_score : null,
       daysInStage: Math.max(
         0,
@@ -98,6 +103,10 @@ export async function loadBoard(
       ratingAvg: stats ? ratingSummary(stats.rated).average : null,
       knockoutReasons: row.application_knockouts?.failed ? knockoutReasons(row.application_knockouts) : null,
       ...(interviews[row.id] ? { interview: interviews[row.id] } : {}),
+      notScored: screening?.status === "insufficient_info",
+      imported: person?.imported ?? false,
+      hasResume: person?.hasResume ?? true,
+      ...(person?.connectedUserId ? { connectedUserId: person.connectedUserId } : {}),
     };
   });
 

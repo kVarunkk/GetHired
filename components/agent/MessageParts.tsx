@@ -1,6 +1,5 @@
 "use client";
 
-import { describeApplicationForm } from "@/helpers/jobs/describe-application-form";
 import { memo, useEffect, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown, { type Components } from "react-markdown";
@@ -23,6 +22,17 @@ import { JobDeleteApprovalDetails } from "./recruiter/JobDeleteApprovalCard";
 import { MoveApprovalDetails } from "./recruiter/MoveApprovalCard";
 import { OutreachApprovalDetails } from "./recruiter/OutreachApprovalCard";
 import { InterviewConfigApprovalDetails, InterviewInviteApprovalDetails } from "./recruiter/InterviewApprovalCard";
+import { AddToJobApprovalDetails } from "./recruiter/AddToJobApprovalDetails";
+import { ApplicationFormApprovalDetails, FORM_APPROVAL_TOOLS } from "./recruiter/ApplicationFormApprovalDetails";
+import CandidateResumeWidget, { type CandidateResumeOutput } from "./recruiter/CandidateResumeWidget";
+import {
+  AddCandidateApprovalDetails,
+  DeleteCandidatesApprovalDetails,
+  ImportApprovalDetails,
+  LawfulBasisNotice,
+} from "./recruiter/ImportApprovalDetails";
+import ResumeImportWidget, { type ResumeImportOutput } from "./recruiter/ResumeImportWidget";
+import SpreadsheetImportWidget, { type SpreadsheetImportOutput } from "./recruiter/SpreadsheetImportWidget";
 import { isRoleApprovalTool, RoleApprovalDetails } from "./recruiter/RoleApprovalCard";
 
 export { isInAppHref };
@@ -30,7 +40,9 @@ export { isInAppHref };
 type MessagePart = UIMessage["parts"][number];
 type ToolPart = Extract<MessagePart, { toolCallId: string }>;
 type ApprovalHandler = (response: { id: string; approved: boolean }) => void;
-type ToolOutputHandler = (toolCallId: string, output: ResumeUploadOutput) => void;
+/** What a client-side tool's widget hands back (helpers/agent/client-updates.ts validates it). */
+export type ClientToolOutput = ResumeUploadOutput | ResumeImportOutput | SpreadsheetImportOutput | CandidateResumeOutput;
+type ToolOutputHandler = (toolCallId: string, output: ClientToolOutput, tool?: string) => void;
 
 /** Present-tense and past-tense labels for each tool. */
 const TOOL_LABELS: Record<string, { running: string; done: string; action: string }> = {
@@ -137,7 +149,28 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   getInterviewSetup: { running: "Reading the interview setup…", done: "Read the interview setup", action: "read the interview setup" },
   configureScreeningInterview: { running: "Saving the interview setup…", done: "Saved the interview setup", action: "set up the AI interview" },
   inviteToInterview: { running: "Sending interview invites…", done: "Sent interview invites", action: "invite applicants to the AI interview" },
+  // The company's own candidates (CP-REQ-063).
+  findPoolCandidates: { running: "Looking through your candidates…", done: "Looked through your candidates", action: "look through your candidates" },
+  addCandidatesToJob: { running: "Adding candidates to the job…", done: "Added candidates to the job", action: "add your candidates to the job" },
   getInterviewReport: { running: "Reading the interview report…", done: "Read the interview report", action: "read the interview report" },
+  // Imports and the company's own candidates (BI-REQ-060).
+  requestResumeImport: { running: "Waiting for your resumes…", done: "Resumes uploaded", action: "import resumes" },
+  requestSpreadsheetImport: { running: "Waiting for your spreadsheet…", done: "Spreadsheet sent for review", action: "import a spreadsheet" },
+  requestCandidateResume: { running: "Waiting for the resume…", done: "Resume added", action: "add the resume" },
+  listImports: { running: "Loading your imports…", done: "Loaded your imports", action: "load your imports" },
+  getImport: { running: "Checking the import…", done: "Checked the import", action: "check the import" },
+  updateImportRows: { running: "Fixing rows…", done: "Fixed rows in the import", action: "fix the import's rows" },
+  removeImportRows: { running: "Removing rows…", done: "Removed rows from the import", action: "remove rows from the import" },
+  retryImportRows: { running: "Reading the resumes again…", done: "Queued the resumes again", action: "read the resumes again" },
+  confirmImport: { running: "Importing…", done: "Imported the candidates", action: "confirm the import" },
+  addCandidate: { running: "Adding the candidate…", done: "Added the candidate", action: "add the candidate" },
+  listMyCandidates: { running: "Looking through your candidates…", done: "Looked through your candidates", action: "list your candidates" },
+  getMyCandidate: { running: "Reading the candidate…", done: "Read the candidate", action: "read the candidate" },
+  findJobsForMyCandidate: { running: "Finding matching jobs…", done: "Found matching jobs", action: "find matching jobs" },
+  updateMyCandidate: { running: "Saving the candidate…", done: "Updated the candidate", action: "update the candidate" },
+  deleteMyCandidates: { running: "Deleting candidates…", done: "Deleted candidates", action: "delete your candidates" },
+  addMyCandidatesToList: { running: "Adding to the list…", done: "Added to the talent list", action: "add them to the talent list" },
+  removeMyCandidateFromList: { running: "Removing from the list…", done: "Removed from the talent list", action: "remove them from the talent list" },
   compareInterviewReports: { running: "Comparing interviews…", done: "Compared interviews", action: "compare interview reports" },
 };
 
@@ -334,8 +367,6 @@ const FIELD_LABELS: Record<string, string> = {
   maxExperience: "Max experience (years)",
   visaSponsorship: "Visa sponsorship",
   skills: "Skills",
-  questions: "Screening questions",
-  applicationForm: "Application form",
   status: "Status",
 };
 
@@ -348,14 +379,14 @@ const formatValue = (value: unknown) =>
         : "No"
       : String(value);
 
-/** Label and value pairs for an approval card. Ids mean nothing to the user, so they're left out. */
+/**
+ * Label and value pairs for an approval card. Ids mean nothing to the user, so
+ * they're left out. A form's questions get their own list (ApplicationFormApprovalDetails).
+ */
 const describeInput = (input: unknown) =>
   Object.entries((input ?? {}) as Record<string, unknown>)
-    .filter(([key]) => !/Ids?$/.test(key))
-    .map(
-      ([key, value]) =>
-        [FIELD_LABELS[key] ?? key, key === "applicationForm" ? describeApplicationForm(value) : formatValue(value)] as const,
-    );
+    .filter(([key]) => !/Ids?$/.test(key) && key !== "questions" && key !== "applicationForm")
+    .map(([key, value]) => [FIELD_LABELS[key] ?? key, formatValue(value)] as const);
 
 /** Indigo: the agent is waiting on the user. */
 function ActionCard({ children }: { children: React.ReactNode }) {
@@ -465,6 +496,29 @@ function approvalTitle(name: string, input: unknown) {
         return `Invite ${count} ${count === 1 ? "applicant" : "applicants"} to the AI interview?`;
       }
       return `Allow the assistant to ${labelsFor(name).action}?`;
+    case "addCandidatesToJob":
+      if (Array.isArray(values.candidateIds)) {
+        return `Add ${values.candidateIds.length} of your candidates to this job? No one is emailed.`;
+      }
+      return `Allow the assistant to ${labelsFor(name).action}?`;
+    case "confirmImport":
+      return "Import these people? No one is emailed.";
+    case "addCandidate":
+      return typeof values.full_name === "string"
+        ? `Add ${values.full_name} to your candidates? No one is emailed.`
+        : "Add this person to your candidates? No one is emailed.";
+    case "deleteMyCandidates":
+      if (Array.isArray(values.candidateIds)) {
+        const count = values.candidateIds.length;
+        return `Delete ${count === 1 ? "this candidate" : `these ${count} candidates`}? This can't be undone.`;
+      }
+      return `Allow the assistant to ${labelsFor(name).action}?`;
+    case "removeImportRows":
+      if (Array.isArray(values.rowIds)) {
+        const count = values.rowIds.length;
+        return `Remove ${count} ${count === 1 ? "row" : "rows"} from this import? A removed resume's file is deleted.`;
+      }
+      return `Allow the assistant to ${labelsFor(name).action}?`;
     case "moveApplications":
       if (Array.isArray(values.applicationIds)) {
         const count = values.applicationIds.length;
@@ -516,6 +570,10 @@ function approvalDetails(name: string, input: unknown) {
   if (["setJobPostStatus", "deleteJobPost", "moveApplications", "sendOutreach"].includes(name)) return [];
   // The interview setup and invites have their own details (InterviewApprovalCard).
   if (["configureScreeningInterview", "inviteToInterview"].includes(name)) return [];
+  // Adding company candidates names the job and the people (AddToJobApprovalDetails).
+  if (name === "addCandidatesToJob") return [];
+  // Imports and deletes show a server preview by name (ImportApprovalDetails).
+  if (["confirmImport", "deleteMyCandidates", "removeImportRows"].includes(name)) return [];
   // Applications show a server preview with each question's own label (ApplicationApprovalDetails).
   if (name === "submitApplication") return [];
   // Role changes show a server preview with the exact diff (RoleApprovalDetails).
@@ -546,6 +604,10 @@ function ApprovalCard({
       {name === "sendOutreach" && <OutreachApprovalDetails input={part.input} />}
       {name === "configureScreeningInterview" && <InterviewConfigApprovalDetails input={part.input} />}
       {name === "inviteToInterview" && <InterviewInviteApprovalDetails input={part.input} />}
+      {name === "addCandidatesToJob" && <AddToJobApprovalDetails input={part.input} />}
+      {name === "confirmImport" && <ImportApprovalDetails input={part.input} />}
+      {name === "addCandidate" && <AddCandidateApprovalDetails input={part.input} />}
+      {name === "deleteMyCandidates" && <DeleteCandidatesApprovalDetails input={part.input} />}
       {name === "submitApplication" && <ApplicationApprovalDetails input={part.input} />}
       {isRoleApprovalTool(name) && <RoleApprovalDetails tool={name} input={part.input} />}
       {(details.length > 0 || isOnboarding) && (
@@ -568,6 +630,8 @@ function ApprovalCard({
           )}
         </dl>
       )}
+      {FORM_APPROVAL_TOOLS.includes(name) && <ApplicationFormApprovalDetails input={part.input} />}
+      {(name === "confirmImport" || name === "addCandidate") && <LawfulBasisNotice input={part.input} />}
       <div className="flex gap-2">
         <Button
           size="sm"
@@ -900,6 +964,21 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
     );
   }
 
+  if (["requestResumeImport", "requestSpreadsheetImport", "requestCandidateResume"].includes(name) && result.cancelled) {
+    return <Step tone="declined" label="Upload cancelled" />;
+  }
+  if (name === "requestResumeImport" && typeof result.files === "number") {
+    return <Step tone="done" label={`Uploaded ${result.files} ${result.files === 1 ? "resume" : "resumes"} to read`} />;
+  }
+  if (name === "requestSpreadsheetImport" && typeof result.rows === "number") {
+    return (
+      <Step
+        tone="done"
+        label={`Sent ${result.rows.toLocaleString("en-US")} ${result.rows === 1 ? "row" : "rows"} for review`}
+      />
+    );
+  }
+
   if (name === "requestResumeUpload") {
     if (typeof result.resumeId === "string") {
       return (
@@ -949,6 +1028,44 @@ function ToolStep({
       );
     case "input-streaming":
     case "input-available":
+      if (part.state === "input-available" && name === "requestResumeImport") {
+        const input = (part.input ?? {}) as { jobPostId?: string; reason?: string };
+        return (
+          <Step tone="yours" label={labels.running}>
+            <ResumeImportWidget
+              jobPostId={input.jobPostId}
+              reason={input.reason}
+              onComplete={(output) => onToolOutput(part.toolCallId, output, name)}
+            />
+          </Step>
+        );
+      }
+      if (part.state === "input-available" && name === "requestSpreadsheetImport") {
+        const input = (part.input ?? {}) as { jobPostId?: string; reason?: string };
+        return (
+          <Step tone="yours" label={labels.running}>
+            <SpreadsheetImportWidget
+              jobPostId={input.jobPostId}
+              reason={input.reason}
+              onComplete={(output) => onToolOutput(part.toolCallId, output, name)}
+            />
+          </Step>
+        );
+      }
+      if (part.state === "input-available" && name === "requestCandidateResume") {
+        const input = (part.input ?? {}) as { candidateId?: string; reason?: string };
+        if (input.candidateId) {
+          return (
+            <Step tone="yours" label={labels.running}>
+              <CandidateResumeWidget
+                candidateId={input.candidateId}
+                reason={input.reason}
+                onComplete={(output) => onToolOutput(part.toolCallId, output, name)}
+              />
+            </Step>
+          );
+        }
+      }
       if (name === "requestResumeUpload" && part.state === "input-available") {
         const reason = (part.input as { reason?: string } | undefined)?.reason;
         return (

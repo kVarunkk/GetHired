@@ -49,6 +49,36 @@ export const RECRUITER_TOOL_PERMISSIONS = {
   compareCandidates: p(["talent.view", "applicants.view"]),
   saveCandidate: p(["talent.save"]),
   unsaveCandidate: p(["talent.save"]),
+  // CP-REQ-063: the company's own candidates. The job also needs jobs.view, checked in the tool.
+  findPoolCandidates: p(["talent.view"], "jobPostId"),
+  // The same key as addCandidatesToJobAction.
+  addCandidatesToJob: p(["applicants.import"], "jobPostId"),
+  // BI-REQ-060: imports and the company's own candidates, with the same keys
+  // as the Candidates and import pages' actions. The upload widgets run in the
+  // browser, where those actions check again.
+  requestResumeImport: p(["applicants.import"], "jobPostIdOrNone"),
+  requestSpreadsheetImport: p(["applicants.import"], "jobPostIdOrNone"),
+  requestCandidateResume: p(["applicants.import"]),
+  listImports: p(["applicants.import"]),
+  // The RPCs check the batch's job.
+  getImport: p(["applicants.import"]),
+  updateImportRows: p(["applicants.import"]),
+  removeImportRows: p(["applicants.import"]),
+  retryImportRows: p(["applicants.import"]),
+  // A list also needs talent_lists.manage, checked in the tool.
+  confirmImport: p(["applicants.import"], "jobPostIdOrNone"),
+  addCandidate: p(["applicants.import"], "jobPostIdOrNone"),
+  listMyCandidates: p(["talent.view"]),
+  // RLS: talent.view, or applicants.view for a job they're in (BI-PERM-002).
+  getMyCandidate: p(["talent.view", "applicants.view"]),
+  // The jobs also need jobs.view, checked in the tool.
+  findJobsForMyCandidate: p(["talent.view"]),
+  // update_company_candidate checks the candidate's jobs.
+  updateMyCandidate: p(["applicants.import"]),
+  // Unscoped, checked in the tool (BI-PERM-002).
+  deleteMyCandidates: p(["applicants.import"]),
+  addMyCandidatesToList: p(["talent_lists.manage"]),
+  removeMyCandidateFromList: p(["talent_lists.manage"]),
   listApplicants: p(["applicants.view"], "jobPostId"),
   getApplication: p(["applicants.view"], "applicationId"),
   getHiringFunnel: p(["applicants.view"], "jobPostId"),
@@ -120,9 +150,19 @@ export const RECRUITER_TOOL_PERMISSIONS = {
 
 export type RecruiterToolName = keyof typeof RECRUITER_TOOL_PERMISSIONS;
 
+/**
+ * Over MCP, mcp.use gates the surface the way agent.use gates the agent
+ * (RMCP spec §4.1), so tools keyed on agent.use need mcp.use there instead.
+ */
+const surfaceKey = (ctx: { surface?: RecruiterToolContext["surface"] }, key: PermissionKey): PermissionKey =>
+  key === "agent.use" && ctx.surface === "mcp" ? "mcp.use" : key;
+
 /** Whether the tool belongs in the user's tool set (RP-REQ-030). */
-export function toolAllowed(ctx: Pick<RecruiterToolContext, "company">, name: RecruiterToolName): boolean {
-  return RECRUITER_TOOL_PERMISSIONS[name].keys.some((key) => canAny(ctx.company, key));
+export function toolAllowed(
+  ctx: Pick<RecruiterToolContext, "company"> & Partial<Pick<RecruiterToolContext, "surface">>,
+  name: RecruiterToolName,
+): boolean {
+  return RECRUITER_TOOL_PERMISSIONS[name].keys.some((key) => canAny(ctx.company, surfaceKey(ctx, key)));
 }
 
 /**
@@ -215,13 +255,13 @@ export async function checkToolPermission(
   input: unknown,
 ): Promise<{ error: string } | null> {
   const rule = RECRUITER_TOOL_PERMISSIONS[name] as ToolPermission;
-  if (!toolAllowed(ctx, name)) return { error: forbiddenMessage(rule.keys[0]) };
+  if (!toolAllowed(ctx, name)) return { error: forbiddenMessage(surfaceKey(ctx, rule.keys[0])) };
   const resolved = await jobsOf(ctx, rule.job ?? "any", (input ?? {}) as Record<string, unknown>);
   if ("error" in resolved) return resolved;
   if (resolved.jobs === undefined) return null;
   for (const job of resolved.jobs) {
     // Any one of the keys at a scope that covers this job.
-    const denials = rule.keys.map((key) => requireToolPermission(ctx, key, job));
+    const denials = rule.keys.map((key) => requireToolPermission(ctx, surfaceKey(ctx, key), job));
     if (denials.every(Boolean)) return denials[0];
   }
   return null;

@@ -467,10 +467,11 @@ export type Database = {
       application_interviews: {
         Row: {
           accommodation_request: string | null
-          applicant_user_id: string
+          applicant_user_id: string | null
           application_id: string
           attempt_granted: boolean
           attempts_used: number
+          company_candidate_id: string | null
           company_id: string
           completed_at: string | null
           config_snapshot: Json
@@ -494,10 +495,11 @@ export type Database = {
         }
         Insert: {
           accommodation_request?: string | null
-          applicant_user_id: string
+          applicant_user_id?: string | null
           application_id: string
           attempt_granted?: boolean
           attempts_used?: number
+          company_candidate_id?: string | null
           company_id: string
           completed_at?: string | null
           config_snapshot: Json
@@ -521,10 +523,11 @@ export type Database = {
         }
         Update: {
           accommodation_request?: string | null
-          applicant_user_id?: string
+          applicant_user_id?: string | null
           application_id?: string
           attempt_granted?: boolean
           attempts_used?: number
+          company_candidate_id?: string | null
           company_id?: string
           completed_at?: string | null
           config_snapshot?: Json
@@ -552,6 +555,13 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: true
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_interviews_company_candidate_id_fkey"
+            columns: ["company_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "company_candidates"
             referencedColumns: ["id"]
           },
           {
@@ -729,10 +739,13 @@ export type Database = {
           answers: string[]
           answers_v2: Json | null
           applicant_user_id: string | null
+          company_candidate_id: string | null
           created_at: string
           form_snapshot: Json | null
           id: string
+          import_batch_id: string | null
           job_post_id: string | null
+          merged_into_application_id: string | null
           resume_id: string | null
           resume_path: string | null
           resume_url: string | null
@@ -748,10 +761,13 @@ export type Database = {
           answers?: string[]
           answers_v2?: Json | null
           applicant_user_id?: string | null
+          company_candidate_id?: string | null
           created_at?: string
           form_snapshot?: Json | null
           id?: string
+          import_batch_id?: string | null
           job_post_id?: string | null
+          merged_into_application_id?: string | null
           resume_id?: string | null
           resume_path?: string | null
           resume_url?: string | null
@@ -767,10 +783,13 @@ export type Database = {
           answers?: string[]
           answers_v2?: Json | null
           applicant_user_id?: string | null
+          company_candidate_id?: string | null
           created_at?: string
           form_snapshot?: Json | null
           id?: string
+          import_batch_id?: string | null
           job_post_id?: string | null
+          merged_into_application_id?: string | null
           resume_id?: string | null
           resume_path?: string | null
           resume_url?: string | null
@@ -804,10 +823,31 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "applications_company_candidate_id_fkey"
+            columns: ["company_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "company_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "applications_job_post_id_fkey"
             columns: ["job_post_id"]
             isOneToOne: false
             referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_merged_into_application_id_fkey"
+            columns: ["merged_into_application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
             referencedColumns: ["id"]
           },
           {
@@ -924,6 +964,212 @@ export type Database = {
           },
         ]
       }
+      candidate_import_batches: {
+        Row: {
+          auto_invite: boolean
+          company_id: string
+          confirmed_at: string | null
+          counts: Json
+          created_at: string
+          created_by: string | null
+          duplicate_action: string
+          expires_at: string
+          file_name: string | null
+          id: string
+          job_post_id: string | null
+          kind: string
+          lawful_basis_attested_at: string | null
+          lawful_basis_attested_by: string | null
+          lawful_basis_note: string | null
+          opened_from: string
+          stage_id: string | null
+          stage_map: Json | null
+          status: string
+          talent_list_id: string | null
+        }
+        Insert: {
+          auto_invite?: boolean
+          company_id: string
+          confirmed_at?: string | null
+          counts?: Json
+          created_at?: string
+          created_by?: string | null
+          duplicate_action?: string
+          expires_at?: string
+          file_name?: string | null
+          id?: string
+          job_post_id?: string | null
+          kind: string
+          lawful_basis_attested_at?: string | null
+          lawful_basis_attested_by?: string | null
+          lawful_basis_note?: string | null
+          opened_from?: string
+          stage_id?: string | null
+          stage_map?: Json | null
+          status?: string
+          talent_list_id?: string | null
+        }
+        Update: {
+          auto_invite?: boolean
+          company_id?: string
+          confirmed_at?: string | null
+          counts?: Json
+          created_at?: string
+          created_by?: string | null
+          duplicate_action?: string
+          expires_at?: string
+          file_name?: string | null
+          id?: string
+          job_post_id?: string | null
+          kind?: string
+          lawful_basis_attested_at?: string | null
+          lawful_basis_attested_by?: string | null
+          lawful_basis_note?: string | null
+          opened_from?: string
+          stage_id?: string | null
+          stage_map?: Json | null
+          status?: string
+          talent_list_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_import_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_import_batches_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_import_batches_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_import_batches_talent_list_id_fkey"
+            columns: ["talent_list_id"]
+            isOneToOne: false
+            referencedRelation: "talent_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_import_mappings: {
+        Row: {
+          company_id: string
+          header_hash: string
+          mapping: Json
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          header_hash: string
+          mapping: Json
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          header_hash?: string
+          mapping?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_import_mappings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_import_rows: {
+        Row: {
+          attempts: number
+          batch_id: string
+          company_id: string
+          created_at: string
+          duplicate_action: string | null
+          duplicate_of: string | null
+          edited: Json | null
+          error_code: string | null
+          extracted: Json | null
+          file_name: string
+          file_path: string | null
+          id: string
+          row_number: number | null
+          status: string
+          updated_at: string
+          warnings: Json
+        }
+        Insert: {
+          attempts?: number
+          batch_id: string
+          company_id: string
+          created_at?: string
+          duplicate_action?: string | null
+          duplicate_of?: string | null
+          edited?: Json | null
+          error_code?: string | null
+          extracted?: Json | null
+          file_name: string
+          file_path?: string | null
+          id?: string
+          row_number?: number | null
+          status?: string
+          updated_at?: string
+          warnings?: Json
+        }
+        Update: {
+          attempts?: number
+          batch_id?: string
+          company_id?: string
+          created_at?: string
+          duplicate_action?: string | null
+          duplicate_of?: string | null
+          edited?: Json | null
+          error_code?: string | null
+          extracted?: Json | null
+          file_name?: string
+          file_path?: string | null
+          id?: string
+          row_number?: number | null
+          status?: string
+          updated_at?: string
+          warnings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_import_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_import_rows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_import_rows_duplicate_of_fkey"
+            columns: ["duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "company_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       candidate_note_mentions: {
         Row: {
           company_id: string
@@ -966,7 +1212,7 @@ export type Database = {
           author_name: string | null
           author_user_id: string
           body: string
-          candidate_user_id: string
+          candidate_user_id: string | null
           company_id: string
           created_at: string
           id: string
@@ -978,7 +1224,7 @@ export type Database = {
           author_name?: string | null
           author_user_id: string
           body: string
-          candidate_user_id: string
+          candidate_user_id?: string | null
           company_id: string
           created_at?: string
           id?: string
@@ -990,7 +1236,7 @@ export type Database = {
           author_name?: string | null
           author_user_id?: string
           body?: string
-          candidate_user_id?: string
+          candidate_user_id?: string | null
           company_id?: string
           created_at?: string
           id?: string
@@ -1199,6 +1445,163 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_candidate_claims: {
+        Row: {
+          application_interview_id: string | null
+          candidate_id: string
+          company_id: string
+          created_at: string
+          expires_at: string
+          token_hash: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          application_interview_id?: string | null
+          candidate_id: string
+          company_id: string
+          created_at?: string
+          expires_at: string
+          token_hash: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          application_interview_id?: string | null
+          candidate_id?: string
+          company_id?: string
+          created_at?: string
+          expires_at?: string
+          token_hash?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_candidate_claims_application_interview_id_fkey"
+            columns: ["application_interview_id"]
+            isOneToOne: false
+            referencedRelation: "application_interviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_candidate_claims_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "company_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_candidate_claims_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_candidates: {
+        Row: {
+          claimed_at: string | null
+          claimed_user_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          current_company: string | null
+          current_title: string | null
+          email: string | null
+          email_opted_out_at: string | null
+          embedding: string | null
+          embedding_stale: boolean
+          embedding_updated_at: string | null
+          experience_years: number | null
+          full_name: string
+          id: string
+          links: Json
+          location: string | null
+          notes: string | null
+          phone: string | null
+          resume_content: Json | null
+          resume_path: string | null
+          search_text: string
+          skills: string[]
+          source_batch_id: string | null
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_user_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          current_company?: string | null
+          current_title?: string | null
+          email?: string | null
+          email_opted_out_at?: string | null
+          embedding?: string | null
+          embedding_stale?: boolean
+          embedding_updated_at?: string | null
+          experience_years?: number | null
+          full_name: string
+          id?: string
+          links?: Json
+          location?: string | null
+          notes?: string | null
+          phone?: string | null
+          resume_content?: Json | null
+          resume_path?: string | null
+          search_text?: string
+          skills?: string[]
+          source_batch_id?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_user_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          current_company?: string | null
+          current_title?: string | null
+          email?: string | null
+          email_opted_out_at?: string | null
+          embedding?: string | null
+          embedding_stale?: boolean
+          embedding_updated_at?: string | null
+          experience_years?: number | null
+          full_name?: string
+          id?: string
+          links?: Json
+          location?: string | null
+          notes?: string | null
+          phone?: string | null
+          resume_content?: Json | null
+          resume_path?: string | null
+          search_text?: string
+          skills?: string[]
+          source_batch_id?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_candidates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_candidates_source_batch_id_fkey"
+            columns: ["source_batch_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_import_batches"
             referencedColumns: ["id"]
           },
         ]
@@ -2705,6 +3108,80 @@ export type Database = {
         }
         Relationships: []
       }
+      mcp_confirmations: {
+        Row: {
+          code: string | null
+          digest: string | null
+          expires_at: string
+          jti: string
+          tool: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code?: string | null
+          digest?: string | null
+          expires_at: string
+          jti: string
+          tool: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code?: string | null
+          digest?: string | null
+          expires_at?: string
+          jti?: string
+          tool?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mcp_tool_calls: {
+        Row: {
+          client_id: string
+          company_id: string | null
+          created_at: string
+          credit: boolean
+          email: boolean
+          id: number
+          outcome: string
+          tool: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          company_id?: string | null
+          created_at?: string
+          credit?: boolean
+          email?: boolean
+          id?: never
+          outcome: string
+          tool: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          company_id?: string | null
+          created_at?: string
+          credit?: boolean
+          email?: boolean
+          id?: never
+          outcome?: string
+          tool?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_tool_calls_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       outreach_draft_usage: {
         Row: {
           company_id: string
@@ -3070,17 +3547,23 @@ export type Database = {
       talent_list_members: {
         Row: {
           added_at: string
-          candidate_user_id: string
+          candidate_user_id: string | null
+          company_candidate_id: string | null
+          id: string
           list_id: string
         }
         Insert: {
           added_at?: string
-          candidate_user_id: string
+          candidate_user_id?: string | null
+          company_candidate_id?: string | null
+          id?: string
           list_id: string
         }
         Update: {
           added_at?: string
-          candidate_user_id?: string
+          candidate_user_id?: string | null
+          company_candidate_id?: string | null
+          id?: string
           list_id?: string
         }
         Relationships: [
@@ -3097,6 +3580,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "talent_list_members_company_candidate_id_fkey"
+            columns: ["company_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "company_candidates"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "talent_list_members_list_id_fkey"
@@ -3604,6 +4094,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      add_candidates_to_job: {
+        Args: {
+          p_candidate_ids: string[]
+          p_job_id: string
+          p_stage_id?: string
+        }
+        Returns: Json
+      }
       algorithm_sign: {
         Args: { algorithm: string; secret: string; signables: string }
         Returns: string
@@ -3721,6 +4219,11 @@ export type Database = {
         Returns: Json
       }
       claim_careers_slug: { Args: { p_slug: string }; Returns: Json }
+      claim_company_candidate: { Args: { p_token: string }; Returns: Json }
+      claim_mcp_confirmation: {
+        Args: { p_code: string; p_digest: string }
+        Returns: string
+      }
       claim_note_mention_emails: {
         Args: { p_note_id: string; p_user_ids: string[] }
         Returns: string[]
@@ -3728,6 +4231,20 @@ export type Database = {
       company_can_view_candidate: {
         Args: { p_user_id: string }
         Returns: boolean
+      }
+      company_candidate_company: {
+        Args: { p_candidate_id: string }
+        Returns: string
+      }
+      company_candidate_search_text: {
+        Args: {
+          p_company: string
+          p_email: string
+          p_full_name: string
+          p_skills: string[]
+          p_title: string
+        }
+        Returns: string
       }
       company_effective_tier: {
         Args: { p_company_id: string }
@@ -3740,6 +4257,18 @@ export type Database = {
       company_permission_scope: {
         Args: { p_company_id: string; p_key: string }
         Returns: string
+      }
+      confirm_candidate_import: {
+        Args: { p_batch_id: string; p_options?: Json; p_rows: Json }
+        Returns: Json
+      }
+      confirm_resume_import: {
+        Args: { p_batch_id: string; p_options: Json; p_rows: Json }
+        Returns: Json
+      }
+      confirm_spreadsheet_import: {
+        Args: { p_batch_id: string; p_options?: Json; p_rows: Json }
+        Returns: Json
       }
       consume_entitlement: {
         Args: {
@@ -3768,6 +4297,15 @@ export type Database = {
         }
         Returns: Json
       }
+      create_imported_application: {
+        Args: {
+          p_batch_id: string
+          p_candidate_id: string
+          p_job_id: string
+          p_stage_id: string
+        }
+        Returns: string
+      }
       create_screening_invite: {
         Args: { p_application_id: string; p_invited_by?: string; p_via: string }
         Returns: Json
@@ -3789,6 +4327,10 @@ export type Database = {
       deduct_user_credits: {
         Args: { p_amount: number; p_user_id: string }
         Returns: undefined
+      }
+      delete_company_candidates: {
+        Args: { p_candidate_ids: string[] }
+        Returns: Json
       }
       delete_company_role: {
         Args: {
@@ -3988,6 +4530,27 @@ export type Database = {
         }
         Returns: Json
       }
+      import_links: { Args: { p_row: Json }; Returns: Json }
+      import_list: { Args: { p_key: string; p_row: Json }; Returns: string[] }
+      import_row_for_update: {
+        Args: { p_row_id: string }
+        Returns: {
+          batch_id: string
+          file_path: string
+          reason: string
+          row_id: string
+          status: string
+        }[]
+      }
+      import_stage: {
+        Args: { p_company: string; p_stage_id: string }
+        Returns: string
+      }
+      import_text: { Args: { p_key: string; p_row: Json }; Returns: string }
+      import_update_candidate: {
+        Args: { p_action: string; p_id: string; p_row: Json }
+        Returns: undefined
+      }
       increment_outreach_drafts: { Args: never; Returns: number }
       industry_preferences_search: {
         Args: { "": Database["public"]["Tables"]["user_info"]["Row"] }
@@ -4024,10 +4587,11 @@ export type Database = {
         Args: { p_id: string }
         Returns: {
           accommodation_request: string | null
-          applicant_user_id: string
+          applicant_user_id: string | null
           application_id: string
           attempt_granted: boolean
           attempts_used: number
+          company_candidate_id: string | null
           company_id: string
           completed_at: string | null
           config_snapshot: Json
@@ -4109,6 +4673,26 @@ export type Database = {
           locations: string[]
         }[]
       }
+      match_company_candidates: {
+        Args: { p_job_id: string; p_limit?: number; p_min_similarity?: number }
+        Returns: Json
+      }
+      match_jobs_for_company_candidate: {
+        Args: {
+          p_candidate_id: string
+          p_limit?: number
+          p_min_similarity?: number
+        }
+        Returns: Json
+      }
+      match_known_applicants: {
+        Args: { p_emails: string[] }
+        Returns: {
+          email: string
+          full_name: string
+          user_id: string
+        }[]
+      }
       match_user_profiles: {
         Args: {
           job_embedding: string
@@ -4134,6 +4718,10 @@ export type Database = {
         Returns: Json
       }
       member_usage: { Args: { p_period_start?: string }; Returns: Json }
+      merge_imported_application: {
+        Args: { p_direct: string; p_imported: string }
+        Returns: string
+      }
       my_company_access: { Args: never; Returns: Json }
       my_company_id: { Args: never; Returns: string }
       my_job_ids_with: { Args: { p_key: string }; Returns: string[] }
@@ -4199,6 +4787,7 @@ export type Database = {
         Args: { p_actor_kind?: string; p_user_id: string }
         Returns: Json
       }
+      remove_import_row: { Args: { p_row_id: string }; Returns: Json }
       reorder_pipeline_stages: { Args: { p_ids: string[] }; Returns: undefined }
       request_screening_accommodation: {
         Args: { p_id: string; p_text: string }
@@ -4246,7 +4835,51 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      resume_batch_destination: {
+        Args: {
+          p_batch: Database["public"]["Tables"]["candidate_import_batches"]["Row"]
+          p_options: Json
+        }
+        Returns: {
+          job_id: string
+          list_id: string
+          reason: string
+        }[]
+      }
+      resume_batch_for_update: {
+        Args: { p_batch_id: string }
+        Returns: {
+          auto_invite: boolean
+          company_id: string
+          confirmed_at: string | null
+          counts: Json
+          created_at: string
+          created_by: string | null
+          duplicate_action: string
+          expires_at: string
+          file_name: string | null
+          id: string
+          job_post_id: string | null
+          kind: string
+          lawful_basis_attested_at: string | null
+          lawful_basis_attested_by: string | null
+          lawful_basis_note: string | null
+          opened_from: string
+          stage_id: string | null
+          stage_map: Json | null
+          status: string
+          talent_list_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "candidate_import_batches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resume_batch_settle: { Args: { p_batch_id: string }; Returns: string }
       resume_sections_public: { Args: { p_content: Json }; Returns: Json }
+      retry_import_row: { Args: { p_row_id: string }; Returns: Json }
       revoke_company_invite: {
         Args: { p_actor_kind?: string; p_invite_id: string }
         Returns: Json
@@ -4334,6 +4967,15 @@ export type Database = {
         Args: { p_cancel: boolean; p_company_id: string }
         Returns: undefined
       }
+      set_company_candidate_resume: {
+        Args: {
+          p_candidate_id: string
+          p_content: Json
+          p_fields?: Json
+          p_path: string
+        }
+        Returns: Json
+      }
       set_company_member_role: {
         Args: { p_actor_kind?: string; p_role_id: string; p_user_id: string }
         Returns: Json
@@ -4367,12 +5009,28 @@ export type Database = {
         Returns: string
       }
       slugify_company_name: { Args: { p_name: string }; Returns: string }
+      stage_spreadsheet_import: {
+        Args: { p_batch_id: string; p_job_id: string; p_rows: Json }
+        Returns: Json
+      }
+      start_candidate_import: {
+        Args: { p_file_name?: string; p_kind: string }
+        Returns: Json
+      }
+      start_resume_import: {
+        Args: { p_files: Json; p_job_id: string }
+        Returns: Json
+      }
       start_screening_attempt: {
         Args: {
           p_id: string
           p_reservation_id: string
           p_voice_session_id: string
         }
+        Returns: Json
+      }
+      submit_resume_batch: {
+        Args: { p_batch_id: string; p_options?: Json; p_row_ids: string[] }
         Returns: Json
       }
       talent_list_company: { Args: { p_list_id: string }; Returns: string }
@@ -4398,6 +5056,10 @@ export type Database = {
         Args: { p_base: string; p_company: string }
         Returns: string
       }
+      update_company_candidate: {
+        Args: { p_candidate_id: string; p_fields: Json }
+        Returns: Json
+      }
       update_company_role: {
         Args: {
           p_actor_kind?: string
@@ -4411,6 +5073,10 @@ export type Database = {
         Returns: Json
       }
       update_company_settings: { Args: { p_settings: Json }; Returns: Json }
+      update_import_row: {
+        Args: { p_duplicate_action?: string; p_edited: Json; p_row_id: string }
+        Returns: Json
+      }
       url_decode: { Args: { data: string }; Returns: string }
       url_encode: { Args: { data: string }; Returns: string }
       valid_role_limits: { Args: { p_limits: Json }; Returns: boolean }

@@ -98,8 +98,9 @@ export function SignUpForm({
         values.email,
         values.password,
         isCompany,
-        // Applicants' confirm link still goes to the agent, as before.
-        isCompany && returnToPath ? { returnTo: returnToPath } : {},
+        // Applicants' confirm link still goes to the agent, unless they came
+        // from a claim link (sendSignupEmail only honours /claim/… for them).
+        returnToPath ? { returnTo: returnToPath } : {},
       );
 
       if (!result.success) throw new Error(result.error);

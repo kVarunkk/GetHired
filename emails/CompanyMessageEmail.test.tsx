@@ -14,6 +14,15 @@ const PROPS = {
 };
 
 describe("CompanyMessageEmail (PLT-062)", () => {
+  it("carries the unsubscribe link for a company candidate (BIT-060)", async () => {
+    const url = "https://gethired.devhub.co.in/unsubscribe/candidate/abc.def";
+    const { html, text } = await both(<CompanyMessageEmail {...PROPS} bodyMd="Hi" unsubscribeUrl={url} />);
+    expect(html).toContain(`href="${url}"`);
+    expect(text).toContain("Unsubscribe");
+    const plain = await both(<CompanyMessageEmail {...PROPS} bodyMd="Hi" />);
+    expect(plain.html).not.toContain("Unsubscribe");
+  });
+
   it("renders the markdown body with the company's name and the footer", async () => {
     const { html, text } = await both(
       <CompanyMessageEmail

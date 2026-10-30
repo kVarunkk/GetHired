@@ -44,6 +44,30 @@ describe("auditActorLabel", () => {
   });
 });
 
+describe("describeAuditEntry for candidates (BI-REQ-007, BI-REQ-017)", () => {
+  it("words an import from its counts", () => {
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "candidates.imported",
+          targetType: "import_batch",
+          targetLabel: "people.csv",
+          after: { created: 12, updated: 2, added_to_job: 10, known: 1 },
+        }),
+      ),
+    ).toEqual({
+      text: "imported 12 candidates from people.csv",
+      details: ["2 updated", "10 added to a job", "1 already in your pipeline"],
+    });
+  });
+
+  it("words a delete without names", () => {
+    expect(
+      describeAuditEntry(entry({ action: "candidates.deleted", targetType: "candidates", targetLabel: null, after: { count: 1 } })).text,
+    ).toBe("deleted 1 candidate");
+  });
+});
+
 describe("describeAuditEntry (RP-REQ-015)", () => {
   it("shows a grant and limit diff for role edits", () => {
     const { text, details } = describeAuditEntry(

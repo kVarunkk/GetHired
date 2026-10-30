@@ -37,12 +37,15 @@ const RENDER_RESIZE_DELAY_MS = 150;
 
 interface OriginalResumeViewerProps {
   url: string;
+  /** Where Download goes, e.g. a signed link that saves under a name. Defaults to `url`. */
+  downloadUrl?: string;
   className?: string;
   showControls?: boolean;
 }
 
 export default function OriginalResumeViewer({
   url,
+  downloadUrl,
   className,
   showControls = true,
 }: OriginalResumeViewerProps) {
@@ -170,7 +173,7 @@ export default function OriginalResumeViewer({
 
   const handleDownload = () => {
     if (!url) return;
-    window.open(url, "_blank");
+    window.open(downloadUrl || url, "_blank");
   };
   const handlePdfError = (err: Error) => {
     setDebugError(

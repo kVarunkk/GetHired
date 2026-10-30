@@ -132,17 +132,17 @@ export const FAQS = {
     {
       question: "What does the GetHired MCP Server do?",
       answer:
-        "The GetHired MCP Server connects compatible AI assistants to job-search features, including personalized recommendations and resume tools.",
+        "It connects your AI assistant to your GetHired account, so it can search and save jobs, apply on GetHired, and manage your resumes, resume reviews and mock interviews.",
     },
     {
       question: "Which AI assistant can connect to the MCP Server?",
       answer:
-        "GetHired's MCP Server is designed to integrate with Claude. Check the setup instructions for current compatibility and configuration.",
+        "Any client that supports remote MCP servers, including Claude, Claude Code, Cursor and VS Code. You sign in with your GetHired account; there are no API keys. The setup page has the steps for each client.",
     },
     {
       question: "Can an AI assistant apply to jobs for me?",
       answer:
-        "The MCP Server supports job-search assistance. Review each job's application process and submit applications through the employer's specified channel.",
+        "For jobs posted on GetHired, yes, but only after you confirm. Your client shows you the application before it is sent. Jobs posted elsewhere are applied to on the employer's own site.",
     },
   ],
 } as const;
@@ -278,7 +278,7 @@ export const LANDING_PAGES: Record<LandingPageKey, LandingPageCopy> = {
     subheading: () =>
       "Discover the GetHired MCP Server, a powerful tool designed to enhance your job search experience.",
     ctas: [
-      { label: "Get Started", href: "https://github.com/kVarunkk/GetHired-mcp-server" },
+      { label: "Get Started", href: "/mcp" },
       { label: "Learn More", href: "/blog/introducing-the-get-hired-mcp-server" },
     ],
     howWeHelp: "applicant",

@@ -16,6 +16,7 @@ import {
   type ApplicationScreeningMessage,
 } from "@/helpers/matching/enqueue-screenings";
 import { loadCandidate, MATCH_JOB_COLUMNS } from "@/helpers/matching/load-candidate";
+import { loadCompanyCandidate } from "@/helpers/matching/load-company-candidate";
 import { inviteAboveFitThreshold } from "@/helpers/interview/screening/fit-threshold";
 import { sendEmailForStatusUpdate } from "@/utils/email";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
@@ -112,6 +113,24 @@ export async function GET(request: NextRequest) {
       return "done";
     }
 
+    // BI-REQ-031: an imported application (claimed or not, BIT-103) has no
+    // resume of the person's own, so it's read from the company's record. Too
+    // little detail isn't worth a model call or a charge (BI-REQ-036): it's
+    // marked, not scored, until they get more.
+    const companyCandidate =
+      application.company_candidate_id && !application.resume_id
+        ? await loadCompanyCandidate(admin, application.company_candidate_id)
+        : null;
+    if (companyCandidate && !companyCandidate.screenable) {
+      const { error: unscoredError } = await admin
+        .from("application_screenings")
+        .update({ status: "insufficient_info", error_code: null, updated_at: now() })
+        .eq("id", screening.id);
+      if (unscoredError) throw new Error(`Status update failed: ${unscoredError.message}`);
+      await archive(msg_id);
+      return "done";
+    }
+
     const attempts = screening.attempts + 1;
     const { error: processingError } = await admin
       .from("application_screenings")
@@ -120,9 +139,11 @@ export async function GET(request: NextRequest) {
     if (processingError) throw new Error(`Status update failed: ${processingError.message}`);
 
     // A missing profile still leaves the answers and the resume to screen.
-    const candidate = application.applicant_user_id
-      ? await loadCandidate(admin, application.applicant_user_id, { resumeId: application.resume_id })
-      : null;
+    const candidate =
+      companyCandidate ??
+      (application.applicant_user_id
+        ? await loadCandidate(admin, application.applicant_user_id, { resumeId: application.resume_id })
+        : null);
 
     const result = await screenApplication(
       {
@@ -210,6 +231,7 @@ export async function GET(request: NextRequest) {
       applicationId,
       jobPostId: application.job_post_id,
       fitScore: result.result.fit_score,
+      ...(application.source === "imported" ? { imported: { batchId: application.import_batch_id } } : {}),
     });
 
     await archive(msg_id);

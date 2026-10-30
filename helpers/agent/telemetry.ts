@@ -54,7 +54,12 @@ function getProvider(): NodeTracerProvider | null {
   return provider;
 }
 
-export type AgentTraceContext = { sessionId: string; userId: string; companyId?: string };
+export type AgentTraceContext = {
+  /** The chat session; null for MCP calls. */
+  sessionId: string | null;
+  userId: string;
+  companyId?: string;
+};
 
 /** The span attribute for the recruiter's company (RA spec §4.9). */
 const COMPANY_ID_ATTRIBUTE = "gethired.company_id";
@@ -84,13 +89,27 @@ export function agentTelemetry(
         usage: true,
         enrichSpan: (options) => ({
           ...enrichSpanWithOpenInference(options),
-          [SemanticConventions.SESSION_ID]: sessionId,
+          ...(sessionId ? { [SemanticConventions.SESSION_ID]: sessionId } : {}),
           [SemanticConventions.USER_ID]: userId,
           ...(companyId ? { [COMPANY_ID_ATTRIBUTE]: companyId } : {}),
         }),
       }),
     ],
   };
+}
+
+/**
+ * Tracing for a tool's own model call over MCP (RMCP spec §4.9): the
+ * function id is `mcp.<tool>`, and there's no session to group it under.
+ * The agent's tool calls aren't traced on their own, so on the agent surface
+ * this is undefined and nothing changes there.
+ */
+export function mcpToolTelemetry(
+  ctx: { surface: "agent" | "mcp"; user: { id: string }; company?: { id: string } },
+  tool: string,
+): TelemetryOptions | undefined {
+  if (ctx.surface !== "mcp") return undefined;
+  return agentTelemetry(`mcp.${tool}`, { sessionId: null, userId: ctx.user.id, companyId: ctx.company?.id });
 }
 
 /**

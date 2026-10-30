@@ -117,6 +117,16 @@ export const PERMISSION_CATALOG = [
     deny: "run AI screening",
   },
   {
+    key: "applicants.import",
+    group: "Applicants",
+    label: "Import candidates and applicants",
+    description:
+      "Add candidates by hand or from a spreadsheet or resumes, add them to jobs, and edit or delete them. Deleting needs all jobs.",
+    scopable: true,
+    requires: ["applicants.view"],
+    deny: "import applicants",
+  },
+  {
     key: "interviews.view",
     group: "Applicants",
     label: "View AI interviews",
@@ -236,6 +246,16 @@ export const PERMISSION_CATALOG = [
     scopable: false,
     requires: [],
     deny: "use the recruiter agent",
+  },
+  {
+    // RMCP spec §4.1: its own switch, so the in-app agent can be allowed without outside clients.
+    key: "mcp.use",
+    group: "Agent",
+    label: "Use GetHired from AI clients",
+    description: "Connect Claude, ChatGPT, Cursor and other MCP clients. Their tools follow the other permissions.",
+    scopable: false,
+    requires: [],
+    deny: "use GetHired from AI clients",
   },
   // Settings
   {

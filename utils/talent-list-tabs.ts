@@ -10,7 +10,10 @@ export type TalentListTab = {
 };
 
 /** The profiles page's own tabs. A list's slug can't be one of these. */
-export const RESERVED_LIST_SLUGS = ["all", "saved"] as const;
+export const RESERVED_LIST_SLUGS = ["all", "saved", "candidates"] as const;
+
+/** The old "Your candidates" tab, `?tab=candidates`: it redirects to /company/candidates. */
+export const CANDIDATES_TAB = "candidates";
 
 export const MAX_LIST_SLUG = 60;
 

@@ -81,7 +81,11 @@ export async function GET() {
         ...(data as object),
         plan: company && can(company, "billing.view") ? plan : null,
         roleLabel: roleLabel(company),
-        access: { billingView: can(company, "billing.view"), isOwner: Boolean(company?.isOwner) },
+        access: {
+          billingView: can(company, "billing.view"),
+          talentView: can(company, "talent.view"),
+          isOwner: Boolean(company?.isOwner),
+        },
       };
     }
   } catch (error) {

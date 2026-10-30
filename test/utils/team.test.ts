@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { can } from "@/helpers/companies/permissions";
-import { ADMIN_KEYS, MEMBER_KEYS } from "@/helpers/companies/role-templates";
+import { ADMIN_KEYS, MEMBER_ASSIGNED_KEYS, MEMBER_KEYS } from "@/helpers/companies/role-templates";
 import { COMPANY_A, COMPANY_B, PRIVATE_APPLIED_TO_A, PRIVATE_NOT_APPLIED, PUBLIC_APPLICANT } from "./recruiter";
 import {
   ADMIN_A,
@@ -34,7 +34,8 @@ describe("team fixtures", () => {
 
   it("gives Admin and Member the RP-REQ-004 roles", () => {
     expect([...ADMIN_A.myCompany.grants.keys()].sort()).toEqual([...ADMIN_KEYS].sort());
-    expect([...MEMBER_A.myCompany.grants.keys()].sort()).toEqual([...MEMBER_KEYS].sort());
+    expect([...MEMBER_A.myCompany.grants.keys()].sort()).toEqual([...MEMBER_KEYS, ...MEMBER_ASSIGNED_KEYS].sort());
+    for (const key of MEMBER_ASSIGNED_KEYS) expect(MEMBER_A.myCompany.grants.get(key)).toBe("assigned");
     expect(ADMIN_ACCESS.grants).toEqual(ADMIN_A.myCompany.grants);
     expect(MEMBER_ACCESS.grants).toEqual(MEMBER_A.myCompany.grants);
     expect(MEMBER_A.myCompany.role).toEqual({ id: ROLES_A.member.id, name: "Member", color: "slate" });
@@ -52,7 +53,7 @@ describe("team fixtures", () => {
     });
     expect(MEMBER_A.membership.company.id).toBe(COMPANY_A.id);
     expect(MEMBER_A.membership.role?.id).toBe(ROLES_A.member.id);
-    expect(MEMBER_A.membership.grants).toHaveLength(MEMBER_KEYS.length);
+    expect(MEMBER_A.membership.grants).toHaveLength(MEMBER_KEYS.length + MEMBER_ASSIGNED_KEYS.length);
     expect(MEMBER_B.myCompany.id).toBe(COMPANY_B.id);
   });
 

@@ -549,6 +549,98 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
   });
 });
 
+describe("moveApplications for imported applications (BIT-019, BI-REQ-032)", () => {
+  const ADVANCE = templateOf("advance");
+  const imported = () =>
+    loaded(
+      pipelineAppOf({
+        applicant_user_id: null,
+        company_candidate_id: "cc000000-0000-4000-8000-000000000001",
+        source: "imported",
+        user_info: null,
+        company_candidates: { full_name: "Meera Iyer" },
+      }),
+    );
+
+  beforeEach(() => vi.mocked(enqueuePipelineEmails).mockReset().mockResolvedValue(undefined));
+
+  it("moves an imported application, with a null candidate user on its event", async () => {
+    const app = imported();
+    supabase.queue("pipeline_stages", { data: INTERVIEW, error: null });
+    supabase.queue("applications", { data: [app], error: null });
+
+    const result = await moveApplications(ctx(), { applicationIds: [app.id], stageId: INTERVIEW.id });
+
+    expect(result).toMatchObject({ ok: true, moved: 1, applications: [{ fullName: "Meera Iyer", candidateUserId: null }] });
+    const [insert] = eventInserts();
+    expect(argsOf(insert.chain, "insert")?.[0]).toEqual([expect.objectContaining({ candidate_user_id: null })]);
+  });
+
+  const setUpEmail = (app: ReturnType<typeof imported>, { recipients = true } = {}) => {
+    supabase.queue("pipeline_stages", { data: INTERVIEW, error: null });
+    supabase.queue("applications", { data: [app], error: null });
+    supabase.queue("company_email_templates", { data: ADVANCE, error: null });
+    supabase.queue("company_info", {
+      data: { name: COMPANY_A.info.name, email: COMPANY_A.info.email, logo_url: null, scheduling_url: null },
+      error: null,
+    });
+    if (recipients) {
+      supabase.queue("application_events", { data: null, error: null, count: 0 });
+      supabase.queueRpc("pipeline_emails_pending", { data: 0, error: null });
+    }
+  };
+  const withCandidate = (candidate: { email: string | null; email_opted_out_at?: string | null }) => {
+    const app = imported();
+    return { ...app, company_candidates: { full_name: "Meera Iyer", ...candidate } };
+  };
+
+  it("emails an imported candidate at their candidate email (BIT-061)", async () => {
+    const app = withCandidate({ email: "meera@mail.test", email_opted_out_at: null });
+    setUpEmail(app);
+
+    const result = await moveApplications(ctx(), {
+      applicationIds: [app.id],
+      stageId: INTERVIEW.id,
+      email: { templateId: ADVANCE.id },
+    });
+
+    expect(result).toMatchObject({ ok: true, moved: 1, emailed: 1, skipped: [] });
+    const [message] = vi.mocked(enqueuePipelineEmails).mock.calls.flatMap(([m]) => m);
+    expect(message).toMatchObject({ applicationId: app.id, candidateUserId: null });
+    expect(message.body).toContain("Meera");
+  });
+
+  it("moves but doesn't email someone who unsubscribed, says so, and doesn't count them toward the cap", async () => {
+    const app = withCandidate({ email: "meera@mail.test", email_opted_out_at: "2026-10-20T00:00:00Z" });
+    setUpEmail(app, { recipients: false });
+
+    const result = await moveApplications(ctx(), {
+      applicationIds: [app.id],
+      stageId: INTERVIEW.id,
+      email: { templateId: ADVANCE.id },
+    });
+
+    expect(result).toMatchObject({ ok: true, moved: 1, emailed: 0, skipped: [{ id: app.id, reason: "unsubscribed" }] });
+    expect(vi.mocked(enqueuePipelineEmails).mock.calls.flat(2)).toEqual([]);
+    // No recipients, so today's count isn't even read.
+    expect(supabase.callsFor("pipeline_emails_pending")).toHaveLength(0);
+  });
+
+  it("says when a candidate's email was cleared", async () => {
+    const app = withCandidate({ email: null });
+    setUpEmail(app, { recipients: false });
+
+    const result = await moveApplications(ctx(), {
+      applicationIds: [app.id],
+      stageId: INTERVIEW.id,
+      email: { templateId: ADVANCE.id },
+    });
+
+    expect(result).toMatchObject({ ok: true, moved: 1, emailed: 0, skipped: [{ id: app.id, reason: "no_email" }] });
+    expect(vi.mocked(enqueuePipelineEmails).mock.calls.flat(2)).toEqual([]);
+  });
+});
+
 describe("actorName (TMT-060, teams difference 8)", () => {
   it("uses the member's display name first", () => {
     expect(actorName(MEMBER_A.user, MEMBER_A.myCompany)).toBe("Max Member");

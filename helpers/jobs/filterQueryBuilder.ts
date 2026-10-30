@@ -1,5 +1,4 @@
 import { parseMultiSelectParam } from "@/utils/formatters";
-import { createClient } from "../../lib/supabase/server";
 import { createServiceRoleClient } from "../../lib/supabase/service-role";
 import {
   AllJobWithRelations,
@@ -7,8 +6,8 @@ import {
   TApplicationStatus,
   TJobTypeEnum,
 } from "@/utils/types";
-import { PostgrestError } from "@supabase/supabase-js";
-import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
+import { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import { Database } from "@/utils/types/database.types";
 import { getCutOffDate } from "@/utils/date";
 import { expandLocations } from "@/helpers/locations/aliases";
 export const allJobsSelectString = `id, created_at, updated_at, job_name, job_type, platform, locations, salary_range, visa_requirement, salary_min, salary_max, company_name, experience, experience_min, experience_max, equity_range, equity_min, equity_max, status, ai_summary, is_platform_job`;
@@ -53,68 +52,64 @@ export function titleKeywordConditions(keyword: string): string[] {
   });
 }
 
-export const buildQuery = async ({
-  jobType,
-  visaRequirement,
-  location,
-  minSalary,
-  minExperience,
-  maxExperience,
-  platform,
-  companyName,
-  cursor,
-  limit,
-  jobTitleKeywords,
-  isFavoriteTabActive,
-  isAppliedJobsTabActive,
-  sortBy,
-  sortOrder,
-  userEmbedding,
-  applicationStatus,
-  createdAfter,
-  isInternalCall,
-  jobEmbedding,
-  relevanceSearchType,
-  userId,
-}: {
-  jobType: string | null;
-  visaRequirement: string | null;
-  location: string | null;
-  minSalary: string | null;
-  minExperience: string | null;
-  maxExperience: string | null;
-  platform: string | null;
-  companyName: string | null;
-  cursor: string | null;
-  limit: number | null;
-  sortBy: string;
-  sortOrder: string;
-  jobTitleKeywords: string | null;
-  isFavoriteTabActive: boolean;
-  isAppliedJobsTabActive: boolean;
-  userEmbedding: string | null;
-  applicationStatus: string | null;
-  createdAfter: string | null;
-  isInternalCall: boolean;
-  jobEmbedding: string | null;
-  relevanceSearchType:
-    | "standard"
-    | "job_digest"
-    | "job_digest_with_suggestions"
-    | "similar_jobs"
-    | null;
-  userId: string | null;
-}): Promise<JobsBuildQueryResult> => {
+/**
+ * Builds and runs the job list query. `supabase` and `user` come from the
+ * caller (the request's session, or the service role and the digest's user on
+ * internal calls), so this never reads the request itself.
+ */
+export const buildQuery = async (
+  supabase: SupabaseClient<Database>,
+  user: { id: string } | null,
+  {
+    jobType,
+    visaRequirement,
+    location,
+    minSalary,
+    minExperience,
+    maxExperience,
+    platform,
+    companyName,
+    cursor,
+    limit,
+    jobTitleKeywords,
+    isFavoriteTabActive,
+    isAppliedJobsTabActive,
+    sortBy,
+    sortOrder,
+    userEmbedding,
+    applicationStatus,
+    createdAfter,
+    jobEmbedding,
+    relevanceSearchType,
+  }: {
+    jobType: string | null;
+    visaRequirement: string | null;
+    location: string | null;
+    minSalary: string | null;
+    minExperience: string | null;
+    maxExperience: string | null;
+    platform: string | null;
+    companyName: string | null;
+    cursor: string | null;
+    limit: number | null;
+    sortBy: string;
+    sortOrder: string;
+    jobTitleKeywords: string | null;
+    isFavoriteTabActive: boolean;
+    isAppliedJobsTabActive: boolean;
+    userEmbedding: string | null;
+    applicationStatus: string | null;
+    createdAfter: string | null;
+    jobEmbedding: string | null;
+    relevanceSearchType:
+      | "standard"
+      | "job_digest"
+      | "job_digest_with_suggestions"
+      | "similar_jobs"
+      | null;
+  },
+): Promise<JobsBuildQueryResult> => {
   try {
-    const supabase = isInternalCall
-      ? createServiceRoleClient()
-      : await createClient();
-
-    const user =
-      isInternalCall && userId
-        ? (await supabase.auth.admin.getUserById(userId)).data.user
-        : await getUserFromRequest();
-
     const jobTypesArray = parseMultiSelectParam<TJobTypeEnum>(jobType);
     const visaRequirementsArray = parseMultiSelectParam(visaRequirement);
     const locationsArray = parseMultiSelectParam(location);

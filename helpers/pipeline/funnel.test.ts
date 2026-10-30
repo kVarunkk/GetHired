@@ -210,7 +210,10 @@ describe("getCompanyFunnel (PLT-081, PL-REQ-011)", () => {
     const waiting = {
       id: "e0000000-0000-4000-8000-0000000000a1",
       stage_entered_at: daysAgo(5),
+      applicant_user_id: "a0000000-0000-4000-8000-000000000001",
+      company_candidate_id: null,
       user_info: { full_name: "Priya Sharma" },
+      company_candidates: null,
       job_postings: {
         id: PIPELINE_JOB.id,
         title: PIPELINE_JOB.title,
@@ -263,5 +266,35 @@ describe("getCompanyFunnel (PLT-081, PL-REQ-011)", () => {
       method: "lt",
       args: ["stage_entered_at", daysAgo(NEEDS_ATTENTION_DAYS)],
     });
+  });
+
+  it("names a waiting imported applicant and leaves merged imports out (BI-REQ-030/042)", async () => {
+    twoJobs();
+    const CANDIDATE_ID = "cc000000-0000-4000-8000-000000000001";
+    db.queue("applications", {
+      data: [
+        {
+          id: "ea000000-0000-4000-8000-000000000001",
+          stage_entered_at: daysAgo(5),
+          applicant_user_id: null,
+          company_candidate_id: CANDIDATE_ID,
+          user_info: null,
+          company_candidates: { id: CANDIDATE_ID, full_name: "Meera Iyer", email: null, resume_path: null },
+          job_postings: { id: PIPELINE_JOB.id, title: PIPELINE_JOB.title, company_id: COMPANY_A.id },
+        },
+      ],
+      error: null,
+    });
+    // The import's own event, at the moment it entered Applied, doesn't count.
+    db.queue("application_events", {
+      data: [{ application_id: "ea000000-0000-4000-8000-000000000001", type: "imported", created_at: daysAgo(5) }],
+      error: null,
+    });
+
+    const { needsAttention } = await getCompanyFunnel({ supabase: db.client, company });
+
+    expect(needsAttention).toEqual([expect.objectContaining({ name: "Meera Iyer", daysInApplied: 5 })]);
+    const [apps] = db.callsFor("applications");
+    expect(apps.chain).toContainEqual({ method: "is", args: ["merged_into_application_id", null] });
   });
 });

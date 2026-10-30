@@ -1,6 +1,6 @@
 import { reportError } from "@/helpers/posthog/report-error";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { TResumeRowContent } from "@/utils/types";
+import { resumeSectionText } from "@/helpers/embeddings/resume-text";
 import { google } from "@ai-sdk/google";
 import { embed } from "ai";
 
@@ -37,24 +37,10 @@ export async function updateUserEmbedding(userId: string) {
       );
     }
 
-    const extractSectionText = (type: string) => {
-      const content = resumeData?.content as unknown as
-        TResumeRowContent | undefined;
-      if (!content || !content.sections) return "N/A";
-
-      return content.sections
-        .filter((s) => s.type === type)
-        .flatMap((s) => s.items ?? [])
-        .flatMap((i) => i.bullets ?? [])
-        .map((b) => b.text)
-        .filter((text): text is string => !!text)
-        .join(". ");
-    };
-
     // Extract dynamic content from the parsed resume
-    const resumeExperience = extractSectionText("experience");
-    const resumeProjects = extractSectionText("projects");
-    const resumeSkills = extractSectionText("skills");
+    const resumeExperience = resumeSectionText(resumeData?.content, "experience");
+    const resumeProjects = resumeSectionText(resumeData?.content, "projects");
+    const resumeSkills = resumeSectionText(resumeData?.content, "skills");
 
     // 3. Prepare the Profile Data
     const topSkillsStr = Array.isArray(userData.top_skills)

@@ -6,10 +6,10 @@
 flowchart TD
   R["Request"] --> MD{"/index.md, /hire.md,<br/>/blog/[slug].md … ?"}
   MD -- yes --> RW["rewrite to /md/… (P7), no auth"]
-  MD -- no --> T{"Bearer gh_… ?"}
-  T -- yes --> TA{"path starts with<br/>/api/user/profile, /api/jobs,<br/>/api/ai-search/jobs, /api/resumes,<br/>/api/resume-review ?"}
+  MD -- no --> T{"Bearer JWT with client_id?<br/>(OAuth app token)"}
+  T -- yes --> TA{"path is /api/mcp ?"}
   TA -- no --> F403["403 JSON"]
-  TA -- yes --> PASS["pass (route resolves token via<br/>createClient / getUserFromRequest → user_api_tokens)"]
+  TA -- yes --> PASS["pass (the route verifies the token)"]
   T -- no --> U["getUserFromRequest()"]
   U --> S{"signed in?"}
   S -- no --> P{"publicPaths or prefix<br/>/jobs/* /blog/* /companies/* /remote-jobs/*<br/>/sitemap/* /careers/* /api/careers/* ?"}
@@ -111,29 +111,20 @@ sequenceDiagram
   W->>Q: delete msg
 ```
 
-## P5. API keys, MCP and OAuth
+## P5. MCP and OAuth
+
+OAuth is the only way to authenticate programmatically (there are no API keys). Tokens the OAuth server issues carry `client_id`, and the middleware allows them only on `/api/mcp` (`plan/mcp/feature-mcp-spec.md`).
 
 ```mermaid
 sequenceDiagram
   autonumber
   actor U as Applicant
-  participant K as /dashboard/api-keys
-  participant TK as /api/user/tokens
-  participant DB as user_api_tokens
-  participant MCP as MCP server
+  participant MCP as MCP client
   participant MW as middleware
-  participant API as /api/jobs, /api/user/profile,<br/>/api/resumes, /api/resume-review,<br/>/api/ai-search/jobs
   participant OC as /oauth/consent
   participant OD as /api/oauth/decision
 
-  U->>K: create key
-  K->>TK: POST
-  TK->>DB: insert sha hash, return gh_… once
-  MCP->>MW: Authorization: Bearer gh_…
-  MW->>API: allowed prefix only
-  API->>DB: getUserFromRequest → hash lookup → user
-  Note over OC,OD: OAuth path (Supabase OAuth server)
-  MCP->>OC: authorize
+  MCP->>OC: authorize (Supabase OAuth server)
   U->>OD: approve / deny form
   OD->>OD: supabase.auth.oauth.approveAuthorization / denyAuthorization
 ```

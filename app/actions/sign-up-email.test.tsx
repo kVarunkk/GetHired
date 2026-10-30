@@ -65,6 +65,18 @@ describe("sendSignupEmail: existing sign-ups (characterisation)", () => {
     expect((await confirmLink())?.searchParams.get("next")).toBe("/get-started?company=true");
   });
 
+  it("sends an applicant back to the claim link they signed up from (BI-REQ-041)", async () => {
+    await sendSignupEmail("ada@example.com", "password123", false, { returnTo: "/claim/abc_DEF-123456789012345" });
+
+    expect((await confirmLink())?.searchParams.get("next")).toBe("/claim/abc_DEF-123456789012345");
+  });
+
+  it("keeps sending applicants to the agent for any other return path", async () => {
+    await sendSignupEmail("ada@example.com", "password123", false, { returnTo: "/settings" });
+
+    expect((await confirmLink())?.searchParams.get("next")).toBe("/agent");
+  });
+
   it("creates an applicant account with a user_info row", async () => {
     expect(await sendSignupEmail("ada@example.com", "password123", false)).toMatchObject({ success: true });
 

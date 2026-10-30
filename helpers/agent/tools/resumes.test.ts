@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createResumeTools } from "./resumes";
 import { execTool, toolContext, validateInput } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import { setPrimaryResumeAction } from "@/app/actions/set-primary-resume";
-import { createResumeReviewAction } from "@/app/actions/create-resume-review";
+import { setPrimaryResume } from "@/helpers/resumes/set-primary-resume";
+import { createResumeReview } from "@/helpers/resume-review/create-resume-review";
 import { startReviewAnalysis } from "@/helpers/resume-review/start-review-analysis";
 import { rankResumesForJob, type ResumeFit } from "@/helpers/resume-review/rank-resumes-for-job";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 import { shortlistResumes } from "@/helpers/resume-review/shortlist-resumes";
 
-vi.mock("@/app/actions/set-primary-resume", () => ({ setPrimaryResumeAction: vi.fn() }));
+vi.mock("@/helpers/resumes/set-primary-resume", () => ({ setPrimaryResume: vi.fn() }));
 vi.mock("@/helpers/resume-review/rank-resumes-for-job", () => ({
   rankResumesForJob: vi.fn(),
   RESUME_PICK_MAX_RESUMES: 5,
@@ -21,7 +21,7 @@ vi.mock("@/helpers/resume-review/shortlist-resumes", () => ({
 }));
 vi.mock("@/helpers/ai/deduct-user-credits", () => ({ deductUserCreditsHelper: vi.fn() }));
 vi.mock("@/helpers/agent/telemetry", () => ({ agentTelemetry: () => ({ isEnabled: false }) }));
-vi.mock("@/app/actions/create-resume-review", () => ({ createResumeReviewAction: vi.fn() }));
+vi.mock("@/helpers/resume-review/create-resume-review", () => ({ createResumeReview: vi.fn() }));
 vi.mock("@/helpers/resume-review/start-review-analysis", () => ({ startReviewAnalysis: vi.fn() }));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
@@ -72,7 +72,7 @@ describe("listResumes tool", () => {
 describe("setPrimaryResume tool", () => {
   it("sets the user's own resume as primary", async () => {
     supabase.queue("resumes", { data: { id: RESUME_ID }, error: null });
-    vi.mocked(setPrimaryResumeAction).mockResolvedValue({ success: true });
+    vi.mocked(setPrimaryResume).mockResolvedValue({ success: true });
 
     const result = await execTool(tools.setPrimaryResume, { resumeId: RESUME_ID });
 
@@ -82,7 +82,7 @@ describe("setPrimaryResume tool", () => {
       { method: "eq", args: ["user_id", "u1"] },
       { method: "maybeSingle", args: [] },
     ]);
-    expect(setPrimaryResumeAction).toHaveBeenCalledWith(RESUME_ID);
+    expect(setPrimaryResume).toHaveBeenCalledWith(supabase.client, expect.objectContaining({ id: "u1" }), RESUME_ID);
     expect(result).toEqual({ resumeId: RESUME_ID, isPrimary: true });
   });
 
@@ -90,12 +90,12 @@ describe("setPrimaryResume tool", () => {
     expect(await execTool(tools.setPrimaryResume, { resumeId: RESUME_ID })).toEqual({
       error: "Resume not found.",
     });
-    expect(setPrimaryResumeAction).not.toHaveBeenCalled();
+    expect(setPrimaryResume).not.toHaveBeenCalled();
   });
 
-  it("passes action errors through", async () => {
+  it("passes helper errors through", async () => {
     supabase.queue("resumes", { data: { id: RESUME_ID }, error: null });
-    vi.mocked(setPrimaryResumeAction).mockResolvedValue({
+    vi.mocked(setPrimaryResume).mockResolvedValue({
       success: false,
       error: "Background Embedding Failed",
     });
@@ -123,7 +123,7 @@ describe("startResumeReview tool", () => {
   const parsedResume = { id: RESUME_ID, content: { sections: [] }, parsing_failed: false };
 
   beforeEach(() => {
-    vi.mocked(createResumeReviewAction).mockResolvedValue({ success: true, reviewId: REVIEW_ID });
+    vi.mocked(createResumeReview).mockResolvedValue({ success: true, reviewId: REVIEW_ID });
     vi.mocked(startReviewAnalysis).mockResolvedValue({ ok: true });
   });
 
@@ -136,9 +136,8 @@ describe("startResumeReview tool", () => {
       name: "Acme review",
     });
 
-    const formData = vi.mocked(createResumeReviewAction).mock.calls[0][0];
-    expect(Object.fromEntries(formData.entries())).toEqual({
-      existingResumeId: RESUME_ID,
+    expect(createResumeReview).toHaveBeenCalledWith(supabase.client, expect.objectContaining({ id: "u1" }), {
+      resumeId: RESUME_ID,
       jobId: JOB_ID,
       name: "Acme review",
     });
@@ -157,8 +156,11 @@ describe("startResumeReview tool", () => {
 
     await execTool(tools.startResumeReview, { resumeId: RESUME_ID, jobDescription: JD });
 
-    const formData = vi.mocked(createResumeReviewAction).mock.calls[0][0];
-    expect(Object.fromEntries(formData.entries())).toEqual({ existingResumeId: RESUME_ID });
+    expect(createResumeReview).toHaveBeenCalledWith(supabase.client, expect.objectContaining({ id: "u1" }), {
+      resumeId: RESUME_ID,
+      jobId: undefined,
+      name: undefined,
+    });
     expect(supabase.callsFor("resume_reviews")[0].chain).toEqual([
       { method: "update", args: [{ target_jd: JD }] },
       { method: "eq", args: ["id", REVIEW_ID] },
@@ -193,12 +195,12 @@ describe("startResumeReview tool", () => {
     expect(await execTool(tools.startResumeReview, { resumeId: RESUME_ID, jobId: JOB_ID })).toEqual({
       error,
     });
-    expect(createResumeReviewAction).not.toHaveBeenCalled();
+    expect(createResumeReview).not.toHaveBeenCalled();
   });
 
-  it("maps the action's credit error", async () => {
+  it("maps the helper's credit error", async () => {
     supabase.queue("resumes", { data: parsedResume, error: null });
-    vi.mocked(createResumeReviewAction).mockResolvedValue({
+    vi.mocked(createResumeReview).mockResolvedValue({
       error: "Insufficient AI credits (5 required).",
     });
 
@@ -208,9 +210,9 @@ describe("startResumeReview tool", () => {
     expect(startReviewAnalysis).not.toHaveBeenCalled();
   });
 
-  it("passes other action errors through", async () => {
+  it("passes other helper errors through", async () => {
     supabase.queue("resumes", { data: parsedResume, error: null });
-    vi.mocked(createResumeReviewAction).mockResolvedValue({
+    vi.mocked(createResumeReview).mockResolvedValue({
       error: "Job description not found for the provided job.",
     });
 

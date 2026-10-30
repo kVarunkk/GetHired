@@ -1,10 +1,12 @@
 import { revalidatePath } from "next/cache";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  addCompanyCandidateToTalentList,
   addToTalentList,
   createTalentList,
   deleteTalentList,
   listTalentLists,
+  removeCompanyCandidateFromTalentList,
   removeFromTalentList,
   renameTalentList,
 } from "@/helpers/pipeline/talent-lists";
@@ -23,9 +25,12 @@ vi.mock("@/helpers/pipeline/talent-lists", () => ({
   deleteTalentList: vi.fn(),
   addToTalentList: vi.fn(),
   removeFromTalentList: vi.fn(),
+  addCompanyCandidateToTalentList: vi.fn(),
+  removeCompanyCandidateFromTalentList: vi.fn(),
   listTalentLists: vi.fn(),
 }));
 
+const COMPANY_CANDIDATE = "cc000000-0000-4000-8000-000000000001";
 const LIST = { id: "a1000000-0000-4000-8000-00000000000a", company_id: COMPANY_A.id, name: "Backend", slug: "backend", created_at: "" };
 
 async function signIn(user = COMPANY_A.user, times = 1) {
@@ -42,6 +47,8 @@ beforeEach(async () => {
   vi.mocked(renameTalentList).mockResolvedValue({ ok: true });
   vi.mocked(deleteTalentList).mockResolvedValue({ ok: true });
   vi.mocked(removeFromTalentList).mockResolvedValue({ ok: true });
+  vi.mocked(addCompanyCandidateToTalentList).mockResolvedValue({ ok: true });
+  vi.mocked(removeCompanyCandidateFromTalentList).mockResolvedValue({ ok: true });
   vi.mocked(listTalentLists).mockResolvedValue([]);
 });
 
@@ -70,13 +77,32 @@ describe("saveTalentListAction (PLT-090)", () => {
     expect(vi.mocked(deleteTalentList).mock.calls[0].slice(1)).toEqual([LIST.id]);
   });
 
+  it("adds and removes the company's own candidates (BI-REQ-006)", async () => {
+    await signIn(COMPANY_A.user, 3);
+
+    await saveTalentListAction({ op: "add", listId: LIST.id, companyCandidateId: COMPANY_CANDIDATE });
+    await saveTalentListAction({ op: "remove", listId: LIST.id, companyCandidateId: COMPANY_CANDIDATE });
+    await saveTalentListAction({ op: "create", name: "Bench", companyCandidateId: COMPANY_CANDIDATE });
+
+    expect(vi.mocked(addCompanyCandidateToTalentList).mock.calls.map((c) => c.slice(1))).toEqual([
+      [LIST.id, COMPANY_CANDIDATE],
+      [LIST.id, COMPANY_CANDIDATE],
+    ]);
+    expect(vi.mocked(removeCompanyCandidateFromTalentList).mock.calls[0].slice(1)).toEqual([LIST.id, COMPANY_CANDIDATE]);
+    expect(addToTalentList).not.toHaveBeenCalled();
+    expect(revalidatePath).toHaveBeenCalledWith(`/company/candidates/${COMPANY_CANDIDATE}`);
+  });
+
   it.each([
     ["an unknown op", { op: "share", listId: LIST.id }],
+    ["both kinds of candidate", { op: "add", listId: LIST.id, candidateUserId: PUBLIC_APPLICANT.id, companyCandidateId: COMPANY_CANDIDATE }],
+    ["no candidate", { op: "add", listId: LIST.id }],
     ["a company id", { op: "delete", listId: LIST.id, companyId: COMPANY_A.id }],
     ["a malformed candidate", { op: "add", listId: LIST.id, candidateUserId: "x" }],
   ])("rejects %s", async (_, input) => {
     expect(await saveTalentListAction(input as never)).toMatchObject({ ok: false });
     expect(addToTalentList).not.toHaveBeenCalled();
+    expect(addCompanyCandidateToTalentList).not.toHaveBeenCalled();
     expect(deleteTalentList).not.toHaveBeenCalled();
   });
 
@@ -97,5 +123,10 @@ describe("listTalentListsAction (PLT-090)", () => {
       lists: [{ id: LIST.id, name: "Backend", slug: "backend", memberCount: 1, hasCandidate: true }],
     });
     expect(vi.mocked(listTalentLists).mock.calls[0][1]).toEqual({ candidateUserId: PUBLIC_APPLICANT.id });
+  });
+
+  it("lists them for a company candidate (BI-REQ-006)", async () => {
+    await listTalentListsAction({ companyCandidateId: COMPANY_CANDIDATE });
+    expect(vi.mocked(listTalentLists).mock.calls[0][1]).toEqual({ companyCandidateId: COMPANY_CANDIDATE });
   });
 });

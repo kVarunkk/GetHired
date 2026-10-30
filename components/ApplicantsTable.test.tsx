@@ -67,6 +67,9 @@ function applicationRow(
     created_at: `2026-10-${(10 + seq).toString().padStart(2, "0")}T00:00:00Z`,
     status: "submitted",
     resume_url: null,
+    applicant_user_id: `a0000000-0000-4000-8000-${seq.toString().padStart(12, "0")}`,
+    company_candidate_id: null,
+    company_candidates: null,
     job_postings: JOB,
     user_info: { full_name: name },
     application_screenings: screening,
@@ -93,6 +96,55 @@ beforeEach(() => {
   seq = 0;
   handleEntitlement.mockImplementation(async (res: Response) => res.status === 402);
   vi.stubGlobal("fetch", fetchMock);
+});
+
+describe("ApplicantsTable: imported applicants (BI-REQ-030)", () => {
+  it("names a company candidate and marks them Imported, with No resume when they have none", () => {
+    const CANDIDATE_ID = "cc000000-0000-4000-8000-000000000001";
+    render(
+      <ApplicantsTable
+        data={[
+          applicationRow("Grace"),
+          applicationRow("", null, {
+            applicant_user_id: null,
+            user_info: null,
+            company_candidate_id: CANDIDATE_ID,
+            company_candidates: { id: CANDIDATE_ID, full_name: "Meera Iyer", email: null, resume_path: null },
+          }),
+        ]}
+      />,
+    );
+
+    const meera = screen.getByText("Meera Iyer").closest("tr")!;
+    expect(within(meera).getByText("Imported")).toBeInTheDocument();
+    expect(within(meera).getByText("No resume")).toBeInTheDocument();
+    const grace = screen.getByText("Grace").closest("tr")!;
+    expect(within(grace).queryByText("Imported")).not.toBeInTheDocument();
+  });
+
+  it("names a claimed candidate from the import and links the connected account (BIT-101)", () => {
+    const CANDIDATE_ID = "cc000000-0000-4000-8000-000000000002";
+    const USER_ID = "a0000000-0000-4000-8000-000000000009";
+    render(
+      <ApplicantsTable
+        data={[
+          applicationRow("Ada Lovelace", null, {
+            applicant_user_id: USER_ID,
+            company_candidate_id: CANDIDATE_ID,
+            company_candidates: { id: CANDIDATE_ID, full_name: "Ada L.", email: "ada@mail.test", resume_path: "c/b/x.pdf" },
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
+    const ada = screen.getByText("Ada L.").closest("tr")!;
+    expect(within(ada).getByText("Imported")).toBeInTheDocument();
+    expect(within(ada).getByRole("link", { name: "GetHired account connected" })).toHaveAttribute(
+      "href",
+      `/company/profiles/${USER_ID}`,
+    );
+  });
 });
 
 describe("ApplicantsTable: behaviour that must survive", () => {
@@ -179,6 +231,21 @@ describe("ApplicantsTable: fit (MT-REQ-007, MT-TEST-006)", () => {
     expect(names().slice(3)).toEqual(expect.arrayContaining(["Unscreened", "Queued"]));
   });
 
+  it("labels an unscored candidate and sorts them after scored rows, not as 0 (BI-REQ-036)", () => {
+    render(
+      <ApplicantsTable
+        data={[
+          applicationRow("Unscored", { status: "insufficient_info", fit_score: null, recommendation: null }),
+          applicationRow("Weak", screened(45, "no")),
+        ]}
+        defaultSort="fit"
+      />,
+    );
+
+    expect(screen.getByText("Not scored: no resume")).toBeInTheDocument();
+    expect(names()).toEqual(["Weak", "Unscored"]);
+  });
+
   it("filters by recommendation", () => {
     render(<ApplicantsTable data={rows()} />);
 
@@ -189,7 +256,7 @@ describe("ApplicantsTable: fit (MT-REQ-007, MT-TEST-006)", () => {
     expect(names()).toEqual(["Top"]);
   });
 
-  it("shows Screen N unscreened in job context, counting none, stale, failed and skipped", () => {
+  it("shows Screen N unscreened in job context, counting none, stale, failed, skipped and unscored", () => {
     render(
       <ApplicantsTable
         jobPostId={JOB.id}
@@ -198,11 +265,12 @@ describe("ApplicantsTable: fit (MT-REQ-007, MT-TEST-006)", () => {
           applicationRow("Stale", { status: "stale", fit_score: 70, recommendation: "maybe" }),
           applicationRow("Failed", { status: "failed", fit_score: null, recommendation: null }),
           applicationRow("Skipped", { status: "skipped_quota", fit_score: null, recommendation: null }),
+          applicationRow("Unscored", { status: "insufficient_info", fit_score: null, recommendation: null }),
         ]}
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Screen 4 unscreened" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Screen 5 unscreened" })).toBeInTheDocument();
   });
 
   it("hides the button when everything is screened, and outside job context", () => {

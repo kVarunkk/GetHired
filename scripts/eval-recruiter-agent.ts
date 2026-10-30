@@ -326,6 +326,7 @@ function fixtureTools(): ToolSet {
     supabase: {} as never,
     user: { id: "c1000000-0000-4000-8000-000000000001" } as never,
     sessionId: "eval",
+    surface: "agent",
     company: {
       id: "c0000000-0000-4000-8000-000000000001",
       name: "Acme Labs",

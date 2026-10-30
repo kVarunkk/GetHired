@@ -12,6 +12,7 @@ const STATIC_PATHS = [
   "/ai-interview",
   "/ai-resume-checker",
   "/mcp-server",
+  "/mcp",
   "/companies",
   "/blog",
   "/privacy-policy",

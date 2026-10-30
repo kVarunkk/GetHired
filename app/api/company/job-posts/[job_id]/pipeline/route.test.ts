@@ -30,7 +30,10 @@ type Row = {
   stage_id: string | null;
   stage_entered_at: string;
   created_at: string;
+  applicant_user_id?: string | null;
+  company_candidate_id?: string | null;
   user_info: { full_name: string | null } | null;
+  company_candidates?: { id: string; full_name: string; resume_path: string | null } | null;
   application_screenings: { status: string; fit_score: number | null } | null;
 };
 
@@ -39,7 +42,10 @@ const rowOf = (n: number, overrides: Partial<Row> = {}): Row => ({
   stage_id: stageOf("applied").id,
   stage_entered_at: daysAgo(0),
   created_at: daysAgo(0),
+  applicant_user_id: PUBLIC_APPLICANT.id,
+  company_candidate_id: null,
   user_info: { full_name: "Priya Sharma" },
+  company_candidates: null,
   application_screenings: null,
   ...overrides,
 });
@@ -126,6 +132,9 @@ describe("GET /api/company/job-posts/[job_id]/pipeline (PLT-041)", () => {
         ratingAvg: null,
         // AF-REQ-003: no knockout failure on this card.
         knockoutReasons: null,
+        notScored: false,
+        imported: false,
+        hasResume: true,
       },
       expect.objectContaining({ id: appId(2), fitScore: null, daysInStage: 0 }),
       // Only a completed screening's score counts.
@@ -135,6 +144,37 @@ describe("GET /api/company/job-posts/[job_id]/pipeline (PLT-041)", () => {
 
     const [appQuery] = rls.callsFor("applications");
     expect(appQuery.chain).toContainEqual({ method: "eq", args: ["job_post_id", PIPELINE_JOB.id] });
+    // BI-REQ-042: merged imports stay off the board.
+    expect(appQuery.chain).toContainEqual({ method: "is", args: ["merged_into_application_id", null] });
+  });
+
+  it("shows an imported card by the candidate's name, marked Imported and No resume (BI-REQ-030)", async () => {
+    await signInCompany();
+    const CANDIDATE_ID = "cc000000-0000-4000-8000-000000000001";
+    ownsJob([
+      rowOf(1, {
+        applicant_user_id: null,
+        user_info: null,
+        company_candidate_id: CANDIDATE_ID,
+        company_candidates: { id: CANDIDATE_ID, full_name: "Meera Iyer", resume_path: null },
+      }),
+      rowOf(2),
+    ]);
+
+    const { body } = await get();
+
+    expect(body.applications[0]).toMatchObject({ name: "Meera Iyer", imported: true, hasResume: false });
+    expect(body.applications[1]).toMatchObject({ name: "Priya Sharma", imported: false, hasResume: true });
+  });
+
+  it("marks a card the screening couldn't score (BI-REQ-036)", async () => {
+    await signInCompany();
+    ownsJob([rowOf(1, { application_screenings: { status: "insufficient_info", fit_score: null } }), rowOf(2)]);
+
+    const { body } = await get();
+
+    expect(body.applications[0]).toMatchObject({ fitScore: null, notScored: true });
+    expect(body.applications[1]).toMatchObject({ notScored: false });
   });
 
   it("badges a card with its AI interview (SIT-062)", async () => {
@@ -195,7 +235,8 @@ describe("GET /api/company/job-posts/[job_id]/pipeline (PLT-041)", () => {
 
     const [appQuery] = rls.callsFor("applications");
     const columns = String(appQuery.chain.find((m) => m.method === "select")!.args[0]);
-    expect(columns).not.toMatch(/email|phone|linkedin|resume/);
+    // The candidate's resume_path only becomes hasResume; the file never leaves.
+    expect(columns).not.toMatch(/email|phone|linkedin|resume_url|resumes\(/);
     expect(JSON.stringify(body)).not.toMatch(/@|email/i);
   });
 

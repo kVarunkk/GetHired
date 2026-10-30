@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { FileText, History, Mic, Sparkles, StickyNote, User } from "lucide-react";
+import { FileText, FileUser, History, Mic, Sparkles, StickyNote, User } from "lucide-react";
 import Error from "@/components/Error";
+import ImportedBadge from "@/components/candidates/ImportedBadge";
+import MergedNotice from "@/components/candidates/MergedNotice";
 import EntityLayout from "@/components/EntityLayout";
 import type { EntityNavItem } from "@/components/EntityNav";
 import PageHeader from "@/components/PageHeader";
@@ -30,14 +32,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { application_id } = await params;
   const frame = await loadApplicationFrame(application_id).catch(() => null);
-  const name = frame?.application.user_info?.full_name;
-  if (!name) return { title: "Application" };
+  if (!frame) return { title: "Application" };
+  const name = frame.person.name;
   return { title: { default: name, template: `%s · ${name} | GetHired` } };
 }
 
 /**
- * An application's frame: the sections sidebar (answers, candidate, fit
- * screening, AI interview, notes, activity) and the header with the stage
+ * An application's frame: the sections sidebar (answers, candidate, resume,
+ * fit screening, AI interview, notes, activity) and the header with the stage
  * picker and the AI interview's actions.
  */
 export default async function ApplicationLayout({
@@ -51,7 +53,7 @@ export default async function ApplicationLayout({
     const { application_id } = await params;
     const frame = await loadApplicationFrame(application_id);
     if (!frame) notFound();
-    const { supabase, company, application, jobId } = frame;
+    const { supabase, company, application, person, jobId, mergedInto, mergedFrom } = frame;
 
     // RLS: only the company's members can read its stages and templates.
     const companyId = application.job_postings?.company_id;
@@ -76,12 +78,13 @@ export default async function ApplicationLayout({
     const stages = allStages?.filter((s) => !s.archived) ?? null;
     const stageKind = allStages?.find((s) => s.id === application.stage_id)?.kind ?? null;
     const screeningInterview = interview.interview;
-    const candidateName = application.user_info?.full_name || "Applicant details";
+    const candidateName = person.name;
 
     const base = applicationPath(application.id);
     const items: EntityNavItem[] = [
       { href: base, label: "Answers", icon: <FileText />, exact: true },
       { href: `${base}/candidate`, label: "Candidate", icon: <User /> },
+      { href: `${base}/resume`, label: "Resume", icon: <FileUser /> },
     ];
     if (jobId) items.push({ href: `${base}/screening`, label: "Fit screening", icon: <Sparkles /> });
     if (screeningInterview) items.push({ href: `${base}/interview`, label: "AI interview", icon: <Mic /> });
@@ -102,7 +105,12 @@ export default async function ApplicationLayout({
         header={
           <PageHeader
             eyebrow="Application"
-            title={<span className="[overflow-wrap:anywhere]">{candidateName}</span>}
+            title={
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="[overflow-wrap:anywhere]">{candidateName}</span>
+                <ImportedBadge person={person} />
+              </span>
+            }
             description={
               application.job_postings?.title && (
                 <span className="[overflow-wrap:anywhere]">
@@ -118,7 +126,8 @@ export default async function ApplicationLayout({
             }
             actions={
               <>
-                {stages && stages.length > 0 && (
+                {/* BI-REQ-042: a merged import is read-only. */}
+                {!mergedInto && stages && stages.length > 0 && (
                   <StagePicker
                     applicationId={application.id}
                     stages={stages}
@@ -128,11 +137,11 @@ export default async function ApplicationLayout({
                     canMove={can(company, "pipeline.move", jobId)}
                   />
                 )}
-                {interview.canManage && jobId && (
+                {!mergedInto && interview.canManage && jobId && (
                   <ScreeningInterviewActions
                     applicationId={application.id}
                     jobPostId={jobId}
-                    candidateName={application.user_info?.full_name || "this applicant"}
+                    candidateName={candidateName}
                     interview={
                       screeningInterview && {
                         id: screeningInterview.id,
@@ -156,7 +165,10 @@ export default async function ApplicationLayout({
           />
         }
       >
-        {children}
+        <div className="flex flex-col gap-6">
+          <MergedNotice mergedInto={mergedInto} mergedFrom={mergedFrom} />
+          {children}
+        </div>
       </EntityLayout>
     );
   } catch (err) {

@@ -26,7 +26,7 @@ describe("AGENT_ROLES.applicant (RA-TEST-001)", () => {
 
   it("builds the same tools as before", () => {
     const supabase = createSupabaseMock().client;
-    const tools = role.createTools({ ...toolContext(supabase), company: null });
+    const tools = role.createTools({ supabase, user: toolContext(supabase).user, sessionId: "s1", company: null });
     expect(Object.keys(tools)).toEqual(Object.keys(createAgentTools(toolContext(supabase))));
   });
 

@@ -192,6 +192,28 @@ describe("BulkActionBar (PL-TEST-006)", () => {
     );
   });
 
+  it("counts imported candidates who weren't emailed (BI-REQ-032/034)", async () => {
+    vi.mocked(moveApplicationsAction).mockResolvedValue({
+      ok: true,
+      moved: 3,
+      emailed: 1,
+      skipped: [
+        { id: ids(3)[1], reason: "unsubscribed" },
+        { id: ids(3)[2], reason: "no_email" },
+      ],
+    });
+    render(<BulkActionBar selectedIds={ids(3)} stages={STAGES} onDone={vi.fn()} />);
+
+    fireEvent.click(reject());
+    fireEvent.click(screen.getByRole("button", { name: "Move and email" }));
+
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        "Moved 3 applications to Rejected. Emailing 1. 1 not emailed: unsubscribed. 1 not emailed: no email.",
+      ),
+    );
+  });
+
   it("tells MoveDialog whether the move changes a candidate's status, and who to preview", () => {
     // Both are in Screening: Interview keeps "reviewed", Rejected doesn't.
     const stageIdOf = () => stageOf("screening").id;

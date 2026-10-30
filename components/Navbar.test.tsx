@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { User } from "@supabase/supabase-js";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SWRConfig } from "swr";
 import NavbarComponent from "./Navbar";
 
 vi.mock("next/navigation", () => ({ usePathname: vi.fn() }));
@@ -177,5 +178,48 @@ describe("NavbarComponent: open outreach badge (ORT-034)", () => {
     renderNavbar(company);
 
     expect(vi.mocked(createClient).mock.results.some((r) => (r.value as { from: ReturnType<typeof vi.fn> }).from.mock.calls.length > 0)).toBe(false);
+  });
+});
+
+describe("NavbarComponent: company links (BI-REQ-003)", () => {
+  const company = { id: "c1", app_metadata: { type: "company" }, user_metadata: {} } as unknown as User;
+
+  function withAccess(access: { billingView: boolean; talentView: boolean }) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ profile: { access } }) })),
+    );
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  // A fresh SWR cache, so each test reads its own /api/current-user.
+  const renderCompanyNavbar = () =>
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <TooltipProvider>
+          <NavbarComponent variant="horizontal" initialUser={company} />
+        </TooltipProvider>
+      </SWRConfig>,
+    );
+
+  it("shows Discover and Candidates", async () => {
+    withAccess({ billingView: true, talentView: true });
+    vi.mocked(usePathname).mockReturnValue("/company");
+
+    renderCompanyNavbar();
+
+    expect(screen.getAllByRole("link", { name: /Discover/ })[0]).toHaveAttribute("href", "/company/profiles");
+    expect(screen.getAllByRole("link", { name: /Candidates/ })[0]).toHaveAttribute("href", "/company/candidates");
+  });
+
+  it("hides Candidates from a role without talent.view", async () => {
+    withAccess({ billingView: true, talentView: false });
+    vi.mocked(usePathname).mockReturnValue("/company");
+
+    renderCompanyNavbar();
+
+    await waitFor(() => expect(screen.queryByRole("link", { name: /Candidates/ })).not.toBeInTheDocument());
+    expect(screen.getAllByRole("link", { name: /Discover/ }).length).toBeGreaterThan(0);
   });
 });

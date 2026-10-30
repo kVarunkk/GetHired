@@ -29,6 +29,6 @@ const OriginalResumeViewer = dynamic(
   { ssr: false, loading: ViewerPlaceholder },
 );
 
-export default function OriginalResumeWrapper({ url }: { url: string }) {
-  return <OriginalResumeViewer url={url} />;
+export default function OriginalResumeWrapper({ url, downloadUrl }: { url: string; downloadUrl?: string }) {
+  return <OriginalResumeViewer url={url} downloadUrl={downloadUrl} />;
 }

@@ -159,6 +159,19 @@ describe("addNote (PLT-052)", () => {
 
     expect((await addNote(ctx(), { applicationId: APP.id, body: "Hi" })).ok).toBe(true);
   });
+
+  it("notes an imported application, which has no candidate user (BI-REQ-030)", async () => {
+    db.queue("applications", {
+      data: { id: APP.id, applicant_user_id: null, company_candidate_id: "cc000000-0000-4000-8000-000000000001" },
+      error: null,
+    });
+    db.queue("candidate_notes", { data: noteOf({ id: NOTE_ID, candidate_user_id: null }), error: null });
+    db.queue("application_events", { data: null, error: null });
+
+    expect((await addNote(ctx(), { applicationId: APP.id, body: "Strong portfolio." })).ok).toBe(true);
+    expect(inserted("candidate_notes")[0]).toMatchObject({ candidate_user_id: null, application_id: APP.id });
+    expect(inserted("application_events")[0]).toMatchObject({ candidate_user_id: null, type: "note_added" });
+  });
 });
 
 describe("addNote mentions (TMT-071)", () => {

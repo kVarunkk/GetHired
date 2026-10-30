@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createInterviewTools } from "./interviews";
 import { execTool, toolContext, validateInput } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import { createInterviewAction } from "@/app/actions/create-interview";
+import { createInterview } from "@/helpers/interview/create-interview";
 
-vi.mock("@/app/actions/create-interview", () => ({ createInterviewAction: vi.fn() }));
+vi.mock("@/helpers/interview/create-interview", () => ({ createInterview: vi.fn() }));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
@@ -334,7 +334,7 @@ describe("createInterview tool", () => {
 
   it("creates an interview for a job with the given resume and returns its link", async () => {
     supabase.queue("resumes", { data: readyResume, error: null });
-    vi.mocked(createInterviewAction).mockResolvedValue({ success: true, interviewId: INTERVIEW_ID });
+    vi.mocked(createInterview).mockResolvedValue({ success: true, interviewId: INTERVIEW_ID });
 
     const result = await execTool(tools.createInterview, {
       jobId: JOB_ID,
@@ -348,7 +348,11 @@ describe("createInterview tool", () => {
       { method: "eq", args: ["id", RESUME_ID] },
       { method: "maybeSingle", args: [] },
     ]);
-    expect(createInterviewAction).toHaveBeenCalledWith("Stripe practice", RESUME_ID, JOB_ID);
+    expect(createInterview).toHaveBeenCalledWith(supabase.client, expect.objectContaining({ id: "u1" }), {
+      name: "Stripe practice",
+      resumeId: RESUME_ID,
+      jobId: JOB_ID,
+    });
     expect(result).toEqual({
       interviewId: INTERVIEW_ID,
       url: `/interview/${INTERVIEW_ID}`,
@@ -359,7 +363,7 @@ describe("createInterview tool", () => {
 
   it("uses the primary resume when none is given", async () => {
     supabase.queue("resumes", { data: readyResume, error: null });
-    vi.mocked(createInterviewAction).mockResolvedValue({ success: true, interviewId: INTERVIEW_ID });
+    vi.mocked(createInterview).mockResolvedValue({ success: true, interviewId: INTERVIEW_ID });
 
     await execTool(tools.createInterview, { jobId: JOB_ID });
 
@@ -369,7 +373,11 @@ describe("createInterview tool", () => {
       { method: "eq", args: ["is_primary", true] },
       { method: "maybeSingle", args: [] },
     ]);
-    expect(createInterviewAction).toHaveBeenCalledWith(null, RESUME_ID, JOB_ID);
+    expect(createInterview).toHaveBeenCalledWith(supabase.client, expect.objectContaining({ id: "u1" }), {
+      name: null,
+      resumeId: RESUME_ID,
+      jobId: JOB_ID,
+    });
   });
 
   it.each([
@@ -380,15 +388,15 @@ describe("createInterview tool", () => {
     supabase.queue("resumes", { data: resume, error: null });
 
     expect(await execTool(tools.createInterview, { jobId: JOB_ID })).toMatchObject({ error });
-    expect(createInterviewAction).not.toHaveBeenCalled();
+    expect(createInterview).not.toHaveBeenCalled();
   });
 
   it.each([
     ["Insufficient AI credits (10 required).", { error: "INSUFFICIENT_CREDITS" }],
     ["Job not found. Please provide a valid job URL.", { error: "Job not found. Please provide a valid job URL." }],
-  ])("maps action errors: %s", async (actionError, expected) => {
+  ])("maps helper errors: %s", async (actionError, expected) => {
     supabase.queue("resumes", { data: readyResume, error: null });
-    vi.mocked(createInterviewAction).mockResolvedValue({ error: actionError });
+    vi.mocked(createInterview).mockResolvedValue({ error: actionError });
 
     expect(await execTool(tools.createInterview, { jobId: JOB_ID })).toMatchObject(expected);
   });

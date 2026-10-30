@@ -1,9 +1,16 @@
 import * as React from "react";
 import { Button, Section, Text } from "react-email";
 import { BaseEmailLayout } from "./BaseEmailLayout";
+import { UnsubscribeLine } from "./UnsubscribeLine";
 
 type InterviewExpiredEmailProps =
-  | { audience: "candidate"; companyName: string; jobTitle: string }
+  | {
+      audience: "candidate";
+      companyName: string;
+      jobTitle: string;
+      /** BI-REQ-034: a company candidate's unsubscribe link. */
+      unsubscribeUrl?: string | null;
+    }
   | {
       audience: "company";
       companyName: string;
@@ -23,6 +30,7 @@ export default function InterviewExpiredEmail(props: InterviewExpiredEmailProps)
         <Text className="text-sm">
           {`Your AI interview for ${jobTitle} at ${companyName} has expired. Your application is still with ${companyName}; they decide what happens next.`}
         </Text>
+        <UnsubscribeLine companyName={companyName} url={props.unsubscribeUrl} />
       </BaseEmailLayout>
     );
   }

@@ -10,6 +10,9 @@ export const INVITE_SKIP_MESSAGES: Record<string, string> = {
   exists: "Already invited.",
   closed: "The applicant is in a Rejected or Hired stage.",
   not_applicant: "This application can't be invited.",
+  // BI-REQ-040: imported applicants.
+  no_email: "They have no email to send the invite to.",
+  unsubscribed: "They unsubscribed from your emails.",
   insufficient_credits: "Not enough interview minutes or credits.",
   member_limit: "Your role's monthly interview minutes are used up.",
   not_found: "Application not found.",

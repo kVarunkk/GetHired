@@ -24,7 +24,7 @@ export const recruiterRole: AgentRole = {
   },
   createTools(ctx) {
     if (!ctx.company) throw new Error(NO_COMPANY);
-    return createRecruiterTools({ ...ctx, company: ctx.company });
+    return createRecruiterTools({ ...ctx, surface: "agent", company: ctx.company });
   },
   toolApproval: recruiterToolApproval,
   // One agent_messages unit per user message, charged before the model runs

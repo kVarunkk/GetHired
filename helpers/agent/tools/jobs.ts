@@ -164,6 +164,17 @@ function reportEmptyLocationSearch(
   );
 }
 
+/** The user's saved or applied jobs, as the /jobs tabs show them. MCP's get_applied_jobs uses it too. */
+export async function listJobsInTab(
+  ctx: AgentToolContext,
+  tab: "saved" | "applied",
+  limit?: number,
+) {
+  return toJobList(
+    await searchJobs(ctx.supabase, ctx.user, { tab, limit: limitOrDefault(limit) }),
+  );
+}
+
 export function createJobTools(ctx: AgentToolContext) {
   const { supabase } = ctx;
 
@@ -181,7 +192,7 @@ export function createJobTools(ctx: AgentToolContext) {
       execute: ({ cursor, limit, ...filters }) =>
         withToolErrors(ctx, "searchJobs", async () => {
           const list = toJobList(
-            await searchJobs(supabase, {
+            await searchJobs(supabase, ctx.user, {
               ...filtersToParams(filters),
               ...(cursor ? { cursor } : {}),
               limit: limitOrDefault(limit),
@@ -220,7 +231,7 @@ export function createJobTools(ctx: AgentToolContext) {
           }
 
           const list = toJobList(
-            await searchJobs(supabase, {
+            await searchJobs(supabase, ctx.user, {
               ...parsedFiltersToParams(parsed.filters),
               limit: limitOrDefault(limit),
             }),
@@ -262,7 +273,7 @@ export function createJobTools(ctx: AgentToolContext) {
           }
 
           const list = toJobList(
-            await searchJobs(supabase, {
+            await searchJobs(supabase, ctx.user, {
               ...filtersToParams(filters),
               sortBy: "relevance",
               limit: limitOrDefault(limit),
@@ -280,7 +291,7 @@ export function createJobTools(ctx: AgentToolContext) {
       execute: ({ jobId, limit }) =>
         withToolErrors(ctx, "findSimilarJobs", async () =>
           toJobList(
-            await searchJobs(supabase, {
+            await searchJobs(supabase, ctx.user, {
               sortBy: "relevance",
               jobId,
               limit: limitOrDefault(limit),
@@ -372,14 +383,7 @@ export function createJobTools(ctx: AgentToolContext) {
       description: "List the jobs the user has saved.",
       inputSchema: z.object({ limit: limitInput }),
       execute: ({ limit }) =>
-        withToolErrors(ctx, "listSavedJobs", async () =>
-          toJobList(
-            await searchJobs(supabase, {
-              tab: "saved",
-              limit: limitOrDefault(limit),
-            }),
-          ),
-        ),
+        withToolErrors(ctx, "listSavedJobs", () => listJobsInTab(ctx, "saved", limit)),
     }),
   };
 }

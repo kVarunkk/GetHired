@@ -7,7 +7,7 @@ Flow ids point to [01-platform](01-platform.md), [02-applicant](02-applicant.md)
 ```mermaid
 flowchart LR
   subgraph Identity["Identity (P2, P5)"]
-    UI[(user_info)] --- UAT[(user_api_tokens)] --- INV[(invitations)]
+    UI[(user_info)] --- INV[(invitations)]
   end
   subgraph Catalog["Job catalog (P4, A2)"]
     AJ[(all_jobs)] --- URJ[(user_relevant_jobs)]
@@ -38,12 +38,11 @@ flowchart LR
   CI --> CS
 ```
 
-## Tables (67) and views (2)
+## Tables (66) and views (2)
 
 | Flow | Tables |
 |---|---|
 | P2 Auth / identity | `user_info`, `invitations`, `waitlist`, `feedbacks` |
-| P5 API keys | `user_api_tokens` |
 | P4 Ingestion | `all_jobs`, `all_jobs_archive`, `scraper_state` (written by the scraper, not the app) |
 | A2 Discovery | `countries_and_cities`, `location_aliases`, `flat_locations` (view), `user_relevant_jobs`, `bookmarks` (≤ 5 alerts) |
 | A3 Job page | `user_favorites`, `user_favorites_companies`, `job_feedback` |
@@ -143,7 +142,7 @@ flowchart LR
 |---|---|
 | P1/P2 | `/auth/callback`, `/auth/confirm`, `/api/current-user` |
 | P4 | `/api/update-embedding/gemini/job` |
-| P5 | `/api/user/tokens`, `/api/oauth/decision`, `/api/user/profile` |
+| P5 | `/api/oauth/decision`, `/api/user/profile` |
 | P6 | `/api/extension/ensure-user`, `/api/extension/generate-answer` |
 | P7 | `/md/[...path]` (markdown pages, reached by the middleware rewrite of `*.md`) |
 | A2/A3 | `/api/jobs`, `/api/jobs/filters`, `/api/jobs/urls`, `/api/jobs/[id]/urls`, `/api/jobs/[id]/favorite`, `/api/locations`, `/api/companies`, `/api/companies/filters`, `/api/ai-search/jobs`, `/api/ai-search/jobs/similar-jobs`, `/api/ai-search/jobs/questions/[id]`, `/api/ai-search/companies` |
@@ -162,7 +161,7 @@ flowchart LR
 | Flow | Actions (`app/actions/…`) |
 |---|---|
 | P1/P2 | `sign-up-email`, `reset-password-email`, `update-user-metadata`, `clear-router-cache`, `send-invite-credit-email`, `invitations/mark-invite-dialogs-shown`, `send-promotion-email` |
-| P3 shared | `update-owned-item`, `delete-owned-item` (rename / delete the user's own resumes, reviews, interviews, API keys, bookmarks), `submit-feedback` |
+| P3 shared | `update-owned-item`, `delete-owned-item` (rename / delete the user's own resumes, reviews, interviews, bookmarks), `submit-feedback` |
 | A1 | `submit-onboarding`, `upload-resume-file` |
 | A2/A3 | `summarize-job`, `jobs-feedback`, `relevant-jobs-update`, `bookmarks/toggle-search-bookmark`, `bookmarks/set-bookmark-alert`, `favorites/set-favorite`, `revalidate-path`, `revalidate-tag` |
 | A4 | `submit-application`, `deduct-application-credits`, `applications/track-external-application`, `set-external-application-status`, `remove-external-application`, `preview-agent-application`, `applications/attachments` |

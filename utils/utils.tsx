@@ -10,7 +10,7 @@ import {
 
 import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
-import { Briefcase, Home, Inbox, LayoutDashboard, Send } from "lucide-react";
+import { Briefcase, Contact, Home, Inbox, LayoutDashboard, Send } from "lucide-react";
 import { INavItem } from "./types";
 import { User } from "@supabase/supabase-js";
 import { platformsArray } from "./platforms";
@@ -284,10 +284,17 @@ export const companyNavbarItems: INavItem[] = [
   },
   {
     id: "profiles",
-    label: "Profiles",
+    label: "Discover",
     href: "/company/profiles",
     type: "startswith",
     icon: <UserIcon className="h-4 w-4" />,
+  },
+  {
+    id: "candidates",
+    label: "Candidates",
+    href: "/company/candidates",
+    type: "startswith",
+    icon: <Contact className="h-4 w-4" />,
   },
   {
     id: "outreach",

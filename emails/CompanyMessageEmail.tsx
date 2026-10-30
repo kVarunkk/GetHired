@@ -9,6 +9,8 @@ interface CompanyMessageEmailProps {
   subject: string;
   /** The rendered template (markdown). Raw HTML in it is escaped, not rendered. */
   bodyMd: string;
+  /** For a company candidate, who has no account to manage email from (BI-REQ-034). */
+  unsubscribeUrl?: string | null;
 }
 
 const text: React.CSSProperties = { fontSize: "15px", lineHeight: "24px", color: "#1f2937", margin: "0 0 16px" };
@@ -36,6 +38,7 @@ export default function CompanyMessageEmail({
   logoUrl,
   subject,
   bodyMd,
+  unsubscribeUrl = null,
 }: CompanyMessageEmailProps) {
   return (
     <Html>
@@ -68,6 +71,14 @@ export default function CompanyMessageEmail({
               {`Sent by ${companyName}.` +
                 (companyEmail ? ` Replies go to ${companyEmail}.` : "")}
             </Text>
+            {unsubscribeUrl && (
+              <Text style={{ ...muted, marginTop: "8px" }}>
+                Don&apos;t want emails from {companyName}?{" "}
+                <Link href={unsubscribeUrl} style={{ color: "#6b7280", textDecoration: "underline" }}>
+                  Unsubscribe
+                </Link>
+              </Text>
+            )}
           </Section>
         </Container>
       </Body>

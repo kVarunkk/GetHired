@@ -124,6 +124,21 @@ describe("ClientTabs: talent lists (PL-TASK-051)", () => {
   });
 });
 
+describe("ClientTabs: a list tab's candidates table (BI-REQ-006)", () => {
+  it("drops the table's filters and page on a tab change", async () => {
+    search = "tab=backend-shortlist&q=meera&tag=referral&batch=b&inJob=no&loc=pune&resume=has&email=none&added=7&matchJob=j1&page=2";
+    render(
+      <ClientTabs user={USER} isCompanyUser isAISearch={false} page="profiles" talentLists={[BACKEND]}>
+        <div />
+      </ClientTabs>,
+    );
+    expect(tab(/Backend shortlist/)).toHaveAttribute("data-state", "active");
+
+    await userEvent.click(tab(/Saved/));
+    expect(push).toHaveBeenLastCalledWith("/company/profiles?tab=saved", { scroll: false });
+  });
+});
+
 describe("ClientTabs: the jobs page's search box", () => {
   // The page's AskAgentBox is the agent entry point; the tab row has no search box.
   it.each([

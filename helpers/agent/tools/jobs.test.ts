@@ -39,10 +39,12 @@ const JOB_ID = JOB.id;
 
 let supabase: SupabaseMock;
 let tools: ReturnType<typeof createJobTools>;
+let ctx: ReturnType<typeof toolContext>;
 
 beforeEach(() => {
   supabase = createSupabaseMock();
-  tools = createJobTools(toolContext(supabase.client));
+  ctx = toolContext(supabase.client);
+  tools = createJobTools(ctx);
   vi.mocked(searchJobs).mockResolvedValue({
     ok: true,
     data: [JOB],
@@ -68,7 +70,7 @@ describe("searchJobs tool", () => {
       limit: 5,
     });
 
-    expect(searchJobs).toHaveBeenCalledWith(supabase.client, {
+    expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, {
       jobTitleKeywords: "frontend|front-end",
       location: "Remote|Bengaluru",
       jobType: "Fulltime|Contract",
@@ -88,7 +90,7 @@ describe("searchJobs tool", () => {
   it("defaults the limit to 10", async () => {
     await execTool(tools.searchJobs, {});
 
-    expect(searchJobs).toHaveBeenCalledWith(supabase.client, { limit: 10 });
+    expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, { limit: 10 });
   });
 
   it.each([
@@ -145,7 +147,7 @@ describe("naturalLanguageJobSearch tool", () => {
 
     expect(parseJobQuery).toHaveBeenCalledTimes(1);
     expect(parseJobQuery).toHaveBeenCalledWith(supabase.client, "u1", "remote react jobs over 120k");
-    expect(searchJobs).toHaveBeenCalledWith(supabase.client, {
+    expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, {
       jobType: "Fulltime",
       jobTitleKeywords: "react",
       location: "Remote",
@@ -206,7 +208,7 @@ describe("findRelevantJobs tool", () => {
       { method: "eq", args: ["user_id", "u1"] },
       { method: "maybeSingle", args: [] },
     ]);
-    expect(searchJobs).toHaveBeenCalledWith(supabase.client, {
+    expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, {
       location: "Remote",
       sortBy: "relevance",
       limit: 5,
@@ -235,7 +237,7 @@ describe("findSimilarJobs tool", () => {
   it("searches by the source job's embedding", async () => {
     await execTool(tools.findSimilarJobs, { jobId: JOB_ID });
 
-    expect(searchJobs).toHaveBeenCalledWith(supabase.client, {
+    expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, {
       sortBy: "relevance",
       jobId: JOB_ID,
       limit: 10,
@@ -251,7 +253,7 @@ describe("listSavedJobs tool", () => {
   it("lists the saved tab", async () => {
     const result = await execTool(tools.listSavedJobs, { limit: 3 });
 
-    expect(searchJobs).toHaveBeenCalledWith(supabase.client, { tab: "saved", limit: 3 });
+    expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, { tab: "saved", limit: 3 });
     expect(result).toMatchObject({ jobs: [COMPACT_JOB] });
   });
 });

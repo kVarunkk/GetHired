@@ -122,21 +122,25 @@ export function fairnessError(
   return null;
 }
 
-// §3.5: memories hold the hiring bar, never one candidate's interview score.
+// §3.5: memories hold the hiring bar, never one candidate's interview score,
+// nor a pool match's similarity (CP-REQ-063).
 const SCORED_VERB = /\b(scored|got|received|earned|rated)\b[^.\n]{0,30}\d/i;
 const SCORE_NUMBER = /\b\d+(?:\.\d+)?\s*(?:\/\s*(?:5|10|100)\b|out of\s+\d+)/i;
 const SCORE_WORDS = /\b(interview|screening|score)\b/i;
+const SIMILARITY = /\b(similarity|match score)\b[^.\n]{0,20}?\d/i;
 const BAR_WORDS = /\b(at least|minimum|bar|threshold|cut-?off|or (?:higher|above|more))\b/i;
 
 /** A `PER_CANDIDATE_SCORE` error when a memory records a candidate's interview score, or null. */
 export function perCandidateScoreError(content: string) {
   const isScore =
-    SCORED_VERB.test(content) || (SCORE_WORDS.test(content) && SCORE_NUMBER.test(content) && !BAR_WORDS.test(content));
+    SCORED_VERB.test(content) ||
+    (SCORE_WORDS.test(content) && SCORE_NUMBER.test(content) && !BAR_WORDS.test(content)) ||
+    (SIMILARITY.test(content) && !BAR_WORDS.test(content));
   return isScore
     ? ({
         error: "PER_CANDIDATE_SCORE",
         message:
-          "Memories can't hold a candidate's interview scores. Save the hiring bar or a decision's job-related reason instead.",
+          "Memories can't hold a candidate's interview scores or match similarity. Save the hiring bar or a decision's job-related reason instead.",
       } as const)
     : null;
 }

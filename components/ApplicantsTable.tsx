@@ -1,6 +1,8 @@
 "use client";
 
 import KnockoutBadge from "@/components/applications/KnockoutBadge";
+import ImportedBadge from "@/components/candidates/ImportedBadge";
+import { applicationPersonOrNull, type ApplicationPerson } from "@/helpers/applications/application-person";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -17,7 +19,12 @@ import MatchScoreBadge from "./matching/MatchScoreBadge";
 import { TApplicationServer } from "@/utils/types/application.types";
 import { TApplicationStatus } from "@/utils/types";
 import { RECOMMENDATION_LABELS, type ScreeningRecommendation } from "@/helpers/matching/config";
-import { isScreeningInProgress, type ScreeningStatus } from "@/helpers/matching/screening-view";
+import {
+  isScreeningInProgress,
+  needsScreening,
+  NOT_SCORED_LABEL,
+  type ScreeningStatus,
+} from "@/helpers/matching/screening-view";
 import { useEntitlementError } from "@/hooks/useEntitlementError";
 import InterviewStatusBadge from "@/components/interviews/InterviewStatusBadge";
 import type { InterviewSummary } from "@/helpers/interview/screening/summary-view";
@@ -55,6 +62,7 @@ const COLUMN_VISIBILITY = { recommendation: false, knockout: false };
 type Row = TApplicationServer & {
   stage_id?: string | null;
   applicantName: string;
+  person: ApplicationPerson | null;
   jobTitle: string;
 };
 
@@ -75,9 +83,6 @@ const knockoutOptions = [
   { value: "passed", label: "Met requirements" },
 ];
 
-/** Screenings the backfill route queues again: none, stale, failed, skipped. */
-const needsScreening = (status: string | undefined) =>
-  status === undefined || status === "stale" || status === "failed" || status === "skipped_quota";
 
 export default function ApplicantsTable({
   data,
@@ -109,11 +114,16 @@ export default function ApplicantsTable({
   const answerQuestion = answerQuestions.find((q) => q.id === answerQuestionId) ?? null;
 
   const flatData = useMemo(() => {
-    const rows = data.map((item) => ({
-      ...item,
-      applicantName: item.user_info?.full_name || "",
-      jobTitle: item.job_postings?.title || "",
-    }));
+    const rows = data.map((item) => {
+      // BI-REQ-030: a GetHired applicant or a company candidate.
+      const person = applicationPersonOrNull(item);
+      return {
+        ...item,
+        person,
+        applicantName: person?.name ?? item.user_info?.full_name ?? "",
+        jobTitle: item.job_postings?.title || "",
+      };
+    });
     if (!answerQuestionId || !answerValue) return rows;
     return rows.filter((row) => {
       const answers = row.answers_v2;
@@ -195,6 +205,7 @@ export default function ApplicantsTable({
             >
               {row.original.applicantName || "N/A"}
             </div>
+            {row.original.person && <ImportedBadge person={row.original.person} />}
             <KnockoutBadge knockout={row.original.application_knockouts} />
           </div>
         ),
@@ -248,6 +259,9 @@ export default function ApplicantsTable({
           }
           if (s?.fit_score !== null && s?.fit_score !== undefined) {
             return <MatchScoreBadge score={s.fit_score} className="whitespace-nowrap" />;
+          }
+          if (s?.status === "insufficient_info") {
+            return <span className="whitespace-nowrap text-sm text-muted-foreground">{NOT_SCORED_LABEL}</span>;
           }
           return <span className="text-muted-foreground">—</span>;
         },

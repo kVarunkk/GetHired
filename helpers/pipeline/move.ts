@@ -16,7 +16,11 @@ export const MAX_MOVE_APPLICATIONS = 50;
  */
 export const PL_DAILY_EMAIL_CAP = 300;
 
-export type MoveSkipReason = "not_found" | "already_in_stage" | "email_failed";
+/**
+ * `unsubscribed` / `no_email`: moved, but an imported candidate who opted out
+ * or whose email was cleared isn't emailed (BI-REQ-032/034).
+ */
+export type MoveSkipReason = "not_found" | "already_in_stage" | "email_failed" | "unsubscribed" | "no_email";
 
 /** An application the move found, with what callers need to tell the candidate. */
 export type LoadedApplication = {
@@ -26,6 +30,8 @@ export type LoadedApplication = {
   fromStageId: string | null;
   fromKind: PipelineStageKind | null;
   email: string | null;
+  /** An imported candidate who unsubscribed (BI-REQ-034). */
+  optedOut: boolean;
   fullName: string | null;
   jobTitle: string;
   companyName: string | null;
@@ -61,7 +67,7 @@ export type MoveResult =
 type Ctx = { supabase: SupabaseClient<Database>; company: MyCompany; user: User };
 
 const LOAD_COLUMNS =
-  "id, applicant_user_id, stage_id, pipeline_stages(kind), user_info(email, full_name), job_postings!inner(id, company_id, title, company_info(name))";
+  "id, applicant_user_id, stage_id, pipeline_stages(kind), user_info(email, full_name), company_candidates(full_name, email, email_opted_out_at), job_postings!inner(id, company_id, title, company_info(name))";
 
 /**
  * The member's name, stored with events, notes and emails so it survives them
@@ -95,6 +101,8 @@ type EmailPlan = {
   logoUrl: string | null;
   /** Rendered per recipient, keyed by application id. */
   messages: Map<string, { subject: string; body: string }>;
+  /** Would get one, but are imported candidates who unsubscribed or have no email. */
+  notSent: { id: string; reason: "unsubscribed" | "no_email" }[];
 };
 
 /**
@@ -127,9 +135,19 @@ async function planEmails(
   if (settingsError || !settings) return { ok: false, error: "Failed to load the company." };
 
   // A custom message goes to everyone moved; the rest only to candidates who'll see a new status.
-  const recipients = toMove.filter(
+  const due = toMove.filter(
     (app) => template.purpose === "custom" || changesCandidateStatus(app.fromKind, stageKind),
   );
+  // BI-REQ-032/034: an imported candidate is emailed at their candidate
+  // email, unless they unsubscribed or it was cleared.
+  const notSent: EmailPlan["notSent"] = [];
+  const recipients = due.filter((app) => {
+    if (app.candidateUserId !== null) return true;
+    if (app.optedOut) notSent.push({ id: app.id, reason: "unsubscribed" });
+    else if (!app.email) notSent.push({ id: app.id, reason: "no_email" });
+    else return true;
+    return false;
+  });
 
   const source = {
     subject: email.overrides?.subject ?? template.subject,
@@ -194,6 +212,7 @@ async function planEmails(
       companyEmail: settings.email,
       logoUrl: settings.logo_url,
       messages,
+      notSent,
     },
   };
 }
@@ -313,8 +332,9 @@ async function prepareMove(
       candidateUserId: row.applicant_user_id,
       fromStageId: row.stage_id,
       fromKind: row.pipeline_stages?.kind ?? null,
-      email: row.user_info?.email ?? null,
-      fullName: row.user_info?.full_name ?? null,
+      email: row.user_info?.email ?? row.company_candidates?.email ?? null,
+      optedOut: !!row.company_candidates?.email_opted_out_at,
+      fullName: row.user_info?.full_name ?? row.company_candidates?.full_name ?? null,
       jobTitle: row.job_postings.title,
       companyName: row.job_postings.company_info?.name ?? company.name,
     };
@@ -388,6 +408,7 @@ export async function moveApplications(ctx: Ctx, input: MoveInput): Promise<Move
     for (const app of toMove) {
       if (plan.messages.has(app.id) && !queued.has(app.id)) skipped.push({ id: app.id, reason: "email_failed" });
     }
+    for (const notSent of plan.notSent) skipped.push(notSent);
   }
 
   const actor = { company_id: company.id, actor_user_id: user.id, actor_name: name };

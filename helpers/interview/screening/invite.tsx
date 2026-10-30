@@ -23,6 +23,8 @@ export type InviteSkipReason =
   | "exists"
   | "closed"
   | "not_applicant"
+  | "no_email"
+  | "unsubscribed"
   | "insufficient_credits"
   | "member_limit"
   | "not_found"
@@ -105,6 +107,8 @@ export type InviteEmailInterview = Pick<Tables<"application_interviews">, "id" |
 export async function sendInterviewInviteEmail(
   interview: InviteEmailInterview,
   person: { email: string; full_name: string | null },
+  /** BI-REQ-040/034: an imported applicant's claim link (instead of the interview page) and unsubscribe link. */
+  candidate?: { claimUrl: string; unsubscribeUrl: string },
 ) {
   const snapshot = interview.config_snapshot as ConfigSnapshot;
   const message = (
@@ -115,7 +119,9 @@ export async function sendInterviewInviteEmail(
       durationMinutes={snapshot.duration_minutes}
       competencyNames={snapshot.competencies.map((c) => c.name)}
       deadlineAt={interview.deadline_at}
-      interviewUrl={screeningInterviewUrl(interview.id)}
+      interviewUrl={candidate?.claimUrl ?? screeningInterviewUrl(interview.id)}
+      claim={!!candidate}
+      unsubscribeUrl={candidate?.unsubscribeUrl ?? null}
     />
   );
   const [htmlContent, textContent] = await Promise.all([render(message), render(message, { plainText: true })]);

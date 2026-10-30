@@ -12,10 +12,9 @@ import { AlertCircle, RotateCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { canRegenerate, withRegeneration } from "@/helpers/agent/regenerations";
 import { isStopped, stoppedReply } from "@/helpers/agent/stopped";
-import type { ResumeUploadOutput } from "./ResumeUploadWidget";
 import Composer from "./Composer";
 import ScrollToBottomButton from "./ScrollToBottomButton";
-import MessageParts, { hasVisibleParts, StepNode } from "./MessageParts";
+import MessageParts, { hasVisibleParts, StepNode, type ClientToolOutput } from "./MessageParts";
 import { AGENT_ROLE_UI, APPLICANT_STARTERS, type AgentRoleId } from "./roles";
 import { cn } from "@/utils/utils";
 
@@ -191,8 +190,8 @@ export default function ChatPane({
     [addToolApprovalResponse],
   );
   const handleToolOutput = useCallback(
-    (toolCallId: string, output: ResumeUploadOutput) =>
-      addToolOutput({ tool: "requestResumeUpload", toolCallId, output }),
+    (toolCallId: string, output: ClientToolOutput, tool = "requestResumeUpload") =>
+      addToolOutput({ tool, toolCallId, output }),
     [addToolOutput],
   );
   const handleStop = useCallback(() => stop(), [stop]);

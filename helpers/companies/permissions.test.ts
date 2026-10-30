@@ -20,6 +20,7 @@ import {
 } from "./permissions";
 import {
   ADMIN_KEYS,
+  MEMBER_ASSIGNED_KEYS,
   MEMBER_KEYS,
   ROLE_TEMPLATES,
   grantsWithinCeiling,
@@ -313,6 +314,66 @@ describe("screening interview keys (SIT-004)", () => {
   });
 });
 
+describe("applicants.import (BI-PERM-001)", () => {
+  it("is scopable and requires applicants.view", () => {
+    const entry = permissionEntry("applicants.import");
+    expect(entry.scopable).toBe(true);
+    expect(entry.requires).toEqual(["applicants.view"]);
+    expect(entry.label).toBe("Import candidates and applicants");
+    expect(entry.group).toBe("Applicants");
+  });
+
+  it("names the missing permission in the 403 copy", () => {
+    expect(forbiddenMessage("applicants.import")).toBe("Your role can't import applicants.");
+    expect(forbiddenMessage("applicants.import", { forJob: true })).toBe(
+      "Your role can't import applicants for this job.",
+    );
+  });
+
+  it("is on for Admin, on for assigned jobs for Member, and off for Hiring manager", () => {
+    expect(templateGrants(roleTemplate("admin")!).get("applicants.import")).toBe("all");
+    expect(templateGrants(roleTemplate("member")!).get("applicants.import")).toBe("assigned");
+    expect(templateGrants(roleTemplate("hiring_manager")!).has("applicants.import")).toBe(false);
+  });
+
+  it("seeds the Member's assigned-job keys in SQL (BI-PERM-001)", () => {
+    expect(migrationArray("-- @member-assigned-keys").sort()).toEqual([...MEMBER_ASSIGNED_KEYS].sort());
+  });
+});
+
+describe("mcp.use (RMCP spec §4.1, RMT-010)", () => {
+  it("is an Agent key of its own, not scopable, with no dependencies", () => {
+    expect(permissionEntry("mcp.use")).toMatchObject({
+      group: "Agent",
+      label: "Use GetHired from AI clients",
+      description: "Connect Claude, ChatGPT, Cursor and other MCP clients. Their tools follow the other permissions.",
+      scopable: false,
+      requires: [],
+    });
+  });
+
+  it("neither implies agent.use nor is implied by it", () => {
+    expect([...expandDependencies([{ key: "mcp.use", scope: "all" }]).keys()]).toEqual(["mcp.use"]);
+    expect(expandDependencies([{ key: "agent.use", scope: "all" }]).has("mcp.use")).toBe(false);
+    expect(permissionEntry("agent.use").requires).not.toContain("mcp.use");
+  });
+
+  it("names the missing permission in the 403 copy", () => {
+    expect(forbiddenMessage("mcp.use")).toBe("Your role can't use GetHired from AI clients.");
+  });
+
+  it("is on for Admin and off for the other templates (§11 Q1)", () => {
+    for (const t of ROLE_TEMPLATES) {
+      expect(templateGrants(t).has("mcp.use"), t.key).toBe(t.key === "admin");
+    }
+  });
+
+  it("passes for an owner without an explicit grant", () => {
+    expect(can(access([], { isOwner: true }), "mcp.use")).toBe(true);
+    expect(can(access([["agent.use", "all"]]), "mcp.use")).toBe(false);
+  });
+});
+
 describe("forbiddenMessage", () => {
   it("comes from the catalog", () => {
     expect(forbiddenMessage("jobs.edit")).toBe("Your role can't edit job posts.");
@@ -335,12 +396,14 @@ describe("role templates (RP-REQ-005)", () => {
     }
   });
 
-  it("Admin and Member equal RP-REQ-004 exactly, at scope all", () => {
+  it("Admin and Member equal RP-REQ-004 exactly, at scope all (plus the Member's assigned-job keys)", () => {
     const admin = templateGrants(roleTemplate("admin")!);
     const member = templateGrants(roleTemplate("member")!);
     expect([...admin.keys()].sort()).toEqual([...ADMIN_KEYS].sort());
-    expect([...member.keys()].sort()).toEqual([...MEMBER_KEYS].sort());
-    expect(new Set([...admin.values(), ...member.values()])).toEqual(new Set(["all"]));
+    expect([...member.keys()].sort()).toEqual([...MEMBER_KEYS, ...MEMBER_ASSIGNED_KEYS].sort());
+    expect(new Set(admin.values())).toEqual(new Set(["all"]));
+    for (const key of MEMBER_KEYS) expect(member.get(key), key).toBe("all");
+    for (const key of MEMBER_ASSIGNED_KEYS) expect(member.get(key), key).toBe("assigned");
     expect(admin.has("company.profile")).toBe(false);
     expect(admin.has("billing.view")).toBe(true);
   });

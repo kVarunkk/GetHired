@@ -40,7 +40,7 @@ export default async function DashboardPage() {
     const { data: userInfoData, error: userInfoError } = await supabase
       .from("user_info")
       .select(
-        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id), user_api_tokens(id)",
+        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id)",
       )
       .eq("user_id", user.id)
       .single();
@@ -314,18 +314,12 @@ export default async function DashboardPage() {
             <Card className="flex flex-col p-4 text-center">
               {/* <CardHeader className="p-0"></CardHeader> */}
               <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full flex-1">
-                <div className=" flex items-center gap-3 ">
-                  <span className="text-3xl font-semibold tracking-tight">
-                    {userInfoData.user_api_tokens.length}
-                  </span>
-
-                  <span className="text-sm text-muted-foreground font-medium">
-                    API Keys created
-                  </span>
-                </div>
+                <span className="text-sm text-muted-foreground font-medium">
+                  Use GetHired from Claude, Cursor or any other MCP client
+                </span>
                 <Button asChild>
-                  <Link href={"/dashboard/api-keys"}>
-                    View API Keys
+                  <Link href={"/mcp"}>
+                    Connect an MCP client
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>

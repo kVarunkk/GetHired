@@ -11,7 +11,10 @@ import { AGENT_LIST_DEFAULT_LIMIT, AGENT_LIST_MAX_LIMIT } from "../config";
 export type AgentToolContext = {
   supabase: SupabaseClient<Database>;
   user: User;
-  sessionId: string;
+  /** The chat session; null for MCP calls, which have none. */
+  sessionId: string | null;
+  /** Where the call comes from: the chat agent or the MCP server. */
+  surface: "agent" | "mcp";
 };
 
 export type ToolError = { error: string; [key: string]: unknown };
@@ -75,7 +78,11 @@ export async function withToolErrors<T>(
     await eventCaptureServerException({
       error,
       distinctId: ctx.user.id,
-      properties: { flow: "agent_tool", tool: toolName, session_id: ctx.sessionId },
+      properties: {
+        flow: ctx.surface === "mcp" ? "mcp_tool" : "agent_tool",
+        tool: toolName,
+        session_id: ctx.sessionId,
+      },
     });
     return {
       error: `Something went wrong while running ${toolName}. Please try again.`,

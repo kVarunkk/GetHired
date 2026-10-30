@@ -19,11 +19,13 @@ export const AUDIT_ACTIONS = [
   "invite.accepted",
   "job.assigned",
   "job.unassigned",
+  "candidates.imported",
+  "candidates.deleted",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 /** The filter's action types: `list_company_audit` matches a prefix (`role` → `role.*`). */
-export const AUDIT_ACTION_GROUP_VALUES = ["role", "member", "owner", "invite", "job"] as const;
+export const AUDIT_ACTION_GROUP_VALUES = ["role", "member", "owner", "invite", "job", "candidates"] as const;
 export type AuditActionGroup = (typeof AUDIT_ACTION_GROUP_VALUES)[number];
 
 export const AUDIT_ACTION_GROUP_LABEL: Record<AuditActionGroup, string> = {
@@ -32,6 +34,7 @@ export const AUDIT_ACTION_GROUP_LABEL: Record<AuditActionGroup, string> = {
   owner: "Owners",
   invite: "Invites",
   job: "Hiring teams",
+  candidates: "Candidates",
 };
 
 export const AUDIT_PAGE_SIZE = 50;
@@ -194,6 +197,23 @@ export function describeAuditEntry(entry: AuditEntry): { text: string; details: 
     }
     case "job.unassigned":
       return { text: `removed ${str(before.name) ?? "a member"} from the hiring team for ${target}${via}`, details: [] };
+    // No names or emails are logged for candidates (BI-REQ-007): counts only.
+    case "candidates.imported": {
+      const n = (key: string) => (typeof after[key] === "number" ? (after[key] as number) : 0);
+      const created = n("created");
+      const updated = n("updated");
+      const details = [
+        updated ? `${updated} updated` : null,
+        n("added_to_job") ? `${n("added_to_job")} added to a job` : null,
+        n("known") ? `${n("known")} already in your pipeline` : null,
+      ].filter((d): d is string => d !== null);
+      const from = entry.targetLabel ? ` from ${entry.targetLabel}` : "";
+      return { text: `imported ${created} candidate${created === 1 ? "" : "s"}${from}${via}`, details };
+    }
+    case "candidates.deleted": {
+      const count = typeof after.count === "number" ? after.count : 0;
+      return { text: `deleted ${count} candidate${count === 1 ? "" : "s"}${via}`, details: [] };
+    }
     default:
       return { text: `${entry.action.replace(/[._]/g, " ")} ${target}`.trim(), details: [] };
   }

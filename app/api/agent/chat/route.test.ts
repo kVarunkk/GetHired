@@ -566,7 +566,11 @@ describe("POST /api/agent/chat: tool loop", () => {
     const res = await submit(text("u1", "user", "react jobs"));
     const body = await res.text();
 
-    expect(searchJobs).toHaveBeenCalledWith(supabase.client, { jobTitleKeywords: "react", limit: 10 });
+    expect(searchJobs).toHaveBeenCalledWith(
+      supabase.client,
+      expect.objectContaining({ id: "u1" }),
+      { jobTitleKeywords: "react", limit: 10 },
+    );
     expect(body).toContain("tool-output-available");
     expect(body).toContain("React Dev");
     expect(streamedText(body)).toBe("Found 1 job.");

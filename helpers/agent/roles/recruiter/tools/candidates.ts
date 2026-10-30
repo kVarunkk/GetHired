@@ -8,10 +8,14 @@ import { searchProfiles } from "@/helpers/profiles/search-profiles";
 import { loadVisibleCandidates } from "@/helpers/profiles/visible-candidates";
 import { getCandidateMatches } from "@/helpers/matching/candidate-matches";
 import { parseStoredExplanation, type MatchExplanation } from "@/helpers/matching/schemas";
-import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
+import { queueJobPostingRelevance } from "@/helpers/profiles/queue-job-relevance";
 import { outreachStatusFor, type OutreachBadge } from "@/helpers/outreach/list";
 import type { TResumeRowContent } from "@/utils/types";
 import { AGENT_LIST_DEFAULT_LIMIT } from "@/helpers/agent/config";
+import { addCandidatesToJob } from "@/helpers/candidates/add-to-job";
+import { describeAddToJob } from "@/helpers/candidates/copy";
+import { candidateImportPath, candidatePath } from "@/helpers/candidates/paths";
+import { listPoolMatches } from "@/helpers/candidates/pool-matches";
 import { RA_MAX_COMPARE, RA_UPGRADE_URL } from "../config";
 import {
   AGENT_CANDIDATE_COLUMNS,
@@ -22,6 +26,7 @@ import {
   limitInput,
   outreachUrl,
   type RecruiterToolContext,
+  requireToolPermission,
   resumeExcerpt,
   textListInput,
   uuidInput,
@@ -32,6 +37,14 @@ const JOB_NOT_FOUND = { error: "Job post not found." } as const;
 const CONTACT_NOTE =
   "Contact details are shared when the candidate answers Interested to your outreach or applies to one of your jobs.";
 const CANDIDATE_NOT_FOUND = { error: "Candidate not found." } as const;
+/** CP-REQ-063: skills per pool candidate in a tool output. */
+const POOL_SKILLS_MAX = 15;
+/** CP-REQ-063: company candidates added to a job in one call. */
+const ADD_TO_JOB_MAX = 50;
+
+/** A company candidate's own text, sandboxed (CP-SEC-003); null when empty. */
+const sandboxedText = (tag: string, value: string | null | undefined) =>
+  value?.trim() ? wrapInSandbox(tag, value.trim()) : null;
 
 // AGENT_CANDIDATE_COLUMNS plus the detail fields, as one literal so Supabase can type the row.
 const PROFILE_DETAIL_COLUMNS =
@@ -179,8 +192,8 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
       inputSchema: z.object({ jobPostId: uuidInput("job post") }),
       execute: ({ jobPostId }) =>
         withToolErrors(ctx, "runMatchingForJob", async () => {
-          // The action checks the job belongs to the session's company.
-          const result = await triggerJobPostingRelevanceUpdate(jobPostId);
+          // The helper checks the job belongs to the session's company.
+          const result = await queueJobPostingRelevance(ctx, jobPostId);
           if (!result.success) return { error: result.error };
           return {
             status: "processing",
@@ -390,6 +403,68 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
             if (insertError) throw insertError;
           }
           return { candidateId, saved: true };
+        }),
+    }),
+
+    findPoolCandidates: tool({
+      description:
+        "List the company's own candidates (people it imported or added, who aren't on GetHired) whose profile is closest to one of its jobs, best first, with a similarity from 0 to 100. Similarity compares the profile with the job's text: it isn't a fit score or a recommendation. Never includes contact details. addCandidatesToJob adds them to the job.",
+      inputSchema: z.object({ jobPostId: uuidInput("job post"), limit: limitInput }),
+      execute: ({ jobPostId, limit }) =>
+        withToolErrors(ctx, "findPoolCandidates", async () => {
+          // talent.view is checked before the call; the job needs jobs.view too (CP-REQ-063).
+          const denied = requireToolPermission(ctx, "jobs.view", jobPostId);
+          if (denied) return denied;
+
+          const result = await listPoolMatches(supabase, jobPostId, { limit: limit ?? AGENT_LIST_DEFAULT_LIMIT });
+          if (!result.ok) return { error: result.error };
+          if (result.status === "no_job_embedding") {
+            return {
+              status: "job_not_ready",
+              message: "The job was saved moments ago and is still being read. Try again in a minute.",
+            };
+          }
+          if (result.status === "no_pool") {
+            return {
+              status: "no_candidates",
+              message: "None of the company's candidates has a resume, title or skills to match on yet.",
+              importUrl: candidateImportPath(),
+            };
+          }
+          return {
+            candidates: result.matches.map((m) => ({
+              candidateId: m.id,
+              name: wrapInSandbox("candidate_name", m.name.trim() || "Candidate"),
+              title: sandboxedText("candidate_title", m.title),
+              location: sandboxedText("candidate_location", m.location),
+              experienceYears: m.experienceYears,
+              skills: sandboxedText("candidate_skills", m.skills.slice(0, POOL_SKILLS_MAX).join(", ")),
+              similarity: m.score,
+              hasResume: m.hasResume,
+              hasEmail: m.hasEmail,
+              url: candidatePath(m.id),
+            })),
+          };
+        }),
+    }),
+
+    addCandidatesToJob: tool({
+      description:
+        "Add up to 50 of the company's own candidates (ids from findPoolCandidates) to one of its jobs as applications, in the job's first stage unless stageId says otherwise. Nobody is emailed. Candidates with no email, or already in the job, are counted and skipped.",
+      inputSchema: z.object({
+        jobPostId: uuidInput("job post"),
+        candidateIds: z.array(z.string().uuid()).min(1).max(ADD_TO_JOB_MAX),
+        stageId: z.string().uuid().optional().describe("A pipeline stage id from listStages."),
+      }),
+      execute: ({ jobPostId, candidateIds, stageId }) =>
+        withToolErrors(ctx, "addCandidatesToJob", async () => {
+          const result = await addCandidatesToJob(supabase, { jobPostId, candidateIds, stageId });
+          if (!result.ok) return { error: result.error };
+          return {
+            counts: result.counts,
+            summary: describeAddToJob(result.counts),
+            applicationsUrl: `/company/job-posts/${jobPostId}/applications`,
+          };
         }),
     }),
 

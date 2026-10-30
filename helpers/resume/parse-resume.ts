@@ -1,61 +1,13 @@
 import { reportError } from "@/helpers/posthog/report-error";
-import { z } from "zod";
 import { wrapInSandbox } from "../ai/security";
 import { generateText, Output } from "ai";
-import { CanvasFactory } from "pdf-parse/worker";
-import { PDFParse } from "pdf-parse";
+import { extractPdfLines } from "./extract-text";
+import { ResumeSchema, withBulletIds } from "./resume-schema";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendResumeParsingStatusEmail } from "@/app/actions/send-resume-status-email";
 import { deductUserCreditsHelper } from "../ai/deduct-user-credits";
 import { TAICredits } from "@/utils/types";
-import { v4 as uuidv4 } from "uuid";
 import { google } from "@ai-sdk/google";
-
-const ResumeSchema = z.object({
-  sections: z.array(
-    z.object({
-      type: z.enum([
-        "experience",
-        "projects",
-        "skills",
-        "education",
-        "summary",
-        "achievements",
-        "other",
-      ]),
-      items: z.array(
-        z.object({
-          heading: z.string().optional(),
-          subheading: z.string().optional(),
-          bullets: z.array(
-            z.object({
-              text: z.string().min(1),
-              lineIndices: z
-                .array(z.number())
-                .describe("Original indices used for this text."),
-            }),
-          ),
-        }),
-      ),
-    }),
-  ),
-});
-
-async function extractTextFromPdf(url: string): Promise<string[]> {
-  const parser = new PDFParse({ url: url, CanvasFactory });
-  try {
-    const result = await parser.getText();
-    const rawText = result.text
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
-    return rawText;
-  } catch {
-    throw new Error("Some error occured while extracting text from pdf.");
-  } finally {
-    parser.destroy();
-  }
-}
 
 async function generateStructuredProfile(lines: string[]) {
   try {
@@ -87,18 +39,7 @@ async function generateStructuredProfile(lines: string[]) {
       }),
     });
 
-    const processedSections = rawProfile.sections.map((section) => ({
-      ...section,
-      items: section.items.map((item) => ({
-        ...item,
-        bullets: item.bullets.map((bullet) => ({
-          ...bullet,
-          id: uuidv4(),
-        })),
-      })),
-    }));
-
-    return { sections: processedSections };
+    return withBulletIds(rawProfile);
   } catch (err) {
     reportError("[RESUME_STRUCTURE_ERROR]:", err);
     throw new Error("AI engine failed to generate a valid document structure.");
@@ -155,7 +96,7 @@ export async function parseResume(userId: string, resumeId: string) {
     }
 
     // 3. Processing Operations
-    const lines = await extractTextFromPdf(signedUrlData.signedUrl);
+    const lines = await extractPdfLines({ url: signedUrlData.signedUrl });
     if (!lines || lines.length === 0) {
       throw new Error("Resume file contained no readable text.");
     }

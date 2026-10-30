@@ -6,7 +6,10 @@ import InterviewExpiredEmail from "@/emails/InterviewExpiredEmail";
 import InterviewReminderEmail from "@/emails/InterviewReminderEmail";
 import { sendEmail } from "@/utils/email";
 import type { Database, Json } from "@/utils/types/database.types";
+import { createClaimLink } from "@/helpers/candidates/claim-token";
+import { unsubscribeUrl } from "@/helpers/candidates/unsubscribe-token";
 import { screeningInterviewUrl } from "./invite";
+import { interviewPeople } from "./people";
 import {
   companyApplicantUrl,
   completedUnscored,
@@ -29,14 +32,11 @@ async function sendRendered(toEmail: string, subject: string, message: React.Rea
   await sendEmail({ toEmail, subject, htmlContent, textContent });
 }
 
-async function applicantsById(admin: Admin, ids: string[]) {
-  const { data } = await admin.from("user_info").select("user_id, email, full_name").in("user_id", ids);
-  return new Map((data ?? []).map((p) => [p.user_id, p]));
-}
-
 /**
  * Invites still `invited` at their deadline become `expired`; the candidate
- * and the company are both told (SI-REQ-014). Returns how many expired.
+ * and the company are both told (SI-REQ-014). An imported applicant who
+ * hasn't claimed it is told at their candidate email with the unsubscribe
+ * link, unless they unsubscribed (BI-REQ-034). Returns how many expired.
  */
 export async function expireInterviews(admin: Admin): Promise<number> {
   const { data: ids, error } = await admin.rpc("expire_screening_interviews");
@@ -46,23 +46,28 @@ export async function expireInterviews(admin: Admin): Promise<number> {
 
   const { data: interviews } = await admin
     .from("application_interviews")
-    .select("id, company_id, job_post_id, application_id, applicant_user_id, config_snapshot")
+    .select("id, company_id, job_post_id, application_id, applicant_user_id, company_candidate_id, config_snapshot")
     .in("id", expired);
-  const people = await applicantsById(admin, (interviews ?? []).map((i) => i.applicant_user_id));
+  const personOf = await interviewPeople(admin, interviews ?? []);
 
   for (const interview of interviews ?? []) {
     const snapshot = interview.config_snapshot as ConfigSnapshot;
-    const person = people.get(interview.applicant_user_id);
+    const person = personOf(interview);
     const subject = `Your AI interview for ${snapshot.job_title} expired`;
     try {
       if (person?.email) {
         await sendRendered(
           person.email,
           subject,
-          <InterviewExpiredEmail audience="candidate" companyName={snapshot.company_name} jobTitle={snapshot.job_title} />,
+          <InterviewExpiredEmail
+            audience="candidate"
+            companyName={snapshot.company_name}
+            jobTitle={snapshot.job_title}
+            unsubscribeUrl={person.candidateId ? unsubscribeUrl(person.candidateId) : null}
+          />,
         );
       }
-      const candidateName = person?.full_name?.trim() || "A candidate";
+      const candidateName = person?.fullName?.trim() || "A candidate";
       const recipients = await interviewRecipientEmails(admin, interview.company_id, interview.job_post_id);
       for (const toEmail of recipients) {
         await sendRendered(
@@ -87,7 +92,8 @@ export async function expireInterviews(admin: Admin): Promise<number> {
 /**
  * One reminder, 48 hours before the deadline, for an interview not started
  * yet. The update claims the rows (reminder_sent_at), so two runs never
- * send twice.
+ * send twice. An imported applicant who hasn't claimed it gets a new claim
+ * link and the unsubscribe link, unless they unsubscribed (BI-REQ-034/041).
  */
 export async function sendReminders(admin: Admin): Promise<number> {
   const now = new Date();
@@ -100,25 +106,34 @@ export async function sendReminders(admin: Admin): Promise<number> {
     .is("reminder_sent_at", null)
     .lte("deadline_at", until.toISOString())
     .gt("deadline_at", now.toISOString())
-    .select("id, applicant_user_id, deadline_at, config_snapshot");
+    .select("id, company_id, applicant_user_id, company_candidate_id, deadline_at, config_snapshot");
   if (error) throw new Error(`Couldn't claim reminders: ${error.message}`);
   if (!claimed?.length) return 0;
 
-  const people = await applicantsById(admin, claimed.map((i) => i.applicant_user_id));
+  const personOf = await interviewPeople(admin, claimed);
   for (const interview of claimed) {
-    const email = people.get(interview.applicant_user_id)?.email;
-    if (!email) continue;
+    const person = personOf(interview);
+    if (!person?.email) continue;
     const snapshot = interview.config_snapshot as ConfigSnapshot;
     try {
+      const interviewUrl = person.candidateId
+        ? await createClaimLink(admin, {
+            companyId: interview.company_id,
+            candidateId: person.candidateId,
+            applicationInterviewId: interview.id,
+            expiresAt: interview.deadline_at,
+          })
+        : screeningInterviewUrl(interview.id);
       await sendRendered(
-        email,
+        person.email,
         `Reminder: your AI interview for ${snapshot.job_title}`,
         <InterviewReminderEmail
           companyName={snapshot.company_name}
           jobTitle={snapshot.job_title}
           durationMinutes={snapshot.duration_minutes}
           deadlineAt={interview.deadline_at}
-          interviewUrl={screeningInterviewUrl(interview.id)}
+          interviewUrl={interviewUrl}
+          unsubscribeUrl={person.candidateId ? unsubscribeUrl(person.candidateId) : null}
         />,
       );
     } catch (err) {

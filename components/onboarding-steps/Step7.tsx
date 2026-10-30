@@ -98,7 +98,11 @@ export const Step7ReviewSubmit: React.FC<StepProps> = ({ formData }) => (
         <div className="space-y-1 text-sm ">
           <p>
             <span className="text-muted-foreground">Resume File:</span>{" "}
-            {formData.resume_id ? "Stored" : "Not Stored"}
+            {formData.use_claim_resume
+              ? formData.claim_resume_name
+              : formData.resume_id
+                ? "Stored"
+                : "Not Stored"}
           </p>
         </div>
       </div>

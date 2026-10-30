@@ -6,12 +6,14 @@ import {
 } from "@/test/utils/supabase-mock";
 import { COMPANY_A, PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import {
+  addCompanyCandidateToTalentList,
   addToTalentList,
   createTalentList,
   deleteTalentList,
   listTalentLists,
   findTalentListIdBySlug,
   PRIVATE_CANDIDATE_ERROR,
+  removeCompanyCandidateFromTalentList,
   removeFromTalentList,
   renameTalentList,
 } from "./talent-lists";
@@ -146,16 +148,52 @@ describe("talent lists (PLT-090, PL-TASK-051)", () => {
     });
 
     const [insert] = db.callsFor("talent_list_members");
-    expect(argsOf(insert, "upsert")).toEqual([
-      { list_id: LIST_ID, candidate_user_id: PUBLIC_APPLICANT.id },
-      { onConflict: "list_id,candidate_user_id", ignoreDuplicates: true },
-    ]);
+    expect(argsOf(insert, "insert")).toEqual([{ list_id: LIST_ID, candidate_user_id: PUBLIC_APPLICANT.id }]);
     expect(db.callsFor("candidate_directory")[0].chain).toContainEqual({
       method: "eq",
       args: ["user_id", PUBLIC_APPLICANT.id],
     });
     // A talent-pool candidate's user_info row is never read (OR-SEC-001).
     expect(db.callsFor("user_info")).toHaveLength(0);
+  });
+
+  it("reads a duplicate member as already added (the keys are partial indexes, BI-DEC-003)", async () => {
+    db.queue("talent_lists", { data: { id: LIST_ID }, error: null });
+    db.queue("candidate_directory", { data: { filled: true }, error: null });
+    db.queue("talent_list_members", { data: null, error: { code: "23505", message: "duplicate" } });
+
+    expect(await addToTalentList(ctx(), LIST_ID, PUBLIC_APPLICANT.id)).toEqual({ ok: true });
+  });
+
+  it("adds and removes a company candidate (BI-REQ-006)", async () => {
+    const CANDIDATE = "cc000000-0000-4000-8000-000000000001";
+    db.queue("talent_lists", { data: { id: LIST_ID }, error: null });
+    db.queue("company_candidates", { data: { id: CANDIDATE }, error: null });
+    db.queue("talent_list_members", { data: null, error: null });
+
+    expect(await addCompanyCandidateToTalentList(ctx(), LIST_ID, CANDIDATE)).toEqual({ ok: true });
+    expect(argsOf(db.callsFor("talent_list_members")[0], "insert")).toEqual([
+      { list_id: LIST_ID, company_candidate_id: CANDIDATE },
+    ]);
+    expect(db.callsFor("company_candidates")[0].chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
+
+    db.queue("talent_lists", { data: { id: LIST_ID }, error: null });
+    db.queue("talent_list_members", { data: null, error: null });
+    expect(await removeCompanyCandidateFromTalentList(ctx(), LIST_ID, CANDIDATE)).toEqual({ ok: true });
+    expect(db.callsFor("talent_list_members")[1].chain).toContainEqual({
+      method: "eq",
+      args: ["company_candidate_id", CANDIDATE],
+    });
+  });
+
+  it("refuses another company's candidate", async () => {
+    db.queue("talent_lists", { data: { id: LIST_ID }, error: null });
+    db.queue("company_candidates", { data: null, error: null });
+
+    expect(
+      await addCompanyCandidateToTalentList(ctx(), LIST_ID, "cc000000-0000-4000-8000-000000000009"),
+    ).toEqual({ ok: false, error: "Candidate not found." });
+    expect(db.callsFor("talent_list_members")).toHaveLength(0);
   });
 
   it("refuses a candidate the company can't view (not in the directory, RLS hides the row)", async () => {
@@ -241,11 +279,13 @@ describe("talent lists (PLT-090, PL-TASK-051)", () => {
         {
           ...LIST,
           talent_list_members: [
-            { candidate_user_id: PUBLIC_APPLICANT.id },
-            { candidate_user_id: "other" },
+            { candidate_user_id: PUBLIC_APPLICANT.id, company_candidate_id: null },
+            { candidate_user_id: "other", company_candidate_id: null },
             // Went private (or blocked the company) after being added: still a
             // member, but the directory and the tab don't show them.
-            { candidate_user_id: "gone-private" },
+            { candidate_user_id: "gone-private", company_candidate_id: null },
+            // A company candidate always counts (BI-REQ-006).
+            { candidate_user_id: null, company_candidate_id: "cc1" },
           ],
         },
         {
@@ -270,7 +310,7 @@ describe("talent lists (PLT-090, PL-TASK-051)", () => {
         id: LIST_ID,
         name: "Backend shortlist",
         slug: "backend-shortlist",
-        memberCount: 2,
+        memberCount: 3,
         hasCandidate: true,
       },
       {

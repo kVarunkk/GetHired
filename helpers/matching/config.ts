@@ -95,3 +95,16 @@ export const SCREENING_TIMEOUT_MS = 60_000;
 /** The UI polls a queued or processing screening this often, for at most SCREENING_POLL_MAX_MS. */
 export const SCREENING_POLL_MS = 5_000;
 export const SCREENING_POLL_MAX_MS = 120_000;
+
+/**
+ * CP-REQ-050/051: candidate pool matching. Cosine similarity between a
+ * company candidate's embedding and a job's. Matches below the minimum aren't
+ * shown; the score maps [FLOOR, CEILING] to 0–100. Calibrate on live data.
+ * `match_company_candidates`' default threshold mirrors the minimum (a test
+ * reads it from the migration).
+ */
+export const POOL_MATCH_MIN_SIMILARITY = 0.55;
+export const POOL_MATCH_FLOOR = 0.5;
+export const POOL_MATCH_CEILING = 0.85;
+/** Matches a job page or the agent asks for. */
+export const POOL_MATCH_LIMIT = 50;

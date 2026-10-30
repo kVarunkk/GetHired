@@ -4,6 +4,8 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { safeReturnPath } from "@/helpers/user/home-path";
+import { loadClaimPrefill } from "@/helpers/candidates/claim-prefill";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -34,6 +36,11 @@ export default async function GetStartedPage({
   // only the owner (company_info.user_id).
   const myCompany = company && user ? await getMyCompany(supabase, user) : null;
 
+  // BIT-105: after a claim, prefill from the company's record. Only a claim
+  // this user made loads anything; otherwise the form is as it always was.
+  const claimToken = !company && user && typeof params.claim === "string" ? params.claim : null;
+  const claimPrefill = claimToken ? await loadClaimPrefill(createServiceRoleClient(), claimToken, user!.id) : null;
+
   return (
     <div>
       {company ? (
@@ -47,7 +54,10 @@ export default async function GetStartedPage({
           returnTo={safeReturnPath(params.returnTo)}
         />
       ) : (
-        <OnboardingForm />
+        <OnboardingForm
+          claimPrefill={claimPrefill && claimToken ? { ...claimPrefill, token: claimToken } : undefined}
+          returnTo={claimPrefill ? safeReturnPath(params.returnTo) : null}
+        />
       )}
     </div>
   );

@@ -70,12 +70,16 @@ export default function NavbarComponent({
   // RP-REQ-016: Billing is hidden from company roles without billing.view.
   const { data: profile } = useSWR(user ? PROFILE_API_KEY : null, fetcher, { revalidateOnFocus: false });
   const showBilling = !isCompanyUser || profile?.profile?.access?.billingView !== false;
+  // BI-PERM-002: the Candidates list needs talent.view.
+  const showCandidates = profile?.profile?.access?.talentView !== false;
   const openOutreach = useOpenOutreachCount(user);
   const navItems = useMemo(() => {
-    return getNavItemsByPath(pathname, isCompanyUser, user).map((item) =>
-      item.id === "opportunities" ? { ...item, count: openOutreach } : item,
-    );
-  }, [pathname, user, isCompanyUser, openOutreach]);
+    return getNavItemsByPath(pathname, isCompanyUser, user)
+      .filter((item) => item.id !== "candidates" || showCandidates)
+      .map((item) =>
+        item.id === "opportunities" ? { ...item, count: openOutreach } : item,
+      );
+  }, [pathname, user, isCompanyUser, openOutreach, showCandidates]);
 
   const navbarItems = navItems.map((each) => {
     let isActive = false;

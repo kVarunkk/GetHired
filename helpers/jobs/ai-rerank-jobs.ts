@@ -1,46 +1,51 @@
 import { reportError } from "@/helpers/posthog/report-error";
-import { headers } from "next/headers";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/utils/types/database.types";
 import { AllJobWithRelations, TAICredits } from "../../utils/types";
-import { INTERNAL_API_SECRET } from "@/utils/formatters";
-import { getBaseUrl } from "@/utils/get-base-url";
+import {
+  rerankJobsForUser,
+  rerankSimilarJobs,
+} from "@/helpers/jobs/rerank-jobs";
 
 interface RerankResult {
   initialJobs: AllJobWithRelations[];
   totalCount: number;
 }
 
-export async function rerankJobsIfApplicable({
-  initialJobs,
-  initialCount,
-  userId,
-  jobId,
-  aiCredits = 0,
-  matchedJobIds,
-  relevanceSearchType,
-  cursor,
-  isInternalCall,
-}: {
-  initialJobs: AllJobWithRelations[];
-  initialCount: number;
-  userId?: string;
-  jobId: string | null;
-  aiCredits?: number;
-  matchedJobIds: string[];
-  relevanceSearchType:
-    | "standard"
-    | "job_digest"
-    | "job_digest_with_suggestions"
-    | "similar_jobs"
-    | null;
-  cursor: string | null;
-  isInternalCall: boolean;
-}): Promise<RerankResult> {
-  let finalJobs = initialJobs;
+/**
+ * Restores the vector order of a relevance search and, on its first page,
+ * re-ranks the top 50 with AI (charging the user). Runs in-process with the
+ * caller's client, so the agent and MCP need nothing from the request.
+ */
+export async function rerankJobsIfApplicable(
+  supabase: SupabaseClient<Database>,
+  {
+    initialJobs,
+    initialCount,
+    userId,
+    jobId,
+    aiCredits = 0,
+    matchedJobIds,
+    relevanceSearchType,
+    cursor,
+  }: {
+    initialJobs: AllJobWithRelations[];
+    initialCount: number;
+    userId?: string;
+    jobId: string | null;
+    aiCredits?: number;
+    matchedJobIds: string[];
+    relevanceSearchType:
+      | "standard"
+      | "job_digest"
+      | "job_digest_with_suggestions"
+      | "similar_jobs"
+      | null;
+    cursor: string | null;
+  },
+): Promise<RerankResult> {
   let finalCount = initialCount;
   let removedJobs: AllJobWithRelations[] = [];
-
-  const headersList = await headers();
-  const url = await getBaseUrl();
 
   const requiredCredits = TAICredits.AI_SEARCH_ASK_AI_RESUME;
 
@@ -51,11 +56,13 @@ export async function rerankJobsIfApplicable({
       .map((id) => jobMap.get(id))
       .filter((job): job is AllJobWithRelations => !!job);
   }
+  let finalJobs = initialJobs;
 
   if (
     cursor ||
     !finalJobs ||
     finalJobs.length === 0 ||
+    !userId ||
     !relevanceSearchType ||
     relevanceSearchType === "standard" ||
     (relevanceSearchType === "similar_jobs" && !jobId) ||
@@ -65,59 +72,34 @@ export async function rerankJobsIfApplicable({
   }
 
   try {
-    const requestHeaders: Record<string, string> = {};
-    const cookie = headersList.get("Cookie");
-    const authHeader = headersList.get("Authorization");
-
-    if (isInternalCall) {
-      requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
-    } else if (cookie) {
-      requestHeaders["Cookie"] = cookie;
-    } else if (authHeader) {
-      // for stdio mcp gh token
-      requestHeaders["Authorization"] = authHeader;
-    }
-
-    // only keep top 50 jobs in initialJobs(will be sent to AI for filtering) and rest in removedJobs(will be concatenated later).
-    removedJobs = initialJobs.splice(50);
-    const aiRerankRes = await fetch(
-      `${url}/api/ai-search/jobs${
-        relevanceSearchType === "similar_jobs" ? "/similar-jobs" : ""
-      }`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...requestHeaders,
-        },
-        body: JSON.stringify({
-          userId: userId,
-          jobs: initialJobs.map((job) => ({
-            id: job.id,
-            job_name: job.job_name,
-            description: job.description?.slice(0, 400),
-            visa_requirement: job.visa_requirement,
-            salary_range: job.salary_range,
-            locations: job.locations,
-            experience: job.experience,
-          })),
-          ...(relevanceSearchType === "similar_jobs"
-            ? { jobId: jobId, aiCredits }
-            : {
-                type: relevanceSearchType,
-              }),
-        }),
-      },
+    // only keep top 50 jobs in toRerank (sent to AI for filtering) and the rest in removedJobs (concatenated later).
+    const toRerank = initialJobs.slice(0, 50);
+    removedJobs = initialJobs.slice(50);
+    const jobs = toRerank.map(
+      (job) =>
+        ({
+          id: job.id,
+          job_name: job.job_name,
+          description: job.description?.slice(0, 400),
+          visa_requirement: job.visa_requirement,
+          salary_range: job.salary_range,
+          locations: job.locations,
+          experience: job.experience,
+        }) as AllJobWithRelations,
     );
 
-    const aiRerankResult: {
-      rerankedJobs: string[] | { id: string; reason?: string }[];
-      filteredOutJobs: string[];
-    } = await aiRerankRes.json();
+    const aiRerankResult =
+      relevanceSearchType === "similar_jobs"
+        ? await rerankSimilarJobs(supabase, { userId, jobId: jobId!, jobs })
+        : await rerankJobsForUser(supabase, {
+            userId,
+            jobs,
+            type: relevanceSearchType,
+          });
 
-    if (aiRerankRes.ok && aiRerankResult.rerankedJobs) {
+    if (aiRerankResult?.rerankedJobs) {
       const filteredOutIdsSet = new Set(aiRerankResult.filteredOutJobs || []);
-      const jobMap = new Map(initialJobs.map((job) => [job.id, job]));
+      const jobMap = new Map(toRerank.map((job) => [job.id, job]));
 
       if (
         relevanceSearchType === "job_digest_with_suggestions" &&
@@ -171,7 +153,7 @@ export async function rerankJobsIfApplicable({
       }
     }
   } catch (e) {
-    reportError("Error during AI Rerank fetch:", e);
+    reportError("Error during AI rerank:", e);
   }
 
   return { initialJobs: finalJobs, totalCount: finalCount };

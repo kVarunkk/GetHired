@@ -122,6 +122,99 @@ describe("/api/updates/screening-interviews (SI-REQ-014, SI-TEST-009)", () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
+  describe("an imported applicant who hasn't claimed it (BIT-063, BI-REQ-034/041)", () => {
+    const CANDIDATE = "cc000000-0000-4000-8000-000000000001";
+    const candidate = (over: Record<string, unknown> = {}) => ({
+      id: CANDIDATE,
+      email: "meera@mail.test",
+      full_name: "Meera Iyer",
+      email_opted_out_at: null,
+      ...over,
+    });
+
+    it("reminds them at their candidate email with a new claim link and the unsubscribe link", async () => {
+      queueQuiet();
+      db.queue("application_interviews", {
+        data: [
+          {
+            id: "ai3",
+            company_id: "c1",
+            applicant_user_id: null,
+            company_candidate_id: CANDIDATE,
+            deadline_at: "2026-10-20T12:00:00.000Z",
+            config_snapshot: snapshot(),
+          },
+        ],
+        error: null,
+      });
+      db.queue("company_candidates", { data: [candidate()], error: null });
+      db.queue("company_candidate_claims", { data: null, error: null });
+
+      expect(await (await run()).json()).toMatchObject({ reminded: 1 });
+      const mail = vi.mocked(sendEmail).mock.calls[0][0];
+      expect(mail.toEmail).toBe("meera@mail.test");
+      expect(mail.htmlContent).toMatch(/https:\/\/app\.test\/claim\/[\w-]{43}/);
+      expect(mail.htmlContent).not.toContain("/interview/screening/ai3");
+      expect(mail.htmlContent).toContain(`https://app.test/unsubscribe/candidate/${CANDIDATE}.`);
+      const insert = db.callsFor("company_candidate_claims")[0].chain.find((c) => c.method === "insert")!;
+      expect(insert.args[0]).toMatchObject({
+        candidate_id: CANDIDATE,
+        application_interview_id: "ai3",
+        expires_at: "2026-10-20T12:00:00.000Z",
+      });
+    });
+
+    it("skips the reminder when they unsubscribed", async () => {
+      queueQuiet();
+      db.queue("application_interviews", {
+        data: [
+          {
+            id: "ai3",
+            company_id: "c1",
+            applicant_user_id: null,
+            company_candidate_id: CANDIDATE,
+            deadline_at: "2026-10-20T12:00:00.000Z",
+            config_snapshot: snapshot(),
+          },
+        ],
+        error: null,
+      });
+      db.queue("company_candidates", { data: [candidate({ email_opted_out_at: "2026-10-18T00:00:00Z" })], error: null });
+
+      expect(await (await run()).json()).toMatchObject({ reminded: 1 });
+      expect(sendEmail).not.toHaveBeenCalled();
+      expect(db.callsFor("company_candidate_claims")).toHaveLength(0);
+    });
+
+    it("tells them and the company when it expires, by the candidate's name", async () => {
+      queueQuiet({ expired: ["ai4"] });
+      db.queue("application_interviews", {
+        data: [
+          {
+            id: "ai4",
+            company_id: "c1",
+            job_post_id: "j1",
+            application_id: "app4",
+            applicant_user_id: null,
+            company_candidate_id: CANDIDATE,
+            config_snapshot: snapshot(),
+          },
+        ],
+        error: null,
+      });
+      db.queue("company_candidates", { data: [candidate()], error: null });
+      db.queue("company_members", { data: [{ user_id: "o1", is_owner: true, role_id: null }], error: null });
+
+      expect(await (await run()).json()).toMatchObject({ expired: 1 });
+      const mails = vi.mocked(sendEmail).mock.calls.map((c) => c[0]);
+      const theirs = mails.find((m) => m.toEmail === "meera@mail.test")!;
+      expect(theirs.htmlContent).toContain(`https://app.test/unsubscribe/candidate/${CANDIDATE}.`);
+      expect(mails.find((m) => m.toEmail === "owner@acme.dev")!.textContent).toContain(
+        "Meera Iyer didn't take the AI interview",
+      );
+    });
+  });
+
   it("sweeps a stuck session with the voice server's stored result", async () => {
     queueQuiet();
     db.queue("interview_sessions", {
@@ -202,7 +295,7 @@ describe("/api/updates/screening-interviews (SI-REQ-014, SI-TEST-009)", () => {
       },
       error: null,
     });
-    db.queue("user_info", { data: { full_name: "Priya Sharma" }, error: null });
+    db.queue("user_info", { data: [{ user_id: "u1", email: "priya@example.com", full_name: "Priya Sharma" }], error: null });
     db.queue("company_members", { data: [{ user_id: "owner", is_owner: true, role_id: null }], error: null });
 
     await run();

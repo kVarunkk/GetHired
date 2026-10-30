@@ -18,7 +18,7 @@ export async function markAnalysisAsFailedAction(reviewId: string) {
   if (!user) return { error: "Unauthorized" };
 
   try {
-    await updateReviewAnalysisStatus(true, reviewId, "failed");
+    await updateReviewAnalysisStatus(supabase, true, reviewId, "failed");
 
     return { success: true };
   } catch (error) {

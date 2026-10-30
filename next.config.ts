@@ -23,6 +23,9 @@ const nextConfig: NextConfig = {
     // Inline the (small) Tailwind CSS into the HTML, so first paint doesn't
     // wait on separate render-blocking stylesheet requests.
     inlineCss: true,
+    // A spreadsheet import confirms up to 5,000 validated rows in one action
+    // call (plan/bulk-import, BI-DEC-004); the default limit is 1 MB.
+    serverActions: { bodySizeLimit: "8mb" },
   },
   serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
   outputFileTracingIncludes: {

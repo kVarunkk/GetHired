@@ -3,6 +3,7 @@ import { createApplicantTools } from "./applicants";
 import { createCandidateTools } from "./candidates";
 import { createCareersTools } from "./careers";
 import { createCompanyTools } from "./company";
+import { createImportTools } from "./imports";
 import { createInterviewTools } from "./interviews";
 import { createJobTools } from "./jobs";
 import { createMatchingTools } from "./matching";
@@ -30,6 +31,7 @@ export function createAllRecruiterTools(ctx: RecruiterToolContext) {
     ...createJobTools(ctx),
     ...createQuestionSetTools(ctx),
     ...createCandidateTools(ctx),
+    ...createImportTools(ctx),
     ...createApplicantTools(ctx),
     ...createMatchingTools(ctx),
     ...createPipelineTools(ctx),

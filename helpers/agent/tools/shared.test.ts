@@ -85,4 +85,22 @@ describe("withToolErrors", () => {
       properties: { flow: "agent_tool", tool: "searchJobs", session_id: "s1" },
     });
   });
+
+  it("tags errors from MCP calls, which have no chat session", async () => {
+    const error = new Error("boom");
+    const mcpCtx = toolContext(createSupabaseMock().client, { sessionId: null, surface: "mcp" });
+
+    const result = await withToolErrors(mcpCtx, "searchJobs", async () => {
+      throw error;
+    });
+
+    expect(result).toEqual({
+      error: "Something went wrong while running searchJobs. Please try again.",
+    });
+    expect(eventCaptureServerException).toHaveBeenCalledWith({
+      error,
+      distinctId: "u1",
+      properties: { flow: "mcp_tool", tool: "searchJobs", session_id: null },
+    });
+  });
 });

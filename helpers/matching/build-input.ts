@@ -46,6 +46,10 @@ const PROFILE_FIELDS = [
   "company_size_preference",
   "industry_preferences",
   "visa_sponsorship_required",
+  // A company candidate's (BI-REQ-031); user_info has none of these.
+  "current_title",
+  "current_company",
+  "location",
 ] as const;
 
 const MISSING = "[missing]";

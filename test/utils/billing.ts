@@ -16,6 +16,7 @@ export const ENTITLEMENT_KEYS = [
   "interview_minutes",
   "agent_messages",
   "match_explanations",
+  "resume_imports",
 ] as const;
 
 export type EntitlementKeyFixture = (typeof ENTITLEMENT_KEYS)[number];
@@ -85,6 +86,7 @@ export const TIER_FREE = tier(0, "free", "Free", {
   outreach: [10, null],
   interview_minutes: [30, 1],
   agent_messages: [100, null],
+  resume_imports: [25, null],
 });
 
 export const TIER_STARTUP = tier(1, "startup", "Startup", {
@@ -96,6 +98,7 @@ export const TIER_STARTUP = tier(1, "startup", "Startup", {
   outreach: [150, 2],
   interview_minutes: [600, 1],
   agent_messages: [2000, 0],
+  resume_imports: [500, 1],
 });
 
 export const TIER_GROWTH = tier(2, "growth", "Growth", {
@@ -107,6 +110,7 @@ export const TIER_GROWTH = tier(2, "growth", "Growth", {
   outreach: [600, 2],
   interview_minutes: [2400, 1],
   agent_messages: [null],
+  resume_imports: [500, 1],
 });
 
 export const TIER_ENTERPRISE = tier(3, "enterprise", "Enterprise", {
@@ -118,6 +122,7 @@ export const TIER_ENTERPRISE = tier(3, "enterprise", "Enterprise", {
   outreach: [null],
   interview_minutes: [null],
   agent_messages: [null],
+  resume_imports: [null],
 });
 
 /** Not public: Startup's entitlements for pre-launch companies (BL-DEC-006). */
@@ -134,6 +139,7 @@ export const TIER_FOUNDING = tier(
     outreach: [150, 2],
     interview_minutes: [600, 1],
     agent_messages: [2000, 0],
+    resume_imports: [500, 1],
   },
   { isPublic: false },
 );

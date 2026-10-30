@@ -15,7 +15,6 @@ export type PaymentsRow = Tables<"payments">;
 export type PricePlanRow = Tables<"price_plan">;
 export type UserInfoRow = Tables<"user_info">;
 export type TJobFeedbackVoteEnum = Enums<"job_feedback_vote">;
-export type UserApiTokensRow = Tables<"user_api_tokens">;
 type ResumesRow = Tables<"resumes">;
 type JobRelevantProfilesRow = Tables<"job_relevant_profiles">;
 
@@ -318,6 +317,8 @@ export enum PostHogEvent {
 
   AgentChatTurn = "agent_chat_turn",
   AgentLocationNoResults = "agent_location_no_results",
+
+  McpToolCall = "mcp_tool_call",
 
   BillingWebhookError = "billing_webhook_error",
   BillingPricingViewed = "billing_pricing_viewed",

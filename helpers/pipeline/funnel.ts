@@ -1,4 +1,8 @@
 import "server-only";
+import {
+  applicationPersonOrNull,
+  COMPANY_CANDIDATE_PERSON_COLUMNS,
+} from "@/helpers/applications/application-person";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
@@ -187,9 +191,11 @@ async function loadNeedsAttention(
   const { data: apps, error } = await supabase
     .from("applications")
     .select(
-      "id, stage_entered_at, user_info(full_name), job_postings!inner(id, title, company_id), pipeline_stages!inner(kind)",
+      `id, stage_entered_at, applicant_user_id, company_candidate_id, user_info(full_name), ${COMPANY_CANDIDATE_PERSON_COLUMNS}, job_postings!inner(id, title, company_id), pipeline_stages!inner(kind)` as const,
     )
     .eq("job_postings.company_id", company.id)
+    // BI-REQ-042: a merged import shows through the application it joined.
+    .is("merged_into_application_id", null)
     .eq("pipeline_stages.kind", "applied")
     .lt("stage_entered_at", cutoff)
     .order("stage_entered_at", { ascending: true })
@@ -226,7 +232,7 @@ async function loadNeedsAttention(
     .slice(0, NEEDS_ATTENTION_LIMIT)
     .map((a) => ({
       applicationId: a.id,
-      name: a.user_info?.full_name?.trim() || "Applicant",
+      name: applicationPersonOrNull(a)?.name ?? "Applicant",
       jobPostId: a.job_postings.id,
       jobTitle: a.job_postings.title,
       daysInApplied: Math.floor(

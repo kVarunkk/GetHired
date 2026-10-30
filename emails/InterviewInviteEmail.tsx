@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Button, Section, Text } from "react-email";
 import { BaseEmailLayout } from "./BaseEmailLayout";
+import { UnsubscribeLine } from "./UnsubscribeLine";
 import { formatInterviewDeadline } from "./screening-interview-format";
 
 interface InterviewInviteEmailProps {
@@ -11,8 +12,15 @@ interface InterviewInviteEmailProps {
   /** Names only, never the descriptions (SI-REQ-020). */
   competencyNames: string[];
   deadlineAt: string;
-  /** `/interview/screening/[id]`, absolute. */
+  /** `/interview/screening/[id]`, or an imported applicant's `/claim/[token]`, absolute. */
   interviewUrl: string;
+  /**
+   * BI-REQ-040/041: for someone the company imported, who has no account
+   * yet. The link claims their application first.
+   */
+  claim?: boolean;
+  /** BI-REQ-034: a company candidate's unsubscribe link. */
+  unsubscribeUrl?: string | null;
 }
 
 /** SI-REQ-013: the invite to a company's AI screening interview. */
@@ -24,6 +32,8 @@ export default function InterviewInviteEmail({
   competencyNames,
   deadlineAt,
   interviewUrl,
+  claim = false,
+  unsubscribeUrl = null,
 }: InterviewInviteEmailProps) {
   return (
     <BaseEmailLayout previewText="" company={{ name: companyName }}>
@@ -37,12 +47,18 @@ export default function InterviewInviteEmail({
         {`The conversation is transcribed and shared with ${companyName}. ${companyName} makes the decision, not the AI. Audio isn't stored.`}
       </Text>
 
+      {claim && (
+        <Text className="text-sm">
+          {`To take it, create a free GetHired account or log in. ${companyName} will see your account's profile for this application.`}
+        </Text>
+      )}
+
       <Section className="my-8 text-center">
         <Button
           href={interviewUrl}
           className="rounded-md bg-indigo-600 px-5 py-3 text-sm font-semibold text-white"
         >
-          Start the interview
+          {claim ? "Get started" : "Start the interview"}
         </Button>
       </Section>
 
@@ -52,6 +68,7 @@ export default function InterviewInviteEmail({
         doesn&apos;t work for you, you can ask for an alternative on the
         interview page.
       </Text>
+      <UnsubscribeLine companyName={companyName} url={unsubscribeUrl} />
     </BaseEmailLayout>
   );
 }

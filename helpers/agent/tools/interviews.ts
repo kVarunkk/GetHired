@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { createInterviewAction } from "@/app/actions/create-interview";
+import { createInterview } from "@/helpers/interview/create-interview";
 import { InterviewAnalysisSchema } from "@/helpers/interview/interview-analysis";
 import { TAICredits } from "@/utils/types";
 import { AGENT_LIST_DEFAULT_LIMIT } from "../config";
@@ -227,8 +227,12 @@ export function createInterviewTools(ctx: AgentToolContext) {
             return { error: "This resume is still being processed. Try again in a minute." };
           }
 
-          const created = await createInterviewAction(name ?? null, resume.id, jobId);
-          if (!("interviewId" in created) || !created.interviewId) {
+          const created = await createInterview(supabase, ctx.user, {
+            name: name ?? null,
+            resumeId: resume.id,
+            jobId,
+          });
+          if (!created.success) {
             const error = created.error ?? "Could not create the interview.";
             return error.startsWith("Insufficient AI credits") ? INSUFFICIENT_CREDITS : { error };
           }

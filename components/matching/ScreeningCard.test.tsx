@@ -122,6 +122,47 @@ describe("ScreeningCard (MT-TEST-006)", () => {
     expect(screen.getByTestId("upgrade")).toBeInTheDocument();
   });
 
+  it("explains a candidate too thin to score, and offers to screen again (BI-REQ-036)", async () => {
+    fetchMock.mockResolvedValue(Response.json({ queued: 1 }));
+    renderCard(screeningOf({ status: "insufficient_info", result: null, fit_score: null, recommendation: null }));
+
+    expect(screen.getByText("Not scored: no resume")).toBeInTheDocument();
+    expect(screen.getByText(/Add a resume, or their current title/)).toBeInTheDocument();
+    expect(screen.queryByText(FOOTNOTE)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Screen again" }));
+    expect(fetchMock).toHaveBeenCalledWith(BACKFILL, expect.objectContaining({ method: "POST" }));
+  });
+
+  it("links an imported candidate without a resume to their resume page (BIT-049)", () => {
+    render(
+      <ScreeningCard
+        applicationId={APPLICATION.id}
+        jobPostId={JOB_POST.id}
+        questions={QUESTIONS}
+        screening={screeningOf({ status: "insufficient_info", result: null, fit_score: null, recommendation: null })}
+        resumeHref="/company/candidates/c1/resume"
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Upload a resume" })).toHaveAttribute("href", "/company/candidates/c1/resume");
+  });
+
+  it("offers no actions when read-only (BIT-065, a merged import)", () => {
+    render(
+      <ScreeningCard
+        applicationId={APPLICATION.id}
+        jobPostId={JOB_POST.id}
+        questions={QUESTIONS}
+        screening={screeningOf({ status: "insufficient_info", result: null, fit_score: null, recommendation: null })}
+        resumeHref="/company/candidates/c1/resume"
+        readOnly
+      />,
+    );
+    expect(screen.getByText("Not scored: no resume")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Upload a resume" })).not.toBeInTheDocument();
+  });
+
   it("keeps a stale result with a banner and a Re-screen button", async () => {
     fetchMock.mockResolvedValue(Response.json({ queued: 1 }));
     renderCard(screeningOf({ status: "stale" }));

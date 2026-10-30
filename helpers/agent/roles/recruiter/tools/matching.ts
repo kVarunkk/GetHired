@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { wrapInSandbox } from "@/helpers/ai/security";
+import { mcpToolTelemetry } from "@/helpers/agent/telemetry";
 import { explainCandidateMatch } from "@/helpers/matching/explain-candidate-match";
 import { queueJobScreenings } from "@/helpers/matching/queue-screenings";
 import { planLimitError, type RecruiterToolContext, uuidInput, withToolErrors } from "./shared";
@@ -19,7 +20,11 @@ export function createMatchingTools(ctx: RecruiterToolContext) {
       }),
       execute: ({ candidateId, jobPostId }, { abortSignal }) =>
         withToolErrors(ctx, "explainMatch", async () => {
-          const result = await explainCandidateMatch(ctx, { candidateId, jobPostId }, { abortSignal });
+          const result = await explainCandidateMatch(
+            ctx,
+            { candidateId, jobPostId },
+            { abortSignal, telemetry: mcpToolTelemetry(ctx, "explain_match") },
+          );
           if (result.ok) {
             return {
               candidateId,

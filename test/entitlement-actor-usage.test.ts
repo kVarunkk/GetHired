@@ -8,6 +8,8 @@ const ACTOR_ARG = { consumeEntitlement: 4, holdEntitlement: 4, assertAllowance: 
 
 const SYSTEM_PATHS: Record<string, string> = {
   "app/api/updates/company/match-explanations/worker/route.ts": "the weekly digest's explanations; no member asked",
+  "app/api/worker/candidate-import/route.ts":
+    "converts the resume_imports hold the member took on submit; the hold's member is charged (BIT-045)",
 };
 
 function nullActorCalls(): Record<string, string[]> {

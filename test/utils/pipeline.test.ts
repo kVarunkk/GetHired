@@ -60,7 +60,7 @@ describe("pipeline fixtures", () => {
     expect(app.stage_id).toBe(stageOf("applied").id);
     expect(app.status).toBe("submitted");
     expect(app.source).toBe("applied");
-    expect(app.user_info.email).toMatch(/@/);
+    expect(app.user_info?.email).toMatch(/@/);
     expect(app.job_postings.company_id).toBe(COMPANY_A.id);
     expect(app.job_postings.company_info.name).toBe(COMPANY_A.info.name);
     expect(pipelineAppOf().id).not.toBe(app.id);

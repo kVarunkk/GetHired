@@ -5,17 +5,18 @@ import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { createSupabaseMock, type RecordedCall, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, COMPANY_B, jobPostingOf } from "@/test/utils/recruiter";
 import { ADMIN_A, MEMBER_A, OWNER_A } from "@/test/utils/team";
-import { INTERNAL_API_SECRET } from "@/utils/formatters";
-import { triggerJobPostingRelevanceUpdate } from "./relevant-profiles-update";
+import { queueJobPostingRelevance } from "@/helpers/profiles/queue-job-relevance";
 import { assertLimit } from "@/helpers/billing/entitlements";
 import { EntitlementError, type EntitlementPayload } from "@/helpers/billing/errors";
+import { embedJobs } from "@/helpers/jobs/job-embedding";
 import { upsertJobPostingAction } from "./upsert-job-posting";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
-vi.mock("./relevant-profiles-update", () => ({ triggerJobPostingRelevanceUpdate: vi.fn() }));
+vi.mock("@/helpers/profiles/queue-job-relevance", () => ({ queueJobPostingRelevance: vi.fn() }));
 vi.mock("@/helpers/billing/entitlements", () => ({ assertLimit: vi.fn() }));
+vi.mock("@/helpers/jobs/job-embedding", () => ({ embedJobs: vi.fn() }));
 
 const AT_LIMIT: EntitlementPayload = {
   key: "active_job_posts",
@@ -108,6 +109,14 @@ function route(mock: SupabaseMock) {
   }
 }
 
+/** The messages sent to the job embeddings queue. */
+const embeddingMessages = () =>
+  service
+    .callsFor("send")
+    .map((c) => c.chain[0].args[1] as { queue_name: string; message: unknown })
+    .filter((args) => args.queue_name === "job_embeddings_queue")
+    .map((args) => args.message);
+
 /** Every recorded write, across both clients. */
 const writes = (table: string) =>
   [...rls.callsFor(table), ...service.callsFor(table)].filter((c) =>
@@ -123,7 +132,8 @@ beforeEach(async () => {
   route(service);
   vi.mocked(createServiceRoleClient).mockReturnValue(service.client);
   await setRequestUser(COMPANY_A.user, rls.client);
-  fetchMock = vi.fn().mockResolvedValue(Response.json({ data: "[0.1,0.2]" }));
+  fetchMock = vi.fn();
+  vi.mocked(embedJobs).mockResolvedValue(["[0.1,0.2]"]);
   vi.stubGlobal("fetch", fetchMock);
 });
 
@@ -161,30 +171,70 @@ describe("upsertJobPostingAction: behaviour that must survive", () => {
     expect(argsOf(link!, "update")?.[0]).toEqual({ job_id: NEW_JOB_ID });
   });
 
-  it("re-embeds an edit, updates all_jobs and revalidates the job", async () => {
+  it("embeds an edit inline, writes it to both rows, updates all_jobs and revalidates the job", async () => {
     const result = await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id });
 
     expect(result).toMatchObject({ success: true, isUpdate: true });
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/api/update-embedding/gemini/job"),
-      expect.objectContaining({ headers: { "X-Internal-Secret": INTERNAL_API_SECRET } }),
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(embedJobs).toHaveBeenCalledWith([
+      expect.objectContaining({ job_name: "Frontend Engineer", locations: ["bengaluru"] }),
+    ]);
+    const postingEmbedding = writes("job_postings").find(
+      (c) => (argsOf(c, "update")?.[0] as { embedding_new?: string })?.embedding_new,
     );
+    expect(argsOf(postingEmbedding!, "update")?.[0]).toEqual({
+      embedding_new: "[0.1,0.2]",
+      embedding_updated_at: expect.any(String),
+    });
+    expect(eqs(postingEmbedding!)).toEqual([["id", OWN.id]]);
     const [update] = writes("all_jobs");
     expect(argsOf(update, "update")?.[0]).toMatchObject({
       job_name: "Frontend Engineer",
       embedding_new: "[0.1,0.2]",
     });
     expect(eqs(update)).toEqual([["id", OWN.job_id]]);
+    expect(embeddingMessages()).toEqual([]);
     expect(revalidateTag).toHaveBeenCalledWith(`job-${OWN.job_id}`);
   });
 
-  it("returns the embedding route's error", async () => {
-    fetchMock.mockResolvedValue(Response.json({ error: "Embedding failed" }, { status: 500 }));
+  it("embeds an active posting before queueing its matching run", async () => {
+    state.savedStatus = "active";
 
-    expect(await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id })).toEqual({
-      success: false,
-      error: "Embedding failed",
+    await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id });
+
+    expect(vi.mocked(embedJobs).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(queueJobPostingRelevance).mock.invocationCallOrder[0],
+    );
+  });
+
+  it("queues both rows for the worker and still saves when the edit can't be embedded", async () => {
+    vi.mocked(embedJobs).mockRejectedValue(new Error("Gemini down"));
+
+    const result = await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id });
+
+    expect(result).toMatchObject({ success: true, isUpdate: true });
+    expect(embeddingMessages()).toEqual([
+      { id: OWN.id, table: "job_postings" },
+      { id: OWN.job_id, table: "all_jobs" },
+    ]);
+    expect(argsOf(writes("all_jobs")[0], "update")?.[0]).not.toHaveProperty("embedding_new");
+  });
+
+  it("still saves an edit when neither embedding nor queueing works", async () => {
+    vi.mocked(embedJobs).mockRejectedValue(new Error("Gemini down"));
+    service.queueRpc("send", { data: null, error: { message: "queue down" } }, "pgmq_public");
+
+    expect(await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id })).toMatchObject({
+      success: true,
+      isUpdate: true,
     });
+  });
+
+  it("doesn't embed a new posting (the insert trigger queues it)", async () => {
+    await upsertJobPostingAction({ values: VALUES });
+
+    expect(embedJobs).not.toHaveBeenCalled();
+    expect(embeddingMessages()).toEqual([]);
   });
 
   it("asks for a relevance update when the saved posting is active", async () => {
@@ -192,7 +242,7 @@ describe("upsertJobPostingAction: behaviour that must survive", () => {
 
     await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id });
 
-    expect(triggerJobPostingRelevanceUpdate).toHaveBeenCalledWith(OWN.id);
+    expect(queueJobPostingRelevance).toHaveBeenCalledWith(expect.objectContaining({ company: expect.objectContaining({ id: COMPANY_A.id }) }), OWN.id);
   });
 });
 
@@ -333,7 +383,7 @@ describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)
   it("marks explanations stale before the relevance re-run starts, so the digest can't revert them", async () => {
     state.savedStatus = "active";
     let staleWritesWhenTriggered = -1;
-    vi.mocked(triggerJobPostingRelevanceUpdate).mockImplementation(async () => {
+    vi.mocked(queueJobPostingRelevance).mockImplementation(async () => {
       staleWritesWhenTriggered = writesTo("job_relevant_profiles").length;
       return { success: true, message: "processing started" };
     });
@@ -343,7 +393,7 @@ describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)
       existingPostingId: OWN.id,
     });
 
-    expect(triggerJobPostingRelevanceUpdate).toHaveBeenCalledWith(OWN.id);
+    expect(queueJobPostingRelevance).toHaveBeenCalledWith(expect.objectContaining({ company: expect.objectContaining({ id: COMPANY_A.id }) }), OWN.id);
     expect(staleWritesWhenTriggered).toBe(1);
   });
 

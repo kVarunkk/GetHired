@@ -16,7 +16,7 @@ export default async function ApplicationNotesPage({ params }: { params: Promise
     const { application_id } = await params;
     const frame = await loadApplicationFrame(application_id);
     if (!frame) notFound();
-    const { supabase, user, company } = frame;
+    const { supabase, user, company, mergedInto } = frame;
 
     const [notes, { data: teammates }] = await Promise.all([
       listNotes({ supabase, company }, { applicationId: application_id }),
@@ -30,7 +30,13 @@ export default async function ApplicationNotesPage({ params }: { params: Promise
     return (
       <div className="mb-20 flex flex-col gap-6">
         <SectionHeader title={`Notes (${notes.length})`} />
-        <NotesPanel applicationId={application_id} notes={notes} currentUserId={user.id} members={mentionable} />
+        <NotesPanel
+          applicationId={application_id}
+          notes={notes}
+          currentUserId={user.id}
+          members={mentionable}
+          readOnly={!!mergedInto}
+        />
       </div>
     );
   } catch (err) {

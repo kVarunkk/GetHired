@@ -46,10 +46,8 @@ const DEFAULT_QUERY_ARGS = {
   userEmbedding: null,
   applicationStatus: null,
   createdAfter: null,
-  isInternalCall: false,
   jobEmbedding: null,
   relevanceSearchType: null,
-  userId: null,
 };
 
 let supabase: SupabaseMock;
@@ -92,8 +90,8 @@ describe("GET /api/jobs: listing and filters", () => {
       totalCount: 40,
       nextCursor: "cursor-2",
     });
-    expect(buildQuery).toHaveBeenCalledWith(DEFAULT_QUERY_ARGS);
-    expect(rerankJobsIfApplicable).toHaveBeenCalledWith({
+    expect(buildQuery).toHaveBeenCalledWith(supabase.client, null, DEFAULT_QUERY_ARGS);
+    expect(rerankJobsIfApplicable).toHaveBeenCalledWith(supabase.client, {
       initialJobs: JOBS,
       initialCount: 42,
       userId: undefined,
@@ -102,11 +100,9 @@ describe("GET /api/jobs: listing and filters", () => {
       matchedJobIds: ["j1", "j2"],
       relevanceSearchType: null,
       cursor: null,
-      isInternalCall: false,
     });
     expect(createClient).toHaveBeenCalled();
     expect(createServiceRoleClient).not.toHaveBeenCalled();
-    expect(getUserFromRequest).not.toHaveBeenCalled();
     expect(supabase.calls).toEqual([]);
   });
 
@@ -131,7 +127,7 @@ describe("GET /api/jobs: listing and filters", () => {
       limit: "10",
     });
 
-    expect(buildQuery).toHaveBeenCalledWith({
+    expect(buildQuery).toHaveBeenCalledWith(supabase.client, null, {
       ...DEFAULT_QUERY_ARGS,
       jobType: "Fulltime|Contract",
       location: "Remote|India",
@@ -154,6 +150,8 @@ describe("GET /api/jobs: listing and filters", () => {
     await get({ tab: "saved" });
 
     expect(buildQuery).toHaveBeenCalledWith(
+      supabase.client,
+      null,
       expect.objectContaining({ isFavoriteTabActive: true, isAppliedJobsTabActive: false }),
     );
   });
@@ -162,6 +160,8 @@ describe("GET /api/jobs: listing and filters", () => {
     await get({ tab: "applied", applicationStatus: "reviewed|selected" });
 
     expect(buildQuery).toHaveBeenCalledWith(
+      supabase.client,
+      null,
       expect.objectContaining({
         isFavoriteTabActive: false,
         isAppliedJobsTabActive: true,
@@ -176,10 +176,26 @@ describe("GET /api/jobs: listing and filters", () => {
     expect(createServiceRoleClient).toHaveBeenCalled();
     expect(createClient).not.toHaveBeenCalled();
     expect(buildQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ isInternalCall: true }),
+      serviceSupabase.client,
+      null,
+      expect.anything(),
     );
     expect(rerankJobsIfApplicable).toHaveBeenCalledWith(
-      expect.objectContaining({ isInternalCall: true }),
+      serviceSupabase.client,
+      expect.anything(),
+    );
+  });
+
+  it("hands buildQuery the request's user, not one it looks up itself", async () => {
+    const user = mockUser({ id: "u1" });
+    await setRequestUser(user);
+
+    await get({ tab: "saved" });
+
+    expect(buildQuery).toHaveBeenCalledWith(
+      supabase.client,
+      user,
+      expect.objectContaining({ isFavoriteTabActive: true }),
     );
   });
 
@@ -207,13 +223,14 @@ describe("GET /api/jobs: relevance search", () => {
       { method: "eq", args: ["user_id", "u1"] },
       { method: "single", args: [] },
     ]);
-    expect(buildQuery).toHaveBeenCalledWith({
+    expect(buildQuery).toHaveBeenCalledWith(supabase.client, expect.objectContaining({ id: "u1" }), {
       ...DEFAULT_QUERY_ARGS,
       sortBy: "relevance",
       userEmbedding: "[0.1,0.2]",
       relevanceSearchType: "standard",
     });
     expect(rerankJobsIfApplicable).toHaveBeenCalledWith(
+      supabase.client,
       expect.objectContaining({
         userId: "u1",
         aiCredits: 10,
@@ -278,6 +295,8 @@ describe("GET /api/jobs: relevance search", () => {
       { method: "single", args: [] },
     ]);
     expect(buildQuery).toHaveBeenCalledWith(
+      supabase.client,
+      expect.objectContaining({ id: "u1" }),
       expect.objectContaining({
         jobEmbedding: "[0.9]",
         userEmbedding: "[0.1]",
@@ -285,6 +304,7 @@ describe("GET /api/jobs: relevance search", () => {
       }),
     );
     expect(rerankJobsIfApplicable).toHaveBeenCalledWith(
+      supabase.client,
       expect.objectContaining({ jobId: "job-1", relevanceSearchType: "similar_jobs" }),
     );
   });
@@ -305,25 +325,50 @@ describe("GET /api/jobs: relevance search", () => {
     expect(supabase.callsFor("user_info")).toHaveLength(0);
   });
 
-  it("runs a job digest for an explicit userId without authenticating", async () => {
+  it("runs a job digest for an explicit userId without needing a session", async () => {
+    await setRequestUser(null);
     supabase.queue("user_info", {
       data: { embedding_new: "[0.3]", ai_credits: 1 },
       error: null,
     });
 
-    await get({ sortBy: "relevance", userId: "digest-user" });
+    const res = await get({ sortBy: "relevance", userId: "digest-user" });
 
-    expect(getUserFromRequest).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
     expect(supabase.callsFor("user_info")[0].chain[1]).toEqual({
       method: "eq",
       args: ["user_id", "digest-user"],
     });
     expect(buildQuery).toHaveBeenCalledWith(
+      supabase.client,
+      null,
       expect.objectContaining({
         relevanceSearchType: "job_digest",
-        userId: "digest-user",
         userEmbedding: "[0.3]",
       }),
+    );
+  });
+
+  it("looks the digest user up by id on internal calls", async () => {
+    const digestUser = mockUser({ id: "digest-user" });
+    const getUserById = vi.fn().mockResolvedValue({ data: { user: digestUser }, error: null });
+    Object.assign(serviceSupabase.client.auth, { admin: { getUserById } });
+    serviceSupabase.queue("user_info", {
+      data: { embedding_new: "[0.3]", ai_credits: 1 },
+      error: null,
+    });
+
+    await get(
+      { sortBy: "relevance", userId: "digest-user" },
+      { "X-Internal-Secret": "internal-secret" },
+    );
+
+    expect(getUserById).toHaveBeenCalledWith("digest-user");
+    expect(getUserFromRequest).not.toHaveBeenCalled();
+    expect(buildQuery).toHaveBeenCalledWith(
+      serviceSupabase.client,
+      digestUser,
+      expect.objectContaining({ relevanceSearchType: "job_digest" }),
     );
   });
 
@@ -336,6 +381,8 @@ describe("GET /api/jobs: relevance search", () => {
     await get({ sortBy: "relevance", userId: "digest-user", type: "digest" });
 
     expect(buildQuery).toHaveBeenCalledWith(
+      supabase.client,
+      null,
       expect.objectContaining({ relevanceSearchType: "job_digest_with_suggestions" }),
     );
   });

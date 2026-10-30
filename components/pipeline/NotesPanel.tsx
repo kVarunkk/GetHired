@@ -225,6 +225,7 @@ export default function NotesPanel({
   notes: initialNotes,
   currentUserId,
   members = [],
+  readOnly = false,
 }: {
   applicationId?: string;
   candidateUserId?: string;
@@ -232,6 +233,8 @@ export default function NotesPanel({
   currentUserId: string;
   /** Teammates for `@` mentions (TM-REQ-009), without the current user. */
   members?: MentionableMember[];
+  /** Notes kept from an application merged into another (BI-REQ-042): no composer, edit or delete. */
+  readOnly?: boolean;
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [body, setBody] = useState("");
@@ -281,29 +284,31 @@ export default function NotesPanel({
         )}
       </section>
 
-      <div className="flex flex-col gap-2 rounded-lg border p-3">
-        <MentionTextarea
-          aria-label="New note"
-          placeholder="Write a note (markdown). Type @ to mention a teammate. Only your company sees it."
-          value={body}
-          onValueChange={setBody}
-          members={members}
-          rows={3}
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <RatingSelect value={rating} onChange={setRating} />
-          <LengthCounter length={body.length} />
-          <Button
-            size="sm"
-            className="ml-auto"
-            disabled={!fits(body) || isSaving}
-            onClick={() => void add()}
-          >
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Add note
-          </Button>
+      {!readOnly && (
+        <div className="flex flex-col gap-2 rounded-lg border p-3">
+          <MentionTextarea
+            aria-label="New note"
+            placeholder="Write a note (markdown). Type @ to mention a teammate. Only your company sees it."
+            value={body}
+            onValueChange={setBody}
+            members={members}
+            rows={3}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <RatingSelect value={rating} onChange={setRating} />
+            <LengthCounter length={body.length} />
+            <Button
+              size="sm"
+              className="ml-auto"
+              disabled={!fits(body) || isSaving}
+              onClick={() => void add()}
+            >
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Add note
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {notes.length === 0 ? (
         <p className="text-sm text-muted-foreground">No notes yet.</p>
@@ -313,7 +318,7 @@ export default function NotesPanel({
             <NoteItem
               key={note.id}
               note={note}
-              isMine={note.author_user_id === currentUserId}
+              isMine={!readOnly && note.author_user_id === currentUserId}
               onSaved={(next) => setNotes((current) => current.map((n) => (n.id === next.id ? next : n)))}
               onDeleted={() => setNotes((current) => current.filter((n) => n.id !== note.id))}
             />

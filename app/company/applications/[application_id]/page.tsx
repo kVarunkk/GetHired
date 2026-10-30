@@ -14,13 +14,13 @@ export default async function ApplicationPage({ params }: { params: Promise<{ ap
     const { application_id } = await params;
     const frame = await loadApplicationFrame(application_id);
     if (!frame) notFound();
-    const { supabase, company, jobId } = frame;
+    const { supabase, company, person, jobId, mergedInto } = frame;
 
     const [{ data: application, error }, interview] = await Promise.all([
       supabase
         .from("applications")
         .select(
-          "id, applicant_user_id, job_post_id, answers, answers_v2, form_snapshot, application_knockouts(failed, reasons, action_taken), user_info(full_name), job_postings(title, questions)",
+          "id, applicant_user_id, source, job_post_id, answers, answers_v2, form_snapshot, application_knockouts(failed, reasons, action_taken), job_postings(title, questions)",
         )
         .eq("id", application_id)
         .maybeSingle(),
@@ -31,12 +31,12 @@ export default async function ApplicationPage({ params }: { params: Promise<{ ap
 
     return (
       <div className="mb-20 flex flex-col gap-6">
-        {can(company, "agent.use") && (
+        {!mergedInto && can(company, "agent.use") && (
           <AskAgentAboutApplication
             application={{
               id: application.id,
               candidateId: application.applicant_user_id,
-              candidateName: application.user_info?.full_name ?? null,
+              candidateName: person.name,
               jobPostId: application.job_post_id,
               jobTitle: application.job_postings?.title ?? null,
             }}
@@ -62,7 +62,12 @@ export default async function ApplicationPage({ params }: { params: Promise<{ ap
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ApplicationAnswers answers={answersView(application, application.job_postings?.questions)} />
+            {application.source === "imported" ? (
+              // BI-REQ-030: an import never filled in the job's form.
+              <p className="text-sm text-muted-foreground">Imported: no application form.</p>
+            ) : (
+              <ApplicationAnswers answers={answersView(application, application.job_postings?.questions)} />
+            )}
           </CardContent>
         </Card>
       </div>
