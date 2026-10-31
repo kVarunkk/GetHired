@@ -66,6 +66,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_feedback: {
+        Row: {
+          agent_role: string
+          comment: string | null
+          context: Json
+          created_at: string
+          dismissed: boolean
+          id: string
+          kind: string
+          message_id: string
+          rating: number | null
+          reasons: string[]
+          session_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_role: string
+          comment?: string | null
+          context?: Json
+          created_at?: string
+          dismissed?: boolean
+          id?: string
+          kind: string
+          message_id: string
+          rating?: number | null
+          reasons?: string[]
+          session_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_role?: string
+          comment?: string | null
+          context?: Json
+          created_at?: string
+          dismissed?: boolean
+          id?: string
+          kind?: string
+          message_id?: string
+          rating?: number | null
+          reasons?: string[]
+          session_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_feedback_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "agent_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_memories: {
         Row: {
           category: string
@@ -148,6 +204,7 @@ export type Database = {
       agent_sessions: {
         Row: {
           created_at: string
+          feedback_requested_at: string | null
           id: string
           role: string
           summary: string | null
@@ -158,6 +215,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          feedback_requested_at?: string | null
           id?: string
           role?: string
           summary?: string | null
@@ -168,6 +226,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          feedback_requested_at?: string | null
           id?: string
           role?: string
           summary?: string | null

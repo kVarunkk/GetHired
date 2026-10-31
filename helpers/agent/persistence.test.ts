@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UIMessage } from "ai";
 import {
   countUserMessagesToday,
@@ -10,6 +10,9 @@ import {
   upsertMessages,
 } from "./persistence";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { reportError } from "@/helpers/posthog/report-error";
+
+vi.mock("@/helpers/posthog/report-error", () => ({ reportError: vi.fn() }));
 
 let supabase: SupabaseMock;
 
@@ -114,6 +117,52 @@ describe("loadSession", () => {
       session: SESSION,
       messages: [],
     });
+  });
+
+  it("doesn't load feedback unless asked", async () => {
+    supabase.queue("agent_sessions", { data: SESSION, error: null });
+
+    await loadSession(supabase.client, "u1", "s1");
+
+    expect(supabase.callsFor("agent_feedback")).toHaveLength(0);
+  });
+
+  it("returns the user's feedback on the session's replies when asked (AF-REQ-031)", async () => {
+    supabase.queue("agent_sessions", { data: SESSION, error: null });
+    supabase.queue("agent_feedback", {
+      data: [
+        { message_id: "m2", kind: "reply", rating: -1, dismissed: false },
+        { message_id: "m2", kind: "survey", rating: null, dismissed: true },
+      ],
+      error: null,
+    });
+
+    const result = await loadSession(supabase.client, "u1", "s1", { withFeedback: true });
+
+    expect(result?.feedback).toEqual({ m2: { reply: -1, survey: "dismissed" } });
+    expect(supabase.callsFor("agent_feedback")[0].chain).toEqual([
+      { method: "select", args: ["message_id, kind, rating, dismissed"] },
+      { method: "eq", args: ["session_id", "s1"] },
+      { method: "eq", args: ["user_id", "u1"] },
+    ]);
+  });
+
+  it("returns empty feedback when there are no rows", async () => {
+    supabase.queue("agent_sessions", { data: SESSION, error: null });
+    supabase.queue("agent_feedback", { data: [], error: null });
+
+    expect((await loadSession(supabase.client, "u1", "s1", { withFeedback: true }))?.feedback).toEqual({});
+  });
+
+  it("still opens the chat when feedback fails to load", async () => {
+    supabase.queue("agent_sessions", { data: SESSION, error: null });
+    supabase.queue("agent_messages", { data: [], error: null });
+    supabase.queue("agent_feedback", { data: null, error: new Error("feedback down") });
+
+    const result = await loadSession(supabase.client, "u1", "s1", { withFeedback: true });
+
+    expect(result).toEqual({ session: SESSION, messages: [], feedback: {} });
+    expect(reportError).toHaveBeenCalled();
   });
 
   it("throws database errors", async () => {

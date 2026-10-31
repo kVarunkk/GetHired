@@ -18,4 +18,5 @@ export const applicantRole: AgentRole = {
   createTools: ({ supabase, user, sessionId }) =>
     createAgentTools({ supabase, user, sessionId, surface: "agent" }),
   toolApproval: agentToolApproval,
+  feedbackMilestones: ["submitApplication", "startResumeReview", "completeOnboarding", "updateMyPreferences"],
 };

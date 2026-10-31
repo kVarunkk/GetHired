@@ -62,6 +62,29 @@ describe("sessions routes for a company user (RAT-012)", () => {
     expect(res.status).toBe(404);
   });
 
+  it("returns a company session with the member's feedback (AF-REQ-031)", async () => {
+    supabase.queue("agent_sessions", {
+      data: { id: SESSION_ID, user_id: COMPANY_A.user.id, role: "company" },
+      error: null,
+    });
+    supabase.queue("agent_messages", { data: [], error: null });
+    supabase.queue("agent_feedback", {
+      data: [{ message_id: "m3", kind: "survey", rating: 4, dismissed: false }],
+      error: null,
+    });
+
+    const res = await GET_ONE(buildRequest("/x"), {
+      params: Promise.resolve({ session_id: SESSION_ID }),
+    });
+
+    expect(res.status).toBe(200);
+    expect((await res.json()).feedback).toEqual({ m3: { survey: "answered" } });
+    expect(supabase.callsFor("agent_feedback")[0].chain).toContainEqual({
+      method: "eq",
+      args: ["user_id", COMPANY_A.user.id],
+    });
+  });
+
   it("keeps a member's chats to themselves: filtered by user, never by company (TM-REQ-007)", async () => {
     supabase = createSupabaseMock();
     supabase.queueRpc("my_company_access", { data: MEMBER_A.membership, error: null });

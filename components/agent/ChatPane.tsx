@@ -10,9 +10,12 @@ import {
 } from "ai";
 import { AlertCircle, RotateCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { canRateReply, hasFeedbackPart, type AgentFeedbackState } from "@/helpers/agent/feedback";
 import { canRegenerate, withRegeneration } from "@/helpers/agent/regenerations";
 import { isStopped, stoppedReply } from "@/helpers/agent/stopped";
 import Composer from "./Composer";
+import FeedbackSurveyCard from "./FeedbackSurveyCard";
+import ReplyFeedback, { type ReplyVote } from "./ReplyFeedback";
 import ScrollToBottomButton from "./ScrollToBottomButton";
 import MessageParts, { hasVisibleParts, StepNode, type ClientToolOutput } from "./MessageParts";
 import { AGENT_ROLE_UI, APPLICANT_STARTERS, type AgentRoleId } from "./roles";
@@ -20,6 +23,11 @@ import { cn } from "@/utils/utils";
 
 /** The applicant's starter prompts. */
 export const SUGGESTED_PROMPTS = APPLICANT_STARTERS;
+
+const EMPTY_FEEDBACK: AgentFeedbackState = {};
+
+/** An unanswered survey card shows while its reply is one of this many latest replies (AF-REQ-016). */
+const SURVEY_CARD_REPLIES = 2;
 
 /** Within this many px of the bottom counts as "at the latest message". */
 const NEAR_BOTTOM_PX = 80;
@@ -70,6 +78,7 @@ export default function ChatPane({
   role = "applicant",
   sessionId,
   initialMessages,
+  initialFeedback = EMPTY_FEEDBACK,
   initialDraft,
   messagesUsedToday = 0,
   memberCap = null,
@@ -78,6 +87,8 @@ export default function ChatPane({
   role?: AgentRoleId;
   sessionId: string;
   initialMessages: UIMessage[];
+  /** The user's saved feedback on this session's replies (AF-REQ-031). */
+  initialFeedback?: AgentFeedbackState;
   initialDraft?: string;
   /** The user's messages so far today, toward the daily cap. */
   messagesUsedToday?: number;
@@ -95,6 +106,10 @@ export default function ChatPane({
   const [usage, setUsage] = useState({ loaded: messagesUsedToday, sent: 0 });
   if (usage.loaded !== messagesUsedToday) setUsage({ loaded: messagesUsedToday, sent: 0 });
   const ui = AGENT_ROLE_UI[role];
+  // Feedback on this session's replies, updated optimistically. A different
+  // session starts again from what was loaded for it.
+  const [feedback, setFeedback] = useState({ sessionId, state: initialFeedback });
+  if (feedback.sessionId !== sessionId) setFeedback({ sessionId, state: initialFeedback });
   const dailyCapReached = usage.loaded + usage.sent >= ui.dailyCap;
   // Reloaded with messagesUsedToday, so `sent` counts from the same point.
   const capLeft = memberCap ? Math.max(memberCap.remaining - usage.sent, 0) : null;
@@ -151,6 +166,9 @@ export default function ChatPane({
   const lastAssistantId = [...messages]
     .reverse()
     .find((m) => m.role === "assistant")?.id;
+  const recentReplyIds = new Set(
+    messages.filter((m) => m.role === "assistant").slice(-SURVEY_CARD_REPLIES).map((m) => m.id),
+  );
 
   // Follow new output only while the user is at the bottom, so reading
   // earlier messages during a reply isn't interrupted.
@@ -195,6 +213,22 @@ export default function ChatPane({
     [addToolOutput],
   );
   const handleStop = useCallback(() => stop(), [stop]);
+  const setReplyVote = useCallback(
+    (messageId: string, vote: ReplyVote | undefined) =>
+      setFeedback((current) => ({
+        ...current,
+        state: { ...current.state, [messageId]: { ...current.state[messageId], reply: vote } },
+      })),
+    [],
+  );
+  const setSurvey = useCallback(
+    (messageId: string, survey: "answered" | "dismissed") =>
+      setFeedback((current) => ({
+        ...current,
+        state: { ...current.state, [messageId]: { ...current.state[messageId], survey } },
+      })),
+    [],
+  );
   // Counts the regeneration on the user message the way the server saves it,
   // so the button goes away after the last one allowed.
   const handleRegenerate = useCallback(
@@ -261,6 +295,18 @@ export default function ChatPane({
                 : undefined;
               const regenerable =
                 parent !== undefined && !dailyCapReached && canRegenerate(parent);
+              // Every finished reply can be rated, not only the latest (AF-REQ-001/002).
+              const streamingHere = busy && index === messages.length - 1;
+              const rateable = message.role === "assistant" && canRateReply(message, { streaming: streamingHere });
+              // The survey card the server added: an answered one keeps its
+              // thanks line; an unanswered one goes once it's older (AF-REQ-016).
+              const survey = feedback.state[message.id]?.survey;
+              const showSurvey =
+                message.role === "assistant" &&
+                !streamingHere &&
+                hasFeedbackPart(message.parts) &&
+                survey !== "dismissed" &&
+                (survey === "answered" || recentReplyIds.has(message.id));
 
               return message.role === "user" ? (
                 <div
@@ -305,16 +351,38 @@ export default function ChatPane({
                       Response stopped
                     </p>
                   )}
-                  {regenerable && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="-ml-2 h-8 w-fit text-muted-foreground"
-                      onClick={() => handleRegenerate(message.id, parent.id)}
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      Regenerate
-                    </Button>
+                  {(rateable || regenerable) && (
+                    <div className="-ml-2 flex flex-wrap items-center gap-1">
+                      {rateable && (
+                        <ReplyFeedback
+                          sessionId={sessionId}
+                          messageId={message.id}
+                          role={role}
+                          value={feedback.state[message.id]?.reply}
+                          onChange={(vote) => setReplyVote(message.id, vote)}
+                        />
+                      )}
+                      {regenerable && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-fit text-muted-foreground"
+                          onClick={() => handleRegenerate(message.id, parent.id)}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Regenerate
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {showSurvey && (
+                    <FeedbackSurveyCard
+                      sessionId={sessionId}
+                      messageId={message.id}
+                      role={role}
+                      state={survey ?? "open"}
+                      onChange={(next) => setSurvey(message.id, next)}
+                    />
                   )}
                 </div>
               );

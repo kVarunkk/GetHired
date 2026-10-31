@@ -4,10 +4,19 @@ import userEvent from "@testing-library/user-event";
 import { DefaultChatTransport, type ChatInit, type UIMessage } from "ai";
 import { useChat } from "@ai-sdk/react";
 import ChatPane, { buildChatRequest, chatErrorMessage, SUGGESTED_PROMPTS } from "./ChatPane";
-import { AGENT_DAILY_MESSAGE_CAP, AGENT_MAX_REGENERATIONS } from "@/helpers/agent/config";
+import {
+  AGENT_CONTENT_FILTER_MESSAGE,
+  AGENT_DAILY_MESSAGE_CAP,
+  AGENT_MAX_REGENERATIONS,
+} from "@/helpers/agent/config";
+import { submitAgentFeedbackAction } from "@/app/actions/submit-agent-feedback";
 
 vi.mock("@ai-sdk/react", () => ({ useChat: vi.fn() }));
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
+vi.mock("@/app/actions/submit-agent-feedback", () => ({
+  submitAgentFeedbackAction: vi.fn(async () => ({ ok: true })),
+  removeAgentFeedbackAction: vi.fn(async () => ({ ok: true })),
+}));
 
 const SESSION_ID = "55555555-5555-4555-8555-555555555555";
 
@@ -151,6 +160,181 @@ describe("ChatPane", () => {
     renderPane();
 
     expect(screen.getByText("Response stopped")).toBeInTheDocument();
+  });
+
+  describe("reply feedback (AF-REQ-001/002/005)", () => {
+    const goodButtons = () => screen.queryAllByRole("button", { name: "Good response" });
+    const conversation = [
+      text("u1", "user", "find jobs"),
+      text("a1", "assistant", "Here are three"),
+      text("u2", "user", "more"),
+      text("a2", "assistant", "Here are three more"),
+    ];
+
+    it("shows 👍/👎 on every finished reply, before Regenerate on the latest", () => {
+      mockChat({ messages: conversation });
+      renderPane();
+
+      expect(goodButtons()).toHaveLength(2);
+      expect(screen.getAllByRole("button", { name: "Bad response" })).toHaveLength(2);
+      const latest = screen.getByText("Here are three more").closest("div.flex.flex-col.gap-4")!;
+      const buttons = within(latest as HTMLElement).getAllByRole("button").map((b) => b.textContent || b.getAttribute("aria-label"));
+      expect(buttons.indexOf("Bad response")).toBeLessThan(buttons.indexOf("Regenerate"));
+    });
+
+    it("hides them on the reply that's streaming", () => {
+      mockChat({ messages: conversation, status: "streaming" });
+      renderPane();
+
+      expect(goodButtons()).toHaveLength(1);
+    });
+
+    it("hides them on the content-filter message and a reply waiting on approval", () => {
+      mockChat({
+        messages: [
+          text("u1", "user", "x"),
+          text("a1", "assistant", AGENT_CONTENT_FILTER_MESSAGE),
+          text("u2", "user", "apply"),
+          {
+            id: "a2",
+            role: "assistant",
+            parts: [
+              { type: "text", text: "Shall I apply?" },
+              {
+                type: "tool-submitApplication",
+                toolCallId: "c1",
+                state: "approval-requested",
+                input: {},
+                approval: { id: "ap1" },
+              },
+            ],
+          } as UIMessage,
+        ],
+      });
+      renderPane();
+
+      expect(goodButtons()).toHaveLength(0);
+    });
+
+    it("shows them on a stopped reply", () => {
+      mockChat({
+        messages: [text("u1", "user", "hi"), { ...text("a1", "assistant", "Here are"), metadata: { stopped: true } }],
+      });
+      renderPane();
+
+      expect(goodButtons()).toHaveLength(1);
+    });
+
+    it("shows the saved vote pressed and saves a new one", async () => {
+      mockChat({ messages: conversation });
+      render(
+        <ChatPane sessionId={SESSION_ID} initialMessages={[]} initialFeedback={{ a1: { reply: -1 } }} />,
+      );
+
+      const [firstDown, secondDown] = screen.getAllByRole("button", { name: "Bad response" });
+      expect(firstDown).toHaveAttribute("aria-pressed", "true");
+      expect(secondDown).toHaveAttribute("aria-pressed", "false");
+
+      await userEvent.click(goodButtons()[1]);
+
+      expect(submitAgentFeedbackAction).toHaveBeenCalledWith({
+        sessionId: SESSION_ID,
+        messageId: "a2",
+        kind: "reply",
+        rating: 1,
+      });
+      expect(goodButtons()[1]).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("shows the new session's votes after a switch", () => {
+      const OTHER = "66666666-6666-4666-8666-666666666666";
+      mockChat({ messages: conversation });
+      const { rerender } = render(
+        <ChatPane sessionId={SESSION_ID} initialMessages={[]} initialFeedback={{ a1: { reply: 1 } }} />,
+      );
+      expect(goodButtons()[0]).toHaveAttribute("aria-pressed", "true");
+
+      rerender(<ChatPane sessionId={OTHER} initialMessages={[]} initialFeedback={{ a2: { reply: 1 } }} />);
+
+      expect(goodButtons()[0]).toHaveAttribute("aria-pressed", "false");
+      expect(goodButtons()[1]).toHaveAttribute("aria-pressed", "true");
+    });
+  });
+
+  describe("the survey card (AF-REQ-013/014/016)", () => {
+    const CARD = "How's the agent working for you?";
+    const THANKS = "Thanks — this helps us improve the agent.";
+    const withCard = (m: UIMessage, suggestions?: string[]): UIMessage => ({
+      ...m,
+      parts: [
+        ...m.parts,
+        ...(suggestions ? [{ type: "data-suggestions", id: "suggestions", data: { suggestions } }] : []),
+        { type: "data-feedback", id: "feedback", data: { v: 1 } },
+      ] as UIMessage["parts"],
+    });
+    const turns = (n: number) =>
+      Array.from({ length: n }, (_, i) => [text(`u${i}`, "user", `q${i}`), text(`a${i}`, "assistant", `answer ${i}`)]).flat();
+
+    it("shows the card under the reply that carries it, after the suggestions", () => {
+      mockChat({ messages: [text("u1", "user", "apply"), withCard(text("a1", "assistant", "Applied!"), ["Track it"])] });
+      renderPane();
+
+      const card = screen.getByRole("region", { name: CARD });
+      const chips = screen.getByRole("group", { name: "Suggested replies" });
+      expect(chips.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("keeps an unanswered card for one more reply, then drops it", () => {
+      const history = [text("u0", "user", "apply"), withCard(text("a0", "assistant", "Applied!"))];
+      mockChat({ messages: [...history, ...turns(1).map((m) => ({ ...m, id: `x-${m.id}` }))] });
+      const { unmount } = renderPane();
+      expect(screen.getByRole("region", { name: CARD })).toBeInTheDocument();
+      unmount();
+
+      mockChat({ messages: [...history, ...turns(2).map((m) => ({ ...m, id: `x-${m.id}` }))] });
+      renderPane();
+      expect(screen.queryByRole("region", { name: CARD })).not.toBeInTheDocument();
+    });
+
+    it("restores a saved answer or dismissal on reload", () => {
+      const old = [text("u0", "user", "apply"), withCard(text("a0", "assistant", "Applied!"))];
+      mockChat({ messages: [...old, ...turns(3)] });
+      const { unmount } = render(
+        <ChatPane sessionId={SESSION_ID} initialMessages={[]} initialFeedback={{ a0: { survey: "answered" } }} />,
+      );
+      // Answered: the thanks line stays, however old.
+      expect(screen.getByText(THANKS)).toBeInTheDocument();
+      unmount();
+
+      mockChat({ messages: old });
+      render(<ChatPane sessionId={SESSION_ID} initialMessages={[]} initialFeedback={{ a0: { survey: "dismissed" } }} />);
+      expect(screen.queryByRole("region", { name: CARD })).not.toBeInTheDocument();
+      expect(screen.queryByText(THANKS)).not.toBeInTheDocument();
+    });
+
+    it("saves an answer into the chat's feedback state", async () => {
+      mockChat({ messages: [text("u1", "user", "apply"), withCard(text("a1", "assistant", "Applied!"))] });
+      renderPane();
+
+      await userEvent.click(screen.getByRole("radio", { name: "Rate 5 out of 5" }));
+      await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+      expect(submitAgentFeedbackAction).toHaveBeenCalledWith(
+        expect.objectContaining({ messageId: "a1", kind: "survey", rating: 5 }),
+      );
+      expect(await screen.findByText(THANKS)).toBeInTheDocument();
+    });
+
+    it("leaves the chips and the composer working while the card is open", async () => {
+      mockChat({ messages: [text("u1", "user", "apply"), withCard(text("a1", "assistant", "Applied!"), ["Track it"])] });
+      renderPane();
+      expect(screen.getByRole("region", { name: CARD })).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Track it" }));
+
+      expect(chat.sendMessage).toHaveBeenCalledWith({ text: "Track it" });
+      expect(screen.getByLabelText("Message")).toBeEnabled();
+    });
   });
 
   it("shows suggested prompts when empty and sends one on click", async () => {

@@ -68,7 +68,7 @@ export default async function AgentPage({
       ]);
 
       if (pageData) {
-        const { sessions, activeSessionId, messages } = pageData;
+        const { sessions, activeSessionId, messages, feedback } = pageData;
 
         return (
           <AgentShell
@@ -76,6 +76,7 @@ export default async function AgentPage({
             initialSessions={sessions}
             activeSessionId={activeSessionId}
             initialMessages={messages}
+            initialFeedback={feedback}
             initialDraft={prompt}
             messagesUsedToday={messagesUsedToday}
             memberCap={memberCap && { limit: memberCap.limit, remaining: memberCap.remaining }}

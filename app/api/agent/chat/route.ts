@@ -17,6 +17,7 @@ import { internalError, readJson, requireAgentUser } from "@/helpers/agent/auth"
 import {
   AGENT_CONTEXT_WINDOW,
   AGENT_CUT_OFF_MESSAGE,
+  AGENT_FEEDBACK_SURVEY_ENABLED,
   AGENT_FULL_TOOL_OUTPUT_TURNS,
   AGENT_MAX_MESSAGE_CHARS,
   AGENT_MAX_REGENERATIONS,
@@ -31,7 +32,10 @@ import { mergeClientUpdates } from "@/helpers/agent/client-updates";
 import { listMemories } from "@/helpers/agent/memory";
 import {
   countUserMessagesToday,
+  lastFeedbackOfferAt,
+  lastSurveyDismissalAt,
   loadSession,
+  markFeedbackRequested,
   setSessionTitle,
   touchSession,
   truncateAfter,
@@ -39,6 +43,12 @@ import {
 } from "@/helpers/agent/persistence";
 import { generateSessionTitle, summariseSession } from "@/helpers/agent/summarise";
 import { generateFollowUps } from "@/helpers/agent/suggestions";
+import {
+  createFinishedToolTracker,
+  FEEDBACK_PART,
+  shouldOfferFeedback,
+  type FinishedTool,
+} from "@/helpers/agent/feedback-trigger";
 import { stoppedReply } from "@/helpers/agent/stopped";
 import { canRegenerate, withRegeneration } from "@/helpers/agent/regenerations";
 import { agentTelemetry, flushAgentTraces } from "@/helpers/agent/telemetry";
@@ -204,6 +214,47 @@ export async function POST(request: NextRequest) {
       : { sessionId, userId: user.id };
     const traceId = (name: string) => `${role.telemetryPrefix}-${name}`;
 
+    /**
+     * Whether to add the survey card after this reply (AF-REQ-010/012). The
+     * cooldowns are read only when the turn could get a card, and the offer
+     * is recorded before the card is written. Any error skips the card; it
+     * never fails the turn.
+     */
+    const offerFeedback = async (
+      finishReason: string | undefined,
+      stopped: boolean,
+      finishedTools: readonly FinishedTool[],
+    ) => {
+      const now = new Date();
+      const input = {
+        enabled: AGENT_FEEDBACK_SURVEY_ENABLED,
+        finishReason,
+        stopped,
+        sessionOffered: session.feedback_requested_at != null,
+        userTurns: history.filter((m) => m.role === "user").length,
+        finishedTools,
+        milestones: role.feedbackMilestones ?? [],
+        now,
+      };
+      if (!shouldOfferFeedback({ ...input, lastOfferedAt: null, lastDismissedAt: null })) return false;
+      try {
+        const [lastOfferedAt, lastDismissedAt] = await Promise.all([
+          lastFeedbackOfferAt(supabase, user.id),
+          lastSurveyDismissalAt(supabase, user.id),
+        ]);
+        if (!shouldOfferFeedback({ ...input, lastOfferedAt, lastDismissedAt })) return false;
+        await markFeedbackRequested(supabase, user.id, sessionId, now);
+        return true;
+      } catch (error) {
+        await eventCaptureServerException({
+          error,
+          distinctId: user.id,
+          properties: { flow: "agent_feedback_offer", session_id: sessionId },
+        });
+        return false;
+      }
+    };
+
     const result = streamText({
       model: google(AGENT_MODEL),
       system: buildPrompt({
@@ -243,11 +294,17 @@ export async function POST(request: NextRequest) {
       originalMessages: history,
       generateId: createIdGenerator({ prefix: "msg", size: 16 }),
       execute: async ({ writer }) => {
+        // Tools that finish this turn, for the survey card's milestones. A
+        // call approved in the last request runs now, named by the reply
+        // being continued.
+        const tools = createFinishedToolTracker(incoming?.role === "assistant" ? toSave ?? undefined : undefined);
+
         // Copy the model's chunks in order, so the suggestions and the finish come last.
         for await (const chunk of result.toUIMessageStream({
           sendFinish: false,
           onError: reportStreamError,
         })) {
+          tools.observe(chunk);
           writer.write(chunk);
         }
 
@@ -272,6 +329,7 @@ export async function POST(request: NextRequest) {
           writer.write({ type: "text-end", id: "content-filter" });
         }
 
+        let feedbackOffered = false;
         if (finishReason === "stop" && !stopped) {
           const suggestions = await generateFollowUps(
             {
@@ -287,6 +345,10 @@ export async function POST(request: NextRequest) {
           if (suggestions.length > 0) {
             writer.write({ type: "data-suggestions", id: "suggestions", data: { suggestions } });
           }
+
+          // The survey card, after the suggestions (AF-REQ-010).
+          feedbackOffered = await offerFeedback(finishReason, stopped, tools.finished());
+          if (feedbackOffered) writer.write({ ...FEEDBACK_PART, data: { ...FEEDBACK_PART.data } });
         }
 
         writer.write({ type: "finish", finishReason });
@@ -316,6 +378,8 @@ export async function POST(request: NextRequest) {
                   output_tokens: usage.outputTokens ?? null,
                   cached_input_tokens: usage.inputTokenDetails?.cacheReadTokens ?? null,
                   memory_count: memories.length,
+                  // Survey response rate = survey rows ÷ turns offered one (AF-REQ-041).
+                  feedback_offered: feedbackOffered,
                   ...(company ? { role: role.id, company_id: company.id } : {}),
                 },
               }),

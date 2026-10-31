@@ -21,12 +21,18 @@ describe("loadAgentPageData", () => {
       error: null,
     });
 
+    supabase.queue("agent_feedback", {
+      data: [{ message_id: "m2", kind: "reply", rating: 1, dismissed: false }],
+      error: null,
+    });
+
     const data = await loadAgentPageData(supabase.client, "u1", "s2");
 
     expect(data).toEqual({
       sessions: [S1, S2],
       activeSessionId: "s2",
       messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] }],
+      feedback: { m2: { reply: 1 } },
     });
     expect(supabase.callsFor("agent_sessions")[0].chain).toEqual([
       { method: "select", args: ["id, title, updated_at"] },
@@ -88,7 +94,7 @@ describe("loadAgentPageData", () => {
 
     const data = await loadAgentPageData(supabase.client, "u1", undefined, { newChat: true });
 
-    expect(data).toEqual({ sessions: [created, S1, S2], activeSessionId: "s9", messages: [] });
+    expect(data).toEqual({ sessions: [created, S1, S2], activeSessionId: "s9", messages: [], feedback: {} });
   });
 
   it("reuses the newest chat for a prompt when it is still empty", async () => {
@@ -97,7 +103,7 @@ describe("loadAgentPageData", () => {
 
     const data = await loadAgentPageData(supabase.client, "u1", undefined, { newChat: true });
 
-    expect(data).toEqual({ sessions: [S1, S2], activeSessionId: "s1", messages: [] });
+    expect(data).toEqual({ sessions: [S1, S2], activeSessionId: "s1", messages: [], feedback: {} });
     expect(supabase.callsFor("agent_sessions")).toHaveLength(2);
   });
 

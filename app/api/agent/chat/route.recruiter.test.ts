@@ -18,6 +18,7 @@ import { agentTelemetry, flushAgentTraces } from "@/helpers/agent/telemetry";
 import { consumeEntitlement, getEntitlements } from "@/helpers/billing/entitlements";
 import { EntitlementError } from "@/helpers/billing/errors";
 import { RA_DAILY_MESSAGE_CAP } from "@/helpers/agent/roles/recruiter/config";
+import { upsertJobPosting } from "@/helpers/jobs/upsert-job-posting";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -36,6 +37,7 @@ vi.mock("@/helpers/agent/telemetry", () => ({
   agentTelemetry: vi.fn(),
   flushAgentTraces: vi.fn(),
 }));
+vi.mock("@/helpers/jobs/upsert-job-posting", () => ({ upsertJobPosting: vi.fn() }));
 vi.mock("@/helpers/billing/entitlements", () => ({
   consumeEntitlement: vi.fn(),
   getEntitlements: vi.fn(),
@@ -266,5 +268,65 @@ describe("POST /api/agent/chat for a company user (RA-TEST-007)", () => {
         properties: expect.objectContaining({ role: "company", company_id: COMPANY_A.id }),
       }),
     );
+  });
+});
+
+describe("POST /api/agent/chat for a company user: the survey card (AF-REQ-010/011)", () => {
+  const JOB_INPUT = {
+    title: "Founding Backend Engineer",
+    description: "Build our backend.",
+    locations: ["Remote"],
+    jobType: "Fulltime",
+    salaryCurrency: "$",
+    minSalary: 0,
+    maxSalary: 0,
+    minExperience: 3,
+    visaSponsorship: "Not Required",
+  };
+
+  function approvedTool(type: string, input: unknown) {
+    const pending = {
+      id: "a1",
+      role: "assistant",
+      parts: [{ type, toolCallId: "c1", state: "approval-requested", input, approval: { id: "ap1" } }],
+    } as UIMessage;
+    const approved = {
+      ...pending,
+      parts: [{ ...pending.parts[0], state: "approval-responded", approval: { id: "ap1", approved: true } }],
+    } as UIMessage;
+    return { history: [text("u1", "user", "write a job post"), pending], approved };
+  }
+
+  it("adds the card after the company's milestone, createJobPost", async () => {
+    vi.mocked(upsertJobPosting).mockResolvedValue({ success: true, postingId: JOB.id } as never);
+    const { history, approved } = approvedTool("tool-createJobPost", JOB_INPUT);
+    queueTurn({ history, countCheck: false });
+    supabase.queue("agent_sessions", { data: null, error: null }); // last offer
+    supabase.queue("agent_feedback", { data: null, error: null }); // last dismissal
+
+    const res = await submit(approved);
+    const body = await res.text();
+    await flushAfter();
+
+    expect(upsertJobPosting).toHaveBeenCalled();
+    expect(body).toContain('"type":"data-feedback"');
+    expect(eventCaptureServer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "agent_chat_turn",
+        properties: expect.objectContaining({ role: "company", feedback_offered: true }),
+      }),
+    );
+  });
+
+  it("doesn't add it when the milestone returned an error", async () => {
+    vi.mocked(upsertJobPosting).mockResolvedValue({ success: false, error: "Plan limit reached." } as never);
+    const { history, approved } = approvedTool("tool-createJobPost", JOB_INPUT);
+    queueTurn({ history, countCheck: false });
+
+    const body = await (await submit(approved)).text();
+
+    expect(upsertJobPosting).toHaveBeenCalled();
+    expect(body).not.toContain('"type":"data-feedback"');
+    expect(supabase.callsFor("agent_feedback")).toHaveLength(0);
   });
 });

@@ -316,6 +316,7 @@ export enum PostHogEvent {
   InHouseApplicationSubmitted = "in_house_application_submitted",
 
   AgentChatTurn = "agent_chat_turn",
+  AgentFeedback = "agent_feedback",
   AgentLocationNoResults = "agent_location_no_results",
 
   McpToolCall = "mcp_tool_call",
