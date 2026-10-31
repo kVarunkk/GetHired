@@ -259,10 +259,41 @@ export function createJobTools(ctx: AgentToolContext) {
         withToolErrors(ctx, "findRelevantJobs", async () => {
           const { data: profile, error } = await supabase
             .from("user_info")
-            .select("embedding_new")
+            .select("embedding_new, filled, relevant_jobs_update_status")
             .eq("user_id", ctx.user.id)
             .maybeSingle();
           if (error) throw error;
+
+          if (profile?.filled) {
+            // The relevance search reads the stored feed (user_relevant_jobs),
+            // which the background pipeline builds (embedding match + rerank)
+            // after onboarding. Until it exists, say so rather than returning
+            // nothing or sending the user back to onboarding. A refresh keeps
+            // the old feed until the new one is written, so it isn't blocked.
+            const { count, error: feedError } = await supabase
+              .from("user_relevant_jobs")
+              .select("jobs_id", { count: "exact", head: true })
+              .eq("user_id", ctx.user.id);
+            if (feedError) throw feedError;
+
+            if (!count) {
+              const status = profile.relevant_jobs_update_status;
+              if (status === "pending" || status === "progress") {
+                return {
+                  error: "MATCHES_PROCESSING",
+                  message:
+                    "The user's personalised matches are still being generated after onboarding (usually a few minutes, and they get an email when it's ready). Offer a regular job search in the meantime.",
+                };
+              }
+              if (status === "failed") {
+                return {
+                  error: "MATCHES_FAILED",
+                  message:
+                    "Generating the user's personalised matches failed. Suggest refreshing them from /jobs?sortBy=relevance, and offer a regular job search meanwhile.",
+                };
+              }
+            }
+          }
 
           if (!profile?.embedding_new) {
             return {

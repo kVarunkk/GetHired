@@ -49,9 +49,16 @@ export const sendEmailForRelevantJobsStatusUpdate = async (
   }
 };
 
+/**
+ * Rebuilds the user's stored feed (user_relevant_jobs) and marks it completed.
+ * On failure it marks the status failed unless `markFailed` is false: a caller
+ * that will retry (the onboarding worker) keeps it at "progress" and sets
+ * "failed" itself once it gives up.
+ */
 export async function processUserRelevance(
   userId: string,
   isInternalCall: boolean = false,
+  { markFailed = true }: { markFailed?: boolean } = {},
 ) {
   const supabase = isInternalCall
     ? createServiceRoleClient()
@@ -145,13 +152,15 @@ export async function processUserRelevance(
     return { success: true };
   } catch (error) {
     reportError("[relevant jobs] update failed", error);
-    await supabase
-      .from("user_info")
-      .update({
-        relevant_jobs_update_status: "failed",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId);
+    if (markFailed) {
+      await supabase
+        .from("user_info")
+        .update({
+          relevant_jobs_update_status: "failed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+    }
 
     const msg =
       error instanceof Error ? error.message : "unknown error occured.";

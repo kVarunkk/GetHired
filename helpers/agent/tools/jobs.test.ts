@@ -204,7 +204,7 @@ describe("findRelevantJobs tool", () => {
     });
 
     expect(supabase.callsFor("user_info")[0].chain).toEqual([
-      { method: "select", args: ["embedding_new"] },
+      { method: "select", args: ["embedding_new, filled, relevant_jobs_update_status"] },
       { method: "eq", args: ["user_id", "u1"] },
       { method: "maybeSingle", args: [] },
     ]);
@@ -218,7 +218,7 @@ describe("findRelevantJobs tool", () => {
 
   it.each([
     ["no profile", null],
-    ["no embedding", { embedding_new: null }],
+    ["no embedding", { embedding_new: null, filled: false }],
   ])("returns a hint instead of searching when there is %s", async (_label, data) => {
     supabase.queue("user_info", { data, error: null });
 
@@ -230,6 +230,45 @@ describe("findRelevantJobs tool", () => {
         "Personalised matches need a completed profile or a parsed primary resume. Ask the user to finish onboarding at /get-started or upload a resume.",
     });
     expect(searchJobs).not.toHaveBeenCalled();
+  });
+});
+
+describe("findRelevantJobs tool for an onboarded user", () => {
+  const onboarded = (status: string) => ({
+    embedding_new: "[0.1]",
+    filled: true,
+    relevant_jobs_update_status: status,
+  });
+
+  it.each([
+    ["pending", "MATCHES_PROCESSING"],
+    ["progress", "MATCHES_PROCESSING"],
+    ["failed", "MATCHES_FAILED"],
+  ])("explains an empty feed while it is %s", async (status, code) => {
+    supabase.queue("user_info", { data: onboarded(status), error: null });
+    supabase.queue("user_relevant_jobs", { data: null, count: 0, error: null });
+
+    expect(await execTool(tools.findRelevantJobs, {})).toMatchObject({ error: code });
+    expect(supabase.callsFor("user_relevant_jobs")[0].chain).toContainEqual({
+      method: "eq",
+      args: ["user_id", "u1"],
+    });
+    expect(searchJobs).not.toHaveBeenCalled();
+  });
+
+  it("searches the old feed while a refresh is in progress", async () => {
+    supabase.queue("user_info", { data: onboarded("progress"), error: null });
+    supabase.queue("user_relevant_jobs", { data: null, count: 40, error: null });
+
+    expect(await execTool(tools.findRelevantJobs, {})).toMatchObject({ jobs: [COMPACT_JOB] });
+  });
+
+  it("still searches an empty feed once generation completed", async () => {
+    supabase.queue("user_info", { data: onboarded("completed"), error: null });
+    supabase.queue("user_relevant_jobs", { data: null, count: 0, error: null });
+
+    await execTool(tools.findRelevantJobs, {});
+    expect(searchJobs).toHaveBeenCalled();
   });
 });
 

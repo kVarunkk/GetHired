@@ -20,8 +20,39 @@ export type OnboardingMessage = {
 };
 
 const BATCH_SIZE = 2;
-const VISIBILITY_TIMEOUT = 0;
+// pgmq's read hides a message for this long. The pipeline (parse, embed,
+// rerank) is slow, so it must outlast a run, or the next scheduled call reads
+// the same message again and processes the user twice.
+const VISIBILITY_TIMEOUT = 300;
+// Attempts per message: read_ct is 1 on the first read.
 const MAX_RETRIES = 3;
+
+async function markFailed(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  userId: string,
+) {
+  await supabase
+    .from("user_info")
+    .update({
+      relevant_jobs_update_status: "failed",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+}
+
+async function dropMessage(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  msg: OnboardingMessage,
+) {
+  await markFailed(supabase, msg.message.userId);
+  await supabase.schema("pgmq_public").rpc("delete", {
+    queue_name: "onboarding_pipeline",
+    message_id: msg.msg_id,
+  });
+  await sendEmailForStatusUpdate(
+    `ONBOARDING WORKER POISON ALERT: Message ${msg.msg_id} for User ${msg.message.userId} dropped after failing ${msg.read_ct} times.`,
+  );
+}
 
 export async function GET() {
   const headersList = await headers();
@@ -64,22 +95,10 @@ export async function GET() {
         try {
           const { userId, resumeId, shouldParse } = msg.message;
 
-          if (msg.read_ct >= MAX_RETRIES) {
-            await supabase
-              .from("user_info")
-              .update({
-                relevant_jobs_update_status: "failed",
-                updated_at: new Date().toISOString(),
-              })
-              .eq("user_id", msg.message.userId);
-
-            await supabase.schema("pgmq_public").rpc("delete", {
-              queue_name: "onboarding_pipeline",
-              message_id: msg.msg_id,
-            });
-            await sendEmailForStatusUpdate(
-              `ONBOARDING WORKER POISON ALERT: Message ${msg.msg_id} for User ${userId} dropped after failing ${msg.read_ct} times.`,
-            );
+          // Only a message whose run never finished (a crash or timeout)
+          // gets here: a failed attempt is handled in the catch below.
+          if (msg.read_ct > MAX_RETRIES) {
+            await dropMessage(supabase, msg);
             return;
           }
 
@@ -119,7 +138,11 @@ export async function GET() {
             throw new Error("Background User Info Update Failed");
 
           // 4. PROCESS USER RELEVANCE
-          const relevanceRes = await processUserRelevance(userId, true);
+          // The status stays "progress" while retries remain, so the jobs page
+          // and the agent keep saying the matches are on their way.
+          const relevanceRes = await processUserRelevance(userId, true, {
+            markFailed: false,
+          });
           if (relevanceRes.error)
             throw new Error("Background User Relevance Failed");
 
@@ -130,6 +153,9 @@ export async function GET() {
           });
         } catch (err) {
           reportError("[onboarding worker] message failed", err);
+          // Last attempt: give up now rather than on an extra read. Otherwise
+          // the message reappears after the visibility timeout and is retried.
+          if (msg.read_ct >= MAX_RETRIES) await dropMessage(supabase, msg);
           return;
         }
       }),
