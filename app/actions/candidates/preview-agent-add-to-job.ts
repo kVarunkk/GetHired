@@ -4,8 +4,6 @@ import { z } from "zod";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import { previewAgentAddToJob, type AddToJobPreview } from "@/helpers/candidates/preview-agent-add-to-job";
 
-export type { AddToJobPreview };
-
 const jobOf = z.object({ jobPostId: z.string().uuid() });
 
 /**

@@ -7,11 +7,8 @@ import {
   previewAgentImport,
   type AddCandidatePreview,
   type DeleteCandidatesPreview,
-  type DestinationPreview,
   type ImportPreview,
 } from "@/helpers/candidates/preview-agent-import";
-
-export type { AddCandidatePreview, DeleteCandidatesPreview, DestinationPreview, ImportPreview };
 
 // SERVER ACTIONS (BI-REQ-060): the agent's approval cards for `confirmImport`,
 // `addCandidate` and `deleteMyCandidates`. The work is in

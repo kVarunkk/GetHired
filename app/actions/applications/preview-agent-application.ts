@@ -7,8 +7,6 @@ import {
   type PreviewAgentApplicationResult,
 } from "@/helpers/applications/preview-agent-application";
 
-export type { PreviewAgentApplicationResult };
-
 /**
  * SERVER ACTION: the agent's approval card for a proposed `submitApplication`
  * call (see `previewAgentApplication`). Writes nothing. The applicant comes

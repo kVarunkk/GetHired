@@ -9,8 +9,6 @@ import {
   type rolePreviewInput,
 } from "@/helpers/companies/preview-agent-role";
 
-export type { PreviewAgentRoleResult };
-
 /**
  * SERVER ACTION: the approval card's preview for the agent's role tools
  * (RP-REQ-032). The work is `previewAgentRole`, which MCP shares. The company

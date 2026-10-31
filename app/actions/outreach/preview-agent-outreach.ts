@@ -3,11 +3,8 @@
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import {
   previewAgentOutreach,
-  type AgentOutreachPreview,
   type PreviewAgentOutreachResult,
 } from "@/helpers/outreach/preview-agent-outreach";
-
-export type { AgentOutreachPreview, PreviewAgentOutreachResult };
 
 /**
  * SERVER ACTION (RAT-053): the agent's approval card for a proposed

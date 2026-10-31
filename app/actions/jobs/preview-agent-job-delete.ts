@@ -5,8 +5,6 @@ import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import { isUuid } from "@/helpers/agent/auth";
 import { previewAgentJobDelete, type PreviewAgentJobDeleteResult } from "@/helpers/jobs/preview-agent-job-delete";
 
-export type { PreviewAgentJobDeleteResult };
-
 const input = z.object({ jobPostId: z.string().refine(isUuid) });
 
 /**

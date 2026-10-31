@@ -3,11 +3,8 @@
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import {
   previewAgentInterviewInvite,
-  type InvitePreviewApplicant,
   type PreviewAgentInterviewInviteResult,
 } from "@/helpers/interview/screening/preview-agent-interview-invite";
-
-export type { InvitePreviewApplicant, PreviewAgentInterviewInviteResult };
 
 /**
  * SERVER ACTION (SIT-071): the agent's approval card for a proposed

@@ -3,8 +3,6 @@
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import { previewAgentMove, type PreviewAgentMoveResult } from "@/helpers/pipeline/preview-agent-move";
 
-export type { PreviewAgentMoveResult };
-
 /**
  * SERVER ACTION (RA-TASK-040): the agent's approval card for a proposed
  * `moveApplications` call. The work is `previewAgentMove`, which MCP shares.

@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  previewAgentJobDeleteAction,
-  type PreviewAgentJobDeleteResult,
-} from "@/app/actions/jobs/preview-agent-job-delete";
+import { previewAgentJobDeleteAction } from "@/app/actions/jobs/preview-agent-job-delete";
+import type { PreviewAgentJobDeleteResult } from "@/helpers/jobs/preview-agent-job-delete";
 
 /**
  * What an agent's job post delete removes, for its approval card

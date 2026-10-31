@@ -1,15 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  previewAgentAddCandidateAction,
-  previewAgentDeleteCandidatesAction,
-  previewAgentImportAction,
-  type AddCandidatePreview,
-  type DeleteCandidatesPreview,
-  type DestinationPreview,
-  type ImportPreview,
-} from "@/app/actions/candidates/preview-agent-import";
+import { previewAgentAddCandidateAction, previewAgentDeleteCandidatesAction, previewAgentImportAction } from "@/app/actions/candidates/preview-agent-import";
+import type { AddCandidatePreview, DeleteCandidatesPreview, DestinationPreview, ImportPreview } from "@/helpers/candidates/preview-agent-import";
 
 const plural = (n: number, one: string, many: string) => `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
 

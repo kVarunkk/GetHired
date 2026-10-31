@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { previewAgentAddToJobAction, type AddToJobPreview } from "@/app/actions/candidates/preview-agent-add-to-job";
+import { previewAgentAddToJobAction } from "@/app/actions/candidates/preview-agent-add-to-job";
+import type { AddToJobPreview } from "@/helpers/candidates/preview-agent-add-to-job";
 
 /**
  * The approval card's details for the agent's `addCandidatesToJob` (CPT-058):
