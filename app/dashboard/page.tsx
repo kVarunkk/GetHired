@@ -12,6 +12,7 @@ import RechargeCredits from "@/components/RechargeCredits";
 import DashboardDropdown from "@/components/DashboardDropdown";
 import CreditDepositDialog from "@/components/CreditDepositDialog";
 import ProfileViewsCard from "@/components/ProfileViewsCard";
+import McpConnectCard from "@/components/mcp/McpConnectCard";
 import { PROFILE_VIEW_WINDOW_DAYS } from "@/helpers/outreach/config";
 import AskApplicantAgent from "@/components/agent/AskApplicantAgent";
 import PageHeader from "@/components/PageHeader";
@@ -311,20 +312,7 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="flex flex-col p-4 text-center">
-              {/* <CardHeader className="p-0"></CardHeader> */}
-              <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full flex-1">
-                <span className="text-sm text-muted-foreground font-medium">
-                  Use GetHired from Claude, Cursor or any other MCP client
-                </span>
-                <Button asChild>
-                  <Link href={"/mcp"}>
-                    Connect an MCP client
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+            <McpConnectCard />
 
             <ProfileViewsCard count={profileViews} />
           </div>

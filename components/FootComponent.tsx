@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { usePathname } from "next/navigation";
+import McpServerCta from "./mcp/McpServerCta";
 
 // Add a prop to check if we are on the /hire page
 export default function FootComponent() {
   const pathname = usePathname();
-  const isHirePage = pathname.startsWith("/hire") || pathname.startsWith("/mcp-server/companies");
+  const isHirePage =
+    pathname.startsWith("/hire") ||
+    pathname.startsWith("/mcp-server/companies");
   const isJobsPage = pathname.startsWith("/jobs");
   const isProfilesPage = pathname.startsWith("/company/profiles");
   // Define content variants
@@ -60,43 +63,46 @@ export default function FootComponent() {
         : defaultContent;
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-6 bg-muted/30 rounded-2xl border">
-      <h2 className="text-2xl sm:text-[28px] font-semibold text-center mb-3 tracking-tight">
-        {content.heading}
-      </h2>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col items-center justify-center py-12 px-6 bg-muted/30 rounded-2xl border">
+        <h2 className="text-2xl sm:text-[28px] font-semibold text-center mb-3 tracking-tight">
+          {content.heading}
+        </h2>
 
-      <p className="text-[15px] leading-7 text-muted-foreground text-center mb-8 max-w-2xl">
-        {content.subtext}
-      </p>
+        <p className="text-[15px] leading-7 text-muted-foreground text-center mb-8 max-w-2xl">
+          {content.subtext}
+        </p>
 
-      <div className="flex flex-col sm:flex-row items-center gap-6">
-        <Button
-          asChild
-          size="lg"
-          variant="brand"
-          className="w-full sm:w-auto sm:whitespace-nowrap px-8"
-        >
-          <Link href={content.primaryButtonHref}>
-            {content.primaryButtonText}
-          </Link>
-        </Button>
-
-        {content.secondaryButtonHref.length &&
-        content.secondaryButtonText.length ? (
+        <div className="flex flex-col sm:flex-row items-center gap-6">
           <Button
             asChild
-            variant="outline"
             size="lg"
+            variant="brand"
             className="w-full sm:w-auto sm:whitespace-nowrap px-8"
           >
-            <Link href={content.secondaryButtonHref}>
-              {content.secondaryButtonText}
+            <Link href={content.primaryButtonHref}>
+              {content.primaryButtonText}
             </Link>
           </Button>
-        ) : (
-          ""
-        )}
+
+          {content.secondaryButtonHref.length &&
+          content.secondaryButtonText.length ? (
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="w-full sm:w-auto sm:whitespace-nowrap px-8"
+            >
+              <Link href={content.secondaryButtonHref}>
+                {content.secondaryButtonText}
+              </Link>
+            </Button>
+          ) : (
+            ""
+          )}
+        </div>
       </div>
+      <McpServerCta />
     </div>
   );
 }

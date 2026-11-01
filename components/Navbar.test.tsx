@@ -223,3 +223,39 @@ describe("NavbarComponent: company links (BI-REQ-003)", () => {
     expect(screen.getAllByRole("link", { name: /Discover/ }).length).toBeGreaterThan(0);
   });
 });
+
+describe("NavbarComponent: MCP setup link", () => {
+  const company = { id: "c1", app_metadata: { type: "company" }, user_metadata: {} } as unknown as User;
+
+  const renderVertical = (user: User | null) =>
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <TooltipProvider>
+          <NavbarComponent variant="vertical" initialUser={user} />
+        </TooltipProvider>
+      </SWRConfig>,
+    );
+
+  it.each([
+    ["an applicant", applicant],
+    ["a company user", company],
+  ])("links %s to /mcp from the sidebar and the mobile menu", async (_label, user) => {
+    renderVertical(user);
+
+    const links = screen.getAllByRole("link", { name: "Use with Claude" });
+    expect(links.length).toBeGreaterThan(0);
+    links.forEach((link) => expect(link).toHaveAttribute("href", "/mcp"));
+
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    expect(within(screen.getByRole("dialog")).getByRole("link", { name: "Use with Claude" })).toHaveAttribute(
+      "href",
+      "/mcp",
+    );
+  });
+
+  it("is hidden when signed out", () => {
+    renderVertical(null);
+    act(() => reportSession(null));
+    expect(screen.queryByRole("link", { name: "Use with Claude" })).not.toBeInTheDocument();
+  });
+});

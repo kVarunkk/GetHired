@@ -42,6 +42,8 @@ const nextConfig: NextConfig = {
         destination: "/company/job-posts/:id/applications",
         permanent: true,
       },
+      // API keys were replaced by OAuth sign-in to the MCP server.
+      { source: "/dashboard/api-keys", destination: "/mcp", permanent: true },
     ];
   },
 };
