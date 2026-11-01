@@ -73,6 +73,7 @@ export async function updateSession(request: NextRequest) {
     "/hire",
     "/ai-interview",
     "/mcp-server",
+    "/mcp-server/companies",
     // The MCP docs page, and the MCP endpoint, which answers signed-out
     // clients with its own 401 that starts their OAuth flow (MCP-SEC-007).
     "/mcp",

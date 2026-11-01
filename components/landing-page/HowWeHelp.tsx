@@ -20,7 +20,7 @@ import {
   HireComposerPreview,
   HirePipelinePreview,
 } from "./HirePreviews";
-import { howWeHelpCopy } from "@/helpers/marketing/content";
+import { howWeHelpCopy, type HowWeHelpAudience } from "@/helpers/marketing/content";
 
 // Each card opens the agent (the recruiter agent on /hire) with a prompt for
 // what the card offers. The prompt is also saved, so it survives a detour
@@ -43,9 +43,16 @@ function hireCta(prompt: string) {
   return agentCta(prompt, COMPANY_AGENT_PATH);
 }
 
-export function HowWeHelp({ jobCount }: { jobCount: number }) {
+export function HowWeHelp({
+  jobCount,
+  audience,
+}: {
+  jobCount: number;
+  /** Which version to show. Defaults to the hiring one on /hire, else the applicant one. */
+  audience?: HowWeHelpAudience;
+}) {
   const pathname = usePathname();
-  const isHirePage = pathname.startsWith("/hire");
+  const isHirePage = audience ? audience === "hire" : !!pathname?.startsWith("/hire");
 
   // The cards' visuals are built-in previews (no theme-specific images), so they
   // render straight away instead of waiting for the client to mount.

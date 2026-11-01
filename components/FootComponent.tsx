@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 // Add a prop to check if we are on the /hire page
 export default function FootComponent() {
   const pathname = usePathname();
-  const isHirePage = pathname.startsWith("/hire");
+  const isHirePage = pathname.startsWith("/hire") || pathname.startsWith("/mcp-server/companies");
   const isJobsPage = pathname.startsWith("/jobs");
   const isProfilesPage = pathname.startsWith("/company/profiles");
   // Define content variants

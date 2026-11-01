@@ -1,7 +1,8 @@
 import FootComponent from "@/components/FootComponent";
 import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
-import Hero from "@/components/landing-page/Hero";
+import Hero, { HeroEyebrow } from "@/components/landing-page/Hero";
+import ClaudeIcon from "@/components/icons/ClaudeIcon";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
@@ -39,6 +40,14 @@ export default async function MCPServerPage() {
       <div className="flex-1 w-full flex flex-col gap-20 items-center">
         <div className="flex-1 flex flex-col gap-32  w-full">
           <Hero
+            eyebrow={
+              <HeroEyebrow
+                href="/mcp-server"
+                icon={<ClaudeIcon className="h-3.5 w-3.5" />}
+                label="New: MCP server"
+                detail="Search and apply from Claude or Cursor"
+              />
+            }
             heading={page.heading}
             subheading={page.subheading(jobCount)}
             ctaText={page.ctas[0].label}

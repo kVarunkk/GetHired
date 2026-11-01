@@ -23,6 +23,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import toast from "react-hot-toast";
 import ModifiedLink from "./ModifiedLink";
+import { cn } from "@/utils/utils";
 
 /** A company's screening interview (SI-REQ-025): the server decides what happens after each attempt. */
 type ScreeningProps = {
@@ -52,25 +53,39 @@ interface InterviewComponentProps {
   screening?: ScreeningProps;
 }
 
+export type VoiceAgent = ReturnType<typeof useVoiceAgent>;
+
 const PRACTICE_SECONDS = 5 * 60;
 
-export default function InterviewComponent({
+export default function InterviewComponent(props: InterviewComponentProps) {
+  const { interviewId, screening } = props;
+  const voiceArgs: Parameters<typeof useVoiceAgent> = screening
+    ? [interviewId, { mode: "screening", applicationInterviewId: screening.applicationInterviewId }]
+    : [interviewId];
+  const voice = useVoiceAgent(...voiceArgs);
+  return <InterviewView {...props} voice={voice} />;
+}
+
+/**
+ * The interview screen, driven by `voice`. The page passes the live voice
+ * agent; the landing-page demo passes a scripted one and sets `embedded`,
+ * which fits the screen to its container and drops the back link and the
+ * links to the job and resume.
+ */
+export function InterviewView({
   interviewId,
   interview,
   sessionHistory,
   screening,
-}: InterviewComponentProps) {
-  const voiceArgs: Parameters<typeof useVoiceAgent> = screening
-    ? [interviewId, { mode: "screening", applicationInterviewId: screening.applicationInterviewId }]
-    : [interviewId];
-  const { status, errorMessage, lines, analysisSession, start, stop } =
-    useVoiceAgent(...voiceArgs);
+  voice,
+  embedded = false,
+}: InterviewComponentProps & { voice: VoiceAgent; embedded?: boolean }) {
+  const { status, errorMessage, lines, analysisSession, start, stop } = voice;
   const [autoScroll, setAutoScroll] = useState(true);
   const totalSeconds = screening ? screening.durationMinutes * 60 : PRACTICE_SECONDS;
   const [timeLeft, setTimeLeft] = useState(totalSeconds);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
 
   const isActive = status === "connecting" || status === "live";
 
@@ -162,11 +177,11 @@ export default function InterviewComponent({
         .reverse()
         .find((session) => session.analysisStatus !== null)?.id);
 
-  // Auto scroll transcript to bottom as new messages arrive
+  // Auto scroll transcript to bottom as new messages arrive. Only the
+  // transcript scrolls, never the page around it (the landing-page demo).
+  const scrollToEnd = () => scrollToBottom(scrollContainerRef.current);
   useEffect(() => {
-    if (autoScroll) {
-      endRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+    if (autoScroll) scrollToBottom(scrollContainerRef.current);
   }, [lines, autoScroll]);
 
   useEffect(() => {
@@ -205,14 +220,21 @@ export default function InterviewComponent({
   };
 
   return (
-    <div className="flex flex-col h-dvh max-h-dvh bg-background text-foreground overflow-hidden">
+    <div
+      className={cn(
+        "flex flex-col bg-background text-foreground overflow-hidden",
+        embedded ? "h-full" : "h-dvh max-h-dvh",
+      )}
+    >
       {/* Top Header Bar */}
       <header className="flex-none border-b border-border bg-card px-4 py-3 sm:px-6 flex items-center justify-between gap-3 z-10">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <BackLink
-            href={screening ? "/dashboard" : "/interview"}
-            label={screening ? "Back to dashboard" : "Back to interviews"}
-          />
+          {!embedded && (
+            <BackLink
+              href={screening ? "/dashboard" : "/interview"}
+              label={screening ? "Back to dashboard" : "Back to interviews"}
+            />
+          )}
           {screening ? (
             <div className="min-w-0 flex-1">
               <h1 className="text-base sm:text-lg font-semibold tracking-tight leading-tight truncate">
@@ -229,6 +251,23 @@ export default function InterviewComponent({
               {interview.name || "AI Interview"}
             </h1>
             <div className="mt-0.5 flex items-center flex-wrap gap-x-3 gap-y-0.5 min-w-0">
+              {embedded ? (
+                <>
+                  {interview.all_jobs?.job_name && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1 min-w-0 max-w-full">
+                      <Briefcase size={14} className="shrink-0" />
+                      <span className="truncate">{interview.all_jobs.job_name}</span>
+                    </span>
+                  )}
+                  {interview.resumes?.name && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1 min-w-0 max-w-full">
+                      <FileUser size={14} className="shrink-0" />
+                      <span className="truncate">{interview.resumes.name}</span>
+                    </span>
+                  )}
+                </>
+              ) : (
+              <>
               {interview.all_jobs?.job_name && (
                 <Link
                   className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 min-w-0 max-w-full"
@@ -254,6 +293,8 @@ export default function InterviewComponent({
                     {interview.resumes.name}
                   </span>
                 </Link>
+              )}
+              </>
               )}
             </div>
           </div>
@@ -282,7 +323,7 @@ export default function InterviewComponent({
           <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-brandSoft rounded-full blur-3xl pointer-events-none" />
 
           {/* Scrolls on short screens (or when zoomed in) instead of clipping */}
-          <div className="relative z-10 flex-1 min-h-0 overflow-y-auto flex flex-col justify-between items-center gap-4 p-4 sm:p-6">
+          <div className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col justify-between items-center gap-4 p-4 sm:p-6">
             {/* Top Info Tag */}
             <div className="w-full flex flex-wrap justify-between items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5 font-medium">
@@ -447,14 +488,13 @@ export default function InterviewComponent({
                   />
                 ))
               )}
-              <div ref={endRef} />
             </div>
             {/* Scroll to bottom floating button when auto-scroll is paused */}
             {!autoScroll && lines.length > 0 && (
               <button
                 onClick={() => {
                   setAutoScroll(true);
-                  endRef.current?.scrollIntoView({ behavior: "smooth" });
+                  scrollToEnd();
                 }}
                 className="absolute bottom-5 right-4 bg-card border border-border text-foreground shadow-lg text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5 hover:bg-secondary transition-all"
               >
@@ -509,6 +549,10 @@ export default function InterviewComponent({
       </main>
     </div>
   );
+}
+
+function scrollToBottom(container: HTMLElement | null) {
+  container?.scrollTo?.({ top: container.scrollHeight, behavior: "smooth" });
 }
 
 function StageText({ title, body }: { title: string; body: string }) {

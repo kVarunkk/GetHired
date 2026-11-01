@@ -152,7 +152,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-  V["Visitor / crawler / AI agent"] --> L["/ (applicant pitch), /hire (company pitch),<br/>/pricing/companies, /mcp-server, /extension …<br/>each with its own title + description"]
+  V["Visitor / crawler / AI agent"] --> L["/ (applicant pitch), /hire (company pitch),<br/>/pricing/companies, /mcp-server, /mcp-server/companies, /extension …<br/>each with its own title + description"]
   L --> DEMO["Agent demo cards → /agent?prompt=… or<br/>/company/agent?prompt=… (login with returnTo if signed out)"]
   V --> B["/blog (filter: job seekers / companies) → /blog/[slug]<br/>Keystatic .mdoc posts with a date and an audience"]
   V --> MDP["/index.md, /hire.md, /pricing/companies.md,<br/>/blog.md, /blog/[slug].md …"]

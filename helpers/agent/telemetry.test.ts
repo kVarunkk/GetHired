@@ -189,7 +189,8 @@ describe("tracing stays agent-only (REQ-027)", () => {
     }
 
     expect(offenders).toEqual([]);
-  });
+    // A synchronous walk of the whole source tree: slow on Windows under a full run.
+  }, 30_000);
 });
 
 describe("mcpToolTelemetry (RMCP spec §4.9)", () => {

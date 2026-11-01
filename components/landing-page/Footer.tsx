@@ -213,6 +213,14 @@ export default function Footer() {
             </li>
             <li>
               <Link
+                href="/mcp-server/companies"
+                className="transition-colors hover:text-foreground hover:underline"
+              >
+                MCP for Hiring Teams
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/extension"
                 className="transition-colors hover:text-foreground hover:underline"
               >

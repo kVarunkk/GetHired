@@ -3,7 +3,9 @@ import AgentHeroDemo from "@/components/landing-page/AgentHeroDemo";
 import { RECRUITER_DEMO } from "@/components/landing-page/agent-demos";
 import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
-import Hero from "@/components/landing-page/Hero";
+import Hero, { HeroEyebrow } from "@/components/landing-page/Hero";
+import { agentPromptHref, COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import { Sparkles } from "lucide-react";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
@@ -56,6 +58,14 @@ export default async function HirePage() {
   return (
     <div className="flex-1 flex flex-col gap-32 w-full">
       <Hero
+        eyebrow={
+          <HeroEyebrow
+            href={agentPromptHref("Help me post a new job. Ask me about the role first.", COMPANY_AGENT_PATH)}
+            icon={<Sparkles className="h-3.5 w-3.5" />}
+            label="Recruiter agent"
+            detail="Post a job and screen applicants in one chat"
+          />
+        }
         heading={page.heading}
         subheading={page.subheading(jobCount)}
         ctaText={page.ctas[0].label}

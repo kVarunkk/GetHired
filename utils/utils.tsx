@@ -410,8 +410,6 @@ export const HeroMaskStyle = {
 
 export const cloudFrontUrl = process.env.NEXT_PUBLIC_CLOUDFRONT_PATH || "";
 
-export const MCP_SERVER_DARK = `${cloudFrontUrl}/hero/mcp-server-hero-dark.webp`;
-export const MCP_SERVER_LIGHT = `${cloudFrontUrl}/hero/mcp-server-hero-light.webp`;
 export const CHROME_EXTENSION_DARK = `${cloudFrontUrl}/hero/chrome-extension-hero-dark.webp`;
 export const CHROME_EXTENSION_LIGHT = `${cloudFrontUrl}/hero/chrome-extension-hero-light.webp`;
 export const RESUME_CHECKER_DARK = `${cloudFrontUrl}/hero/dark-ai-resume-checker.webp`;

@@ -290,6 +290,8 @@ describe("middleware: bearer tokens (MCP-SEC-006, MCP TASK-000)", () => {
       passesThrough(await updateSession(request("/.well-known/oauth-protected-resource/api/mcp"))),
     ).toBe(true);
     expect(passesThrough(await updateSession(request("/mcp")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/mcp-server")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/mcp-server/companies")))).toBe(true);
   });
 
   it("keeps the OAuth app token lockdown on the metadata paths", async () => {

@@ -2,7 +2,9 @@ import FootComponent from "@/components/FootComponent";
 import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
 import AgentHeroDemo from "@/components/landing-page/AgentHeroDemo";
-import Hero from "@/components/landing-page/Hero";
+import Hero, { HeroEyebrow } from "@/components/landing-page/Hero";
+import { agentPromptHref } from "@/helpers/agent/prompt-draft";
+import { Sparkles } from "lucide-react";
 import { HowWeHelp } from "@/components/landing-page/HowWeHelp";
 import PlatformStats from "@/components/landing-page/PlatformStats";
 import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAdvantageSection";
@@ -37,6 +39,14 @@ export default async function Home() {
   return (
     <div className="flex-1 flex flex-col gap-32 w-full">
       <Hero
+        eyebrow={
+          <HeroEyebrow
+            href={agentPromptHref("Show jobs that match my profile, best matches first.")}
+            icon={<Sparkles className="h-3.5 w-3.5" />}
+            label="AI job agent"
+            detail="Ask it for jobs that match your resume"
+          />
+        }
         heading={page.heading}
         subheading={page.subheading(jobCount)}
         ctaText={page.ctas[0].label}
