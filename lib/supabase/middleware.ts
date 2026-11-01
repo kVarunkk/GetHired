@@ -7,6 +7,16 @@ import { getUserFromRequest } from "./get-user-from-request";
 import { APPLICANT_HOME, COMPANY_HOME, companyOnboardingPath } from "@/helpers/user/home-path";
 import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 import { pageForMarkdownPath } from "@/helpers/marketing/content";
+import { decodeJwt } from "jose";
+import { MCP_PATH, PROTECTED_RESOURCE_METADATA_PATH } from "@/helpers/mcp/config";
+
+function isOAuthAppToken(token: string) {
+  try {
+    return typeof decodeJwt(token).client_id === "string";
+  } catch {
+    return false;
+  }
+}
 
 export async function updateSession(request: NextRequest) {
   // Markdown versions of public pages, for AI agents: /hire.md, /index.md,
@@ -33,28 +43,17 @@ export async function updateSession(request: NextRequest) {
     ? authHeader.replace("Bearer ", "")
     : null;
 
-  if (bearerToken?.startsWith("gh_")) {
-    // Only allow API routes for gh_ tokens
-    // gh_ tokens are for MCP/programmatic access only
-    const allowedPaths = [
-      "/api/user/profile",
-      "/api/jobs",
-      "/api/ai-search/jobs",
-      "/api/resumes",
-      "/api/resume-review",
-    ];
-
-    const isAllowed = allowedPaths.some((path) =>
-      request.nextUrl.pathname.startsWith(path),
-    );
-
-    if (!isAllowed) {
-      return NextResponse.json(
-        { error: "API tokens can only be used with API routes" },
-        { status: 403 },
-      );
+  // MCP-SEC-006: a token Supabase's OAuth server issued to an app carries
+  // client_id, and only works on the MCP endpoint, which verifies it itself.
+  // Deny-only, so decoding without verifying is enough.
+  if (bearerToken && isOAuthAppToken(bearerToken)) {
+    if (request.nextUrl.pathname === MCP_PATH) {
+      return supabaseResponse;
     }
-    return supabaseResponse;
+    return NextResponse.json(
+      { error: "OAuth app tokens can only be used with the MCP endpoint" },
+      { status: 403 },
+    );
   }
 
   const user = await getUserFromRequest();
@@ -74,6 +73,11 @@ export async function updateSession(request: NextRequest) {
     "/hire",
     "/ai-interview",
     "/mcp-server",
+    "/mcp-server/companies",
+    // The MCP docs page, and the MCP endpoint, which answers signed-out
+    // clients with its own 401 that starts their OAuth flow (MCP-SEC-007).
+    "/mcp",
+    MCP_PATH,
     "/extension",
     "/ai-resume-checker",
     "/api/jobs",
@@ -123,6 +127,12 @@ export async function updateSession(request: NextRequest) {
     "/api/internal/interview-transcript",
     "/api/updates/screening-interviews",
     "/api/updates/screening-interviews/retention",
+    // Bulk import: the resume parsing worker and the abandoned-batch cron
+    // (X-Internal-Secret).
+    "/api/worker/candidate-import",
+    "/api/updates/candidate-imports/expire",
+    // Candidate pool: the candidate embeddings worker (X-Internal-Secret).
+    "/api/worker/candidate-embeddings",
     "/api/ai-search/jobs",
     "/api/ai-search/profiles",
     "/api/dodo/webhook",
@@ -192,10 +202,19 @@ export async function updateSession(request: NextRequest) {
     pathname.length > "/remote-jobs/".length;
 
   const isSitemapPage = pathname.startsWith("/sitemap/");
+  // RFC 9728 metadata for /api/mcp (MCP spec §4.2).
+  const isProtectedResourceMetadata =
+    pathname === PROTECTED_RESOURCE_METADATA_PATH ||
+    pathname.startsWith(`${PROTECTED_RESOURCE_METADATA_PATH}/`);
   // CP-SEC-001: careers pages, their job pages and their jobs API are public.
   const isCareersPath =
     (pathname.startsWith("/careers/") && pathname.length > "/careers/".length) ||
     (pathname.startsWith("/api/careers/") && pathname.length > "/api/careers/".length);
+  // BI-REQ-034 / BI-CON-004: a company candidate's unsubscribe link is public.
+  const isCandidateUnsubscribePath =
+    pathname.startsWith("/unsubscribe/candidate/") && pathname.length > "/unsubscribe/candidate/".length;
+  // BI-REQ-041: a claim link shows its sign-up and log-in choices to anyone.
+  const isClaimPath = pathname.startsWith("/claim/") && pathname.length > "/claim/".length;
   // Exempt from the company-only and company-onboarding redirects below, so an
   // applicant sees why they can't join and an invitee who hasn't accepted yet
   // can (teams difference 4).
@@ -209,7 +228,10 @@ export async function updateSession(request: NextRequest) {
     isCompanyPage ||
     isRemoteJobsLocationPage ||
     isSitemapPage ||
-    isCareersPath;
+    isProtectedResourceMetadata ||
+    isCareersPath ||
+    isCandidateUnsubscribePath ||
+    isClaimPath;
 
   const isProtectedPath = !isAuthPath && !isPublicPath;
   const isProtectedRelevanceSearch =

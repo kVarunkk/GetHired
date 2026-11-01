@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import CandidateSharedSection from "@/components/CandidateSharedSection";
 import Error from "@/components/Error";
+import ImportedCandidateSummary, { IMPORTED_CANDIDATE_COLUMNS } from "@/components/candidates/ImportedCandidateSummary";
 import SectionHeader from "@/components/SectionHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,13 +27,41 @@ export default async function ApplicationCandidatePage({ params }: { params: Pro
     const { application_id } = await params;
     const frame = await loadApplicationFrame(application_id);
     if (!frame) notFound();
-    const { supabase } = frame;
+    const { supabase, person, importedCandidateIds } = frame;
+    // The company's own records: the candidate, or the merged imports' (BIT-102).
+    const loadImported = async () => {
+      if (importedCandidateIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("company_candidates")
+        .select(IMPORTED_CANDIDATE_COLUMNS)
+        .in("id", importedCandidateIds);
+      if (error) throw error;
+      return data ?? [];
+    };
 
-    const { data: application, error } = await supabase
-      .from("applications")
-      .select(`id, created_at, status, resumes(resume_path), user_info(${RECRUITER_CANDIDATE_COLUMNS})` as const)
-      .eq("id", application_id)
-      .maybeSingle();
+    // BI-REQ-030: an unclaimed company candidate has no GetHired profile or shared items.
+    if (person.kind === "candidate" && !person.connectedUserId) {
+      const [candidate] = await loadImported();
+      if (!candidate) notFound();
+      return (
+        <div className="mb-20 flex flex-col gap-6 [overflow-wrap:anywhere]">
+          <SectionHeader title="Candidate" />
+          <ImportedCandidateSummary candidate={candidate} />
+        </div>
+      );
+    }
+
+    // BIT-101/102: a claimed candidate, or a direct application an import was
+    // merged into, reads as the company's record first; what their GetHired
+    // account says is shown apart, with its source, not merged.
+    const [{ data: application, error }, imported] = await Promise.all([
+      supabase
+        .from("applications")
+        .select(`id, created_at, status, resumes(resume_path), user_info(${RECRUITER_CANDIDATE_COLUMNS})` as const)
+        .eq("id", application_id)
+        .maybeSingle(),
+      loadImported(),
+    ]);
     if (error) throw error;
     if (!application) notFound();
     const candidate = application.user_info;
@@ -71,11 +100,25 @@ export default async function ApplicationCandidatePage({ params }: { params: Pro
     return (
       <div className="mb-20 flex flex-col gap-6 [overflow-wrap:anywhere]">
         <SectionHeader title="Candidate" />
+        {imported.length > 0 && (
+          <>
+            <section className="flex flex-col gap-3">
+              <h2 className="text-lg font-semibold">From your import</h2>
+              {imported.map((record) => (
+                <ImportedCandidateSummary key={record.id} candidate={record} />
+              ))}
+            </section>
+            <div>
+              <h2 className="text-lg font-semibold">From their GetHired profile</h2>
+              <p className="text-sm text-muted-foreground">What they added after connecting their GetHired account.</p>
+            </div>
+          </>
+        )}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <Card className="h-fit">
             <CardHeader>
-              <CardTitle>{candidate?.full_name || "N/A"}</CardTitle>
-              <CardDescription>{candidate?.email}</CardDescription>
+              <CardTitle>{candidate?.full_name || person.name}</CardTitle>
+              <CardDescription>{candidate?.email || (imported.length > 0 ? null : person.email)}</CardDescription>
               <p className="text-sm text-muted-foreground">
                 Applied on {format(new Date(application.created_at), "PPP")}
               </p>

@@ -313,6 +313,148 @@ describe("GET /api/worker/application-screening (MT-TEST-004)", () => {
     expect(vi.mocked(screenApplication).mock.calls[0][0]).toMatchObject({ profile: {}, resume: null });
   });
 
+  it("screens an application with no applicant_user_id without loading a profile (BIT-000)", async () => {
+    queueMessages(message(7));
+    const application = { ...APPLICATION, applicant_user_id: null };
+    screeningData(screeningRow(), { application, candidate: false });
+
+    const res = await run();
+
+    expect(await res.json()).toEqual({ processed: 1, failed: 0 });
+    expect(db.callsFor("user_info")).toHaveLength(0);
+    expect(vi.mocked(screenApplication).mock.calls[0][0]).toMatchObject({ profile: {}, resume: null });
+    expect(archived()).toEqual([7]);
+  });
+
+  describe("company candidates (BIT-017, BI-REQ-031/036)", () => {
+    const CANDIDATE_ID = "cc000000-0000-4000-8000-000000000001";
+    const BATCH_ID = "cb000000-0000-4000-8000-000000000001";
+    const imported = {
+      ...APPLICATION,
+      applicant_user_id: null,
+      company_candidate_id: CANDIDATE_ID,
+      import_batch_id: BATCH_ID,
+      source: "imported",
+    };
+    const candidateRow = (overrides: Record<string, unknown> = {}) => ({
+      id: CANDIDATE_ID,
+      full_name: "Meera Iyer",
+      current_title: null,
+      current_company: null,
+      location: null,
+      experience_years: null,
+      skills: [],
+      resume_content: null,
+      ...overrides,
+    });
+
+    it("scores and charges a candidate with a resume, from the candidate's own record", async () => {
+      queueMessages(message(7));
+      screeningData(screeningRow(), { application: imported, candidate: false });
+      db.queue("company_candidates", { data: candidateRow({ resume_content: RESUME_CONTENT }), error: null });
+
+      await run();
+
+      expect(db.callsFor("user_info")).toHaveLength(0);
+      expect(vi.mocked(screenApplication).mock.calls[0][0]).toMatchObject({
+        profile: { full_name: "Meera Iyer" },
+        resume: RESUME_CONTENT,
+      });
+      expect(consumeEntitlement).toHaveBeenCalled();
+      expect(updates().at(-1)).toMatchObject({ status: "completed" });
+      const [event] = db.callsFor("application_events");
+      expect(event.chain[0].args[0]).toMatchObject({ type: "screened", candidate_user_id: null });
+      // BI-REQ-015b: the invite checks the batch's auto-invite.
+      expect(inviteAboveFitThreshold).toHaveBeenCalledWith(
+        db.client,
+        expect.objectContaining({ imported: { batchId: BATCH_ID } }),
+      );
+    });
+
+    it("marks a name-and-email candidate insufficient_info: no model, charge, event or invite", async () => {
+      queueMessages(message(7));
+      screeningData(screeningRow(), { application: imported, candidate: false });
+      db.queue("company_candidates", { data: candidateRow(), error: null });
+
+      const res = await run();
+
+      expect(await res.json()).toEqual({ processed: 1, failed: 0 });
+      expect(screenApplication).not.toHaveBeenCalled();
+      expect(consumeEntitlement).not.toHaveBeenCalled();
+      expect(db.callsFor("application_events")).toHaveLength(0);
+      expect(inviteAboveFitThreshold).not.toHaveBeenCalled();
+      expect(updates()).toEqual([expect.objectContaining({ status: "insufficient_info", error_code: null })]);
+      expect(archived()).toEqual([7]);
+    });
+
+    it("scores an insufficient_info screening re-queued after a resume upload (BIT-049)", async () => {
+      queueMessages(message(7));
+      screeningData(screeningRow({ status: "queued" }), { application: imported, candidate: false });
+      db.queue("company_candidates", { data: candidateRow({ resume_content: RESUME_CONTENT }), error: null });
+
+      await run();
+
+      expect(screenApplication).toHaveBeenCalled();
+      expect(updates().at(-1)).toMatchObject({ status: "completed" });
+    });
+
+    it("scores a claimed import on the import, not the person's profile (BIT-103)", async () => {
+      queueMessages(message(7));
+      const claimed = { ...imported, applicant_user_id: APPLICATION.applicant_user_id, resume_id: null };
+      screeningData(screeningRow(), { application: claimed, candidate: false });
+      db.queue("company_candidates", { data: candidateRow({ resume_content: RESUME_CONTENT }), error: null });
+
+      await run();
+
+      expect(db.callsFor("user_info")).toHaveLength(0);
+      expect(db.callsFor("resumes")).toHaveLength(0);
+      expect(vi.mocked(screenApplication).mock.calls[0][0]).toMatchObject({
+        profile: { full_name: "Meera Iyer" },
+        resume: RESUME_CONTENT,
+      });
+      expect(updates().at(-1)).toMatchObject({ status: "completed" });
+    });
+
+    it("marks a claimed import with too little detail insufficient_info (BIT-103)", async () => {
+      queueMessages(message(7));
+      const claimed = { ...imported, applicant_user_id: APPLICATION.applicant_user_id, resume_id: null };
+      screeningData(screeningRow(), { application: claimed, candidate: false });
+      db.queue("company_candidates", { data: candidateRow(), error: null });
+
+      await run();
+
+      expect(screenApplication).not.toHaveBeenCalled();
+      expect(updates()).toEqual([expect.objectContaining({ status: "insufficient_info" })]);
+    });
+
+    it("uses the person's own resume when the application has one", async () => {
+      queueMessages(message(7));
+      const application = {
+        ...imported,
+        applicant_user_id: APPLICATION.applicant_user_id,
+        resume_id: "r0000000-0000-4000-8000-000000000001",
+      };
+      screeningData(screeningRow(), { application });
+
+      await run();
+
+      expect(db.callsFor("company_candidates")).toHaveLength(0);
+      expect(db.callsFor("resumes")[0].chain).toContainEqual({ method: "eq", args: ["id", application.resume_id] });
+    });
+
+    it("leaves a GetHired applicant with little detail to the model", async () => {
+      queueMessages(message(7));
+      screeningData(screeningRow(), { candidate: false });
+      db.queue("user_info", { data: { full_name: "Sam" }, error: null });
+      db.queue("resumes", { data: null, error: null });
+
+      await run();
+
+      expect(screenApplication).toHaveBeenCalled();
+      expect(db.callsFor("company_candidates")).toHaveLength(0);
+    });
+  });
+
   it("marks skipped_quota and archives without retrying when the allowance is used up", async () => {
     queueMessages(message(7));
     screeningData();

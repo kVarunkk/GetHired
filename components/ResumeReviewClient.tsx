@@ -10,19 +10,11 @@ import {
   TResumeReviewServer,
 } from "@/utils/types/review.types";
 import AnalysisPane from "./resume-review/AnalysisPane";
+import { scoreColorClass } from "./resume-review/score";
 import { AskAgentAboutResumeReview } from "./agent/AskAgentOnApplicantIdPages";
 import { markAnalysisAsFailedAction } from "@/app/actions/mark-review-analysis-failed";
 import useSWR, { mutate } from "swr";
 import { cn, fetcher } from "@/utils/utils";
-
-/** Match score colour: green when strong, amber when middling, red when weak. */
-function scoreColorClass(score: string | number) {
-  const value = parseFloat(String(score));
-  if (Number.isNaN(value)) return "text-foreground";
-  if (value >= 75) return "text-success";
-  if (value >= 50) return "text-warning";
-  return "text-destructive";
-}
 
 interface ReviewWorkspaceProps {
   initialReview: TResumeReviewServer;

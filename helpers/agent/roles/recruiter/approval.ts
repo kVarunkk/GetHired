@@ -1,4 +1,4 @@
-import { createToolApproval } from "../../approval";
+import { createToolApproval, type ToolApprovalPolicy } from "../../approval";
 import { RA_MAX_EMAIL_ACTIONS_PER_TURN } from "./config";
 
 /**
@@ -7,8 +7,9 @@ import { RA_MAX_EMAIL_ACTIONS_PER_TURN } from "./config";
  * (which can email candidates) or messages a candidate asks first (RA-REQ-005). Memory and note
  * writes ask after the turn read candidate text (RA-SEC-003). Email actions
  * and credit-spending calls are capped per turn (RA-SEC-006, RA-SEC-007).
+ * Exported as data for the MCP catalog's confirm and credit flags (RMCP spec §4.4).
  */
-export const recruiterToolApproval = createToolApproval({
+export const RECRUITER_APPROVAL_POLICY: ToolApprovalPolicy = {
   alwaysAsk: [
     "createJobPost",
     "updateJobPost",
@@ -53,6 +54,16 @@ export const recruiterToolApproval = createToolApproval({
     // SIT-071: the card shows the exact setup; invites email applicants and hold minutes.
     "configureScreeningInterview",
     "inviteToInterview",
+    // CP-REQ-063: adds the company's own candidates to a job; the card names the job and who.
+    "addCandidatesToJob",
+    // BI-REQ-060: approving an import or a hand-added person records the
+    // lawful-basis attestation (BI-REQ-016); the card names who goes where.
+    "confirmImport",
+    "addCandidate",
+    // Deleting takes the candidates' applications and files with it.
+    "deleteMyCandidates",
+    // A removed resume's file is deleted.
+    "removeImportRows",
   ],
   untrustedContentTools: [
     "getCandidateProfile",
@@ -71,11 +82,19 @@ export const recruiterToolApproval = createToolApproval({
     // Interview quotes and applicant names are candidate words.
     "getInterviewReport",
     "compareInterviewReports",
+    // Company candidates' names, titles and skills come from their resumes (CP-SEC-003).
+    "findPoolCandidates",
+    // Imported rows and the company's own candidates are their resumes' and sheets' words.
+    "getImport",
+    "listImports",
+    "listMyCandidates",
+    "getMyCandidate",
   ],
-  gatedWriteTools: ["saveMemory", "deleteMemory", "addNote", "updateNote"],
+  // An import row or candidate edit after reading their text could be the text's idea (RA-SEC-003).
+  gatedWriteTools: ["saveMemory", "deleteMemory", "addNote", "updateNote", "updateImportRows", "updateMyCandidate"],
   untrustedReason:
-    "The assistant read candidate profiles or applications in this reply, so memory and note changes need your OK.",
-  creditTools: ["screenApplicants", "runMatchingForJob", "explainMatch", "inviteToInterview"],
+    "The assistant read candidate profiles, applications or imports in this reply, so memory, note and candidate changes need your OK.",
+  creditTools: ["screenApplicants", "runMatchingForJob", "explainMatch", "inviteToInterview", "retryImportRows"],
   perTurnCaps: [
     {
       tools: ["moveApplications", "sendOutreach"],
@@ -83,4 +102,7 @@ export const recruiterToolApproval = createToolApproval({
       reason: `Only ${RA_MAX_EMAIL_ACTIONS_PER_TURN} actions that move applications or email candidates can run per message. Ask the user before trying again.`,
     },
   ],
-});
+};
+
+/** The recruiter agent's tool approval policy, passed to `streamText` as `toolApproval`. */
+export const recruiterToolApproval = createToolApproval(RECRUITER_APPROVAL_POLICY);

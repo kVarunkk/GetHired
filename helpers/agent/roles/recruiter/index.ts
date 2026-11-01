@@ -24,9 +24,17 @@ export const recruiterRole: AgentRole = {
   },
   createTools(ctx) {
     if (!ctx.company) throw new Error(NO_COMPANY);
-    return createRecruiterTools({ ...ctx, company: ctx.company });
+    return createRecruiterTools({ ...ctx, surface: "agent", company: ctx.company });
   },
   toolApproval: recruiterToolApproval,
+  feedbackMilestones: [
+    "createJobPost",
+    "updateJobPost",
+    "sendOutreach",
+    "inviteToInterview",
+    "confirmImport",
+    "addCandidatesToJob",
+  ],
   // One agent_messages unit per user message, charged before the model runs
   // (BL-TASK-035). The ref is the message id, so a regenerate is free.
   async chargeMessage({ company, userId, messageId }) {

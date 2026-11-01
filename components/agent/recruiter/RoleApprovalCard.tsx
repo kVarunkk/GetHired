@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  previewAgentRoleAction,
-  type PreviewAgentRoleResult,
-} from "@/app/actions/roles/preview-agent-role";
+import { previewAgentRoleAction } from "@/app/actions/roles/preview-agent-role";
+import type { PreviewAgentRoleResult } from "@/helpers/companies/preview-agent-role";
 import { describeGrantChange, describeLimitChange } from "@/helpers/companies/role-diff";
 
 export const ROLE_APPROVAL_TOOLS = [

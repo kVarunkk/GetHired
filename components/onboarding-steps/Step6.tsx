@@ -1,6 +1,7 @@
 import { StepProps } from "../OnboardingComponent";
 import { CardContent } from "../ui/card";
 import { Label } from "../ui/label";
+import { Checkbox } from "../ui/checkbox";
 import { AlertCircle, Loader2 } from "lucide-react";
 import ResumeSourceSelector from "../ResumeSourceSelector";
 import { TResumeReviewResume } from "@/utils/types/review.types";
@@ -27,6 +28,29 @@ export const Step6ResumeUpload: React.FC<StepProps> = ({
           <Label>Professional Resume*</Label>
         </div>
 
+        {formData.claim_resume_name && (
+          <div className="flex items-start gap-3 rounded-xl border p-4">
+            <Checkbox
+              id="use-claim-resume"
+              checked={formData.use_claim_resume}
+              onCheckedChange={(checked) => {
+                // BIT-105: one resume at a time, so choosing this clears the others.
+                setFormData((prev) => ({
+                  ...prev,
+                  use_claim_resume: checked === true,
+                  ...(checked === true ? { resume_id: null, resume_file: null } : {}),
+                }));
+              }}
+            />
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="use-claim-resume">Use {formData.claim_resume_name}</Label>
+              <p className="text-sm text-muted-foreground">
+                A copy is added to your resumes when you submit. Or choose another below.
+              </p>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="h-32 flex items-center justify-center border-2 border-dashed rounded-xl bg-muted/40">
             <Loader2 className="animate-spin h-5 w-5 text-muted-foreground" />
@@ -39,6 +63,7 @@ export const Step6ResumeUpload: React.FC<StepProps> = ({
               setFormData((prev) => ({
                 ...prev,
                 resume_id: id,
+                use_claim_resume: id ? false : prev.use_claim_resume,
               }));
             }}
             file={formData.resume_file || null}
@@ -46,6 +71,7 @@ export const Step6ResumeUpload: React.FC<StepProps> = ({
               setFormData((prev) => ({
                 ...prev,
                 resume_file: file,
+                use_claim_resume: file ? false : prev.use_claim_resume,
               }));
             }}
             showManageResumes={false}

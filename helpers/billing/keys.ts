@@ -1,5 +1,6 @@
 // Entitlement keys (BL-REQ-002). The tier_entitlements.key check constraint in
-// supabase/migrations/20261014150000_company_billing.sql lists the same keys.
+// supabase/migrations/20261014150000_company_billing.sql lists the same keys
+// (resume_imports: 20261025120000_bulk_import.sql).
 // No server-only import: the billing UI uses these too.
 
 export const LIMIT_KEYS = ["active_job_posts", "seats", "profiles_per_search"] as const;
@@ -10,6 +11,7 @@ export const ALLOWANCE_KEYS = [
   "interview_minutes",
   "agent_messages",
   "match_explanations",
+  "resume_imports",
 ] as const;
 
 export const ENTITLEMENT_KEYS = [...LIMIT_KEYS, ...ALLOWANCE_KEYS] as const;
@@ -37,6 +39,7 @@ export const KEY_LABELS: Record<EntitlementKey, { one: string; many: string }> =
   interview_minutes: { one: "interview minute", many: "interview minutes" },
   agent_messages: { one: "agent message", many: "agent messages" },
   match_explanations: { one: "match explanation", many: "match explanations" },
+  resume_imports: { one: "resume import", many: "resume imports" },
 };
 
 export function labelFor(key: EntitlementKey, n: number) {

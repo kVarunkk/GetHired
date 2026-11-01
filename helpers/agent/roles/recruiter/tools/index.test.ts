@@ -25,6 +25,27 @@ describe("createRecruiterTools (RAT-028)", () => {
         "compareCandidates",
         "saveCandidate",
         "unsaveCandidate",
+        // CP-REQ-063: the company's own candidates.
+        "findPoolCandidates",
+        "addCandidatesToJob",
+        // BI-REQ-060: imports and the company's own candidates.
+        "requestResumeImport",
+        "requestSpreadsheetImport",
+        "requestCandidateResume",
+        "listImports",
+        "getImport",
+        "updateImportRows",
+        "removeImportRows",
+        "retryImportRows",
+        "confirmImport",
+        "addCandidate",
+        "listMyCandidates",
+        "getMyCandidate",
+        "findJobsForMyCandidate",
+        "updateMyCandidate",
+        "deleteMyCandidates",
+        "addMyCandidatesToList",
+        "removeMyCandidateFromList",
         "listApplicants",
         "getApplication",
         "getHiringFunnel",
@@ -101,10 +122,13 @@ describe("createRecruiterTools (RAT-028)", () => {
     }
   });
 
-  it("leaves approvals to the toolApproval policy and runs every tool on the server", () => {
+  // BI-REQ-060: the upload widgets run in the browser, like the applicant agent's requestResumeUpload.
+  const CLIENT_TOOLS = ["requestResumeImport", "requestSpreadsheetImport", "requestCandidateResume"];
+
+  it("leaves approvals to the toolApproval policy and runs every tool on the server but the upload widgets", () => {
     for (const [name, tool] of Object.entries(tools)) {
       expect(tool.needsApproval, name).toBeUndefined();
-      expect(tool.execute, name).toBeTypeOf("function");
+      expect(tool.execute, name).toBeTypeOf(CLIENT_TOOLS.includes(name) ? "undefined" : "function");
     }
   });
 

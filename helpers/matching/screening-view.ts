@@ -7,7 +7,9 @@ export type ScreeningStatus =
   | "completed"
   | "failed"
   | "stale"
-  | "skipped_quota";
+  | "skipped_quota"
+  /** BI-REQ-036: a company candidate with too little detail to score. Never charged. */
+  | "insufficient_info";
 
 /** The `application_screenings` columns a company sees. */
 export const SCREENING_VIEW_COLUMNS =
@@ -56,3 +58,19 @@ export function toScreeningView(row: {
 /** Statuses the UI shows as "Screening…" and polls. */
 export const isScreeningInProgress = (status: ScreeningStatus | undefined) =>
   status === "queued" || status === "processing";
+
+/** BI-REQ-036: what the UI shows for `insufficient_info`. */
+export const NOT_SCORED_LABEL = "Not scored: no resume";
+
+/** Statuses that "Screen unscreened" and a job edit pick up again. */
+const RESCREENABLE = new Set(["stale", "failed", "skipped_quota", "insufficient_info"]);
+
+/** No screening yet, or one that "Screen unscreened" queues again. */
+export const needsScreening = (status: string | undefined) => status === undefined || RESCREENABLE.has(status);
+
+/**
+ * Re-screens are free (the charge ref is the application), so only a
+ * screening that was never charged needs the allowance.
+ */
+export const needsScreeningAllowance = (status: string | undefined) =>
+  status === undefined || status === "skipped_quota" || status === "insufficient_info";

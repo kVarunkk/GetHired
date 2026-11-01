@@ -29,6 +29,14 @@ const FIT_SCAN_LIMIT = 200;
 
 type ScreeningSummary = { status: string; fit_score: number | null; recommendation: string | null } | null;
 
+/**
+ * BI-REQ-030: an imported candidate (no account) is shown by name only, and
+ * the name, typed or uploaded by the company, is sandboxed. Contact details
+ * never reach the agent.
+ */
+const importedName = (fullName: string | null | undefined) =>
+  wrapInSandbox("candidate_name", fullName?.trim() || "Candidate");
+
 
 export function createApplicantTools(ctx: RecruiterToolContext) {
   const { supabase, company } = ctx;
@@ -54,9 +62,11 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
           let query = supabase
             .from("applications")
             .select(
-              `id, status, created_at, applicant_user_id, job_postings!inner(id, title, company_id), pipeline_stages(id, name), user_info(${AGENT_CANDIDATE_COLUMNS}), application_screenings(status, fit_score, recommendation)`,
+              `id, status, created_at, applicant_user_id, company_candidate_id, job_postings!inner(id, title, company_id), pipeline_stages(id, name), user_info(${AGENT_CANDIDATE_COLUMNS}), company_candidates(full_name), application_screenings(status, fit_score, recommendation)`,
             )
-            .eq("job_postings.company_id", company.id);
+            .eq("job_postings.company_id", company.id)
+            // BI-REQ-042: a merged import shows through the application it joined.
+            .is("merged_into_application_id", null);
           if (jobPostId) query = query.eq("job_post_id", jobPostId);
           if (stageId) query = query.eq("stage_id", stageId);
           if (status) query = query.eq("status", status);
@@ -69,10 +79,12 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
             const screening = row.application_screenings as ScreeningSummary;
             const completed = screening?.status === "completed" ? screening : null;
             const candidate = row.user_info as CandidateRow | null;
+            const imported = !row.applicant_user_id && !!row.company_candidate_id;
             return {
               applicationId: row.id,
               candidateId: row.applicant_user_id,
-              name: candidate?.full_name ?? null,
+              name: imported ? importedName(row.company_candidates?.full_name) : (candidate?.full_name ?? null),
+              ...(imported ? { imported: true } : {}),
               roles: (candidate?.desired_roles ?? []).slice(0, 3),
               experienceYears: candidate?.experience_years ?? null,
               job: { id: row.job_postings.id, title: row.job_postings.title },
@@ -105,7 +117,7 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
           const { data: application, error } = await supabase
             .from("applications")
             .select(
-              `id, status, created_at, answers, answers_v2, form_snapshot, resume_id, applicant_user_id, job_postings!inner(id, title, company_id, questions), pipeline_stages(id, name), user_info(${AGENT_CANDIDATE_COLUMNS})`,
+              `id, status, created_at, answers, answers_v2, form_snapshot, resume_id, applicant_user_id, company_candidate_id, job_postings!inner(id, title, company_id, questions), pipeline_stages(id, name), user_info(${AGENT_CANDIDATE_COLUMNS}), company_candidates(full_name)`,
             )
             .eq("id", applicationId)
             .eq("job_postings.company_id", company.id)
@@ -113,14 +125,15 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
           if (error) throw error;
           if (!application) return NOT_FOUND;
 
-          const resumes = supabase.from("resumes").select("content");
+          // An imported candidate has no GetHired resume (BI-REQ-030).
+          const resumes = () => supabase.from("resumes").select("content");
+          const resumeQuery = application.resume_id
+            ? resumes().eq("id", application.resume_id)
+            : application.applicant_user_id
+              ? resumes().eq("user_id", application.applicant_user_id).eq("is_primary", true)
+              : null;
           const [{ data: resume }, { data: screeningRow }] = await Promise.all([
-            (application.resume_id
-              ? resumes.eq("id", application.resume_id)
-              : resumes.eq("user_id", application.applicant_user_id ?? "").eq("is_primary", true)
-            )
-              .limit(1)
-              .maybeSingle(),
+            resumeQuery ? resumeQuery.limit(1).maybeSingle() : Promise.resolve({ data: null }),
             supabase
               .from("application_screenings")
               .select(SCREENING_VIEW_COLUMNS)
@@ -141,6 +154,7 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
 
           const screening = screeningRow ? toScreeningView(screeningRow) : null;
           const candidate = application.user_info as CandidateRow | null;
+          const imported = !application.applicant_user_id && !!application.company_candidate_id;
 
           return {
             applicationId: application.id,
@@ -150,7 +164,11 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
             status: application.status,
             appliedAt: application.created_at,
             job: { id: application.job_postings.id, title: application.job_postings.title },
-            candidate: candidate ? compactCandidate(candidate) : null,
+            candidate: imported
+              ? { name: importedName(application.company_candidates?.full_name), imported: true }
+              : candidate
+                ? compactCandidate(candidate)
+                : null,
             answers,
             resumeExcerpt: resumeExcerpt(resume?.content as TResumeRowContent | null),
             screening: screening

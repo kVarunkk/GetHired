@@ -3,6 +3,8 @@
 import InterviewStatusBadge from "@/components/interviews/InterviewStatusBadge";
 import { isOpenInterview } from "@/helpers/interview/screening/summary-view";
 import KnockoutBadge from "@/components/applications/KnockoutBadge";
+import ImportedBadge from "@/components/candidates/ImportedBadge";
+import { NOT_SCORED_LABEL } from "@/helpers/matching/screening-view";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import posthog from "@/lib/posthog/client";
@@ -120,6 +122,10 @@ export default function PipelineBoard({
       } else {
         if (result.skipped.some((s) => s.reason === "email_failed")) {
           toast.error(`Moved ${app.name}, but the email couldn't be sent.`);
+        } else if (result.skipped.some((s) => s.reason === "unsubscribed")) {
+          toast.success(`Moved ${app.name}. Email not sent: unsubscribed.`);
+        } else if (result.skipped.some((s) => s.reason === "no_email")) {
+          toast.success(`Moved ${app.name}. Email not sent: no email.`);
         } else if (result.emailed > 0) {
           toast.success(`Moved ${app.name}. Their email is on its way.`);
         }
@@ -300,7 +306,7 @@ function BoardColumn({
 function CardDetails({ card }: { card: BoardApplication }) {
   return (
     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-      <Badge variant="outline" title="Fit score" className="px-1.5 py-0 font-normal">
+      <Badge variant="outline" title={card.notScored ? NOT_SCORED_LABEL : "Fit score"} className="px-1.5 py-0 font-normal">
         {card.fitScore ?? "–"}
       </Badge>
       <span>{card.daysInStage}d in stage</span>
@@ -319,6 +325,9 @@ function CardDetails({ card }: { card: BoardApplication }) {
         <KnockoutBadge knockout={{ failed: true, reasons: card.knockoutReasons.map((label) => ({ label })) }} />
       )}
       {card.interview && <InterviewStatusBadge summary={card.interview} className="px-1.5 py-0" />}
+      <ImportedBadge
+        person={{ imported: card.imported ?? false, hasResume: card.hasResume ?? true, connectedUserId: card.connectedUserId }}
+      />
     </div>
   );
 }

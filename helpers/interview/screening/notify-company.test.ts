@@ -80,7 +80,7 @@ describe("notifyCompanyOfCandidateResponse (SI-REQ-016/026)", () => {
       },
       error: null,
     });
-    service.queue("user_info", { data: { full_name: "Priya Sharma" }, error: null });
+    service.queue("user_info", { data: [{ user_id: "a1", email: "priya@example.com", full_name: "Priya Sharma" }], error: null });
     queueTeam();
   }
 
@@ -117,7 +117,7 @@ describe("notifyCompanyOfCompletedInterview (SI-REQ-030)", () => {
       },
       error: null,
     });
-    service.queue("user_info", { data: { full_name: "Priya Sharma" }, error: null });
+    service.queue("user_info", { data: [{ user_id: "a1", email: "priya@example.com", full_name: "Priya Sharma" }], error: null });
     queueTeam();
   }
 

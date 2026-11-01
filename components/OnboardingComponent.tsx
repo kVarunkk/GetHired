@@ -42,6 +42,10 @@ import {
 import { submitOnboardingAction } from "@/app/actions/submit-onboarding";
 import { useProgress } from "react-transition-progress";
 import { APPLICANT_HOME } from "@/helpers/user/home-path";
+import {
+  fillEmptyFromClaim,
+  type OnboardingClaimPrefill,
+} from "@/helpers/candidates/claim-prefill-form";
 
 type IFormData = {
   email: string | null;
@@ -63,6 +67,9 @@ type IFormData = {
   company_size_preference: string;
   resume_file: File | null;
   resume_id: string | null;
+  /** BIT-105: the claimed company's resume, copied on submit when chosen. */
+  claim_resume_name: string | null;
+  use_claim_resume: boolean;
   no_of_resumes?: number;
   job_type: string[];
   user_id?: string;
@@ -77,7 +84,12 @@ export interface StepProps {
   >;
 }
 
-export const OnboardingForm: React.FC = () => {
+export const OnboardingForm: React.FC<{
+  /** BIT-105: fields and a resume from a claimed company candidate. */
+  claimPrefill?: OnboardingClaimPrefill;
+  /** Where to go once saved, instead of the applicant home. */
+  returnTo?: string | null;
+}> = ({ claimPrefill, returnTo }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<IFormData>({
     full_name: "",
@@ -98,6 +110,8 @@ export const OnboardingForm: React.FC = () => {
     company_size_preference: "",
     resume_file: null,
     resume_id: null,
+    claim_resume_name: claimPrefill?.resume?.name ?? null,
+    use_claim_resume: false,
     job_type: [],
     email: "",
   });
@@ -213,6 +227,13 @@ export const OnboardingForm: React.FC = () => {
         } else if (error && error.code !== "PGRST116") {
           setError(`Failed to load user data: ${error.message}`);
         }
+        if (claimPrefill) {
+          // What the person already has wins; the import only fills gaps.
+          setFormData((prev) => ({
+            ...fillEmptyFromClaim(prev, claimPrefill.fields),
+            use_claim_resume: !!prev.claim_resume_name && !prev.resume_id,
+          }));
+        }
       } else {
         setError("User not logged in. Please log in to complete onboarding.");
       }
@@ -220,6 +241,8 @@ export const OnboardingForm: React.FC = () => {
     };
 
     fetchUserAndData();
+    // Loads once; the prefill comes from the server render and doesn't change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validateStep = useCallback(() => {
@@ -316,7 +339,7 @@ export const OnboardingForm: React.FC = () => {
           if (
             currentStep ===
               steps.findIndex((s) => s.name === "Resume Upload") &&
-            !(formData.resume_id || formData.resume_file)
+            !(formData.resume_id || formData.resume_file || formData.use_claim_resume)
           ) {
             newErrors[field] = "Please upload your resume.";
             isValid = false;
@@ -395,6 +418,8 @@ export const OnboardingForm: React.FC = () => {
         onboardingFormData.append("resumeFile", formData.resume_file);
       } else if (formData.resume_id) {
         onboardingFormData.append("resumeId", formData.resume_id);
+      } else if (formData.use_claim_resume && claimPrefill) {
+        onboardingFormData.append("claimToken", claimPrefill.token);
       }
 
       const result = await submitOnboardingAction(onboardingFormData);
@@ -408,7 +433,7 @@ export const OnboardingForm: React.FC = () => {
 
       startTransition(() => {
         startProgress();
-        router.push(APPLICANT_HOME);
+        router.push(returnTo ?? APPLICANT_HOME);
       });
     } catch (error) {
       toast.error(
@@ -490,6 +515,13 @@ export const OnboardingForm: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {claimPrefill && (
+        <p className="max-w-2xl rounded-xl border p-4 text-sm text-muted-foreground">
+          We&apos;ve filled in what {claimPrefill.companyName} has on file for
+          you. Check each step: nothing is saved until you submit.
+        </p>
+      )}
 
       {stepLoading ? (
         <div className="h-20 w-full max-w-2xl flex items-center justify-center">

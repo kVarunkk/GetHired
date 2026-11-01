@@ -11,6 +11,10 @@ import { AGENT_DAILY_MESSAGE_CAP } from "@/helpers/agent/config";
 
 vi.mock("@ai-sdk/react", () => ({ useChat: vi.fn() }));
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
+vi.mock("@/app/actions/submit-agent-feedback", () => ({
+  submitAgentFeedbackAction: vi.fn(async () => ({ ok: true })),
+  removeAgentFeedbackAction: vi.fn(async () => ({ ok: true })),
+}));
 
 const SESSION_ID = "55555555-5555-4555-8555-555555555555";
 const text = (id: string, role: "user" | "assistant", value: string): UIMessage => ({
@@ -42,6 +46,16 @@ function mockChat(overrides: Partial<ChatMock> = {}) {
 beforeEach(() => mockChat());
 
 describe("ChatPane for a company user (RAT-018, RA-REQ-001)", () => {
+  it("asks what went wrong with the company's reasons (AF-REQ-006)", async () => {
+    mockChat({ messages: [text("u1", "user", "find candidates"), text("a1", "assistant", "Here are three")] });
+    render(<ChatPane role="company" sessionId={SESSION_ID} initialMessages={[]} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Bad response" }));
+
+    expect(await screen.findByRole("button", { name: "Bad candidate matches" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Bad job matches" })).not.toBeInTheDocument();
+  });
+
   it("shows the recruiter's empty state and starters", async () => {
     render(<ChatPane role="company" sessionId={SESSION_ID} initialMessages={[]} />);
 

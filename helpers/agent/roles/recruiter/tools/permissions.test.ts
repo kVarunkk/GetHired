@@ -11,10 +11,10 @@ import {
   memberWith,
   type MemberFixture,
 } from "@/test/utils/team";
-import { isPermissionKey } from "@/helpers/companies/permissions";
+import { forbiddenMessage, isPermissionKey } from "@/helpers/companies/permissions";
 import { buildRecruiterSystemPrompt } from "../system-prompt";
 import { createAllRecruiterTools, createRecruiterTools } from "./index";
-import { hasAssignedScope, missingAbilities, RECRUITER_TOOL_PERMISSIONS } from "./permissions";
+import { checkToolPermission, hasAssignedScope, missingAbilities, RECRUITER_TOOL_PERMISSIONS } from "./permissions";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/helpers/matching/queue-screenings", () => ({ queueJobScreenings: vi.fn() }));
@@ -226,5 +226,39 @@ describe("per-call checks (RP-REQ-031, RPT-081)", () => {
     // narrower role in the next request has no screenApplicants at all.
     expect(Object.keys(toolsFor(ADMIN_A))).toContain("screenApplicants");
     expect(Object.keys(toolsFor(memberWith(["applicants.view"])))).not.toContain("screenApplicants");
+  });
+});
+
+describe("agent.use over MCP (RMCP spec §4.1)", () => {
+  const AGENT_USE_TOOLS = ["getMyCompany", "getCareersPage", "saveMemory", "deleteMemory"];
+  const onSurface = (member: MemberFixture, surface: "agent" | "mcp") =>
+    Object.keys(
+      createRecruiterTools(
+        recruiterToolContext(db.client, { user: member.user, company: member.myCompany, surface }),
+      ),
+    );
+
+  it("reads agent.use as mcp.use on the MCP surface", () => {
+    const mcpOnly = memberWith(["mcp.use", "jobs.view"]);
+    expect(onSurface(mcpOnly, "mcp")).toEqual(expect.arrayContaining(AGENT_USE_TOOLS));
+    for (const name of AGENT_USE_TOOLS) expect(onSurface(mcpOnly, "agent"), name).not.toContain(name);
+  });
+
+  it("doesn't let agent.use stand in for mcp.use on the MCP surface", () => {
+    const agentOnly = memberWith(["agent.use", "jobs.view"]);
+    for (const name of AGENT_USE_TOOLS) expect(onSurface(agentOnly, "mcp"), name).not.toContain(name);
+    expect(onSurface(agentOnly, "agent")).toEqual(expect.arrayContaining(AGENT_USE_TOOLS));
+  });
+
+  it("checks the same key again at run time", async () => {
+    const at = (member: MemberFixture, surface: "agent" | "mcp") =>
+      checkToolPermission(
+        recruiterToolContext(db.client, { user: member.user, company: member.myCompany, surface }),
+        "getMyCompany",
+        {},
+      );
+    expect(await at(memberWith(["mcp.use"]), "mcp")).toBeNull();
+    expect(await at(memberWith(["agent.use"]), "mcp")).toEqual({ error: forbiddenMessage("mcp.use") });
+    expect(await at(memberWith(["agent.use"]), "agent")).toBeNull();
   });
 });

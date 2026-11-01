@@ -16,6 +16,13 @@ export type BoardApplication = {
   knockoutReasons?: string[] | null;
   /** SIT-062: the AI interview, for members with interviews.view on the job. */
   interview?: InterviewSummary;
+  /** BI-REQ-030: a company candidate's card ("Imported"), and whether they have a resume. */
+  imported?: boolean;
+  hasResume?: boolean;
+  /** BIT-101: a claimed candidate's GetHired account. */
+  connectedUserId?: string;
+  /** BI-REQ-036: screened but too thin to score (`insufficient_info`). */
+  notScored?: boolean;
 };
 
 export type BoardStage = {

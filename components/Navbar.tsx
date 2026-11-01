@@ -34,7 +34,11 @@ import ScrollFade from "./ScrollFade";
 import { useOpenOutreachCount } from "./outreach/useOpenOutreachCount";
 import useSWR from "swr";
 import { Button } from "./ui/button";
+import ClaudeIcon from "./icons/ClaudeIcon";
 
+/** The MCP setup guide, linked from every signed-in sidebar (both roles). */
+const MCP_HREF = "/mcp";
+const MCP_LABEL = "Use with Claude";
 
 /** The count next to a nav label (open outreach), hidden at 0. */
 function NavCount({ count }: { count?: number }) {
@@ -68,14 +72,21 @@ export default function NavbarComponent({
   // The landing page at / is for applicants; companies redirect from it anyway.
   const homeHref = isCompanyUser ? COMPANY_HOME : "/";
   // RP-REQ-016: Billing is hidden from company roles without billing.view.
-  const { data: profile } = useSWR(user ? PROFILE_API_KEY : null, fetcher, { revalidateOnFocus: false });
-  const showBilling = !isCompanyUser || profile?.profile?.access?.billingView !== false;
+  const { data: profile } = useSWR(user ? PROFILE_API_KEY : null, fetcher, {
+    revalidateOnFocus: false,
+  });
+  const showBilling =
+    !isCompanyUser || profile?.profile?.access?.billingView !== false;
+  // BI-PERM-002: the Candidates list needs talent.view.
+  const showCandidates = profile?.profile?.access?.talentView !== false;
   const openOutreach = useOpenOutreachCount(user);
   const navItems = useMemo(() => {
-    return getNavItemsByPath(pathname, isCompanyUser, user).map((item) =>
-      item.id === "opportunities" ? { ...item, count: openOutreach } : item,
-    );
-  }, [pathname, user, isCompanyUser, openOutreach]);
+    return getNavItemsByPath(pathname, isCompanyUser, user)
+      .filter((item) => item.id !== "candidates" || showCandidates)
+      .map((item) =>
+        item.id === "opportunities" ? { ...item, count: openOutreach } : item,
+      );
+  }, [pathname, user, isCompanyUser, openOutreach, showCandidates]);
 
   const navbarItems = navItems.map((each) => {
     let isActive = false;
@@ -108,6 +119,12 @@ export default function NavbarComponent({
       subscription.unsubscribe();
     };
   }, []);
+
+  // Dashboard stays in the mobile menu, its only route on phones.
+  const inlineItems = navbarItems.filter((item) => item.href !== "/dashboard");
+  // A long list (the company nav) doesn't fit beside the logo at lg, so it
+  // stays in the menu until xl.
+  const wideNav = inlineItems.length > WIDE_NAV_THRESHOLD;
 
   return (
     <>
@@ -153,6 +170,7 @@ export default function NavbarComponent({
                 isCompanyUser={isCompanyUser}
                 billingActive={pathname.startsWith("/company/billing")}
                 showBilling={showBilling}
+                wideNav={wideNav}
               />
             ) : (
               // Same 40px footprint as the menu button, so the logo doesn't shift.
@@ -161,7 +179,11 @@ export default function NavbarComponent({
               </LoadingNav>
             )}
             {/* The short logo on very small screens, so the bar fits without scrolling. */}
-            <Link href={homeHref} aria-label="GetHired home" className="shrink-0">
+            <Link
+              href={homeHref}
+              aria-label="GetHired home"
+              className="shrink-0"
+            >
               <span className="block min-[400px]:hidden">
                 <Brand type="short" />
               </span>
@@ -180,24 +202,25 @@ export default function NavbarComponent({
           ) : (
             <nav
               aria-label="Main"
-              className="absolute left-1/2 -translate-x-1/2 items-center gap-4 text-sm hidden lg:flex"
+              className={cn(
+                "absolute left-1/2 -translate-x-1/2 items-center gap-4 text-sm hidden",
+                wideNav ? "xl:flex" : "lg:flex",
+              )}
             >
-              {/* Dashboard stays in the mobile menu, its only route on phones. */}
-              {navbarItems
-                .filter((item) => item.href !== "/dashboard")
-                .map((item) => (
-                  <ModifiedLink
-                    key={item.id}
-                    href={item.href}
-                    className={cn(
-                      "hover:underline underline-offset-2",
-                      item.active && "underline underline-offset-2",
-                    )}
-                  >
-                    {item.label}
-                    <NavCount count={item.count} />
-                  </ModifiedLink>
-                ))}
+              {inlineItems.map((item) => (
+                <ModifiedLink
+                  key={item.id}
+                  href={item.href}
+                  className={cn(
+                    // nowrap: two-word labels ("Job Posts") stay on one line.
+                    "whitespace-nowrap hover:underline underline-offset-2",
+                    item.active && "underline underline-offset-2",
+                  )}
+                >
+                  {item.label}
+                  <NavCount count={item.count} />
+                </ModifiedLink>
+              ))}
             </nav>
           )}
 
@@ -270,7 +293,10 @@ export default function NavbarComponent({
                         <span className="relative shrink-0">
                           {item.icon}
                           {!!item.count && !isMenuOpen && (
-                            <span aria-hidden className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-brand" />
+                            <span
+                              aria-hidden
+                              className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-brand"
+                            />
                           )}
                         </span>
                         <SidebarLabel open={isMenuOpen}>
@@ -337,6 +363,24 @@ export default function NavbarComponent({
               />
             ) : user ? (
               <div className="flex flex-col items-center gap-5">
+                {/* GetHired from Claude, Cursor or VS Code: the MCP setup guide. */}
+                <Tooltip delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={MCP_HREF}
+                      className={cn(
+                        "flex px-4 py-2 items-center w-full gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden",
+                        pathname === MCP_HREF && "bg-secondary",
+                      )}
+                    >
+                      <ClaudeIcon className="h-4 w-4" />
+                      <SidebarLabel open={isMenuOpen}>{MCP_LABEL}</SidebarLabel>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" hidden={isMenuOpen}>
+                    <p>{MCP_LABEL}</p>
+                  </TooltipContent>
+                </Tooltip>
                 {/* Applicants top up credits; companies manage their plan (billing.view). */}
                 {showBilling && (
                   <Tooltip delayDuration={100}>
@@ -369,10 +413,7 @@ export default function NavbarComponent({
                     </TooltipContent>
                   </Tooltip>
                 )}
-                <FeedbackForm
-                  isMenuOpen={isMenuOpen}
-                  isVertical={true}
-                />
+                <FeedbackForm isMenuOpen={isMenuOpen} isVertical={true} />
                 <ProfileDropdown
                   isMenuOpen={isMenuOpen}
                   user={user}
@@ -412,6 +453,9 @@ export default function NavbarComponent({
 }
 
 /** Placeholder widths for the desktop link row, roughly matching real labels. */
+/** More inline nav items than this move the inline nav from lg to xl. */
+const WIDE_NAV_THRESHOLD = 5;
+
 const HORIZONTAL_SKELETON_WIDTHS = [
   "w-10",
   "w-12",
@@ -451,12 +495,15 @@ const NavbarSheet = ({
   isCompanyUser,
   billingActive,
   showBilling = true,
+  wideNav = false,
 }: {
   items: INavItemWithActive[];
   signedIn: boolean;
   isCompanyUser: boolean;
   billingActive: boolean;
   showBilling?: boolean;
+  /** The inline nav only shows from xl, so the menu button stays until then. */
+  wideNav?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -465,7 +512,7 @@ const NavbarSheet = ({
       <button
         onClick={() => setOpen(true)}
         aria-label="Open menu"
-        className="lg:hidden p-2"
+        className={cn("p-2", wideNav ? "xl:hidden" : "lg:hidden")}
       >
         <Menu />
       </button>
@@ -498,13 +545,27 @@ const NavbarSheet = ({
               </ModifiedLink>
             );
           })}
+          {signedIn && (
+            <Link
+              href={MCP_HREF}
+              className="hover:underline underline-offset-2 p-2 w-full flex items-center gap-2"
+              onClick={() => setOpen(false)}
+            >
+              <ClaudeIcon className="h-4 w-4" />
+              {MCP_LABEL}
+            </Link>
+          )}
           {/* Same as the sidebar: applicants top up credits; companies manage their plan. */}
           {signedIn && showBilling && (
             <Link
-              href={isCompanyUser ? "/company/billing" : "/dashboard/buy-credits"}
+              href={
+                isCompanyUser ? "/company/billing" : "/dashboard/buy-credits"
+              }
               className={cn(
                 "text-brand hover:underline underline-offset-2 p-2 w-full",
-                isCompanyUser && billingActive && "underline underline-offset-2",
+                isCompanyUser &&
+                  billingActive &&
+                  "underline underline-offset-2",
               )}
               onClick={() => setOpen(false)}
             >

@@ -30,6 +30,13 @@ function describe(event: Event, stageName: (id: unknown) => string): string | nu
       return `Outreach sent${by(event)}`;
     case "outreach_replied":
       return "Replied to outreach";
+    // BI-REQ-030/040/042: company candidates.
+    case "imported":
+      return `Imported${by(event)}`;
+    case "claimed":
+      return "Joined GetHired with this email";
+    case "merged":
+      return "Merged with their own application";
     default:
       return null;
   }

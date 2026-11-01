@@ -15,6 +15,8 @@ export const applicantRole: AgentRole = {
     const profile = await loadPromptProfile(supabase, user.id);
     return ({ memories, now, summary }) => buildSystemPrompt({ profile, memories, now, summary });
   },
-  createTools: ({ supabase, user, sessionId }) => createAgentTools({ supabase, user, sessionId }),
+  createTools: ({ supabase, user, sessionId }) =>
+    createAgentTools({ supabase, user, sessionId, surface: "agent" }),
   toolApproval: agentToolApproval,
+  feedbackMilestones: ["submitApplication", "startResumeReview", "completeOnboarding", "updateMyPreferences"],
 };

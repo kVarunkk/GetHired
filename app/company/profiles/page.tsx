@@ -13,12 +13,16 @@ import type { SuggestedTier } from "@/helpers/billing/errors";
 import { listTalentLists } from "@/helpers/pipeline/talent-lists";
 import { can, canAny } from "@/helpers/companies/permissions";
 import { AskAgentAboutProfiles } from "@/components/agent/recruiter/AskAgentOnMainPages";
+import { activeTabFrom, CANDIDATES_TAB } from "@/utils/talent-list-tabs";
+import { CANDIDATES_LIST_PATH } from "@/helpers/candidates/paths";
+import { loadCandidatesTab, type CandidatesTab } from "@/helpers/candidates/candidates-tab";
+import CompanyCandidatesTable from "@/components/candidates/CompanyCandidatesTable";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Profiles",
+  title: "Discover",
   description:
-    "Candidates in the talent pool. Search, save them to lists and reach out.",
+    "People on GetHired's talent pool. Search, save them to lists and reach out.",
 };
 
 export default async function ProfilesPage({
@@ -36,6 +40,16 @@ export default async function ProfilesPage({
   }
 
   const searchParameters = await searchParams;
+  const params = new URLSearchParams(
+    searchParameters as Record<string, string>,
+  );
+  // "Your candidates" was a tab here before it got its own page.
+  if (params.get("tab") === CANDIDATES_TAB) {
+    params.delete("tab");
+    const rest = params.toString();
+    redirect(rest ? `${CANDIDATES_LIST_PATH}?${rest}` : CANDIDATES_LIST_PATH);
+  }
+  const dynamicKey = params.toString();
   const isAISearch = searchParameters?.sortBy === "relevance";
 
   const company = await getMyCompany(supabase, user);
@@ -58,6 +72,18 @@ export default async function ProfilesPage({
     company,
   }).catch(() => []);
 
+  const activeList = talentLists.find(
+    (list) => list.slug === activeTabFrom(params, talentLists),
+  );
+  // A list's company candidates sit under its GetHired members (BI-REQ-006),
+  // for members who can see the pool. Extra: a failure hides them.
+  const candidates =
+    activeList && can(company, "talent.view") && !isAISearch
+      ? await loadCandidatesTab(supabase, company, searchParameters, {
+          listId: activeList.id,
+        }).catch(() => null)
+      : null;
+
   const headersList = await headers();
   const url = await getBaseUrl();
 
@@ -69,10 +95,6 @@ export default async function ProfilesPage({
   let hiddenCount = 0;
   let upgradePlan: SuggestedTier | null = null;
 
-  const params = new URLSearchParams(
-    searchParameters as Record<string, string>,
-  );
-  const dynamicKey = params.toString();
   try {
     const res = await fetch(`${url}/api/profiles?${params.toString()}`, {
       cache: isAISearch ? "no-cache" : "force-cache",
@@ -121,8 +143,8 @@ export default async function ProfilesPage({
       <div className="w-full lg:w-3/4">
         <div className="flex flex-col gap-6 pt-4">
           <PageHeader
-            title="Profiles"
-            description="Candidates in the talent pool. Search, save them to lists and reach out."
+            title="Discover"
+            description="People on GetHired's talent pool. Search, save them to lists and reach out."
           />
           {can(company, "agent.use") && (
             <AskAgentAboutProfiles
@@ -180,6 +202,18 @@ export default async function ProfilesPage({
                   error={error}
                   profilesPerSearch={profilesPerSearch}
                 />
+                {candidates &&
+                  tab === activeList?.slug &&
+                  (candidates.list.total > 0 ||
+                    candidates.list.page > 1 ||
+                    hasCandidateFilters(candidates)) && (
+                    <section className="mt-8 flex flex-col gap-3">
+                      <h2 className="text-lg font-semibold">
+                        Your candidates in this list
+                      </h2>
+                      <CompanyCandidatesTable {...candidates} inList />
+                    </section>
+                  )}
               </TabsContent>
             ))}
         </ClientTabs>
@@ -187,3 +221,17 @@ export default async function ProfilesPage({
     </div>
   );
 }
+
+/** Whether the table is filtered, so an empty list still shows its toolbar. */
+const hasCandidateFilters = ({ filters }: CandidatesTab) =>
+  Boolean(
+    filters.q ||
+      filters.tag ||
+      filters.batchId ||
+      filters.inJob ||
+      filters.loc ||
+      filters.resume ||
+      filters.email ||
+      filters.addedDays ||
+      filters.matchJob,
+  );

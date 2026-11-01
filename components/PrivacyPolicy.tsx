@@ -66,6 +66,11 @@ export default function PrivacyPolicy() {
               your interactions with us and the Services, the choices you make
               and the products and features you use.
             </p>
+            <p className="mt-2">
+              If you rate or comment on the agent&apos;s replies, we store your
+              ratings and comments with that chat, and they are deleted when
+              you delete the chat.
+            </p>
 
             <h3 className="text-base font-medium mb-2 mt-4">
               Information Automatically Collected

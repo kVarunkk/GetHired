@@ -213,6 +213,43 @@ describe("PipelineBoard (PLT-043, PL-TEST-006)", () => {
     expect(within(lee).queryByText("Didn't meet requirements")).not.toBeInTheDocument();
   });
 
+  it("badges an imported card, with No resume when it has none (BI-REQ-030)", () => {
+    render(
+      <PipelineBoard
+        jobPostId={PIPELINE_JOB.id}
+        initial={boardOf([
+          cardOf(1, { name: "Meera", imported: true, hasResume: false }),
+          cardOf(2, { name: "Lee", imported: false, hasResume: true }),
+        ])}
+      />,
+    );
+    const meera = screen.getByRole("link", { name: "Meera" }).closest("[data-card]") as HTMLElement;
+    expect(within(meera).getByText("Imported")).toBeInTheDocument();
+    expect(within(meera).getByText("No resume")).toBeInTheDocument();
+    const lee = screen.getByRole("link", { name: "Lee" }).closest("[data-card]") as HTMLElement;
+    expect(within(lee).queryByText("Imported")).not.toBeInTheDocument();
+  });
+
+  it("links a claimed card's connected GetHired account (BIT-101)", () => {
+    render(
+      <PipelineBoard
+        jobPostId={PIPELINE_JOB.id}
+        initial={boardOf([cardOf(1, { name: "Meera", imported: true, hasResume: true, connectedUserId: "a0000000-0000-4000-8000-000000000009" })])}
+      />,
+    );
+    const meera = screen.getByRole("link", { name: "Meera" }).closest("[data-card]") as HTMLElement;
+    expect(within(meera).getByRole("link", { name: "GetHired account connected" })).toHaveAttribute(
+      "href",
+      "/company/profiles/a0000000-0000-4000-8000-000000000009",
+    );
+  });
+
+  it("says why an unscored card has no fit score (BI-REQ-036)", () => {
+    render(<PipelineBoard jobPostId={PIPELINE_JOB.id} initial={boardOf([cardOf(1, { name: "Meera", notScored: true })])} />);
+    const meera = screen.getByRole("link", { name: "Meera" }).closest("[data-card]") as HTMLElement;
+    expect(within(meera).getByTitle("Not scored: no resume")).toHaveTextContent("–");
+  });
+
   it("badges a card with its AI interview (SIT-062)", () => {
     render(
       <PipelineBoard

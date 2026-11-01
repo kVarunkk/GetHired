@@ -7,6 +7,7 @@ import { previewAgentMoveAction } from "@/app/actions/pipeline/preview-agent-mov
 import { previewAgentOutreachAction } from "@/app/actions/outreach/preview-agent-outreach";
 import { previewAgentJobDeleteAction } from "@/app/actions/jobs/preview-agent-job-delete";
 import { previewAgentInterviewInviteAction } from "@/app/actions/interviews/preview-agent-interview-invite";
+import { previewAgentAddToJobAction } from "@/app/actions/candidates/preview-agent-add-to-job";
 
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
 vi.mock("@/app/actions/pipeline/preview-agent-move", () => ({ previewAgentMoveAction: vi.fn() }));
@@ -15,6 +16,7 @@ vi.mock("@/app/actions/jobs/preview-agent-job-delete", () => ({ previewAgentJobD
 vi.mock("@/app/actions/interviews/preview-agent-interview-invite", () => ({
   previewAgentInterviewInviteAction: vi.fn(),
 }));
+vi.mock("@/app/actions/candidates/preview-agent-add-to-job", () => ({ previewAgentAddToJobAction: vi.fn() }));
 
 const assistant = (parts: unknown[]): UIMessage =>
   ({ id: "a1", role: "assistant", parts }) as UIMessage;
@@ -381,6 +383,60 @@ describe("MessageParts: recruiter approvals (RA-REQ-005)", () => {
     expect(screen.getByText("Visa sponsorship")).toBeInTheDocument();
   });
 
+  it("lists each form question on its own row with its type, options and knockout rule (AF-REQ-009)", () => {
+    renderParts(
+      assistant([
+        approval("updateJobPost", {
+          jobPostId: "b1",
+          applicationForm: {
+            version: 1,
+            questions: [
+              {
+                id: "00000000-0000-4000-8000-000000000001",
+                type: "yes_no",
+                label: "Can you relocate?",
+                required: true,
+                knockout: { fail_if: { kind: "equals", value: false }, action: "reject" },
+              },
+              {
+                id: "00000000-0000-4000-8000-000000000002",
+                type: "single_select",
+                label: "Preferred stack?",
+                required: false,
+                options: ["Go", "Rust"],
+              },
+              { id: "00000000-0000-4000-8000-000000000003", type: "url", label: "Old", required: false, archived: true },
+            ],
+            standard_fields: { phone: "optional", cover_letter: "off" },
+          },
+        }),
+      ]),
+    );
+
+    expect(screen.getByText("Update this job post?")).toBeInTheDocument();
+    const items = within(screen.getByText("Can you relocate?").closest("ol")!).getAllByRole("listitem");
+    expect(items).toHaveLength(2);
+    expect(within(items[0]).getByText("Can you relocate?")).toBeInTheDocument();
+    expect(within(items[0]).getByText("Yes / no")).toBeInTheDocument();
+    expect(within(items[0]).getByText("Required")).toBeInTheDocument();
+    expect(within(items[0]).getByText("Knockout: Answers No → rejects the application")).toBeInTheDocument();
+    expect(within(items[1]).getByText("Single choice")).toBeInTheDocument();
+    expect(within(items[1]).getByText("Optional")).toBeInTheDocument();
+    expect(within(items[1]).getByText("Options: Go · Rust")).toBeInTheDocument();
+    // Archived questions and fields that are off aren't shown.
+    expect(screen.queryByText("Old")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Cover letter/)).not.toBeInTheDocument();
+    expect(screen.getByText("Phone")).toBeInTheDocument();
+  });
+
+  it("lists plain-text screening questions one per row", () => {
+    renderParts(assistant([approval("createJobPost", { title: "Founding Engineer", questions: ["Why us?", "What have you built?"] })]));
+
+    expect(screen.getByText("Why us?")).toBeInTheDocument();
+    expect(screen.getByText("What have you built?")).toBeInTheDocument();
+    expect(screen.queryByText("Why us?, What have you built?")).not.toBeInTheDocument();
+  });
+
   it("asks before publishing a job post", () => {
     renderParts(assistant([approval("setJobPostStatus", { jobPostId: "b1", status: "active" })]));
 
@@ -505,5 +561,49 @@ describe("MessageParts: screening interview approvals (SIT-071)", () => {
     expect(screen.getByText(/Alan/)).toBeInTheDocument();
     expect(screen.getByText(/Already invited./)).toBeInTheDocument();
     expect(screen.getByText(/30 interview minutes/)).toBeInTheDocument();
+  });
+});
+
+describe("MessageParts: adding your candidates to a job (CPT-058)", () => {
+  const approval = (tool: string, input: unknown) => ({
+    type: `tool-${tool}`,
+    toolCallId: "c1",
+    state: "approval-requested",
+    input,
+    approval: { id: "ap1" },
+  });
+
+  it("names the job, the count and the people, and that no one is emailed", async () => {
+    vi.mocked(previewAgentAddToJobAction).mockResolvedValue({
+      ok: true,
+      jobTitle: "Backend Engineer",
+      stageName: "Phone screen",
+      candidates: [
+        { id: "c1", name: "Meera", hasEmail: true },
+        { id: "c2", name: "Ravi", hasEmail: false },
+      ],
+      notFound: 0,
+    });
+    renderParts(assistant([approval("addCandidatesToJob", { jobPostId: "b1", candidateIds: ["c1", "c2"], stageId: "s1" })]));
+
+    expect(screen.getByText("Add 2 of your candidates to this job? No one is emailed.")).toBeInTheDocument();
+    expect(await screen.findByText(/Backend Engineer/)).toBeInTheDocument();
+    expect(screen.getByText(/Phone screen/)).toBeInTheDocument();
+    expect(screen.getByText("Meera")).toBeInTheDocument();
+    expect(screen.getByText(/Ravi: no email, won't be added/)).toBeInTheDocument();
+    expect(vi.mocked(previewAgentAddToJobAction)).toHaveBeenCalledWith({
+      jobPostId: "b1",
+      candidateIds: ["c1", "c2"],
+      stageId: "s1",
+    });
+    // The raw ids aren't listed as details.
+    expect(screen.queryByText("b1")).not.toBeInTheDocument();
+  });
+
+  it("says when the add won't go through", async () => {
+    vi.mocked(previewAgentAddToJobAction).mockResolvedValue({ ok: false, error: "Your role can't import applicants here." });
+    renderParts(assistant([approval("addCandidatesToJob", { jobPostId: "b1", candidateIds: ["c1"] })]));
+    expect(screen.getByText("Add 1 of your candidates to this job? No one is emailed.")).toBeInTheDocument();
+    expect(await screen.findByText(/Your role can't import applicants here./)).toBeInTheDocument();
   });
 });

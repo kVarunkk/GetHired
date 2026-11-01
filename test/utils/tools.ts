@@ -15,6 +15,7 @@ export function toolContext(
     supabase,
     user: mockUser({ id: "u1", email: "ada@example.com" }),
     sessionId: "s1",
+    surface: "agent",
     ...overrides,
   };
 }
@@ -28,6 +29,7 @@ export function recruiterToolContext(
     supabase,
     user: COMPANY_A.user,
     sessionId: "s1",
+    surface: "agent",
     company: myCompanyOf(COMPANY_A),
     ...overrides,
   };

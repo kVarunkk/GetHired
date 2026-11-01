@@ -14,6 +14,7 @@ export const SHOWN_KEYS: EntitlementKey[] = [
   "outreach",
   "interview_minutes",
   "agent_messages",
+  "resume_imports",
 ];
 
 /** "10 active job posts", "500 screenings / month", "∞ seats", or null when the plan lacks the key. */

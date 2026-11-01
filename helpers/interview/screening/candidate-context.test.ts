@@ -4,6 +4,7 @@ import type { TResumeRowContent } from "@/utils/types";
 import {
   CANDIDATE_CONTEXT_MAX_CHARS,
   buildCandidateContext,
+  buildShortCandidateContext,
   loadCandidateContext,
 } from "./candidate-context";
 
@@ -47,6 +48,15 @@ describe("buildCandidateContext (SI-REQ-022, SI-TEST-005)", () => {
     expect(firstName).toBe("Priya");
   });
 
+  it("builds the short context with only what's there (BIT-103)", () => {
+    expect(
+      buildShortCandidateContext(
+        { current_title: null, current_company: "Sharma Labs", experience_years: 1, skills: null },
+        "Priya Sharma",
+      ),
+    ).toEqual({ firstName: "Priya", context: "Experience:\n[removed] Labs, 1 year of experience" });
+  });
+
   it("trims to the character limit", () => {
     const long = buildCandidateContext({ sections: [section("experience", "x".repeat(20_000))] }, null);
     expect(long.context.length).toBe(CANDIDATE_CONTEXT_MAX_CHARS);
@@ -81,6 +91,77 @@ describe("loadCandidateContext", () => {
     expect(await loadCandidateContext(mock.client, APP)).toEqual({
       ok: false,
       error: "This application has no resume.",
+    });
+  });
+
+  describe("a claimed import (BIT-103)", () => {
+    const CANDIDATE = "cc000000-0000-4000-8000-000000000001";
+    const claimed = { resume_id: null, applicant_user_id: USER, company_candidate_id: CANDIDATE };
+    const candidateRow = (overrides: Record<string, unknown> = {}) => ({
+      full_name: "Priya Sharma",
+      current_title: null,
+      current_company: null,
+      experience_years: null,
+      skills: [],
+      resume_content: null,
+      ...overrides,
+    });
+
+    it("uses the company's resume, scrubbed, with no contact columns read", async () => {
+      const mock = createSupabaseMock();
+      mock.queue("applications", { data: claimed, error: null });
+      mock.queue("company_candidates", { data: candidateRow({ resume_content: resume }), error: null });
+
+      const result = await loadCandidateContext(mock.client, APP);
+
+      expect(result).toMatchObject({ ok: true, firstName: "Priya" });
+      const { context } = result as { context: string };
+      expect(context).toContain("Built the payments API at Razorpay.");
+      expect(context).not.toMatch(/@|sharma|github\.com|40 LPA/i);
+      expect(mock.callsFor("resumes")).toHaveLength(0);
+      expect(mock.callsFor("user_info")).toHaveLength(0);
+      const select = mock.callsFor("company_candidates")[0].chain[0];
+      expect(select.method).toBe("select");
+      expect(select.args[0]).not.toMatch(/email|phone|tags|notes|links/);
+      expect(mock.callsFor("company_candidates")[0].chain).toContainEqual({ method: "eq", args: ["id", CANDIDATE] });
+    });
+
+    it("builds a short context from title, company, years and skills without a resume", async () => {
+      const mock = createSupabaseMock();
+      mock.queue("applications", { data: claimed, error: null });
+      mock.queue("company_candidates", {
+        data: candidateRow({
+          current_title: "Backend Engineer",
+          current_company: "Razorpay",
+          experience_years: 5,
+          skills: ["Go", " Postgres ", ""],
+        }),
+        error: null,
+      });
+
+      expect(await loadCandidateContext(mock.client, APP)).toEqual({
+        ok: true,
+        firstName: "Priya",
+        context: "Experience:\nBackend Engineer at Razorpay, 5 years of experience\n\nSkills:\nGo, Postgres",
+      });
+    });
+
+    it("returns an error when the record has nothing to go on", async () => {
+      const mock = createSupabaseMock();
+      mock.queue("applications", { data: claimed, error: null });
+      mock.queue("company_candidates", { data: candidateRow(), error: null });
+
+      expect(await loadCandidateContext(mock.client, APP)).toEqual({ ok: false, error: "This application has no resume." });
+    });
+
+    it("prefers the application's own resume when there is one", async () => {
+      const mock = createSupabaseMock();
+      mock.queue("applications", { data: { ...claimed, resume_id: "r1" }, error: null });
+      mock.queue("resumes", { data: { content: resume }, error: null });
+      mock.queue("user_info", { data: { full_name: "Priya Sharma" }, error: null });
+
+      expect(await loadCandidateContext(mock.client, APP)).toMatchObject({ ok: true });
+      expect(mock.callsFor("company_candidates")).toHaveLength(0);
     });
   });
 

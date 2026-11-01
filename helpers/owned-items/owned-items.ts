@@ -13,7 +13,6 @@ export const OWNED_ITEM_FIELDS = {
   resumes: z.object({ name }).strict(),
   resume_reviews: z.object({ name }).strict(),
   interviews: z.object({ name }).strict(),
-  user_api_tokens: z.object({ name }).strict(),
   bookmarks: z.object({ name, url: inAppUrl }).strict(),
 } as const;
 

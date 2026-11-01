@@ -65,7 +65,18 @@ export const MEMBER_KEYS: PermissionKey[] = [
   "billing.view",
 ];
 
-const JOB_SCOPED_KEYS: PermissionKey[] = PERMISSION_CATALOG.filter((p) => p.scopable).map((p) => p.key);
+/**
+ * What a Member gets for their assigned jobs only (BI-PERM-001). The seed
+ * function lists the same keys (`-- @member-assigned-keys`).
+ */
+export const MEMBER_ASSIGNED_KEYS: PermissionKey[] = ["applicants.import"];
+
+/** Job-scoped keys the Hiring manager template leaves out (BI-PERM-001). */
+const HIRING_MANAGER_EXCLUDED: PermissionKey[] = ["applicants.import"];
+
+const JOB_SCOPED_KEYS: PermissionKey[] = PERMISSION_CATALOG.filter((p) => p.scopable)
+  .map((p) => p.key)
+  .filter((k) => !HIRING_MANAGER_EXCLUDED.includes(k));
 
 export const ROLE_TEMPLATES: RoleTemplate[] = [
   {
@@ -80,7 +91,7 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
     name: "Member",
     description: "Works with applicants, talent and outreach across every job.",
     color: "slate",
-    grants: all(MEMBER_KEYS),
+    grants: [...all(MEMBER_KEYS), ...scoped(MEMBER_ASSIGNED_KEYS, "assigned")],
   },
   {
     key: "recruiter",

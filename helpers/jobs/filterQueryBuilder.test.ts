@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createClient } from "@/lib/supabase/server";
-import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { mockUser } from "@/test/utils/auth";
 import { expandLocations } from "@/helpers/locations/aliases";
 import {
   createSupabaseMock,
@@ -12,12 +12,8 @@ import {
   titleWords,
 } from "./filterQueryBuilder";
 
-vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/service-role", () => ({
   createServiceRoleClient: vi.fn(),
-}));
-vi.mock("@/lib/supabase/get-user-from-request", () => ({
-  getUserFromRequest: vi.fn(),
 }));
 vi.mock("@/helpers/locations/aliases", () => ({ expandLocations: vi.fn() }));
 
@@ -40,10 +36,8 @@ const BASE_ARGS = {
   userEmbedding: null,
   applicationStatus: null,
   createdAfter: null,
-  isInternalCall: false,
   jobEmbedding: null,
   relevanceSearchType: null,
-  userId: null,
 } as const;
 
 let supabase: SupabaseMock;
@@ -56,8 +50,6 @@ const overlapsCall = () =>
 beforeEach(() => {
   supabase = createSupabaseMock();
   supabase.queue("all_jobs", { data: [], error: null, count: 0 });
-  vi.mocked(createClient).mockResolvedValue(supabase.client);
-  vi.mocked(getUserFromRequest).mockResolvedValue(null);
 });
 
 describe("buildQuery: location filter", () => {
@@ -68,7 +60,7 @@ describe("buildQuery: location filter", () => {
       "remote",
     ]);
 
-    await buildQuery({ ...BASE_ARGS, location: "Bengaluru|Remote" });
+    await buildQuery(supabase.client, null, { ...BASE_ARGS, location: "Bengaluru|Remote" });
 
     expect(expandLocations).toHaveBeenCalledWith(["Bengaluru", "Remote"]);
     expect(overlapsCall()).toEqual({
@@ -78,10 +70,48 @@ describe("buildQuery: location filter", () => {
   });
 
   it("adds no location filter when none is requested", async () => {
-    await buildQuery({ ...BASE_ARGS });
+    await buildQuery(supabase.client, null, { ...BASE_ARGS });
 
     expect(expandLocations).not.toHaveBeenCalled();
     expect(overlapsCall()).toBeUndefined();
+  });
+});
+
+describe("buildQuery: user", () => {
+  it("reads the saved tab through the given client and user", async () => {
+    supabase = createSupabaseMock();
+    supabase.queue("all_jobs", { data: [{ id: "j1" }], error: null, count: 1 });
+    const service = createSupabaseMock();
+    service.queueRpc("get_masked_job_urls", {
+      data: [{ id: "j1", job_url: "https://a", company_url: null }],
+      error: null,
+    });
+    vi.mocked(createServiceRoleClient).mockReturnValue(service.client);
+
+    const result = await buildQuery(supabase.client, mockUser({ id: "u1" }), {
+      ...BASE_ARGS,
+      isFavoriteTabActive: true,
+    });
+
+    expect(result.error).toBeNull();
+    expect(supabase.callsFor("all_jobs")[0].chain).toContainEqual({
+      method: "eq",
+      args: ["user_favorites.user_id", "u1"],
+    });
+    expect(service.callsFor("get_masked_job_urls")[0].chain[0].args[1]).toEqual({
+      p_job_ids: ["j1"],
+      p_user_id: "u1",
+    });
+  });
+
+  it("refuses the saved tab without a user", async () => {
+    const result = await buildQuery(supabase.client, null, {
+      ...BASE_ARGS,
+      isFavoriteTabActive: true,
+    });
+
+    expect(result.error).toBe("User not authenticated to view favorite jobs.");
+    expect(supabase.calls).toEqual([]);
   });
 });
 
@@ -94,9 +124,8 @@ describe("buildQuery: total", () => {
   it("counts the filtered query itself, not every job", async () => {
     supabase = createSupabaseMock();
     supabase.queue("all_jobs", { data: [], error: null, count: 12 });
-    vi.mocked(createClient).mockResolvedValue(supabase.client);
 
-    const result = await buildQuery({ ...BASE_ARGS, jobType: "Fulltime" });
+    const result = await buildQuery(supabase.client, null, { ...BASE_ARGS, jobType: "Fulltime" });
 
     expect(supabase.callsFor("all_jobs")).toHaveLength(1);
     expect(selectOf().args[1]).toEqual({ count: "exact" });
@@ -104,7 +133,7 @@ describe("buildQuery: total", () => {
   });
 
   it("doesn't count again on later pages", async () => {
-    await buildQuery({
+    await buildQuery(supabase.client, null, {
       ...BASE_ARGS,
       cursor: Buffer.from("2026-10-01_j1").toString("base64"),
     });
@@ -119,7 +148,7 @@ describe("buildQuery: cursor", () => {
   const chain = () => supabase.callsFor("all_jobs")[0]!.chain;
 
   it("continues after the last row, ties by id, then the nulls", async () => {
-    await buildQuery({
+    await buildQuery(supabase.client, null, {
       ...BASE_ARGS,
       sortBy: "salary_min",
       sortOrder: "desc",
@@ -135,7 +164,7 @@ describe("buildQuery: cursor", () => {
   });
 
   it("breaks ties by id in the sort direction when ascending", async () => {
-    await buildQuery({
+    await buildQuery(supabase.client, null, {
       ...BASE_ARGS,
       sortBy: "salary_min",
       sortOrder: "asc",
@@ -151,7 +180,7 @@ describe("buildQuery: cursor", () => {
   });
 
   it("only returns later nulls once the last row was null, so no row repeats", async () => {
-    await buildQuery({
+    await buildQuery(supabase.client, null, {
       ...BASE_ARGS,
       sortBy: "salary_min",
       sortOrder: "desc",
@@ -170,7 +199,7 @@ describe("buildQuery: cursor", () => {
   });
 
   it("quotes values with commas and keeps non-ASCII text", async () => {
-    await buildQuery({
+    await buildQuery(supabase.client, null, {
       ...BASE_ARGS,
       sortBy: "company_name",
       sortOrder: "asc",
@@ -193,7 +222,7 @@ describe("buildQuery: experience filter", () => {
       ?.chain.filter((step) => String(step.args[0]).startsWith("experience_"));
 
   it("matches jobs whose range overlaps the applicant's, open-ended jobs included", async () => {
-    await buildQuery({ ...BASE_ARGS, minExperience: "1", maxExperience: "3" });
+    await buildQuery(supabase.client, null, { ...BASE_ARGS, minExperience: "1", maxExperience: "3" });
 
     expect(experienceCalls()).toEqual([
       { method: "not", args: ["experience_min", "is", null] },
@@ -203,7 +232,7 @@ describe("buildQuery: experience filter", () => {
   });
 
   it("applies a max on its own", async () => {
-    await buildQuery({ ...BASE_ARGS, maxExperience: "0" });
+    await buildQuery(supabase.client, null, { ...BASE_ARGS, maxExperience: "0" });
 
     expect(experienceCalls()).toEqual([
       { method: "not", args: ["experience_min", "is", null] },
@@ -212,7 +241,7 @@ describe("buildQuery: experience filter", () => {
   });
 
   it("adds no experience filter when none is requested", async () => {
-    await buildQuery({ ...BASE_ARGS });
+    await buildQuery(supabase.client, null, { ...BASE_ARGS });
 
     expect(experienceCalls()).toEqual([]);
   });
@@ -335,7 +364,7 @@ describe("titleKeywordConditions", () => {
 
 describe("buildQuery: title keywords", () => {
   it("ors every keyword's conditions together", async () => {
-    await buildQuery({ ...BASE_ARGS, jobTitleKeywords: "ai|full stack" });
+    await buildQuery(supabase.client, null, { ...BASE_ARGS, jobTitleKeywords: "ai|full stack" });
 
     expect(supabase.callsFor("all_jobs")[0]?.chain).toContainEqual({
       method: "or",
@@ -349,7 +378,7 @@ describe("buildQuery: title keywords", () => {
   });
 
   it("adds no title filter when the keywords have no words", async () => {
-    await buildQuery({ ...BASE_ARGS, jobTitleKeywords: "-" });
+    await buildQuery(supabase.client, null, { ...BASE_ARGS, jobTitleKeywords: "-" });
 
     const orCalls = supabase
       .callsFor("all_jobs")[0]

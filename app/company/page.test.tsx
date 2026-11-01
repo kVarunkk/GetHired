@@ -78,6 +78,8 @@ describe("company dashboard (PLT-082 characterisation)", () => {
         {
           id: "app-1",
           stage_entered_at: new Date(Date.now() - 5 * 86_400_000).toISOString(),
+          applicant_user_id: "user-1",
+          company_candidate_id: null,
           user_info: { full_name: "Priya Sharma" },
           job_postings: { id: "job-1", title: "Backend Engineer", company_id: COMPANY_A.id },
         },

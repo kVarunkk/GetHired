@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createCandidateTools } from "./candidates";
 import { searchProfiles } from "@/helpers/profiles/search-profiles";
-import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
+import { queueJobPostingRelevance } from "@/helpers/profiles/queue-job-relevance";
 import { execTool, inputJsonSchema, recruiterToolContext, validateInput } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
@@ -15,8 +15,8 @@ vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
 vi.mock("@/helpers/profiles/search-profiles", () => ({ searchProfiles: vi.fn() }));
-vi.mock("@/app/actions/relevant-profiles-update", () => ({
-  triggerJobPostingRelevanceUpdate: vi.fn(),
+vi.mock("@/helpers/profiles/queue-job-relevance", () => ({
+  queueJobPostingRelevance: vi.fn(),
 }));
 
 const CANDIDATE_ID = CANDIDATE_PROFILE.user_id;
@@ -210,19 +210,19 @@ describe("findMatchesForJob tool", () => {
 });
 
 describe("runMatchingForJob tool", () => {
-  it("starts matching through the shared action", async () => {
-    vi.mocked(triggerJobPostingRelevanceUpdate).mockResolvedValue({ success: true, message: "processing started" });
+  it("starts matching through the shared helper, with the session company", async () => {
+    vi.mocked(queueJobPostingRelevance).mockResolvedValue({ success: true, message: "processing started" });
 
     expect(await execTool(tools.runMatchingForJob, { jobPostId: JOB_POST.id })).toEqual({
       status: "processing",
       jobPostId: JOB_POST.id,
       note: "The company gets an email when matching finishes.",
     });
-    expect(triggerJobPostingRelevanceUpdate).toHaveBeenCalledWith(JOB_POST.id);
+    expect(queueJobPostingRelevance).toHaveBeenCalledWith(expect.objectContaining({ company: expect.objectContaining({ id: COMPANY_A.id }) }), JOB_POST.id);
   });
 
   it("passes its error through", async () => {
-    vi.mocked(triggerJobPostingRelevanceUpdate).mockResolvedValue({
+    vi.mocked(queueJobPostingRelevance).mockResolvedValue({
       success: false,
       error: "Matching is already in progress for this job.",
     });

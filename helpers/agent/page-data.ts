@@ -2,6 +2,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import type { UIMessage } from "ai";
 import { Database } from "@/utils/types/database.types";
 import { loadSession, sessionRoleFields } from "./persistence";
+import type { AgentFeedbackState } from "./feedback";
 import type { AgentRoleId } from "./roles/types";
 
 type SessionSummary = { id: string; title: string; updated_at: string };
@@ -25,7 +26,8 @@ async function createSession(
 /**
  * Data for the /agent page: the user's sessions (newest first), the session
  * to open (`requestedId`, or the newest when none is asked for) and its
- * messages. Creates a first session for users who have none.
+ * messages, with the user's feedback on them. Creates a first session for
+ * users who have none.
  *
  * Returns null when `requestedId` isn't one of the user's sessions (another
  * user's, deleted, or made up), so the page can 404 rather than show a
@@ -39,7 +41,12 @@ export async function loadAgentPageData(
   userId: string,
   requestedId: string | undefined,
   { newChat = false, role }: { newChat?: boolean; role?: AgentRoleId } = {},
-): Promise<{ sessions: SessionSummary[]; activeSessionId: string; messages: UIMessage[] } | null> {
+): Promise<{
+  sessions: SessionSummary[];
+  activeSessionId: string;
+  messages: UIMessage[];
+  feedback: AgentFeedbackState;
+} | null> {
   let query = supabase.from("agent_sessions").select(SESSION_COLUMNS).eq("user_id", userId);
   if (role === "company") query = query.eq("role", role);
   const { data, error } = await query.order("updated_at", { ascending: false });
@@ -51,12 +58,14 @@ export async function loadAgentPageData(
 
   if (sessions.length === 0) sessions = [await createSession(supabase, userId, role)];
   const active = requested ?? sessions[0];
-  const messages = (await loadSession(supabase, userId, active.id, { role }))?.messages ?? [];
+  const loaded = await loadSession(supabase, userId, active.id, { role, withFeedback: true });
+  const messages = loaded?.messages ?? [];
+  const feedback = loaded?.feedback ?? {};
 
   if (newChat && !requested && messages.length > 0) {
     const created = await createSession(supabase, userId, role);
-    return { sessions: [created, ...sessions], activeSessionId: created.id, messages: [] };
+    return { sessions: [created, ...sessions], activeSessionId: created.id, messages: [], feedback: {} };
   }
 
-  return { sessions, activeSessionId: active.id, messages };
+  return { sessions, activeSessionId: active.id, messages, feedback };
 }

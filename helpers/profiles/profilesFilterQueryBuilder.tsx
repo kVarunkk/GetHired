@@ -7,6 +7,7 @@ import { PostgrestError } from "@supabase/supabase-js";
 import { parseMultiSelectParam } from "@/utils/formatters";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { DIRECTORY_CANDIDATE_COLUMNS } from "./candidate-columns";
+import { sanitizeSearchTerm } from "@/helpers/search/sanitize-search-term";
 
 // RS-SEC-004 and OR-REQ-010: directory columns only. No contact details, never
 // `*` or credits/referral data.
@@ -30,8 +31,6 @@ const PROFILE_SEARCH_COLUMNS = [
   "career_goals_long_term",
 ] as const;
 
-const SEARCH_MAX_LENGTH = 100;
-
 /**
  * Array filters that match by substring when `matchText` is on: the param, the
  * text[] column it otherwise overlaps, and the computed field (see migration
@@ -44,19 +43,7 @@ const TEXT_MATCH_FILTERS = [
   { param: "industry", column: "industry_preferences", searchField: "industry_preferences_search" },
 ] as const;
 
-/**
- * Makes a search box value safe inside a PostgREST `or()` filter: drops the
- * characters that would end the quoted value or change the filter (`,()"\`)
- * and the ilike wildcards (`%`, `*`, `_`), collapses whitespace and caps it.
- */
-export function sanitizeSearchTerm(raw: string | null): string {
-  if (!raw) return "";
-  return raw
-    .replace(/[,()"\\%*_]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, SEARCH_MAX_LENGTH);
-}
+export { sanitizeSearchTerm };
 
 export async function buildProfileQuery({
   searchQuery,

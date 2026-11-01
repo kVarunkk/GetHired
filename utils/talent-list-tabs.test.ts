@@ -28,6 +28,8 @@ describe("slugifyListName (PL-TASK-051)", () => {
     expect(isReservedListSlug("all")).toBe(true);
     expect(isReservedListSlug("saved")).toBe(true);
     expect(isReservedListSlug("saved-list")).toBe(false);
+    // The old "Your candidates" tab, which redirects to /company/candidates.
+    expect(isReservedListSlug("candidates")).toBe(true);
   });
 
   it("links to a list's tab", () => {

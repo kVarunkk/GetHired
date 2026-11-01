@@ -19,6 +19,8 @@ import {
   howWeHelpCopy,
   LANDING_PAGES,
   markdownPath,
+  MCP_CAPABILITIES,
+  MCP_SERVER_URL,
   PRICING_DESCRIPTION,
   PRICING_INTRO,
   SITE_URL,
@@ -47,17 +49,36 @@ function header(title: string, pagePath: string, summary: string) {
   return [`# ${title}`, `> ${summary}`, `Canonical page: ${absolute(pagePath)}`];
 }
 
-function landingMarkdown(page: LandingPageCopy, jobCount: number) {
+/** The "How we help" cards, or on an MCP page its server URL and capabilities. */
+function featureBlocks(page: LandingPageCopy, jobCount: number) {
+  if (page.mcp) {
+    const copy = MCP_CAPABILITIES[page.mcp];
+    return [
+      "## Server URL",
+      `\`${MCP_SERVER_URL}\``,
+      "There are no API keys. Your client signs you in through GetHired and asks you to approve it once.",
+      `## ${copy.heading}`,
+      copy.subheading,
+      copy.items.map((f) => `- **${f.name}.** ${f.description}`).join("\n"),
+    ];
+  }
+  if (!page.howWeHelp) return [];
   const help = howWeHelpCopy(page.howWeHelp, jobCount);
+  return [
+    `## ${help.heading}`,
+    help.subheading,
+    help.features.map((f) => `- **${f.name}.** ${f.description}`).join("\n"),
+  ];
+}
+
+function landingMarkdown(page: LandingPageCopy, jobCount: number) {
   const ctas = page.ctas.map((c) => (c.href === "#" ? `- ${c.label}` : `- ${link(c.label, c.href)}`));
 
   return [
     ...header(page.heading, page.path, page.description),
     page.subheading(jobCount),
     ctas.join("\n"),
-    `## ${help.heading}`,
-    help.subheading,
-    help.features.map((f) => `- **${f.name}.** ${f.description}`).join("\n"),
+    ...featureBlocks(page, jobCount),
     "## Frequently asked questions",
     ...FAQS[page.faq].map((f) => `### ${f.question}\n\n${f.answer}`),
     ...(page.related?.length

@@ -12,6 +12,7 @@ import RechargeCredits from "@/components/RechargeCredits";
 import DashboardDropdown from "@/components/DashboardDropdown";
 import CreditDepositDialog from "@/components/CreditDepositDialog";
 import ProfileViewsCard from "@/components/ProfileViewsCard";
+import McpConnectCard from "@/components/mcp/McpConnectCard";
 import { PROFILE_VIEW_WINDOW_DAYS } from "@/helpers/outreach/config";
 import AskApplicantAgent from "@/components/agent/AskApplicantAgent";
 import PageHeader from "@/components/PageHeader";
@@ -40,7 +41,7 @@ export default async function DashboardPage() {
     const { data: userInfoData, error: userInfoError } = await supabase
       .from("user_info")
       .select(
-        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id), user_api_tokens(id)",
+        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id)",
       )
       .eq("user_id", user.id)
       .single();
@@ -311,26 +312,7 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="flex flex-col p-4 text-center">
-              {/* <CardHeader className="p-0"></CardHeader> */}
-              <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full flex-1">
-                <div className=" flex items-center gap-3 ">
-                  <span className="text-3xl font-semibold tracking-tight">
-                    {userInfoData.user_api_tokens.length}
-                  </span>
-
-                  <span className="text-sm text-muted-foreground font-medium">
-                    API Keys created
-                  </span>
-                </div>
-                <Button asChild>
-                  <Link href={"/dashboard/api-keys"}>
-                    View API Keys
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+            <McpConnectCard />
 
             <ProfileViewsCard count={profileViews} />
           </div>

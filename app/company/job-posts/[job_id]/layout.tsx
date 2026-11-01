@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { format } from "date-fns";
-import { FileText, Mic, Pencil, UserCog, Users } from "lucide-react";
+import { FileText, FileUp, Mic, Pencil, UserCog, UserSearch, Users } from "lucide-react";
 import Error from "@/components/Error";
 import EntityLayout from "@/components/EntityLayout";
 import type { EntityNavItem } from "@/components/EntityNav";
@@ -12,10 +12,12 @@ import FindSuitableProfilesForJobPost from "@/components/FindSuitableProfilesFor
 import { JobStatusSwitch } from "@/components/JobPostingsTable";
 import ShareJobPosting from "@/components/ShareJobPosting";
 import { isUuid } from "@/helpers/agent/auth";
+import { jobImportPath } from "@/helpers/candidates/paths";
 import { getMyCareersLink } from "@/helpers/careers/my-careers-link";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { jobControls } from "@/helpers/companies/job-scope";
 import { can } from "@/helpers/companies/permissions";
+import { jobPoolMatchesPath } from "@/helpers/jobs/paths";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -37,8 +39,8 @@ export async function generateMetadata({
 }
 
 /**
- * A job post's frame: the sections sidebar (overview, applications, AI
- * interview, hiring team, edit) and the header with the job's controls. Each
+ * A job post's frame: the sections sidebar (overview, applications, from
+ * your candidates, import, AI interview, hiring team, edit) and the header with the job's controls. Each
  * section page checks its own permission too.
  */
 export default async function JobPostLayout({
@@ -77,6 +79,20 @@ export default async function JobPostLayout({
       { href: base, label: "Overview", icon: <FileText />, exact: true },
       { href: `${base}/applications`, label: "Applications", icon: <Users /> },
     ];
+    // CP-REQ-060: the company's own candidates who may fit, for talent.view.
+    if (can(company, "talent.view")) {
+      items.push({ href: jobPoolMatchesPath(job.id), label: "From your candidates", icon: <UserSearch /> });
+    }
+    // CP-REQ-020: resumes, a spreadsheet or one person, for applicants.import
+    // on this job. Active for every method's route under /import.
+    if (can(company, "applicants.import", job.id)) {
+      items.push({
+        href: jobImportPath(job.id),
+        activePath: `${base}/import`,
+        label: "Import candidates",
+        icon: <FileUp />,
+      });
+    }
     // SIT-060/061: the AI interview page, for interviews.view on this job.
     if (can(company, "interviews.view", job.id)) {
       items.push({ href: `${base}/interview`, label: "AI interview", icon: <Mic /> });

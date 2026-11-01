@@ -4,7 +4,9 @@ import { z } from "zod";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
 import { listTalentLists, type TalentListSummary } from "@/helpers/pipeline/talent-lists";
 
-const inputSchema = z.object({ candidateUserId: z.string().uuid().optional() }).strict();
+const inputSchema = z
+  .object({ candidateUserId: z.string().uuid().optional(), companyCandidateId: z.string().uuid().optional() })
+  .strict();
 
 /** SERVER ACTION (PL-TASK-051): the session company's lists, for the "Add to list" menu. */
 export async function listTalentListsAction(

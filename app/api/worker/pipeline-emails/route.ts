@@ -2,6 +2,7 @@ import { reportError } from "@/helpers/posthog/report-error";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendCompanyMessage } from "@/helpers/email/send-company-message";
+import { unsubscribeUrl } from "@/helpers/candidates/unsubscribe-token";
 import {
   PIPELINE_EMAIL_MAX_READS,
   PIPELINE_EMAIL_QUEUE,
@@ -23,7 +24,9 @@ const SEND_CONCURRENCY = 5;
  * Sends the emails queued by stage moves (`helpers/pipeline/move.ts`), every
  * minute. The recipient is loaded from the database at send time; an
  * application that's gone, moved to another company or has no address is
- * dropped. Each sent email is logged as an `email_sent` event with the
+ * dropped. An imported application's email goes to the company candidate,
+ * with their unsubscribe link, unless they've unsubscribed since (BI-REQ-032/
+ * 034). Each sent email is logged as an `email_sent` event with the
  * member who moved it. A failed send stays in the queue and is retried until
  * `PIPELINE_EMAIL_MAX_READS`.
  */
@@ -58,7 +61,9 @@ export async function GET(request: NextRequest) {
   const ids = [...new Set(messages.map((m) => m.message.applicationId))];
   const { data: rows, error: loadError } = await admin
     .from("applications")
-    .select("id, user_info(email), job_postings!inner(company_id)")
+    .select(
+      "id, user_info(email), company_candidate_id, company_candidates(email, email_opted_out_at), job_postings!inner(company_id)",
+    )
     .in("id", ids);
   if (loadError) {
     reportError("[pipeline emails worker] couldn't load the applications", loadError.message);
@@ -72,7 +77,8 @@ export async function GET(request: NextRequest) {
 
   const handle = async ({ msg_id, read_ct, message }: QueueMessage) => {
     const row = byId.get(message.applicationId);
-    const toEmail = row?.user_info?.email;
+    const candidate = row?.company_candidates ?? null;
+    const toEmail = row?.user_info?.email ?? (candidate?.email_opted_out_at ? null : candidate?.email);
     if (!row || row.job_postings.company_id !== message.companyId || !toEmail) {
       dropped++;
       await archive(msg_id);
@@ -86,6 +92,7 @@ export async function GET(request: NextRequest) {
       companyName: message.companyName,
       companyEmail: message.companyEmail,
       logoUrl: message.logoUrl,
+      ...(row.company_candidate_id && !row.user_info ? { unsubscribeUrl: unsubscribeUrl(row.company_candidate_id) } : {}),
     });
     if (!result.ok) {
       // Left in the queue: it comes back after the visibility timeout.

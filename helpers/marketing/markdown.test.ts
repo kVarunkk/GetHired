@@ -89,6 +89,21 @@ describe("pageMarkdown", () => {
     }
   });
 
+  it("gives each MCP page the server URL and its own capabilities, not the job-search cards", async () => {
+    const seekers = (await pageMarkdown("/mcp-server"))!;
+    const teams = (await pageMarkdown("/mcp-server/companies"))!;
+
+    for (const md of [seekers, teams]) {
+      expect(md).toContain("`https://gethired.devhub.co.in/api/mcp`");
+      expect(md).not.toContain("github.com");
+      expect(md).not.toContain("Over 12,345 listings");
+    }
+    expect(seekers).toContain("- **Apply on GetHired.**");
+    expect(teams).toContain("- **Job posts.**");
+    expect(teams).toContain(`### ${FAQS["mcp-company"][0].question}`);
+    expect(pageForMarkdownPath("/mcp-server/companies.md")).toBe("/mcp-server/companies");
+  });
+
   it("shows a CTA with no link yet as plain text", async () => {
     expect(await pageMarkdown("/extension")).toContain("\n- Coming Soon\n");
   });

@@ -15,11 +15,14 @@ export type EntityNavItem = {
   icon?: ReactNode;
   /** Active only on this exact path, not on the pages under it (the entity's index page). */
   exact?: boolean;
+  /** The path the item is active on and under, when it differs from `href`. */
+  activePath?: string;
 };
 
 function isActive(pathname: string, item: EntityNavItem) {
-  if (item.exact) return pathname === item.href;
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const path = item.activePath ?? item.href;
+  if (item.exact) return pathname === path;
+  return pathname === path || pathname.startsWith(`${path}/`);
 }
 
 /**

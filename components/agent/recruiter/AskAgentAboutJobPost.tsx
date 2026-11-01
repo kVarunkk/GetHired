@@ -16,6 +16,8 @@ type Allowed = {
   canViewInterviews?: boolean;
   /** interviews.manage and jobs.edit on the job (configureScreeningInterview). */
   canManageInterviews?: boolean;
+  /** talent.view (findPoolCandidates; the page itself needs jobs.view). */
+  canFindPoolCandidates?: boolean;
 };
 
 const when = (allowed: boolean, suggestion: AgentSuggestion) => (allowed ? [suggestion] : []);
@@ -33,6 +35,11 @@ export function jobPostSuggestions(job: JobPost, p: Allowed): AgentSuggestion[] 
     ...when(p.canMatch, { label: "Find candidates", prompt: `Find and rank the best candidates for ${ref}.` }),
     // listApplicants / getHiringFunnel
     ...when(p.canViewApplicants, { label: "Strongest applicants", prompt: `Who are the strongest applicants for ${ref}?` }),
+    // findPoolCandidates
+    ...when(!!p.canFindPoolCandidates, {
+      label: "Who in our candidates fits?",
+      prompt: `Who in our candidates fits ${ref}? List the closest ones; don't add anyone yet.`,
+    }),
     // configureScreeningInterview (asks before saving)
     ...when(!!p.canManageInterviews, {
       label: "Set up an AI interview",

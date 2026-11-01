@@ -95,10 +95,14 @@ export default function BulkActionBar({
       setTarget(null);
       const skipped = result.skipped.filter((s) => s.reason === "not_found").length;
       const failed = result.skipped.filter((s) => s.reason === "email_failed").length;
+      const unsubscribed = result.skipped.filter((s) => s.reason === "unsubscribed").length;
+      const noEmail = result.skipped.filter((s) => s.reason === "no_email").length;
       toast.success(
         `Moved ${plural(result.moved)} to ${stage.name}.` +
           (result.emailed > 0 ? ` Emailing ${result.emailed}.` : "") +
           (failed > 0 ? ` ${failed} email${failed === 1 ? "" : "s"} couldn't be sent.` : "") +
+          (unsubscribed > 0 ? ` ${unsubscribed} not emailed: unsubscribed.` : "") +
+          (noEmail > 0 ? ` ${noEmail} not emailed: no email.` : "") +
           (skipped > 0 ? ` ${plural(skipped)} couldn't be found.` : ""),
       );
       onDone();

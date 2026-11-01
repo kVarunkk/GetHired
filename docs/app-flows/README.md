@@ -6,7 +6,7 @@ New here? Read [The whole system](#the-whole-system) below, then the journey dia
 
 | File | What's in it |
 |---|---|
-| [01-platform.md](01-platform.md) | Auth and routing, sign-up, the read-only browser client, job ingestion and embeddings, API keys / MCP / extension, public pages |
+| [01-platform.md](01-platform.md) | Auth and routing, sign-up, the read-only browser client, job ingestion and embeddings, MCP / OAuth / extension, public pages |
 | [02-applicant.md](02-applicant.md) | Applicant flows A1–A13 |
 | [03-company.md](03-company.md) | Company flows C1–C14 |
 | [04-background-jobs.md](04-background-jobs.md) | Every queue and cron: producer → queue → worker → effect |
@@ -43,11 +43,11 @@ flowchart TB
     APP["Browser: applicant pages"]
     CO["Browser: company pages"]
     EXT["Browser extension"]
-    MCP["MCP server (gh_ token / OAuth)"]
+    MCP["MCP client (OAuth)"]
     PUB["Public: /, /hire, /jobs, /careers/[slug], /blog<br/>+ markdown copies (/hire.md, /blog/[slug].md)"]
   end
 
-  MW["middleware.ts → updateSession<br/>markdown rewrite, publicPaths, role + onboarding redirects, gh_ token gate"]
+  MW["middleware.ts → updateSession<br/>markdown rewrite, publicPaths, role + onboarding redirects, OAuth app token gate"]
 
   subgraph Next["Next.js on Cloud Run"]
     SA["Server actions (~115)<br/>every write from the browser"]
@@ -109,7 +109,7 @@ mindmap
       P2 Sign-up + user rows
       P3 Read-only browser, writes via actions
       P4 Job ingestion + embeddings
-      P5 API keys / MCP / OAuth
+      P5 MCP / OAuth
       P6 Extension
       P7 Public pages, blog, markdown
     Applicant

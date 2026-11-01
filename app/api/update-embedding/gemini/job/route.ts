@@ -1,10 +1,9 @@
 import { reportError } from "@/helpers/posthog/report-error";
 import { NextResponse } from "next/server";
-import { embedMany } from "ai";
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
-import { google } from "@ai-sdk/google";
+import { embedJobs, type EmbeddingJob } from "@/helpers/jobs/job-embedding";
 
 const VISIBILITY_TIMEOUT = 300;
 const BATCH_SIZE = 50;
@@ -19,14 +18,6 @@ type JobEmbeddingMessage = {
 
 type EmbeddingTable = "all_jobs" | "job_postings";
 
-type EmbeddingJob = {
-  id: string;
-  job_name: string | null;
-  description: string | null;
-  locations: string[] | string | null;
-  job_type: string | null;
-  salary_range: string | null;
-};
 
 export async function POST() {
   const headersList = await headers();
@@ -83,7 +74,7 @@ export async function POST() {
 
     // Queue messages can refer to either source table; normalize their fields
     // before building embeddings.
-    const jobsByMessageKey = new Map<string, EmbeddingJob>();
+    const jobsByMessageKey = new Map<string, EmbeddingJob & { id: string }>();
     const allJobIds = [...new Set(idsByTable.all_jobs)];
     if (allJobIds.length > 0) {
       const { data: jobs, error: fetchError } = await supabase
@@ -165,34 +156,16 @@ export async function POST() {
       });
     }
 
-    // 3. Format text payloads for embedding
-    const textsToEmbed = jobsInMessageOrder.map((job) => `
-      ROLE: ${job.job_name || "N/A"}
-      LOCATION: ${Array.isArray(job.locations) ? job.locations.join(", ") : job.locations || ""}
-      DETAILED DESCRIPTION: ${job.description || "N/A"}
-      TYPE: ${job.job_type || "N/A"}
-      COMPENSATION: ${job.salary_range || "N/A"}
-    `.trim());
+    // 3. Generate embeddings in bulk
+    const embeddings = await embedJobs(jobsInMessageOrder);
 
-    // 4. Generate embeddings in bulk via Vercel AI SDK
-    const model = google.embedding("gemini-embedding-001");
-    const { embeddings } = await embedMany({
-      model: model,
-      values: textsToEmbed,
-      providerOptions: {
-        google: {
-          outputDimensionality: 768,
-        },
-      },
-    });
-
-    // 5. Update Supabase with the generated embeddings
+    // 4. Update Supabase with the generated embeddings
     let processedCount = 0;
     for (let i = 0; i < processableMessages.length; i++) {
       const message = processableMessages[i];
       const table = tableByMessageId.get(message.msg_id)!;
       const updatedAt = new Date().toISOString();
-      const embedding = `[${embeddings[i].join(",")}]`;
+      const embedding = embeddings[i];
       const embeddingUpdate = {
         embedding_new: embedding,
         updated_at: updatedAt,

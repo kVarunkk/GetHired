@@ -10,7 +10,7 @@ import {
 
 import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
-import { Briefcase, Home, Inbox, LayoutDashboard, Send } from "lucide-react";
+import { Briefcase, Contact, Home, Inbox, LayoutDashboard, Send } from "lucide-react";
 import { INavItem } from "./types";
 import { User } from "@supabase/supabase-js";
 import { platformsArray } from "./platforms";
@@ -284,10 +284,17 @@ export const companyNavbarItems: INavItem[] = [
   },
   {
     id: "profiles",
-    label: "Profiles",
+    label: "Discover",
     href: "/company/profiles",
     type: "startswith",
     icon: <UserIcon className="h-4 w-4" />,
+  },
+  {
+    id: "candidates",
+    label: "Candidates",
+    href: "/company/candidates",
+    type: "startswith",
+    icon: <Contact className="h-4 w-4" />,
   },
   {
     id: "outreach",
@@ -403,8 +410,6 @@ export const HeroMaskStyle = {
 
 export const cloudFrontUrl = process.env.NEXT_PUBLIC_CLOUDFRONT_PATH || "";
 
-export const MCP_SERVER_DARK = `${cloudFrontUrl}/hero/mcp-server-hero-dark.webp`;
-export const MCP_SERVER_LIGHT = `${cloudFrontUrl}/hero/mcp-server-hero-light.webp`;
 export const CHROME_EXTENSION_DARK = `${cloudFrontUrl}/hero/chrome-extension-hero-dark.webp`;
 export const CHROME_EXTENSION_LIGHT = `${cloudFrontUrl}/hero/chrome-extension-hero-light.webp`;
 export const RESUME_CHECKER_DARK = `${cloudFrontUrl}/hero/dark-ai-resume-checker.webp`;

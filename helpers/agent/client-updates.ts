@@ -12,6 +12,21 @@ const CLIENT_TOOL_OUTPUTS: Record<string, z.ZodTypeAny> = {
     z.object({ resumeId: z.string().min(1).max(64) }),
     z.object({ cancelled: z.literal(true) }),
   ]),
+  // The recruiter agent's import widgets (BI-REQ-060). The ids only point the
+  // server tools at an import; they read everything else themselves, scoped
+  // to the session's company.
+  "tool-requestResumeImport": z.union([
+    z.object({ batchId: z.string().uuid(), files: z.number().int().min(1).max(100) }).strict(),
+    z.object({ cancelled: z.literal(true) }),
+  ]),
+  "tool-requestSpreadsheetImport": z.union([
+    z.object({ batchId: z.string().uuid(), rows: z.number().int().min(1).max(5000) }).strict(),
+    z.object({ cancelled: z.literal(true) }),
+  ]),
+  "tool-requestCandidateResume": z.union([
+    z.object({ uploaded: z.literal(true), rescreened: z.number().int().min(0).max(1000) }).strict(),
+    z.object({ cancelled: z.literal(true) }),
+  ]),
 };
 
 const approvalResponse = z.object({

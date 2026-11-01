@@ -155,6 +155,23 @@ describe("StagePicker (PLT-032)", () => {
     expect(select()).toHaveValue(stageOf("rejected").id);
   });
 
+  it("says an imported candidate wasn't emailed because they unsubscribed (BI-REQ-034)", async () => {
+    vi.mocked(moveApplicationsAction).mockResolvedValue({
+      ok: true,
+      moved: 1,
+      emailed: 0,
+      skipped: [{ id: APPLICATION_ID, reason: "unsubscribed" }],
+    });
+    renderPicker();
+
+    fireEvent.change(select(), { target: { value: stageOf("rejected").id } });
+    fireEvent.click(screen.getByRole("button", { name: "Move and email" }));
+
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Moved to Rejected. Email not sent: unsubscribed."),
+    );
+  });
+
   it("cancelling the confirmation keeps the current stage", () => {
     renderPicker();
 

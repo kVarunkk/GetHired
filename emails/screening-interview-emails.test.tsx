@@ -35,6 +35,30 @@ describe("InterviewInviteEmail (SI-REQ-013)", () => {
     expect(await render(email)).toContain(`href="${URL}"`);
   });
 
+  it("asks an imported applicant to claim it first, with the unsubscribe link (BIT-063)", async () => {
+    const claim = (
+      <InterviewInviteEmail
+        firstName="Priya"
+        companyName="Acme"
+        jobTitle="Backend Engineer"
+        durationMinutes={15}
+        competencyNames={["System design"]}
+        deadlineAt={DEADLINE}
+        interviewUrl="https://gethired.devhub.co.in/claim/tok"
+        claim
+        unsubscribeUrl="https://gethired.devhub.co.in/unsubscribe/candidate/x.y"
+      />
+    );
+    const plain = await text(claim);
+    expect(plain).toContain("create a free GetHired account or log in");
+    expect(plain).toContain("Acme will see your account's profile");
+    expect(plain).toContain("Get started");
+    const html = await render(claim);
+    expect(html).toContain('href="https://gethired.devhub.co.in/claim/tok"');
+    expect(html).toContain('href="https://gethired.devhub.co.in/unsubscribe/candidate/x.y"');
+    expect(await text(email)).not.toContain("Unsubscribe");
+  });
+
   it("says a person decides and audio isn't stored", async () => {
     const plain = await text(email);
     expect(plain).toContain("Acme makes the decision");

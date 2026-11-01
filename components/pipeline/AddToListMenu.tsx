@@ -33,10 +33,14 @@ type ListItem = { id: string; name: string; memberCount: number; hasCandidate: b
  */
 export default function AddToListMenu({
   candidateUserId,
+  companyCandidateId,
   onReachOut,
   className,
-}: {
-  candidateUserId: string;
+}: (
+  | { candidateUserId: string; companyCandidateId?: never }
+  /** One of the company's own candidates (BI-REQ-006). */
+  | { companyCandidateId: string; candidateUserId?: never }
+) & {
   /** Opens the outreach composer. Without it, the footer isn't shown. */
   onReachOut?: () => void;
   /** For the trigger button. */
@@ -47,9 +51,10 @@ export default function AddToListMenu({
   const [lists, setLists] = useState<ListItem[] | null>(null);
   const [newName, setNewName] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const candidate = companyCandidateId ? { companyCandidateId } : { candidateUserId: candidateUserId! };
 
   const load = async () => {
-    const result = await listTalentListsAction({ candidateUserId });
+    const result = await listTalentListsAction(candidate);
     if (result.ok) setLists(result.lists);
     else toast.error(result.error);
   };
@@ -60,7 +65,7 @@ export default function AddToListMenu({
       const result = await saveTalentListAction({
         op: list.hasCandidate ? "remove" : "add",
         listId: list.id,
-        candidateUserId,
+        ...candidate,
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -81,7 +86,7 @@ export default function AddToListMenu({
   const create = async () => {
     setBusy("new");
     try {
-      const result = await saveTalentListAction({ op: "create", name: newName.trim(), candidateUserId });
+      const result = await saveTalentListAction({ op: "create", name: newName.trim(), ...candidate });
       if (!result.ok) {
         toast.error(result.error);
         return;

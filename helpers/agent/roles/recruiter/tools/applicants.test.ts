@@ -141,6 +141,63 @@ describe("listApplicants tool", () => {
   });
 });
 
+describe("imported applicants (BIT-019, BI-REQ-030)", () => {
+  const CANDIDATE_ID = "cc000000-0000-4000-8000-000000000001";
+  const importedRow = {
+    ...row(APP_ID, "2026-10-02", null),
+    applicant_user_id: null,
+    company_candidate_id: CANDIDATE_ID,
+    user_info: null,
+    company_candidates: { full_name: `Meera ${INJECTION_LINE}` },
+  };
+
+  it("lists them by name and stage, the name sandboxed, and leaves merged imports out", async () => {
+    supabase.queue("applications", { data: [importedRow], error: null });
+
+    const result = (await execTool(tools.listApplicants, {})) as { applicants: Record<string, unknown>[] };
+
+    expect(result.applicants[0]).toMatchObject({
+      applicationId: APP_ID,
+      candidateId: null,
+      imported: true,
+      roles: [],
+      experienceYears: null,
+      stage: STAGE,
+    });
+    expect(String(result.applicants[0].name)).toMatch(/^<candidate_name>\n.*Meera/);
+    const chain = supabase.callsFor("applications")[0].chain;
+    expect(chain).toContainEqual({ method: "is", args: ["merged_into_application_id", null] });
+    const columns = String(chain.find((m) => m.method === "select")!.args[0]);
+    expect(columns).toContain("company_candidates(full_name)");
+    expect(columns).not.toMatch(/company_candidates\([^)]*(email|phone|notes|tags)/);
+  });
+
+  it("reads one without a resume lookup or contact details", async () => {
+    supabase.queue("applications", {
+      data: {
+        ...APPLICATION,
+        applicant_user_id: null,
+        company_candidate_id: CANDIDATE_ID,
+        resume_id: null,
+        answers: [],
+        answers_v2: null,
+        job_postings: { id: JOB_POST.id, title: JOB_POST.title, company_id: COMPANY_A.id, questions: [] },
+        user_info: null,
+        company_candidates: { full_name: "Meera Iyer" },
+      },
+      error: null,
+    });
+    supabase.queue("application_screenings", { data: null, error: null });
+
+    const result = (await execTool(tools.getApplication, { applicationId: APP_ID })) as Record<string, unknown>;
+
+    expect(result).toMatchObject({ applicationId: APP_ID, answers: null, resumeExcerpt: null, screening: null });
+    expect(String((result.candidate as { name: string }).name)).toContain("Meera Iyer");
+    expect(result.candidate).toMatchObject({ imported: true });
+    expect(supabase.callsFor("resumes")).toHaveLength(0);
+  });
+});
+
 describe("getApplication tool", () => {
   function queueApplication() {
     supabase.queue("applications", {

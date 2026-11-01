@@ -7,6 +7,7 @@ import { PanelLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import type { AgentFeedbackState } from "@/helpers/agent/feedback";
 import { agentPromptHref, takePendingPrompt } from "@/helpers/agent/prompt-draft";
 import { cn } from "@/utils/utils";
 import ChatPane from "./ChatPane";
@@ -22,6 +23,7 @@ export default function AgentShell({
   initialSessions,
   activeSessionId,
   initialMessages,
+  initialFeedback = {},
   initialDraft = "",
   messagesUsedToday = 0,
   memberCap = null,
@@ -31,6 +33,8 @@ export default function AgentShell({
   initialSessions: AgentSessionSummary[];
   activeSessionId: string;
   initialMessages: UIMessage[];
+  /** The user's saved feedback on this session's replies (AF-REQ-031). */
+  initialFeedback?: AgentFeedbackState;
   /** Text to start the message box with (from `?prompt=`). */
   initialDraft?: string;
   /** The user's messages so far today, toward the daily cap. */
@@ -174,6 +178,7 @@ export default function AgentShell({
           role={role}
           sessionId={activeSessionId}
           initialMessages={initialMessages}
+          initialFeedback={initialFeedback}
           initialDraft={initialDraft}
           messagesUsedToday={messagesUsedToday}
           memberCap={memberCap}

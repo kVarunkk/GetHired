@@ -2,6 +2,7 @@ import { reportError } from "@/helpers/posthog/report-error";
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import {
   parseJobSearchParams,
   searchJobs,
@@ -13,9 +14,7 @@ export async function GET(request: NextRequest) {
   const internalSecret = request.headers.get("X-Internal-Secret");
   const isInternalCall = internalSecret === process.env.INTERNAL_API_SECRET;
 
-  const params = parseJobSearchParams(request.nextUrl.searchParams, {
-    isInternalCall,
-  });
+  const params = parseJobSearchParams(request.nextUrl.searchParams);
 
   const trace: SearchJobsTrace = {
     stage: "initialize",
@@ -27,7 +26,16 @@ export async function GET(request: NextRequest) {
       ? createServiceRoleClient()
       : await createClient();
 
-    const result = await searchJobs(supabase, params, trace);
+    // Internal digest calls run for the user named in the query; everything
+    // else for the request's session.
+    trace.stage = "authenticate_request";
+    const user =
+      isInternalCall && params.applicantUserId
+        ? (await supabase.auth.admin.getUserById(params.applicantUserId)).data
+            .user
+        : await getUserFromRequest();
+
+    const result = await searchJobs(supabase, user ?? null, params, trace);
 
     if (!result.ok) {
       return NextResponse.json(

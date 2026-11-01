@@ -5,7 +5,9 @@ import { sendScreeningMessages } from "./enqueue-screenings";
 /**
  * After a job edit changes its snapshot (MT-REQ-008): marks the job's
  * completed screenings and explanations `stale`, keeping their results until
- * they're replaced, and re-queues the screenings. Explanations are re-queued
+ * they're replaced, and re-queues the screenings, with the unscored ones
+ * (`insufficient_info`, BI-REQ-036), whose candidate may have more detail by
+ * now. Explanations are re-queued
  * by the next digest run, which the edit also triggers for an active job.
  * Call it with the service role, after the edit is saved. Throws on failure.
  */
@@ -30,8 +32,16 @@ export async function markJobResultsStale(
     throw new Error(`Couldn't mark explanations stale: ${explanationsError.message}`);
   }
 
+  const { data: unscored, error: unscoredError } = await admin
+    .from("application_screenings")
+    .update({ status: "queued", attempts: 0, updated_at: new Date().toISOString() })
+    .eq("job_post_id", jobPostId)
+    .eq("status", "insufficient_info")
+    .select("application_id");
+  if (unscoredError) throw new Error(`Couldn't re-queue unscored screenings: ${unscoredError.message}`);
+
   await sendScreeningMessages(
     admin,
-    (stale ?? []).map((row) => row.application_id),
+    [...(stale ?? []), ...(unscored ?? [])].map((row) => row.application_id),
   );
 }

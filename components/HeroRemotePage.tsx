@@ -1,6 +1,7 @@
-import Link from "next/link";
-import { Button } from "./ui/button";
+import { Sparkles } from "lucide-react";
+import { agentPromptHref } from "@/helpers/agent/prompt-draft";
 import AgentHeroDemo from "./landing-page/AgentHeroDemo";
+import Hero, { HeroEyebrow } from "./landing-page/Hero";
 
 export default function HeroRemotePage({
   location,
@@ -12,27 +13,20 @@ export default function HeroRemotePage({
   const decodedLocation = decodeURIComponent(location);
 
   return (
-    <div className="flex flex-col gap-5 w-full items-center text-center px-4 py-3 lg:px-20 xl:px-40 2xl:px-80">
-      <h1 className="text-5xl sm:text-7xl font-semibold tracking-tight leading-[1.1]">
-        Top Remote Jobs in {decodedLocation}
-      </h1>
-
-      <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-        Find your next remote job from over {jobCount.toLocaleString()} quality
-        listings with the power of AI
-      </p>
-
-      <div className="flex items-center gap-5">
-        <Link
-          href={`/jobs?location=${location.toLowerCase()}|remote&sortBy=created_at&sortOrder=desc`}
-        >
-          <Button variant="brand">Find Remote Jobs</Button>
-        </Link>
-      </div>
-
-      <div className="mt-8 w-full max-w-5xl">
-        <AgentHeroDemo />
-      </div>
-    </div>
+    <Hero
+      eyebrow={
+        <HeroEyebrow
+          href={agentPromptHref(`Find remote jobs in ${decodedLocation} posted this week.`)}
+          icon={<Sparkles className="h-3.5 w-3.5" />}
+          label="Ask the agent"
+          detail={`Find remote jobs in ${decodedLocation} by chatting`}
+        />
+      }
+      heading={`Top Remote Jobs in ${decodedLocation}`}
+      subheading={`Find your next remote job from over ${jobCount.toLocaleString()} quality listings with the power of AI`}
+      ctaText="Find Remote Jobs"
+      ctaLink={`/jobs?location=${location.toLowerCase()}|remote&sortBy=created_at&sortOrder=desc`}
+      preview={<AgentHeroDemo />}
+    />
   );
 }

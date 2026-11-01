@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { upsertJobPostingAction } from "@/app/actions/upsert-job-posting";
 import { useEntitlementError } from "@/hooks/useEntitlementError";
+import { jobPostPath } from "@/helpers/jobs/paths";
 import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 import { jobPostHandoffPrompt } from "@/helpers/agent/handoff-prompts";
 import { applyQuestionSet } from "@/helpers/jobs/question-sets";
@@ -182,7 +183,7 @@ export default function JobPostingForm({
 
       await mutate(`company-jobs-${companyId}`);
       toast.success(`Job Posting ${result.isUpdate ? "updated" : "created"} Successfully!`, { duration: 8000 });
-      router.push(`/company/job-posts/${result.postingId}`);
+      router.push(jobPostPath(result.postingId, { created: !result.isUpdate }));
       router.refresh();
     } catch (e) {
       const errMsg =

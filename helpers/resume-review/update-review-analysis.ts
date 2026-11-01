@@ -1,12 +1,16 @@
-import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/utils/types/database.types";
 
+/**
+ * Sets a review's analysis status. `supabase` is the caller's user-scoped
+ * client, so RLS keeps this to the user's own reviews.
+ */
 export const updateReviewAnalysisStatus = async (
+  supabase: SupabaseClient<Database>,
   analysisFailed: boolean,
   reviewId: string,
   status: string,
 ) => {
-  const supabase = await createClient();
-
   await supabase
     .from("resume_reviews")
     .update({

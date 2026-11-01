@@ -128,180 +128,204 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="m-0 px-4 pt-20 pb-0 lg:px-20 xl:px-40 2xl:px-80 mt-auto">
-      <div className="container mx-auto max-w-6xl grid grid-cols-2 md:grid-cols-4 gap-8 text-center md:text-left">
-        {/* ==================================== */}
-        {/* 1. Brand / About (Col 1) */}
-        {/* ==================================== */}
-        <div className="flex flex-col items-center md:items-start gap-5 col-span-2 md:col-span-1">
-          <Link href={"/"} className="w-fit">
-            <Brand type="long" />
-          </Link>
-          <p className="text-sm text-muted-foreground">
-            Your smartest path to the perfect job.
-          </p>
-
-          <div className="flex flex-col mt-16">
-            <SocialsComponent isFooter={true} />
+    <footer className="m-0 mt-auto w-full overflow-hidden pt-20 pb-0">
+      <div className="px-4 lg:px-20 xl:px-40 2xl:px-80">
+        <div className="container mx-auto max-w-6xl grid grid-cols-2 md:grid-cols-4 gap-8 text-center md:text-left">
+          {/* ==================================== */}
+          {/* 1. Brand / About (Col 1) */}
+          {/* ==================================== */}
+          <div className="flex flex-col items-center md:items-start gap-5 col-span-2 md:col-span-1">
+            <Link href={"/"} className="w-fit">
+              <Brand type="long" />
+            </Link>
             <p className="text-sm text-muted-foreground">
-              &copy; {currentYear} GetHired. All rights reserved.
+              Your smartest path to the perfect job.
             </p>
+
+            <div className="flex flex-col mt-16">
+              <SocialsComponent isFooter={true} />
+              <p className="text-sm text-muted-foreground">
+                &copy; {currentYear} GetHired. All rights reserved.
+              </p>
+            </div>
+          </div>
+
+          {/* ==================================== */}
+          {/* 2. Quick Links (Col 2) */}
+          {/* ==================================== */}
+          <div className="col-span-2 md:col-span-1">
+            <h3 className="text-sm font-semibold mb-3">Quick Links</h3>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <Link
+                  href="/ai-interview"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  AI Interview
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/ai-resume-checker"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  AI Resume Checker
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/jobs"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  Jobs
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/companies"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  Companies
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/blog"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  Blog
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/hire"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  For Companies
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/mcp-server"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  MCP Server
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/mcp-server/companies"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  MCP for Hiring Teams
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/extension"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  Chrome Extension
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/privacy-policy"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terms-of-service"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/about"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/contact"
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  Contact
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* ==================================== */}
+          {/* 3. Popular Searches (NEW Col 3) */}
+          {/* ==================================== */}
+          <div className="col-span-2 md:col-span-1">
+            <h3 className="text-sm font-semibold mb-3">Popular Searches</h3>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              {popularSearches.map((item) => (
+                <li key={item.name}>
+                  <Link
+                    href={item.href}
+                    className="transition-colors hover:text-foreground hover:underline"
+                    prefetch={false}
+                  >
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* ==================================== */}
+          {/* 4. Remote Jobs */}
+          {/* ==================================== */}
+          <div className="col-span-2 md:col-span-1">
+            <h3 className="text-sm font-semibold mb-3">Remote Jobs</h3>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              {remoteJobs.map((item) => (
+                <li key={item.name}>
+                  <Link
+                    href={item.href}
+                    className="transition-colors hover:text-foreground hover:underline"
+                    prefetch={false}
+                  >
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
-
-        {/* ==================================== */}
-        {/* 2. Quick Links (Col 2) */}
-        {/* ==================================== */}
-        <div className="col-span-2 md:col-span-1">
-          <h3 className="text-sm font-semibold mb-3">Quick Links</h3>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>
-              <Link
-                href="/ai-interview"
-                className="transition-colors hover:text-foreground hover:underline"
-              >
-                AI Interview
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/ai-resume-checker"
-                className="transition-colors hover:text-foreground hover:underline"
-              >
-                AI Resume Checker
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/jobs"
-                className="transition-colors hover:text-foreground hover:underline"
-              >
-                Jobs
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/companies"
-                className="transition-colors hover:text-foreground hover:underline"
-              >
-                Companies
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/blog"
-                className="transition-colors hover:text-foreground hover:underline"
-              >
-                Blog
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/hire"
-                className="transition-colors hover:text-foreground hover:underline"
-              >
-                For Companies
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/mcp-server"
-                className="transition-colors hover:text-foreground hover:underline"
-              >
-                MCP Server
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/extension"
-                className="transition-colors hover:text-foreground hover:underline"
-              >
-                Chrome Extension
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/privacy-policy"
-                className="transition-colors hover:text-foreground hover:underline"
-              >
-                Privacy Policy
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/terms-of-service"
-                className="transition-colors hover:text-foreground hover:underline"
-              >
-                Terms of Service
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/about"
-                className="transition-colors hover:text-foreground hover:underline"
-              >
-                About Us
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/contact"
-                className="transition-colors hover:text-foreground hover:underline"
-              >
-                Contact
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* ==================================== */}
-        {/* 3. Popular Searches (NEW Col 3) */}
-        {/* ==================================== */}
-        <div className="col-span-2 md:col-span-1">
-          <h3 className="text-sm font-semibold mb-3">Popular Searches</h3>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            {popularSearches.map((item) => (
-              <li key={item.name}>
-                <Link
-                  href={item.href}
-                  className="transition-colors hover:text-foreground hover:underline"
-                  prefetch={false}
-                >
-                  {item.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* ==================================== */}
-        {/* 4. Remote Jobs */}
-        {/* ==================================== */}
-        <div className="col-span-2 md:col-span-1">
-          <h3 className="text-sm font-semibold mb-3">Remote Jobs</h3>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            {remoteJobs.map((item) => (
-              <li key={item.name}>
-                <Link
-                  href={item.href}
-                  className="transition-colors hover:text-foreground hover:underline"
-                  prefetch={false}
-                >
-                  {item.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
-      <div className="m-0 px-1 pt-16 md:pt-24">
-        <p
-          className="m-0 whitespace-nowrap bg-foreground bg-clip-text text-center text-[clamp(2.5rem,14vw,16rem)] font-semibold leading-[0.85] tracking-[-0.06em] text-transparent [mask-image:linear-gradient(to_bottom,#000_25%,transparent_100%)]"
-          aria-hidden="true"
+      {/* The wordmark spans the full viewport width and sits flush on the
+          bottom edge: an SVG stretched to its box with the baseline on the
+          bottom line ("GetHired" has no descenders). */}
+      <svg
+        className="mt-16 block h-auto w-full md:mt-24 [mask-image:linear-gradient(to_bottom,#000_25%,rgba(0,0,0,0.15)_100%)]"
+        viewBox="0 0 1000 184"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <text
+          x="0"
+          y="184"
+          textLength="1000"
+          lengthAdjust="spacingAndGlyphs"
+          fontSize="244"
+          fontWeight="600"
+          letterSpacing="-14"
+          className="fill-foreground"
         >
           GetHired
-        </p>
-      </div>
+        </text>
+      </svg>
     </footer>
   );
 }

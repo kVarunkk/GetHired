@@ -4,6 +4,8 @@ image: /images/posts/introducing-the-get-hired-mcp-server/image.jpg
 publishedAt: 2026-05-18
 type: job-seekers
 ---
+**Update:** the MCP server now runs inside GetHired at `https://gethired.devhub.co.in/api/mcp`, with more tools for job seekers and a full set for hiring teams. The separate GitHub server and API tokens are retired. See [the MCP server for job seekers](/mcp-server), [the MCP server for hiring teams](/mcp-server/companies) and [the setup guide](/mcp).
+
 We’re excited to launch the GetHired MCP Server — a new way to connect AI tools like Cursor and Claude directly to your GetHired account.
 
 This means your AI assistant can now securely access your jobs, resumes, applications, and profile information through the Model Context Protocol (MCP).
@@ -40,9 +42,7 @@ When connecting through clients like Cursor:
 1. You approve access
 1. The AI client is securely connected to your account
 
-No manual token pasting is required for supported HTTP clients.
-
-For local stdio clients like Claude Desktop, users can generate an API token from their GetHired dashboard.
+No manual token pasting is required, and there are no API keys.
 
 ## Why We Built This
 
@@ -54,18 +54,7 @@ The MCP Server is the first step toward making GetHired programmable and AI-nati
 
 ## Getting Started
 
-You can find the full setup guide, installation steps, and configuration instructions here:
-
-GitHub Repository: [https://github.com/kVarunkk/GetHired-mcp-server](https://github.com/kVarunkk/GetHired-mcp-server)
-
-The README includes:
-
-- Cursor setup
-- Claude Desktop setup
-- HTTP and stdio configuration
-- Authentication flow
-- Available tools
-- Troubleshooting
+The [setup guide](/mcp) has the server URL and the steps for Claude, Claude Code, Cursor and VS Code, plus every tool and the limits.
 
 ## What’s Next
 

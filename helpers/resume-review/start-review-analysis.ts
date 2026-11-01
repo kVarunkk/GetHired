@@ -217,7 +217,7 @@ CONSTRAINTS:
       console.log(`[BG_SUCCESS]: Review ${reviewId} analysis completed.`);
     } catch (err) {
       reportError("[BG_ERROR]: Resume review analysis failed:", err);
-      await updateReviewAnalysisStatus(true, reviewId, "failed");
+      await updateReviewAnalysisStatus(supabase, true, reviewId, "failed");
       await sendResumeReviewStatusEmail(
         userInfo.email,
         "failure",

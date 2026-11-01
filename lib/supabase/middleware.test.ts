@@ -4,6 +4,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { SignJWT } from "jose";
 import { headers } from "next/headers";
 import { updateSession } from "./middleware";
 import { mockUser } from "@/test/utils/auth";
@@ -132,14 +133,6 @@ describe("middleware: /agent", () => {
     expect(passesThrough(await updateSession(request("/api/agent/chat")))).toBe(true);
   });
 
-  it("rejects gh_ API tokens on the agent API", async () => {
-    const res = await updateSession(
-      request("/api/agent/chat", { headers: { Authorization: "Bearer gh_abc123" } }),
-    );
-
-    expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: "API tokens can only be used with API routes" });
-  });
 });
 
 describe("middleware: the agent is the applicant home", () => {
@@ -232,13 +225,87 @@ describe("middleware: regressions", () => {
 
     expect(passesThrough(await updateSession(request("/interview/i1")))).toBe(true);
   });
+});
 
-  it("still allows gh_ tokens on their API routes", async () => {
-    const res = await updateSession(
-      request("/api/jobs", { headers: { Authorization: "Bearer gh_abc123" } }),
+describe("middleware: bearer tokens (MCP-SEC-006, MCP TASK-000)", () => {
+  const bearer = (token: string) => ({ headers: { Authorization: `Bearer ${token}` } });
+  // The middleware only decodes the payload, so any key will do.
+  const jwt = (claims: Record<string, unknown>) =>
+    new SignJWT(claims)
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject(applicant.id)
+      .setExpirationTime("1h")
+      .sign(new TextEncoder().encode("test-secret"));
+
+  it("treats a gh_ key as an ordinary signed-out request", async () => {
+    // gh_ keys are gone: no 403 and no pass-through as a token.
+    expect(redirectTarget(await updateSession(request("/api/resumes", bearer("gh_abc123"))))).toMatch(
+      /^\/auth\/login/,
     );
+    expect(redirectTarget(await updateSession(request("/api/agent/chat", bearer("gh_abc123"))))).toMatch(
+      /^\/auth\/login/,
+    );
+    // A public route still answers, as it would for anyone signed out.
+    expect(passesThrough(await updateSession(request("/api/jobs", bearer("gh_abc123"))))).toBe(true);
+    expect(getUserFromRequest).toHaveBeenCalled();
+  });
 
-    expect(passesThrough(res)).toBe(true);
+  it.each(["/api/jobs", "/api/agent/chat", "/dashboard"])(
+    "refuses an OAuth app token (client_id) on %s",
+    async (path) => {
+      vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+      const token = await jwt({ client_id: "client-1", aud: "authenticated" });
+
+      const res = await updateSession(request(path, bearer(token)));
+
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({
+        error: "OAuth app tokens can only be used with the MCP endpoint",
+      });
+    },
+  );
+
+  it("lets an OAuth app token through to /api/mcp (the route verifies it)", async () => {
+    const token = await jwt({ client_id: "client-1", aud: "authenticated" });
+
+    expect(passesThrough(await updateSession(request("/api/mcp", bearer(token))))).toBe(true);
+    expect(getUserFromRequest).not.toHaveBeenCalled();
+  });
+
+  it("handles a bearer JWT without client_id as before", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+    const token = await jwt({ aud: "authenticated" });
+
+    expect(passesThrough(await updateSession(request("/api/agent/chat", bearer(token))))).toBe(true);
+  });
+
+  it("lets requests without a token reach /api/mcp, which answers with its own 401 (TASK-033)", async () => {
+    expect(passesThrough(await updateSession(request("/api/mcp")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/api/mcp", bearer("gh_abc123"))))).toBe(true);
+  });
+
+  it("serves the protected resource metadata and the MCP docs page to anyone (TASK-033)", async () => {
+    expect(passesThrough(await updateSession(request("/.well-known/oauth-protected-resource")))).toBe(true);
+    expect(
+      passesThrough(await updateSession(request("/.well-known/oauth-protected-resource/api/mcp"))),
+    ).toBe(true);
+    expect(passesThrough(await updateSession(request("/mcp")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/mcp-server")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/mcp-server/companies")))).toBe(true);
+  });
+
+  it("keeps the OAuth app token lockdown on the metadata paths", async () => {
+    const token = await jwt({ client_id: "client-1", aud: "authenticated" });
+
+    expect((await updateSession(request("/mcp", bearer(token)))).status).toBe(403);
+  });
+
+  it("handles a malformed bearer as before", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+
+    expect(passesThrough(await updateSession(request("/api/agent/chat", bearer("not.a.jwt"))))).toBe(
+      true,
+    );
   });
 });
 
@@ -263,6 +330,25 @@ describe("middleware: screening interview routes", () => {
 
   it("keeps the screening start route behind a session", async () => {
     expect(passesThrough(await updateSession(request("/api/interview/screening/start")))).toBe(false);
+  });
+});
+
+describe("middleware: bulk import routes", () => {
+  it("lets the resume worker and the expiry cron through without a session (each checks its own secret)", async () => {
+    for (const path of ["/api/worker/candidate-import", "/api/updates/candidate-imports/expire"]) {
+      expect(passesThrough(await updateSession(request(path))), path).toBe(true);
+    }
+  });
+
+  it("keeps the import pages behind a session", async () => {
+    expect(passesThrough(await updateSession(request("/company/candidates/import")))).toBe(false);
+    expect(passesThrough(await updateSession(request("/company/job-posts/j1/import")))).toBe(false);
+  });
+});
+
+describe("middleware: candidate pool routes", () => {
+  it("lets the candidate embeddings worker through without a session (it checks its own secret)", async () => {
+    expect(passesThrough(await updateSession(request("/api/worker/candidate-embeddings")))).toBe(true);
   });
 });
 
@@ -291,6 +377,26 @@ describe("middleware: careers pages (CP-SEC-001, CPT-048)", () => {
 
   it("keeps the bare /careers path private", async () => {
     expect(redirectTarget(await updateSession(request("/careers")))).toMatch(/^\/auth\/login/);
+  });
+});
+
+describe("middleware: candidate unsubscribe links (BIT-060, BI-CON-004)", () => {
+  it("lets an unsubscribe link through without a session", async () => {
+    expect(passesThrough(await updateSession(request("/unsubscribe/candidate/abc.def")))).toBe(true);
+  });
+
+  it("keeps the bare path private", async () => {
+    expect(redirectTarget(await updateSession(request("/unsubscribe/candidate/")))).toMatch(/^\/auth\/login/);
+  });
+});
+
+describe("middleware: claim links (BIT-064, BI-REQ-041)", () => {
+  it("lets a claim link through without a session, so it can offer sign-up", async () => {
+    expect(passesThrough(await updateSession(request("/claim/abcdefghijklmnopqrstuvwxyz")))).toBe(true);
+  });
+
+  it("keeps the bare path private", async () => {
+    expect(redirectTarget(await updateSession(request("/claim/")))).toMatch(/^\/auth\/login/);
   });
 });
 

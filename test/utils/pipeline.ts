@@ -22,7 +22,10 @@ export type ApplicationEventType =
   | "note_added"
   | "screened"
   | "outreach_sent"
-  | "outreach_replied";
+  | "outreach_replied"
+  | "imported"
+  | "claimed"
+  | "merged";
 
 export type PipelineStageRow = Tables["pipeline_stages"]["Row"];
 
@@ -35,7 +38,9 @@ export type ApplicationEventRow = Tables["application_events"]["Row"] & {
 };
 
 export type PipelineApplication = ApplicationRow & {
-  user_info: { full_name: string | null; email: string | null };
+  user_info: { full_name: string | null; email: string | null } | null;
+  /** BI-REQ-030: an imported application's person. */
+  company_candidates?: { full_name: string; email?: string | null; email_opted_out_at?: string | null } | null;
   job_postings: {
     id: string;
     company_id: string;

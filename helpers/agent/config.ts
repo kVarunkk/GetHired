@@ -72,3 +72,15 @@ export const AGENT_LIST_DEFAULT_LIMIT = 10;
 export const AGENT_LIST_MAX_LIMIT = 20;
 /** Job descriptions returned by getJobDetails are trimmed to this length. */
 export const AGENT_JOB_DESCRIPTION_MAX_CHARS = 2000;
+
+/**
+ * The in-chat survey card (agent feedback spec §2). False stops the server
+ * offering it; cards already saved in chats still render.
+ */
+export const AGENT_FEEDBACK_SURVEY_ENABLED = true;
+/** Days after a card is offered before the same user is offered another. */
+export const AGENT_FEEDBACK_COOLDOWN_DAYS = 14;
+/** Days after a user dismisses a card before they're offered another (AF-DEC-003). */
+export const AGENT_FEEDBACK_DISMISSED_COOLDOWN_DAYS = 30;
+/** User messages in a session after which the card can be offered without a milestone. */
+export const AGENT_FEEDBACK_MIN_USER_TURNS = 8;

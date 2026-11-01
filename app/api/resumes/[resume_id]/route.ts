@@ -1,4 +1,5 @@
 import { reportError } from "@/helpers/posthog/report-error";
+import { getResumeDetails } from "@/helpers/resumes/get-resume-details";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
@@ -20,18 +21,10 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const { data: resume, error } = await supabase
-      .from("resumes")
-      .select("id, name, content, created_at, updated_at, is_primary")
-      .eq("user_id", user.id)
-      .eq("id", resumeId)
-      .single();
 
-    if (error) {
-      return NextResponse.json(
-        { error: "Failed to fetch resume details." },
-        { status: 500 },
-      );
+    const resume = await getResumeDetails(supabase, user, resumeId);
+    if (!resume) {
+      return NextResponse.json({ error: "Resume not found." }, { status: 404 });
     }
 
     return NextResponse.json({ data: resume });

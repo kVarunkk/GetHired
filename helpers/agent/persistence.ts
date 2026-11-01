@@ -2,6 +2,8 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import type { UIMessage } from "ai";
 import { Database, Json, Tables } from "@/utils/types/database.types";
 import type { AgentProfileSummary } from "./system-prompt";
+import { feedbackStateFromRows, type AgentFeedbackState } from "./feedback";
+import { reportError } from "@/helpers/posthog/report-error";
 import type { AgentRoleId } from "./roles/types";
 
 type Client = SupabaseClient<Database>;
@@ -16,16 +18,34 @@ export type AgentSession = Tables<"agent_sessions">;
 export const sessionRoleFields = (role: AgentRoleId | undefined) =>
   role === "company" ? { role } : {};
 
+type LoadedSession = { session: AgentSession; messages: UIMessage[] };
+
 /**
  * The user's session and its messages ordered by `seq`, or null when the
  * session doesn't exist or belongs to someone else. Database errors are thrown.
+ *
+ * `withFeedback` also returns the user's feedback on the session's replies
+ * (AF-REQ-031), for the pages that show it. A feedback error is reported and
+ * returns `{}`, so it never keeps a chat from opening.
  */
 export async function loadSession(
   supabase: Client,
   userId: string,
   sessionId: string,
-  { role }: { role?: AgentRoleId } = {},
-): Promise<{ session: AgentSession; messages: UIMessage[] } | null> {
+  options: { role?: AgentRoleId; withFeedback: true },
+): Promise<(LoadedSession & { feedback: AgentFeedbackState }) | null>;
+export async function loadSession(
+  supabase: Client,
+  userId: string,
+  sessionId: string,
+  options?: { role?: AgentRoleId; withFeedback?: false },
+): Promise<LoadedSession | null>;
+export async function loadSession(
+  supabase: Client,
+  userId: string,
+  sessionId: string,
+  { role, withFeedback = false }: { role?: AgentRoleId; withFeedback?: boolean } = {},
+): Promise<(LoadedSession & { feedback?: AgentFeedbackState }) | null> {
   let query = supabase
     .from("agent_sessions")
     .select("*")
@@ -39,11 +59,14 @@ export async function loadSession(
   // A session of the other role isn't continued with this role's tools.
   if (role && session.role && session.role !== role) return null;
 
-  const { data: rows, error } = await supabase
-    .from("agent_messages")
-    .select("id, role, parts, metadata")
-    .eq("session_id", sessionId)
-    .order("seq", { ascending: true });
+  const [{ data: rows, error }, feedback] = await Promise.all([
+    supabase
+      .from("agent_messages")
+      .select("id, role, parts, metadata")
+      .eq("session_id", sessionId)
+      .order("seq", { ascending: true }),
+    withFeedback ? loadSessionFeedback(supabase, userId, sessionId) : undefined,
+  ]);
 
   if (error) throw error;
 
@@ -57,7 +80,25 @@ export async function loadSession(
       }) as UIMessage,
   );
 
-  return { session, messages };
+  return feedback ? { session, messages, feedback } : { session, messages };
+}
+
+/** The user's feedback on a session's replies; `{}` (reported) on an error. */
+async function loadSessionFeedback(
+  supabase: Client,
+  userId: string,
+  sessionId: string,
+): Promise<AgentFeedbackState> {
+  const { data, error } = await supabase
+    .from("agent_feedback")
+    .select("message_id, kind, rating, dismissed")
+    .eq("session_id", sessionId)
+    .eq("user_id", userId);
+  if (error) {
+    reportError("[agent] feedback load failed", error);
+    return {};
+  }
+  return feedbackStateFromRows(data ?? []);
 }
 
 /**
@@ -185,4 +226,51 @@ export async function countUserMessagesToday(
 
   if (error) throw error;
   return count ?? 0;
+}
+
+/** When the user was last offered the survey card, in any session (AF-REQ-012). */
+export async function lastFeedbackOfferAt(supabase: Client, userId: string): Promise<Date | null> {
+  const { data, error } = await supabase
+    .from("agent_sessions")
+    .select("feedback_requested_at")
+    .eq("user_id", userId)
+    .not("feedback_requested_at", "is", null)
+    .order("feedback_requested_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.feedback_requested_at ? new Date(data.feedback_requested_at) : null;
+}
+
+/** When the user last dismissed the survey card (AF-DEC-003). */
+export async function lastSurveyDismissalAt(supabase: Client, userId: string): Promise<Date | null> {
+  const { data, error } = await supabase
+    .from("agent_feedback")
+    .select("created_at")
+    .eq("user_id", userId)
+    .eq("kind", "survey")
+    .eq("dismissed", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? new Date(data.created_at) : null;
+}
+
+/** Records that this session was offered the survey card (AF-REQ-012). */
+export async function markFeedbackRequested(
+  supabase: Client,
+  userId: string,
+  sessionId: string,
+  now: Date,
+) {
+  const { error } = await supabase
+    .from("agent_sessions")
+    .update({ feedback_requested_at: now.toISOString() })
+    .eq("id", sessionId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
 }

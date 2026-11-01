@@ -2,6 +2,7 @@
 // `/index.md`, ...), so the two can't drift. Client-safe: no server imports.
 
 import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import { MCP_PATH } from "@/helpers/mcp/config";
 
 export const SITE_URL = "https://gethired.devhub.co.in";
 
@@ -132,17 +133,49 @@ export const FAQS = {
     {
       question: "What does the GetHired MCP Server do?",
       answer:
-        "The GetHired MCP Server connects compatible AI assistants to job-search features, including personalized recommendations and resume tools.",
+        "It connects your AI assistant to your GetHired account, so it can search and save jobs, apply on GetHired, and manage your resumes, resume reviews and mock interviews.",
     },
     {
       question: "Which AI assistant can connect to the MCP Server?",
       answer:
-        "GetHired's MCP Server is designed to integrate with Claude. Check the setup instructions for current compatibility and configuration.",
+        "Any client that supports remote MCP servers, including Claude, Claude Code, Cursor and VS Code. You sign in with your GetHired account; there are no API keys. The setup page has the steps for each client.",
     },
     {
       question: "Can an AI assistant apply to jobs for me?",
       answer:
-        "The MCP Server supports job-search assistance. Review each job's application process and submit applications through the employer's specified channel.",
+        "For jobs posted on GetHired, yes, but only after you confirm. Your client shows you the application before it is sent. Jobs posted elsewhere are applied to on the employer's own site.",
+    },
+    {
+      question: "Does it cost anything?",
+      answer:
+        "Connecting is free. Tools that use AI, like a resume review or a plain-English job search, spend AI credits from your balance, the same as in the app, and only once they run.",
+    },
+  ],
+  "mcp-company": [
+    {
+      question: "What can a hiring team do over MCP?",
+      answer:
+        "What the recruiter agent can: write and publish job posts, search the talent pool, review applications, move people through your pipeline, import your own candidates, send messages, invite applicants to AI screening interviews, manage your team and edit your careers page.",
+    },
+    {
+      question: "Who on my team can connect?",
+      answer:
+        "Anyone whose role has the \"Use GetHired from AI clients\" permission. Each tool then follows the rest of their role, including which jobs they're assigned to, so a connection can't do more than that person can in the app.",
+    },
+    {
+      question: "Can the assistant email candidates or change things on its own?",
+      answer:
+        "No. Every tool that changes something or emails a candidate shows you what it will do and waits for you to confirm. Tools that email are also limited per hour.",
+    },
+    {
+      question: "Does it cost extra?",
+      answer:
+        "No. There's no charge per call. Tools use your plan's allowances, the same as doing the work in the app.",
+    },
+    {
+      question: "My client has a limit on tools. What do I do?",
+      answer:
+        "Add toolsets to the server URL to connect only some of them, for example ?toolsets=jobs,applicants, and readonly=true for a connection that can't change anything. The setup guide lists every toolset.",
     },
   ],
 } as const;
@@ -209,6 +242,78 @@ export function howWeHelpCopy(audience: HowWeHelpAudience, jobCount: number) {
   };
 }
 
+/** The MCP server's public URL. */
+export const MCP_SERVER_URL = `${SITE_URL}${MCP_PATH}`;
+
+export type McpAudience = "applicant" | "company";
+
+/** What each MCP landing page says the server does, in card order. */
+export const MCP_CAPABILITIES: Record<
+  McpAudience,
+  { heading: string; subheading: string; items: readonly { name: string; description: string }[] }
+> = {
+  applicant: {
+    heading: "What your assistant can do",
+    subheading:
+      "Your assistant works with your GetHired account directly, so you don't copy job posts or resumes between tabs.",
+    items: [
+      {
+        name: "Search and save jobs",
+        description:
+          "Search by role, location and salary, or describe what you want in plain English. Get jobs matched to your profile and save the ones you like.",
+      },
+      {
+        name: "Apply on GetHired",
+        description:
+          "Read a job's application form and apply to jobs posted on GetHired, once you've seen the application and confirmed it.",
+      },
+      {
+        name: "Resumes and reviews",
+        description:
+          "Read your resumes, pick the best one for a job, set your primary resume and start an AI resume review.",
+      },
+      {
+        name: "Applications and interviews",
+        description:
+          "Track your applications, set up mock interviews, read their feedback and see your screening interviews.",
+      },
+    ],
+  },
+  company: {
+    heading: "What your team's assistant can do",
+    subheading:
+      "The recruiter agent's tools, in the AI client your team already uses, within each person's role.",
+    items: [
+      {
+        name: "Job posts",
+        description: "Draft, edit and publish job posts and their application questions.",
+      },
+      {
+        name: "Candidates and the talent pool",
+        description:
+          "Find matched candidates, search the pool, import your own candidates and add them to a job.",
+      },
+      {
+        name: "Applications and the pipeline",
+        description: "Review applications and notes, move people between stages and keep talent lists.",
+      },
+      {
+        name: "Messages and AI interviews",
+        description:
+          "Send messages from your templates and invite applicants to AI screening interviews, once you confirm.",
+      },
+      {
+        name: "Team and roles",
+        description: "Invite teammates, manage roles and see who has access.",
+      },
+      {
+        name: "Careers page",
+        description: "Edit and publish your company's careers page.",
+      },
+    ],
+  },
+};
+
 export type MarketingLink = { label: string; href: string };
 
 export type LandingPageCopy = {
@@ -220,7 +325,10 @@ export type LandingPageCopy = {
   subheading: (jobCount: number) => string;
   /** The hero's buttons. An href of "#" is a label with no link yet ("Coming Soon"). */
   ctas: MarketingLink[];
-  howWeHelp: HowWeHelpAudience;
+  /** The "How we help" cards. The MCP pages show their capabilities instead. */
+  howWeHelp?: HowWeHelpAudience;
+  /** Set on the MCP landing pages: their capabilities and the server URL. */
+  mcp?: McpAudience;
   faq: FAQTopic;
   /** Extra links for the markdown version only. */
   related?: MarketingLink[];
@@ -230,6 +338,7 @@ export type LandingPageKey =
   | "home"
   | "hire"
   | "mcp-server"
+  | "mcp-server-companies"
   | "extension"
   | "ai-interview"
   | "ai-resume-checker";
@@ -268,21 +377,47 @@ export const LANDING_PAGES: Record<LandingPageKey, LandingPageCopy> = {
     ],
     howWeHelp: "hire",
     faq: "hiring",
-    related: [{ label: "Plans and pricing", href: "/pricing/companies" }],
+    related: [
+      { label: "Plans and pricing", href: "/pricing/companies" },
+      { label: "MCP server for hiring teams", href: "/mcp-server/companies" },
+    ],
   },
   "mcp-server": {
     path: "/mcp-server",
     description:
-      "Connect Claude to GetHired job-search tools for personalized job recommendations and resume support with the GetHired MCP Server.",
-    heading: "GetHired MCP Server",
-    subheading: () =>
-      "Discover the GetHired MCP Server, a powerful tool designed to enhance your job search experience.",
+      "Use GetHired from Claude, Cursor, VS Code or any MCP client: search and save jobs, apply, and manage your resumes, reviews and mock interviews with the GetHired MCP server.",
+    heading: "GetHired in your AI assistant",
+    subheading: (jobCount) =>
+      `Connect Claude, Cursor, VS Code or any MCP client to your GetHired account. Search ${jobCount.toLocaleString("en-US")} tech jobs, apply, and work on your resume without leaving the chat.`,
     ctas: [
-      { label: "Get Started", href: "https://github.com/kVarunkk/GetHired-mcp-server" },
-      { label: "Learn More", href: "/blog/introducing-the-get-hired-mcp-server" },
+      { label: "Set up your client", href: "/mcp" },
+      { label: "For hiring teams", href: "/mcp-server/companies" },
     ],
-    howWeHelp: "applicant",
+    mcp: "applicant",
     faq: "mcp",
+    related: [
+      { label: "Setup guide", href: "/mcp" },
+      { label: "MCP server for hiring teams", href: "/mcp-server/companies" },
+    ],
+  },
+  "mcp-server-companies": {
+    path: "/mcp-server/companies",
+    description:
+      "Run your hiring from Claude, Cursor, VS Code or any MCP client: job posts, the talent pool, applications, the pipeline, messages and AI screening interviews with the GetHired MCP server.",
+    heading: "Your hiring, in your AI assistant",
+    subheading: () =>
+      "Connect Claude, Cursor, VS Code or any MCP client to your company on GetHired. Post jobs, review applicants and move your pipeline from the chat, within each teammate's role.",
+    ctas: [
+      { label: "Set up your client", href: "/mcp#for-hiring-teams" },
+      { label: "Start hiring free", href: "/auth/sign-up?company=true" },
+    ],
+    mcp: "company",
+    faq: "mcp-company",
+    related: [
+      { label: "Setup guide", href: "/mcp" },
+      { label: "Plans and pricing", href: "/pricing/companies" },
+      { label: "MCP server for job seekers", href: "/mcp-server" },
+    ],
   },
   extension: {
     path: "/extension",

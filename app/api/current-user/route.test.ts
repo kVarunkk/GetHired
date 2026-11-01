@@ -57,7 +57,7 @@ describe("GET /api/current-user (company)", () => {
       id: COMPANY_A.id,
       company_favorites: [{ user_id: "u1" }],
       roleLabel: "Member",
-      access: { billingView: true, isOwner: false },
+      access: { billingView: true, talentView: true, isOwner: false },
     });
   });
 

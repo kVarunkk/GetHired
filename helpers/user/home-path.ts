@@ -20,6 +20,12 @@ export function safeReturnPath(value: unknown): string | null {
   return value.startsWith("//") || value.startsWith("/\\") ? null : value;
 }
 
+/** `value` when it's a claim link's path (`/claim/<token>`, BI-REQ-041), else null. */
+export function claimReturnPath(value: unknown): string | null {
+  const path = safeReturnPath(value);
+  return path && /^\/claim\/[\w-]{20,200}$/.test(path) ? path : null;
+}
+
 /**
  * Company onboarding, carrying where to go once it's done (`returnTo`). The
  * dashboard is the default, so it isn't carried.

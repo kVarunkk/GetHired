@@ -55,19 +55,22 @@ export async function addNote(
   const checked = checkBody(input.body);
   if (!checked.ok) return checked;
 
-  let candidateUserId: string;
+  // Null for an imported application's company candidate (BI-REQ-030).
+  let candidateUserId: string | null;
   let applicationId: string | null = null;
 
   if (input.applicationId !== undefined) {
     if (!isUuid(input.applicationId)) return { ok: false, error: "Application not found." };
     const { data: app, error } = await supabase
       .from("applications")
-      .select("id, applicant_user_id, job_postings!inner(company_id)")
+      .select("id, applicant_user_id, company_candidate_id, job_postings!inner(company_id)")
       .eq("id", input.applicationId)
       .eq("job_postings.company_id", company.id)
       .maybeSingle();
     if (error) throw new Error(`Failed to load the application: ${error.message}`);
-    if (!app?.applicant_user_id) return { ok: false, error: "Application not found." };
+    if (!app || (!app.applicant_user_id && !app.company_candidate_id)) {
+      return { ok: false, error: "Application not found." };
+    }
     candidateUserId = app.applicant_user_id;
     applicationId = app.id;
   } else {

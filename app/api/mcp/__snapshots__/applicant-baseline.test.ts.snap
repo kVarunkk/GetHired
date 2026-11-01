@@ -1,0 +1,1266 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`applicant MCP baseline > the confirm and credit flags of each applicant tool 1`] = `
+{
+  "complete_onboarding": {
+    "confirm": true,
+    "credit": false,
+  },
+  "create_interview": {
+    "confirm": false,
+    "credit": false,
+  },
+  "favorite_job": {
+    "confirm": false,
+    "credit": false,
+  },
+  "get_application_form": {
+    "confirm": false,
+    "credit": false,
+  },
+  "get_applied_jobs": {
+    "confirm": false,
+    "credit": false,
+  },
+  "get_interview_analysis": {
+    "confirm": false,
+    "credit": false,
+  },
+  "get_job_details": {
+    "confirm": false,
+    "credit": false,
+  },
+  "get_my_profile": {
+    "confirm": false,
+    "credit": false,
+  },
+  "get_relevant_jobs": {
+    "confirm": false,
+    "credit": false,
+  },
+  "get_resume_details": {
+    "confirm": false,
+    "credit": false,
+  },
+  "get_resume_review_details": {
+    "confirm": false,
+    "credit": false,
+  },
+  "get_resume_reviews": {
+    "confirm": false,
+    "credit": false,
+  },
+  "get_resumes": {
+    "confirm": false,
+    "credit": false,
+  },
+  "get_saved_jobs": {
+    "confirm": false,
+    "credit": false,
+  },
+  "get_similar_jobs": {
+    "confirm": false,
+    "credit": false,
+  },
+  "list_applications": {
+    "confirm": false,
+    "credit": false,
+  },
+  "list_interviews": {
+    "confirm": false,
+    "credit": false,
+  },
+  "list_screening_interviews": {
+    "confirm": false,
+    "credit": false,
+  },
+  "natural_language_job_search": {
+    "confirm": false,
+    "credit": true,
+  },
+  "pick_resume_for_job": {
+    "confirm": false,
+    "credit": true,
+  },
+  "search_jobs": {
+    "confirm": false,
+    "credit": false,
+  },
+  "set_primary_resume": {
+    "confirm": false,
+    "credit": false,
+  },
+  "start_resume_review": {
+    "confirm": true,
+    "credit": true,
+  },
+  "submit_application": {
+    "confirm": true,
+    "credit": true,
+  },
+  "update_application_status": {
+    "confirm": false,
+    "credit": false,
+  },
+  "update_my_preferences": {
+    "confirm": true,
+    "credit": false,
+  },
+}
+`;
+
+exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
+[
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Search jobs",
+    },
+    "description": "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "companies": {
+          "items": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string",
+          },
+          "maxItems": 10,
+          "type": "array",
+        },
+        "cursor": {
+          "description": "nextCursor from a previous searchJobs call.",
+          "type": "string",
+        },
+        "jobTypes": {
+          "items": {
+            "enum": [
+              "Fulltime",
+              "Contract",
+              "Intern",
+            ],
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "keywords": {
+          "description": "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end']. Leave out seniority words such as junior, senior, lead or fresher: use minExperience/maxExperience.",
+          "items": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string",
+          },
+          "maxItems": 10,
+          "type": "array",
+        },
+        "limit": {
+          "description": "How many results to return (default 10).",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "locations": {
+          "description": "Locations, e.g. ['Remote', 'Bengaluru'].",
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string",
+          },
+          "maxItems": 10,
+          "type": "array",
+        },
+        "maxExperience": {
+          "description": "Upper end of the user's experience range in years: only jobs requiring at most this much. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+          "maximum": 30,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "minExperience": {
+          "description": "Lower end of the user's experience range in years. Jobs match when their experience range overlaps the user's. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+          "maximum": 30,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "minSalary": {
+          "description": "Minimum salary as a plain integer.",
+          "minimum": 0,
+          "type": "integer",
+        },
+        "platforms": {
+          "description": "Job source platforms.",
+          "items": {
+            "enum": [
+              "greenhouse",
+              "jazzhr",
+              "ashby",
+              "rippling",
+              "workable",
+              "recruitee",
+              "personio",
+              "bamboohr",
+              "jobvite",
+              "workday",
+              "keka",
+              "gethired",
+            ],
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "postedWithinDays": {
+          "description": "Only jobs posted within this many days.",
+          "maximum": 90,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "visaRequirements": {
+          "items": {
+            "enum": [
+              "Will Sponsor",
+              "Not Required",
+              "Required",
+            ],
+            "type": "string",
+          },
+          "type": "array",
+        },
+      },
+      "type": "object",
+    },
+    "name": "search_jobs",
+    "title": "Search jobs",
+  },
+  {
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true,
+      "title": "Search jobs from a description",
+    },
+    "description": "Turn a plain-English job request into filters with AI, then search. Costs 5 AI credits per call; prefer search_jobs when you can build the filters yourself.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "How many results to return (default 10).",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "query": {
+          "description": "The user's request in their words.",
+          "maxLength": 300,
+          "minLength": 1,
+          "type": "string",
+        },
+      },
+      "required": [
+        "query",
+      ],
+      "type": "object",
+    },
+    "name": "natural_language_job_search",
+    "title": "Search jobs from a description",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Jobs matched to me",
+    },
+    "description": "Find jobs matched to the user's profile and primary resume, best matches first. Needs at least 5 AI credits but does not spend them.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "filters": {
+          "additionalProperties": false,
+          "description": "Optional filters to narrow the matches.",
+          "properties": {
+            "companies": {
+              "items": {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string",
+              },
+              "maxItems": 10,
+              "type": "array",
+            },
+            "jobTypes": {
+              "items": {
+                "enum": [
+                  "Fulltime",
+                  "Contract",
+                  "Intern",
+                ],
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "keywords": {
+              "description": "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end']. Leave out seniority words such as junior, senior, lead or fresher: use minExperience/maxExperience.",
+              "items": {
+                "maxLength": 50,
+                "minLength": 1,
+                "type": "string",
+              },
+              "maxItems": 10,
+              "type": "array",
+            },
+            "locations": {
+              "description": "Locations, e.g. ['Remote', 'Bengaluru'].",
+              "items": {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string",
+              },
+              "maxItems": 10,
+              "type": "array",
+            },
+            "maxExperience": {
+              "description": "Upper end of the user's experience range in years: only jobs requiring at most this much. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+              "maximum": 30,
+              "minimum": 0,
+              "type": "integer",
+            },
+            "minExperience": {
+              "description": "Lower end of the user's experience range in years. Jobs match when their experience range overlaps the user's. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+              "maximum": 30,
+              "minimum": 0,
+              "type": "integer",
+            },
+            "minSalary": {
+              "description": "Minimum salary as a plain integer.",
+              "minimum": 0,
+              "type": "integer",
+            },
+            "platforms": {
+              "description": "Job source platforms.",
+              "items": {
+                "enum": [
+                  "greenhouse",
+                  "jazzhr",
+                  "ashby",
+                  "rippling",
+                  "workable",
+                  "recruitee",
+                  "personio",
+                  "bamboohr",
+                  "jobvite",
+                  "workday",
+                  "keka",
+                  "gethired",
+                ],
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "postedWithinDays": {
+              "description": "Only jobs posted within this many days.",
+              "maximum": 90,
+              "minimum": 1,
+              "type": "integer",
+            },
+            "visaRequirements": {
+              "items": {
+                "enum": [
+                  "Will Sponsor",
+                  "Not Required",
+                  "Required",
+                ],
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "type": "object",
+        },
+        "limit": {
+          "description": "How many results to return (default 10).",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+      },
+      "type": "object",
+    },
+    "name": "get_relevant_jobs",
+    "title": "Jobs matched to me",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Similar jobs",
+    },
+    "description": "Find jobs similar to a given job. May spend 5 AI credits to re-rank results with AI when the user has enough credits.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "jobId": {
+          "description": "The job id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+        "limit": {
+          "description": "How many results to return (default 10).",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+      },
+      "required": [
+        "jobId",
+      ],
+      "type": "object",
+    },
+    "name": "get_similar_jobs",
+    "title": "Similar jobs",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Job details",
+    },
+    "description": "Get full details of one job: description, experience, visa, salary and links, including applyUrl for applying on GetHired.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "jobId": {
+          "description": "The job id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "jobId",
+      ],
+      "type": "object",
+    },
+    "name": "get_job_details",
+    "title": "Job details",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Saved jobs",
+    },
+    "description": "List the jobs the user has saved.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "How many results to return (default 10).",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+      },
+      "type": "object",
+    },
+    "name": "get_saved_jobs",
+    "title": "Saved jobs",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Applied jobs",
+    },
+    "description": "List the jobs the user has applied to or is tracking, as the Applied tab on /jobs shows them. Use list_applications for each application's status.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "How many results to return (default 10).",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+      },
+      "type": "object",
+    },
+    "name": "get_applied_jobs",
+    "title": "Applied jobs",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Save or unsave a job",
+    },
+    "description": "Save (bookmark) a job for the user, or remove it from their saved jobs with action: unsave.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "default": "save",
+          "description": "save adds the job to the saved jobs; unsave removes it.",
+          "enum": [
+            "save",
+            "unsave",
+          ],
+          "type": "string",
+        },
+        "jobId": {
+          "description": "The job id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "jobId",
+      ],
+      "type": "object",
+    },
+    "name": "favorite_job",
+    "title": "Save or unsave a job",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "My applications",
+    },
+    "description": "List the user's job applications with their status, newest first. isPlatformJob tells whether the job was applied to through GetHired.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "How many results to return (default 10).",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "status": {
+          "description": "Only applications with this status.",
+          "enum": [
+            "submitted",
+            "reviewed",
+            "selected",
+            "stand_by",
+            "rejected",
+          ],
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
+    "name": "list_applications",
+    "title": "My applications",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Track an application",
+    },
+    "description": "Track the status of the user's application to an external (non-GetHired) job, e.g. after they applied on the company site or heard back. Creates the application record if needed. Not allowed for jobs applied to through GetHired, whose status is set by the company.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "jobId": {
+          "description": "The job id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+        "status": {
+          "enum": [
+            "submitted",
+            "reviewed",
+            "selected",
+            "stand_by",
+            "rejected",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "jobId",
+        "status",
+      ],
+      "type": "object",
+    },
+    "name": "update_application_status",
+    "title": "Track an application",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Read an application form",
+    },
+    "description": "Read the application form of a job on GetHired (isPlatformJob), before applying with submit_application: each field's key, label, type, whether it's required and its options or limits, plus suggested answers from the user's profile and the resume that would be sent.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "jobId": {
+          "description": "The job id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "jobId",
+      ],
+      "type": "object",
+    },
+    "name": "get_application_form",
+    "title": "Read an application form",
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true,
+      "readOnlyHint": false,
+      "title": "Apply to a job",
+    },
+    "description": "Apply to a job on GetHired for the user (Easy Apply) with their answers to its application form. Costs 1 AI credit. Read the form with get_application_form first. Only use answers the user gave or that come from their profile; ask them for anything else. GetHired asks the user to confirm before it runs.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "answers": {
+          "description": "One entry per field you answer. Leave out optional fields the user has nothing for.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "choices": {
+                "description": "For multi_select fields only: the chosen options.",
+                "items": {
+                  "maxLength": 120,
+                  "type": "string",
+                },
+                "maxItems": 30,
+                "type": "array",
+              },
+              "key": {
+                "description": "The field's key, exactly as getApplicationForm returned it.",
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string",
+              },
+              "value": {
+                "description": "The answer as text: yes/no for yes_no, digits for number, YYYY-MM-DD for date, an http(s) link for url, one of the options for single_select, and amount plus 3-letter currency for salary (e.g. 1500000 INR).",
+                "maxLength": 5000,
+                "type": "string",
+              },
+            },
+            "required": [
+              "key",
+            ],
+            "type": "object",
+          },
+          "maxItems": 40,
+          "type": "array",
+        },
+        "confirmation_token": {
+          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "type": "string",
+        },
+        "jobId": {
+          "description": "The job id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+        "resumeId": {
+          "description": "The resume to send, from listResumes. Leave out to send the primary resume.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "jobId",
+        "answers",
+      ],
+      "type": "object",
+    },
+    "name": "submit_application",
+    "title": "Apply to a job",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "My profile",
+    },
+    "description": "Get the user's name, AI credit balance, onboarding status, weekly activity and three most recent applications.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object",
+    },
+    "name": "get_my_profile",
+    "title": "My profile",
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Update job preferences",
+    },
+    "description": "Update the user's job preferences on their profile (roles, locations, salary, job types, visa, skills, work style). Personalised matches are refreshed afterwards. Send only the fields that change. GetHired asks the user to confirm before it runs.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmation_token": {
+          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "type": "string",
+        },
+        "desiredRoles": {
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string",
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "type": "array",
+        },
+        "jobTypes": {
+          "items": {
+            "enum": [
+              "Fulltime",
+              "Contract",
+              "Intern",
+            ],
+            "type": "string",
+          },
+          "minItems": 1,
+          "type": "array",
+        },
+        "maxSalary": {
+          "minimum": 0,
+          "type": "integer",
+        },
+        "minSalary": {
+          "minimum": 0,
+          "type": "integer",
+        },
+        "preferredLocations": {
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string",
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "type": "array",
+        },
+        "salaryCurrency": {
+          "enum": [
+            "₹",
+            "$",
+            "€",
+            "£",
+            "C$",
+            "A$",
+          ],
+          "type": "string",
+        },
+        "topSkills": {
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string",
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "type": "array",
+        },
+        "visaSponsorshipRequired": {
+          "type": "boolean",
+        },
+        "workStylePreferences": {
+          "description": "e.g. Remote, Hybrid, On-site, Startup Environment, Fast-paced.",
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string",
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "type": "array",
+        },
+      },
+      "type": "object",
+    },
+    "name": "update_my_preferences",
+    "title": "Update job preferences",
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Finish onboarding",
+    },
+    "description": "Finish the user's GetHired onboarding with their profile and resume, the same as the /get-started form. Only for users whose profile (get_my_profile) shows onboarding isn't complete; gather the required fields first. GetHired asks the user to confirm before it runs.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "careerGoalsLongTerm": {
+          "maxLength": 500,
+          "type": "string",
+        },
+        "careerGoalsShortTerm": {
+          "maxLength": 500,
+          "type": "string",
+        },
+        "companySizePreference": {
+          "enum": [
+            "Small (1-50)",
+            "Medium (51-500)",
+            "Large (500+)",
+            "Any",
+          ],
+          "type": "string",
+        },
+        "confirmation_token": {
+          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "type": "string",
+        },
+        "desiredRoles": {
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string",
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "type": "array",
+        },
+        "experienceYears": {
+          "maximum": 60,
+          "minimum": 0,
+          "type": "number",
+        },
+        "fullName": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string",
+        },
+        "githubUrl": {
+          "format": "uri",
+          "type": "string",
+        },
+        "industryPreferences": {
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string",
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "type": "array",
+        },
+        "jobTypes": {
+          "items": {
+            "enum": [
+              "Fulltime",
+              "Contract",
+              "Intern",
+            ],
+            "type": "string",
+          },
+          "minItems": 1,
+          "type": "array",
+        },
+        "linkedinUrl": {
+          "format": "uri",
+          "type": "string",
+        },
+        "maxSalary": {
+          "minimum": 0,
+          "type": "integer",
+        },
+        "minSalary": {
+          "description": "Minimum yearly salary as a plain integer.",
+          "minimum": 0,
+          "type": "integer",
+        },
+        "preferredLocations": {
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string",
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "type": "array",
+        },
+        "resumeId": {
+          "description": "From requestResumeUpload or listResumes; omit to use the primary resume.",
+          "format": "uuid",
+          "type": "string",
+        },
+        "salaryCurrency": {
+          "enum": [
+            "₹",
+            "$",
+            "€",
+            "£",
+            "C$",
+            "A$",
+          ],
+          "type": "string",
+        },
+        "topSkills": {
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string",
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "type": "array",
+        },
+        "visaSponsorshipRequired": {
+          "type": "boolean",
+        },
+        "workStylePreferences": {
+          "description": "e.g. Remote, Hybrid, On-site, Startup Environment.",
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string",
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "type": "array",
+        },
+      },
+      "required": [
+        "fullName",
+        "desiredRoles",
+        "jobTypes",
+        "salaryCurrency",
+        "minSalary",
+        "preferredLocations",
+        "experienceYears",
+        "topSkills",
+        "workStylePreferences",
+        "companySizePreference",
+      ],
+      "type": "object",
+    },
+    "name": "complete_onboarding",
+    "title": "Finish onboarding",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "My resumes",
+    },
+    "description": "List the user's uploaded resumes with whether each is primary and ready (parsed), processing, or failed.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object",
+    },
+    "name": "get_resumes",
+    "title": "My resumes",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Resume details",
+    },
+    "description": "Get one of the user's resumes with its parsed content.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "resumeId": {
+          "description": "The resume id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "resumeId",
+      ],
+      "type": "object",
+    },
+    "name": "get_resume_details",
+    "title": "Resume details",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Set primary resume",
+    },
+    "description": "Make one of the user's resumes their primary resume. Personalised job matches use the primary resume.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "resumeId": {
+          "description": "The resume id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "resumeId",
+      ],
+      "type": "object",
+    },
+    "name": "set_primary_resume",
+    "title": "Set primary resume",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Review a resume",
+    },
+    "description": "Start an AI review of one of the user's resumes against a job (jobId) or a pasted job description. Costs 5 AI credits once the analysis succeeds. Runs in the background and returns a link. GetHired asks the user to confirm before it runs.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmation_token": {
+          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "type": "string",
+        },
+        "jobDescription": {
+          "description": "A job description the user pasted, when there is no jobId.",
+          "maxLength": 4000,
+          "minLength": 50,
+          "type": "string",
+        },
+        "jobId": {
+          "description": "The job id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+        "name": {
+          "description": "Optional name for the review.",
+          "maxLength": 80,
+          "minLength": 1,
+          "type": "string",
+        },
+        "resumeId": {
+          "description": "The resume id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "resumeId",
+      ],
+      "type": "object",
+    },
+    "name": "start_resume_review",
+    "title": "Review a resume",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "My resume reviews",
+    },
+    "description": "List the user's resume reviews, newest first, with each one's status and score.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "How many reviews to return (default 10).",
+          "maximum": 50,
+          "minimum": 1,
+          "type": "integer",
+        },
+      },
+      "type": "object",
+    },
+    "name": "get_resume_reviews",
+    "title": "My resume reviews",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Resume review details",
+    },
+    "description": "Get a resume review's status, score, overall feedback and its top suggestions (highest priority first).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "reviewId": {
+          "description": "The resume review id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "reviewId",
+      ],
+      "type": "object",
+    },
+    "name": "get_resume_review_details",
+    "title": "Resume review details",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Pick a resume for a job",
+    },
+    "description": "Compare the user's resumes against a job (jobId) or a pasted job description and pick the one that fits best, with the job requirements each covers and misses. Pass resumeIds to compare specific resumes; otherwise all ready resumes are compared. With more than 5, the closest 5 are shortlisted first and only those are compared in detail. Costs 1 AI credit when two or more resumes are compared; free with one.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "jobDescription": {
+          "description": "A job description the user pasted, when there is no jobId.",
+          "maxLength": 4000,
+          "minLength": 50,
+          "type": "string",
+        },
+        "jobId": {
+          "description": "The job id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+        "resumeIds": {
+          "description": "Only when the user names which resumes to compare (2 to 50, from listResumes). Leave out to compare all of them.",
+          "items": {
+            "description": "The resume id, exactly as returned by another tool.",
+            "format": "uuid",
+            "type": "string",
+          },
+          "maxItems": 50,
+          "minItems": 2,
+          "type": "array",
+        },
+      },
+      "type": "object",
+    },
+    "name": "pick_resume_for_job",
+    "title": "Pick a resume for a job",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "My mock interviews",
+    },
+    "description": "List the user's AI mock interviews, newest first: the job and resume each is for, and each session taken with its analysis status (completed, processing, failed, or null when none).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "How many results to return (default 10).",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+      },
+      "type": "object",
+    },
+    "name": "list_interviews",
+    "title": "My mock interviews",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Interview feedback",
+    },
+    "description": "Get the feedback from one AI interview session: overall feedback, communication and role-fit scores (1-5), strengths, areas to improve and practice tips. Defaults to the latest session.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "interviewId": {
+          "description": "The interview id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+        "sessionId": {
+          "description": "A session id from listInterviews; omit for the latest session.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "interviewId",
+      ],
+      "type": "object",
+    },
+    "name": "get_interview_analysis",
+    "title": "Interview feedback",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Set up a mock interview",
+    },
+    "description": "Set up an AI mock interview for a job, using a resume (the primary one by default). Free to create; the user starts it from the returned link, and each session uses 10 AI credits when it starts.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "jobId": {
+          "description": "The job id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+        "name": {
+          "description": "Optional name for the interview.",
+          "maxLength": 80,
+          "minLength": 1,
+          "type": "string",
+        },
+        "resumeId": {
+          "description": "Omit to use the primary resume.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "jobId",
+      ],
+      "type": "object",
+    },
+    "name": "create_interview",
+    "title": "Set up a mock interview",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "My screening interviews",
+    },
+    "description": "List the screening interviews companies have invited the user to after they applied, newest first: the job and company, the status (invited, paused, in_progress, completed, expired, declined, cancelled or withdrawn), the deadline, length and attempts left. These are separate from mock interviews. The company keeps the report; the user doesn't see a score.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "How many results to return (default 10).",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+      },
+      "type": "object",
+    },
+    "name": "list_screening_interviews",
+    "title": "My screening interviews",
+  },
+]
+`;

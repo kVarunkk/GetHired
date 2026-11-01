@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { formatDate } from "@/utils/date";
-import {
-  previewAgentOutreachAction,
-  type PreviewAgentOutreachResult,
-} from "@/app/actions/outreach/preview-agent-outreach";
+import { previewAgentOutreachAction } from "@/app/actions/outreach/preview-agent-outreach";
+import type { PreviewAgentOutreachResult } from "@/helpers/outreach/preview-agent-outreach";
 
 type OutreachInput = { subject?: unknown; message?: unknown };
 

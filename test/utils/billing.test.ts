@@ -51,3 +51,13 @@ describe("billing fixtures", () => {
     expect(JSON.parse(body)).toMatchObject({ type: "payment.succeeded", data: { payment_id: "pay_1" } });
   });
 });
+
+describe("resume_imports (BI-DEC-008)", () => {
+  const amountOf = (t: (typeof ALL_TIERS)[number]) => t.entitlements.find((e) => e.key === "resume_imports");
+
+  it("is an allowance: Free 25 with a hard stop, paid tiers 500 with overage credits", () => {
+    expect(amountOf(TIER_FREE)).toMatchObject({ kind: "allowance", amount: 25, overage_credits: null });
+    expect(amountOf(TIER_STARTUP)).toMatchObject({ kind: "allowance", amount: 500, overage_credits: 1 });
+    expect(amountOf(TIER_FOUNDING)).toMatchObject({ amount: 500, overage_credits: 1 });
+  });
+});

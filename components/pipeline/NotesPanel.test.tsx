@@ -151,6 +151,23 @@ describe("NotesPanel (PLT-054)", () => {
     expect(within(theirs).getByText("Ravi")).toBeInTheDocument();
   });
 
+  it("shows no composer, edit or delete when read-only (BIT-065, a merged import)", () => {
+    render(
+      <NotesPanel
+        applicationId={APP.id}
+        notes={[noteOf({ body: "Mine", author_user_id: ME, author_name: "Asha" })]}
+        currentUserId={ME}
+        readOnly
+      />,
+    );
+
+    expect(screen.getByText("Mine")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "New note" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add note" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+  });
+
   it("shows the author's initials and stored name, even after they've left the team (TMT-062)", () => {
     const removed = "c3000000-0000-4000-8000-000000000009";
     render(

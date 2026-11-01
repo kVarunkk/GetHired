@@ -36,6 +36,18 @@ vi.mock("@/helpers/agent/summarise", () => ({
 }));
 vi.mock("@/helpers/agent/suggestions", () => ({ generateFollowUps: vi.fn() }));
 vi.mock("@/helpers/jobs/search-jobs", () => ({ searchJobs: vi.fn() }));
+vi.mock("@/helpers/user/update-user-embedding", () => ({ updateUserEmbedding: vi.fn() }));
+// The survey's kill switch, switchable per test.
+const survey = vi.hoisted(() => ({ enabled: true }));
+vi.mock("@/helpers/agent/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/helpers/agent/config")>();
+  return {
+    ...actual,
+    get AGENT_FEEDBACK_SURVEY_ENABLED() {
+      return survey.enabled;
+    },
+  };
+});
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
@@ -529,6 +541,7 @@ describe("POST /api/agent/chat: token usage", () => {
         output_tokens: 10,
         cached_input_tokens: null,
         memory_count: 1,
+        feedback_offered: false,
       },
     });
   });
@@ -566,7 +579,11 @@ describe("POST /api/agent/chat: tool loop", () => {
     const res = await submit(text("u1", "user", "react jobs"));
     const body = await res.text();
 
-    expect(searchJobs).toHaveBeenCalledWith(supabase.client, { jobTitleKeywords: "react", limit: 10 });
+    expect(searchJobs).toHaveBeenCalledWith(
+      supabase.client,
+      expect.objectContaining({ id: "u1" }),
+      { jobTitleKeywords: "react", limit: 10 },
+    );
     expect(body).toContain("tool-output-available");
     expect(body).toContain("React Dev");
     expect(streamedText(body)).toBe("Found 1 job.");
@@ -864,5 +881,230 @@ describe("POST /api/agent/chat: streaming", () => {
     // The mock model sends "Hello from the agent" as one chunk.
     expect(body.match(/"type":"text-delta"/g)!.length).toBeGreaterThan(1);
     expect(streamedText(body)).toBe("Hello from the agent");
+  });
+});
+
+describe("POST /api/agent/chat: the survey card (AF-REQ-010/012/041)", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const longHistory = (turns: number) =>
+    Array.from({ length: turns }, (_, i) => [
+      text(`u${i}`, "user", `question ${i}`),
+      text(`a${i}`, "assistant", `answer ${i}`),
+    ]).flat();
+
+  /** A turn that approves updateMyPreferences (a milestone) and continues. */
+  function approvedPreferences() {
+    const pending = {
+      id: "a1",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool-updateMyPreferences",
+          toolCallId: "c1",
+          state: "approval-requested",
+          input: { minSalary: 100000 },
+          approval: { id: "ap1" },
+        },
+      ],
+    } as UIMessage;
+    const approved = {
+      ...pending,
+      parts: [{ ...pending.parts[0], state: "approval-responded", approval: { id: "ap1", approved: true } }],
+    } as UIMessage;
+    return { history: [text("u1", "user", "set my min salary to 100k"), pending], approved };
+  }
+
+  /** Queues the cooldown reads: the last offer, then the last dismissal. */
+  function queueCooldowns({
+    lastOffer = null as string | null,
+    lastDismissal = null as string | null,
+    offerError = null as unknown,
+  } = {}) {
+    supabase.queue("agent_sessions", {
+      data: lastOffer ? { feedback_requested_at: lastOffer } : null,
+      error: offerError,
+    });
+    supabase.queue("agent_feedback", { data: lastDismissal ? { created_at: lastDismissal } : null, error: null });
+  }
+
+  const offerUpdates = () =>
+    supabase
+      .callsFor("agent_sessions")
+      .filter(
+        (c) =>
+          c.chain[0].method === "update" && "feedback_requested_at" in (c.chain[0].args[0] as object),
+      );
+  const turnEvent = () =>
+    vi.mocked(eventCaptureServer).mock.calls.find(([e]) => e.event === "agent_chat_turn")?.[0];
+
+  beforeEach(() => {
+    vi.mocked(eventCaptureServer).mockClear();
+    vi.mocked(eventCaptureServerException).mockClear();
+    survey.enabled = true;
+  });
+
+  it("adds the card after an approved milestone tool, after the suggestions and before finish", async () => {
+    const { history, approved } = approvedPreferences();
+    queueSession({ history, countCheck: false });
+    supabase.queue("user_info", { data: [{ user_id: "u1" }], error: null });
+    queueCooldowns();
+    vi.mocked(generateFollowUps).mockResolvedValue(["Show matching jobs"]);
+
+    const res = await submit(approved);
+    const body = await res.text();
+    await flushAfter();
+
+    expect(body).toContain('"type":"data-feedback","id":"feedback","data":{"v":1}');
+    expect(body.indexOf("data-suggestions")).toBeLessThan(body.indexOf("data-feedback"));
+    expect(body.indexOf("data-feedback")).toBeLessThan(body.indexOf('"type":"finish"'));
+    expect(offerUpdates()).toHaveLength(1);
+    expect(offerUpdates()[0].chain).toContainEqual({ method: "eq", args: ["id", SESSION_ID] });
+    expect(offerUpdates()[0].chain).toContainEqual({ method: "eq", args: ["user_id", "u1"] });
+    const reply = upserts(supabase).at(-1)![0];
+    expect(reply.parts).toContainEqual({ type: "data-feedback", id: "feedback", data: { v: 1 } });
+    expect(turnEvent()?.properties).toMatchObject({ feedback_offered: true });
+  });
+
+  it("reads the cooldowns from the user's sessions and dismissals", async () => {
+    queueSession({ history: longHistory(7) });
+    queueCooldowns();
+
+    await (await submit(text("u9", "user", "one more"))).text();
+
+    const offerRead = supabase.callsFor("agent_sessions")[1].chain;
+    expect(offerRead).toContainEqual({ method: "eq", args: ["user_id", "u1"] });
+    expect(offerRead).toContainEqual({ method: "not", args: ["feedback_requested_at", "is", null] });
+    const dismissalRead = supabase.callsFor("agent_feedback")[0].chain;
+    expect(dismissalRead).toContainEqual({ method: "eq", args: ["user_id", "u1"] });
+    expect(dismissalRead).toContainEqual({ method: "eq", args: ["kind", "survey"] });
+    expect(dismissalRead).toContainEqual({ method: "eq", args: ["dismissed", true] });
+  });
+
+  it("adds the card on the 8th user message of a session, not the 7th", async () => {
+    queueSession({ history: longHistory(6) });
+    let body = await (await submit(text("u9", "user", "seventh"))).text();
+    expect(body).not.toContain("data-feedback");
+    expect(supabase.callsFor("agent_feedback")).toHaveLength(0);
+
+    supabase = createSupabaseMock();
+    await setRequestUser(mockUser({ id: "u1" }), supabase.client);
+    model = mockModel([textStream("Hello from the agent")]);
+    vi.mocked(google).mockReturnValue(model as never);
+    queueSession({ history: longHistory(7) });
+    queueCooldowns();
+    body = await (await submit(text("u9", "user", "eighth"))).text();
+    expect(body).toContain("data-feedback");
+  });
+
+  it("doesn't add it twice in a session", async () => {
+    queueSession({
+      history: longHistory(9),
+      session: { ...SESSION, feedback_requested_at: "2026-01-01T00:00:00Z" } as typeof SESSION,
+    });
+
+    const body = await (await submit(text("u9", "user", "more"))).text();
+
+    expect(body).not.toContain("data-feedback");
+    expect(offerUpdates()).toHaveLength(0);
+  });
+
+  it("doesn't add it within 14 days of the last offer", async () => {
+    queueSession({ history: longHistory(9) });
+    queueCooldowns({ lastOffer: new Date(Date.now() - 13 * DAY).toISOString() });
+
+    const body = await (await submit(text("u9", "user", "more"))).text();
+
+    expect(body).not.toContain("data-feedback");
+    expect(offerUpdates()).toHaveLength(0);
+  });
+
+  it("doesn't add it within 30 days of a dismissal", async () => {
+    queueSession({ history: longHistory(9) });
+    queueCooldowns({ lastDismissal: new Date(Date.now() - 29 * DAY).toISOString() });
+
+    const body = await (await submit(text("u9", "user", "more"))).text();
+
+    expect(body).not.toContain("data-feedback");
+    expect(offerUpdates()).toHaveLength(0);
+  });
+
+  it("doesn't add it with the kill switch off", async () => {
+    survey.enabled = false;
+    queueSession({ history: longHistory(9) });
+
+    const body = await (await submit(text("u9", "user", "more"))).text();
+    await flushAfter();
+
+    expect(body).not.toContain("data-feedback");
+    expect(supabase.callsFor("agent_feedback")).toHaveLength(0);
+    expect(turnEvent()?.properties).toMatchObject({ feedback_offered: false });
+  });
+
+  it("doesn't add it on the content-filter path", async () => {
+    queueSession({ history: longHistory(9) });
+    model = new MockLanguageModelV4({
+      doStream: async () => ({
+        stream: new ReadableStream<LanguageModelV4StreamPart>({
+          start(controller) {
+            controller.enqueue({
+              type: "finish",
+              finishReason: { unified: "content-filter", raw: "SAFETY" },
+              usage: {
+                inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+                outputTokens: { total: 0, text: 0, reasoning: undefined },
+              },
+            });
+            controller.close();
+          },
+        }),
+      }),
+    });
+    vi.mocked(google).mockReturnValue(model as never);
+
+    const body = await (await submit(text("u9", "user", "more"))).text();
+
+    expect(body).not.toContain("data-feedback");
+    expect(supabase.callsFor("agent_feedback")).toHaveLength(0);
+  });
+
+  it("skips the card but finishes the turn when a cooldown read fails", async () => {
+    queueSession({ history: longHistory(9) });
+    queueCooldowns({ offerError: new Error("db down") });
+
+    const body = await (await submit(text("u9", "user", "more"))).text();
+    await flushAfter();
+
+    expect(body).not.toContain("data-feedback");
+    expect(body).toContain('"type":"finish"');
+    expect(offerUpdates()).toHaveLength(0);
+    expect(eventCaptureServerException).toHaveBeenCalledWith(
+      expect.objectContaining({ properties: expect.objectContaining({ flow: "agent_feedback_offer" }) }),
+    );
+    expect(turnEvent()?.properties).toMatchObject({ feedback_offered: false });
+  });
+
+  it("skips the card when recording the offer fails", async () => {
+    queueSession({ history: longHistory(9) });
+    queueCooldowns();
+    supabase.queue("agent_sessions", { data: null, error: new Error("update failed") });
+
+    const body = await (await submit(text("u9", "user", "more"))).text();
+
+    expect(body).not.toContain("data-feedback");
+    expect(body).toContain('"type":"finish"');
+  });
+
+  it("doesn't count a milestone the user denied", async () => {
+    const { history, approved } = approvedPreferences();
+    const denied = {
+      ...approved,
+      parts: [{ ...approved.parts[0], approval: { id: "ap1", approved: false } }],
+    } as UIMessage;
+    queueSession({ history, countCheck: false });
+
+    const body = await (await submit(denied)).text();
+
+    expect(body).not.toContain("data-feedback");
+    expect(supabase.callsFor("agent_feedback")).toHaveLength(0);
   });
 });

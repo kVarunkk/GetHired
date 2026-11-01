@@ -92,6 +92,11 @@ export type MatrixEntry = {
    * actions (RP-DEC-003) and `null` for membership-only ones.
    */
   permission: PermissionKey | "owner" | null;
+  /**
+   * Any scope of `permission` will do (rows filtered later, by RLS or the
+   * RPC), so the Member template's `assigned` keys pass too.
+   */
+  anyScope?: true;
   run: (member: MemberFixture) => Promise<unknown>;
 };
 
@@ -103,6 +108,7 @@ async function tool(name: string, input: Record<string, unknown>, member: Member
     supabase: pastAuthClient(member),
     user: member.user,
     sessionId: "s1",
+    surface: "agent",
     company: member.myCompany,
   }) as unknown as Record<string, { execute: (input: unknown, options: unknown) => Promise<unknown> }>;
   const t = tools[name];
@@ -336,6 +342,213 @@ export const PERMISSION_MATRIX: MatrixEntry[] = [
       (await import("@/app/actions/pipeline/save-talent-list")).saveTalentListAction({
         op: "create",
         name: "Shortlist",
+      }),
+  },
+  // Bulk import (BIT-020): applicants.import is `assigned` for Member.
+  {
+    name: "action:createCandidate",
+    kind: "action",
+    permission: "applicants.import",
+    run: async () =>
+      (await import("@/app/actions/candidates/create-candidate")).createCandidateAction({
+        full_name: "Asha Rao",
+        email: "asha@mail.test",
+        jobPostId: JOB,
+        attested: true,
+      }),
+  },
+  // CPT-017: the pool and a list, so applicants.import unscoped (then talent_lists.manage).
+  {
+    name: "action:createCandidate (list)",
+    kind: "action",
+    permission: "applicants.import",
+    run: async () =>
+      (await import("@/app/actions/candidates/create-candidate")).createCandidateAction({
+        full_name: "Asha Rao",
+        talentListId: ID,
+        attested: true,
+      }),
+  },
+  {
+    name: "action:checkCandidateEmail",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () =>
+      (await import("@/app/actions/candidates/check-candidate-email")).checkCandidateEmailAction({
+        email: "asha@mail.test",
+      }),
+  },
+  {
+    name: "action:updateCandidate",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () =>
+      (await import("@/app/actions/candidates/update-candidate")).updateCandidateAction({
+        candidateId: ID,
+        fields: { full_name: "Asha" },
+      }),
+  },
+  {
+    name: "action:deleteCandidates",
+    kind: "action",
+    permission: "applicants.import",
+    run: async () =>
+      (await import("@/app/actions/candidates/delete-candidates")).deleteCandidatesAction({ candidateIds: [ID] }),
+  },
+  {
+    name: "action:addCandidatesToJob",
+    kind: "action",
+    permission: "applicants.import",
+    run: async () =>
+      (await import("@/app/actions/candidates/add-candidates-to-job")).addCandidatesToJobAction({
+        jobPostId: JOB,
+        candidateIds: [ID],
+      }),
+  },
+  // Spreadsheet import (BIT-032–034).
+  {
+    name: "action:getImportMapping",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () =>
+      (await import("@/app/actions/candidates/import-mapping")).getImportMappingAction({ headerHash: "a".repeat(64) }),
+  },
+  {
+    name: "action:checkImportEmails",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () =>
+      (await import("@/app/actions/candidates/check-import-emails")).checkImportEmailsAction({
+        emails: ["asha@mail.test"],
+      }),
+  },
+  {
+    name: "action:startImport",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () =>
+      (await import("@/app/actions/candidates/start-import")).startImportAction({ fileName: "people.csv" }),
+  },
+  {
+    name: "action:confirmSpreadsheetImport",
+    kind: "action",
+    permission: "applicants.import",
+    run: async () =>
+      (await import("@/app/actions/candidates/confirm-spreadsheet-import")).confirmSpreadsheetImportAction({
+        batchId: ID,
+        rows: [{ full_name: "Asha Rao", email: "asha@mail.test" }],
+        jobPostId: JOB,
+        attested: true,
+      }),
+  },
+  // Resume import (BIT-043–049). Only the upload URLs take a job id; the
+  // rest take a batch, row or candidate, and their RPCs check its job.
+  {
+    name: "action:createResumeUploadUrls",
+    kind: "action",
+    permission: "applicants.import",
+    run: async () =>
+      (await import("@/app/actions/candidates/create-resume-upload-urls")).createResumeUploadUrlsAction({
+        jobPostId: JOB,
+        files: [{ name: "asha.pdf", size: 1000, type: "application/pdf" }],
+      }),
+  },
+  // CPT-014: a pool batch needs applicants.import unscoped (CP-REQ-004).
+  {
+    name: "action:createResumeUploadUrls (pool)",
+    kind: "action",
+    permission: "applicants.import",
+    run: async () =>
+      (await import("@/app/actions/candidates/create-resume-upload-urls")).createResumeUploadUrlsAction({
+        files: [{ name: "asha.pdf", size: 1000, type: "application/pdf" }],
+      }),
+  },
+  {
+    name: "action:submitResumeBatch (list)",
+    kind: "action",
+    permission: "talent_lists.manage",
+    run: async () =>
+      (await import("@/app/actions/candidates/submit-resume-batch")).submitResumeBatchAction({
+        batchId: ID,
+        talentListId: ID,
+      }),
+  },
+  {
+    name: "action:submitResumeBatch",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () =>
+      (await import("@/app/actions/candidates/submit-resume-batch")).submitResumeBatchAction({ batchId: ID }),
+  },
+  {
+    name: "action:importStatus",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () => (await import("@/app/actions/candidates/import-status")).importStatusAction({ batchId: ID }),
+  },
+  {
+    name: "action:updateImportRow",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () =>
+      (await import("@/app/actions/candidates/update-import-row")).updateImportRowAction({
+        rowId: ID,
+        fields: { full_name: "Asha" },
+      }),
+  },
+  {
+    name: "action:retryImportRow",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () => (await import("@/app/actions/candidates/retry-import-row")).retryImportRowAction({ rowId: ID }),
+  },
+  {
+    name: "action:removeImportRow",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () => (await import("@/app/actions/candidates/remove-import-row")).removeImportRowAction({ rowId: ID }),
+  },
+  {
+    name: "action:confirmResumeImport",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () =>
+      (await import("@/app/actions/candidates/confirm-resume-import")).confirmResumeImportAction({
+        batchId: ID,
+        attested: true,
+      }),
+  },
+  {
+    name: "action:createCandidateResumeUpload",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () =>
+      (await import("@/app/actions/candidates/upload-candidate-resume")).createCandidateResumeUploadAction({
+        candidateId: ID,
+        file: { name: "asha.pdf", size: 1000 },
+      }),
+  },
+  {
+    name: "action:uploadCandidateResume",
+    kind: "action",
+    permission: "applicants.import",
+    anyScope: true,
+    run: async () =>
+      (await import("@/app/actions/candidates/upload-candidate-resume")).uploadCandidateResumeAction({
+        candidateId: ID,
+        path: `x/candidates/${ID}/${ID}.pdf`,
       }),
   },
   {
@@ -608,6 +821,8 @@ export const PERMISSION_MATRIX: MatrixEntry[] = [
   toolEntry("compareCandidates", "talent.view"),
   toolEntry("saveCandidate", "talent.save"),
   toolEntry("unsaveCandidate", "talent.save"),
+  toolEntry("findPoolCandidates", "talent.view"),
+  toolEntry("addCandidatesToJob", "applicants.import", { candidateIds: [TOOL_INPUT.candidateId] }),
   toolEntry("listApplicants", "applicants.view"),
   toolEntry("getApplication", "applicants.view"),
   toolEntry("getHiringFunnel", "applicants.view"),

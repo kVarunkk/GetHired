@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  previewAgentMoveAction,
-  type PreviewAgentMoveResult,
-} from "@/app/actions/pipeline/preview-agent-move";
+import { previewAgentMoveAction } from "@/app/actions/pipeline/preview-agent-move";
+import type { PreviewAgentMoveResult } from "@/helpers/pipeline/preview-agent-move";
 import { statusForKind } from "@/helpers/pipeline/status-map";
 import { statusLabel } from "./RecruiterResults";
 

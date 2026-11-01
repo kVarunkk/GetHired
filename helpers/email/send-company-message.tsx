@@ -16,6 +16,7 @@ export async function sendCompanyMessage({
   companyName,
   companyEmail,
   logoUrl,
+  unsubscribeUrl = null,
 }: {
   toEmail: string;
   subject: string;
@@ -23,6 +24,8 @@ export async function sendCompanyMessage({
   companyName: string;
   companyEmail: string | null;
   logoUrl: string | null;
+  /** A company candidate's unsubscribe link (BI-REQ-034). */
+  unsubscribeUrl?: string | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const email = (
@@ -32,6 +35,7 @@ export async function sendCompanyMessage({
         logoUrl={logoUrl}
         subject={subject}
         bodyMd={bodyMd}
+        unsubscribeUrl={unsubscribeUrl}
       />
     );
     const [htmlContent, textContent] = await Promise.all([

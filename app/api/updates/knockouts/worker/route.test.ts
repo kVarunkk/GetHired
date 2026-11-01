@@ -98,4 +98,15 @@ describe("GET /api/updates/knockouts/worker (AF-DEC-002, CPT-032)", () => {
     expect(await (await call()).json()).toEqual({ sent: 0, cancelled: 0, failed: 1 });
     expect(updates("application_knockouts")).toEqual([]);
   });
+
+  it("cancels, without crashing, for an application with no applicant (BIT-000)", async () => {
+    db.queue("application_knockouts", { data: [{ application_id: APP_ID, company_id: COMPANY_A.id }], error: null });
+    db.queue("applications", {
+      data: { id: APP_ID, applicant_user_id: null, pipeline_stages: { kind: "rejected" }, user_info: null, job_postings: { title: "Engineer" } },
+      error: null,
+    });
+
+    expect(await (await call()).json()).toEqual({ sent: 0, cancelled: 1, failed: 0 });
+    expect(sendCompanyMessage).not.toHaveBeenCalled();
+  });
 });

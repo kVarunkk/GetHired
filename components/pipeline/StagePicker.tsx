@@ -80,6 +80,11 @@ export default function StagePicker({
       } else if (result.skipped.some((s) => s.reason === "email_failed")) {
         toast.error(`Moved to ${target.name}, but the email couldn't be sent.`);
         router.refresh();
+      } else if (result.skipped.some((s) => s.reason === "unsubscribed" || s.reason === "no_email")) {
+        // BI-REQ-032/034: an imported candidate who unsubscribed or has no email isn't emailed.
+        const why = result.skipped.some((s) => s.reason === "unsubscribed") ? "unsubscribed" : "no email";
+        toast.success(`Moved to ${target.name}. Email not sent: ${why}.`);
+        router.refresh();
       } else {
         toast.success(
           result.emailed > 0

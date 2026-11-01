@@ -20,7 +20,8 @@ type MentionedNote = {
   id: string;
   body: string;
   application_id: string | null;
-  candidate_user_id: string;
+  /** Null on an imported application: the name comes from its company candidate. */
+  candidate_user_id: string | null;
 };
 
 /**
@@ -50,12 +51,19 @@ export async function sendNoteMentionEmails({
     if (recipients.length === 0) return;
 
     const [{ data: candidate }, { data: application }] = await Promise.all([
-      service.from("user_info").select("full_name").eq("user_id", note.candidate_user_id).maybeSingle(),
+      note.candidate_user_id
+        ? service.from("user_info").select("full_name").eq("user_id", note.candidate_user_id).maybeSingle()
+        : Promise.resolve({ data: null }),
       note.application_id
-        ? service.from("applications").select("job_postings(title)").eq("id", note.application_id).maybeSingle()
+        ? service
+            .from("applications")
+            .select("job_postings(title), company_candidates(full_name)")
+            .eq("id", note.application_id)
+            .maybeSingle()
         : Promise.resolve({ data: null }),
     ]);
-    const candidateFirstName = firstName(candidate?.full_name) ?? "a candidate";
+    const candidateFirstName =
+      firstName(candidate?.full_name ?? application?.company_candidates?.full_name) ?? "a candidate";
     const jobTitle = application?.job_postings?.title ?? null;
     const url = note.application_id
       ? `${deploymentUrl()}/company/applications/${note.application_id}`

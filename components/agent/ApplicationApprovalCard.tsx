@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  previewAgentApplicationAction,
-  type PreviewAgentApplicationResult,
-} from "@/app/actions/applications/preview-agent-application";
+import { previewAgentApplicationAction } from "@/app/actions/applications/preview-agent-application";
+import type { PreviewAgentApplicationResult } from "@/helpers/applications/preview-agent-application";
 
 /**
  * What the agent's application will send, for its approval card: the job,

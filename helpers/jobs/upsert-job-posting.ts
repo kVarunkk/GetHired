@@ -14,7 +14,7 @@ import { formFromLegacyQuestions, legacyQuestionsOf } from "@/helpers/jobs/appli
 import { screenFormFairness } from "@/helpers/jobs/form-fairness";
 import { splitForm } from "@/helpers/jobs/public-application-form";
 import type { Json } from "@/utils/types/database.types";
-import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
+import { queueJobPostingRelevance } from "@/helpers/profiles/queue-job-relevance";
 import { assertLimit } from "@/helpers/billing/entitlements";
 import {
   EntitlementError,
@@ -23,13 +23,9 @@ import {
 } from "@/helpers/billing/errors";
 import { jobSnapshotHash, JOB_SNAPSHOT_COLUMNS } from "@/helpers/matching/job-snapshot";
 import { markJobResultsStale } from "@/helpers/matching/mark-stale";
+import { embedJobs } from "@/helpers/jobs/job-embedding";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
-import {
-  buildEquityRange,
-  buildExperience,
-  deploymentUrl,
-  INTERNAL_API_SECRET,
-} from "@/utils/formatters";
+import { buildEquityRange, buildExperience } from "@/utils/formatters";
 
 export type UpsertJobPostingResult =
   | { success: true; isUpdate: boolean; postingId: string }
@@ -190,34 +186,9 @@ export async function upsertJobPosting(
       }
     }
 
-    let embedding = null;
-    if (existing) {
-      const embeddingResult = await fetch(
-        `${deploymentUrl()}/api/update-embedding/gemini/job`,
-        {
-          method: "POST",
-          headers: {
-            "X-Internal-Secret": INTERNAL_API_SECRET,
-          },
-          body: JSON.stringify({
-            id: existing.id,
-            job_name: values.title,
-            locations: values.location,
-            description: values.description,
-            job_type: values.job_type,
-            salary_range,
-            table: "job_postings",
-          }),
-        },
-      );
-
-      if (!embeddingResult.ok) {
-        const errorData = await embeddingResult.json();
-        return { success: false, error: errorData.error };
-      }
-
-      embedding = (await embeddingResult.json()).data;
-    }
+    // An edit is embedded now, not by the queue, so the matching run queued
+    // below ranks against the new text. The insert triggers queue new rows.
+    const embedding = existing ? await embedEditedPosting(service, posting) : null;
 
     if (existing?.job_id) {
       const { error: updateError } = await service
@@ -238,7 +209,7 @@ export async function upsertJobPosting(
           description: values.description,
           locations: values.location,
           updated_at: new Date().toISOString(),
-          embedding_new: embedding,
+          ...(embedding ? { embedding_new: embedding } : {}),
         })
         .eq("id", existing.job_id);
 
@@ -282,11 +253,19 @@ export async function upsertJobPosting(
         .eq("id", posting.id);
     }
 
+    // Couldn't embed inline: the scheduled worker re-embeds both rows instead.
+    if (existing && !embedding) {
+      await queueJobEmbeddings(service, [
+        { id: posting.id, table: "job_postings" },
+        ...(existing.job_id ? [{ id: existing.job_id, table: "all_jobs" as const }] : []),
+      ]);
+    }
+
     // CP-CON-001: the careers page lists the company's active jobs.
     revalidateTag(careersCompanyTag(company.id));
 
     if (posting.status === "active") {
-      await triggerJobPostingRelevanceUpdate(posting.id);
+      await queueJobPostingRelevance({ supabase, company, user }, posting.id);
     }
 
     return { success: true, isUpdate, postingId: posting.id };
@@ -299,5 +278,65 @@ export async function upsertJobPosting(
           ? error.message
           : "Unknown error occurred while processing job post.",
     };
+  }
+}
+
+/** The pgmq queue `/api/update-embedding/gemini/job` drains every 5 minutes. */
+const JOB_EMBEDDINGS_QUEUE = "job_embeddings_queue";
+
+/**
+ * Queues each row for a new embedding. A failure is reported, not thrown: the
+ * edit is already saved, and the old embedding still matches it roughly.
+ */
+async function queueJobEmbeddings(
+  service: SupabaseClient<Database>,
+  rows: { id: string; table: "job_postings" | "all_jobs" }[],
+) {
+  for (const row of rows) {
+    const { error } = await service.schema("pgmq_public").rpc("send", {
+      queue_name: JOB_EMBEDDINGS_QUEUE,
+      message: row,
+      sleep_seconds: 0,
+    });
+    if (error) reportError(`[job posting] couldn't queue the ${row.table} embedding for ${row.id}`, error);
+  }
+}
+
+/**
+ * Embeds an edited posting and saves it on the posting, returning the vector
+ * for its `all_jobs` row, or null if either step failed (reported, not thrown:
+ * the edit is already saved).
+ */
+async function embedEditedPosting(
+  service: SupabaseClient<Database>,
+  posting: {
+    id: string;
+    title: string;
+    description: string | null;
+    location: string[] | null;
+    job_type: string | null;
+    salary_range: string | null;
+  },
+): Promise<string | null> {
+  try {
+    const [embedding] = await embedJobs([
+      {
+        job_name: posting.title,
+        description: posting.description,
+        locations: posting.location,
+        job_type: posting.job_type,
+        salary_range: posting.salary_range,
+      },
+    ]);
+    const now = new Date().toISOString();
+    const { error } = await service
+      .from("job_postings")
+      .update({ embedding_new: embedding, embedding_updated_at: now })
+      .eq("id", posting.id);
+    if (error) throw new Error(error.message);
+    return embedding;
+  } catch (err) {
+    reportError(`[job posting] couldn't embed ${posting.id}`, err);
+    return null;
   }
 }

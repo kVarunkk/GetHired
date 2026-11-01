@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { startReviewAnalysis } from "@/helpers/resume-review/start-review-analysis";
+import { listResumeReviews } from "@/helpers/resume-review/list-resume-reviews";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -51,35 +52,23 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const searchParams = req.nextUrl.searchParams;
-    const limit = searchParams.get("limit") || "10";
+    const limit = req.nextUrl.searchParams.get("limit");
     const supabase = await createClient();
     const user = await getUserFromRequest();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const { data: reviews, error } = await supabase
-      .from("resume_reviews")
-      .select(
-        `id, name, status, score, created_at, updated_at, analysis_failed, resume_id, job_id`,
-      )
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(parseInt(limit));
 
-    if (error) {
-      return NextResponse.json(
-        { error: "Failed to fetch resume reviews." },
-        { status: 500 },
-      );
-    }
+    const reviews = await listResumeReviews(supabase, user, {
+      limit: limit ? parseInt(limit) : undefined,
+    });
 
     return NextResponse.json({ data: reviews });
   } catch (error) {
     reportError("[resume-review] couldn't list the reviews", error);
     return NextResponse.json(
       { error: "Error fetching your resume reviews." },
-      { status: 405 },
+      { status: 500 },
     );
   }
 }

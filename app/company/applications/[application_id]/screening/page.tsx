@@ -3,6 +3,7 @@ import Error from "@/components/Error";
 import SectionHeader from "@/components/SectionHeader";
 import ScreeningCard from "@/components/matching/ScreeningCard";
 import { loadApplicationFrame } from "@/helpers/applications/application-page";
+import { candidatePath } from "@/helpers/candidates/paths";
 import { SCREENING_VIEW_COLUMNS, toScreeningView } from "@/helpers/matching/screening-view";
 import type { Metadata } from "next";
 
@@ -16,7 +17,7 @@ export default async function ApplicationScreeningPage({ params }: { params: Pro
     const { application_id } = await params;
     const frame = await loadApplicationFrame(application_id);
     if (!frame?.jobId) notFound();
-    const { supabase, jobId } = frame;
+    const { supabase, jobId, application, mergedInto } = frame;
 
     // RLS: only the job's company members can read it (MT-SEC-004).
     const [{ data: screeningRow }, { data: job }] = await Promise.all([
@@ -32,6 +33,9 @@ export default async function ApplicationScreeningPage({ params }: { params: Pro
           jobPostId={jobId}
           questions={job?.questions ?? []}
           screening={screeningRow ? toScreeningView(screeningRow) : null}
+          // BIT-049: an imported candidate's resume is uploaded on their page.
+          resumeHref={application.company_candidate_id ? `${candidatePath(application.company_candidate_id)}/resume` : null}
+          readOnly={!!mergedInto}
         />
       </div>
     );

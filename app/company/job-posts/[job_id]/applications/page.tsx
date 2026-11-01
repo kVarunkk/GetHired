@@ -17,8 +17,12 @@ import { DEFAULT_DURATION_MINUTES } from "@/helpers/interview/screening/schemas"
 import { getInterviewSummaries } from "@/helpers/interview/screening/summaries";
 import { loadBoard } from "@/helpers/pipeline/board";
 import { getJobFunnel } from "@/helpers/pipeline/funnel";
+import { COMPANY_CANDIDATE_PERSON_COLUMNS } from "@/helpers/applications/application-person";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 import { createClient } from "@/lib/supabase/server";
+import { jobImportPath } from "@/helpers/candidates/paths";
+import { FileUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { PipelineBoardData } from "@/utils/types/pipeline.types";
 import { cn } from "@/utils/utils";
 import type { Metadata } from "next";
@@ -60,11 +64,13 @@ export default async function JobApplicationsPage({
           company_id,
           questions,
           application_form,
-          applications(*, user_info(${RECRUITER_CANDIDATE_COLUMNS}), job_postings(*), application_screenings(status, fit_score, recommendation), application_knockouts(failed, reasons, action_taken))
+          applications(*, user_info(${RECRUITER_CANDIDATE_COLUMNS}), ${COMPANY_CANDIDATE_PERSON_COLUMNS}, job_postings(*), application_screenings(status, fit_score, recommendation), application_knockouts(failed, reasons, action_taken))
         ` as const,
       )
       .eq("id", job_id)
       .eq("company_id", company.id)
+      // BI-REQ-042: a merged import shows through the application it joined.
+      .is("applications.merged_into_application_id", null)
       .maybeSingle();
     if (error) throw error;
     if (!job) notFound();
@@ -126,21 +132,32 @@ export default async function JobApplicationsPage({
           title={`Applications (${applications.length})`}
           description="Everyone who applied to this job, by stage."
           actions={
-            <nav aria-label="Applications view" className="flex rounded-md border p-0.5 text-sm">
-              {(["list", "board"] as const).map((option) => (
-                <Link
-                  key={option}
-                  href={`?view=${option}`}
-                  aria-current={view === option ? "page" : undefined}
-                  className={cn(
-                    "rounded px-3 py-1 capitalize text-muted-foreground",
-                    view === option && "bg-muted font-medium text-foreground",
-                  )}
-                >
-                  {option}
-                </Link>
-              ))}
-            </nav>
+            <>
+              {/* CP-REQ-022: people who applied outside GetHired, by any method. */}
+              {can(company, "applicants.import", job_id) && (
+                <Button asChild variant="outline">
+                  <Link href={jobImportPath(job_id)}>
+                    <FileUp className="mr-2 h-4 w-4" />
+                    Import candidates
+                  </Link>
+                </Button>
+              )}
+              <nav aria-label="Applications view" className="flex rounded-md border p-0.5 text-sm">
+                {(["list", "board"] as const).map((option) => (
+                  <Link
+                    key={option}
+                    href={`?view=${option}`}
+                    aria-current={view === option ? "page" : undefined}
+                    className={cn(
+                      "rounded px-3 py-1 capitalize text-muted-foreground",
+                      view === option && "bg-muted font-medium text-foreground",
+                    )}
+                  >
+                    {option}
+                  </Link>
+                ))}
+              </nav>
+            </>
           }
         />
 

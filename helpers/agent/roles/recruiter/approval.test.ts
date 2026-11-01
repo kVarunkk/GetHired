@@ -65,6 +65,13 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
         // SIT-071: screening interview setup and invites.
         "configureScreeningInterview",
         "inviteToInterview",
+        // CP-REQ-063: the company's own candidates into a job.
+        "addCandidatesToJob",
+        // BI-REQ-060: imports record the lawful-basis attestation; deletes can't be undone.
+        "confirmImport",
+        "addCandidate",
+        "deleteMyCandidates",
+        "removeImportRows",
       ].sort(),
     );
   });
@@ -82,6 +89,11 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
     "getHiringFunnel",
     "listOutreach",
     "getOutreach",
+    "findPoolCandidates",
+    "getImport",
+    "listImports",
+    "listMyCandidates",
+    "getMyCandidate",
   ])("gates memory and note writes after %s in the same turn (RA-SEC-003)", (reader) => {
     for (const write of ["saveMemory", "deleteMemory", "addNote", "updateNote"]) {
       expect(typeOf(decide(write, [user("x"), ...ran(reader, "c1")])), write).toBe("user-approval");
@@ -92,6 +104,20 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
     expect(decide("saveMemory", [user("x"), ...ran("listMyJobs", "c1")])).toBe("not-applicable");
     expect(decide("addNote", [user("x"), ...ran("listStages", "c1")])).toBe("not-applicable");
     expect(decide("addToTalentList", [user("x"), ...ran("getApplication", "c1")])).toBe("not-applicable");
+  });
+
+  // BI-REQ-060: a resume or sheet could ask the agent to change itself, or a candidate.
+  it("gates import row and candidate edits after the turn read an import or a candidate", () => {
+    for (const write of ["updateImportRows", "updateMyCandidate"]) {
+      expect(typeOf(decide(write, [user("x"), ...ran("getImport", "c1")])), write).toBe("user-approval");
+      expect(typeOf(decide(write, [user("x"), ...ran("getMyCandidate", "c1")])), write).toBe("user-approval");
+      expect(decide(write, [user("x"), ...ran("listMyJobs", "c1")]), write).toBe("not-applicable");
+    }
+  });
+
+  it("counts a resume retry toward the credit cap (RA-SEC-007)", () => {
+    const messages = [user("x"), ...ran("screenApplicants", "c1"), ...ran("runMatchingForJob", "c2")];
+    expect(typeOf(decide("retryImportRows", messages))).toBe("denied");
   });
 
   it(`denies the email action after ${RA_MAX_EMAIL_ACTIONS_PER_TURN} in a turn (RA-SEC-006)`, () => {

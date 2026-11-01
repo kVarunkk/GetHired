@@ -1,4 +1,4 @@
-import { generateText, Output, type LanguageModel } from "ai";
+import { generateText, Output, type LanguageModel, type TelemetryOptions } from "ai";
 import { google } from "@ai-sdk/google";
 import type { TResumeRowContent } from "@/utils/types";
 import { buildMatchInput } from "./build-input";
@@ -43,7 +43,8 @@ export async function explainMatch(
     model,
     abortSignal,
     timeoutMs,
-  }: { model?: LanguageModel; abortSignal?: AbortSignal; timeoutMs?: number } = {},
+    telemetry,
+  }: { model?: LanguageModel; abortSignal?: AbortSignal; timeoutMs?: number; telemetry?: TelemetryOptions } = {},
 ): Promise<ExplainMatchResult> {
   const signals = [abortSignal, timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined].filter(
     (s): s is AbortSignal => !!s,
@@ -58,6 +59,7 @@ export async function explainMatch(
       output: Output.object({ schema: MatchExplanationSchema }),
       abortSignal: signal,
       maxRetries: 1,
+      ...(telemetry ? { telemetry } : {}),
     });
 
     return { ok: true, explanation: normaliseExplanation(output) };

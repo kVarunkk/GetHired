@@ -7,6 +7,7 @@ import InterviewCompletedCompanyEmail from "@/emails/InterviewCompletedCompanyEm
 import { sendEmail } from "@/utils/email";
 import { deploymentUrl } from "@/utils/formatters";
 import type { Database } from "@/utils/types/database.types";
+import { interviewPeople } from "./people";
 import type { ConfigSnapshot } from "./schemas";
 
 export const companyApplicantUrl = (applicationId: string) =>
@@ -71,16 +72,14 @@ export async function notifyCompanyOfCandidateResponse(
   try {
     const { data: interview } = await admin
       .from("application_interviews")
-      .select("id, company_id, job_post_id, application_id, applicant_user_id, accommodation_request, config_snapshot")
+      .select(
+        "id, company_id, job_post_id, application_id, applicant_user_id, company_candidate_id, accommodation_request, config_snapshot",
+      )
       .eq("id", applicationInterviewId)
       .maybeSingle();
     if (!interview) return;
-    const { data: person } = await admin
-      .from("user_info")
-      .select("full_name")
-      .eq("user_id", interview.applicant_user_id)
-      .maybeSingle();
-    const candidateName = person?.full_name?.trim() || "A candidate";
+    const person = (await interviewPeople(admin, [interview]))(interview);
+    const candidateName = person?.fullName?.trim() || "A candidate";
     const jobTitle = (interview.config_snapshot as ConfigSnapshot).job_title;
     const applicantUrl = companyApplicantUrl(interview.application_id);
 
@@ -141,17 +140,13 @@ export async function notifyCompanyOfCompletedInterview(
   try {
     const { data: interview, error } = await admin
       .from("application_interviews")
-      .select("id, company_id, job_post_id, application_id, applicant_user_id, config_snapshot")
+      .select("id, company_id, job_post_id, application_id, applicant_user_id, company_candidate_id, config_snapshot")
       .eq("id", applicationInterviewId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!interview) return;
-    const { data: person } = await admin
-      .from("user_info")
-      .select("full_name")
-      .eq("user_id", interview.applicant_user_id)
-      .maybeSingle();
-    const candidateName = person?.full_name?.trim() || "A candidate";
+    const person = (await interviewPeople(admin, [interview]))(interview);
+    const candidateName = person?.fullName?.trim() || "A candidate";
     const jobTitle = (interview.config_snapshot as ConfigSnapshot).job_title;
 
     const recipients = await interviewRecipientEmails(admin, interview.company_id, interview.job_post_id);

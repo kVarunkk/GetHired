@@ -45,6 +45,18 @@ describe("AddToListMenu (PLT-090)", () => {
     expect(screen.getByRole("button", { name: /Design/ })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("works on one of the company's own candidates (BI-REQ-006)", async () => {
+    const id = "cc000000-0000-4000-8000-000000000001";
+    render(<AddToListMenu companyCandidateId={id} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add to list" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Backend/ }));
+
+    expect(listTalentListsAction).toHaveBeenCalledWith({ companyCandidateId: id });
+    await waitFor(() =>
+      expect(saveTalentListAction).toHaveBeenCalledWith({ op: "add", listId: BACKEND.id, companyCandidateId: id }),
+    );
+  });
+
   it("adds to a list and removes from one", async () => {
     await open();
 

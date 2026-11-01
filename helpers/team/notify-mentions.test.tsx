@@ -78,6 +78,25 @@ describe("sendNoteMentionEmails (TMT-071)", () => {
     expect(service.callsFor("applications")).toHaveLength(0);
   });
 
+  it("names an imported candidate from the application (BI-REQ-030)", async () => {
+    service.queueRpc("claim_note_mention_emails", { data: [PRIYA], error: null });
+    service.queue("applications", {
+      data: { job_postings: { title: "Backend Engineer" }, company_candidates: { full_name: "Meera Iyer" } },
+      error: null,
+    });
+
+    await sendNoteMentionEmails({
+      note: { ...NOTE, candidate_user_id: null },
+      authorName: "Asha Rao",
+      userIds: [PRIYA],
+    });
+
+    const mail = vi.mocked(sendEmail).mock.calls[0][0];
+    expect(mail.subject).toBe("Asha Rao mentioned you in a note on Meera");
+    expect(mail.htmlContent).toContain(`/company/applications/${APP_ID}`);
+    expect(service.callsFor("user_info")).toHaveLength(0);
+  });
+
   it("sends nothing when nobody is claimed, and doesn't call the RPC for no mentions", async () => {
     service.queueRpc("claim_note_mention_emails", { data: [], error: null });
     await sendNoteMentionEmails({ note: NOTE, authorName: "Asha Rao", userIds: [SAM] });

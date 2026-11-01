@@ -44,6 +44,7 @@ const moved = {
       fromStageId: stageOf("applied").id,
       fromKind: "applied" as const,
       email: "ada@example.com",
+      optedOut: false,
       fullName: "Ada Lovelace",
       jobTitle: PIPELINE_JOB.title,
       companyName: COMPANY_A.info.name,

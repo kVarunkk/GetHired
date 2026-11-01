@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ChevronDown, Info, Loader2 } from "lucide-react";
@@ -15,7 +16,7 @@ import {
   SCREENING_POLL_MS,
 } from "@/helpers/matching/config";
 import type { ScreeningResult } from "@/helpers/matching/schemas";
-import { isScreeningInProgress, type ScreeningView } from "@/helpers/matching/screening-view";
+import { isScreeningInProgress, NOT_SCORED_LABEL, type ScreeningView } from "@/helpers/matching/screening-view";
 import { cn } from "@/utils/utils";
 
 const FOOTNOTE =
@@ -158,12 +159,18 @@ export default function ScreeningCard({
   jobPostId,
   questions,
   screening: initial,
+  resumeHref = null,
+  readOnly = false,
   className,
 }: {
   applicationId: string;
   jobPostId: string;
   questions: string[];
   screening: ScreeningView | null;
+  /** An imported candidate's resume page, where a resume can be uploaded (BIT-049). */
+  resumeHref?: string | null;
+  /** An imported application merged into another (BI-REQ-042): the result only, no actions. */
+  readOnly?: boolean;
   className?: string;
 }) {
   const [screening, setScreening] = useState(initial);
@@ -227,19 +234,20 @@ export default function ScreeningCard({
     }
   };
 
-  const action = (label: string) => (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={requeue}
-      disabled={requeueing}
-      className="self-start"
-    >
-      {requeueing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      {label}
-    </Button>
-  );
+  const action = (label: string) =>
+    !readOnly && (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={requeue}
+        disabled={requeueing}
+        className="self-start"
+      >
+        {requeueing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {label}
+      </Button>
+    );
 
   const showResult = (status === "completed" || status === "stale") && screening?.result;
 
@@ -294,6 +302,23 @@ export default function ScreeningCard({
             Your plan&apos;s screenings ran out before this application was screened.
           </p>
           {action("Upgrade to screen")}
+        </>
+      )}
+
+      {status === "insufficient_info" && (
+        <>
+          <p className="text-sm font-medium">{NOT_SCORED_LABEL}</p>
+          <p className="text-sm text-muted-foreground">
+            Add a resume, or their current title, company, experience or skills, to score them against this job.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {resumeHref && !readOnly && (
+              <Button asChild variant="outline" size="sm">
+                <Link href={resumeHref}>Upload a resume</Link>
+              </Button>
+            )}
+            {action("Screen again")}
+          </div>
         </>
       )}
 

@@ -11,14 +11,20 @@ import { notFound, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 import AskAgentAboutJobPost from "@/components/agent/recruiter/AskAgentAboutJobPost";
+import PoolMatchesNotice from "@/components/candidates/PoolMatchesNotice";
+import { loadPoolMatchesCard, poolNoticeCount } from "@/helpers/candidates/pool-matches-card";
+import { JOB_CREATED_PARAM } from "@/helpers/jobs/paths";
 
 export default async function JobPostPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ job_id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   try {
     const { job_id } = await params;
+    const created = (await searchParams)?.[JOB_CREATED_PARAM] === "1";
     if (!isUuid(job_id)) notFound();
     const supabase = await createClient();
     const {
@@ -43,14 +49,21 @@ export default async function JobPostPage({
     // itself is public, so RLS can't hide it). The layout checks it too.
     const company = user ? await getMyCompany(supabase, user) : null;
     if (!company || job.company_id !== company.id || !can(company, "jobs.view", job.id)) notFound();
+    // CP-REQ-061: right after the job is made, how many of the company's own
+    // candidates may fit. The matches themselves have their own section.
+    const noticeCount = created
+      ? poolNoticeCount(await loadPoolMatchesCard(supabase, company, job.id), created)
+      : null;
 
     // The layout shows the header and the job's controls.
     return (
       <div className="mb-20 flex flex-col gap-6">
+        {noticeCount !== null && <PoolMatchesNotice jobId={job.id} count={noticeCount} />}
         {can(company, "agent.use") && (
           <AskAgentAboutJobPost
             job={{ id: job.id, title: job.title }}
             canMatch={can(company, "matching.run", job.id)}
+            canFindPoolCandidates={can(company, "talent.view")}
             canViewApplicants={can(company, "applicants.view", job.id)}
             canViewInterviews={can(company, "interviews.view", job.id)}
             canManageInterviews={can(company, "interviews.manage", job.id) && can(company, "jobs.edit", job.id)}

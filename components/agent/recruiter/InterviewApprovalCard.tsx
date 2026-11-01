@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  previewAgentInterviewInviteAction,
-  type PreviewAgentInterviewInviteResult,
-} from "@/app/actions/interviews/preview-agent-interview-invite";
+import { previewAgentInterviewInviteAction } from "@/app/actions/interviews/preview-agent-interview-invite";
+import type { PreviewAgentInterviewInviteResult } from "@/helpers/interview/screening/preview-agent-interview-invite";
 
 type ConfigInput = {
   enabled?: boolean;

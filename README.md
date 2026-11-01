@@ -34,7 +34,7 @@ The [application flow docs](docs/app-flows/README.md) map every end-to-end flow 
 | **Doc**                                                   | **What it covers**                                                                                                  |
 | :-------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------ |
 | [System overview](docs/app-flows/README.md)               | The whole system on one diagram, plus an index of every flow.                                                       |
-| [Platform](docs/app-flows/01-platform.md)                 | Auth and routing, sign-up, how writes are secured, job ingestion and embeddings, API keys / MCP, extension, public pages. |
+| [Platform](docs/app-flows/01-platform.md)                 | Auth and routing, sign-up, how writes are secured, job ingestion and embeddings, MCP / OAuth, extension, public pages. |
 | [Job seekers](docs/app-flows/02-applicant.md)             | Onboarding, job search, applying, resumes and reviews, practice and screening interviews, credits, the AI agent.     |
 | [Companies](docs/app-flows/03-company.md)                 | Onboarding, team and roles, job posts, AI screening, pipeline, candidate search, outreach, billing, careers page, recruiter agent. |
 | [Background jobs](docs/app-flows/04-background-jobs.md)   | Every queue and cron: what fills it, what processes it, and what it does.                                           |

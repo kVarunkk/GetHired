@@ -6,9 +6,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
-import { POST } from "./route";
+import { GET, POST } from "./route";
 import { buildRequest } from "@/test/utils/request";
-import { mockUser } from "@/test/utils/auth";
+import { mockUser, setRequestUser } from "@/test/utils/auth";
 import { flushAfter } from "@/test/utils/after";
 import { mockGenerateModel } from "@/test/utils/ai";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
@@ -209,7 +209,7 @@ describe("POST /api/resume-review: analysis", () => {
     await post();
     await flushAfter();
 
-    expect(updateReviewAnalysisStatus).toHaveBeenCalledWith(true, "rev1", "failed");
+    expect(updateReviewAnalysisStatus).toHaveBeenCalledWith(supabase.client, true, "rev1", "failed");
     expect(sendResumeReviewStatusEmail).toHaveBeenCalledWith(
       "ada@example.com",
       "failure",
@@ -218,5 +218,65 @@ describe("POST /api/resume-review: analysis", () => {
       "u1",
     );
     expect(deductUserCreditsHelper).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/resume-review", () => {
+  const REVIEWS = [{ id: "rev1", name: "Stripe review", status: "completed", score: 64 }];
+  const list = (searchParams: Record<string, string> = {}) =>
+    GET(buildRequest("/api/resume-review", { searchParams }));
+
+  beforeEach(async () => {
+    await setRequestUser(mockUser({ id: "u1" }), supabase.client);
+  });
+
+  it("returns 401 without a user", async () => {
+    await setRequestUser(null, supabase.client);
+
+    const res = await list();
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "Unauthorized" });
+  });
+
+  it("lists the user's reviews, newest first, 10 by default", async () => {
+    supabase.queue("resume_reviews", { data: REVIEWS, error: null });
+
+    const res = await list();
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ data: REVIEWS });
+    expect(supabase.callsFor("resume_reviews")[0].chain).toEqual([
+      {
+        method: "select",
+        args: ["id, name, status, score, created_at, updated_at, analysis_failed, resume_id, job_id"],
+      },
+      { method: "eq", args: ["user_id", "u1"] },
+      { method: "order", args: ["created_at", { ascending: false }] },
+      { method: "limit", args: [10] },
+    ]);
+  });
+
+  it.each([
+    ["5", 5],
+    ["500", 50],
+    ["0", 1],
+    ["abc", 10],
+  ])("clamps limit=%s to %i", async (limit, expected) => {
+    await list({ limit });
+
+    expect(supabase.callsFor("resume_reviews")[0].chain).toContainEqual({
+      method: "limit",
+      args: [expected],
+    });
+  });
+
+  it("returns 500 on a database error", async () => {
+    supabase.queue("resume_reviews", { data: null, error: new Error("boom") });
+
+    const res = await list();
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Error fetching your resume reviews." });
   });
 });

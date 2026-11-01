@@ -93,6 +93,19 @@ describe("similarCandidatesPrompt", () => {
   });
 });
 
+describe("AskAgentAboutJobPost: your candidates chip (CPT-058, CP-REQ-063)", () => {
+  const NO = { canMatch: false, canViewApplicants: false };
+
+  it("asks about the company's own candidates with talent.view (findPoolCandidates)", () => {
+    const chips = jobPostSuggestions(JOB, { ...NO, canFindPoolCandidates: true });
+    expect(chips.map((s) => s.label)).toEqual(["Who in our candidates fits?", "Improve the post"]);
+    expect(chips[0].prompt).toBe(
+      `Who in our candidates fits "Founding Backend Engineer" (job post ${JOB.id})? List the closest ones; don't add anyone yet.`,
+    );
+    expect(jobPostSuggestions(JOB, NO).map((s) => s.label)).toEqual(["Improve the post"]);
+  });
+});
+
 describe("AskAgentAboutJobPost: AI interview chips (SIT-072)", () => {
   const NO = { canMatch: false, canViewApplicants: false };
 

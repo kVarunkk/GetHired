@@ -1,5 +1,6 @@
 import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { TelemetryOptions } from "ai";
 import type { Database } from "@/utils/types/database.types";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
 import { consumeEntitlement } from "@/helpers/billing/entitlements";
@@ -27,7 +28,7 @@ export type ExplainCandidateMatchResult =
 export async function explainCandidateMatch(
   { supabase, company, user }: { supabase: SupabaseClient<Database>; company: MyCompany; user: User },
   { jobPostId, candidateId }: { jobPostId: string; candidateId: string },
-  { abortSignal }: { abortSignal?: AbortSignal } = {},
+  { abortSignal, telemetry }: { abortSignal?: AbortSignal; telemetry?: TelemetryOptions } = {},
 ): Promise<ExplainCandidateMatchResult> {
   const { data: job } = await supabase
     .from("job_postings")
@@ -66,7 +67,7 @@ export async function explainCandidateMatch(
 
   const result = await explainMatch(
     { job, profile: candidate.profile, resume: candidate.resume },
-    { abortSignal, timeoutMs: MATCH_EXPLAIN_TIMEOUT_MS },
+    { abortSignal, timeoutMs: MATCH_EXPLAIN_TIMEOUT_MS, telemetry },
   );
 
   if (!result.ok) {

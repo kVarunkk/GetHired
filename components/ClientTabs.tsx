@@ -11,6 +11,9 @@ import { Loader2 } from "lucide-react";
 import { activeTabFrom, type TalentListTab } from "@/utils/talent-list-tabs";
 import ScrollMaskX from "./ScrollMaskX";
 
+/** A list tab's candidates table's URL state (`candidateFiltersFrom`). */
+const CANDIDATE_TABLE_PARAMS = ["q", "tag", "batch", "inJob", "loc", "resume", "email", "added", "matchJob", "page"];
+
 export function ClientTabs({
   user,
   isCompanyUser,
@@ -53,7 +56,11 @@ export function ClientTabs({
       }
       // Each profiles tab (All, Saved, a list) is its own result set: start
       // from its first page.
-      if (page === "profiles") newSearchParams.delete("cursor");
+      // The candidates table's filters and page belong to the tab they were
+      // set on.
+      if (page === "profiles") {
+        for (const key of ["cursor", ...CANDIDATE_TABLE_PARAMS]) newSearchParams.delete(key);
+      }
       router.push(
         `/${
           page === "jobs"

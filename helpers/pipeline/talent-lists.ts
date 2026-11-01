@@ -168,13 +168,62 @@ export async function addToTalentList(
   }
   if (!listed.filled) return { ok: false, error: PRIVATE_CANDIDATE_ERROR };
 
+  return insertMember(ctx, { list_id: listId, candidate_user_id: candidateUserId });
+}
+
+/**
+ * Adds a member. The unique keys are partial indexes (BI-DEC-003), which
+ * PostgREST's upsert can't target, so a duplicate shows up as the insert's
+ * unique_violation and reads as "already there".
+ */
+async function insertMember(
+  ctx: Ctx,
+  row: { list_id: string; candidate_user_id?: string; company_candidate_id?: string },
+): Promise<Result> {
+  const { error } = await ctx.supabase.from("talent_list_members").insert(row);
+  if (error && error.code !== UNIQUE_VIOLATION) return { ok: false, error: "Couldn't add the candidate." };
+  return { ok: true };
+}
+
+/**
+ * Adds one of the company's own candidates (BI-REQ-006). Another company's
+ * candidate is "not found" (RLS checks it again on insert).
+ */
+export async function addCompanyCandidateToTalentList(
+  ctx: Ctx,
+  listId: string,
+  companyCandidateId: string,
+): Promise<Result> {
+  if (!isUuid(listId)) return NOT_FOUND;
+  if (!isUuid(companyCandidateId)) return { ok: false, error: "Candidate not found." };
+  if (!(await ownList(ctx, listId))) return NOT_FOUND;
+
+  const { data: candidate, error } = await ctx.supabase
+    .from("company_candidates")
+    .select("id")
+    .eq("id", companyCandidateId)
+    .eq("company_id", ctx.company.id)
+    .maybeSingle();
+  if (error) throw new Error(`Failed to check the candidate: ${error.message}`);
+  if (!candidate) return { ok: false, error: "Candidate not found." };
+
+  return insertMember(ctx, { list_id: listId, company_candidate_id: companyCandidateId });
+}
+
+export async function removeCompanyCandidateFromTalentList(
+  ctx: Ctx,
+  listId: string,
+  companyCandidateId: string,
+): Promise<Result> {
+  if (!isUuid(listId) || !isUuid(companyCandidateId)) return NOT_FOUND;
+  if (!(await ownList(ctx, listId))) return NOT_FOUND;
+
   const { error } = await ctx.supabase
     .from("talent_list_members")
-    .upsert(
-      { list_id: listId, candidate_user_id: candidateUserId },
-      { onConflict: "list_id,candidate_user_id", ignoreDuplicates: true },
-    );
-  if (error) return { ok: false, error: "Couldn't add the candidate." };
+    .delete()
+    .eq("list_id", listId)
+    .eq("company_candidate_id", companyCandidateId);
+  if (error) return { ok: false, error: "Couldn't remove the candidate." };
   return { ok: true };
 }
 
@@ -196,24 +245,27 @@ export async function removeFromTalentList(
 }
 
 /**
- * The company's lists, oldest first, with whether `candidateUserId` is in
- * each. `memberCount` counts only members the list's tab shows: public,
- * filled profiles (a member may have gone private since).
+ * The company's lists, oldest first, with whether `candidateUserId` (or the
+ * company candidate `companyCandidateId`) is in each. `memberCount` counts
+ * only members the list's tab shows: public, filled profiles (a member may
+ * have gone private since), and every company candidate (BI-REQ-006).
  */
 export async function listTalentLists(
   { supabase, company }: Ctx,
-  { candidateUserId }: { candidateUserId?: string } = {},
+  { candidateUserId, companyCandidateId }: { candidateUserId?: string; companyCandidateId?: string } = {},
 ): Promise<TalentListSummary[]> {
   const { data, error } = await supabase
     .from("talent_lists")
-    .select("id, name, slug, talent_list_members(candidate_user_id)")
+    .select("id, name, slug, talent_list_members(candidate_user_id, company_candidate_id)")
     .eq("company_id", company.id)
     .order("created_at", { ascending: true });
   if (error) throw new Error(`Failed to load the lists: ${error.message}`);
 
   // Who the tabs show: filled profiles in the directory (OR-SEC-001).
   const memberIds = [
-    ...new Set((data ?? []).flatMap((l) => l.talent_list_members.map((m) => m.candidate_user_id))),
+    ...new Set(
+      (data ?? []).flatMap((l) => l.talent_list_members.flatMap((m) => (m.candidate_user_id ? [m.candidate_user_id] : []))),
+    ),
   ];
   const shown = new Set<string>();
   if (memberIds.length > 0) {
@@ -230,12 +282,14 @@ export async function listTalentLists(
     id: list.id,
     name: list.name,
     slug: list.slug,
-    memberCount: list.talent_list_members.filter((m) => shown.has(m.candidate_user_id)).length,
-    hasCandidate:
-      !!candidateUserId &&
-      list.talent_list_members.some(
-        (m) => m.candidate_user_id === candidateUserId,
-      ),
+    memberCount: list.talent_list_members.filter(
+      (m) => m.company_candidate_id || (m.candidate_user_id && shown.has(m.candidate_user_id)),
+    ).length,
+    hasCandidate: list.talent_list_members.some(
+      (m) =>
+        (!!candidateUserId && m.candidate_user_id === candidateUserId) ||
+        (!!companyCandidateId && m.company_candidate_id === companyCandidateId),
+    ),
   }));
 }
 

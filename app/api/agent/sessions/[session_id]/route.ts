@@ -18,7 +18,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
   if (!isUuid(sessionId)) return notFound();
 
   try {
-    const loaded = await loadSession(supabase, user.id, sessionId, { role });
+    const loaded = await loadSession(supabase, user.id, sessionId, { role, withFeedback: true });
     if (!loaded) return notFound();
     return NextResponse.json(loaded);
   } catch (error) {

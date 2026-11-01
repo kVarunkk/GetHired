@@ -38,7 +38,7 @@ describe("/api/company/outreach (ORT-030)", () => {
     expect((await GET(buildRequest("/api/company/outreach"))).status).toBe(401);
   });
 
-  it("403 for an applicant, or a company user without a company (also via a gh_ token)", async () => {
+  it("403 for an applicant, or a company user without a company", async () => {
     await signIn(mockUser({ type: "applicant" }));
     expect((await post(OUTREACH_INPUT)).status).toBe(403);
     await signIn(mockUser({ type: "company" }), null);

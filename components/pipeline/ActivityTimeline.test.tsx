@@ -101,3 +101,21 @@ describe("ActivityTimeline (PLT-054)", () => {
     expect(applied.textContent).toBe(applied.querySelector("p")!.textContent + applied.querySelector("time")!.textContent);
   });
 });
+
+describe("ActivityTimeline for imports (BI-REQ-030)", () => {
+  it("describes import, claim and merge events", () => {
+    render(
+      <ActivityTimeline
+        stages={STAGES}
+        events={[
+          eventOf("imported", { created_at: minutesAgo(30), actor_name: "Asha", payload: {} }),
+          eventOf("claimed", { created_at: minutesAgo(20), actor_name: null, actor_user_id: null, payload: {} }),
+          eventOf("merged", { created_at: minutesAgo(10), actor_name: null, actor_user_id: null, payload: {} }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("Imported by Asha")).toBeInTheDocument();
+    expect(screen.getByText("Joined GetHired with this email")).toBeInTheDocument();
+    expect(screen.getByText("Merged with their own application")).toBeInTheDocument();
+  });
+});

@@ -135,12 +135,18 @@ describe("GET /api/agent/sessions/[session_id]", () => {
       error: null,
     });
 
+    supabase.queue("agent_feedback", {
+      data: [{ message_id: "m2", kind: "reply", rating: 1, dismissed: false }],
+      error: null,
+    });
+
     const res = await GET_ONE(buildRequest("/x"), params());
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       session: SESSION,
       messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] }],
+      feedback: { m2: { reply: 1 } },
     });
     expect(supabase.callsFor("agent_sessions")[0].chain).toContainEqual({
       method: "eq",

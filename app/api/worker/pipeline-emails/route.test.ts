@@ -13,6 +13,9 @@ vi.mock("@/helpers/email/send-company-message", () => ({ sendCompanyMessage: vi.
 vi.mock("@/utils/email", () => ({ sendEmailForStatusUpdate: vi.fn() }));
 vi.mock("@/utils/formatters", () => ({ INTERNAL_API_SECRET: "test-secret" }));
 vi.mock("server-only", () => ({}));
+vi.mock("@/helpers/candidates/unsubscribe-token", () => ({
+  unsubscribeUrl: (id: string) => `https://gethired.test/unsubscribe/candidate/${id}.sig`,
+}));
 
 const appId = (n: number) => `e0000000-0000-4000-8000-00000000000${n}`;
 const TEMPLATE_ID = "c0000000-0000-4000-8000-000000000001";
@@ -111,6 +114,46 @@ describe("GET /api/worker/pipeline-emails", () => {
     expect(sendCompanyMessage).not.toHaveBeenCalled();
     expect(db.callsFor("application_events")).toHaveLength(0);
     expect(archived().sort()).toEqual([1, 2, 3]);
+  });
+
+  const CANDIDATE = "cc000000-0000-4000-8000-000000000001";
+  const importedRow = (candidate: { email: string | null; email_opted_out_at: string | null }) => ({
+    id: appId(1),
+    user_info: null,
+    company_candidate_id: CANDIDATE,
+    company_candidates: candidate,
+    job_postings: { company_id: COMPANY_A.id },
+  });
+
+  it("sends an imported application's email to the candidate, with the unsubscribe link (BIT-061)", async () => {
+    db.queueRpc("read", { data: [{ ...message(7, 1), message: { ...payload(1), candidateUserId: null } }], error: null }, "pgmq_public");
+    db.queue("applications", { data: [importedRow({ email: "meera@mail.test", email_opted_out_at: null })], error: null });
+
+    expect(await (await run()).json()).toEqual({ sent: 1, dropped: 0, failed: 0 });
+    expect(sendCompanyMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toEmail: "meera@mail.test",
+        unsubscribeUrl: `https://gethired.test/unsubscribe/candidate/${CANDIDATE}.sig`,
+      }),
+    );
+    expect(insertedEvents()).toEqual([expect.objectContaining({ application_id: appId(1), candidate_user_id: null })]);
+    expect(archived()).toEqual([7]);
+  });
+
+  it("drops an imported application's email when the candidate unsubscribed or has no email since (BI-REQ-034)", async () => {
+    for (const candidate of [
+      { email: "meera@mail.test", email_opted_out_at: "2026-10-25T00:00:00Z" },
+      { email: null, email_opted_out_at: null },
+    ]) {
+      db = createSupabaseMock();
+      vi.mocked(createServiceRoleClient).mockReturnValue(db.client);
+      db.queueRpc("read", { data: [message(7, 1)], error: null }, "pgmq_public");
+      db.queue("applications", { data: [importedRow(candidate)], error: null });
+
+      expect(await (await run()).json()).toEqual({ sent: 0, dropped: 1, failed: 0 });
+      expect(archived()).toEqual([7]);
+    }
+    expect(sendCompanyMessage).not.toHaveBeenCalled();
   });
 
   it("leaves a failed send in the queue for a retry", async () => {

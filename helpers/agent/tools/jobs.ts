@@ -164,6 +164,17 @@ function reportEmptyLocationSearch(
   );
 }
 
+/** The user's saved or applied jobs, as the /jobs tabs show them. MCP's get_applied_jobs uses it too. */
+export async function listJobsInTab(
+  ctx: AgentToolContext,
+  tab: "saved" | "applied",
+  limit?: number,
+) {
+  return toJobList(
+    await searchJobs(ctx.supabase, ctx.user, { tab, limit: limitOrDefault(limit) }),
+  );
+}
+
 export function createJobTools(ctx: AgentToolContext) {
   const { supabase } = ctx;
 
@@ -181,7 +192,7 @@ export function createJobTools(ctx: AgentToolContext) {
       execute: ({ cursor, limit, ...filters }) =>
         withToolErrors(ctx, "searchJobs", async () => {
           const list = toJobList(
-            await searchJobs(supabase, {
+            await searchJobs(supabase, ctx.user, {
               ...filtersToParams(filters),
               ...(cursor ? { cursor } : {}),
               limit: limitOrDefault(limit),
@@ -220,7 +231,7 @@ export function createJobTools(ctx: AgentToolContext) {
           }
 
           const list = toJobList(
-            await searchJobs(supabase, {
+            await searchJobs(supabase, ctx.user, {
               ...parsedFiltersToParams(parsed.filters),
               limit: limitOrDefault(limit),
             }),
@@ -248,10 +259,41 @@ export function createJobTools(ctx: AgentToolContext) {
         withToolErrors(ctx, "findRelevantJobs", async () => {
           const { data: profile, error } = await supabase
             .from("user_info")
-            .select("embedding_new")
+            .select("embedding_new, filled, relevant_jobs_update_status")
             .eq("user_id", ctx.user.id)
             .maybeSingle();
           if (error) throw error;
+
+          if (profile?.filled) {
+            // The relevance search reads the stored feed (user_relevant_jobs),
+            // which the background pipeline builds (embedding match + rerank)
+            // after onboarding. Until it exists, say so rather than returning
+            // nothing or sending the user back to onboarding. A refresh keeps
+            // the old feed until the new one is written, so it isn't blocked.
+            const { count, error: feedError } = await supabase
+              .from("user_relevant_jobs")
+              .select("jobs_id", { count: "exact", head: true })
+              .eq("user_id", ctx.user.id);
+            if (feedError) throw feedError;
+
+            if (!count) {
+              const status = profile.relevant_jobs_update_status;
+              if (status === "pending" || status === "progress") {
+                return {
+                  error: "MATCHES_PROCESSING",
+                  message:
+                    "The user's personalised matches are still being generated after onboarding (usually a few minutes, and they get an email when it's ready). Offer a regular job search in the meantime.",
+                };
+              }
+              if (status === "failed") {
+                return {
+                  error: "MATCHES_FAILED",
+                  message:
+                    "Generating the user's personalised matches failed. Suggest refreshing them from /jobs?sortBy=relevance, and offer a regular job search meanwhile.",
+                };
+              }
+            }
+          }
 
           if (!profile?.embedding_new) {
             return {
@@ -262,7 +304,7 @@ export function createJobTools(ctx: AgentToolContext) {
           }
 
           const list = toJobList(
-            await searchJobs(supabase, {
+            await searchJobs(supabase, ctx.user, {
               ...filtersToParams(filters),
               sortBy: "relevance",
               limit: limitOrDefault(limit),
@@ -280,7 +322,7 @@ export function createJobTools(ctx: AgentToolContext) {
       execute: ({ jobId, limit }) =>
         withToolErrors(ctx, "findSimilarJobs", async () =>
           toJobList(
-            await searchJobs(supabase, {
+            await searchJobs(supabase, ctx.user, {
               sortBy: "relevance",
               jobId,
               limit: limitOrDefault(limit),
@@ -372,14 +414,7 @@ export function createJobTools(ctx: AgentToolContext) {
       description: "List the jobs the user has saved.",
       inputSchema: z.object({ limit: limitInput }),
       execute: ({ limit }) =>
-        withToolErrors(ctx, "listSavedJobs", async () =>
-          toJobList(
-            await searchJobs(supabase, {
-              tab: "saved",
-              limit: limitOrDefault(limit),
-            }),
-          ),
-        ),
+        withToolErrors(ctx, "listSavedJobs", () => listJobsInTab(ctx, "saved", limit)),
     }),
   };
 }

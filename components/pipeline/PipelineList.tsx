@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import ApplicantsTable, { type AnswerFilterQuestion } from "@/components/ApplicantsTable";
 import type { TApplicationServer } from "@/utils/types/application.types";
+import { applicationPersonOrNull } from "@/helpers/applications/application-person";
 import BulkActionBar from "./BulkActionBar";
 import type { TemplateOption } from "./MoveDialog";
 import type { StageOption } from "./StagePicker";
@@ -40,7 +41,7 @@ export default function PipelineList({
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
   const stageIds = new Map(data.map((a) => [a.id, a.stage_id]));
-  const names = new Map(data.map((a) => [a.id, a.user_info?.full_name || "Applicant"]));
+  const names = new Map(data.map((a) => [a.id, applicationPersonOrNull(a)?.name ?? "Applicant"]));
 
   return (
     <div className="space-y-4">

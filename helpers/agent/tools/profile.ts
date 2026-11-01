@@ -39,7 +39,7 @@ const preferencesInput = z
 
 type Preferences = z.infer<typeof preferencesInput>;
 
-const COLUMNS = {
+export const PREFERENCE_COLUMNS = {
   desiredRoles: "desired_roles",
   preferredLocations: "preferred_locations",
   minSalary: "min_salary",
@@ -75,7 +75,7 @@ export function createProfileTools(ctx: AgentToolContext) {
 
           const fields = Object.keys(preferences) as (keyof Preferences)[];
           const update = Object.fromEntries(
-            fields.map((field) => [COLUMNS[field], preferences[field]]),
+            fields.map((field) => [PREFERENCE_COLUMNS[field], preferences[field]]),
           ) as TablesUpdate<"user_info">;
 
           const { data, error } = await ctx.supabase

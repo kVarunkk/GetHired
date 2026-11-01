@@ -8,6 +8,7 @@ import {
   agentTelemetry,
   ARIZE_OTLP_URL,
   flushAgentTraces,
+  mcpToolTelemetry,
   resetAgentTelemetryForTests,
 } from "./telemetry";
 import { AGENT_TRACE_CONTENT } from "./config";
@@ -188,5 +189,51 @@ describe("tracing stays agent-only (REQ-027)", () => {
     }
 
     expect(offenders).toEqual([]);
+    // A synchronous walk of the whole source tree: slow on Windows under a full run.
+  }, 30_000);
+});
+
+describe("mcpToolTelemetry (RMCP spec §4.9)", () => {
+  const user = { id: "u1" };
+  const company = { id: "c1" };
+
+  it("traces a tool's model call over MCP as mcp.<tool>", () => {
+    configure();
+
+    expect(mcpToolTelemetry({ surface: "mcp", user, company }, "explain_match")).toMatchObject({
+      functionId: "mcp.explain_match",
+    });
+  });
+
+  it("records the user and company, and no session", async () => {
+    configure();
+
+    await generateText({
+      model: mockGenerateModel("ok"),
+      prompt: "x",
+      telemetry: mcpToolTelemetry({ surface: "mcp", user, company }, "explain_match"),
+    });
+    await flushAgentTraces();
+
+    expect(exporter.spans.length).toBeGreaterThan(0);
+    for (const span of exporter.spans) {
+      expect(span.attributes["session.id"]).toBeUndefined();
+      expect(span.attributes["user.id"]).toBe("u1");
+      expect(span.attributes["gethired.company_id"]).toBe("c1");
+    }
+  });
+
+  it("is off without Arize credentials", () => {
+    vi.stubEnv("ARIZE_SPACE_ID", "");
+    vi.stubEnv("ARIZE_API_KEY", "");
+
+    expect(mcpToolTelemetry({ surface: "mcp", user, company }, "explain_match")).toEqual({ isEnabled: false });
+  });
+
+  it("leaves the agent's tool calls untraced", () => {
+    configure();
+
+    expect(mcpToolTelemetry({ surface: "agent", user, company }, "explain_match")).toBeUndefined();
+    expect(exporter.configs).toHaveLength(0);
   });
 });

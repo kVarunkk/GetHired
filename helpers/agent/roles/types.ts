@@ -45,6 +45,12 @@ export type AgentRole = {
   createTools(ctx: AgentRoleToolContext): ToolSet;
   toolApproval: ToolApprovalFn;
   /**
+   * Tools that finish a task worth asking about: one that runs without an
+   * error lets the server add the survey card (AF-REQ-011). Not part of the
+   * prompt, the tools or the approvals.
+   */
+  feedbackMilestones?: readonly string[];
+  /**
    * Charges one user message before the model runs; throws EntitlementError
    * when the plan's allowance is used up. Roles without it don't charge.
    */

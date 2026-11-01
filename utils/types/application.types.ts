@@ -12,12 +12,20 @@ const applicantsServerQuery = supabase
         status,
         resume_url,
         answers_v2,
+        applicant_user_id,
+        company_candidate_id,
         job_postings(
           id,
           title
         ),
         user_info(
           full_name
+        ),
+        company_candidates(
+          id,
+          full_name,
+          email,
+          resume_path
         ),
         application_screenings(
           status,

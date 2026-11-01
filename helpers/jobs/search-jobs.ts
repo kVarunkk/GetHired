@@ -1,16 +1,12 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { buildQuery } from "@/helpers/jobs/filterQueryBuilder";
 import { rerankJobsIfApplicable } from "@/helpers/jobs/ai-rerank-jobs";
-import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { getCutOffDate } from "@/utils/date";
 import { AllJobWithRelations, TAICredits } from "@/utils/types";
 import { Database } from "@/utils/types/database.types";
 
 export type RelevanceSearchType =
-  | "standard"
-  | "job_digest"
-  | "job_digest_with_suggestions"
-  | "similar_jobs";
+  "standard" | "job_digest" | "job_digest_with_suggestions" | "similar_jobs";
 
 export type SearchJobsParams = {
   jobType: string | null;
@@ -36,7 +32,6 @@ export type SearchJobsParams = {
   limit: number;
   /** "digest" selects job_digest_with_suggestions for job digests. */
   digestType: string | null;
-  isInternalCall: boolean;
 };
 
 export type SearchJobsResult =
@@ -74,12 +69,10 @@ const DEFAULT_PARAMS: SearchJobsParams = {
   cursor: null,
   limit: 20,
   digestType: null,
-  isInternalCall: false,
 };
 
 export function parseJobSearchParams(
   searchParams: URLSearchParams,
-  { isInternalCall }: { isInternalCall: boolean },
 ): SearchJobsParams {
   const tab = searchParams.get("tab");
 
@@ -103,17 +96,19 @@ export function parseJobSearchParams(
     cursor: searchParams.get("cursor"),
     limit: parseInt(searchParams.get("limit") || String(DEFAULT_PARAMS.limit)),
     digestType: searchParams.get("type"),
-    isInternalCall,
   };
 }
 
 /**
  * Job listing, filtering and relevance search shared by GET /api/jobs and the
- * agent tools. Expected failures (auth, missing profile, credits) come back as
- * `{ ok: false }`; unexpected errors are thrown with `trace` showing where.
+ * agent tools. `user` is the caller's session or tool-context user (null when
+ * signed out); it's never read from the request here. Expected failures (auth,
+ * missing profile, credits) come back as `{ ok: false }`; unexpected errors
+ * are thrown with `trace` showing where.
  */
 export async function searchJobs(
   supabase: SupabaseClient<Database>,
+  user: { id: string } | null,
   input: Partial<SearchJobsParams>,
   trace: SearchJobsTrace = { stage: "initialize", distinctId: "unknown" },
 ): Promise<SearchJobsResult> {
@@ -138,7 +133,6 @@ export async function searchJobs(
       relevanceSearchType = jobId ? "similar_jobs" : "standard";
 
       trace.stage = "authenticate_request";
-      const user = await getUserFromRequest();
       userId = user?.id;
       if (!userId) {
         return { ok: false, status: 401, error: "User not found." };
@@ -195,32 +189,34 @@ export async function searchJobs(
   }
 
   trace.stage = "build_jobs_query";
-  const { data, error, nextCursor, count, matchedJobIds } = await buildQuery({
-    jobType: params.jobType,
-    location: params.location,
-    visaRequirement: params.visaRequirement,
-    minSalary: params.minSalary,
-    minExperience: params.minExperience,
-    maxExperience: params.maxExperience,
-    platform: params.platform,
-    companyName: params.companyName,
-    cursor: params.cursor,
-    limit: params.limit,
-    sortBy,
-    sortOrder: params.sortOrder,
-    jobTitleKeywords: params.jobTitleKeywords,
-    isFavoriteTabActive: params.tab === "saved",
-    isAppliedJobsTabActive: params.tab === "applied",
-    userEmbedding,
-    applicationStatus: params.applicationStatus,
-    createdAfter: params.createdAfterDays
-      ? getCutOffDate(Number(params.createdAfterDays))
-      : null,
-    isInternalCall: params.isInternalCall,
-    jobEmbedding,
-    relevanceSearchType,
-    userId: applicantUserId,
-  });
+  const { data, error, nextCursor, count, matchedJobIds } = await buildQuery(
+    supabase,
+    user,
+    {
+      jobType: params.jobType,
+      location: params.location,
+      visaRequirement: params.visaRequirement,
+      minSalary: params.minSalary,
+      minExperience: params.minExperience,
+      maxExperience: params.maxExperience,
+      platform: params.platform,
+      companyName: params.companyName,
+      cursor: params.cursor,
+      limit: params.limit,
+      sortBy,
+      sortOrder: params.sortOrder,
+      jobTitleKeywords: params.jobTitleKeywords,
+      isFavoriteTabActive: params.tab === "saved",
+      isAppliedJobsTabActive: params.tab === "applied",
+      userEmbedding,
+      applicationStatus: params.applicationStatus,
+      createdAfter: params.createdAfterDays
+        ? getCutOffDate(Number(params.createdAfterDays))
+        : null,
+      jobEmbedding,
+      relevanceSearchType,
+    },
+  );
 
   if (error) {
     throw error;
@@ -228,7 +224,7 @@ export async function searchJobs(
 
   // only used if relevanceSearchType is job_digest, similar_jobs or job_digest_with_suggestions.
   trace.stage = "rerank_jobs";
-  const { initialJobs, totalCount } = await rerankJobsIfApplicable({
+  const { initialJobs, totalCount } = await rerankJobsIfApplicable(supabase, {
     initialJobs: data,
     initialCount: count,
     userId,
@@ -237,7 +233,6 @@ export async function searchJobs(
     matchedJobIds,
     relevanceSearchType,
     cursor: params.cursor,
-    isInternalCall: params.isInternalCall,
   });
 
   return { ok: true, data: initialJobs, totalCount, nextCursor };

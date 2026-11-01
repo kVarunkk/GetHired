@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { setPrimaryResumeAction } from "@/app/actions/set-primary-resume";
-import { createResumeReviewAction } from "@/app/actions/create-resume-review";
+import { setPrimaryResume } from "@/helpers/resumes/set-primary-resume";
+import { createResumeReview } from "@/helpers/resume-review/create-resume-review";
 import { startReviewAnalysis } from "@/helpers/resume-review/start-review-analysis";
 import {
   rankResumesForJob,
@@ -137,7 +137,7 @@ export function createResumeTools(ctx: AgentToolContext) {
           if (error) throw error;
           if (!resume) return { error: "Resume not found." };
 
-          const result = await setPrimaryResumeAction(resumeId);
+          const result = await setPrimaryResume(supabase, ctx.user, resumeId);
           if (!result.success) return { error: result.error ?? "Could not update the resume." };
 
           return { resumeId, isPrimary: true };
@@ -195,13 +195,8 @@ export function createResumeTools(ctx: AgentToolContext) {
             return { error: "This resume is still being processed. Try again in a minute." };
           }
 
-          const formData = new FormData();
-          formData.set("existingResumeId", resumeId);
-          if (jobId) formData.set("jobId", jobId);
-          if (name) formData.set("name", name);
-
-          const created = await createResumeReviewAction(formData);
-          if (!("reviewId" in created) || !created.reviewId) {
+          const created = await createResumeReview(supabase, ctx.user, { resumeId, jobId, name });
+          if (!created.success) {
             const error = created.error ?? "Could not create the review.";
             return error.startsWith("Insufficient AI credits") ? INSUFFICIENT_CREDITS : { error };
           }
