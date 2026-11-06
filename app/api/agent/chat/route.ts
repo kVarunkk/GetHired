@@ -209,9 +209,21 @@ export async function POST(request: NextRequest) {
     );
 
     // Agent-only tracing to Arize AX; off when it isn't configured (spec §13).
-    const traceContext = company
-      ? { sessionId, userId: user.id, companyId: company.id }
-      : { sessionId, userId: user.id };
+    const traceContext = {
+      sessionId,
+      userId: user.id,
+      role: role.id,
+      // This turn's request, so a tool span can be judged in context.
+      ...(incoming?.role === "user"
+        ? {
+            userText: incoming.parts
+              .filter((part) => part.type === "text")
+              .map((part) => (typeof part.text === "string" ? part.text : ""))
+              .join("\n"),
+          }
+        : {}),
+      ...(company ? { companyId: company.id } : {}),
+    };
     const traceId = (name: string) => `${role.telemetryPrefix}-${name}`;
 
     /**
