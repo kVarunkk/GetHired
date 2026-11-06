@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/utils/date";
 import { ChevronRight } from "lucide-react";
 import DataTable, { SortableHeader, TextFilter } from "./DataTable";
-import DynamicActions from "./DynamicTableActions";
 import { Badge } from "./ui/badge";
 import ResumeSetPrimary from "./ResumeSetPrimary";
 import { Link as ModifiedLink } from "react-transition-progress/next";
@@ -14,29 +13,25 @@ import InfoTooltip from "./InfoTooltip";
 import { useRouter } from "next/navigation";
 import { TResumeReviewResume } from "@/utils/types/review.types";
 import ResumeStatusBadge from "./ResumeStatusBadge";
+import ResumeRowActions from "./resume/ResumeRowActions";
+
+export type TResumeTableRow = TResumeReviewResume & {
+  schema_version: number;
+  review_count: number;
+  /** False when the file couldn't be read and there's nothing to edit (RE-REQ-098). */
+  has_content: boolean;
+};
 
 interface ResumesTableProps {
-  data: TResumeReviewResume[];
+  data: TResumeTableRow[];
 }
 
 export default function ResumesTable({ data }: ResumesTableProps) {
-  const [items, setItems] = useState<TResumeReviewResume[]>(data);
+  const [items, setItems] = useState<TResumeTableRow[]>(data);
   const [isProcessing, setIsProcessing] = useState(false);
   const router = useRouter();
 
-  const updateLocalItem = (updatedItem: TResumeReviewResume) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
-    );
-    router.refresh();
-  };
-
-  const removeLocalItem = (id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-    router.refresh();
-  };
-
-  const columns: ColumnDef<TResumeReviewResume>[] = useMemo(
+  const columns: ColumnDef<TResumeTableRow>[] = useMemo(
     () => [
       {
         accessorKey: "is_primary",
@@ -90,8 +85,15 @@ export default function ResumesTable({ data }: ResumesTableProps) {
                 }
               />
             )}
-            {row.original.parsing_failed && (
+            {row.original.parsing_failed && row.original.has_content ? (
+              // A failed resume with content still works; the file is only gone.
+              <Badge variant="outline">Needs a new file</Badge>
+            ) : row.original.parsing_failed ? (
               <ResumeStatusBadge isParsed={false} isParsingFailed={true} />
+            ) : (
+              row.original.schema_version === 1 && (
+                <Badge variant="outline">Older format</Badge>
+              )
             )}
           </div>
         ),
@@ -113,26 +115,24 @@ export default function ResumesTable({ data }: ResumesTableProps) {
         id: "actions2",
         header: "",
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <DynamicActions
-              tableName="resumes"
-              entityName="Resume"
-              item={row.original}
-              fields={[
-                {
-                  name: "name",
-                  label: "Resume Display Name",
-                  required: true,
-                },
-              ]}
-              updateLocalItem={updateLocalItem}
-              removeLocalItem={removeLocalItem}
-            />
-          </div>
+          <ResumeRowActions
+            resume={{
+              id: row.original.id,
+              name: row.original.name,
+              reviewCount: row.original.review_count,
+              // RE-REQ-098: nothing to edit, copy or export without content.
+              isUnreadable: !row.original.has_content,
+            }}
+            canDelete={items.length > 1}
+            onDeleted={(id) => {
+              setItems((prev) => prev.filter((item) => item.id !== id));
+              router.refresh();
+            }}
+          />
         ),
       },
     ],
-    [isProcessing, items],
+    [isProcessing, items, router],
   );
 
   return (

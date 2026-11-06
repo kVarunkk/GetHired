@@ -9,6 +9,7 @@ import { previewAgentApplication } from "@/helpers/applications/preview-agent-ap
 import { canonicalizeLocations } from "@/helpers/locations/aliases";
 import { PREFERENCE_COLUMNS } from "@/helpers/agent/tools/profile";
 import type { AgentToolContext } from "@/helpers/agent/tools/shared";
+import { previewResumeEdit, type ResumeEditTool } from "@/helpers/resumes/preview-resume-edit";
 import { deploymentUrl } from "@/utils/formatters";
 import { TAICredits } from "@/utils/types";
 
@@ -83,6 +84,27 @@ export const previewSubmitApplication: McpPreviewBuilder = async (ctx, input) =>
     ],
   };
 };
+
+/** One builder per resume tool: the agent's approval card, as a confirmation (RE-REQ-082). */
+const resumeEditPreview =
+  (tool: ResumeEditTool): McpPreviewBuilder =>
+  async (ctx, input) => {
+    const preview = await previewResumeEdit(ctx.supabase, ctx.user, tool, input);
+    if (!preview.ok) return preview;
+    return {
+      ok: true,
+      summary: preview.summary,
+      details: preview.changes.map(({ label, before, after }) => ({
+        label,
+        value: `${display(before)} → ${display(after)}`,
+      })),
+    };
+  };
+
+export const previewCreateResume = resumeEditPreview("createResume");
+export const previewUpdateResume = resumeEditPreview("updateResume");
+export const previewDeleteResume = resumeEditPreview("deleteResume");
+export const previewApplySuggestions = resumeEditPreview("applyReviewSuggestions");
 
 export const previewResumeReview: McpPreviewBuilder = async (ctx, input) => {
   const { resumeId, jobId, jobDescription, name } = input as {

@@ -1,7 +1,19 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { wrapInSandbox } from "@/helpers/ai/security";
+import { RESUME_LIMITS } from "@/helpers/resume/config";
+import { readResume } from "@/helpers/resume/read-resume";
+import { ResumeFromChatSchema, contentFromChat, createResume } from "@/helpers/resumes/create-resume";
+import { deleteResume } from "@/helpers/resumes/delete-resume";
+import { duplicateResume } from "@/helpers/resumes/duplicate-resume";
+import { getResumeDetails } from "@/helpers/resumes/get-resume-details";
+import { ResumeOperationSchema } from "@/helpers/resumes/resume-operations";
+import { RESUME_CHANGED } from "@/helpers/resumes/save-resume";
 import { setPrimaryResume } from "@/helpers/resumes/set-primary-resume";
+import { RESUME_MAX_OPERATIONS, updateResume } from "@/helpers/resumes/update-resume";
+import { PLACEHOLDER_UNFILLED, applyReviewSuggestions } from "@/helpers/resume-review/apply-suggestions";
 import { createResumeReview } from "@/helpers/resume-review/create-resume-review";
+import { placeholdersIn } from "@/helpers/resume-review/suggestions";
 import { startReviewAnalysis } from "@/helpers/resume-review/start-review-analysis";
 import {
   rankResumesForJob,
@@ -27,6 +39,7 @@ const PRIORITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
 type ReviewAnalysis = {
   overall_feedback?: string;
   bullet_points?: {
+    bullet_id: string;
     section: string;
     original: string;
     suggested: string;
@@ -36,6 +49,25 @@ type ReviewAnalysis = {
 };
 
 const reviewUrl = (reviewId: string) => `/resume-review/${reviewId}`;
+
+const RESUME_NOT_FOUND = { error: "Resume not found." };
+
+/** What a refused write tells the model to do next (RE-REQ-033, RE-REQ-059). */
+function saveFailure(failure: { code: string; error: string; bulletIds?: string[] }) {
+  const { code, error, bulletIds } = failure;
+  if (code === RESUME_CHANGED) {
+    return { error, code, message: "The resume changed. Read it again, then redo the change on what's there now." };
+  }
+  if (code === PLACEHOLDER_UNFILLED) {
+    return {
+      error,
+      code,
+      bulletIds,
+      message: "Ask the user for the real value of each [placeholder], then pass the final text. Never guess one.",
+    };
+  }
+  return { error, code };
+}
 
 const PICK_DETAIL_ITEMS = 3;
 
@@ -146,7 +178,7 @@ export function createResumeTools(ctx: AgentToolContext) {
 
     requestResumeUpload: tool({
       description:
-        "Ask the user to upload a resume (PDF). The app shows an upload widget; the result is the new resumeId, or cancelled if the user dismissed it.",
+        "Ask the user to upload a resume (PDF or Word). The app shows an upload widget and reads the file straight away; the result is the new resumeId, ready to use, or cancelled if the user dismissed it.",
       inputSchema: z.object({
         reason: z
           .string()
@@ -340,15 +372,154 @@ export function createResumeTools(ctx: AgentToolContext) {
         }),
     }),
 
+    getResumeContent: tool({
+      description:
+        "Read one of the user's resumes: contact details, and every section, item and bullet with its id, plus the revision that updateResume needs.",
+      inputSchema: z.object({ resumeId: uuidInput("resume") }),
+      execute: ({ resumeId }) =>
+        withToolErrors(ctx, "getResumeContent", async () => {
+          const row = await getResumeDetails(supabase, ctx.user, resumeId, { forEditing: true });
+          if (!row) return RESUME_NOT_FOUND;
+
+          const { content, contact, revision, template, hasContent } = readResume(row);
+          if (!hasContent) return { error: "This resume has no content yet." };
+
+          return {
+            resumeId: row.id,
+            name: row.name,
+            isPrimary: row.is_primary,
+            template,
+            revision,
+            // Text from a file the user uploaded: data, never instructions.
+            resume: wrapInSandbox("resume", JSON.stringify({ contact, sections: content.sections })),
+            url: `/resume/${row.id}`,
+          };
+        }),
+    }),
+
+    createResume: tool({
+      description:
+        "Create a new resume for the user: blank, or from what they told you in this chat. Never add anything they didn't say. Free; the user must approve.",
+      inputSchema: ResumeFromChatSchema,
+      execute: ({ name, sections }) =>
+        withToolErrors(ctx, "createResume", async () => {
+          const created = await createResume(supabase, ctx.user, {
+            name,
+            content: sections ? contentFromChat(sections) : undefined,
+          });
+          if (!created.ok) return { error: created.error };
+          return { resumeId: created.resumeId, url: `/resume/${created.resumeId}/edit` };
+        }),
+    }),
+
+    updateResume: tool({
+      description:
+        "Edit one of the user's resumes with a list of operations. Read it with getResumeContent first, and pass the revision and ids from there. An unknown id fails the whole call. Free; the user must approve.",
+      inputSchema: z.object({
+        resumeId: uuidInput("resume"),
+        expectedRevision: z.number().int().positive().describe("The revision from getResumeContent."),
+        operations: z.array(ResumeOperationSchema).min(1).max(RESUME_MAX_OPERATIONS),
+      }),
+      execute: (input) =>
+        withToolErrors(ctx, "updateResume", async () => {
+          const saved = await updateResume(supabase, ctx.user, input, { surface: ctx.surface });
+          if (!saved.ok) return saveFailure(saved);
+          return { resumeId: input.resumeId, revision: saved.revision, url: `/resume/${input.resumeId}` };
+        }),
+    }),
+
+    duplicateResume: tool({
+      description:
+        "Make a copy of one of the user's resumes, to keep a version or tailor one for a job. It's never the primary resume. Free.",
+      inputSchema: z.object({
+        resumeId: uuidInput("resume"),
+        name: z.string().trim().min(1).max(RESUME_LIMITS.shortFieldChars).optional(),
+      }),
+      execute: ({ resumeId, name }) =>
+        withToolErrors(ctx, "duplicateResume", async () => {
+          const copy = await duplicateResume(supabase, ctx.user, { resumeId, name });
+          if (!copy.ok) return { error: copy.error };
+          return { resumeId: copy.resumeId, url: `/resume/${copy.resumeId}` };
+        }),
+    }),
+
+    deleteResume: tool({
+      description:
+        "Delete one of the user's resumes, with its reviews. It can't be undone, and the last resume can't be deleted. The user must approve.",
+      inputSchema: z.object({ resumeId: uuidInput("resume") }),
+      execute: ({ resumeId }) =>
+        withToolErrors(ctx, "deleteResume", async () => {
+          const deleted = await deleteResume(supabase, ctx.user, { resumeId });
+          if (!deleted.ok) return { error: deleted.error };
+          return { resumeId, deleted: true, reviewsDeleted: deleted.reviewsDeleted };
+        }),
+    }),
+
+    applyReviewSuggestions: tool({
+      description:
+        "Apply suggestions from a resume review, by each suggestion's bulletId from getResumeReview. They go to a copy by default, which later applies reuse; pass target 'original' only when the user asks to change the reviewed resume. Pass text to use the user's own wording. Text with a [placeholder] is refused: ask the user for the real value, then pass it as text. The user must approve.",
+      inputSchema: z.object({
+        reviewId: uuidInput("resume review"),
+        target: z.enum(["copy", "original"]).optional(),
+        items: z
+          .array(
+            z.object({
+              bulletId: z.string().describe("The suggestion's bulletId, from getResumeReview."),
+              text: z
+                .string()
+                .optional()
+                .describe("The final text, when the user edited the suggestion or gave a real value for a placeholder."),
+            }),
+          )
+          .min(1),
+      }),
+      execute: (input) =>
+        withToolErrors(ctx, "applyReviewSuggestions", async () => {
+          const result = await applyReviewSuggestions(supabase, ctx.user, input, { surface: ctx.surface });
+          if (!result.ok) return saveFailure(result);
+          return {
+            target: result.target,
+            resumeId: result.targetResumeId,
+            items: result.items,
+            ...(result.targetResumeId ? { url: `/resume/${result.targetResumeId}` } : {}),
+            message:
+              "A bullet marked changed no longer has the text the review saw, so it wasn't applied. Say which ones.",
+          };
+        }),
+    }),
+
+    exportResume: tool({
+      description:
+        "Get a link that downloads one of the user's resumes as a PDF or Word file. It works in a browser where the user is signed in. Free.",
+      inputSchema: z.object({
+        resumeId: uuidInput("resume"),
+        format: z.enum(["pdf", "docx"]).optional().describe("Defaults to pdf."),
+      }),
+      execute: ({ resumeId, format = "pdf" }) =>
+        withToolErrors(ctx, "exportResume", async () => {
+          const { data: resume, error } = await supabase
+            .from("resumes")
+            .select("id, name")
+            .eq("id", resumeId)
+            .eq("user_id", ctx.user.id)
+            .maybeSingle();
+          if (error) throw error;
+          if (!resume) return RESUME_NOT_FOUND;
+          return { resumeId, name: resume.name, format, url: `/api/resumes/${resumeId}/export?format=${format}` };
+        }),
+    }),
+
     getResumeReview: tool({
       description:
-        "Get a resume review's status, score, overall feedback and its top suggestions (highest priority first).",
+        "Get a resume review's status, score, overall feedback and its top suggestions (highest priority first), each with the bulletId that applyReviewSuggestions needs, any [placeholders] the user must fill in, and whether it's already applied.",
       inputSchema: z.object({ reviewId: uuidInput("resume review") }),
       execute: ({ reviewId }) =>
         withToolErrors(ctx, "getResumeReview", async () => {
           const { data: review, error } = await supabase
             .from("resume_reviews")
-            .select("id, name, status, score, analysis_failed, ai_response, created_at")
+            .select(
+              "id, name, status, score, analysis_failed, ai_response, created_at, resume_review_applied(bullet_id)",
+            )
             .eq("id", reviewId)
             .eq("user_id", ctx.user.id)
             .maybeSingle();
@@ -357,17 +528,21 @@ export function createResumeTools(ctx: AgentToolContext) {
 
           const analysis = (review.ai_response ?? {}) as ReviewAnalysis;
           const bullets = analysis.bullet_points ?? [];
+          const applied = new Set((review.resume_review_applied ?? []).map((row) => row.bullet_id));
           const suggestions = [...bullets]
             .sort(
               (a, b) => (PRIORITY_ORDER[a.priority] ?? 3) - (PRIORITY_ORDER[b.priority] ?? 3),
             )
             .slice(0, MAX_SUGGESTIONS)
-            .map(({ section, original, suggested, reason, priority }) => ({
+            .map(({ bullet_id, section, original, suggested, reason, priority }) => ({
+              bulletId: bullet_id,
               section,
               original,
               suggested,
               reason,
               priority,
+              placeholders: placeholdersIn(suggested),
+              applied: applied.has(bullet_id),
             }));
 
           return {

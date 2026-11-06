@@ -51,6 +51,37 @@ describe("MessageParts", () => {
     }
   });
 
+  describe("resume tool results (RE-REQ-077)", () => {
+    const result = (name: string, output: unknown) =>
+      assistant([{ type: `tool-${name}`, toolCallId: "c1", state: "output-available", input: {}, output }]);
+
+    it("renders the export link as a download", () => {
+      renderParts(result("exportResume", { url: "/api/resumes/r1/export?format=pdf" }));
+
+      const link = screen.getByRole("link", { name: "Download your resume" });
+      expect(link).toHaveAttribute("href", "/api/resumes/r1/export?format=pdf");
+      expect(link).toHaveAttribute("download");
+    });
+
+    it("gives no link to somewhere outside the app", () => {
+      renderParts(result("exportResume", { url: "https://evil.com/resume.pdf" }));
+
+      expect(screen.queryByRole("link")).toBeNull();
+    });
+
+    it("links to the resume after an edit", () => {
+      renderParts(result("updateResume", { resumeId: "r1", revision: 4, url: "/resume/r1" }));
+
+      expect(screen.getByRole("link", { name: "Open the resume" })).toHaveAttribute("href", "/resume/r1");
+    });
+
+    it("gives no resume link to somewhere outside the app", () => {
+      renderParts(result("duplicateResume", { resumeId: "r1", url: "https://evil.com/r1" }));
+
+      expect(screen.queryByRole("link")).toBeNull();
+    });
+  });
+
   describe("links and images in replies (SEC-014)", () => {
     it.each([
       ["/jobs/j1", true],
@@ -387,7 +418,7 @@ describe("MessageParts", () => {
     );
 
     expect(screen.getByText("so I can review it")).toBeInTheDocument();
-    expect(screen.getByLabelText("Resume PDF")).toBeInTheDocument();
+    expect(screen.getByLabelText("Resume file")).toBeInTheDocument();
   });
 
   it("links to the recharge page for insufficient credits", () => {

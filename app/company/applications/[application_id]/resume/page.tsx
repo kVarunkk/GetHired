@@ -3,9 +3,12 @@ import { Download } from "lucide-react";
 import Error from "@/components/Error";
 import OriginalResumeWrapper from "@/components/OriginalResumeWrapper";
 import SectionHeader from "@/components/SectionHeader";
+import ApplicationResumeDownload from "@/components/resume/ApplicationResumeDownload";
+import ResumePreview from "@/components/resume/ResumePreview";
 import { Button } from "@/components/ui/button";
 import { reportError } from "@/helpers/posthog/report-error";
 import { loadApplicationFrame } from "@/helpers/applications/application-page";
+import { applicationResume } from "@/helpers/applications/application-resume";
 import { RESUME_BUCKET, resumeExtensionOf } from "@/helpers/candidates/resume-files";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import type { Metadata } from "next";
@@ -37,12 +40,24 @@ export default async function ApplicationResumePage({ params }: { params: Promis
     if (person.kind === "user") {
       const { data, error } = await supabase
         .from("applications")
-        .select("resumes(resume_path)")
+        .select("resume_snapshot, resume_contact_snapshot, resumes(resume_path, content, template)")
         .eq("id", application_id)
         .maybeSingle();
       if (error) throw error;
-      const path = data?.resumes?.resume_path;
-      if (path) file = { path, sign: supabase.storage.from("resumes") };
+
+      const resume = applicationResume(data);
+      if (resume?.kind === "document") {
+        return (
+          <div className="mb-20 flex flex-col gap-6">
+            <SectionHeader
+              title="Resume"
+              actions={data?.resume_snapshot ? <ApplicationResumeDownload applicationId={application_id} /> : undefined}
+            />
+            <ResumePreview document={resume.document} />
+          </div>
+        );
+      }
+      if (resume?.kind === "file") file = { path: resume.path, sign: supabase.storage.from("resumes") };
     }
     // A company candidate's file, claimed or not (BIT-101).
     const importedPath = application.company_candidates?.resume_path;

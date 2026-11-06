@@ -7,10 +7,10 @@ const inAppUrl = z.string().trim().max(2000).regex(/^\/(?!\/)/, "Use a link from
 /**
  * The tables whose rows a user renames or deletes from their own lists
  * (`DynamicTableActions`), and the fields they may edit. Rows are always
- * matched on the session user's `user_id` as well as RLS.
+ * matched on the session user's `user_id` as well as RLS. `resumes` isn't here:
+ * saveResume and deleteResume keep the revision and the primary resume right.
  */
 export const OWNED_ITEM_FIELDS = {
-  resumes: z.object({ name }).strict(),
   resume_reviews: z.object({ name }).strict(),
   interviews: z.object({ name }).strict(),
   bookmarks: z.object({ name, url: inAppUrl }).strict(),

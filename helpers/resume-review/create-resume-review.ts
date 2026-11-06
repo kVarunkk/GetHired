@@ -74,7 +74,8 @@ export async function createResumeReview(
       if (result.success && result.resumeId) {
         finalResumeId = result.resumeId;
       }
-      if (result.error) throw result.error;
+      // RE-REQ-017: the parse runs in the request, so the user sees why it failed.
+      if (result.error) return { error: String(result.error) };
     }
 
     const { data: reviewEntry, error: reviewError } = await supabase

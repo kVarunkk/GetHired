@@ -82,6 +82,9 @@ describe("submitApplicationAction (AF-REQ-007, CPT-015)", () => {
       answers: ["The mission"],
       answers_v2: ANSWERS,
       form_snapshot: FORM,
+      // RE-REQ-061: both snapshots, null here because the queued resume has no content.
+      resume_snapshot: null,
+      resume_contact_snapshot: null,
       source: "applied",
       source_detail: null,
     });

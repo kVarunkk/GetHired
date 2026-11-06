@@ -2,6 +2,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import { canonicalizeLocations } from "@/helpers/locations/aliases";
+import { RESUME_MAX_FILE_BYTES } from "@/helpers/resume/config";
+import { resumeFromUpload, type ResumeUploadResult } from "@/helpers/resumes/resume-from-upload";
 import type { ClaimPrefill, ClaimPrefillFields } from "./claim-prefill-form";
 import { hashClaimToken } from "./claim-token";
 import { RESUME_BUCKET } from "./resume-files";
@@ -10,9 +12,6 @@ import { RESUME_BUCKET } from "./resume-files";
 // from the company's record. Nothing here writes the profile: the fields
 // prefill the onboarding form, which saves only when they submit it (through
 // the onboarding schema, the `user_info` allowlist).
-
-/** The applicant upload limit (uploadResumeAction); imports allow 10 MB. */
-const MAX_COPY_BYTES = 2 * 1024 * 1024;
 
 type ClaimedCandidate = {
   companyName: string;
@@ -57,7 +56,7 @@ const link = (links: ClaimedCandidate["candidate"]["links"], key: string) => {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 };
 
-const isPdf = (path: string | null): path is string => !!path && /\.pdf$/i.test(path);
+const claimResumeName = (companyName: string) => `Resume from ${companyName}`;
 
 /** What the onboarding form can prefill from the claim, or null when there's nothing. */
 export async function loadClaimPrefill(
@@ -77,7 +76,7 @@ export async function loadClaimPrefill(
     linkedin_url: link(candidate.links, "linkedin"),
     github_url: link(candidate.links, "github"),
   };
-  const resume = isPdf(candidate.resume_path) ? { name: `Resume from ${claimed.companyName}.pdf` } : null;
+  const resume = candidate.resume_path ? { name: claimResumeName(claimed.companyName) } : null;
   return { companyName: claimed.companyName, fields, resume };
 }
 
@@ -95,39 +94,27 @@ export function hasPrefill(prefill: ClaimPrefill | null): prefill is ClaimPrefil
 }
 
 /**
- * Copies the claimed candidate's resume into the user's own resumes, as a
- * new (not primary) resume, and returns its id. `supabase` is the user's
- * client, so the upload and insert go through the same storage and RLS as
- * an onboarding upload; `admin` only reads the company's file.
+ * Reads the claimed candidate's resume into the user's own resumes, as a new
+ * (not primary) resume, and returns its id (RE-REQ-023). The company's file is
+ * untouched and no file is saved. `admin` only reads that file; `supabase` is
+ * the user's client, so the row goes through the same RLS as an upload.
  */
-export async function copyClaimResume(
+export async function importClaimResume(
   supabase: SupabaseClient<Database>,
   admin: SupabaseClient<Database>,
-  userId: string,
+  user: { id: string },
   token: string,
-): Promise<{ ok: true; resumeId: string } | { ok: false; error: string }> {
-  const claimed = await loadClaimedCandidate(admin, token, userId);
+): Promise<ResumeUploadResult> {
+  const claimed = await loadClaimedCandidate(admin, token, user.id);
   const path = claimed?.candidate.resume_path ?? null;
-  if (!claimed || !isPdf(path)) return { ok: false, error: "That resume is no longer available. Upload your own." };
+  if (!claimed || !path) return { ok: false, error: "That resume is no longer available. Upload your own." };
 
-  const { data: file, error: downloadError } = await admin.storage.from(RESUME_BUCKET).download(path);
-  if (downloadError || !file) throw new Error(`Failed to read the resume: ${downloadError?.message ?? "no file"}`);
-  if (file.size > MAX_COPY_BYTES) {
+  const { data: blob, error: downloadError } = await admin.storage.from(RESUME_BUCKET).download(path);
+  if (downloadError || !blob) throw new Error(`Failed to read the resume: ${downloadError?.message ?? "no file"}`);
+  if (blob.size > RESUME_MAX_FILE_BYTES) {
     return { ok: false, error: "That resume is larger than 2 MB. Upload your own." };
   }
 
-  const name = `Resume from ${claimed.companyName}.pdf`;
-  const fileName = `resumes/${userId}/${Date.now()}-${name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-  const { error: storageError } = await supabase.storage
-    .from("resumes")
-    .upload(fileName, Buffer.from(await file.arrayBuffer()), { contentType: "application/pdf" });
-  if (storageError) throw storageError;
-
-  const { data: resume, error: insertError } = await supabase
-    .from("resumes")
-    .insert({ user_id: userId, name, resume_path: fileName, is_primary: false, content: null })
-    .select("id")
-    .single();
-  if (insertError) throw insertError;
-  return { ok: true, resumeId: resume.id };
+  const file = new File([blob], path.split("/").pop() ?? "resume");
+  return resumeFromUpload(supabase, user, file, { name: claimResumeName(claimed.companyName) });
 }

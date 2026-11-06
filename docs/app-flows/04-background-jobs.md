@@ -26,6 +26,7 @@ flowchart LR
   R13["rpc create_screening_invite(s)<br/>manage_screening_interview reopen"]:::t --> SI[["screening_invite_email_queue"]]:::q --> W13["/api/worker/screening-invite-emails"]
   R14["rpc finalize_interview_analysis_session<br/>enqueue_company_interview_analysis<br/>finish_screening_session"]:::t --> IA[["interview_analysis_queue"]]:::q --> W14["/api/updates/interview-analysis/worker"]
   W8 -. "fit ≥ threshold" .-> R13
+  E15["/updates/resumes/reparse/enqueue"] --> RR[["resume_reparse_queue"]]:::q --> W15["/api/worker/resume-reparse"]
 ```
 
 ## Queue reference
@@ -46,6 +47,7 @@ flowchart LR
 | `pipeline_email_queue` | 20261019150000 | `moveApplications` | pipeline-emails worker | stage email, `email_sent` event |
 | `screening_invite_email_queue` | 20261020120000 | invite RPCs, reopen | screening-invite-emails worker | invite email |
 | `interview_analysis_queue` | 20261006210000 | finalize RPC, attachments RPC, `finish_screening_session` | interview-analysis worker | `interview_analyses`, emails |
+| `resume_reparse_queue` | 20261106130000 | resumes reparse enqueue | `resume-reparse` worker | `resumes.content` (version 1 → 2), `resume_migration_items` |
 
 ## Crons
 
@@ -88,6 +90,8 @@ gantt
 | screening-interviews | `*/15 * * * *` | `/api/updates/screening-interviews` | inactive |
 | screening-interviews-retention | `0 22 1 * *` | `/api/updates/screening-interviews/retention` | inactive |
 | pipeline-emails-worker | `* * * * *` | `/api/worker/pipeline-emails` | inactive |
+| resume-reparse-worker | `* * * * *` | `/api/worker/resume-reparse` | inactive (RET-113) |
+| resume-delete-files | `17 * * * *` | `/api/updates/resumes/delete-files` | inactive (RET-115) |
 | screening-invite-emails-worker | `* * * * *` | `/api/worker/screening-invite-emails` | inactive |
 
 | External-scheduler route | Purpose |

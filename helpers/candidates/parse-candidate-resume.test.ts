@@ -24,7 +24,11 @@ const OUTPUT = {
     skills: ["Maths", "Engines", "maths"],
   },
   sections: [
-    { type: "experience", items: [{ heading: "Analytical Engines", bullets: [{ text: "Wrote the first program", lineIndices: [3] }] }] },
+    {
+      type: "experience",
+      lineIndices: [2],
+      items: [{ heading: "Analytical Engines", lineIndices: [3], bullets: [{ text: "Wrote the first program", lineIndices: [3] }] }],
+    },
   ],
 };
 

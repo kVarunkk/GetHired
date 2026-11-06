@@ -4,8 +4,7 @@ import { useId, useState } from "react";
 import { FileUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { uploadResumeAction } from "@/app/actions/upload-resume-file";
-
-const MAX_SIZE_BYTES = 2 * 1024 * 1024;
+import { RESUME_FILE_ACCEPT, resumeFileProblem } from "@/helpers/resume/config";
 
 export type ResumeUploadOutput = { resumeId: string } | { cancelled: true };
 
@@ -26,17 +25,13 @@ export default function ResumeUploadWidget({
     setFile(null);
     setError(null);
     if (!selected) return;
-    if (selected.type !== "application/pdf") {
-      setError("Only PDF files are supported.");
-    } else if (selected.size > MAX_SIZE_BYTES) {
-      setError("The file must be 2MB or smaller.");
-    } else {
-      setFile(selected);
-    }
+    const problem = resumeFileProblem(selected);
+    if (problem) setError(problem);
+    else setFile(selected);
   };
 
   const upload = async () => {
-    if (!file) return;
+    if (!file || uploading) return;
     setUploading(true);
     setError(null);
     try {
@@ -63,12 +58,12 @@ export default function ResumeUploadWidget({
       </div>
       {reason && <p className="text-sm text-muted-foreground">{reason}</p>}
       <label htmlFor={inputId} className="sr-only">
-        Resume PDF
+        Resume file
       </label>
       <input
         id={inputId}
         type="file"
-        accept=".pdf,application/pdf"
+        accept={RESUME_FILE_ACCEPT}
         disabled={uploading}
         onChange={(event) => chooseFile(event.target.files?.[0])}
         className="w-full cursor-pointer rounded-lg border border-dashed border-brand/40 bg-background p-3 text-sm text-muted-foreground file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed"
@@ -86,7 +81,7 @@ export default function ResumeUploadWidget({
           disabled={!file || uploading}
         >
           {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
-          {uploading ? "Uploading…" : "Upload"}
+          {uploading ? "Reading your resume…" : "Upload"}
         </Button>
         <Button
           size="sm"

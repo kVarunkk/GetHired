@@ -250,7 +250,7 @@ describe("middleware: bearer tokens (MCP-SEC-006, MCP TASK-000)", () => {
     expect(getUserFromRequest).toHaveBeenCalled();
   });
 
-  it.each(["/api/jobs", "/api/agent/chat", "/dashboard"])(
+  it.each(["/api/jobs", "/api/agent/chat", "/dashboard", "/api/resumes/22222222-2222-4222-8222-222222222222/export"])(
     "refuses an OAuth app token (client_id) on %s",
     async (path) => {
       vi.mocked(getUserFromRequest).mockResolvedValue(applicant);

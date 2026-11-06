@@ -159,7 +159,7 @@ export const buildQuery = async (
       }
       selectString = `
        ${allJobsSelectString},
-        applications!inner(*)
+        applications!inner(id, status, created_at, all_jobs_id)
     `;
       query = supabase
         .from("all_jobs")

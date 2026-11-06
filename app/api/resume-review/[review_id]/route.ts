@@ -27,7 +27,7 @@ export async function GET(
     const { data: review, error } = await supabase
       .from("resume_reviews")
       .select(
-        "*, resumes (id,name, updated_at,content,parsing_failed,resume_path)",
+        "*, resumes (id,name, updated_at,content,contact,template,revision,schema_version,parsing_failed,resume_path), resume_review_applied (bullet_id,target_resume_id,applied_text)",
       )
       .eq("user_id", user.id)
       .eq("id", reviewId)

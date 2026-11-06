@@ -3,7 +3,9 @@
 import { cn } from "@/utils/utils";
 import { Eye, File, FileText, Loader2, RefreshCcw } from "lucide-react";
 import ResumeSourceSelector from "../ResumeSourceSelector";
-import DigitalTwinMirror from "./DigitalTwinMirror";
+import ResumePreview from "../resume/ResumePreview";
+import { readResume } from "@/helpers/resume/read-resume";
+import { buildResumeDocument } from "@/helpers/resume/render/document";
 import { useEffect, useState } from "react";
 import { uploadResumeAction } from "@/app/actions/upload-resume-file";
 import { createClient } from "@/lib/supabase/client";
@@ -15,7 +17,6 @@ import {
   TResumeReviewResume,
   TResumeReviewServer,
 } from "@/utils/types/review.types";
-import { TResumeRowContent } from "@/utils/types";
 import { retryResumeParsingAction } from "@/app/actions/retry-resume-parsing";
 import { mutate } from "swr";
 
@@ -43,11 +44,14 @@ export default function ResumeSection({
   const supabase = createClient();
 
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"mirror" | "original">("mirror");
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+
+  const resumeToShow = readResume(linkedResume ?? {});
 
   const handleLinkResume = async (resumeId: string | null) => {
     if (!resumeId) return;
@@ -87,10 +91,10 @@ export default function ResumeSection({
   };
 
   const handleStartProcessing = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || isUploading) return;
 
     setIsUploading(true);
-    const toastId = toast.loading("Adding new Resume...");
+    setUploadError(null);
 
     try {
       const formData = new FormData();
@@ -99,16 +103,13 @@ export default function ResumeSection({
       const result = await uploadResumeAction(formData);
 
       if (result.success && result.resumeId) {
-        toast.success("Resume uploaded. Initializing sync...", { id: toastId });
         await handleLinkResume(result.resumeId);
         setSelectedFile(null);
       } else {
-        toast.error(result.error || "Upload failed", { id: toastId });
+        setUploadError(result.error ?? "Upload failed. Please try again.");
       }
     } catch {
-      toast.error("An unexpected error occurred during upload.", {
-        id: toastId,
-      });
+      setUploadError("Upload failed. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -200,7 +201,7 @@ export default function ResumeSection({
         <div className="flex items-center gap-4 flex-wrap">
           <div className="text-lg font-semibold tracking-tight">Resume</div>
 
-          {isResumeLinked && isParsed && (
+          {isResumeLinked && isParsed && linkedResume?.resume_path && (
             <div className="flex items-center p-0.5 bg-muted rounded-lg border">
               <button
                 onClick={() => setViewMode("mirror")}
@@ -212,7 +213,7 @@ export default function ResumeSection({
                 )}
               >
                 <Eye size={12} />
-                Mirror
+                Preview
               </button>
               <button
                 onClick={() => setViewMode("original")}
@@ -269,7 +270,7 @@ export default function ResumeSection({
               <div className="flex flex-col items-center justify-center py-20 space-y-4 animate-in fade-in duration-300">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                 <p className="text-sm font-medium text-muted-foreground">
-                  Processing Upload
+                  Reading your resume. This can take a few seconds.
                 </p>
               </div>
             ) : (
@@ -279,8 +280,16 @@ export default function ResumeSection({
                   selectedId={selectedResumeId}
                   onSelectExisting={setSelectedResumeId}
                   file={selectedFile}
-                  onFileChange={setSelectedFile}
+                  onFileChange={(file) => {
+                    setSelectedFile(file);
+                    setUploadError(null);
+                  }}
                 />
+                {uploadError && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {uploadError}
+                  </p>
+                )}
                 <Button
                   variant="brand"
                   onClick={() => {
@@ -300,9 +309,12 @@ export default function ResumeSection({
         ) : isParsed ? (
           <div className="h-full">
             {viewMode === "mirror" ? (
-              <DigitalTwinMirror
-                content={linkedResume?.content as TResumeRowContent}
-                activeHighlightId={activeHighlightId}
+              <ResumePreview
+                document={buildResumeDocument({
+                  ...resumeToShow,
+                  contact: resumeToShow.contact ?? { fullName: "", links: [] },
+                })}
+                activeBulletId={activeHighlightId}
               />
             ) : (
               <OriginalResumeWrapper url={signedUrl ?? ""} />

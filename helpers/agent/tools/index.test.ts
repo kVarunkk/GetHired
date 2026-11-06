@@ -30,6 +30,13 @@ describe("createAgentTools", () => {
         "startResumeReview",
         "getResumeReview",
         "pickResumeForJob",
+        "getResumeContent",
+        "createResume",
+        "updateResume",
+        "duplicateResume",
+        "deleteResume",
+        "applyReviewSuggestions",
+        "exportResume",
         "listInterviews",
         "listScreeningInterviews",
         "getInterviewAnalysis",
@@ -73,10 +80,14 @@ describe("createAgentTools", () => {
       .sort();
 
     expect(needingApproval).toEqual([
+      "applyReviewSuggestions",
       "completeOnboarding",
+      "createResume",
+      "deleteResume",
       "startResumeReview",
       "submitApplication",
       "updateMyPreferences",
+      "updateResume",
     ]);
   });
 

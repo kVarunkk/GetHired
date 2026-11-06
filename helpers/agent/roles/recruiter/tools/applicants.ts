@@ -3,6 +3,7 @@ import { answersView } from "@/helpers/applications/answers-view";
 import { z } from "zod";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { scrubPII } from "@/helpers/ai/fairness";
+import { readResumeSnapshot } from "@/helpers/applications/resume-snapshot";
 import { SCREENING_VIEW_COLUMNS, toScreeningView } from "@/helpers/matching/screening-view";
 import type { TResumeRowContent } from "@/utils/types";
 import { Constants } from "@/utils/types/database.types";
@@ -117,7 +118,7 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
           const { data: application, error } = await supabase
             .from("applications")
             .select(
-              `id, status, created_at, answers, answers_v2, form_snapshot, resume_id, applicant_user_id, company_candidate_id, job_postings!inner(id, title, company_id, questions), pipeline_stages(id, name), user_info(${AGENT_CANDIDATE_COLUMNS}), company_candidates(full_name)`,
+              `id, status, created_at, answers, answers_v2, form_snapshot, resume_id, resume_snapshot, applicant_user_id, company_candidate_id, job_postings!inner(id, title, company_id, questions), pipeline_stages(id, name), user_info(${AGENT_CANDIDATE_COLUMNS}), company_candidates(full_name)`,
             )
             .eq("id", applicationId)
             .eq("job_postings.company_id", company.id)
@@ -125,13 +126,17 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
           if (error) throw error;
           if (!application) return NOT_FOUND;
 
-          // An imported candidate has no GetHired resume (BI-REQ-030).
+          // What was sent (RE-REQ-062). An older application reads its live
+          // resume, and an imported candidate has no GetHired resume (BI-REQ-030).
+          const snapshot = readResumeSnapshot(application.resume_snapshot);
           const resumes = () => supabase.from("resumes").select("content");
-          const resumeQuery = application.resume_id
-            ? resumes().eq("id", application.resume_id)
-            : application.applicant_user_id
-              ? resumes().eq("user_id", application.applicant_user_id).eq("is_primary", true)
-              : null;
+          const resumeQuery = snapshot
+            ? null
+            : application.resume_id
+              ? resumes().eq("id", application.resume_id)
+              : application.applicant_user_id
+                ? resumes().eq("user_id", application.applicant_user_id).eq("is_primary", true)
+                : null;
           const [{ data: resume }, { data: screeningRow }] = await Promise.all([
             resumeQuery ? resumeQuery.limit(1).maybeSingle() : Promise.resolve({ data: null }),
             supabase
@@ -170,7 +175,7 @@ export function createApplicantTools(ctx: RecruiterToolContext) {
                 ? compactCandidate(candidate)
                 : null,
             answers,
-            resumeExcerpt: resumeExcerpt(resume?.content as TResumeRowContent | null),
+            resumeExcerpt: resumeExcerpt((snapshot?.content ?? resume?.content) as TResumeRowContent | null),
             screening: screening
               ? {
                   status: screening.status,

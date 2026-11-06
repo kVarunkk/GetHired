@@ -7,7 +7,9 @@ import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { evaluateKnockouts } from "@/helpers/applications/evaluate-knockouts";
 import { KNOCKOUT_EMAIL_DELAY_MS, rejectForKnockout } from "@/helpers/applications/knockout-reject";
+import { buildResumeSnapshot } from "@/helpers/applications/resume-snapshot";
 import { validateAnswers } from "@/helpers/applications/validate-answers";
+import { upgradeResumeFromFile } from "@/helpers/resumes/upgrade-resume";
 import { isTextType, liveQuestions, readApplicationForm } from "@/helpers/jobs/application-form-schema";
 import { publicApplicationForm, withRules } from "@/helpers/jobs/public-application-form";
 import {
@@ -60,12 +62,15 @@ export async function submitApplication(
   if (!parsed.success) return { ok: false, error: BAD_INPUT };
   const { allJobsId, resumeId, answers: rawAnswers, source = "applied", ref } = parsed.data;
 
-  const { data: resume } = await supabase
-    .from("resumes")
-    .select("id")
-    .eq("id", resumeId)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const readResumeRow = () =>
+    supabase
+      .from("resumes")
+      .select("id, name, content, contact, template, revision, schema_version, resume_path")
+      .eq("id", resumeId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+  const { data: resume } = await readResumeRow();
   if (!resume) return { ok: false, error: "Pick one of your resumes." };
 
   const service = createServiceRoleClient();
@@ -114,6 +119,19 @@ export async function submitApplication(
     .eq("status", "interested")
     .limit(1);
 
+  // RE-REQ-061/095: last, so a parse only runs for an application that's going
+  // through. A resume that can't upgrade is sent as it is: it never stops the
+  // application (RE-REQ-100).
+  let sent = resume;
+  if (resume.schema_version === 1) {
+    try {
+      const upgraded = await upgradeResumeFromFile(resume);
+      if (upgraded.ok) sent = (await readResumeRow()).data ?? resume;
+    } catch (err) {
+      reportError("[apply] couldn't upgrade the resume", err);
+    }
+  }
+
   // BW-F02: applicants can't insert platform applications themselves, so the
   // insert is the service role's, after the checks above.
   const { data: application, error: insertError } = await service
@@ -127,6 +145,7 @@ export async function submitApplication(
       answers: legacyAnswers,
       answers_v2: answers as Json,
       form_snapshot: publicApplicationForm(form) as unknown as Json,
+      ...buildResumeSnapshot(sent),
       source: interested && interested.length > 0 ? "outreach" : source,
       source_detail: ref ? ref.toLowerCase() : null,
     })

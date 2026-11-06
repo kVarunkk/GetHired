@@ -52,7 +52,7 @@ describe("agentToolApproval: memory after untrusted content (SEC-012)", () => {
     );
   });
 
-  it.each(["getJobDetails", "getResumeReview", "getInterviewAnalysis"])(
+  it.each(["getJobDetails", "getResumeReview", "getResumeContent", "getInterviewAnalysis"])(
     "asks before saving a memory after %s in the same turn",
     (reader) => {
       const status = decide("saveMemory", [user("look at this job"), ...ran(reader, "c1")]);

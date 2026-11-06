@@ -62,6 +62,12 @@ const NEW_NAMES = [
   "get_interview_analysis",
   "create_interview",
   "list_screening_interviews",
+  "create_resume",
+  "update_resume",
+  "duplicate_resume",
+  "delete_resume",
+  "apply_review_suggestions",
+  "export_resume",
 ];
 
 const JOB_ID = "11111111-1111-4111-8111-111111111111";
@@ -107,6 +113,7 @@ describe("MCP_TOOLS", () => {
     }
     expect(Object.keys(MCP_EXCLUDED_AGENT_TOOLS).sort()).toEqual([
       "deleteMemory",
+      "getResumeContent",
       "requestResumeUpload",
       "saveMemory",
     ]);
@@ -126,7 +133,16 @@ describe("MCP_TOOLS", () => {
         .sort();
 
     expect(flagged("confirm")).toEqual(
-      ["complete_onboarding", "start_resume_review", "submit_application", "update_my_preferences"].sort(),
+      [
+        "apply_review_suggestions",
+        "complete_onboarding",
+        "create_resume",
+        "delete_resume",
+        "start_resume_review",
+        "submit_application",
+        "update_my_preferences",
+        "update_resume",
+      ].sort(),
     );
     expect(flagged("credit")).toEqual(
       ["natural_language_job_search", "pick_resume_for_job", "start_resume_review", "submit_application"].sort(),
@@ -264,7 +280,7 @@ describe("MCP_TOOLS", () => {
       expect(await bind("get_resume_details").run({ resumeId: RESUME_ID })).toEqual({
         resume: { id: RESUME_ID, name: "CV" },
       });
-      expect(getResumeDetails).toHaveBeenCalledWith(supabase.client, ctx.user, RESUME_ID);
+      expect(getResumeDetails).toHaveBeenCalledWith(supabase.client, ctx.user, RESUME_ID, { forEditing: true });
 
       vi.mocked(getResumeDetails).mockResolvedValueOnce(null);
       expect(await bind("get_resume_details").run({ resumeId: RESUME_ID })).toEqual({

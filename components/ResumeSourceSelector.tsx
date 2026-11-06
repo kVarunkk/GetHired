@@ -10,6 +10,8 @@ import { SelectResumeParent } from "@/helpers/resume-selector/SelectResumeParent
 import { ResumePreview } from "@/helpers/resume-selector/ResumePreview";
 import { TResumeReviewResume } from "@/utils/types/review.types";
 
+const isPdfFile = (file: File) => /\.pdf$/i.test(file.name);
+
 interface ResumeSourceSelectorProps {
   existingResumes: (TResumeReviewResume & {
     resume_path?: string | null;
@@ -33,6 +35,7 @@ export default function ResumeSourceSelector({
 }: ResumeSourceSelectorProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fetchedName, setFetchedName] = useState<string | null>(null);
+  const [pageHref, setPageHref] = useState<string | null>(null);
 
   const selectedResume = selectedId
     ? existingResumes.find((r) => r.id === selectedId)
@@ -49,8 +52,10 @@ export default function ResumeSourceSelector({
     let ignore = false;
     setPreviewUrl(null);
     setFetchedName(null);
+    setPageHref(null);
 
     if (file) {
+      if (!isPdfFile(file)) return;
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
       return () => {
@@ -70,10 +75,14 @@ export default function ResumeSourceSelector({
             .select("resume_path, name")
             .eq("id", selectedId)
             .single();
-          if (fetchError || !resumeData?.resume_path)
-            throw new Error("Resume not found");
-          path = resumeData.resume_path;
+          if (fetchError || !resumeData) throw new Error("Resume not found");
           if (!ignore) setFetchedName(resumeData.name || null);
+          // A resume with no stored file has only its page (RE-REQ-100).
+          if (!resumeData.resume_path) {
+            if (!ignore) setPageHref(`/resume/${selectedId}`);
+            return;
+          }
+          path = resumeData.resume_path;
         }
 
         const { data, error: signedError } = await supabase.storage
@@ -151,7 +160,12 @@ export default function ResumeSourceSelector({
           when it first appears and not on every pick. */}
       {hasSelection && (
         <div className="animate-in fade-in duration-200">
-          <ResumePreview previewUrl={previewUrl} name={selectedName} />
+          <ResumePreview
+            previewUrl={previewUrl}
+            pageHref={pageHref}
+            noPreview={!!file && !isPdfFile(file)}
+            name={selectedName}
+          />
         </div>
       )}
     </div>

@@ -96,6 +96,8 @@ export function importedApplicationOf(
   applicationSeq += 1;
   return {
     id: seqId("ea000000", applicationSeq),
+    resume_snapshot: null,
+    resume_contact_snapshot: null,
     applicant_user_id: null,
     company_candidate_id: candidate.id,
     import_batch_id: candidate.source_batch_id,

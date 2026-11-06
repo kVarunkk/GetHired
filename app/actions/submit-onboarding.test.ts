@@ -3,13 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { completeApplicantOnboarding } from "@/helpers/user/complete-onboarding";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import { copyClaimResume } from "@/helpers/candidates/claim-prefill";
+import { importClaimResume } from "@/helpers/candidates/claim-prefill";
 import { submitOnboardingAction } from "./submit-onboarding";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/helpers/user/complete-onboarding", () => ({ completeApplicantOnboarding: vi.fn() }));
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn(() => ({})) }));
-vi.mock("@/helpers/candidates/claim-prefill", () => ({ copyClaimResume: vi.fn() }));
+vi.mock("@/helpers/candidates/claim-prefill", () => ({ importClaimResume: vi.fn() }));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
@@ -36,7 +36,6 @@ const PROFILE = {
 };
 
 let supabase: SupabaseMock;
-let upload: ReturnType<typeof vi.fn>;
 
 function form(fields: { profile?: object; resumeId?: string; file?: File; claimToken?: string }) {
   const data = new FormData();
@@ -47,23 +46,19 @@ function form(fields: { profile?: object; resumeId?: string; file?: File; claimT
   return data;
 }
 
-const pdf = () => new File([new Uint8Array(10)], "My CV.pdf", { type: "application/pdf" });
-
-function signIn(user: typeof SESSION_USER | null, credits = 20) {
+function signIn(user: typeof SESSION_USER | null) {
   supabase = createSupabaseMock({ user });
-  upload = vi.fn().mockResolvedValue({ error: null });
-  Object.assign(supabase.client, { storage: { from: () => ({ upload }) } });
-  supabase.queue("user_info", { data: { ai_credits: credits }, error: null });
   vi.mocked(createClient).mockResolvedValue(supabase.client);
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   signIn(SESSION_USER);
   vi.mocked(completeApplicantOnboarding).mockResolvedValue({ ok: true });
 });
 
 describe("submitOnboardingAction", () => {
-  it("completes onboarding for the session user with an existing resume", async () => {
+  it("completes onboarding for the session user with the resume from Step 6", async () => {
     expect(await submitOnboardingAction(form({ resumeId: RESUME_ID }))).toEqual({ success: true });
 
     expect(completeApplicantOnboarding).toHaveBeenCalledWith(
@@ -74,33 +69,17 @@ describe("submitOnboardingAction", () => {
     );
   });
 
-  it("uploads a new file, creates the resume and asks the pipeline to parse it", async () => {
-    supabase.queue("resumes", { data: { id: "new-resume" }, error: null });
+  it("waits for no parse and writes no resume itself (RE-REQ-021)", async () => {
+    await submitOnboardingAction(form({ resumeId: RESUME_ID }));
 
-    expect(await submitOnboardingAction(form({ file: pdf() }))).toEqual({ success: true });
-
-    expect(upload).toHaveBeenCalledWith(
-      expect.stringMatching(new RegExp(`^resumes/${USER_ID}/\\d+-My_CV\\.pdf$`)),
-      expect.anything(),
-      { contentType: "application/pdf" },
-    );
-    expect(supabase.callsFor("resumes")[0].chain[0]).toMatchObject({
-      method: "insert",
-      args: [expect.objectContaining({ user_id: USER_ID, name: "My CV.pdf", content: null })],
-    });
-    expect(vi.mocked(completeApplicantOnboarding).mock.calls[0][3]).toEqual({
-      resumeId: "new-resume",
-      shouldParse: true,
-    });
+    expect(supabase.callsFor("resumes")).toHaveLength(0);
+    expect(importClaimResume).not.toHaveBeenCalled();
   });
 
-  it("refuses a new file without enough AI credits, before writing anything", async () => {
-    signIn(SESSION_USER, 1);
+  it("ignores a file: Step 6 has already parsed it", async () => {
+    const file = new File([new Uint8Array(10)], "cv.pdf");
 
-    expect(await submitOnboardingAction(form({ file: pdf() }))).toEqual({
-      error: "Insufficient AI credits for resume upload. Please top up to continue.",
-    });
-    expect(upload).not.toHaveBeenCalled();
+    expect(await submitOnboardingAction(form({ file }))).toEqual({ error: "Please upload your resume." });
     expect(completeApplicantOnboarding).not.toHaveBeenCalled();
   });
 
@@ -109,14 +88,12 @@ describe("submitOnboardingAction", () => {
     expect(completeApplicantOnboarding).not.toHaveBeenCalled();
   });
 
-  it("validates the profile before uploading anything", async () => {
+  it("validates the profile", async () => {
     const result = await submitOnboardingAction(
-      form({ profile: { ...PROFILE, full_name: "" }, file: pdf() }),
+      form({ profile: { ...PROFILE, full_name: "" }, resumeId: RESUME_ID }),
     );
 
     expect(result).toEqual({ error: expect.stringContaining("full_name") });
-    expect(upload).not.toHaveBeenCalled();
-    expect(supabase.callsFor("resumes")).toHaveLength(0);
     expect(completeApplicantOnboarding).not.toHaveBeenCalled();
   });
 
@@ -158,39 +135,29 @@ describe("submitOnboardingAction", () => {
     );
 
     expect(vi.mocked(completeApplicantOnboarding).mock.calls[0][1]).toEqual(SESSION_USER);
-    expect(supabase.callsFor("user_info")[0].chain).toContainEqual({
-      method: "eq",
-      args: ["user_id", USER_ID],
-    });
   });
 
   describe("the claimed company's resume (BIT-105)", () => {
     const TOKEN = "t".repeat(43);
 
-    it("copies it and asks the pipeline to parse it", async () => {
-      vi.mocked(copyClaimResume).mockResolvedValue({ ok: true, resumeId: "copied" });
+    it("imports it, already parsed", async () => {
+      vi.mocked(importClaimResume).mockResolvedValue({ ok: true, resumeId: "imported" });
 
       expect(await submitOnboardingAction(form({ claimToken: TOKEN }))).toEqual({ success: true });
 
-      expect(copyClaimResume).toHaveBeenCalledWith(supabase.client, expect.anything(), USER_ID, TOKEN);
-      expect(vi.mocked(completeApplicantOnboarding).mock.calls[0][3]).toEqual({ resumeId: "copied", shouldParse: true });
+      expect(importClaimResume).toHaveBeenCalledWith(supabase.client, expect.anything(), SESSION_USER, TOKEN);
+      expect(vi.mocked(completeApplicantOnboarding).mock.calls[0][3]).toEqual({ resumeId: "imported", shouldParse: false });
     });
 
     it("is ignored when they chose another resume", async () => {
       await submitOnboardingAction(form({ claimToken: TOKEN, resumeId: RESUME_ID }));
-      signIn(SESSION_USER);
-      supabase.queue("resumes", { data: { id: "new-resume" }, error: null });
-      await submitOnboardingAction(form({ claimToken: TOKEN, file: pdf() }));
 
-      expect(copyClaimResume).not.toHaveBeenCalled();
-      expect(vi.mocked(completeApplicantOnboarding).mock.calls.map((call) => call[3])).toEqual([
-        { resumeId: RESUME_ID, shouldParse: false },
-        { resumeId: "new-resume", shouldParse: true },
-      ]);
+      expect(importClaimResume).not.toHaveBeenCalled();
+      expect(vi.mocked(completeApplicantOnboarding).mock.calls[0][3]).toEqual({ resumeId: RESUME_ID, shouldParse: false });
     });
 
-    it("saves nothing when the copy is refused", async () => {
-      vi.mocked(copyClaimResume).mockResolvedValue({ ok: false, error: "That resume is no longer available. Upload your own." });
+    it("saves nothing when the import is refused", async () => {
+      vi.mocked(importClaimResume).mockResolvedValue({ ok: false, error: "That resume is no longer available. Upload your own." });
 
       expect(await submitOnboardingAction(form({ claimToken: TOKEN }))).toEqual({
         error: "That resume is no longer available. Upload your own.",
@@ -198,14 +165,11 @@ describe("submitOnboardingAction", () => {
       expect(completeApplicantOnboarding).not.toHaveBeenCalled();
     });
 
-    it("needs the same credits as an upload, and a valid profile, before copying", async () => {
-      signIn(SESSION_USER, 1);
-      expect(await submitOnboardingAction(form({ claimToken: TOKEN }))).toMatchObject({ error: expect.stringMatching(/credits/) });
-      signIn(SESSION_USER);
+    it("needs a valid profile before importing", async () => {
       expect(await submitOnboardingAction(form({ claimToken: TOKEN, profile: { ...PROFILE, full_name: "" } }))).toMatchObject({
         error: expect.stringContaining("full_name"),
       });
-      expect(copyClaimResume).not.toHaveBeenCalled();
+      expect(importClaimResume).not.toHaveBeenCalled();
     });
   });
 });

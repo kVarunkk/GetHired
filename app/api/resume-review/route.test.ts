@@ -151,7 +151,7 @@ describe("POST /api/resume-review: analysis", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
     expect(supabase.callsFor("resume_reviews")[0].chain).toEqual([
-      { method: "select", args: ["name, resume_id, resumes ( content ), target_jd"] },
+      { method: "select", args: ["name, resume_id, resumes ( content, revision ), target_jd"] },
       { method: "eq", args: ["id", "rev1"] },
       { method: "single", args: [] },
     ]);
@@ -179,7 +179,15 @@ describe("POST /api/resume-review: analysis", () => {
       {
         method: "update",
         args: [
-          { ai_response: ANALYSIS, score: 64, status: "completed", analysis_failed: false, updated_at: NOW },
+          {
+            // The fixture's bullet isn't on its resume, so its suggestion goes (RE-REQ-054a).
+            ai_response: { ...ANALYSIS, bullet_points: [] },
+            score: 64,
+            status: "completed",
+            analysis_failed: false,
+            resume_revision: null,
+            updated_at: NOW,
+          },
         ],
       },
       { method: "eq", args: ["id", "rev1"] },

@@ -47,7 +47,7 @@ import {
   type OnboardingClaimPrefill,
 } from "@/helpers/candidates/claim-prefill-form";
 
-type IFormData = {
+export type IFormData = {
   email: string | null;
   full_name: string;
   linkedin_url: string;
@@ -65,8 +65,12 @@ type IFormData = {
   career_goals_short_term: string;
   career_goals_long_term: string;
   company_size_preference: string;
+  /** Shown in Step 6. It's parsed when added, so only `resume_id` is submitted. */
   resume_file: File | null;
   resume_id: string | null;
+  /** The resume this form's upload created, which a new file replaces (RE-REQ-021). */
+  uploaded_resume_id: string | null;
+  resume_parsing: boolean;
   /** BIT-105: the claimed company's resume, copied on submit when chosen. */
   claim_resume_name: string | null;
   use_claim_resume: boolean;
@@ -110,6 +114,8 @@ export const OnboardingForm: React.FC<{
     company_size_preference: "",
     resume_file: null,
     resume_id: null,
+    uploaded_resume_id: null,
+    resume_parsing: false,
     claim_resume_name: claimPrefill?.resume?.name ?? null,
     use_claim_resume: false,
     job_type: [],
@@ -338,11 +344,15 @@ export const OnboardingForm: React.FC<{
         case "resume_file":
           if (
             currentStep ===
-              steps.findIndex((s) => s.name === "Resume Upload") &&
-            !(formData.resume_id || formData.resume_file || formData.use_claim_resume)
+            steps.findIndex((s) => s.name === "Resume Upload")
           ) {
-            newErrors[field] = "Please upload your resume.";
-            isValid = false;
+            if (formData.resume_parsing) {
+              newErrors[field] = "We're still reading your resume.";
+              isValid = false;
+            } else if (!(formData.resume_id || formData.use_claim_resume)) {
+              newErrors[field] = "Please upload your resume.";
+              isValid = false;
+            }
           }
           break;
       }
@@ -414,9 +424,7 @@ export const OnboardingForm: React.FC<{
       const onboardingFormData = new FormData();
 
       onboardingFormData.append("profileData", JSON.stringify(dataToSave));
-      if (formData.resume_file) {
-        onboardingFormData.append("resumeFile", formData.resume_file);
-      } else if (formData.resume_id) {
+      if (formData.resume_id) {
         onboardingFormData.append("resumeId", formData.resume_id);
       } else if (formData.use_claim_resume && claimPrefill) {
         onboardingFormData.append("claimToken", claimPrefill.token);

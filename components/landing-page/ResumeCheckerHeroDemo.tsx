@@ -16,9 +16,10 @@ import {
 
 // A sample resume review for the AI resume checker's hero. It renders the
 // review page's own AnalysisPane and DigitalTwinMirror with a canned review,
-// so hovering a suggestion highlights its line in the resume and clicking it
-// copies the rewrite, as on /resume-review/[id]. "Tailor Resume" replays the
-// analysis locally: nothing is saved and no API is called.
+// so hovering a suggestion highlights its line in the resume and Copy copies
+// the rewrite, as on /resume-review/[id]. The pane is read-only, so there's no
+// Apply. "Tailor Resume" replays the analysis locally: nothing is saved and no
+// API is called.
 
 /** How long the replayed analysis spins before the results come back. */
 export const DEMO_ANALYSIS_MS = 2400;
@@ -94,6 +95,7 @@ export default function ResumeCheckerHeroDemo() {
           isAnalyzing={isAnalyzing}
           setActiveHighlightId={setActiveHighlightId}
           activeHighlightId={activeHighlightId}
+          readOnly
         />
       </aside>
 

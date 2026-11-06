@@ -10,7 +10,7 @@ import SectionHeader from "@/components/SectionHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { loadApplicationFrame } from "@/helpers/applications/application-page";
+import { applicationPath, loadApplicationFrame } from "@/helpers/applications/application-page";
 import { loadSharedSignals, markSharedSignalsViewed } from "@/helpers/applications/shared-signals";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 import type { TApplicationStatus } from "@/utils/types";
@@ -57,7 +57,9 @@ export default async function ApplicationCandidatePage({ params }: { params: Pro
     const [{ data: application, error }, imported] = await Promise.all([
       supabase
         .from("applications")
-        .select(`id, created_at, status, resumes(resume_path), user_info(${RECRUITER_CANDIDATE_COLUMNS})` as const)
+        .select(
+          `id, created_at, status, resume_snapshot, resumes(resume_path), user_info(${RECRUITER_CANDIDATE_COLUMNS})` as const,
+        )
         .eq("id", application_id)
         .maybeSingle(),
       loadImported(),
@@ -68,18 +70,22 @@ export default async function ApplicationCandidatePage({ params }: { params: Pro
 
     // What the candidate shared (OR-REQ-032). A failure hides the section,
     // not the page. Opening it ends the candidate's right to un-share.
-    const [shared, { data: signedUrlData }] = await Promise.all([
+    // What was sent has its own page, and only an older application needs the file.
+    const resumePath = application.resume_snapshot ? null : application.resumes?.resume_path;
+    const [shared, signed] = await Promise.all([
       loadSharedSignals(supabase, application.id).catch((err) => {
         reportError("[application] couldn't load shared items", err);
         return null;
       }),
-      supabase.storage.from("resumes").createSignedUrl(application.resumes?.resume_path ?? "", 3600),
+      resumePath ? supabase.storage.from("resumes").createSignedUrl(resumePath, 3600) : null,
     ]);
     if (shared?.unviewedIds.length) {
       const ids = shared.unviewedIds;
       after(() => markSharedSignalsViewed(application.id, ids));
     }
-    const signedUrl = signedUrlData?.signedUrl ?? null;
+    const resumeHref = application.resume_snapshot
+      ? `${applicationPath(application.id)}/resume`
+      : (signed?.data?.signedUrl ?? null);
 
     const details: { label: string; value: string }[] = [
       { label: "Desired Roles", value: candidate?.desired_roles?.join(", ") || "Not specified" },
@@ -124,10 +130,10 @@ export default async function ApplicationCandidatePage({ params }: { params: Pro
               </p>
               <ApplicationStatusBadge status={application.status as TApplicationStatus} />
             </CardHeader>
-            {signedUrl && (
+            {resumeHref && (
               <CardContent>
                 <Button asChild className="w-full">
-                  <a href={signedUrl} target="_blank" rel="noopener noreferrer">
+                  <a href={resumeHref} target="_blank" rel="noopener noreferrer">
                     View Resume
                   </a>
                 </Button>

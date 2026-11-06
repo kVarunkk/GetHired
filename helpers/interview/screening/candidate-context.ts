@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { scrubPII } from "@/helpers/ai/fairness";
+import { readResumeSnapshot } from "@/helpers/applications/resume-snapshot";
 import { firstName as firstNameOf } from "@/helpers/outreach/linkify";
 import { extractSectionText } from "@/utils/extract-resume-content";
 import type { TResumeRowContent } from "@/utils/types";
@@ -92,25 +93,31 @@ export async function loadCandidateContext(
 ): Promise<{ ok: true; firstName: string | null; context: string } | { ok: false; error: string }> {
   const { data: application, error } = await admin
     .from("applications")
-    .select("resume_id, applicant_user_id, company_candidate_id")
+    .select("resume_id, resume_snapshot, applicant_user_id, company_candidate_id")
     .eq("id", applicationId)
     .maybeSingle();
   if (error) throw new Error(`Couldn't load the application: ${error.message}`);
-  if (application && !application.resume_id && application.company_candidate_id) {
+  const snapshot = readResumeSnapshot(application?.resume_snapshot);
+  if (application && !snapshot && !application.resume_id && application.company_candidate_id) {
     return companyCandidateContext(admin, application.company_candidate_id);
   }
-  if (!application?.resume_id || !application.applicant_user_id) {
+  if (!application?.applicant_user_id || (!snapshot && !application.resume_id)) {
     return { ok: false, error: NO_RESUME };
   }
 
-  const { data: resume, error: resumeError } = await admin
-    .from("resumes")
-    .select("content")
-    .eq("id", application.resume_id)
-    .eq("user_id", application.applicant_user_id)
-    .maybeSingle();
-  if (resumeError) throw new Error(`Couldn't load the resume: ${resumeError.message}`);
-  if (!resume) return { ok: false, error: NO_RESUME };
+  // What was sent (RE-REQ-062), or for an older application its live resume.
+  let content = snapshot?.content as unknown as TResumeRowContent | null | undefined;
+  if (!snapshot) {
+    const { data: resume, error: resumeError } = await admin
+      .from("resumes")
+      .select("content")
+      .eq("id", application.resume_id!)
+      .eq("user_id", application.applicant_user_id)
+      .maybeSingle();
+    if (resumeError) throw new Error(`Couldn't load the resume: ${resumeError.message}`);
+    if (!resume) return { ok: false, error: NO_RESUME };
+    content = resume.content as TResumeRowContent | null;
+  }
 
   const { data: profile } = await admin
     .from("user_info")
@@ -118,10 +125,7 @@ export async function loadCandidateContext(
     .eq("user_id", application.applicant_user_id)
     .maybeSingle();
 
-  return {
-    ok: true,
-    ...buildCandidateContext((resume.content as TResumeRowContent | null) ?? null, profile?.full_name ?? null),
-  };
+  return { ok: true, ...buildCandidateContext(content ?? null, profile?.full_name ?? null) };
 }
 
 async function companyCandidateContext(

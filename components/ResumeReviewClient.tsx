@@ -14,6 +14,7 @@ import { scoreColorClass } from "./resume-review/score";
 import { AskAgentAboutResumeReview } from "./agent/AskAgentOnApplicantIdPages";
 import { markAnalysisAsFailedAction } from "@/app/actions/mark-review-analysis-failed";
 import useSWR, { mutate } from "swr";
+import { reviewRefreshInterval, type ReviewTriggerState } from "./resume-review/review-refresh";
 import { cn, fetcher } from "@/utils/utils";
 
 interface ReviewWorkspaceProps {
@@ -31,27 +32,16 @@ export default function ResumeReviewClient({
     null,
   );
   const [isJdPaneOpen, setIsJdPaneOpen] = useState(true);
-  const [activeTriggerState, setActiveTriggerState] = useState<
-    "idle" | "saving_jd" | "triggering_analysis" | "triggering_parse"
-  >("idle");
+  const [activeTriggerState, setActiveTriggerState] =
+    useState<ReviewTriggerState>("idle");
 
   const cacheKey = `/api/resume-review/${initialReview.id}`;
   const {
     data: { data: review },
   } = useSWR(cacheKey, fetcher, {
     fallbackData: { data: initialReview },
-    refreshInterval: (swrRootData) => {
-      const data = swrRootData?.data;
-      const isParsing =
-        (data?.resume_id &&
-          !data?.resumes?.content &&
-          !data?.resumes?.parsing_failed) ||
-        activeTriggerState === "triggering_parse";
-      const isAnalyzing =
-        data?.status === "processing" ||
-        activeTriggerState === "triggering_analysis";
-      return isParsing || isAnalyzing ? 2000 : 0;
-    },
+    refreshInterval: (swrRootData) =>
+      reviewRefreshInterval(swrRootData?.data, activeTriggerState),
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
   });
@@ -155,6 +145,10 @@ export default function ResumeReviewClient({
           isAnalyzing={isAnalyzing}
           setActiveHighlightId={setActiveHighlightId}
           activeHighlightId={activeHighlightId}
+          onRerun={() => {
+            changeTriggerState("triggering_analysis");
+            runAnalysis();
+          }}
         />
       </aside>
 

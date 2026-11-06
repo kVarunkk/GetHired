@@ -24,6 +24,21 @@ export function resumeSuggestions(resume: Resume): AgentSuggestion[] {
       label: "Review it for a job",
       prompt: `Review ${ref} against a job I like. Ask me which job first.`,
     }),
+    // getResumeContent, updateResume
+    ...when(!resume.parsingFailed, {
+      label: "Improve my summary",
+      prompt: `Read ${ref} and suggest a stronger summary. Ask me for anything you need, then update it with my approval.`,
+    }),
+    // duplicateResume
+    ...when(!resume.parsingFailed, {
+      label: "Make a copy to tailor",
+      prompt: `Make a copy of ${ref} that I can tailor for a job.`,
+    }),
+    // exportResume
+    ...when(!resume.parsingFailed, {
+      label: "Download it",
+      prompt: `Give me a download link for ${ref} as a PDF.`,
+    }),
     // createInterview
     ...when(!resume.parsingFailed, {
       label: "Mock interview with it",

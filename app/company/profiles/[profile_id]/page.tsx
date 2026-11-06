@@ -15,6 +15,8 @@ import {
   RECRUITER_CANDIDATE_COLUMNS,
 } from "@/helpers/profiles/candidate-columns";
 import { publicResumeContent } from "@/helpers/profiles/ai-rerank-profiles";
+import { readResume } from "@/helpers/resume/read-resume";
+import { buildResumeDocument } from "@/helpers/resume/render/document";
 import { getCandidateMatches } from "@/helpers/matching/candidate-matches";
 import { outreachStatusFor } from "@/helpers/outreach/list";
 import ProfileMatches from "@/components/matching/ProfileMatches";
@@ -67,7 +69,7 @@ const getCachedDirectoryProfile = (profile_id: string) =>
 const getFullProfile = async (supabase: SupabaseClient<Database>, profile_id: string) => {
   const { data, error } = await supabase
     .from("user_info")
-    .select(`${RECRUITER_CANDIDATE_COLUMNS}, resumes(resume_path)` as const)
+    .select(`${RECRUITER_CANDIDATE_COLUMNS}, resumes(resume_path, content, contact, template, schema_version)` as const)
     .eq("user_id", profile_id)
     .eq("resumes.is_primary", true)
     .maybeSingle();
@@ -168,13 +170,24 @@ export default async function ProfilePage({
 
     let body: React.ReactNode;
     if (hasAccess) {
-      const full = profile as NonNullable<Awaited<ReturnType<typeof getFullProfile>>>;
-      const { data: signedUrlData } = await supabase.storage
-        .from("resumes")
-        .createSignedUrl(full.resumes?.[0]?.resume_path || "", 3600);
+      // RE-REQ-064: the primary resume as it reads now, or for one still on
+      // version 1 its file. The row is the viewer's to read through RLS.
+      const { resumes, ...full } = profile as NonNullable<Awaited<ReturnType<typeof getFullProfile>>>;
+      const primary = resumes?.[0];
+      const resume = primary ? readResume(primary) : null;
+      const resumeDocument =
+        resume?.hasContent && resume.schemaVersion === 2
+          ? buildResumeDocument({
+              contact: resume.contact ?? { fullName: "", links: [] },
+              content: resume.content,
+              template: resume.template,
+            })
+          : undefined;
+      const filePath = resumeDocument ? null : primary?.resume_path;
+      const signed = filePath ? await supabase.storage.from("resumes").createSignedUrl(filePath, 3600) : null;
       body = (
         <ProfileClientHydrator
-          applicantProfile={{ ...full, signedUrl: signedUrlData?.signedUrl, applications }}
+          applicantProfile={{ ...full, signedUrl: signed?.data?.signedUrl, resumeDocument, applications }}
         />
       );
     } else {

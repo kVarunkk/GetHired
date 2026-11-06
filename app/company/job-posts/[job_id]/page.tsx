@@ -9,7 +9,6 @@ import Link from "next/link";
 import JobDescriptionCard from "@/components/JobDetailsCard";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { isUuid } from "@/helpers/agent/auth";
-import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 import AskAgentAboutJobPost from "@/components/agent/recruiter/AskAgentAboutJobPost";
 import PoolMatchesNotice from "@/components/candidates/PoolMatchesNotice";
 import { loadPoolMatchesCard, poolNoticeCount } from "@/helpers/candidates/pool-matches-card";
@@ -35,7 +34,7 @@ export default async function JobPostPage({
       .select(
         `
           *,
-          applications(*, user_info(${RECRUITER_CANDIDATE_COLUMNS}), job_postings(*), application_screenings(status, fit_score, recommendation)),
+          applications(id),
           company_info(name, website)
         ` as const,
       )

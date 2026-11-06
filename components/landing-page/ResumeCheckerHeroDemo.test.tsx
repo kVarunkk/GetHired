@@ -29,12 +29,20 @@ describe("ResumeCheckerHeroDemo", () => {
   it("highlights the resume line a suggestion rewrites on hover", () => {
     render(<ResumeCheckerHeroDemo />);
 
-    const card = screen.getByText(/Led the React and TypeScript component library/).closest("button")!;
+    const card = screen.getByText(/Led the React and TypeScript component library/).closest("div.rounded-xl")!;
     fireEvent.mouseEnter(card);
     expect(document.getElementById("bullet-demo-b1")).toHaveClass("bg-brandSoft");
 
     fireEvent.mouseLeave(card);
     expect(document.getElementById("bullet-demo-b1")).not.toHaveClass("bg-brandSoft");
+  });
+
+  it("has nothing to apply", () => {
+    render(<ResumeCheckerHeroDemo />);
+
+    expect(screen.getAllByRole("button", { name: "Copy" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Apply all/ })).not.toBeInTheDocument();
   });
 
   it("replays the analysis when Tailor Resume is pressed", () => {

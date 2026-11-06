@@ -24,10 +24,14 @@ import {
   listResumeReviews,
 } from "@/helpers/resume-review/list-resume-reviews";
 import {
+  previewApplySuggestions,
   previewCompleteOnboarding,
+  previewCreateResume,
+  previewDeleteResume,
   previewResumeReview,
   previewSubmitApplication,
   previewUpdatePreferences,
+  previewUpdateResume,
   type McpPreviewBuilder,
 } from "./previews";
 import type { McpToolset } from "./toolsets";
@@ -89,6 +93,11 @@ const SAFE_WRITE = {
   idempotentHint: true,
   openWorldHint: false,
 } as const;
+
+/** Makes something new each time it's called. */
+const ADD = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } as const;
+/** Changes or removes what's there. */
+const CHANGE = { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false } as const;
 
 export const MCP_TOOLS: readonly McpToolDef[] = [
   // --- Jobs ---
@@ -190,11 +199,12 @@ export const MCP_TOOLS: readonly McpToolDef[] = [
     title: "Resume details",
     annotations: READ,
     agentTools: [],
-    description: "Get one of the user's resumes with its parsed content.",
+    description:
+      "Get one of the user's resumes: its contact details, every section, item and bullet with its id, and the revision that update_resume needs.",
     custom: {
       inputSchema: z.object({ resumeId: uuidInput("resume") }),
       run: async ({ resumeId }: { resumeId: string }, ctx) => {
-        const resume = await getResumeDetails(ctx.supabase, ctx.user, resumeId);
+        const resume = await getResumeDetails(ctx.supabase, ctx.user, resumeId, { forEditing: true });
         return resume ? { resume } : { error: "Resume not found." };
       },
     },
@@ -204,6 +214,47 @@ export const MCP_TOOLS: readonly McpToolDef[] = [
     title: "Set primary resume",
     annotations: SAFE_WRITE,
     agentTools: ["setPrimaryResume"],
+  },
+  {
+    name: "create_resume",
+    title: "Create a resume",
+    annotations: ADD,
+    agentTools: ["createResume"],
+    preview: previewCreateResume,
+  },
+  {
+    name: "update_resume",
+    title: "Edit a resume",
+    annotations: CHANGE,
+    agentTools: ["updateResume"],
+    preview: previewUpdateResume,
+    description:
+      "Edit one of the user's resumes with a list of operations. Read it with get_resume_details first, and pass the revision and ids from there. An unknown id fails the whole call. Free.",
+  },
+  { name: "duplicate_resume", title: "Copy a resume", annotations: ADD, agentTools: ["duplicateResume"] },
+  {
+    name: "delete_resume",
+    title: "Delete a resume",
+    annotations: CHANGE,
+    agentTools: ["deleteResume"],
+    preview: previewDeleteResume,
+  },
+  {
+    name: "apply_review_suggestions",
+    title: "Apply review suggestions",
+    annotations: CHANGE,
+    agentTools: ["applyReviewSuggestions"],
+    preview: previewApplySuggestions,
+    description:
+      "Apply suggestions from a resume review, by each suggestion's bulletId from get_resume_review_details. They go to a copy by default, which later applies reuse; pass target 'original' only when the user asks to change the reviewed resume. Pass text to use the user's own wording. Text with a [placeholder] is refused: ask the user for the real value, then pass it as text.",
+  },
+  {
+    name: "export_resume",
+    title: "Download a resume",
+    annotations: READ,
+    agentTools: ["exportResume"],
+    description:
+      "Get a link that downloads one of the user's resumes as a PDF or Word file. Give it to the user to open in a browser where they're signed in to GetHired. Free.",
   },
   {
     name: "start_resume_review",
@@ -240,6 +291,8 @@ export const MCP_TOOLS: readonly McpToolDef[] = [
     title: "Resume review details",
     annotations: READ,
     agentTools: ["getResumeReview"],
+    description:
+      "Get a resume review's status, score, overall feedback and its top suggestions (highest priority first), each with the bulletId that apply_review_suggestions needs, any [placeholders] the user must fill in, and whether it's already applied.",
   },
   {
     name: "pick_resume_for_job",
@@ -273,6 +326,7 @@ export const MCP_TOOLS: readonly McpToolDef[] = [
 /** Applicant agent tools MCP leaves out, and why (spec §4.4). */
 export const MCP_EXCLUDED_AGENT_TOOLS: Partial<Record<AgentToolName, string>> = {
   requestResumeUpload: "A browser widget. MCP users upload resumes at /resume.",
+  getResumeContent: "`get_resume_details` covers it.",
   saveMemory: "Agent memory, which means nothing outside the chat.",
   deleteMemory: "Agent memory, which means nothing outside the chat.",
 };

@@ -86,7 +86,10 @@ export async function GET(request: NextRequest) {
 
     const { data: application, error: applicationError } = await admin
       .from("applications")
-      .select("*")
+      // Named columns, so resume_contact_snapshot can't reach the prompt (RE-SEC-006).
+      .select(
+        "job_post_id, company_candidate_id, resume_id, resume_snapshot, applicant_user_id, source, import_batch_id, answers, answers_v2, form_snapshot",
+      )
       .eq("id", applicationId)
       .maybeSingle();
     if (applicationError) throw new Error(`Application load failed: ${applicationError.message}`);
@@ -142,7 +145,10 @@ export async function GET(request: NextRequest) {
     const candidate =
       companyCandidate ??
       (application.applicant_user_id
-        ? await loadCandidate(admin, application.applicant_user_id, { resumeId: application.resume_id })
+        ? await loadCandidate(admin, application.applicant_user_id, {
+            resumeId: application.resume_id,
+            resumeSnapshot: application.resume_snapshot,
+          })
         : null);
 
     const result = await screenApplication(

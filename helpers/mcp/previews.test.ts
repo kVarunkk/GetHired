@@ -10,11 +10,15 @@ import { canonicalizeLocations } from "@/helpers/locations/aliases";
 import { previewAgentApplication } from "@/helpers/applications/preview-agent-application";
 import type { AgentToolContext } from "@/helpers/agent/tools/shared";
 import {
+  previewApplySuggestions,
   previewCompleteOnboarding,
+  previewCreateResume,
+  previewDeleteResume,
   previewResumeReview,
   previewSubmitApplication,
   previewText,
   previewUpdatePreferences,
+  previewUpdateResume,
 } from "./previews";
 
 vi.mock("@/helpers/locations/aliases", () => ({ canonicalizeLocations: vi.fn() }));
@@ -37,6 +41,88 @@ beforeEach(() => {
   vi.mocked(canonicalizeLocations).mockImplementation(async (names) =>
     names.map((name) => (name === "Bangalore" ? "Bengaluru" : name)),
   );
+});
+
+describe("the resume confirmations (RE-REQ-082)", () => {
+  const ROW = {
+    id: RESUME_ID,
+    name: "Backend",
+    content: {
+      version: 2,
+      sections: [
+        { id: "s1", type: "experience", items: [{ id: "i1", heading: "Engineer", bullets: [{ id: "b1", text: "Old" }] }] },
+      ],
+    },
+    contact: { fullName: "Ada", links: [] },
+    template: "classic",
+    revision: 3,
+    schema_version: 2,
+  };
+  const EDIT = {
+    resumeId: RESUME_ID,
+    expectedRevision: 3,
+    operations: [{ op: "setBulletText", bulletId: "b1", text: "New" }],
+  };
+
+  it("shows an edit's before and after, and writes nothing", async () => {
+    supabase.queue("resumes", { data: ROW, error: null });
+
+    expect(await previewUpdateResume(ctx, EDIT)).toEqual({
+      ok: true,
+      summary: 'Change "Backend"?',
+      details: [{ label: "Experience, Engineer", value: "Old → New" }],
+    });
+    expect(writes()).toEqual([]);
+  });
+
+  it("says 'not set' for what's new, and 'not set' isn't a blank", async () => {
+    supabase.queue("resumes", { data: ROW, error: null });
+
+    const preview = await previewUpdateResume(ctx, {
+      ...EDIT,
+      operations: [{ op: "addBullet", itemId: "i1", text: "Added" }],
+    });
+
+    expect(preview).toMatchObject({ ok: true, details: [{ value: "not set → Added" }] });
+  });
+
+  it("is an error for a stale revision, not a confirmation", async () => {
+    supabase.queue("resumes", { data: { ...ROW, revision: 4 }, error: null });
+
+    expect(await previewUpdateResume(ctx, EDIT)).toMatchObject({ ok: false });
+  });
+
+  it("is an error for the last resume", async () => {
+    supabase.queue("resumes", { data: [ROW], error: null });
+
+    expect(await previewDeleteResume(ctx, { resumeId: RESUME_ID })).toMatchObject({ ok: false });
+    expect(writes()).toEqual([]);
+  });
+
+  it("is an error for an unfilled placeholder", async () => {
+    supabase.queue("resume_reviews", {
+      data: {
+        id: JOB_ID,
+        resume_id: RESUME_ID,
+        ai_response: { bullet_points: [{ bullet_id: "b1", original: "Old", suggested: "Cut by [X%]" }] },
+      },
+      error: null,
+    });
+
+    const preview = await previewApplySuggestions(ctx, { reviewId: JOB_ID, items: [{ bulletId: "b1" }] });
+
+    expect(preview).toMatchObject({ ok: false });
+    expect(writes()).toEqual([]);
+  });
+
+  it("names a new resume's sections", async () => {
+    supabase.queue("resumes", { data: null, error: null, count: 1 });
+
+    expect(await previewCreateResume(ctx, { name: "Design" })).toMatchObject({
+      ok: true,
+      summary: 'Create the resume "Design"?',
+    });
+  });
 });
 
 describe("previewText", () => {

@@ -4,7 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createResumeReview } from "@/helpers/resume-review/create-resume-review";
 import { uploadResumeAction } from "./upload-resume-file";
 
-export async function createResumeReviewAction(formData: FormData) {
+export async function createResumeReviewAction(
+  formData: FormData,
+): ReturnType<typeof createResumeReview> {
   const supabase = await createClient();
   const file = formData.get("file") as File | null;
 

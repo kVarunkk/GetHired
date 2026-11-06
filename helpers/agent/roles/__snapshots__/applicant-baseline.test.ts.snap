@@ -4,15 +4,21 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
 {
   "decisions": {
     "afterTwoCreditCalls": {
+      "applyReviewSuggestions": "user-approval",
       "completeOnboarding": "user-approval",
       "createInterview": "not-applicable",
+      "createResume": "user-approval",
       "deleteMemory": "not-applicable",
+      "deleteResume": "user-approval",
+      "duplicateResume": "not-applicable",
+      "exportResume": "not-applicable",
       "findRelevantJobs": "not-applicable",
       "findSimilarJobs": "not-applicable",
       "getApplicationForm": "not-applicable",
       "getInterviewAnalysis": "not-applicable",
       "getJobDetails": "not-applicable",
       "getMyProfile": "not-applicable",
+      "getResumeContent": "not-applicable",
       "getResumeReview": "not-applicable",
       "listApplications": "not-applicable",
       "listInterviews": "not-applicable",
@@ -44,20 +50,27 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "unsaveJob": "not-applicable",
       "updateApplicationStatus": "not-applicable",
       "updateMyPreferences": "user-approval",
+      "updateResume": "user-approval",
     },
     "afterUntrustedRead": {
+      "applyReviewSuggestions": "user-approval",
       "completeOnboarding": "user-approval",
       "createInterview": "not-applicable",
+      "createResume": "user-approval",
       "deleteMemory": {
-        "reason": "The assistant read a job posting or report in this reply, so memory changes need your OK.",
+        "reason": "The assistant read a job posting, resume or report in this reply, so memory changes need your OK.",
         "type": "user-approval",
       },
+      "deleteResume": "user-approval",
+      "duplicateResume": "not-applicable",
+      "exportResume": "not-applicable",
       "findRelevantJobs": "not-applicable",
       "findSimilarJobs": "not-applicable",
       "getApplicationForm": "not-applicable",
       "getInterviewAnalysis": "not-applicable",
       "getJobDetails": "not-applicable",
       "getMyProfile": "not-applicable",
+      "getResumeContent": "not-applicable",
       "getResumeReview": "not-applicable",
       "listApplications": "not-applicable",
       "listInterviews": "not-applicable",
@@ -69,7 +82,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "requestResumeUpload": "not-applicable",
       "saveJob": "not-applicable",
       "saveMemory": {
-        "reason": "The assistant read a job posting or report in this reply, so memory changes need your OK.",
+        "reason": "The assistant read a job posting, resume or report in this reply, so memory changes need your OK.",
         "type": "user-approval",
       },
       "searchJobs": "not-applicable",
@@ -80,17 +93,24 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "unsaveJob": "not-applicable",
       "updateApplicationStatus": "not-applicable",
       "updateMyPreferences": "user-approval",
+      "updateResume": "user-approval",
     },
     "plain": {
+      "applyReviewSuggestions": "user-approval",
       "completeOnboarding": "user-approval",
       "createInterview": "not-applicable",
+      "createResume": "user-approval",
       "deleteMemory": "not-applicable",
+      "deleteResume": "user-approval",
+      "duplicateResume": "not-applicable",
+      "exportResume": "not-applicable",
       "findRelevantJobs": "not-applicable",
       "findSimilarJobs": "not-applicable",
       "getApplicationForm": "not-applicable",
       "getInterviewAnalysis": "not-applicable",
       "getJobDetails": "not-applicable",
       "getMyProfile": "not-applicable",
+      "getResumeContent": "not-applicable",
       "getResumeReview": "not-applicable",
       "listApplications": "not-applicable",
       "listInterviews": "not-applicable",
@@ -110,18 +130,25 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "unsaveJob": "not-applicable",
       "updateApplicationStatus": "not-applicable",
       "updateMyPreferences": "user-approval",
+      "updateResume": "user-approval",
     },
   },
   "names": [
+    "applyReviewSuggestions",
     "completeOnboarding",
     "createInterview",
+    "createResume",
     "deleteMemory",
+    "deleteResume",
+    "duplicateResume",
+    "exportResume",
     "findRelevantJobs",
     "findSimilarJobs",
     "getApplicationForm",
     "getInterviewAnalysis",
     "getJobDetails",
     "getMyProfile",
+    "getResumeContent",
     "getResumeReview",
     "listApplications",
     "listInterviews",
@@ -140,6 +167,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
     "unsaveJob",
     "updateApplicationStatus",
     "updateMyPreferences",
+    "updateResume",
   ],
   "prompts": {
     "filled": "# Role
@@ -156,6 +184,7 @@ You can use tools to:
 - list resumes, set the primary resume, and ask the user to upload one (listResumes, setPrimaryResume, requestResumeUpload)
 - pick which of the user's resumes fits a job or a pasted job description best, with what each covers and misses (pickResumeForJob, costs 1 AI credit when there are two or more resumes)
 - start a resume review against a job or a job description the user pastes, and read reviews (startResumeReview, costs AI credits; getResumeReview)
+- read and edit resumes (getResumeContent, updateResume), create, copy and delete them (createResume, duplicateResume, deleteResume), apply a review's suggestions (applyReviewSuggestions) and give the user a download link (exportResume), all free
 - list the user's AI mock interviews (listInterviews), read the feedback from an interview session (getInterviewAnalysis), and set up a new interview for a job (createInterview, free to create; each session uses AI credits when the user starts it). You cannot run the interview itself: give the user the link so they can take it.
 - list the screening interviews companies invited the user to, with their status and deadline (listScreeningInterviews). You cannot see their results: the company gets the report. Give the user the link to take an open one.
 - finish onboarding for a user who hasn't completed it (completeOnboarding, with the user's approval)
@@ -166,6 +195,7 @@ You can use tools to:
 - Before an action that spends AI credits or changes the user's profile, briefly say what it will do; the app also asks the user to approve it.
 - You can only apply to jobs on GetHired. For other jobs, link the user to /jobs/<id> so they apply on the company's site, and offer to track the application.
 - When applying, never make up an answer to an application question. Fill fields only from what the user told you or their profile; ask them for any required answer you don't have. If the user has more than one resume and hasn't said which to send, pick one with pickResumeForJob first. Before applying, show the answers you'll send and which resume. Only say you applied after the application was sent successfully.
+- When writing to a resume, never invent a metric, name or fact, and never estimate one. Use only what the resume says or the user told you. Where a real value is missing, ask the user for it.
 - Memory policy:
   - Job preferences that fit the profile (desired roles, locations, salary, job type, visa sponsorship, skills, work style) go to updateMyPreferences, not to memory.
   - Use saveMemory only for durable facts the profile has no field for (e.g. companies to avoid, ongoing interviews). Do not save one-off search details.
@@ -221,6 +251,7 @@ You can use tools to:
 - list resumes, set the primary resume, and ask the user to upload one (listResumes, setPrimaryResume, requestResumeUpload)
 - pick which of the user's resumes fits a job or a pasted job description best, with what each covers and misses (pickResumeForJob, costs 1 AI credit when there are two or more resumes)
 - start a resume review against a job or a job description the user pastes, and read reviews (startResumeReview, costs AI credits; getResumeReview)
+- read and edit resumes (getResumeContent, updateResume), create, copy and delete them (createResume, duplicateResume, deleteResume), apply a review's suggestions (applyReviewSuggestions) and give the user a download link (exportResume), all free
 - list the user's AI mock interviews (listInterviews), read the feedback from an interview session (getInterviewAnalysis), and set up a new interview for a job (createInterview, free to create; each session uses AI credits when the user starts it). You cannot run the interview itself: give the user the link so they can take it.
 - list the screening interviews companies invited the user to, with their status and deadline (listScreeningInterviews). You cannot see their results: the company gets the report. Give the user the link to take an open one.
 - finish onboarding for a user who hasn't completed it (completeOnboarding, with the user's approval)
@@ -231,6 +262,7 @@ You can use tools to:
 - Before an action that spends AI credits or changes the user's profile, briefly say what it will do; the app also asks the user to approve it.
 - You can only apply to jobs on GetHired. For other jobs, link the user to /jobs/<id> so they apply on the company's site, and offer to track the application.
 - When applying, never make up an answer to an application question. Fill fields only from what the user told you or their profile; ask them for any required answer you don't have. If the user has more than one resume and hasn't said which to send, pick one with pickResumeForJob first. Before applying, show the answers you'll send and which resume. Only say you applied after the application was sent successfully.
+- When writing to a resume, never invent a metric, name or fact, and never estimate one. Use only what the resume says or the user told you. Where a real value is missing, ask the user for it.
 - Memory policy:
   - Job preferences that fit the profile (desired roles, locations, salary, job type, visa sponsorship, skills, work style) go to updateMyPreferences, not to memory.
   - Use saveMemory only for durable facts the profile has no field for (e.g. companies to avoid, ongoing interviews). Do not save one-off search details.
@@ -267,6 +299,7 @@ You can use tools to:
 - list resumes, set the primary resume, and ask the user to upload one (listResumes, setPrimaryResume, requestResumeUpload)
 - pick which of the user's resumes fits a job or a pasted job description best, with what each covers and misses (pickResumeForJob, costs 1 AI credit when there are two or more resumes)
 - start a resume review against a job or a job description the user pastes, and read reviews (startResumeReview, costs AI credits; getResumeReview)
+- read and edit resumes (getResumeContent, updateResume), create, copy and delete them (createResume, duplicateResume, deleteResume), apply a review's suggestions (applyReviewSuggestions) and give the user a download link (exportResume), all free
 - list the user's AI mock interviews (listInterviews), read the feedback from an interview session (getInterviewAnalysis), and set up a new interview for a job (createInterview, free to create; each session uses AI credits when the user starts it). You cannot run the interview itself: give the user the link so they can take it.
 - list the screening interviews companies invited the user to, with their status and deadline (listScreeningInterviews). You cannot see their results: the company gets the report. Give the user the link to take an open one.
 - finish onboarding for a user who hasn't completed it (completeOnboarding, with the user's approval)
@@ -277,6 +310,7 @@ You can use tools to:
 - Before an action that spends AI credits or changes the user's profile, briefly say what it will do; the app also asks the user to approve it.
 - You can only apply to jobs on GetHired. For other jobs, link the user to /jobs/<id> so they apply on the company's site, and offer to track the application.
 - When applying, never make up an answer to an application question. Fill fields only from what the user told you or their profile; ask them for any required answer you don't have. If the user has more than one resume and hasn't said which to send, pick one with pickResumeForJob first. Before applying, show the answers you'll send and which resume. Only say you applied after the application was sent successfully.
+- When writing to a resume, never invent a metric, name or fact, and never estimate one. Use only what the resume says or the user told you. Where a real value is missing, ask the user for it.
 - Memory policy:
   - Job preferences that fit the profile (desired roles, locations, salary, job type, visa sponsorship, skills, work style) go to updateMyPreferences, not to memory.
   - Use saveMemory only for durable facts the profile has no field for (e.g. companies to avoid, ongoing interviews). Do not save one-off search details.
@@ -320,6 +354,53 @@ The user hasn't finished onboarding, so personalised matches and some features (
 No saved memories.",
   },
   "schemas": {
+    "applyReviewSuggestions": {
+      "description": "Apply suggestions from a resume review, by each suggestion's bulletId from getResumeReview. They go to a copy by default, which later applies reuse; pass target 'original' only when the user asks to change the reviewed resume. Pass text to use the user's own wording. Text with a [placeholder] is refused: ask the user for the real value, then pass it as text. The user must approve.",
+      "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "bulletId": {
+                  "description": "The suggestion's bulletId, from getResumeReview.",
+                  "type": "string",
+                },
+                "text": {
+                  "description": "The final text, when the user edited the suggestion or gave a real value for a placeholder.",
+                  "type": "string",
+                },
+              },
+              "required": [
+                "bulletId",
+              ],
+              "type": "object",
+            },
+            "minItems": 1,
+            "type": "array",
+          },
+          "reviewId": {
+            "description": "The resume review id, exactly as returned by another tool.",
+            "format": "uuid",
+            "type": "string",
+          },
+          "target": {
+            "enum": [
+              "copy",
+              "original",
+            ],
+            "type": "string",
+          },
+        },
+        "required": [
+          "reviewId",
+          "items",
+        ],
+        "type": "object",
+      },
+    },
     "completeOnboarding": {
       "description": "Finish the user's onboarding with their profile and resume, the same as the /get-started form. Only for users whose profile shows onboarding isn't complete; gather the required fields first. The user must approve.",
       "input": {
@@ -497,6 +578,96 @@ No saved memories.",
         "type": "object",
       },
     },
+    "createResume": {
+      "description": "Create a new resume for the user: blank, or from what they told you in this chat. Never add anything they didn't say. Free; the user must approve.",
+      "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string",
+          },
+          "sections": {
+            "description": "Only what the user gave you. Leave out for a blank resume.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "items": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "bullets": {
+                        "items": {
+                          "type": "string",
+                        },
+                        "type": "array",
+                      },
+                      "endDate": {
+                        "description": "As the user wrote it, e.g. 'Present'.",
+                        "type": "string",
+                      },
+                      "heading": {
+                        "description": "A role, degree, project or skill group.",
+                        "type": "string",
+                      },
+                      "location": {
+                        "type": "string",
+                      },
+                      "startDate": {
+                        "description": "As the user wrote it, e.g. 'Jan 2022'.",
+                        "type": "string",
+                      },
+                      "subheading": {
+                        "description": "A company or school.",
+                        "type": "string",
+                      },
+                      "url": {
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "bullets",
+                    ],
+                    "type": "object",
+                  },
+                  "type": "array",
+                },
+                "title": {
+                  "description": "The heading as the user wrote it. Required for type 'other'.",
+                  "type": "string",
+                },
+                "type": {
+                  "enum": [
+                    "summary",
+                    "experience",
+                    "projects",
+                    "skills",
+                    "education",
+                    "achievements",
+                    "certifications",
+                    "languages",
+                    "publications",
+                    "volunteering",
+                    "awards",
+                    "other",
+                  ],
+                  "type": "string",
+                },
+              },
+              "required": [
+                "type",
+                "items",
+              ],
+              "type": "object",
+            },
+            "type": "array",
+          },
+        },
+        "type": "object",
+      },
+    },
     "deleteMemory": {
       "description": "Forget a saved memory that is no longer true.",
       "input": {
@@ -511,6 +682,73 @@ No saved memories.",
         },
         "required": [
           "memoryId",
+        ],
+        "type": "object",
+      },
+    },
+    "deleteResume": {
+      "description": "Delete one of the user's resumes, with its reviews. It can't be undone, and the last resume can't be deleted. The user must approve.",
+      "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "resumeId": {
+            "description": "The resume id, exactly as returned by another tool.",
+            "format": "uuid",
+            "type": "string",
+          },
+        },
+        "required": [
+          "resumeId",
+        ],
+        "type": "object",
+      },
+    },
+    "duplicateResume": {
+      "description": "Make a copy of one of the user's resumes, to keep a version or tailor one for a job. It's never the primary resume. Free.",
+      "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string",
+          },
+          "resumeId": {
+            "description": "The resume id, exactly as returned by another tool.",
+            "format": "uuid",
+            "type": "string",
+          },
+        },
+        "required": [
+          "resumeId",
+        ],
+        "type": "object",
+      },
+    },
+    "exportResume": {
+      "description": "Get a link that downloads one of the user's resumes as a PDF or Word file. It works in a browser where the user is signed in. Free.",
+      "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "format": {
+            "description": "Defaults to pdf.",
+            "enum": [
+              "pdf",
+              "docx",
+            ],
+            "type": "string",
+          },
+          "resumeId": {
+            "description": "The resume id, exactly as returned by another tool.",
+            "format": "uuid",
+            "type": "string",
+          },
+        },
+        "required": [
+          "resumeId",
         ],
         "type": "object",
       },
@@ -725,8 +963,26 @@ No saved memories.",
         "type": "object",
       },
     },
+    "getResumeContent": {
+      "description": "Read one of the user's resumes: contact details, and every section, item and bullet with its id, plus the revision that updateResume needs.",
+      "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "resumeId": {
+            "description": "The resume id, exactly as returned by another tool.",
+            "format": "uuid",
+            "type": "string",
+          },
+        },
+        "required": [
+          "resumeId",
+        ],
+        "type": "object",
+      },
+    },
     "getResumeReview": {
-      "description": "Get a resume review's status, score, overall feedback and its top suggestions (highest priority first).",
+      "description": "Get a resume review's status, score, overall feedback and its top suggestions (highest priority first), each with the bulletId that applyReviewSuggestions needs, any [placeholders] the user must fill in, and whether it's already applied.",
       "input": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false,
@@ -885,7 +1141,7 @@ No saved memories.",
       },
     },
     "requestResumeUpload": {
-      "description": "Ask the user to upload a resume (PDF). The app shows an upload widget; the result is the new resumeId, or cancelled if the user dismissed it.",
+      "description": "Ask the user to upload a resume (PDF or Word). The app shows an upload widget and reads the file straight away; the result is the new resumeId, ready to use, or cancelled if the user dismissed it.",
       "input": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false,
@@ -1306,6 +1562,405 @@ No saved memories.",
             "type": "array",
           },
         },
+        "type": "object",
+      },
+    },
+    "updateResume": {
+      "description": "Edit one of the user's resumes with a list of operations. Read it with getResumeContent first, and pass the revision and ids from there. An unknown id fails the whole call. Free; the user must approve.",
+      "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "expectedRevision": {
+            "description": "The revision from getResumeContent.",
+            "exclusiveMinimum": 0,
+            "type": "integer",
+          },
+          "operations": {
+            "items": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "bulletId": {
+                      "type": "string",
+                    },
+                    "op": {
+                      "const": "setBulletText",
+                      "type": "string",
+                    },
+                    "text": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "bulletId",
+                    "text",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "index": {
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "itemId": {
+                      "type": "string",
+                    },
+                    "op": {
+                      "const": "addBullet",
+                      "type": "string",
+                    },
+                    "text": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "itemId",
+                    "text",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "bulletId": {
+                      "type": "string",
+                    },
+                    "op": {
+                      "const": "removeBullet",
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "bulletId",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "endDate": {
+                          "type": "string",
+                        },
+                        "heading": {
+                          "type": "string",
+                        },
+                        "location": {
+                          "type": "string",
+                        },
+                        "startDate": {
+                          "type": "string",
+                        },
+                        "subheading": {
+                          "type": "string",
+                        },
+                        "url": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                    "itemId": {
+                      "type": "string",
+                    },
+                    "op": {
+                      "const": "setItemFields",
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "itemId",
+                    "fields",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "bullets": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "fields": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "endDate": {
+                          "type": "string",
+                        },
+                        "heading": {
+                          "type": "string",
+                        },
+                        "location": {
+                          "type": "string",
+                        },
+                        "startDate": {
+                          "type": "string",
+                        },
+                        "subheading": {
+                          "type": "string",
+                        },
+                        "url": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                    "index": {
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "op": {
+                      "const": "addItem",
+                      "type": "string",
+                    },
+                    "sectionId": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "sectionId",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "itemId": {
+                      "type": "string",
+                    },
+                    "op": {
+                      "const": "removeItem",
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "itemId",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "index": {
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "op": {
+                      "const": "addSection",
+                      "type": "string",
+                    },
+                    "sectionType": {
+                      "enum": [
+                        "summary",
+                        "experience",
+                        "projects",
+                        "skills",
+                        "education",
+                        "achievements",
+                        "certifications",
+                        "languages",
+                        "publications",
+                        "volunteering",
+                        "awards",
+                        "other",
+                      ],
+                      "type": "string",
+                    },
+                    "title": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "sectionType",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "op": {
+                      "const": "setSectionTitle",
+                      "type": "string",
+                    },
+                    "sectionId": {
+                      "type": "string",
+                    },
+                    "title": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "sectionId",
+                    "title",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "op": {
+                      "const": "removeSection",
+                      "type": "string",
+                    },
+                    "sectionId": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "sectionId",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "description": "The section, item or bullet to move, within its parent.",
+                      "type": "string",
+                    },
+                    "index": {
+                      "description": "Its new position. Past the end means last.",
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "op": {
+                      "const": "move",
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "id",
+                    "index",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                        },
+                        "fullName": {
+                          "type": "string",
+                        },
+                        "headline": {
+                          "type": "string",
+                        },
+                        "links": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "label": {
+                                "type": "string",
+                              },
+                              "url": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "label",
+                              "url",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "location": {
+                          "type": "string",
+                        },
+                        "phone": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                    "op": {
+                      "const": "setContact",
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "fields",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                    },
+                    "op": {
+                      "const": "rename",
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "name",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "op": {
+                      "const": "setTemplate",
+                      "type": "string",
+                    },
+                    "template": {
+                      "enum": [
+                        "classic",
+                        "compact",
+                      ],
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "op",
+                    "template",
+                  ],
+                  "type": "object",
+                },
+              ],
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "type": "array",
+          },
+          "resumeId": {
+            "description": "The resume id, exactly as returned by another tool.",
+            "format": "uuid",
+            "type": "string",
+          },
+        },
+        "required": [
+          "resumeId",
+          "expectedRevision",
+          "operations",
+        ],
         "type": "object",
       },
     },

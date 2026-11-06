@@ -80,10 +80,18 @@ export type AIRerankRequestBody = {
   aiCredits?: number;
 };
 
+/**
+ * `resumes.content` as stored, version 1 or 2, for readers that only need the
+ * text. To work with a resume, use `readResume` (RE-REQ-008).
+ */
 export type TResumeRowContent = {
+  version?: number;
   sections?: {
+    id?: string;
     type?: string;
+    title?: string;
     items?: {
+      id?: string;
       bullets?: {
         id?: string;
         text?: string;
@@ -91,6 +99,10 @@ export type TResumeRowContent = {
       }[];
       heading?: string;
       subheading?: string;
+      location?: string;
+      startDate?: string;
+      endDate?: string;
+      url?: string;
     }[];
   }[];
 };
@@ -320,6 +332,13 @@ export enum PostHogEvent {
   AgentLocationNoResults = "agent_location_no_results",
 
   McpToolCall = "mcp_tool_call",
+
+  // Resume editor (RE-REQ-110). Never resume text, contact details or parse_notes.
+  ResumeParsed = "resume_parsed",
+  ResumeSaved = "resume_saved",
+  ResumeDuplicated = "resume_duplicated",
+  ResumeExported = "resume_exported",
+  ReviewSuggestionsApplied = "review_suggestions_applied",
 
   BillingWebhookError = "billing_webhook_error",
   BillingPricingViewed = "billing_pricing_viewed",

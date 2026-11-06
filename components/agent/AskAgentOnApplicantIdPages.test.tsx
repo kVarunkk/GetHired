@@ -46,6 +46,9 @@ describe("applicant id page agent helpers", () => {
   it("only offers what the resume's state allows", () => {
     expect(labels(resumeSuggestions(RESUME))).toEqual([
       "Review it for a job",
+      "Improve my summary",
+      "Make a copy to tailor",
+      "Download it",
       "Mock interview with it",
       "Make it my primary resume",
     ]);

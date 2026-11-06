@@ -10,6 +10,7 @@ import {
   validateAndSanitizeSearchQuery,
   wrapInSandbox,
 } from "@/helpers/ai/security";
+import { reconcileSuggestions } from "@/helpers/resume-review/suggestions";
 import { updateReviewAnalysisStatus } from "@/helpers/resume-review/update-review-analysis";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 import { sendResumeReviewStatusEmail } from "@/app/actions/send-review-status-email";
@@ -51,7 +52,7 @@ export async function startReviewAnalysis(
   // 1. Fetch Resume Content (The Digital Twin)
   const { data: reviewData } = await supabase
     .from("resume_reviews")
-    .select(`name, resume_id, resumes ( content ), target_jd`)
+    .select(`name, resume_id, resumes ( content, revision ), target_jd`)
     .eq("id", reviewId)
     .single();
 
@@ -62,6 +63,7 @@ export async function startReviewAnalysis(
   }
 
   const resumeJson = reviewData.resumes?.content;
+  const resumeRevision = reviewData.resumes?.revision ?? null;
   if (!resumeJson) {
     return { ok: false, status: 422, error: "Resume not indexed" };
   }
@@ -157,7 +159,9 @@ ${wrapInSandbox("resume_json", JSON.stringify(resumeJson))}
 CONSTRAINTS:
 - Use the exact 'id' from <resume_json> for every 'bullet_id' — do not invent IDs
 - If you cannot find the ID, skip that suggestion
-- Every suggested rewrite must include a real metric or a realistic conservative estimate with a clear note that it's an estimate
+- Never invent a number, name or fact. Use only what <resume_json> says about the candidate
+- Where a metric would help and the resume has none, write a placeholder in square brackets for the candidate to fill in, such as [X%] or [number of users]. Never write an estimate
+- Use square brackets only for these placeholders
 
 `.trim();
 
@@ -190,15 +194,26 @@ CONSTRAINTS:
       const { error: saveError } = await supabase
         .from("resume_reviews")
         .update({
-          ai_response: analysis,
+          ai_response: {
+            ...analysis,
+            bullet_points: reconcileSuggestions(analysis.bullet_points, resumeJson),
+          },
           score: analysis.score,
           status: "completed",
           analysis_failed: false,
+          resume_revision: resumeRevision,
           updated_at: new Date().toISOString(),
         })
         .eq("id", reviewId);
 
       if (saveError) throw saveError;
+
+      // They were for the suggestions this analysis just replaced.
+      const { error: clearError } = await supabase
+        .from("resume_review_applied")
+        .delete()
+        .eq("review_id", reviewId);
+      if (clearError) reportError("[REVIEW_APPLIED_CLEAR_FAILED]:", clearError);
 
       await sendResumeReviewStatusEmail(
         userInfo.email,

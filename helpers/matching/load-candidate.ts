@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { readResumeSnapshot } from "@/helpers/applications/resume-snapshot";
 import type { Database } from "@/utils/types/database.types";
 import type { TResumeRowContent } from "@/utils/types";
 
@@ -10,13 +11,15 @@ export const MATCH_JOB_COLUMNS =
  * A candidate's profile and primary resume for a matching prompt. Call it with
  * the service role, and only after checking the company may see the
  * candidate. The prompt builders strip protected fields (MT-SEC-002).
- * With `resumeId` (an application's resume) that resume is used instead of
- * the primary one. Returns null when the profile doesn't exist.
+ * With `resumeSnapshot` (what an application sent, RE-REQ-062) the live resume
+ * isn't read at all. With `resumeId` (an older application's resume) that
+ * resume is used instead of the primary one. Returns null when the profile
+ * doesn't exist.
  */
 export async function loadCandidate(
   admin: SupabaseClient<Database>,
   userId: string,
-  { resumeId }: { resumeId?: string | null } = {},
+  { resumeId, resumeSnapshot }: { resumeId?: string | null; resumeSnapshot?: unknown } = {},
 ): Promise<{ profile: Record<string, unknown>; resume: TResumeRowContent | null } | null> {
   const { data: profile, error } = await admin
     .from("user_info")
@@ -25,6 +28,11 @@ export async function loadCandidate(
     .maybeSingle();
   if (error) throw new Error(`Failed to load the candidate: ${error.message}`);
   if (!profile) return null;
+
+  const snapshot = readResumeSnapshot(resumeSnapshot);
+  if (snapshot) {
+    return { profile: profile as Record<string, unknown>, resume: snapshot.content as unknown as TResumeRowContent };
+  }
 
   const resumes = admin.from("resumes").select("content").eq("user_id", userId);
   const { data: resume } = await (resumeId

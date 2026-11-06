@@ -27,7 +27,7 @@ export function AskAgentAboutJobs() {
   );
 }
 
-// listResumes, setPrimaryResume, requestResumeUpload, startResumeReview.
+// listResumes, setPrimaryResume, requestResumeUpload, startResumeReview, createResume.
 export const RESUMES_SUGGESTIONS: AgentSuggestion[] = [
   { label: "Which resume is my primary?", prompt: "List my resumes and tell me which one is my primary." },
   {
@@ -35,6 +35,7 @@ export const RESUMES_SUGGESTIONS: AgentSuggestion[] = [
     prompt: "Help me pick which of my resumes should be my primary one for job matches, then set it.",
   },
   { label: "Upload a new resume", prompt: "I want to upload a new resume." },
+  { label: "Start a blank resume", prompt: "Create a blank resume for me." },
   { label: "Review my resume for a job", prompt: "Review my resume against a job I like. Ask me which job first." },
 ];
 

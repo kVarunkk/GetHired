@@ -214,6 +214,8 @@ export function applicationOf(
   applicationSeq += 1;
   return {
     id: seqId("e0000000", applicationSeq),
+    resume_snapshot: null,
+    resume_contact_snapshot: null,
     applicant_user_id: candidate.id,
     job_post_id: posting.id,
     all_jobs_id: posting.job_id,

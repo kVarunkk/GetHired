@@ -805,8 +805,10 @@ export type Database = {
           import_batch_id: string | null
           job_post_id: string | null
           merged_into_application_id: string | null
+          resume_contact_snapshot: Json | null
           resume_id: string | null
           resume_path: string | null
+          resume_snapshot: Json | null
           resume_url: string | null
           source: string
           source_detail: string | null
@@ -827,8 +829,10 @@ export type Database = {
           import_batch_id?: string | null
           job_post_id?: string | null
           merged_into_application_id?: string | null
+          resume_contact_snapshot?: Json | null
           resume_id?: string | null
           resume_path?: string | null
+          resume_snapshot?: Json | null
           resume_url?: string | null
           source?: string
           source_detail?: string | null
@@ -849,8 +853,10 @@ export type Database = {
           import_batch_id?: string | null
           job_post_id?: string | null
           merged_into_application_id?: string | null
+          resume_contact_snapshot?: Json | null
           resume_id?: string | null
           resume_path?: string | null
+          resume_snapshot?: Json | null
           resume_url?: string | null
           source?: string
           source_detail?: string | null
@@ -3478,15 +3484,118 @@ export type Database = {
           },
         ]
       }
+      resume_migration_items: {
+        Row: {
+          attempts: number
+          coverage: number | null
+          created_at: string
+          error: string | null
+          file_deleted_at: string | null
+          file_path: string
+          id: string
+          notified_at: string | null
+          queued_at: string | null
+          resume_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          coverage?: number | null
+          created_at?: string
+          error?: string | null
+          file_deleted_at?: string | null
+          file_path: string
+          id?: string
+          notified_at?: string | null
+          queued_at?: string | null
+          resume_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          coverage?: number | null
+          created_at?: string
+          error?: string | null
+          file_deleted_at?: string | null
+          file_path?: string
+          id?: string
+          notified_at?: string | null
+          queued_at?: string | null
+          resume_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resume_migration_items_resume_id_fkey"
+            columns: ["resume_id"]
+            isOneToOne: true
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resume_review_applied: {
+        Row: {
+          applied_at: string
+          applied_text: string
+          bullet_id: string
+          id: string
+          previous_text: string
+          review_id: string
+          target_resume_id: string
+        }
+        Insert: {
+          applied_at?: string
+          applied_text: string
+          bullet_id: string
+          id?: string
+          previous_text: string
+          review_id: string
+          target_resume_id: string
+        }
+        Update: {
+          applied_at?: string
+          applied_text?: string
+          bullet_id?: string
+          id?: string
+          previous_text?: string
+          review_id?: string
+          target_resume_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resume_review_applied_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "resume_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resume_review_applied_target_resume_id_fkey"
+            columns: ["target_resume_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resume_reviews: {
         Row: {
           ai_response: Json | null
           analysis_failed: boolean | null
+          applied_copy_id: string | null
           created_at: string
           id: string
           job_id: string | null
           name: string | null
           resume_id: string | null
+          resume_revision: number | null
           score: number | null
           status: string | null
           target_jd: string | null
@@ -3496,11 +3605,13 @@ export type Database = {
         Insert: {
           ai_response?: Json | null
           analysis_failed?: boolean | null
+          applied_copy_id?: string | null
           created_at?: string
           id?: string
           job_id?: string | null
           name?: string | null
           resume_id?: string | null
+          resume_revision?: number | null
           score?: number | null
           status?: string | null
           target_jd?: string | null
@@ -3510,11 +3621,13 @@ export type Database = {
         Update: {
           ai_response?: Json | null
           analysis_failed?: boolean | null
+          applied_copy_id?: string | null
           created_at?: string
           id?: string
           job_id?: string | null
           name?: string | null
           resume_id?: string | null
+          resume_revision?: number | null
           score?: number | null
           status?: string | null
           target_jd?: string | null
@@ -3554,39 +3667,64 @@ export type Database = {
       }
       resumes: {
         Row: {
+          contact: Json | null
           content: Json | null
           created_at: string
           id: string
           is_primary: boolean
           name: string | null
+          parse_notes: Json | null
           parsing_failed: boolean
           resume_path: string | null
+          revision: number
+          schema_version: number
+          source_resume_id: string | null
+          template: string
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          contact?: Json | null
           content?: Json | null
           created_at?: string
           id?: string
           is_primary?: boolean
           name?: string | null
+          parse_notes?: Json | null
           parsing_failed?: boolean
           resume_path?: string | null
+          revision?: number
+          schema_version?: number
+          source_resume_id?: string | null
+          template?: string
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          contact?: Json | null
           content?: Json | null
           created_at?: string
           id?: string
           is_primary?: boolean
           name?: string | null
+          parse_notes?: Json | null
           parsing_failed?: boolean
           resume_path?: string | null
+          revision?: number
+          schema_version?: number
+          source_resume_id?: string | null
+          template?: string
           updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "resumes_source_resume_id_fkey"
+            columns: ["source_resume_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "resumes_user_id_fkey"
             columns: ["user_id"]

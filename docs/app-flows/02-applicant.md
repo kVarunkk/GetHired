@@ -139,17 +139,29 @@ sequenceDiagram
   end
 ```
 
-## A5. Resumes (`/resume`, `/resume/[id]`)
+## A5. Resumes (`/resume`, `/resume/[id]`, `/resume/[id]/edit`)
+
+The structured resume is the only copy: an upload is parsed while the user waits, and the file is never stored (RE-REQ-010/011). `resumes.content` holds the full resume (`version: 2`), and `resumes.contact` holds the name, email, phone and links, which never go in `content` (RE-REQ-004/005). `saveResume` (`helpers/resumes/update-resume.ts`) is the one write path for both (RE-REQ-033).
 
 ```mermaid
 flowchart LR
-  R["/resume"] --> UP["uploadResumeFileAction → storage + resumes → parseResume (Gemini)"]
-  R --> RT["retryResumeParsingAction → parseResume"]
+  R["/resume"] --> UP["uploadResumeAction → parseResumeUpload (Gemini, in the request)<br/>→ saveResume: content + contact, schema_version 2"]
+  R --> REUP["ResumeReuploadPrompt<br/>(a failed resume with no content)"]
   R --> PRIM["setPrimaryResumeAction → resumes.is_primary → updateUserEmbedding (Gemini) → user_info.embedding"]
   R --> API["GET/DELETE /api/resumes, /api/resumes/[id]"]
-  UP --> TRG["trigger resumes_store_public_sections → resume_public_sections<br/>(what companies may see)"]
-  UP --> EM["parseResume → sendResumeStatusEmail (Resend)"]
+  R --> DET["/resume/[id]"]
+  DET --> VIEW["ResumePreview from content + contact + template"]
+  DET --> EDIT["/resume/[id]/edit → ResumeEditor → saveResume"]
+  DET --> COPY["duplicateResume (RE-REQ-041)"]
+  DET --> EXP["/api/resumes/[id]/export?format=pdf|docx<br/>(@react-pdf/renderer, docx)"]
+  VIEW --> SNAP["resumes_store_public_sections → resume_public_sections<br/>(what companies may see, an allowlist)"]
+  UP --> SNAP
+  EDIT --> APP["an application copies resume_snapshot + resume_contact_snapshot"]
 ```
+
+- **Version 1 resumes** still have `resume_path`. Every reader tolerates both shapes through `readResume`, a null `resume_path` and a null `contact` (RE-REQ-100). Opening the editor upgrades one in place (RE-REQ-095), and `GET /resume/[id]` still signs and shows the old PDF.
+- **A resume with no content and no file** can't be edited, copied or exported. `/resume` and `/resume/[id]` ask for the file again (RE-REQ-098), over the same row, so its reviews and applications still point at it.
+- **Review suggestions** are applied to a copy by default, or to the original; `resume_review_applied` keeps it idempotent and `resume_reviews.resume_revision` catches a stale page (RE-REQ-071…075).
 
 ## A6. Resume review
 

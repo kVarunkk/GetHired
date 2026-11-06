@@ -1,20 +1,21 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import { after } from "next/server";
-import { TAICredits } from "@/utils/types";
 import { revalidatePath } from "next/cache";
-import { parseResume } from "@/helpers/resume/parse-resume";
+import { z } from "zod";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
+import { resumeFromUpload } from "@/helpers/resumes/resume-from-upload";
+import { createClient } from "@/lib/supabase/server";
+
+const MISSING_DATA = { error: "Missing required upload data." };
 
 /**
- * SERVER ACTION: uploadResumeAction
- * Used when a user uploads a new resume from within an existing review workspace.
- * 1. Creates a 'resumes' table entry immediately.
- * 2. Returns the resumeId to the client.
- * 3. Handles Storage upload and Parse trigger in the background.
+ * Parses an uploaded resume in the request and returns the saved resume
+ * (RE-REQ-011). The file is never stored. `replaceResumeId` overwrites one of
+ * the user's resumes instead of adding one (RE-REQ-021).
  */
-export async function uploadResumeAction(formData: FormData) {
+export async function uploadResumeAction(
+  formData: FormData,
+): Promise<{ success?: boolean; resumeId?: string; error?: string }> {
   const supabase = await createClient();
 
   const {
@@ -25,94 +26,29 @@ export async function uploadResumeAction(formData: FormData) {
     return { error: "Authentication required." };
   }
 
-  const userId = user.id;
+  const file = formData.get("file");
+  if (!(file instanceof File)) return MISSING_DATA;
 
-  const { data: profile } = await supabase
-    .from("user_info")
-    .select("ai_credits")
-    .eq("user_id", userId)
-    .single();
-
-  if (!profile) {
-    return {
-      error:
-        "User profile not found. Please complete your profile to upload a resume.",
-    };
-  }
-
-  if ((profile.ai_credits || 0) < TAICredits.AI_SEARCH_ASK_AI_RESUME) {
-    return {
-      error: `Insufficient AI credits for resume upload. Please top up to continue.`,
-    };
-  }
-
-  const file = formData.get("file") as File;
-
-  if (!userId || !file || file.size === 0) {
-    return { error: "Missing required upload data." };
-  }
-
-  if (file.size > 2 * 1024 * 1024) {
-    return { error: "File too large. Maximum allowed size is 2MB." };
-  }
-
-  if (file.type !== "application/pdf") {
-    return { error: "Invalid file format. Only PDFs are accepted." };
-  }
+  const replace = formData.get("replaceResumeId");
+  if (replace !== null && !z.string().uuid().safeParse(replace).success) return MISSING_DATA;
 
   try {
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const fileName = `resumes/${userId}/${Date.now()}-${sanitizedName}`;
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const result = await resumeFromUpload(
+      supabase,
+      user,
+      file,
+      replace ? { replaceResumeId: replace as string } : {},
+    );
+    if (!result.ok) return { error: result.error };
 
-    const { error: storageError } = await supabase.storage
-      .from("resumes")
-      .upload(fileName, buffer, {
-        contentType: "application/pdf",
-      });
-
-    if (storageError) throw storageError;
-
-    const { data: resumeEntry, error: resumeError } = await supabase
-      .from("resumes")
-      .insert({
-        user_id: userId,
-        name: file.name,
-        resume_path: fileName,
-        content: null,
-      })
-      .select("id")
-      .single();
-
-    if (resumeError) throw resumeError;
-
-    after(async () => {
-      try {
-        await parseResume(userId, resumeEntry.id);
-      } catch (err) {
-        await eventCaptureServerException({
-          error: err,
-          distinctId: userId,
-          properties: { flow: "upload_resume_file_after_block" },
-        });
-      }
-    });
     revalidatePath("/resume");
-    return { success: true, resumeId: resumeEntry.id };
+    return { success: true, resumeId: result.resumeId };
   } catch (err: unknown) {
-    const error =
-      err instanceof Error
-        ? err.message
-        : "An unexpected error occurred while initiating resume upload.";
     await eventCaptureServerException({
       error: err,
-      distinctId: userId,
+      distinctId: user.id,
       properties: { flow: "upload_resume_file" },
     });
-
-    return {
-      error,
-    };
+    return { error: "We couldn't save this resume. Please try again." };
   }
 }

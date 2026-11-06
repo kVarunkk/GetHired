@@ -1,10 +1,9 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { TAICredits } from "@/utils/types";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { completeApplicantOnboarding } from "@/helpers/user/complete-onboarding";
-import { copyClaimResume } from "@/helpers/candidates/claim-prefill";
+import { importClaimResume } from "@/helpers/candidates/claim-prefill";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
   describeProfileError,
@@ -14,7 +13,8 @@ import {
 /**
  * The /get-started form's submit. The user always comes from the session
  * (SEC-009); `profileData` is validated and allowlisted by the shared helper,
- * which also marks onboarding complete.
+ * which also marks onboarding complete. Step 6 has already parsed an uploaded
+ * resume (RE-REQ-021), so this takes its `resumeId`.
  */
 export async function submitOnboardingAction(formData: FormData) {
   const supabase = await createClient();
@@ -24,72 +24,27 @@ export async function submitOnboardingAction(formData: FormData) {
   if (!user) return { error: "Authentication required." };
 
   const resumeId = formData.get("resumeId") as string | null;
-  const resumeFile = formData.get("resumeFile") as File | null;
-  const hasFile = !!resumeFile && resumeFile.size > 0;
-  // BIT-105: the resume a claimed company has on file, copied on submit.
-  const claimToken = !hasFile && !resumeId ? (formData.get("claimToken") as string | null) : null;
-  if (!hasFile && !resumeId && !claimToken) return { error: "Please upload your resume." };
+  // BIT-105: the resume a claimed company has on file, imported on submit.
+  const claimToken = !resumeId ? (formData.get("claimToken") as string | null) : null;
+  if (!resumeId && !claimToken) return { error: "Please upload your resume." };
 
-  // Validate before uploading, so a bad profile leaves no orphaned file.
+  // Validate before importing, so a bad profile charges nothing.
   const profileData: unknown = JSON.parse(formData.get("profileData") as string);
   const check = onboardingProfileSchema.safeParse(profileData);
   if (!check.success) return { error: describeProfileError(check.error) };
 
-  const { data: profile } = await supabase
-    .from("user_info")
-    .select("ai_credits")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!profile) {
-    return {
-      error:
-        "User profile not found. Please complete your profile to upload a resume.",
-    };
-  }
-
-  if ((profile.ai_credits || 0) < TAICredits.AI_SEARCH_ASK_AI_RESUME && (hasFile || !!claimToken)) {
-    return {
-      error: `Insufficient AI credits for resume upload. Please top up to continue.`,
-    };
-  }
-
   try {
     let finalResumeId = resumeId;
 
-    if (hasFile) {
-      const fileName = `resumes/${user.id}/${Date.now()}-${resumeFile.name.replace(/\s+/g, "_")}`;
-      const arrayBuffer = await resumeFile.arrayBuffer();
-      const { error: storageError } = await supabase.storage
-        .from("resumes")
-        .upload(fileName, Buffer.from(arrayBuffer), {
-          contentType: "application/pdf",
-        });
-      if (storageError) throw storageError;
-
-      // The helper makes it the primary resume.
-      const { data: newResume, error: resError } = await supabase
-        .from("resumes")
-        .insert({
-          user_id: user.id,
-          name: resumeFile.name,
-          resume_path: fileName,
-          is_primary: false,
-          content: null,
-        })
-        .select("id")
-        .single();
-      if (resError) throw resError;
-      finalResumeId = newResume.id;
-    } else if (claimToken) {
-      const copied = await copyClaimResume(supabase, createServiceRoleClient(), user.id, claimToken);
-      if (!copied.ok) return { error: copied.error };
-      finalResumeId = copied.resumeId;
+    if (claimToken) {
+      const imported = await importClaimResume(supabase, createServiceRoleClient(), user, claimToken);
+      if (!imported.ok) return { error: imported.error };
+      finalResumeId = imported.resumeId;
     }
 
     const result = await completeApplicantOnboarding(supabase, user, profileData, {
       resumeId: finalResumeId!,
-      shouldParse: hasFile || !!claimToken,
+      shouldParse: false,
     });
     if (!result.ok) return { error: result.error };
 

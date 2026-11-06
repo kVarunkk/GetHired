@@ -10,6 +10,7 @@ import { cn } from "@/utils/utils";
 import ResumeUploadWidget, { type ResumeUploadOutput } from "./ResumeUploadWidget";
 import { rehypeAnimateWords } from "./animate-words";
 import { ApplicationApprovalDetails } from "./ApplicationApprovalCard";
+import { ResumeEditApprovalDetails, isResumeEditTool } from "./ResumeEditApprovalCard";
 import { inlineLink, isInAppHref, NEW_TAB } from "./links";
 import {
   ApplicantResults,
@@ -66,6 +67,17 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   startResumeReview: { running: "Starting the review…", done: "Started the resume review", action: "start a resume review" },
   pickResumeForJob: { running: "Comparing your resumes…", done: "Compared your resumes", action: "compare your resumes" },
   getResumeReview: { running: "Loading the review…", done: "Loaded the review", action: "load the review" },
+  getResumeContent: { running: "Reading the resume…", done: "Read the resume", action: "read the resume" },
+  createResume: { running: "Creating the resume…", done: "Created the resume", action: "create the resume" },
+  updateResume: { running: "Updating the resume…", done: "Updated the resume", action: "update the resume" },
+  duplicateResume: { running: "Copying the resume…", done: "Copied the resume", action: "copy the resume" },
+  deleteResume: { running: "Deleting the resume…", done: "Deleted the resume", action: "delete the resume" },
+  applyReviewSuggestions: {
+    running: "Applying the suggestions…",
+    done: "Applied the suggestions",
+    action: "apply the suggestions",
+  },
+  exportResume: { running: "Preparing the download…", done: "Download ready", action: "prepare the download" },
   listInterviews: { running: "Loading interviews…", done: "Loaded interviews", action: "load interviews" },
   listScreeningInterviews: {
     running: "Loading screening interviews…",
@@ -462,6 +474,14 @@ function approvalTitle(name: string, input: unknown) {
       return "Send this application? It uses 1 AI credit, and the company sees these answers.";
     case "completeOnboarding":
       return "Set up your profile with these details?";
+    case "createResume":
+      return "Create this resume?";
+    case "updateResume":
+      return "Make these changes to your resume?";
+    case "deleteResume":
+      return "Delete this resume?";
+    case "applyReviewSuggestions":
+      return "Apply these suggestions?";
     case "createJobPost":
       return "Create this job post as a draft?";
     case "updateJobPost":
@@ -576,6 +596,8 @@ function approvalDetails(name: string, input: unknown) {
   if (["confirmImport", "deleteMyCandidates", "removeImportRows"].includes(name)) return [];
   // Applications show a server preview with each question's own label (ApplicationApprovalDetails).
   if (name === "submitApplication") return [];
+  // Resume changes show a server preview with the before and after (ResumeEditApprovalDetails).
+  if (isResumeEditTool(name)) return [];
   // Role changes show a server preview with the exact diff (RoleApprovalDetails).
   if (isRoleApprovalTool(name)) return [];
   return describeInput(input);
@@ -609,6 +631,7 @@ function ApprovalCard({
       {name === "addCandidate" && <AddCandidateApprovalDetails input={part.input} />}
       {name === "deleteMyCandidates" && <DeleteCandidatesApprovalDetails input={part.input} />}
       {name === "submitApplication" && <ApplicationApprovalDetails input={part.input} />}
+      {isResumeEditTool(name) && <ResumeEditApprovalDetails tool={name} input={part.input} />}
       {isRoleApprovalTool(name) && <RoleApprovalDetails tool={name} input={part.input} />}
       {(details.length > 0 || isOnboarding) && (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
@@ -939,6 +962,43 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
             {labelsFor(name).done}.{" "}
             <Link {...NEW_TAB} href={result.url} className={inlineLink}>
               Open the full analysis
+            </Link>
+          </>
+        }
+      />
+    );
+  }
+
+  // RE-REQ-077: the app's own route, so the guardrail allows it, as a download.
+  if (name === "exportResume" && typeof result.url === "string" && isInAppHref(result.url)) {
+    return (
+      <Step
+        tone="done"
+        label={
+          <>
+            {labelsFor(name).done}.{" "}
+            <a href={result.url} download className={inlineLink}>
+              Download your resume
+            </a>
+          </>
+        }
+      />
+    );
+  }
+
+  if (
+    ["createResume", "updateResume", "duplicateResume", "applyReviewSuggestions"].includes(name) &&
+    typeof result.url === "string" &&
+    isInAppHref(result.url)
+  ) {
+    return (
+      <Step
+        tone="done"
+        label={
+          <>
+            {labelsFor(name).done}.{" "}
+            <Link {...NEW_TAB} href={result.url} className={inlineLink}>
+              Open the resume
             </Link>
           </>
         }
