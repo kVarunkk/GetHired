@@ -137,7 +137,12 @@ beforeEach(async () => {
 
 /** The options agentTelemetry returned for `functionId` in this test. */
 const traced = (functionId: string) => ({ isEnabled: false, functionId });
-const TRACE_CONTEXT = { sessionId: SESSION_ID, userId: "u1" };
+const TRACE_CONTEXT = {
+  sessionId: SESSION_ID,
+  userId: "u1",
+  role: "applicant",
+  userText: "hi",
+};
 
 describe("POST /api/agent/chat: guards", () => {
   it("returns 401 without a user", async () => {
