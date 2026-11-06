@@ -330,96 +330,6 @@ export type Database = {
         }
         Relationships: []
       }
-      all_jobs_archive: {
-        Row: {
-          ai_summary: string | null
-          company_name: string | null
-          company_url: string | null
-          created_at: string
-          description: string | null
-          embedding_new: string | null
-          embedding_updated_at: string | null
-          equity_max: number | null
-          equity_min: number | null
-          equity_range: string | null
-          experience: string | null
-          experience_max: number | null
-          experience_min: number | null
-          id: string
-          is_platform_job: boolean
-          job_name: string | null
-          job_type: string | null
-          job_url: string | null
-          locations: string[]
-          normalized_locations: string[] | null
-          platform: string | null
-          salary_max: number | null
-          salary_min: number | null
-          salary_range: string | null
-          status: Database["public"]["Enums"]["job_posting_status"]
-          updated_at: string | null
-          visa_requirement: string | null
-        }
-        Insert: {
-          ai_summary?: string | null
-          company_name?: string | null
-          company_url?: string | null
-          created_at?: string
-          description?: string | null
-          embedding_new?: string | null
-          embedding_updated_at?: string | null
-          equity_max?: number | null
-          equity_min?: number | null
-          equity_range?: string | null
-          experience?: string | null
-          experience_max?: number | null
-          experience_min?: number | null
-          id?: string
-          is_platform_job?: boolean
-          job_name?: string | null
-          job_type?: string | null
-          job_url?: string | null
-          locations?: string[]
-          normalized_locations?: string[] | null
-          platform?: string | null
-          salary_max?: number | null
-          salary_min?: number | null
-          salary_range?: string | null
-          status?: Database["public"]["Enums"]["job_posting_status"]
-          updated_at?: string | null
-          visa_requirement?: string | null
-        }
-        Update: {
-          ai_summary?: string | null
-          company_name?: string | null
-          company_url?: string | null
-          created_at?: string
-          description?: string | null
-          embedding_new?: string | null
-          embedding_updated_at?: string | null
-          equity_max?: number | null
-          equity_min?: number | null
-          equity_range?: string | null
-          experience?: string | null
-          experience_max?: number | null
-          experience_min?: number | null
-          id?: string
-          is_platform_job?: boolean
-          job_name?: string | null
-          job_type?: string | null
-          job_url?: string | null
-          locations?: string[]
-          normalized_locations?: string[] | null
-          platform?: string | null
-          salary_max?: number | null
-          salary_min?: number | null
-          salary_range?: string | null
-          status?: Database["public"]["Enums"]["job_posting_status"]
-          updated_at?: string | null
-          visa_requirement?: string | null
-        }
-        Relationships: []
-      }
       application_attachments: {
         Row: {
           application_id: string
@@ -3458,32 +3368,6 @@ export type Database = {
         }
         Relationships: []
       }
-      resume_public_sections: {
-        Row: {
-          resume_id: string
-          sections: Json
-          updated_at: string
-        }
-        Insert: {
-          resume_id: string
-          sections?: Json
-          updated_at?: string
-        }
-        Update: {
-          resume_id?: string
-          sections?: Json
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "resume_public_sections_resume_id_fkey"
-            columns: ["resume_id"]
-            isOneToOne: true
-            referencedRelation: "resumes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       resume_migration_items: {
         Row: {
           attempts: number
@@ -3533,6 +3417,32 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "resume_migration_items_resume_id_fkey"
+            columns: ["resume_id"]
+            isOneToOne: true
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resume_public_sections: {
+        Row: {
+          resume_id: string
+          sections: Json
+          updated_at: string
+        }
+        Insert: {
+          resume_id: string
+          sections?: Json
+          updated_at?: string
+        }
+        Update: {
+          resume_id?: string
+          sections?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resume_public_sections_resume_id_fkey"
             columns: ["resume_id"]
             isOneToOne: true
             referencedRelation: "resumes"
