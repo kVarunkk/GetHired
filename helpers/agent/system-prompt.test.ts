@@ -63,6 +63,8 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("You can only apply to jobs on GetHired");
     expect(prompt).toContain("never make up an answer to an application question");
     expect(prompt).toContain("Only say you applied after the application was sent successfully");
+    expect(prompt).toContain("A copy alone is not tailoring");
+    expect(prompt).toContain("Only say you changed, created or sent something after the tool that does it succeeded");
     expect(prompt).toContain("updateMyPreferences");
     expect(prompt).toContain("saveMemory");
     expect(prompt).toContain("memoryId");

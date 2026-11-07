@@ -1,6 +1,6 @@
 // Tunables for the /agent feature (spec GUD-002).
 
-/** Chat model. A non-lite Flash model for reliable multi-step tool calling. */
+/** Chat model. A lite model, so multi-step work has to be spelled out in the prompt. */
 export const AGENT_MODEL = "gemini-3.5-flash-lite";
 /** Cheap model for session titles and rolling summaries. */
 export const AGENT_TITLE_MODEL = "gemini-3.1-flash-lite";

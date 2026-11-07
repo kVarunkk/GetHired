@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { memo, useState, type ReactNode } from "react";
+import { Plus, Trash2, X } from "lucide-react";
+import LocationSearchSelect from "@/components/LocationSearchSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,7 @@ import {
 import type { ResumeContact, ResumeItem, ResumeSection } from "@/helpers/resume/resume-schema";
 import type { ResumeOperation } from "@/helpers/resumes/resume-operations";
 import type { EditorDraft } from "./resume-editor-state";
+import ResumeDatePicker from "./ResumeDatePicker";
 import SortableList from "./SortableList";
 
 type Apply = (...operations: ResumeOperation[]) => void;
@@ -67,9 +69,94 @@ function TextField({
   );
 }
 
-function Group({ title, children }: { title: string; children: ReactNode }) {
+function LocationField({
+  id,
+  value,
+  onChange,
+  errors,
+  path,
+}: {
+  id: string;
+  value: string | undefined;
+  onChange: (value: string) => void;
+  errors: FieldErrors;
+  path: string;
+}) {
   return (
-    <section className="flex flex-col gap-4 rounded-lg border p-4">
+    <div className="min-w-0">
+      <Label htmlFor={id}>Location</Label>
+      <div className="mt-1 flex items-center gap-1">
+        <LocationSearchSelect
+          id={id}
+          name="location"
+          className="min-w-0 flex-1"
+          initialLocations={value ? [value] : []}
+          onChange={(_, locations) => onChange(locations[0] ?? "")}
+          placeholder="Select a location"
+          isSingleSelect
+        />
+        {/* A location from an upload may not be in the list, where picking it again would clear it. */}
+        {value && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            aria-label="Clear location"
+            onClick={() => onChange("")}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+      <FieldError errors={errors} path={path} />
+    </div>
+  );
+}
+
+function DateField({
+  id,
+  label,
+  value,
+  onChange,
+  errors,
+  path,
+  allowPresent,
+  notBefore,
+  notAfter,
+}: {
+  id: string;
+  label: string;
+  value: string | undefined;
+  onChange: (value: string) => void;
+  errors: FieldErrors;
+  path: string;
+  allowPresent?: boolean;
+  notBefore?: string;
+  notAfter?: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="mt-1">
+        <ResumeDatePicker
+          id={id}
+          value={value}
+          onChange={onChange}
+          allowPresent={allowPresent}
+          notBefore={notBefore}
+          notAfter={notAfter}
+          invalid={errors.has(path)}
+        />
+      </div>
+      <FieldError errors={errors} path={path} />
+    </div>
+  );
+}
+
+function Group({ title, target, children }: { title: string; target: string; children: ReactNode }) {
+  return (
+    <section data-resume-target={target} className="flex scroll-mt-4 flex-col gap-4 rounded-lg border p-4">
       <h2 className="text-sm font-semibold">{title}</h2>
       {children}
     </section>
@@ -78,31 +165,41 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 
 const TEMPLATE_LABELS: Record<ResumeTemplate, string> = { classic: "Classic", compact: "Compact" };
 
-function ResumeDetails({ draft, apply, errors }: { draft: EditorDraft; apply: Apply; errors: FieldErrors }) {
+const ResumeDetails = memo(function ResumeDetails({
+  name,
+  template,
+  apply,
+  errors,
+}: {
+  name: string;
+  template: ResumeTemplate;
+  apply: Apply;
+  errors: FieldErrors;
+}) {
   return (
-    <Group title="Resume">
+    <Group title="Resume" target="details">
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField
           id="resume-name"
           label="Resume name"
-          value={draft.name}
-          onChange={(name) => apply({ op: "rename", name })}
+          value={name}
+          onChange={(value) => apply({ op: "rename", name: value })}
           errors={errors}
           path="name"
         />
         <div>
           <Label htmlFor="resume-template">Template</Label>
           <Select
-            value={draft.template}
-            onValueChange={(template) => apply({ op: "setTemplate", template: template as ResumeTemplate })}
+            value={template}
+            onValueChange={(value) => apply({ op: "setTemplate", template: value as ResumeTemplate })}
           >
             <SelectTrigger id="resume-template" aria-label="Template" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {RESUME_TEMPLATES.map((template) => (
-                <SelectItem key={template} value={template}>
-                  {TEMPLATE_LABELS[template]}
+              {RESUME_TEMPLATES.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {TEMPLATE_LABELS[option]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -111,21 +208,28 @@ function ResumeDetails({ draft, apply, errors }: { draft: EditorDraft; apply: Ap
       </div>
     </Group>
   );
-}
+});
 
 const CONTACT_FIELDS = [
   ["fullName", "Full name", "text"],
   ["headline", "Headline", "text"],
   ["email", "Email", "email"],
   ["phone", "Phone", "tel"],
-  ["location", "Location", "text"],
 ] as const;
 
-function ContactDetails({ contact, apply, errors }: { contact: ResumeContact; apply: Apply; errors: FieldErrors }) {
+const ContactDetails = memo(function ContactDetails({
+  contact,
+  apply,
+  errors,
+}: {
+  contact: ResumeContact;
+  apply: Apply;
+  errors: FieldErrors;
+}) {
   const setLinks = (links: ResumeContact["links"]) => apply({ op: "setContact", fields: { links } });
 
   return (
-    <Group title="Contact">
+    <Group title="Contact" target="contact">
       <div className="grid gap-4 sm:grid-cols-2">
         {CONTACT_FIELDS.map(([field, label, type]) => (
           <TextField
@@ -139,6 +243,13 @@ function ContactDetails({ contact, apply, errors }: { contact: ResumeContact; ap
             path={`contact.${field}`}
           />
         ))}
+        <LocationField
+          id="contact-location"
+          value={contact.location}
+          onChange={(location) => apply({ op: "setContact", fields: { location } })}
+          errors={errors}
+          path="contact.location"
+        />
       </div>
       {contact.links.map((link, index) => (
         <div key={index} className="flex items-start gap-2">
@@ -185,49 +296,41 @@ function ContactDetails({ contact, apply, errors }: { contact: ResumeContact; ap
       </Button>
     </Group>
   );
-}
+});
 
-const ITEM_FIELDS = [
-  ["heading", "Title"],
-  ["subheading", "Organization"],
-  ["location", "Location"],
-  ["startDate", "Start"],
-  ["endDate", "End"],
-  ["url", "Link"],
-] as const;
-
-function ItemEditor({
-  section,
+const ItemEditor = memo(function ItemEditor({
+  isSummary,
   item,
   path,
   apply,
   errors,
   onFocusBullet,
 }: {
-  section: ResumeSection;
+  isSummary: boolean;
   item: ResumeItem;
   path: string;
   apply: Apply;
   errors: FieldErrors;
   onFocusBullet: (id: string) => void;
 }) {
-  const isSummary = section.type === "summary";
+  const field = (name: "heading" | "subheading" | "location" | "url" | "startDate" | "endDate") => ({
+    id: `${item.id}-${name}`,
+    value: item[name],
+    onChange: (value: string) => apply({ op: "setItemFields", itemId: item.id, fields: { [name]: value } }),
+    errors,
+    path: `${path}.${name}`,
+  });
 
   return (
-    <div className="flex flex-col gap-3 rounded-md border p-3">
+    <div data-resume-target={item.id} className="flex scroll-mt-4 flex-col gap-3 rounded-md border p-3">
       {!isSummary && (
         <div className="grid gap-3 sm:grid-cols-2">
-          {ITEM_FIELDS.map(([field, label]) => (
-            <TextField
-              key={field}
-              id={`${item.id}-${field}`}
-              label={label}
-              value={item[field]}
-              onChange={(value) => apply({ op: "setItemFields", itemId: item.id, fields: { [field]: value } })}
-              errors={errors}
-              path={`${path}.${field}`}
-            />
-          ))}
+          <TextField label="Title" {...field("heading")} />
+          <TextField label="Organization" {...field("subheading")} />
+          <LocationField {...field("location")} />
+          <TextField label="Link" {...field("url")} />
+          <DateField label="Start" notAfter={item.endDate} {...field("startDate")} />
+          <DateField label="End" allowPresent notBefore={item.startDate} {...field("endDate")} />
         </div>
       )}
       <SortableList
@@ -236,7 +339,7 @@ function ItemEditor({
         onMove={(id, index) => apply({ op: "move", id, index })}
       >
         {(bullet, index) => (
-          <div className="flex items-start gap-1">
+          <div data-resume-target={bullet.id} className="flex scroll-mt-4 items-start gap-1">
             <div className="min-w-0 flex-1">
               <Textarea
                 aria-label={isSummary ? "Summary text" : "Bullet"}
@@ -279,11 +382,18 @@ function ItemEditor({
       </div>
     </div>
   );
-}
+});
 
 const sectionLabel = (section: ResumeSection) => section.title || RESUME_SECTION_LABELS[section.type];
 
-function SectionEditor({
+/**
+ * What the title field holds. A known section with no title renders under its
+ * label, so the field starts there. `other` has no real label and needs a title.
+ */
+const sectionTitleValue = (section: ResumeSection) =>
+  section.title ?? (section.type === "other" ? undefined : RESUME_SECTION_LABELS[section.type]);
+
+const SectionEditor = memo(function SectionEditor({
   section,
   path,
   apply,
@@ -297,13 +407,13 @@ function SectionEditor({
   onFocusBullet: (id: string) => void;
 }) {
   return (
-    <section className="flex flex-col gap-3 rounded-lg border p-4">
+    <section data-resume-target={section.id} className="flex scroll-mt-4 flex-col gap-3 rounded-lg border p-4">
       <div className="flex items-end gap-2">
         <div className="min-w-0 flex-1">
           <TextField
             id={`${section.id}-title`}
             label={`${RESUME_SECTION_LABELS[section.type]} section title`}
-            value={section.title}
+            value={sectionTitleValue(section)}
             onChange={(title) => apply({ op: "setSectionTitle", sectionId: section.id, title })}
             errors={errors}
             path={`${path}.title`}
@@ -326,7 +436,7 @@ function SectionEditor({
       >
         {(item, index) => (
           <ItemEditor
-            section={section}
+            isSummary={section.type === "summary"}
             item={item}
             path={`${path}.items.${index}`}
             apply={apply}
@@ -350,7 +460,7 @@ function SectionEditor({
       </Button>
     </section>
   );
-}
+});
 
 function AddSection({ apply }: { apply: Apply }) {
   const [resetKey, setResetKey] = useState(0);
@@ -394,7 +504,7 @@ export default function ResumeForm({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <ResumeDetails draft={draft} apply={apply} errors={errors} />
+      <ResumeDetails name={draft.name} template={draft.template} apply={apply} errors={errors} />
       <ContactDetails contact={draft.contact} apply={apply} errors={errors} />
       <SortableList
         items={draft.content.sections}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useMemo, useReducer, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { dismissResumeNotesAction } from "@/app/actions/resumes/dismiss-resume-notes";
@@ -19,42 +19,21 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buildResumeDocument } from "@/helpers/resume/render/document";
 import type { ResumeOperation } from "@/helpers/resumes/resume-operations";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { cn } from "@/utils/utils";
 import { editorIssues, editorReducer, isSameDraft, type EditorDraft } from "./resume-editor-state";
 import ResumeForm, { type FieldErrors } from "./ResumeForm";
 import ResumePreview from "./ResumePreview";
+import { usePreviewSync } from "./use-preview-sync";
 
-const LEAVE_WARNING = "You have unsaved changes. Leave without saving?";
-
-/** Warns before the tab closes or an in-app link leaves the editor (RE-REQ-032). */
-function useUnsavedChangesGuard(isDirty: boolean, bypass: React.RefObject<boolean>) {
-  useEffect(() => {
-    if (!isDirty) return;
-
-    const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (bypass.current) return;
-      event.preventDefault();
-    };
-    const onClick = (event: MouseEvent) => {
-      const link = (event.target as Element | null)?.closest?.("a[href]");
-      if (!link || link.getAttribute("target") === "_blank") return;
-      if (!window.confirm(LEAVE_WARNING)) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-
-    window.addEventListener("beforeunload", onBeforeUnload);
-    document.addEventListener("click", onClick, true);
-    return () => {
-      window.removeEventListener("beforeunload", onBeforeUnload);
-      document.removeEventListener("click", onClick, true);
-    };
-  }, [isDirty, bypass]);
-}
+/** Marks the smallest part under the mouse, the one the form will scroll to. */
+const LINKED_PREVIEW_CLASSES =
+  "lg:[&_[data-resume-target]]:rounded-sm lg:[&_[data-resume-target]]:transition-colors lg:[&_[data-resume-target]:hover:not(:has([data-resume-target]:hover))]:bg-muted";
 
 function ParseNotesNotice({ resumeId, lines }: { resumeId: string; lines: string[] }) {
   const [dismissed, setDismissed] = useState(false);
@@ -108,32 +87,45 @@ export default function ResumeEditor({
   const [view, setView] = useState<"edit" | "preview">("edit");
 
   const bypassGuard = useRef(false);
-  const isDirty = !isSameDraft(draft, saved);
+  // Validating, comparing and the preview all read this, so they run after the
+  // keystroke has painted and never hold up typing.
+  const settledDraft = useDeferredValue(draft);
+  const isDirty = useMemo(() => !isSameDraft(settledDraft, saved), [settledDraft, saved]);
   useUnsavedChangesGuard(isDirty, bypassGuard);
+  const { formRef, previewRef, onFormFocus, onPreviewMouseMove, onPreviewMouseLeave, hoverScroll, setHoverScroll } =
+    usePreviewSync();
 
-  const issues = useMemo(() => editorIssues(draft), [draft]);
-  const errors: FieldErrors = useMemo(
-    () =>
-      new Map(
-        issues
-          .filter((issue) => saveAttempted || issue.immediate)
-          .reverse()
-          .map((issue) => [issue.path, issue.message]),
-      ),
-    [issues, saveAttempted],
+  const issues = useMemo(() => editorIssues(settledDraft), [settledDraft]);
+  // Keyed by content: the form's memoized parts need the same Map until a message changes.
+  const errorEntries = JSON.stringify(
+    issues
+      .filter((issue) => saveAttempted || issue.immediate)
+      .reverse()
+      .map((issue) => [issue.path, issue.message]),
+  );
+  const errors: FieldErrors = useMemo(() => new Map(JSON.parse(errorEntries)), [errorEntries]);
+
+  const preview = useMemo(
+    () => (
+      <ResumePreview
+        document={buildResumeDocument({
+          contact: settledDraft.contact,
+          content: settledDraft.content,
+          template: settledDraft.template,
+        })}
+        activeBulletId={activeBulletId}
+      />
+    ),
+    [settledDraft, activeBulletId],
   );
 
-  const document = useMemo(
-    () => buildResumeDocument({ contact: draft.contact, content: draft.content, template: draft.template }),
-    [draft],
-  );
-
-  const apply = (...operations: ResumeOperation[]) => dispatch({ type: "apply", operations });
+  const apply = useCallback((...operations: ResumeOperation[]) => dispatch({ type: "apply", operations }), []);
 
   const save = async () => {
     setSaveAttempted(true);
     setSaveError(null);
-    if (issues.length > 0) {
+    // The latest draft, not the settled one: Save can land before validation catches up.
+    if (editorIssues(draft).length > 0) {
       setSaveError("Fix the highlighted fields to save.");
       return;
     }
@@ -202,11 +194,21 @@ export default function ResumeEditor({
       </Tabs>
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
-        <div className={cn("min-w-0", view === "preview" && "hidden lg:block")}>
+        <div ref={formRef} onFocus={onFormFocus} className={cn("min-w-0", view === "preview" && "hidden lg:block")}>
           <ResumeForm draft={draft} apply={apply} errors={errors} onFocusBullet={setActiveBulletId} />
         </div>
-        <div className={cn("min-w-0 lg:sticky lg:top-4", view === "edit" && "hidden lg:block")}>
-          <ResumePreview document={document} activeBulletId={activeBulletId} />
+        {/* Its own scroll area, so all of it can be read wherever the form is. */}
+        <div
+          ref={previewRef}
+          onMouseMove={onPreviewMouseMove}
+          onMouseLeave={onPreviewMouseLeave}
+          className={cn(
+            "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem-var(--sticky-action-bar-height,4rem))] lg:overflow-y-auto",
+            hoverScroll && LINKED_PREVIEW_CLASSES,
+            view === "edit" && "hidden lg:block",
+          )}
+        >
+          {preview}
         </div>
       </div>
 
@@ -239,6 +241,10 @@ export default function ResumeEditor({
         ) : (
           isDirty && <p className="text-sm text-muted-foreground">Unsaved changes</p>
         )}
+        <div className="ml-auto hidden items-center gap-2 lg:flex">
+          <Switch id="resume-hover-scroll" checked={hoverScroll} onCheckedChange={setHoverScroll} />
+          <Label htmlFor="resume-hover-scroll">Scroll form on hover</Label>
+        </div>
       </StickyActionBar>
     </div>
   );

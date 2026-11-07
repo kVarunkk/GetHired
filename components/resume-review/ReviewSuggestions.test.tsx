@@ -51,7 +51,7 @@ const review = (overrides: Record<string, unknown> = {}) =>
     resume_id: SOURCE_ID,
     applied_copy_id: null,
     resume_revision: 3,
-    resumes: { id: SOURCE_ID, content: CONTENT, revision: 3 },
+    resumes: { id: SOURCE_ID, name: "Backend", content: CONTENT, revision: 3 },
     resume_review_applied: [],
     ai_response: {
       bullet_points: [suggestion("b1", "Built the API"), suggestion("b2", "Cut test time by [X%]")],
@@ -98,7 +98,17 @@ describe("applying one suggestion", () => {
     await waitFor(() => expect(mutate).toHaveBeenCalledWith(`/api/resume-review/${REVIEW_ID}`));
   });
 
-  it("can target the resume itself", async () => {
+  it("applies to a copy without asking", async () => {
+    const user = userEvent.setup();
+    show(review());
+
+    await user.click(within(card("Built the API")).getByRole("button", { name: "Apply" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("asks before changing the resume itself", async () => {
     const user = userEvent.setup();
     show(review());
 
@@ -106,7 +116,28 @@ describe("applying one suggestion", () => {
     await user.click(within(card("Built the API")).getByRole("button", { name: "Apply" }));
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
+    expect(within(screen.getByRole("alertdialog")).getByText(/rewrites 1 bullet on Backend/)).toBeInTheDocument();
+    expect(applyReviewSuggestionsAction).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Apply to original" }));
+
     expect(vi.mocked(applyReviewSuggestionsAction).mock.calls[0][0].target).toBe("original");
+    await waitFor(() => expect(screen.queryByLabelText("Suggested text")).not.toBeInTheDocument());
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("keeps the edited text when the user backs out", async () => {
+    const user = userEvent.setup();
+    show(review());
+
+    await user.click(screen.getByRole("radio", { name: "This resume" }));
+    await user.click(within(card("Built the API")).getByRole("button", { name: "Apply" }));
+    await user.type(screen.getByLabelText("Suggested text"), " fast");
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Cancel" }));
+
+    expect(applyReviewSuggestionsAction).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Suggested text")).toHaveValue("Built the API fast");
   });
 
   it("keeps Confirm off until every placeholder has a value", async () => {
@@ -155,18 +186,55 @@ describe("applying one suggestion", () => {
   });
 });
 
-describe("Apply all", () => {
-  it("skips suggestions with placeholders", async () => {
+describe("Apply all changes", () => {
+  it("skips suggestions with placeholders, and says so", async () => {
     const user = userEvent.setup();
     show(review());
 
-    await user.click(screen.getByRole("button", { name: "Apply all (1)" }));
+    expect(screen.getByText(/1 change needs your real numbers/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Apply all changes (1)" }));
 
     expect(vi.mocked(applyReviewSuggestionsAction).mock.calls[0][0].items).toEqual([{ bulletId: "b1" }]);
   });
 
-  it("is gone when nothing qualifies", () => {
+  it("asks first on the resume itself, with the count", async () => {
+    const user = userEvent.setup();
+    show(
+      review({
+        ai_response: { bullet_points: [suggestion("b1", "Built the API"), suggestion("b2", "Sped up the tests")] },
+      }),
+    );
+
+    await user.click(screen.getByRole("radio", { name: "This resume" }));
+    await user.click(screen.getByRole("button", { name: "Apply all changes (2)" }));
+
+    expect(within(screen.getByRole("alertdialog")).getByText(/rewrites 2 bullets/)).toBeInTheDocument();
+    expect(applyReviewSuggestionsAction).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Apply to original" }));
+
+    expect(applyReviewSuggestionsAction).toHaveBeenCalledWith({
+      reviewId: REVIEW_ID,
+      target: "original",
+      items: [{ bulletId: "b1" }, { bulletId: "b2" }],
+    });
+  });
+
+  it("stays visible but off when every change needs a value", () => {
     show(review({ ai_response: { bullet_points: [suggestion("b2", "Cut by [X%]")] } }));
+
+    expect(screen.getByRole("button", { name: "Apply all changes" })).toBeDisabled();
+  });
+
+  it("is gone when everything is applied", () => {
+    show(
+      review({
+        applied_copy_id: COPY_ID,
+        ai_response: { bullet_points: [suggestion("b1", "Built the API")] },
+        resume_review_applied: [{ bullet_id: "b1", target_resume_id: COPY_ID, applied_text: "Built the API" }],
+      }),
+    );
 
     expect(screen.queryByRole("button", { name: /Apply all/ })).not.toBeInTheDocument();
   });
@@ -227,11 +295,12 @@ describe("applied suggestions", () => {
 });
 
 describe("older reviews (RE-REQ-059a)", () => {
-  it("ask for the numbers to be checked, and have no Apply all", () => {
+  it("ask for the numbers to be checked, and can't apply all at once", () => {
     show(review({ resume_revision: null }));
 
     expect(within(card("Built the API")).getByText(/Check the numbers/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Apply all/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply all changes" })).toBeDisabled();
+    expect(screen.getByText(/may have estimated numbers/)).toBeInTheDocument();
   });
 
   it("still open for editing before applying", async () => {

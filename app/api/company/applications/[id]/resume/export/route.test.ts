@@ -19,7 +19,7 @@ const SNAPSHOT = { name: "Backend – Stripe", template: "classic", content: { v
 let db: SupabaseMock;
 
 const call = (format = "pdf") =>
-  GET(new NextRequest(`http://test/api?format=${format}`), { params: Promise.resolve({ application_id: APPLICATION_ID }) });
+  GET(new NextRequest(`http://test/api?format=${format}`), { params: Promise.resolve({ id: APPLICATION_ID }) });
 
 const frame = (person: Record<string, unknown>) =>
   vi.mocked(loadApplicationFrame).mockResolvedValue({ supabase: db.client, person } as never);

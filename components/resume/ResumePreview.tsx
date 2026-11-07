@@ -19,6 +19,9 @@ function DocumentLink({ part }: { part: ResumeDocumentLink }) {
  * A resume as it will read, from the same document as the PDF and Word file
  * (RE-REQ-051). Text is rendered as text, so whatever a resume holds stays
  * inert. `activeBulletId` marks the bullet being edited or reviewed.
+ * `data-resume-target` ties each part to its place in the editor's form
+ * (`usePreviewSync`). A section's is on its heading alone, so the gaps between
+ * entries don't count as hovering the section.
  */
 export default function ResumePreview({
   document,
@@ -38,23 +41,29 @@ export default function ResumePreview({
       className={cn("w-full rounded-lg border bg-card text-card-foreground", classes.page, className)}
     >
       {isEmpty && <p className="text-muted-foreground">Nothing here yet. Add details to see your resume.</p>}
-      {document.name && <h2 className={cn("font-semibold", classes.name)}>{document.name}</h2>}
-      {document.headline && <p className="mt-0.5">{document.headline}</p>}
-      {document.contact.length > 0 && (
-        <p className="mt-1 text-muted-foreground">
-          {document.contact.map((part, index) => (
-            <span key={part.text}>
-              {index > 0 && " · "}
-              <DocumentLink part={part} />
-            </span>
-          ))}
-        </p>
-      )}
+      {/* The resume's name and template aren't printed: their fields go to the top. */}
+      <span data-resume-target="details" />
+      <div data-resume-target="contact">
+        {document.name && <h2 className={cn("font-semibold", classes.name)}>{document.name}</h2>}
+        {document.headline && <p className="mt-0.5">{document.headline}</p>}
+        {document.contact.length > 0 && (
+          <p className="mt-1 text-muted-foreground">
+            {document.contact.map((part, index) => (
+              <span key={part.text}>
+                {index > 0 && " · "}
+                <DocumentLink part={part} />
+              </span>
+            ))}
+          </p>
+        )}
+      </div>
       {document.sections.map((section) => (
         <section key={section.id} className={classes.gap}>
-          <h3 className={cn("mb-1.5 border-b pb-0.5 font-semibold", classes.heading)}>{section.title}</h3>
+          <h3 data-resume-target={section.id} className={cn("mb-1.5 border-b pb-0.5 font-semibold", classes.heading)}>
+            {section.title}
+          </h3>
           {section.items.map((item) => (
-            <div key={item.id} className={classes.item}>
+            <div key={item.id} data-resume-target={item.id} className={classes.item}>
               {item.title && <p className="font-semibold">{item.title}</p>}
               {item.meta && <p className="text-muted-foreground">{item.meta}</p>}
               {item.link && (
@@ -67,6 +76,7 @@ export default function ResumePreview({
                   <p
                     key={bullet.id}
                     id={`bullet-${bullet.id}`}
+                    data-resume-target={bullet.id}
                     data-active={bullet.id === activeBulletId || undefined}
                     className="rounded-sm data-[active]:bg-accent"
                   >
@@ -79,6 +89,7 @@ export default function ResumePreview({
                     <li
                       key={bullet.id}
                       id={`bullet-${bullet.id}`}
+                      data-resume-target={bullet.id}
                       data-active={bullet.id === activeBulletId || undefined}
                       className="rounded-sm data-[active]:bg-accent"
                     >

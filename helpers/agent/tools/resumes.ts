@@ -430,7 +430,7 @@ export function createResumeTools(ctx: AgentToolContext) {
 
     duplicateResume: tool({
       description:
-        "Make a copy of one of the user's resumes, to keep a version or tailor one for a job. It's never the primary resume. Free.",
+        "Make a copy of one of the user's resumes, to keep a version or as the first step of tailoring one for a job. The copy is identical until it's edited. It's never the primary resume. Free.",
       inputSchema: z.object({
         resumeId: uuidInput("resume"),
         name: z.string().trim().min(1).max(RESUME_LIMITS.shortFieldChars).optional(),
@@ -439,7 +439,12 @@ export function createResumeTools(ctx: AgentToolContext) {
         withToolErrors(ctx, "duplicateResume", async () => {
           const copy = await duplicateResume(supabase, ctx.user, { resumeId, name });
           if (!copy.ok) return { error: copy.error };
-          return { resumeId: copy.resumeId, url: `/resume/${copy.resumeId}` };
+          return {
+            resumeId: copy.resumeId,
+            url: `/resume/${copy.resumeId}`,
+            message:
+              "This is an exact copy: nothing in it has changed. If the user wants it tailored, read it and edit it now, and don't say it's tailored until the edit is saved.",
+          };
         }),
     }),
 

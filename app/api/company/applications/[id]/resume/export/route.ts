@@ -14,12 +14,12 @@ const fail = (error: string, status: number) => NextResponse.json({ error }, { s
  * application's resume page's: RLS lets only the job's company read the row. A
  * company's imported candidate has their file instead, so nothing here.
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ application_id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const format = request.nextUrl.searchParams.get("format");
   if (!isExportFormat(format)) return fail("Choose pdf or docx.", 400);
 
   try {
-    const { application_id: applicationId } = await params;
+    const { id: applicationId } = await params;
     const frame = await loadApplicationFrame(applicationId);
     if (!frame || frame.person.kind !== "user") return fail(NOT_FOUND, 404);
 

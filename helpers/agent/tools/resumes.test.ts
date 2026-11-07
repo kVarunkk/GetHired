@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createResumeTools } from "./resumes";
 import { execTool, toolContext, validateInput } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { duplicateResume } from "@/helpers/resumes/duplicate-resume";
 import { setPrimaryResume } from "@/helpers/resumes/set-primary-resume";
 import { createResumeReview } from "@/helpers/resume-review/create-resume-review";
 import { startReviewAnalysis } from "@/helpers/resume-review/start-review-analysis";
@@ -9,6 +10,7 @@ import { rankResumesForJob, type ResumeFit } from "@/helpers/resume-review/rank-
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 import { shortlistResumes } from "@/helpers/resume-review/shortlist-resumes";
 
+vi.mock("@/helpers/resumes/duplicate-resume", () => ({ duplicateResume: vi.fn() }));
 vi.mock("@/helpers/resumes/set-primary-resume", () => ({ setPrimaryResume: vi.fn() }));
 vi.mock("@/helpers/resume-review/rank-resumes-for-job", () => ({
   rankResumesForJob: vi.fn(),
@@ -113,6 +115,23 @@ describe("the resume editing tools (RE-REQ-070)", () => {
 
       expect(result).toMatchObject({ code: "INVALID" });
       expect(supabase.callsFor("resumes")).toHaveLength(1);
+    });
+  });
+
+  describe("duplicateResume", () => {
+    it("says the copy is unchanged, so the model doesn't report it as tailored", async () => {
+      vi.mocked(duplicateResume).mockResolvedValue({ ok: true, resumeId: "copy-1" });
+
+      const result = await execTool(tools.duplicateResume, { resumeId: RESUME_ID });
+
+      expect(result).toMatchObject({ resumeId: "copy-1", url: "/resume/copy-1" });
+      expect(result).toHaveProperty("message", expect.stringContaining("nothing in it has changed"));
+    });
+
+    it("passes on a refusal", async () => {
+      vi.mocked(duplicateResume).mockResolvedValue({ ok: false, error: "Resume not found." });
+
+      expect(await execTool(tools.duplicateResume, { resumeId: RESUME_ID })).toEqual({ error: "Resume not found." });
     });
   });
 

@@ -8,6 +8,16 @@ import { Download, ExternalLink, Loader2 } from "lucide-react";
 import { applyReviewSuggestionsAction } from "@/app/actions/resume-review/apply-suggestions";
 import { undoReviewSuggestionAction } from "@/app/actions/resume-review/undo-suggestion";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { downloadResume } from "@/helpers/resume/download-resume";
@@ -17,6 +27,7 @@ import type { TResumeReviewServer } from "@/utils/types/review.types";
 import SuggestionCard, { type SuggestionState } from "./SuggestionCard";
 
 type Target = "copy" | "original";
+type ApplyItem = { bulletId: string; text?: string };
 
 const APPLY_FAILED = "We couldn't apply that. Please try again.";
 
@@ -39,6 +50,11 @@ export default function ReviewSuggestions({
   const [target, setTarget] = useState<Target>("copy");
   const [isBusy, setIsBusy] = useState(false);
   const [changedIds, setChangedIds] = useState<ReadonlySet<string>>(new Set());
+  /** An apply to the original, waiting on the dialog. `settle` answers whoever asked. */
+  const [confirming, setConfirming] = useState<{
+    items: ApplyItem[];
+    settle: (applied: boolean | Promise<boolean>) => void;
+  } | null>(null);
 
   const suggestions = useMemo(() => readSuggestions(review.ai_response), [review.ai_response]);
   const bulletIds = useMemo(
@@ -68,10 +84,14 @@ export default function ReviewSuggestions({
     !changedIds.has(suggestion.bullet_id) &&
     !hasPlaceholder(suggestion.suggested);
   const applyAllItems = suggestions.filter(canApplyAll).map((suggestion) => ({ bulletId: suggestion.bullet_id }));
+  const openCount = suggestions.filter(
+    (suggestion) => stateOf(suggestion.bullet_id) === "ready" && !changedIds.has(suggestion.bullet_id),
+  ).length;
+  const skippedCount = openCount - applyAllItems.length;
 
   const refresh = () => mutate(`/api/resume-review/${review.id}`);
 
-  const apply = async (items: { bulletId: string; text?: string }[]): Promise<boolean> => {
+  const apply = async (items: ApplyItem[]): Promise<boolean> => {
     setIsBusy(true);
     try {
       const result = await applyReviewSuggestionsAction({ reviewId: review.id, target, items });
@@ -98,6 +118,19 @@ export default function ReviewSuggestions({
     } finally {
       setIsBusy(false);
     }
+  };
+
+  /** Changing the original asks first. A card keeps its editor open if the answer is no. */
+  const requestApply = (items: ApplyItem[]): Promise<boolean> => {
+    if (target !== "original") return apply(items);
+    return new Promise((settle) => setConfirming({ items, settle }));
+  };
+
+  // The action button also closes the dialog, which settles again with false.
+  // A promise keeps its first answer, so that second call does nothing.
+  const settleConfirm = (applied: boolean | Promise<boolean>) => {
+    confirming?.settle(applied);
+    setConfirming(null);
   };
 
   const undo = async (bulletId: string) => {
@@ -150,13 +183,26 @@ export default function ReviewSuggestions({
               <ToggleGroupItem value="original">This resume</ToggleGroupItem>
             </ToggleGroup>
           </div>
-          {applyAllItems.length > 0 && (
-            <Button size="sm" variant="outline" disabled={isBusy} onClick={() => apply(applyAllItems)}>
+          {openCount > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isBusy || applyAllItems.length === 0}
+              onClick={() => requestApply(applyAllItems)}
+            >
               {isBusy && <Loader2 className="h-4 w-4 animate-spin" />}
-              Apply all ({applyAllItems.length})
+              Apply all changes{applyAllItems.length > 0 && ` (${applyAllItems.length})`}
             </Button>
           )}
         </div>
+      )}
+
+      {skippedCount > 0 && !readOnly && (
+        <p className="text-xs text-muted-foreground">
+          {isOlderReview
+            ? "This older review may have estimated numbers, so check and apply each change yourself."
+            : `${skippedCount} ${skippedCount === 1 ? "change needs" : "changes need"} your real numbers first, so apply ${skippedCount === 1 ? "it" : "them"} one at a time.`}
+        </p>
       )}
 
       {appliedIds.size > 0 && targetResumeId && !readOnly && (
@@ -185,10 +231,28 @@ export default function ReviewSuggestions({
           isChanged={changedIds.has(suggestion.bullet_id)}
           checkNumbers={isOlderReview}
           onHighlight={setActiveHighlightId}
-          onApply={(text) => apply([{ bulletId: suggestion.bullet_id, text }])}
+          onApply={(text) => requestApply([{ bulletId: suggestion.bullet_id, text }])}
           onUndo={() => undo(suggestion.bullet_id)}
         />
       ))}
+
+      <AlertDialog open={confirming !== null} onOpenChange={(open) => !open && settleConfirm(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change your original resume?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirming?.items.length === 1 ? "This rewrites 1 bullet" : `This rewrites ${confirming?.items.length} bullets`}{" "}
+              on {review.resumes?.name ?? "your resume"} instead of a copy. You can undo each change from this page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirming && settleConfirm(apply(confirming.items))}>
+              Apply to original
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

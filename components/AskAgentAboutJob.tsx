@@ -26,7 +26,7 @@ export function jobSuggestions(job: Job) {
     { label: "Best resume for it", prompt: `Which of my resumes fits ${ref} best?` },
     {
       label: "Tailor my CV",
-      prompt: `Review my resume against ${ref} and tell me what to change.`,
+      prompt: `Make a copy of my resume and tailor it for ${ref}. Only use what's already in my resume.`,
     },
     { label: "Similar jobs", prompt: `Find jobs similar to ${ref}.` },
   ];

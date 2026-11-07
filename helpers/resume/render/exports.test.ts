@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { RESUME_TEMPLATES, type ResumeTemplate } from "@/helpers/resume/config";
 import { extractPdfLines, extractResumeText } from "@/helpers/resume/extract-text";
 import type { ResumeContact, ResumeContent } from "@/helpers/resume/resume-schema";
@@ -57,6 +58,15 @@ function expectInOrder(text: string, parts: string[]) {
   }
 }
 
+/** Each text run's baseline, in points from the top of the first page. */
+async function pdfBaselines(pdf: Uint8Array) {
+  const document = await getDocument({ data: pdf.slice(), verbosity: 0 }).promise;
+  const page = await document.getPage(1);
+  const { items } = await page.getTextContent();
+  const runs = items.flatMap((item) => ("str" in item ? [item] : []));
+  return new Map(runs.map((run) => [run.str, page.view[3] - run.transform[5]]));
+}
+
 describe.each(RESUME_TEMPLATES)("the %s template", (template) => {
   it("PDF: every field comes back in reading order (RE-REQ-053)", async () => {
     const document = documentFor(template);
@@ -65,6 +75,15 @@ describe.each(RESUME_TEMPLATES)("the %s template", (template) => {
     const lines = await extractPdfLines({ data: bytes }, { pageMarkers: false });
 
     expectInOrder(flatten(lines), resumeDocumentText(document));
+  });
+
+  it("PDF: the headline sits clear of the larger name above it", async () => {
+    const pdf = await renderResumePdf(documentFor(template));
+    const baselines = await pdfBaselines(pdf);
+    const gap = baselines.get(CONTACT.headline!)! - baselines.get(CONTACT.fullName)!;
+
+    // When the name inherits the body's line height, this comes out under 10pt.
+    expect(gap).toBeGreaterThan(15);
   });
 
   it("Word: every field comes back in reading order", async () => {

@@ -21,6 +21,9 @@ vi.mock("@/components/resume/ResumeEditor", () => ({
   ),
 }));
 vi.mock("@/components/resume/ResumeUpgradeGate", () => ({ default: () => <div data-testid="gate" /> }));
+vi.mock("@/components/agent/AskAgentOnApplicantIdPages", () => ({
+  AskAgentAboutResume: ({ resume }: { resume: object }) => <div data-testid="agent">{JSON.stringify(resume)}</div>,
+}));
 
 const USER_ID = "00000000-0000-4000-8000-000000000001";
 const RESUME_ID = "22222222-2222-4222-8222-222222222222";
@@ -34,6 +37,8 @@ const ROW = {
   revision: 5,
   schema_version: 2,
   parse_notes: { unusedLines: ["Page 2"] },
+  is_primary: true,
+  parsing_failed: false,
 };
 
 let db: SupabaseMock;
@@ -42,7 +47,7 @@ const open = async (id = RESUME_ID) => render(await EditResumePage({ params: Pro
 
 beforeEach(() => {
   vi.clearAllMocks();
-  db = createSupabaseMock({ user: { id: USER_ID } });
+  db = createSupabaseMock({ user: { id: USER_ID, app_metadata: { type: "applicant" } } });
   vi.mocked(createClient).mockResolvedValue(db.client);
 });
 
@@ -59,6 +64,29 @@ describe("/resume/[resumeId]/edit", () => {
       unusedLines: ["Page 2"],
       initial: { name: "Backend", template: "compact", contact: { fullName: "", links: [] } },
     });
+  });
+
+  it("offers the agent, about this resume", async () => {
+    db.queue("resumes", { data: ROW, error: null });
+
+    await open();
+
+    expect(JSON.parse(screen.getByTestId("agent").textContent!)).toEqual({
+      id: RESUME_ID,
+      name: "Backend",
+      isPrimary: true,
+      parsingFailed: false,
+    });
+  });
+
+  it("offers the agent to applicants only", async () => {
+    db = createSupabaseMock({ user: { id: USER_ID, app_metadata: { type: "company" } } });
+    vi.mocked(createClient).mockResolvedValue(db.client);
+    db.queue("resumes", { data: ROW, error: null });
+
+    await open();
+
+    expect(screen.queryByTestId("agent")).toBeNull();
   });
 
   it("only reads the user's own resume", async () => {

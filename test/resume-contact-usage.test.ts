@@ -21,7 +21,7 @@ const ALLOWED: Record<string, string> = {
   "helpers/applications/resume-snapshot.ts": "the snapshot's own code: builds it and reads it back",
   "helpers/applications/application-resume.ts": "the company's resume view through the snapshot (RE-REQ-005)",
   "app/company/applications/[application_id]/resume/page.tsx": "the company's resume view through the snapshot (RE-REQ-005)",
-  "app/api/company/applications/[application_id]/resume/export/route.ts": "the download of that same view (RE-REQ-063)",
+  "app/api/company/applications/[id]/resume/export/route.ts": "the download of that same view (RE-REQ-063)",
   "app/company/profiles/[profile_id]/page.tsx": "only after company_has_candidate_access, and RLS gates the row (RE-REQ-064)",
 };
 

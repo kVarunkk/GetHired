@@ -1566,7 +1566,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": false,
       "title": "Copy a resume",
     },
-    "description": "Make a copy of one of the user's resumes, to keep a version or tailor one for a job. It's never the primary resume. Free.",
+    "description": "Make a copy of one of the user's resumes, to keep a version or as the first step of tailoring one for a job. The copy is identical until it's edited. It's never the primary resume. Free.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {

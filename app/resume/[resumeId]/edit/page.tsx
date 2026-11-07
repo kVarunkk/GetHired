@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, unstable_rethrow } from "next/navigation";
+import { AskAgentAboutResume } from "@/components/agent/AskAgentOnApplicantIdPages";
 import ErrorComponent from "@/components/Error";
 import PageHeader from "@/components/PageHeader";
 import ResumeEditor from "@/components/resume/ResumeEditor";
@@ -31,7 +32,7 @@ export default async function EditResumePage({ params }: { params: Promise<{ res
 
     const { data, error } = await supabase
       .from("resumes")
-      .select("id, name, content, contact, template, revision, schema_version, parse_notes")
+      .select("id, name, content, contact, template, revision, schema_version, parse_notes, is_primary, parsing_failed")
       .eq("id", resumeId)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -48,6 +49,16 @@ export default async function EditResumePage({ params }: { params: Promise<{ res
           title={resume.name ?? "Untitled resume"}
           description="Edit your resume. Changes show in the preview as you type."
         />
+        {user.app_metadata.type === "applicant" && (
+          <AskAgentAboutResume
+            resume={{
+              id: resumeId,
+              name: resume.name ?? "Untitled resume",
+              isPrimary: data.is_primary === true,
+              parsingFailed: data.parsing_failed === true,
+            }}
+          />
+        )}
         {resume.schemaVersion === 1 ? (
           <ResumeUpgradeGate resumeId={resumeId} />
         ) : (

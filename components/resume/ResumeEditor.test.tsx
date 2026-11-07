@@ -1,12 +1,23 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { dismissResumeNotesAction } from "@/app/actions/resumes/dismiss-resume-notes";
 import { saveResumeAction } from "@/app/actions/resumes/save-resume";
 import { RESUME_LIMITS } from "@/helpers/resume/config";
-import type { EditorDraft } from "./resume-editor-state";
+import { editorReducer, type EditorDraft } from "./resume-editor-state";
 import ResumeEditor from "./ResumeEditor";
 
 vi.mock("@/components/ui/select", () => import("@/test/utils/select-mock"));
+const locationRenders = vi.hoisted(() => new Map<string, number>());
+vi.mock("@/components/LocationSearchSelect", () => ({
+  default: ({ id, onChange }: { id: string; onChange: (name: string, locations: string[]) => void }) => {
+    locationRenders.set(id, (locationRenders.get(id) ?? 0) + 1);
+    return (
+      <button type="button" id={id} onClick={() => onChange("location", ["Pune"])}>
+        Pick Pune
+      </button>
+    );
+  },
+}));
 vi.mock("@/app/actions/resumes/save-resume", () => ({ saveResumeAction: vi.fn() }));
 vi.mock("@/app/actions/resumes/dismiss-resume-notes", () => ({ dismissResumeNotesAction: vi.fn() }));
 vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() } }));
@@ -66,6 +77,71 @@ describe("ResumeEditor edits (RE-REQ-032)", () => {
     expect(preview().getByText("Grace Hopper")).toBeInTheDocument();
     expect(preview().getByText("Rewrote it")).toBeInTheDocument();
     expect(preview().getByText("Staff Engineer")).toBeInTheDocument();
+  });
+
+  it("starts a known section's title at its label, and lets the user change it", () => {
+    open();
+
+    const title = screen.getByLabelText("Experience section title");
+    expect(title).toHaveValue("Experience");
+
+    type(title, "");
+    expect(title).toHaveValue("");
+
+    type(title, "Work history");
+    expect(title).toHaveValue("Work history");
+    expect(preview().getByText("Work history")).toBeInTheDocument();
+  });
+
+  it("leaves an Other section's title for the user", () => {
+    open();
+
+    fireEvent.change(screen.getByLabelText("Add a section"), { target: { value: "other" } });
+
+    expect(screen.getByLabelText("Other section title")).toHaveValue("");
+  });
+
+  it("sets an entry's location and dates through their pickers", () => {
+    open();
+
+    fireEvent.click(screen.getByLabelText("Location", { selector: "#i1-location" }));
+    fireEvent.click(screen.getByLabelText("End"));
+    fireEvent.click(screen.getByRole("button", { name: "Present" }));
+
+    expect(preview().getByText(/Pune/)).toHaveTextContent("Present");
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Clear location" })[0]);
+    expect(preview().queryByText(/Pune/)).toBeNull();
+  });
+
+  it("refuses to save an entry that ends before it starts", async () => {
+    open({
+      initial: {
+        ...INITIAL,
+        content: {
+          version: 2,
+          sections: [
+            { id: "s1", type: "experience", items: [{ id: "i1", startDate: "Mar 2021", endDate: "Jan 2020", bullets: [] }] },
+          ],
+        },
+      },
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent("The end date can't be before the start date.");
+
+    type(screen.getByLabelText("Full name"), "Grace Hopper");
+    fireEvent.click(saveButton());
+
+    await waitFor(() => expect(screen.getByText("The end date can't be before the start date.")).toBeInTheDocument());
+    expect(saveResumeAction).not.toHaveBeenCalled();
+  });
+
+  it("sets the contact location through the picker", () => {
+    open();
+
+    fireEvent.click(screen.getByLabelText("Location", { selector: "#contact-location" }));
+
+    expect(preview().getByText(/Pune/)).toBeInTheDocument();
   });
 
   it("marks the bullet being edited in the preview", () => {
@@ -321,6 +397,280 @@ describe("the unsaved-changes guard", () => {
 
     // The listener goes in an effect, which can run just after that render.
     await waitFor(() => expect(leavePage().defaultPrevented).toBe(false));
+  });
+});
+
+describe("typing stays cheap", () => {
+  const typeBullet = (draft: EditorDraft, text: string) =>
+    editorReducer(draft, { type: "apply", operations: [{ op: "setBulletText", bulletId: "b1", text }] });
+
+  it("keeps everything an edit didn't touch", () => {
+    const next = typeBullet(INITIAL, "Changed");
+
+    expect(next.content.sections[0].items[0].bullets[0].text).toBe("Changed");
+    expect(next.content.sections[0].items[0].bullets[1]).toBe(INITIAL.content.sections[0].items[0].bullets[1]);
+    expect(next.content.sections[1]).toBe(INITIAL.content.sections[1]);
+    expect(next.contact).toBe(INITIAL.contact);
+  });
+
+  it("returns the same draft for an edit that changes nothing", () => {
+    expect(typeBullet(INITIAL, "First")).toBe(INITIAL);
+  });
+
+  it("keeps a removed bullet removed", () => {
+    const next = editorReducer(INITIAL, { type: "apply", operations: [{ op: "removeBullet", bulletId: "b1" }] });
+
+    expect(next.content.sections[0].items[0].bullets.map((bullet) => bullet.id)).toEqual(["b2"]);
+  });
+
+  it("re-renders only the part being edited", () => {
+    open();
+    locationRenders.clear();
+
+    type(bullets()[0], "Changed");
+    expect(locationRenders.has("contact-location")).toBe(false);
+
+    locationRenders.clear();
+    type(screen.getByLabelText("Full name"), "Grace Hopper");
+    expect(locationRenders.has("i1-location")).toBe(false);
+  });
+
+  it("checks the latest draft on Save", () => {
+    open();
+
+    type(screen.getByLabelText("Resume name"), "");
+    fireEvent.click(saveButton());
+
+    expect(saveResumeAction).not.toHaveBeenCalled();
+    expect(screen.getByText("Give this resume a name.")).toBeInTheDocument();
+  });
+});
+
+describe("keeping the form and the preview together", () => {
+  const box = (element: Element, top: number, bottom: number) =>
+    vi.spyOn(element, "getBoundingClientRect").mockReturnValue({ top, bottom } as DOMRect);
+
+  const previewPane = () => screen.getByRole("article", { name: "Resume preview" }).parentElement as HTMLElement;
+
+  const stubPane = () => {
+    const pane = previewPane();
+    pane.scrollTo = vi.fn();
+    box(pane, 100, 500);
+    return pane;
+  };
+
+  /** The form's part, not the preview's: the form comes first in the page. */
+  const formField = (id: string) => document.querySelector(`[data-resume-target="${id}"]`) as HTMLElement;
+
+  const hover = (element: Element, clientX = 10, clientY = 10) => fireEvent.mouseMove(element, { clientX, clientY });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    window.localStorage.clear();
+  });
+
+  it("gives the preview its own scroll area", () => {
+    open();
+
+    expect(previewPane().className).toContain("lg:overflow-y-auto");
+    expect(previewPane().className).toContain("lg:max-h-");
+  });
+
+  describe("focusing a field", () => {
+    it("scrolls the preview to a bullet, and only the preview", () => {
+      open();
+      const pane = stubPane();
+      const scrollIntoView = vi.fn();
+      const bullet = preview().getByText("Second");
+      bullet.scrollIntoView = scrollIntoView;
+      box(bullet, 900, 920);
+
+      fireEvent.focus(bullets()[1]);
+
+      expect(pane.scrollTo).toHaveBeenCalledWith({ top: 784, behavior: "smooth" });
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    });
+
+    it("scrolls to the entry for one of its fields", () => {
+      open();
+      const pane = stubPane();
+      box(preview().getByText("Engineer").parentElement as Element, 700, 800);
+
+      fireEvent.focus(screen.getByLabelText("Title"));
+
+      expect(pane.scrollTo).toHaveBeenCalledWith({ top: 584, behavior: "smooth" });
+    });
+
+    it("scrolls to the heading for a section's title", () => {
+      open();
+      const pane = stubPane();
+      box(preview().getByRole("heading", { name: "Experience" }), 600, 620);
+
+      fireEvent.focus(screen.getByLabelText("Experience section title"));
+
+      expect(pane.scrollTo).toHaveBeenCalledWith({ top: 484, behavior: "smooth" });
+    });
+
+    it("scrolls to the header for a contact field", () => {
+      open();
+      const pane = stubPane();
+      box(preview().getByText("Ada Lovelace").parentElement as Element, -300, -200);
+
+      fireEvent.focus(screen.getByLabelText("Full name"));
+
+      expect(pane.scrollTo).toHaveBeenCalledWith({ top: -416, behavior: "smooth" });
+    });
+
+    it("falls back to the entry for a bullet the preview leaves out", () => {
+      open();
+      const pane = stubPane();
+      box(preview().getByText("Engineer").parentElement as Element, 700, 800);
+      fireEvent.click(screen.getAllByRole("button", { name: "Add bullet" })[0]);
+
+      fireEvent.focus(bullets()[2]);
+
+      expect(pane.scrollTo).toHaveBeenCalledWith({ top: 584, behavior: "smooth" });
+    });
+
+    it("leaves the preview alone when the part is already showing", () => {
+      open();
+      const pane = stubPane();
+      box(preview().getByText("Second"), 200, 220);
+
+      fireEvent.focus(bullets()[1]);
+
+      expect(pane.scrollTo).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("hovering the preview", () => {
+    const fieldFor = (id: string) => {
+      const field = formField(id);
+      field.scrollIntoView = vi.fn();
+      box(field, 2000, 2100);
+      return field;
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    it("scrolls the form to the part under the mouse after a moment", () => {
+      open();
+      const field = fieldFor("b2");
+
+      hover(preview().getByText("Second"));
+      expect(field.scrollIntoView).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(200);
+      expect(field.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    });
+
+    it("ignores parts the mouse only passes over", () => {
+      open();
+      const first = fieldFor("b1");
+      const second = fieldFor("b2");
+
+      hover(preview().getByText("First"), 10, 10);
+      vi.advanceTimersByTime(100);
+      hover(preview().getByText("Second"), 10, 30);
+      vi.advanceTimersByTime(200);
+
+      expect(first.scrollIntoView).not.toHaveBeenCalled();
+      expect(second.scrollIntoView).toHaveBeenCalledTimes(1);
+    });
+
+    it("does nothing once the mouse has left", () => {
+      open();
+      const field = fieldFor("b2");
+
+      hover(preview().getByText("Second"));
+      fireEvent.mouseLeave(previewPane());
+      vi.advanceTimersByTime(200);
+
+      expect(field.scrollIntoView).not.toHaveBeenCalled();
+    });
+
+    it("ignores a move with no mouse movement, as when the preview scrolls under it", () => {
+      open();
+      const first = fieldFor("b1");
+      const second = fieldFor("b2");
+
+      hover(preview().getByText("First"), 10, 10);
+      vi.advanceTimersByTime(200);
+      hover(preview().getByText("Second"), 10, 10);
+      vi.advanceTimersByTime(200);
+
+      expect(first.scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(second.scrollIntoView).not.toHaveBeenCalled();
+    });
+
+    it("marks what's under the mouse while it's on", () => {
+      open();
+
+      expect(previewPane().className).toContain("hover:not(:has(");
+    });
+
+    it("can be switched off, which also drops the mark", () => {
+      open();
+      const field = fieldFor("b2");
+
+      fireEvent.click(screen.getByRole("switch", { name: "Scroll form on hover" }));
+      hover(preview().getByText("Second"));
+      vi.advanceTimersByTime(200);
+
+      expect(field.scrollIntoView).not.toHaveBeenCalled();
+      expect(previewPane().className).not.toContain("hover:not(:has(");
+    });
+
+    it("still follows focus when it's off", () => {
+      open();
+      const pane = stubPane();
+      box(preview().getByText("Second"), 900, 920);
+
+      fireEvent.click(screen.getByRole("switch", { name: "Scroll form on hover" }));
+      fireEvent.focus(bullets()[1]);
+
+      expect(pane.scrollTo).toHaveBeenCalled();
+    });
+
+    it("remembers being switched off", () => {
+      const first = open();
+      fireEvent.click(screen.getByRole("switch", { name: "Scroll form on hover" }));
+      first.unmount();
+
+      open();
+
+      expect(screen.getByRole("switch", { name: "Scroll form on hover" })).not.toBeChecked();
+    });
+
+    it("works without storage", () => {
+      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new Error("blocked");
+      });
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new Error("blocked");
+      });
+      open();
+
+      const toggle = screen.getByRole("switch", { name: "Scroll form on hover" });
+      expect(toggle).toBeChecked();
+      fireEvent.click(toggle);
+      expect(toggle).not.toBeChecked();
+      vi.restoreAllMocks();
+    });
+
+    it("leaves the form alone when the part is already showing", () => {
+      open();
+      const field = formField("b2");
+      field.scrollIntoView = vi.fn();
+      box(field, 100, 200);
+
+      hover(preview().getByText("Second"));
+      vi.advanceTimersByTime(200);
+
+      expect(field.scrollIntoView).not.toHaveBeenCalled();
+    });
   });
 });
 

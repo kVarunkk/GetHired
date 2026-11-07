@@ -105,6 +105,7 @@ export default function AskAgentBox({
       </h2>
 
       <form
+        data-leaves-page
         onSubmit={(event) => {
           event.preventDefault();
           if (question.trim()) open(toPrompt(question));
@@ -132,7 +133,7 @@ export default function AskAgentBox({
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
+                if (question.trim()) event.currentTarget.form?.requestSubmit();
               }
             }}
           />

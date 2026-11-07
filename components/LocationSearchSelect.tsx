@@ -40,6 +40,8 @@ export interface GenericFormData {
 }
 
 interface LocationSearchSelectProps {
+  /** For the trigger, so a `Label` can point at it. */
+  id?: string;
   name: keyof GenericFormData;
   onChange: (name: keyof GenericFormData, keywords: string[]) => void;
   placeholder?: string;
@@ -50,6 +52,7 @@ interface LocationSearchSelectProps {
 }
 
 export default function LocationSearchSelect({
+  id,
   name,
   onChange,
   placeholder = "Search cities or countries...",
@@ -126,6 +129,7 @@ export default function LocationSearchSelect({
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
+              id={id}
               variant="outline"
               role="combobox"
               aria-expanded={open}
@@ -150,12 +154,17 @@ export default function LocationSearchSelect({
         <Drawer open={open} onOpenChange={setOpen}>
           <DrawerTrigger asChild>
             <Button
+              id={id}
               variant="outline"
               role="combobox"
               aria-expanded={open}
               className="w-full justify-between text-muted-foreground"
             >
-              <span className="truncate">{placeholder}</span>
+              <span className="truncate">
+                {isSingleSelect && initialLocations.length > 0
+                  ? initialLocations[0]
+                  : placeholder}
+              </span>
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </DrawerTrigger>
