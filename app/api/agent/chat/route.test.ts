@@ -435,7 +435,7 @@ describe("POST /api/agent/chat: history rules", () => {
       role: "assistant",
       parts: [
         {
-          type: "tool-startResumeReview",
+          type: "tool-submitApplication",
           toolCallId: "c1",
           state: "approval-requested",
           input: { resumeId: "22222222-2222-4222-8222-222222222222", jobId: "11111111-1111-4111-8111-111111111111" },

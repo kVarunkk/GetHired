@@ -177,3 +177,11 @@ describe("ResumeOperationSchema", () => {
     expect(ResumeOperationSchema.safeParse({ op: "setBulletText", bulletId: "b1", text: "x" }).success).toBe(true);
   });
 });
+
+describe("naming a new bullet (RI-REQ-031)", () => {
+  it("is for our own code: the schema strips the id a model sends", () => {
+    const parsed = ResumeOperationSchema.parse({ op: "addBullet", itemId: "i1", text: "New", bulletId: "chosen" });
+
+    expect(parsed).not.toHaveProperty("bulletId");
+  });
+});

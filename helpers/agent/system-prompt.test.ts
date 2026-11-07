@@ -63,7 +63,11 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("You can only apply to jobs on GetHired");
     expect(prompt).toContain("never make up an answer to an application question");
     expect(prompt).toContain("Only say you applied after the application was sent successfully");
-    expect(prompt).toContain("A copy alone is not tailoring");
+    expect(prompt).toContain("To tailor or improve a resume, call improveResume, then reviewResumeChanges");
+    expect(prompt).toContain("Use updateResume only for changes the user dictates");
+    expect(prompt).toContain("If improveResume fails, tell the user why and stop");
+    expect(prompt).toContain("After the card, report only what its result says");
+    expect(prompt).not.toContain("applyReviewSuggestions");
     expect(prompt).toContain("Only say you changed, created or sent something after the tool that does it succeeded");
     expect(prompt).toContain("updateMyPreferences");
     expect(prompt).toContain("saveMemory");

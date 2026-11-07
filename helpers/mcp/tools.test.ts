@@ -54,8 +54,8 @@ const NEW_NAMES = [
   "get_application_form",
   "submit_application",
   "set_primary_resume",
-  "start_resume_review",
   "pick_resume_for_job",
+  "improve_resume",
   "update_my_preferences",
   "complete_onboarding",
   "list_interviews",
@@ -115,6 +115,7 @@ describe("MCP_TOOLS", () => {
       "deleteMemory",
       "getResumeContent",
       "requestResumeUpload",
+      "reviewResumeChanges",
       "saveMemory",
     ]);
   });
@@ -138,14 +139,13 @@ describe("MCP_TOOLS", () => {
         "complete_onboarding",
         "create_resume",
         "delete_resume",
-        "start_resume_review",
         "submit_application",
         "update_my_preferences",
         "update_resume",
       ].sort(),
     );
     expect(flagged("credit")).toEqual(
-      ["natural_language_job_search", "pick_resume_for_job", "start_resume_review", "submit_application"].sort(),
+      ["improve_resume", "natural_language_job_search", "pick_resume_for_job", "submit_application"].sort(),
     );
   });
 
@@ -213,7 +213,6 @@ describe("MCP_TOOLS", () => {
       expect(hints("favorite_job")).toMatchObject({ destructiveHint: false, idempotentHint: true });
       expect(hints("update_my_preferences")).toMatchObject({ destructiveHint: true, idempotentHint: true });
       expect(hints("complete_onboarding")).toMatchObject({ destructiveHint: true });
-      expect(hints("start_resume_review")).toMatchObject({ destructiveHint: false });
       expect(hints("natural_language_job_search")).toMatchObject({ readOnlyHint: true, openWorldHint: true });
     });
   });

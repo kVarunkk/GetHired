@@ -17,7 +17,6 @@ import ResumeRowActions from "./resume/ResumeRowActions";
 
 export type TResumeTableRow = TResumeReviewResume & {
   schema_version: number;
-  review_count: number;
   /** False when the file couldn't be read and there's nothing to edit (RE-REQ-098). */
   has_content: boolean;
 };
@@ -119,7 +118,6 @@ export default function ResumesTable({ data }: ResumesTableProps) {
             resume={{
               id: row.original.id,
               name: row.original.name,
-              reviewCount: row.original.review_count,
               // RE-REQ-098: nothing to edit, copy or export without content.
               isUnreadable: !row.original.has_content,
             }}

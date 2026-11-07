@@ -24,11 +24,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useResumeActions } from "./use-resume-actions";
 
-const reviewsWarning = (count: number) =>
-  count === 0
-    ? "This can't be undone."
-    : `Its ${count === 1 ? "review" : `${count} reviews`} will be deleted too. This can't be undone.`;
-
 /**
  * A resume's actions in the list (RE-REQ-030). A version 1 resume that failed
  * to parse has nothing to edit, copy or download until it's uploaded again, so
@@ -39,7 +34,7 @@ export default function ResumeRowActions({
   canDelete,
   onDeleted,
 }: {
-  resume: { id: string; name: string | null; reviewCount: number; isUnreadable: boolean };
+  resume: { id: string; name: string | null; isUnreadable: boolean };
   /** False for the user's last resume (RE-REQ-037). */
   canDelete: boolean;
   onDeleted: (id: string) => void;
@@ -105,7 +100,7 @@ export default function ResumeRowActions({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {resume.name ?? "this resume"}?</AlertDialogTitle>
-            <AlertDialogDescription>{reviewsWarning(resume.reviewCount)}</AlertDialogDescription>
+            <AlertDialogDescription>This can&apos;t be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>

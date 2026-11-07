@@ -133,7 +133,7 @@ describe("POST /api/agent/chat for a company user (RA-TEST-007)", () => {
     expect(toolNames()).toContain("searchCandidates");
     expect(toolNames()).toContain("createJobPost");
     expect(toolNames()).not.toContain("searchJobs");
-    expect(toolNames()).not.toContain("startResumeReview");
+    expect(toolNames()).not.toContain("improveResume");
     expect(supabase.callsFor("user_info")).toHaveLength(0);
   });
 

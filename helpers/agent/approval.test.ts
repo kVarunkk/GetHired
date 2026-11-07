@@ -30,7 +30,7 @@ const typeOf = (status: ReturnType<typeof agentToolApproval>) =>
   typeof status === "string" ? status : status?.type;
 
 describe("agentToolApproval: approvals (REQ-014, SEC-012)", () => {
-  it.each(["startResumeReview", "updateMyPreferences", "completeOnboarding"])(
+  it.each(["updateMyPreferences", "completeOnboarding"])(
     "always asks the user before %s",
     (toolName) => {
       expect(decide(toolName, [user("hi")])).toBe("user-approval");
@@ -105,9 +105,9 @@ describe("agentToolApproval: credit cap per turn (SEC-013)", () => {
     const messages = [
       user("x"),
       ...ran("naturalLanguageJobSearch", "c1"),
-      ...ran("startResumeReview", "c2"),
+      ...ran("improveResume", "c2"),
     ];
-    expect(typeOf(decide("startResumeReview", messages))).toBe("denied");
+    expect(typeOf(decide("improveResume", messages))).toBe("denied");
   });
 
   it("doesn't count calls from earlier turns, denied calls, or the call itself", () => {
@@ -116,7 +116,7 @@ describe("agentToolApproval: credit cap per turn (SEC-013)", () => {
       ...ran("naturalLanguageJobSearch", "c1"),
       ...ran("naturalLanguageJobSearch", "c2"),
       user("b"),
-      ...ran("startResumeReview", "c3", true),
+      ...ran("improveResume", "c3", true),
       ...ran("naturalLanguageJobSearch", "c4"),
       ...ran("naturalLanguageJobSearch", "current"),
     ];

@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { RESUME_SECTION_LABELS } from "@/helpers/resume/config";
+import { buildResumeDocument, type ResumeDocument } from "@/helpers/resume/render/document";
 import { previewReviewSuggestions } from "@/helpers/resume-review/apply-suggestions";
+import type { ReviewChange } from "@/helpers/resume-review/changes";
 import type { Database } from "@/utils/types/database.types";
 import { RESUME_DEFAULT_NAME, ResumeFromChatSchema } from "./create-resume";
 import { LAST_RESUME_ERROR } from "./delete-resume";
@@ -11,12 +13,26 @@ import { planResumeUpdate } from "./update-resume";
 export const RESUME_EDIT_TOOLS = ["createResume", "updateResume", "deleteResume", "applyReviewSuggestions"] as const;
 export type ResumeEditTool = (typeof RESUME_EDIT_TOOLS)[number];
 
-export type ResumeEditPreview = { ok: true; summary: string; changes: ResumeChange[] } | { ok: false; error: string };
+/**
+ * `before` and `after` hold contact details, so they go only to the resume's
+ * owner, through the approval card. MCP reads `summary` and `changes` alone
+ * (RI-REQ-003, RI-SEC-004).
+ */
+export type ResumeEditPreview =
+  | { ok: true; summary: string; changes: ResumeChange[]; before?: ResumeDocument; after?: ResumeDocument }
+  | { ok: false; error: string };
 
 type Client = SupabaseClient<Database>;
 type User = { id: string };
 
 const count = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+const CHANGE_LABELS: Record<ReviewChange["kind"], string> = {
+  rewrite: "Bullet",
+  add: "New bullet",
+  remove: "Removed bullet",
+  move: "Order",
+};
 
 async function previewUpdate(supabase: Client, user: User, input: unknown): Promise<ResumeEditPreview> {
   const plan = await planResumeUpdate(supabase, user, input);
@@ -24,7 +40,13 @@ async function previewUpdate(supabase: Client, user: User, input: unknown): Prom
 
   const changes = describeResumeChanges(plan.before, plan.after);
   if (changes.length === 0) return { ok: false, error: "These changes wouldn't change anything." };
-  return { ok: true, summary: `Change "${plan.before.name}"?`, changes };
+  return {
+    ok: true,
+    summary: `Change "${plan.before.name}"?`,
+    changes,
+    before: buildResumeDocument(plan.before),
+    after: buildResumeDocument(plan.after),
+  };
 }
 
 async function previewCreate(supabase: Client, user: User, input: unknown): Promise<ResumeEditPreview> {
@@ -75,11 +97,13 @@ async function previewApply(supabase: Client, user: User, input: unknown): Promi
   return {
     ok: true,
     summary: `Apply ${count(preview.applied.length, "suggestion")} to ${where}?${skipped}`,
-    changes: preview.applied.map(({ previousText, appliedText }) => ({
-      label: "Bullet",
+    changes: preview.applied.map(({ kind, previousText, appliedText }) => ({
+      label: CHANGE_LABELS[kind],
       before: previousText,
-      after: appliedText,
+      after: kind === "move" ? "Moves to a new position" : appliedText,
     })),
+    before: preview.before,
+    after: preview.after,
   };
 }
 

@@ -82,6 +82,10 @@ exports[`applicant MCP baseline > the confirm and credit flags of each applicant
     "confirm": false,
     "credit": false,
   },
+  "improve_resume": {
+    "confirm": false,
+    "credit": true,
+  },
   "list_applications": {
     "confirm": false,
     "credit": false,
@@ -109,10 +113,6 @@ exports[`applicant MCP baseline > the confirm and credit flags of each applicant
   "set_primary_resume": {
     "confirm": false,
     "credit": false,
-  },
-  "start_resume_review": {
-    "confirm": true,
-    "credit": true,
   },
   "submit_application": {
     "confirm": true,
@@ -1566,7 +1566,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": false,
       "title": "Copy a resume",
     },
-    "description": "Make a copy of one of the user's resumes, to keep a version or as the first step of tailoring one for a job. The copy is identical until it's edited. It's never the primary resume. Free.",
+    "description": "Make a copy of one of the user's resumes, to keep a version. Don't copy a resume to tailor it: applying suggested changes makes its own copy. The copy is identical until it's edited. It's never the primary resume. Free.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -1627,7 +1627,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": false,
       "title": "Apply review suggestions",
     },
-    "description": "Apply suggestions from a resume review, by each suggestion's bulletId from get_resume_review_details. They go to a copy by default, which later applies reuse; pass target 'original' only when the user asks to change the reviewed resume. Pass text to use the user's own wording. Text with a [placeholder] is refused: ask the user for the real value, then pass it as text. GetHired asks the user to confirm before it runs.",
+    "description": "Apply changes from a resume review, by each change's id from improve_resume or get_resume_review_details. They go to a copy by default, which later applies reuse; pass target 'original' only when the user asks to change the reviewed resume. Pass text to use the user's own wording. Text with a [placeholder] is refused: ask the user for the real value, then pass it as text. GetHired asks the user to confirm before it runs.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -1639,8 +1639,8 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "items": {
             "additionalProperties": false,
             "properties": {
-              "bulletId": {
-                "description": "The suggestion's bulletId, from getResumeReview.",
+              "id": {
+                "description": "The suggestion's id, from getResumeReview.",
                 "type": "string",
               },
               "text": {
@@ -1649,7 +1649,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
               },
             },
             "required": [
-              "bulletId",
+              "id",
             ],
             "type": "object",
           },
@@ -1712,53 +1712,6 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
   },
   {
     "annotations": {
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": false,
-      "readOnlyHint": false,
-      "title": "Review a resume",
-    },
-    "description": "Start an AI review of one of the user's resumes against a job (jobId) or a pasted job description. Costs 5 AI credits once the analysis succeeds. Runs in the background and returns a link. GetHired asks the user to confirm before it runs.",
-    "inputSchema": {
-      "additionalProperties": false,
-      "properties": {
-        "confirmation_token": {
-          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
-          "type": "string",
-        },
-        "jobDescription": {
-          "description": "A job description the user pasted, when there is no jobId.",
-          "maxLength": 4000,
-          "minLength": 50,
-          "type": "string",
-        },
-        "jobId": {
-          "description": "The job id, exactly as returned by another tool.",
-          "format": "uuid",
-          "type": "string",
-        },
-        "name": {
-          "description": "Optional name for the review.",
-          "maxLength": 80,
-          "minLength": 1,
-          "type": "string",
-        },
-        "resumeId": {
-          "description": "The resume id, exactly as returned by another tool.",
-          "format": "uuid",
-          "type": "string",
-        },
-      },
-      "required": [
-        "resumeId",
-      ],
-      "type": "object",
-    },
-    "name": "start_resume_review",
-    "title": "Review a resume",
-  },
-  {
-    "annotations": {
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "My resume reviews",
@@ -1785,7 +1738,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": true,
       "title": "Resume review details",
     },
-    "description": "Get a resume review's status, score, overall feedback and its top suggestions (highest priority first), each with the bulletId that apply_review_suggestions needs, any [placeholders] the user must fill in, and whether it's already applied.",
+    "description": "Get a resume review's status, score, overall feedback and its top changes of every kind (pending first, then highest priority), each with the id that apply_review_suggestions needs, any [placeholders] the user must fill in, and its state on the copy and on the original resume (pending, applied, or changed if the resume moved on since the review).",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -1840,6 +1793,48 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
     },
     "name": "pick_resume_for_job",
     "title": "Pick a resume for a job",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Improve a resume",
+    },
+    "description": "Suggest how to improve or tailor one of the user's resumes: rewrites, new bullets, removals, moves, and gaps to ask the user about, each change with its id. Pass a jobId or a pasted jobDescription to tailor it to a job, or neither to judge it on its own. It changes nothing: apply the ones the user chooses with apply_review_suggestions. Costs 2 AI credits once it succeeds.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "focus": {
+          "description": "What the user asked for, in their words, such as 'make it shorter' or 'focus on leadership'.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "jobDescription": {
+          "description": "A job description the user pasted, when there is no jobId.",
+          "maxLength": 4000,
+          "minLength": 50,
+          "type": "string",
+        },
+        "jobId": {
+          "description": "The job id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+        "resumeId": {
+          "description": "The resume id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "resumeId",
+      ],
+      "type": "object",
+    },
+    "name": "improve_resume",
+    "title": "Improve a resume",
   },
   {
     "annotations": {

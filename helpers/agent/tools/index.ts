@@ -23,3 +23,13 @@ export function createAgentTools(ctx: AgentToolContext) {
 }
 
 export type AgentTools = ReturnType<typeof createAgentTools>;
+
+/**
+ * The tools in the chat. The changes card is the chat's one way to apply a
+ * review, so `applyReviewSuggestions` is MCP's alone (RI-REQ-051).
+ */
+export function createChatTools(ctx: AgentToolContext) {
+  const { applyReviewSuggestions: mcpOnly, ...tools } = createAgentTools(ctx);
+  void mcpOnly;
+  return tools;
+}

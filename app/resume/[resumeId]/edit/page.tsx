@@ -3,6 +3,7 @@ import { notFound, unstable_rethrow } from "next/navigation";
 import { AskAgentAboutResume } from "@/components/agent/AskAgentOnApplicantIdPages";
 import ErrorComponent from "@/components/Error";
 import PageHeader from "@/components/PageHeader";
+import ImproveResumeLink from "@/components/resume/ImproveResumeLink";
 import ResumeEditor from "@/components/resume/ResumeEditor";
 import ResumeUpgradeGate from "@/components/resume/ResumeUpgradeGate";
 import { isUuid } from "@/helpers/agent/auth";
@@ -48,6 +49,11 @@ export default async function EditResumePage({ params }: { params: Promise<{ res
           backLabel="Back to resume"
           title={resume.name ?? "Untitled resume"}
           description="Edit your resume. Changes show in the preview as you type."
+          actions={
+            user.app_metadata.type === "applicant" && resume.hasContent ? (
+              <ImproveResumeLink prompt={`Improve my resume "${resume.name ?? "Untitled resume"}" (resume ${resumeId}).`} />
+            ) : undefined
+          }
         />
         {user.app_metadata.type === "applicant" && (
           <AskAgentAboutResume

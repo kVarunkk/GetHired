@@ -13,8 +13,6 @@ import { parseJobQuery } from "@/helpers/jobs/parse-job-query";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { MCP_TOOLS } from "@/helpers/mcp/tools";
 import { MCP_CALLS_PER_MINUTE } from "@/helpers/mcp/config";
-import { createResumeReview } from "@/helpers/resume-review/create-resume-review";
-import { startReviewAnalysis } from "@/helpers/resume-review/start-review-analysis";
 import { previewAgentApplication } from "@/helpers/applications/preview-agent-application";
 import { loadApplicationTarget } from "@/helpers/applications/agent-application";
 import { submitApplication } from "@/helpers/applications/submit-application";
@@ -29,8 +27,6 @@ vi.mock("@/helpers/mcp/auth", async (importOriginal) => ({
 vi.mock("@/helpers/jobs/search-jobs", () => ({ searchJobs: vi.fn() }));
 vi.mock("@/helpers/jobs/parse-job-query", () => ({ parseJobQuery: vi.fn() }));
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
-vi.mock("@/helpers/resume-review/create-resume-review", () => ({ createResumeReview: vi.fn() }));
-vi.mock("@/helpers/resume-review/start-review-analysis", () => ({ startReviewAnalysis: vi.fn() }));
 vi.mock("@/helpers/applications/preview-agent-application", () => ({ previewAgentApplication: vi.fn() }));
 vi.mock("@/helpers/applications/submit-application", () => ({ submitApplication: vi.fn() }));
 vi.mock("@/helpers/applications/agent-application", async (importOriginal) => ({
@@ -296,7 +292,6 @@ describe("/api/mcp limits and the call log (§4.7)", () => {
 
 describe("/api/mcp confirm tools (§4.6)", () => {
   const ELICIT = { elicitation: { form: {} } };
-  const READY_RESUME = { id: RESUME_ID, name: "Ada CV", content: "…", parsing_failed: false };
   const ACCEPT = { confirm: { action: "accept", content: { confirm: true } } };
 
   const modernCall = (
@@ -496,7 +491,7 @@ describe("/api/mcp confirm tools (§4.6)", () => {
     });
 
     it("apply_review_suggestions through elicitation: applies to the reviewed resume on a yes", async () => {
-      const args = { reviewId: REVIEW_ID, target: "original", items: [{ bulletId: "b1" }] };
+      const args = { reviewId: REVIEW_ID, target: "original", items: [{ id: "b1" }] };
       supabase.queue("resume_reviews", { data: REVIEW, error: null });
       supabase.queue("resumes", resumeRow);
       const first = await rpc(await modernCall("apply_review_suggestions", args, { capabilities: ELICIT }));
@@ -552,47 +547,6 @@ describe("/api/mcp confirm tools (§4.6)", () => {
         new RegExp(`^https?://.+/api/resumes/${RESUME_ID}/export\\?format=pdf$`),
       );
     });
-  });
-
-  it("path B on a legacy client: start_resume_review previews for free, charges on the confirmed run, once (TASK-064)", async () => {
-    const args = { resumeId: RESUME_ID, jobId: JOB_ID };
-    const job = { data: { job_name: "Frontend Engineer", company_name: "Acme" }, error: null };
-    supabase.queue("resumes", { data: READY_RESUME, error: null });
-    supabase.queue("all_jobs", job);
-
-    const first = await rpc(await legacyCall("start_resume_review", args));
-
-    const { confirmation_token: token, preview } = first.body.result.structuredContent;
-    expect(preview).toMatch(/5 AI credits[\s\S]*Resume: Ada CV[\s\S]*Job: Frontend Engineer at Acme/);
-    expect(token).toEqual(expect.any(String));
-    expect(createResumeReview).not.toHaveBeenCalled();
-    expect(startReviewAnalysis).not.toHaveBeenCalled();
-
-    supabase.queue("resumes", { data: READY_RESUME, error: null });
-    vi.mocked(createResumeReview).mockResolvedValue({ success: true, reviewId: REVIEW_ID });
-    vi.mocked(startReviewAnalysis).mockResolvedValue({ ok: true } as never);
-    tokenClaim("claimed");
-    const confirmed = await rpc(await legacyCall("start_resume_review", { ...args, confirmation_token: token }));
-
-    expect(confirmed.body.result.structuredContent).toMatchObject({ reviewId: REVIEW_ID, status: "processing" });
-    expect(createResumeReview).toHaveBeenCalledOnce();
-    expect(createResumeReview).toHaveBeenCalledWith(
-      supabase.client,
-      expect.objectContaining({ id: applicant.id }),
-      { resumeId: RESUME_ID, jobId: JOB_ID, name: undefined },
-    );
-    expect(startReviewAnalysis).toHaveBeenCalledOnce();
-
-    tokenClaim("used");
-    supabase.queue("resumes", { data: READY_RESUME, error: null });
-    supabase.queue("all_jobs", job);
-    const replay = await rpc(await legacyCall("start_resume_review", { ...args, confirmation_token: token }));
-
-    expect(replay.body.result.isError).toBe(true);
-    expect(replay.body.result.structuredContent.refused).toMatch(/already used/);
-    expect(createResumeReview).toHaveBeenCalledOnce();
-    expect(startReviewAnalysis).toHaveBeenCalledOnce();
-    expect(outcomes()).toEqual(["needs_confirmation", "ok", "needs_confirmation"]);
   });
 
   it("path B on a modern client that can't elicit: submit_application charges only on the confirmed run, once (TASK-064)", async () => {

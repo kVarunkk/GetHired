@@ -6,7 +6,6 @@ import {
   AskAgentAboutInterviews,
   AskAgentAboutJobs,
   AskAgentAboutOpportunities,
-  AskAgentAboutResumeReviews,
   AskAgentAboutResumes,
   AskAgentAboutSettings,
   OPPORTUNITIES_SUGGESTIONS,
@@ -27,7 +26,6 @@ describe("applicant page agent helpers", () => {
       <>
         <AskAgentAboutJobs />
         <AskAgentAboutResumes />
-        <AskAgentAboutResumeReviews />
         <AskAgentAboutInterviews />
         <AskAgentAboutOpportunities />
         <AskAgentAboutSettings />

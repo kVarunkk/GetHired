@@ -8,7 +8,7 @@ vi.mock("react-transition-progress/next", () => ({
 }));
 vi.mock("./ResumeSetPrimary", () => ({ default: () => null }));
 vi.mock("./resume/ResumeRowActions", () => ({
-  default: ({ resume, canDelete }: { resume: { id: string; isUnreadable: boolean; reviewCount: number }; canDelete: boolean }) => (
+  default: ({ resume, canDelete }: { resume: { id: string; isUnreadable: boolean }; canDelete: boolean }) => (
     <div data-testid={`actions-${resume.id}`}>{JSON.stringify({ ...resume, canDelete })}</div>
   ),
 }));
@@ -20,7 +20,6 @@ const row = (overrides: Partial<TResumeTableRow>): TResumeTableRow => ({
   is_primary: false,
   parsing_failed: false,
   schema_version: 2,
-  review_count: 0,
   has_content: true,
   ...overrides,
 });
@@ -63,11 +62,6 @@ describe("ResumesTable (RE-REQ-030)", () => {
 
     expect(screen.getByText("Sync Failed")).toBeInTheDocument();
     expect(actions("r1").isUnreadable).toBe(true);
-  });
-
-  it("passes on the review count for the delete confirm", () => {
-    render(<ResumesTable data={[row({ review_count: 4 })]} />);
-    expect(actions("r1").reviewCount).toBe(4);
   });
 
   it("only allows a delete when another resume stays", () => {

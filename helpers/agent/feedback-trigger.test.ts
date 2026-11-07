@@ -14,7 +14,7 @@ import {
 
 const NOW = new Date("2026-11-01T12:00:00.000Z");
 const daysAgo = (days: number) => new Date(NOW.getTime() - days * 24 * 60 * 60 * 1000);
-const MILESTONES = ["submitApplication", "startResumeReview"];
+const MILESTONES = ["submitApplication", "improveResume"];
 
 const offer = (overrides: Partial<FeedbackOfferInput> = {}): FeedbackOfferInput => ({
   enabled: true,
@@ -111,7 +111,7 @@ describe("createFinishedToolTracker", () => {
     tracker.observe({ type: "tool-input-start", toolCallId: "c1", toolName: "searchJobs" });
     tracker.observe({ type: "tool-input-available", toolCallId: "c1", toolName: "searchJobs", input: {} });
     tracker.observe({ type: "tool-output-available", toolCallId: "c1", output: { jobs: [] } });
-    tracker.observe({ type: "tool-input-available", toolCallId: "c2", toolName: "startResumeReview", input: {} });
+    tracker.observe({ type: "tool-input-available", toolCallId: "c2", toolName: "improveResume", input: {} });
     tracker.observe({ type: "tool-output-available", toolCallId: "c2", output: { partial: true }, preliminary: true });
     tracker.observe({ type: "tool-output-error", toolCallId: "c2", errorText: "boom" });
     tracker.observe({ type: "tool-input-available", toolCallId: "c3", toolName: "submitApplication", input: {} });

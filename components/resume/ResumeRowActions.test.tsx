@@ -33,7 +33,7 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   }) => (asChild ? children : <button disabled={disabled} onClick={onSelect}>{children}</button>),
 }));
 
-const RESUME = { id: "r1", name: "Backend", reviewCount: 0, isUnreadable: false };
+const RESUME = { id: "r1", name: "Backend", isUnreadable: false };
 
 const onDeleted = vi.fn();
 
@@ -111,16 +111,12 @@ describe("deleting (RE-REQ-037)", () => {
     expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
   });
 
-  it.each([
-    [0, /^This can't be undone/],
-    [1, /Its review will be deleted too/],
-    [3, /Its 3 reviews will be deleted too/],
-  ])("says what goes with %i reviews", async (reviewCount, text) => {
-    open({ reviewCount });
+  it("asks before deleting", async () => {
+    open();
 
     click("Delete");
 
-    expect(await screen.findByText(text)).toBeInTheDocument();
+    expect(await screen.findByText(/^This can't be undone/)).toBeInTheDocument();
     expect(deleteResumeAction).not.toHaveBeenCalled();
   });
 

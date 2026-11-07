@@ -49,6 +49,9 @@ const nextConfig: NextConfig = {
       },
       // API keys were replaced by OAuth sign-in to the MCP server.
       { source: "/dashboard/api-keys", destination: "/mcp", permanent: true },
+      // Old emails link to these pages (RI-REQ-062).
+      { source: "/resume-review", destination: "/resume", permanent: true },
+      { source: "/resume-review/:path*", destination: "/resume", permanent: true },
     ];
   },
 };

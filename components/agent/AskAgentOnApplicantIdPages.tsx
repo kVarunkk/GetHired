@@ -1,11 +1,10 @@
 "use client";
 
 import { AGENT_PATH } from "@/helpers/agent/prompt-draft";
-import AgentHandoff from "./AgentHandoff";
 import AskAgentBox, { type AgentSuggestion } from "./AskAgentBox";
 
-// The applicant id pages' entry points to the job search agent (resume,
-// resume review, interview analysis). The entity's id goes in each prompt so
+// The applicant id pages' entry points to the job search agent (resume and
+// interview analysis). The entity's id goes in each prompt so
 // the agent can pass it to its tools; each suggestion maps to a tool in
 // helpers/agent/tools/. The opportunity page reuses AskAgentAboutJob, because
 // the applicant role has no outreach tools.
@@ -19,20 +18,19 @@ const resumeRef = (resume: Resume) => `my resume "${resume.name}" (resume ${resu
 export function resumeSuggestions(resume: Resume): AgentSuggestion[] {
   const ref = resumeRef(resume);
   return [
-    // startResumeReview (refuses a resume that failed to parse)
+    // improveResume (refuses a resume with no content)
     ...when(!resume.parsingFailed, {
-      label: "Review it for a job",
-      prompt: `Review ${ref} against a job I like. Ask me which job first.`,
+      label: "Tailor it for a job",
+      prompt: `Tailor ${ref} for a job I like. Ask me which job first.`,
     }),
-    // getResumeContent, updateResume
     ...when(!resume.parsingFailed, {
       label: "Improve my summary",
-      prompt: `Read ${ref} and suggest a stronger summary. Ask me for anything you need, then update it with my approval.`,
+      prompt: `Improve ${ref}, focusing on the summary.`,
     }),
     // duplicateResume
     ...when(!resume.parsingFailed, {
-      label: "Make a copy to tailor",
-      prompt: `Make a copy of ${ref} that I can tailor for a job.`,
+      label: "Make a copy",
+      prompt: `Make a copy of ${ref}.`,
     }),
     // exportResume
     ...when(!resume.parsingFailed, {
@@ -60,24 +58,6 @@ export function AskAgentAboutResume({ resume }: { resume: Resume }) {
       basePath={AGENT_PATH}
       suggestions={resumeSuggestions(resume)}
       toPrompt={(question) => `About ${resumeRef(resume)}: ${question.trim()}`}
-    />
-  );
-}
-
-type Review = { id: string; name: string | null };
-
-const reviewRef = (review: Review) =>
-  `my resume review${review.name ? ` "${review.name}"` : ""} (review ${review.id})`;
-
-// The review's left pane is narrow, so it gets the small one-line handoff
-// instead of the full question box with chips.
-export function AskAgentAboutResumeReview({ review }: { review: Review }) {
-  return (
-    <AgentHandoff
-      label="Ask the agent about this review"
-      placeholder="What should I fix first?…"
-      basePath={AGENT_PATH}
-      toPrompt={(question) => `About ${reviewRef(review)}: ${question.trim()}`}
     />
   );
 }

@@ -20,11 +20,6 @@ export function outreachHandoffPrompt(text: string, candidateId: string, job?: J
   return `Write an outreach message to candidate ${candidateId}${about}. ${text.trim()}`;
 }
 
-/** Create CV Review (applicant: startResumeReview). */
-export function resumeReviewHandoffPrompt(text: string) {
-  return `Review my resume against this job: ${text.trim()}`;
-}
-
 /** Easy Apply (applicant: getApplicationForm, submitApplication). */
 export function applyHandoffPrompt(text: string, job: { id: string; title: string | null; company: string | null }) {
   const role = `the ${job.title ?? "this"} role${job.company ? ` at ${job.company}` : ""} (/jobs/${job.id})`;

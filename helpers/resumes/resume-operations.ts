@@ -75,6 +75,12 @@ export const ResumeOperationSchema = z.discriminatedUnion("op", [
 
 export type ResumeOperation = z.infer<typeof ResumeOperationSchema>;
 
+/**
+ * An operation from our own code, which can name the new bullet. The schema
+ * strips `bulletId` from an `addBullet`, so a model can't pick an id.
+ */
+export type PlannedOperation = ResumeOperation | (Extract<ResumeOperation, { op: "addBullet" }> & { bulletId: string });
+
 export type ResumeDraft = {
   content: ResumeContent;
   contact: ResumeContact;
@@ -135,7 +141,7 @@ function move(content: ResumeContent, id: string, to: number) {
   throw new UnknownIdError(`Nothing has the id ${id}.`);
 }
 
-function apply(draft: ResumeDraft, operation: ResumeOperation) {
+function apply(draft: ResumeDraft, operation: PlannedOperation) {
   const { content } = draft;
   switch (operation.op) {
     case "setBulletText": {
@@ -144,7 +150,11 @@ function apply(draft: ResumeDraft, operation: ResumeOperation) {
       break;
     }
     case "addBullet":
-      insertAt(findItem(content, operation.itemId).item.bullets, { id: uuidv4(), text: operation.text }, operation.index);
+      insertAt(
+        findItem(content, operation.itemId).item.bullets,
+        { id: "bulletId" in operation ? operation.bulletId : uuidv4(), text: operation.text },
+        operation.index,
+      );
       break;
     case "removeBullet": {
       const { item, position } = findBullet(content, operation.bulletId);
@@ -202,7 +212,7 @@ function apply(draft: ResumeDraft, operation: ResumeOperation) {
  * Runs the operations on a copy, without checking the limits. The editor uses
  * this directly, since a half-typed resume isn't valid until it's saved.
  */
-export function runResumeOperations(draft: ResumeDraft, operations: ResumeOperation[]): ResumeOperationsResult {
+export function runResumeOperations(draft: ResumeDraft, operations: PlannedOperation[]): ResumeOperationsResult {
   const next = structuredClone(draft);
   try {
     for (const operation of operations) apply(next, operation);
@@ -220,7 +230,7 @@ export function runResumeOperations(draft: ResumeDraft, operations: ResumeOperat
 export function applyResumeOperations(
   content: ResumeContent,
   contact: ResumeContact,
-  operations: ResumeOperation[],
+  operations: PlannedOperation[],
 ): ResumeOperationsResult {
   const result = runResumeOperations({ content, contact }, operations);
   if (!result.ok) return result;

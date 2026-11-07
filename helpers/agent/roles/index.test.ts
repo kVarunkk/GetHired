@@ -5,7 +5,7 @@ import {
   AGENT_DAILY_MESSAGE_CAP,
 } from "../config";
 import { buildSystemPrompt } from "../system-prompt";
-import { createAgentTools } from "../tools";
+import { createChatTools } from "../tools";
 import { agentToolApproval } from "../approval";
 import { recruiterToolContext, toolContext } from "@/test/utils/tools";
 import { createSupabaseMock } from "@/test/utils/supabase-mock";
@@ -29,7 +29,7 @@ describe("AGENT_ROLES.applicant (RA-TEST-001)", () => {
   it("builds the same tools as before", () => {
     const supabase = createSupabaseMock().client;
     const tools = role.createTools({ supabase, user: toolContext(supabase).user, sessionId: "s1", company: null });
-    expect(Object.keys(tools)).toEqual(Object.keys(createAgentTools(toolContext(supabase))));
+    expect(Object.keys(tools)).toEqual(Object.keys(createChatTools(toolContext(supabase))));
   });
 
   it("loads the profile and builds the same prompt as before", async () => {
@@ -62,7 +62,7 @@ describe("feedbackMilestones (AF-REQ-011)", () => {
     );
     expect(AGENT_ROLES.applicant.feedbackMilestones).toEqual([
       "submitApplication",
-      "startResumeReview",
+      "improveResume",
       "completeOnboarding",
       "updateMyPreferences",
     ]);

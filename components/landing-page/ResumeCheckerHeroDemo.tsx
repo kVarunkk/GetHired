@@ -17,7 +17,7 @@ import {
 // A sample resume review for the AI resume checker's hero. It renders the
 // review page's own AnalysisPane and DigitalTwinMirror with a canned review,
 // so hovering a suggestion highlights its line in the resume and Copy copies
-// the rewrite, as on /resume-review/[id]. The pane is read-only, so there's no
+// the rewrite. The pane is read-only, so there's no
 // Apply. "Tailor Resume" replays the analysis locally: nothing is saved and no
 // API is called.
 

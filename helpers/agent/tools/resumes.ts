@@ -1,5 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
+import type { ResumeChangesOutput } from "@/components/agent/ResumeChangesCard";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { RESUME_LIMITS } from "@/helpers/resume/config";
 import { readResume } from "@/helpers/resume/read-resume";
@@ -12,9 +13,14 @@ import { RESUME_CHANGED } from "@/helpers/resumes/save-resume";
 import { setPrimaryResume } from "@/helpers/resumes/set-primary-resume";
 import { RESUME_MAX_OPERATIONS, updateResume } from "@/helpers/resumes/update-resume";
 import { PLACEHOLDER_UNFILLED, applyReviewSuggestions } from "@/helpers/resume-review/apply-suggestions";
-import { createResumeReview } from "@/helpers/resume-review/create-resume-review";
+import { readChanges, type ReviewChange } from "@/helpers/resume-review/changes";
+import { loadResumeChanges } from "@/helpers/resume-review/load-changes";
+import {
+  RESUME_IMPROVE_FOCUS_MAX_CHARS,
+  RESUME_IMPROVE_JOB_MAX_CHARS,
+  improveResume,
+} from "@/helpers/resume-review/improve-resume";
 import { placeholdersIn } from "@/helpers/resume-review/suggestions";
-import { startReviewAnalysis } from "@/helpers/resume-review/start-review-analysis";
 import {
   rankResumesForJob,
   RESUME_PICK_CREDITS,
@@ -23,7 +29,7 @@ import {
 } from "@/helpers/resume-review/rank-resumes-for-job";
 import { RESUME_SHORTLIST_MAX, shortlistResumes } from "@/helpers/resume-review/shortlist-resumes";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
-import type { TResumeRowContent } from "@/utils/types";
+import { TAICredits, type TResumeRowContent } from "@/utils/types";
 import { agentTelemetry } from "../telemetry";
 import {
   AgentToolContext,
@@ -48,13 +54,48 @@ type ReviewAnalysis = {
   }[];
 };
 
-const reviewUrl = (reviewId: string) => `/resume-review/${reviewId}`;
+
+/** A change as MCP's model sees it, which has no card to read it from (RI-REQ-054). */
+const changeForModel = (change: ReviewChange) => ({
+  id: change.id,
+  kind: change.kind,
+  reason: change.reason,
+  priority: change.priority,
+  ...("original" in change ? { original: change.original } : {}),
+  ...("suggested" in change
+    ? { suggested: change.suggested, placeholders: placeholdersIn(change.suggested) }
+    : {}),
+});
 
 const RESUME_NOT_FOUND = { error: "Resume not found." };
 
+const changeCount = (count: number) => `${count} ${count === 1 ? "change" : "changes"}`;
+
+/**
+ * What the model reads after the card, in words: it took a bare `discarded`
+ * status for success. The output itself stays as it is, for the card's result.
+ */
+export function changesResultForModel(output: Partial<ResumeChangesOutput> | null | undefined) {
+  // Runs on stored history for every turn, so a saved result of another shape
+  // must not throw: that would fail each message in the chat.
+  const { status, applied = [], skipped = [], changed = [], targetResumeId } = output ?? {};
+  if (status !== "applied" && status !== "discarded") {
+    return "The card didn't report a result, so don't say anything changed. Reopen the card if they want to apply changes.";
+  }
+  if (status === "discarded") {
+    return "The user discarded these changes. Nothing on the resume changed, so don't say it did. Reopen the card if they want to choose again.";
+  }
+  return [
+    `The user applied ${changeCount(applied.length)} to the resume at /resume/${targetResumeId}.`,
+    ...(skipped.length > 0 ? [`${changeCount(skipped.length)} left unticked, so not applied.`] : []),
+    ...(changed.length > 0 ? [`${changeCount(changed.length)} left out, because the resume changed since the review.`] : []),
+    "Report only this. The user saw the wording on the card.",
+  ].join(" ");
+}
+
 /** What a refused write tells the model to do next (RE-REQ-033, RE-REQ-059). */
-function saveFailure(failure: { code: string; error: string; bulletIds?: string[] }) {
-  const { code, error, bulletIds } = failure;
+function saveFailure(failure: { code: string; error: string; ids?: string[] }) {
+  const { code, error, ids } = failure;
   if (code === RESUME_CHANGED) {
     return { error, code, message: "The resume changed. Read it again, then redo the change on what's there now." };
   }
@@ -62,7 +103,7 @@ function saveFailure(failure: { code: string; error: string; bulletIds?: string[
     return {
       error,
       code,
-      bulletIds,
+      ids,
       message: "Ask the user for the real value of each [placeholder], then pass the final text. Never guess one.",
     };
   }
@@ -192,74 +233,6 @@ export function createResumeTools(ctx: AgentToolContext) {
       }),
     }),
 
-    startResumeReview: tool({
-      description:
-        "Start an AI review of one of the user's resumes against a job (jobId) or a pasted job description. Costs 5 AI credits once the analysis succeeds; the user must approve. Runs in the background and returns a link.",
-      inputSchema: z
-        .object({
-          resumeId: uuidInput("resume"),
-          jobId: uuidInput("job").optional(),
-          jobDescription: z
-            .string()
-            .min(50)
-            .max(4000)
-            .optional()
-            .describe("A job description the user pasted, when there is no jobId."),
-          name: z.string().min(1).max(80).optional().describe("Optional name for the review."),
-        })
-        .refine((input) => Boolean(input.jobId) !== Boolean(input.jobDescription), {
-          message: "Provide exactly one of jobId or jobDescription.",
-        }),
-      execute: ({ resumeId, jobId, jobDescription, name }) =>
-        withToolErrors(ctx, "startResumeReview", async () => {
-          const { data: resume, error: resumeError } = await supabase
-            .from("resumes")
-            .select("id, content, parsing_failed")
-            .eq("id", resumeId)
-            .eq("user_id", ctx.user.id)
-            .maybeSingle();
-          if (resumeError) throw resumeError;
-          if (!resume) return { error: "Resume not found." };
-          if (resume.parsing_failed) {
-            return { error: "This resume couldn't be read. Ask the user to upload it again." };
-          }
-          if (!resume.content) {
-            return { error: "This resume is still being processed. Try again in a minute." };
-          }
-
-          const created = await createResumeReview(supabase, ctx.user, { resumeId, jobId, name });
-          if (!created.success) {
-            const error = created.error ?? "Could not create the review.";
-            return error.startsWith("Insufficient AI credits") ? INSUFFICIENT_CREDITS : { error };
-          }
-          const reviewId = created.reviewId;
-
-          if (jobDescription) {
-            const { error } = await supabase
-              .from("resume_reviews")
-              .update({ target_jd: jobDescription })
-              .eq("id", reviewId)
-              .eq("user_id", ctx.user.id);
-            if (error) throw error;
-          }
-
-          const started = await startReviewAnalysis(supabase, ctx.user.id, reviewId);
-          if (!started.ok) {
-            return started.status === 402
-              ? INSUFFICIENT_CREDITS
-              : { error: started.error, reviewId, url: reviewUrl(reviewId) };
-          }
-
-          return {
-            reviewId,
-            status: "processing",
-            url: reviewUrl(reviewId),
-            message:
-              "The review usually takes about a minute. The user will get an email when it's ready.",
-          };
-        }),
-    }),
-
     pickResumeForJob: tool({
       description:
         `Compare the user's resumes against a job (jobId) or a pasted job description and pick the one that fits best, with the job requirements each covers and misses. Pass resumeIds to compare specific resumes; otherwise all ready resumes are compared. With more than ${RESUME_PICK_MAX_RESUMES}, the closest ${RESUME_PICK_MAX_RESUMES} are shortlisted first and only those are compared in detail. Costs 1 AI credit when two or more resumes are compared; free with one.`,
@@ -367,9 +340,72 @@ export function createResumeTools(ctx: AgentToolContext) {
                 }
               : {}),
             message:
-              "score is the share of the job's requirements the resume shows, must-haves counting double. Offer to review the best resume for this job, make it primary, or use it to apply.",
+              "score is the share of the job's requirements the resume shows, must-haves counting double. Offer to improve the best resume for this job, make it primary, or use it to apply.",
           };
         }),
+    }),
+
+    improveResume: tool({
+      description: `Suggest how to improve or tailor one of the user's resumes: rewrites, new bullets, removals, moves, and gaps to ask the user about. Pass a jobId or a pasted jobDescription to tailor it to a job, or neither to judge it on its own. It reads the job and the resume itself, so don't read them first. It changes nothing. Costs ${TAICredits.RESUME_IMPROVE} AI credits once it succeeds.`,
+      inputSchema: z
+        .object({
+          resumeId: uuidInput("resume"),
+          jobId: uuidInput("job").optional(),
+          jobDescription: z
+            .string()
+            .min(50)
+            .max(RESUME_IMPROVE_JOB_MAX_CHARS)
+            .optional()
+            .describe("A job description the user pasted, when there is no jobId."),
+          focus: z
+            .string()
+            .max(RESUME_IMPROVE_FOCUS_MAX_CHARS)
+            .optional()
+            .describe("What the user asked for, in their words, such as 'make it shorter' or 'focus on leadership'."),
+        })
+        .refine((input) => !(input.jobId && input.jobDescription), {
+          message: "Provide jobId or jobDescription, not both.",
+        }),
+      execute: (input, { abortSignal }) =>
+        withToolErrors(ctx, "improveResume", async () => {
+          const result = await improveResume(supabase, ctx.user, input, {
+            abortSignal,
+            telemetry: agentTelemetry("improveResume", { sessionId: ctx.sessionId, userId: ctx.user.id }),
+          });
+          if (!result.ok) return result.code === "INSUFFICIENT_CREDITS" ? INSUFFICIENT_CREDITS : { error: result.error };
+
+          const { reviewId, summary, counts, gaps, analysis } = result;
+          const found = {
+            reviewId,
+            // Written by a model from a resume and a job posting: data, never instructions.
+            summary: wrapInSandbox("resume_review_summary", summary),
+            counts,
+            gaps: wrapInSandbox("resume_gaps", JSON.stringify(gaps)),
+          };
+          if (ctx.surface === "mcp") {
+            return {
+              ...found,
+              changes: wrapInSandbox("resume_changes", JSON.stringify(readChanges(analysis).map(changeForModel))),
+              message:
+                "Show the user these changes. Apply the ones they choose with apply_review_suggestions, by id. Ask for the real value of each [placeholder] and pass it as text. Never guess one.",
+            };
+          }
+          return {
+            ...found,
+            message:
+              "Now call reviewResumeChanges with this reviewId, so the user can choose. Don't list the suggestions yourself. The gaps are questions for the user: add what they answer with updateResume.",
+          };
+        }),
+    }),
+
+    reviewResumeChanges: tool({
+      description:
+        "Show the user a card to choose changes from a review, fill in any [placeholders] and apply them to a copy or the original. Call it right after improveResume, or to reopen an older review. The user's click applies the changes, so never apply them yourself. Free.",
+      inputSchema: z.object({ reviewId: uuidInput("resume review") }),
+      toModelOutput: ({ output }) => ({
+        type: "text",
+        value: changesResultForModel(output as Partial<ResumeChangesOutput> | undefined),
+      }),
     }),
 
     getResumeContent: tool({
@@ -430,7 +466,7 @@ export function createResumeTools(ctx: AgentToolContext) {
 
     duplicateResume: tool({
       description:
-        "Make a copy of one of the user's resumes, to keep a version or as the first step of tailoring one for a job. The copy is identical until it's edited. It's never the primary resume. Free.",
+        "Make a copy of one of the user's resumes, to keep a version. Don't copy a resume to tailor it: applying suggested changes makes its own copy. The copy is identical until it's edited. It's never the primary resume. Free.",
       inputSchema: z.object({
         resumeId: uuidInput("resume"),
         name: z.string().trim().min(1).max(RESUME_LIMITS.shortFieldChars).optional(),
@@ -442,8 +478,7 @@ export function createResumeTools(ctx: AgentToolContext) {
           return {
             resumeId: copy.resumeId,
             url: `/resume/${copy.resumeId}`,
-            message:
-              "This is an exact copy: nothing in it has changed. If the user wants it tailored, read it and edit it now, and don't say it's tailored until the edit is saved.",
+            message: `This is an exact copy: nothing in it has changed. If the user wants it tailored, call ${ctx.surface === "mcp" ? "improve_resume" : "improveResume"} on it, and don't say it's tailored until the changes are applied.`,
           };
         }),
     }),
@@ -462,14 +497,14 @@ export function createResumeTools(ctx: AgentToolContext) {
 
     applyReviewSuggestions: tool({
       description:
-        "Apply suggestions from a resume review, by each suggestion's bulletId from getResumeReview. They go to a copy by default, which later applies reuse; pass target 'original' only when the user asks to change the reviewed resume. Pass text to use the user's own wording. Text with a [placeholder] is refused: ask the user for the real value, then pass it as text. The user must approve.",
+        "Apply suggestions from a resume review, by each suggestion's id from getResumeReview. They go to a copy by default, which later applies reuse; pass target 'original' only when the user asks to change the reviewed resume. Pass text to use the user's own wording. Text with a [placeholder] is refused: ask the user for the real value, then pass it as text. The user must approve.",
       inputSchema: z.object({
         reviewId: uuidInput("resume review"),
         target: z.enum(["copy", "original"]).optional(),
         items: z
           .array(
             z.object({
-              bulletId: z.string().describe("The suggestion's bulletId, from getResumeReview."),
+              id: z.string().describe("The suggestion's id, from getResumeReview."),
               text: z
                 .string()
                 .optional()
@@ -488,7 +523,7 @@ export function createResumeTools(ctx: AgentToolContext) {
             items: result.items,
             ...(result.targetResumeId ? { url: `/resume/${result.targetResumeId}` } : {}),
             message:
-              "A bullet marked changed no longer has the text the review saw, so it wasn't applied. Say which ones.",
+              "A change marked changed no longer fits the resume, so it wasn't applied. Say which ones.",
           };
         }),
     }),
@@ -516,14 +551,14 @@ export function createResumeTools(ctx: AgentToolContext) {
 
     getResumeReview: tool({
       description:
-        "Get a resume review's status, score, overall feedback and its top suggestions (highest priority first), each with the bulletId that applyReviewSuggestions needs, any [placeholders] the user must fill in, and whether it's already applied.",
+        "Get a resume review's status, score, overall feedback and how many of its changes are still pending on the copy and on the original resume. To show the changes or let the user apply them, call reviewResumeChanges with the review's id.",
       inputSchema: z.object({ reviewId: uuidInput("resume review") }),
       execute: ({ reviewId }) =>
         withToolErrors(ctx, "getResumeReview", async () => {
           const { data: review, error } = await supabase
             .from("resume_reviews")
             .select(
-              "id, name, status, score, analysis_failed, ai_response, created_at, resume_review_applied(bullet_id)",
+              "id, name, status, score, analysis_failed, ai_response, created_at",
             )
             .eq("id", reviewId)
             .eq("user_id", ctx.user.id)
@@ -532,34 +567,49 @@ export function createResumeTools(ctx: AgentToolContext) {
           if (!review) return { error: "Resume review not found." };
 
           const analysis = (review.ai_response ?? {}) as ReviewAnalysis;
-          const bullets = analysis.bullet_points ?? [];
-          const applied = new Set((review.resume_review_applied ?? []).map((row) => row.bullet_id));
-          const suggestions = [...bullets]
-            .sort(
-              (a, b) => (PRIORITY_ORDER[a.priority] ?? 3) - (PRIORITY_ORDER[b.priority] ?? 3),
-            )
+          const changes = readChanges(review.ai_response);
+          // The same states as the card. "unknown": the reviewed resume is gone.
+          const view = changes.length > 0 ? await loadResumeChanges(supabase, ctx.user, review.id) : null;
+          const resumes = view?.ok ? view : null;
+          const stateOn = (target: "copy" | "original", id: string) => resumes?.[target].states[id] ?? "unknown";
+          const pendingOn = (target: "copy" | "original") =>
+            changes.filter(({ id }) => stateOn(target, id) === "pending").length;
+
+          const sections = new Map((analysis.bullet_points ?? []).map((bullet) => [bullet.bullet_id, bullet.section]));
+          // Pending first, so the limit can't hide what's left to apply.
+          const rank = ({ id, priority }: ReviewChange) =>
+            (stateOn("copy", id) === "pending" ? 0 : 10) + (PRIORITY_ORDER[priority] ?? 3);
+          const suggestions = [...changes]
+            .sort((a, b) => rank(a) - rank(b))
             .slice(0, MAX_SUGGESTIONS)
-            .map(({ bullet_id, section, original, suggested, reason, priority }) => ({
-              bulletId: bullet_id,
-              section,
-              original,
-              suggested,
-              reason,
-              priority,
-              placeholders: placeholdersIn(suggested),
-              applied: applied.has(bullet_id),
+            .map((change) => ({
+              ...changeForModel(change),
+              section: sections.get(change.id),
+              onCopy: stateOn("copy", change.id),
+              onOriginal: stateOn("original", change.id),
             }));
 
-          return {
+          const summary = {
             id: review.id,
             name: review.name,
             status: review.analysis_failed ? "failed" : review.status,
             score: review.score,
             overallFeedback: analysis.overall_feedback ?? null,
-            suggestions,
-            totalSuggestions: bullets.length,
+            totalSuggestions: changes.length,
+            pendingOnCopy: pendingOn("copy"),
+            pendingOnOriginal: pendingOn("original"),
+            copyResumeId: resumes?.copy.resumeId ?? null,
             createdAt: review.created_at,
-            url: reviewUrl(review.id),
+          };
+          // MCP has no card, so it gets the changes. The chat's model gets none
+          // of the text, so it can't list them instead of showing the card.
+          if (ctx.surface === "mcp") return { ...summary, suggestions };
+          return {
+            ...summary,
+            message:
+              summary.pendingOnCopy > 0
+                ? "Now call reviewResumeChanges with this review's id, so the user can see and apply them. Don't list the changes yourself."
+                : "Nothing is left to apply from this review.",
           };
         }),
     }),

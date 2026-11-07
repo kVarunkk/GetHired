@@ -47,6 +47,15 @@ export function validateAndSanitizeSearchQuery(
 }
 
 /**
+ * A job description for a prompt. It's long, untrusted text that can fairly say
+ * "system prompt", so it gets no injection patterns: `wrapInSandbox` is what
+ * protects the prompt from it.
+ */
+export function cleanJobText(text: string, maxLength: number): string {
+  return text.slice(0, maxLength).replace(/<\/?[^>]+(>|$)/g, "").trim();
+}
+
+/**
  * wrapInSandbox remains used for prompt construction.
  */
 export function wrapInSandbox(tagName: string, content: string): string {

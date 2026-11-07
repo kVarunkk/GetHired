@@ -112,7 +112,7 @@ describe("middleware: /agent", () => {
     expect(await res.json()).toEqual({ error: "Finish setting up your company first." });
   });
 
-  it.each(["/dashboard", "/settings", "/opportunities", "/resume-review", "/interview/abc"])(
+  it.each(["/dashboard", "/settings", "/opportunities", "/interview/abc"])(
     "keeps %s applicant-only for onboarded companies",
     async (path) => {
       vi.mocked(getUserFromRequest).mockResolvedValue(company);

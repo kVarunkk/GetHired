@@ -22,6 +22,19 @@ export const hasPlaceholder = (text: string) => PLACEHOLDER.test(text);
 /** The placeholders in `text`, in order, repeats included. */
 export const placeholdersIn = (text: string) => text.match(PLACEHOLDERS) ?? [];
 
+/** `text` in order, with each placeholder as its own part (RI-REQ-026). */
+export const splitPlaceholders = (text: string) =>
+  text
+    .split(/(\[[^\]]+\])/)
+    .map((part, index) => ({ text: part, placeholder: index % 2 === 1 }))
+    .filter((part) => part.text);
+
+/** `text` with each placeholder swapped for its value. An empty value leaves it in place. */
+export function fillPlaceholders(text: string, values: readonly string[]) {
+  let index = 0;
+  return text.replace(PLACEHOLDERS, (placeholder) => values[index++]?.trim() || placeholder);
+}
+
 export const resumeBullets = (content: ResumeContent): ResumeBullet[] =>
   content.sections.flatMap((section) => section.items.flatMap((item) => item.bullets));
 

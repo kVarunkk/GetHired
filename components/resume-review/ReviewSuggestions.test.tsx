@@ -74,7 +74,7 @@ beforeEach(() => {
     ok: true,
     target: "copy",
     targetResumeId: COPY_ID,
-    items: [{ bulletId: "b1", status: "applied" }],
+    items: [{ id: "b1", status: "applied" }],
   });
   vi.stubGlobal("matchMedia", () => ({ matches: false }));
 });
@@ -93,7 +93,7 @@ describe("applying one suggestion", () => {
     expect(applyReviewSuggestionsAction).toHaveBeenCalledWith({
       reviewId: REVIEW_ID,
       target: "copy",
-      items: [{ bulletId: "b1", text: "Built the billing API" }],
+      items: [{ id: "b1", text: "Built the billing API" }],
     });
     await waitFor(() => expect(mutate).toHaveBeenCalledWith(`/api/resume-review/${REVIEW_ID}`));
   });
@@ -153,7 +153,7 @@ describe("applying one suggestion", () => {
 
     await user.click(screen.getByRole("button", { name: "Confirm" }));
     expect(vi.mocked(applyReviewSuggestionsAction).mock.calls[0][0].items).toEqual([
-      { bulletId: "b2", text: "Cut test time by 30%" },
+      { id: "b2", text: "Cut test time by 30%" },
     ]);
   });
 
@@ -162,7 +162,7 @@ describe("applying one suggestion", () => {
       ok: true,
       target: "copy",
       targetResumeId: null,
-      items: [{ bulletId: "b1", status: "changed" }],
+      items: [{ id: "b1", status: "changed" }],
     });
     const user = userEvent.setup();
     show(review());
@@ -195,7 +195,7 @@ describe("Apply all changes", () => {
 
     await user.click(screen.getByRole("button", { name: "Apply all changes (1)" }));
 
-    expect(vi.mocked(applyReviewSuggestionsAction).mock.calls[0][0].items).toEqual([{ bulletId: "b1" }]);
+    expect(vi.mocked(applyReviewSuggestionsAction).mock.calls[0][0].items).toEqual([{ id: "b1" }]);
   });
 
   it("asks first on the resume itself, with the count", async () => {
@@ -217,7 +217,7 @@ describe("Apply all changes", () => {
     expect(applyReviewSuggestionsAction).toHaveBeenCalledWith({
       reviewId: REVIEW_ID,
       target: "original",
-      items: [{ bulletId: "b1" }, { bulletId: "b2" }],
+      items: [{ id: "b1" }, { id: "b2" }],
     });
   });
 

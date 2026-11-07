@@ -34,11 +34,11 @@ describe("MessageParts", () => {
           output: { jobs: [{ id: "j1", title: "Frontend Engineer", company: "Acme", url: "/jobs/j1" }] },
         },
         {
-          type: "tool-startResumeReview",
+          type: "tool-submitApplication",
           toolCallId: "c2",
           state: "output-available",
           input: {},
-          output: { reviewId: "rev1", status: "processing", url: "/resume-review/rev1" },
+          output: { applied: true, url: "/jobs/j1" },
         },
       ]),
     );
@@ -250,7 +250,7 @@ describe("MessageParts", () => {
     const { onApprove } = renderParts(
       assistant([
         {
-          type: "tool-startResumeReview",
+          type: "tool-submitApplication",
           toolCallId: "c1",
           state: "approval-requested",
           input: { resumeId: "r1", jobId: "j1" },
@@ -259,8 +259,8 @@ describe("MessageParts", () => {
       ]),
     );
 
-    expect(screen.getByText(/Start a resume review/)).toBeInTheDocument();
-    expect(screen.getByText(/5 AI credits/)).toBeInTheDocument();
+    expect(screen.getByText(/Send this application/)).toBeInTheDocument();
+    expect(screen.getByText(/1 AI credit/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));
     expect(onApprove).toHaveBeenCalledWith({ id: "ap1", approved: true });
@@ -500,7 +500,7 @@ describe("MessageParts", () => {
     expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
   });
 
-  it("links to a started resume review", () => {
+  it("still labels a review started in an old chat, with no link to the page that's gone", () => {
     renderParts(
       assistant([
         {
@@ -513,10 +513,8 @@ describe("MessageParts", () => {
       ]),
     );
 
-    expect(screen.getByRole("link", { name: /Open the review/ })).toHaveAttribute(
-      "href",
-      "/resume-review/rev1",
-    );
+    expect(screen.getByText("Started the resume review")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("links to an uploaded resume", () => {

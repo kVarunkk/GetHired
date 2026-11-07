@@ -4,6 +4,7 @@ import ResumesTable from "@/components/ResumesTable";
 import CreateResumeDialog from "@/components/CreateResumeDialog";
 import ResumeReuploadPrompt from "@/components/resume/ResumeReuploadPrompt";
 import PageHeader from "@/components/PageHeader";
+import ImproveResumeLink from "@/components/resume/ImproveResumeLink";
 import { AskAgentAboutResumes } from "@/components/agent/AskAgentOnApplicantPages";
 import type { Metadata } from "next";
 
@@ -28,7 +29,7 @@ export default async function ResumePage() {
     const { data: resumes, error: resumesError } = await supabase
       .from("resumes")
       .select(
-        "id, created_at, name, is_primary, parsing_failed, schema_version, content, resume_reviews(count)",
+        "id, created_at, name, is_primary, parsing_failed, schema_version, content",
       )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
@@ -40,10 +41,9 @@ export default async function ResumePage() {
     // RE-REQ-098/103: a resume with no content and no working file can't be
     // edited, copied or exported, so it's asked for again here. Its reviews and
     // applications still point at the same row.
-    const rows = (resumes ?? []).map(({ resume_reviews, content, ...resume }) => ({
+    const rows = (resumes ?? []).map(({ content, ...resume }) => ({
       ...resume,
       has_content: content !== null && content !== undefined,
-      review_count: resume_reviews[0]?.count ?? 0,
     }));
 
     const tableKey = `${rows.length}-${rows[0]?.id || "empty"}`;
@@ -53,7 +53,14 @@ export default async function ResumePage() {
         <PageHeader
           title="Resumes"
           description="Resumes you've built, tailored to the jobs you want."
-          actions={<CreateResumeDialog />}
+          actions={
+            <>
+              {user.app_metadata.type === "applicant" && rows.length > 0 && (
+                <ImproveResumeLink prompt="Improve my resume. Ask me which one first." />
+              )}
+              <CreateResumeDialog />
+            </>
+          }
         />
         {user.app_metadata.type === "applicant" && <AskAgentAboutResumes />}
         <ResumeReuploadPrompt

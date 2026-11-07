@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ResumeDocument } from "@/helpers/resume/render/document";
 import type { ResumeContent } from "@/helpers/resume/resume-schema";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { describeResumeChanges } from "./resume-changes";
 import { LAST_RESUME_ERROR } from "./delete-resume";
 import { previewResumeEdit } from "./preview-resume-edit";
 import { RESUME_CHANGED_ERROR } from "./save-resume";
+import { RESUME_PLACEHOLDER_ERROR } from "./update-resume";
 import { upgradeResumeFromFile } from "./upgrade-resume";
 
 vi.mock("./upgrade-resume", () => ({ upgradeResumeFromFile: vi.fn() }));
@@ -75,12 +77,67 @@ describe("previewing updateResume (RE-REQ-072)", () => {
   it("shows the before and after, and writes nothing", async () => {
     db.queue("resumes", { data: ROW, error: null });
 
-    expect(await preview("updateResume", EDIT)).toEqual({
+    expect(await preview("updateResume", EDIT)).toMatchObject({
       ok: true,
       summary: 'Change "Backend"?',
       changes: [{ label: "Experience, Engineer", before: "Old text", after: "New text" }],
     });
     expect(writes()).toEqual([]);
+  });
+
+  it("carries both documents for the diff (RI-REQ-003)", async () => {
+    db.queue("resumes", { data: ROW, error: null });
+
+    const result = await preview("updateResume", EDIT);
+
+    const bulletOf = (document?: ResumeDocument) => document?.sections[0].items[0].bullets[0];
+    expect(result.ok && bulletOf(result.before)).toEqual({ id: "b1", text: "Old text" });
+    expect(result.ok && bulletOf(result.after)).toEqual({ id: "b1", text: "New text" });
+  });
+
+  describe("placeholders (RI-REQ-006)", () => {
+    const refused = async (operation: unknown) => {
+      const result = await preview("updateResume", { ...EDIT, operations: [operation] });
+      expect(result).toEqual({ ok: false, error: RESUME_PLACEHOLDER_ERROR });
+    };
+
+    it("refuses one in a bullet, before reading the resume", async () => {
+      await refused({ op: "setBulletText", bulletId: "b1", text: "Grew revenue by [X%]" });
+      await refused({ op: "addBullet", itemId: "i1", text: "Led [N] engineers" });
+
+      expect(db.callsFor("resumes")).toEqual([]);
+    });
+
+    it("refuses one in an entry, a section title or the contact details", async () => {
+      await refused({ op: "addItem", sectionId: "s1", bullets: ["Saved [X] hours"] });
+      await refused({ op: "addItem", sectionId: "s1", fields: { heading: "[Company]" } });
+      await refused({ op: "setItemFields", itemId: "i1", fields: { subheading: "[Team]" } });
+      await refused({ op: "setSectionTitle", sectionId: "s1", title: "[Title]" });
+      await refused({ op: "setContact", fields: { headline: "[Role]" } });
+    });
+
+    it("refuses the whole list for one placeholder", async () => {
+      const result = await preview("updateResume", {
+        ...EDIT,
+        operations: [EDIT.operations[0], { op: "addBullet", itemId: "i1", text: "Led [N] engineers" }],
+      });
+
+      expect(result).toEqual({ ok: false, error: RESUME_PLACEHOLDER_ERROR });
+    });
+
+    it("leaves a link and the resume's own name alone", async () => {
+      db.queue("resumes", { data: ROW, error: null });
+
+      const result = await preview("updateResume", {
+        ...EDIT,
+        operations: [
+          { op: "setItemFields", itemId: "i1", fields: { url: "https://example.com/a[1]" } },
+          { op: "rename", name: "Backend [Stripe]" },
+        ],
+      });
+
+      expect(result).toMatchObject({ ok: true });
+    });
   });
 
   it("limits the read to the user", async () => {
@@ -190,20 +247,22 @@ describe("previewing applyReviewSuggestions", () => {
     db.queue("resume_reviews", { data: REVIEW, error: null });
     db.queue("resumes", { data: ROW, error: null });
 
-    const result = await preview("applyReviewSuggestions", { reviewId: REVIEW_ID, items: [{ bulletId: "b1" }] });
+    const result = await preview("applyReviewSuggestions", { reviewId: REVIEW_ID, items: [{ id: "b1" }] });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ok: true,
       summary: 'Apply 1 suggestion to a new copy of "Backend"?',
       changes: [{ label: "Bullet", before: "Old text", after: "Better text" }],
     });
+    expect(result.ok && result.before?.sections[0].items[0].bullets[0].text).toBe("Old text");
+    expect(result.ok && result.after?.sections[0].items[0].bullets[0].text).toBe("Better text");
     expect(writes()).toEqual([]);
   });
 
   it("is an error for an unfilled placeholder", async () => {
     db.queue("resume_reviews", { data: REVIEW, error: null });
 
-    const result = await preview("applyReviewSuggestions", { reviewId: REVIEW_ID, items: [{ bulletId: "b2" }] });
+    const result = await preview("applyReviewSuggestions", { reviewId: REVIEW_ID, items: [{ id: "b2" }] });
 
     expect(result).toMatchObject({ ok: false, error: expect.stringContaining("bracketed") });
   });
@@ -212,7 +271,7 @@ describe("previewing applyReviewSuggestions", () => {
     db.queue("resume_reviews", { data: REVIEW, error: null });
     db.queue("resumes", { data: { ...ROW, content: content("Edited") }, error: null });
 
-    const result = await preview("applyReviewSuggestions", { reviewId: REVIEW_ID, items: [{ bulletId: "b1" }] });
+    const result = await preview("applyReviewSuggestions", { reviewId: REVIEW_ID, items: [{ id: "b1" }] });
 
     expect(result).toMatchObject({ ok: false, error: expect.stringContaining("changed") });
   });
@@ -258,5 +317,60 @@ describe("describeResumeChanges", () => {
 
   it("finds nothing in the same resume", () => {
     expect(describeResumeChanges(draft(), draft())).toEqual([]);
+  });
+});
+
+describe("previewing every kind of change (RI-REQ-054)", () => {
+  const why = { reason: "r", priority: "low" };
+  const withChange = (change: unknown) => ({
+    ...REVIEW,
+    ai_response: { ...REVIEW.ai_response, changes: [change] },
+  });
+
+  it("lists an add as text, for MCP", async () => {
+    db.queue("resume_reviews", {
+      data: withChange({ ...why, kind: "add", id: "add-1", item_id: "i1", anchors: ["b1"], suggested: "Led the team" }),
+      error: null,
+    });
+    db.queue("resumes", { data: ROW, error: null });
+
+    const result = await preview("applyReviewSuggestions", { reviewId: REVIEW_ID, items: [{ id: "add-1" }] });
+
+    expect(result).toMatchObject({ ok: true, changes: [{ label: "New bullet", before: "", after: "Led the team" }] });
+    expect(writes()).toEqual([]);
+  });
+
+  it("lists a removal", async () => {
+    db.queue("resume_reviews", {
+      data: withChange({ ...why, kind: "remove", id: "remove-1", bullet_id: "b1", original: "Old text" }),
+      error: null,
+    });
+    db.queue("resumes", { data: ROW, error: null });
+
+    const result = await preview("applyReviewSuggestions", { reviewId: REVIEW_ID, items: [{ id: "remove-1" }] });
+
+    expect(result).toMatchObject({ ok: true, changes: [{ label: "Removed bullet", before: "Old text", after: "" }] });
+  });
+
+  it("lists a move", async () => {
+    db.queue("resume_reviews", {
+      data: withChange({ ...why, kind: "move", id: "move-1", target_id: "b1", index: 0 }),
+      error: null,
+    });
+    db.queue("resumes", { data: ROW, error: null });
+
+    const result = await preview("applyReviewSuggestions", { reviewId: REVIEW_ID, items: [{ id: "move-1" }] });
+
+    expect(result).toMatchObject({ ok: true, changes: [{ label: "Order", after: "Moves to a new position" }] });
+  });
+
+  it("leaves out what's already on the copy", async () => {
+    db.queue("resume_reviews", { data: { ...REVIEW, applied_copy_id: RESUME_ID }, error: null });
+    db.queue("resumes", { data: ROW, error: null });
+    db.queue("resume_review_applied", { data: [{ bullet_id: "b1" }], error: null });
+
+    const result = await preview("applyReviewSuggestions", { reviewId: REVIEW_ID, items: [{ id: "b1" }] });
+
+    expect(result).toMatchObject({ ok: false });
   });
 });

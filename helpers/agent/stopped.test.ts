@@ -40,7 +40,7 @@ describe("stoppedReply", () => {
       reply([
         searched,
         { type: "tool-listSavedJobs", toolCallId: "c2", state: "input-streaming", input: {} },
-        { type: "tool-startResumeReview", toolCallId: "c3", state: "approval-responded", input: {}, approval: { id: "ap", approved: true } },
+        { type: "tool-submitApplication", toolCallId: "c3", state: "approval-responded", input: {}, approval: { id: "ap", approved: true } },
         { type: "data-suggestions", id: "suggestions", data: { suggestions: ["More"] } },
       ]),
     );

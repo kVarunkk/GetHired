@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createResumeTools } from "./resumes";
+import { changesResultForModel, createResumeTools } from "./resumes";
 import { execTool, toolContext, validateInput } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { duplicateResume } from "@/helpers/resumes/duplicate-resume";
+import { loadResumeChanges, type LoadResumeChangesResult } from "@/helpers/resume-review/load-changes";
 import { setPrimaryResume } from "@/helpers/resumes/set-primary-resume";
-import { createResumeReview } from "@/helpers/resume-review/create-resume-review";
-import { startReviewAnalysis } from "@/helpers/resume-review/start-review-analysis";
 import { rankResumesForJob, type ResumeFit } from "@/helpers/resume-review/rank-resumes-for-job";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 import { shortlistResumes } from "@/helpers/resume-review/shortlist-resumes";
@@ -23,8 +22,7 @@ vi.mock("@/helpers/resume-review/shortlist-resumes", () => ({
 }));
 vi.mock("@/helpers/ai/deduct-user-credits", () => ({ deductUserCreditsHelper: vi.fn() }));
 vi.mock("@/helpers/agent/telemetry", () => ({ agentTelemetry: () => ({ isEnabled: false }) }));
-vi.mock("@/helpers/resume-review/create-resume-review", () => ({ createResumeReview: vi.fn() }));
-vi.mock("@/helpers/resume-review/start-review-analysis", () => ({ startReviewAnalysis: vi.fn() }));
+vi.mock("@/helpers/resume-review/load-changes", () => ({ loadResumeChanges: vi.fn() }));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
@@ -41,6 +39,8 @@ beforeEach(() => {
   supabase = createSupabaseMock();
   tools = createResumeTools(toolContext(supabase.client));
 });
+
+const mcpTools = () => createResumeTools({ ...toolContext(supabase.client), surface: "mcp" });
 
 describe("the resume editing tools (RE-REQ-070)", () => {
   const CONTENT = {
@@ -128,6 +128,15 @@ describe("the resume editing tools (RE-REQ-070)", () => {
       expect(result).toHaveProperty("message", expect.stringContaining("nothing in it has changed"));
     });
 
+    it("points tailoring at the suggestions, never at a hand edit", async () => {
+      vi.mocked(duplicateResume).mockResolvedValue({ ok: true, resumeId: "copy-1" });
+
+      const result = await execTool(tools.duplicateResume, { resumeId: RESUME_ID });
+
+      expect(result).toHaveProperty("message", expect.stringContaining("call improveResume"));
+      expect(result).not.toHaveProperty("message", expect.stringContaining("edit it now"));
+    });
+
     it("passes on a refusal", async () => {
       vi.mocked(duplicateResume).mockResolvedValue({ ok: false, error: "Resume not found." });
 
@@ -150,12 +159,12 @@ describe("the resume editing tools (RE-REQ-070)", () => {
 
       const result = await execTool(tools.applyReviewSuggestions, {
         reviewId: REVIEW_ID,
-        items: [{ bulletId: "b1" }],
+        items: [{ id: "b1" }],
       });
 
       expect(result).toMatchObject({
         code: "PLACEHOLDER_UNFILLED",
-        bulletIds: ["b1"],
+        ids: ["b1"],
         message: expect.stringContaining("Never guess"),
       });
       expect(supabase.callsFor("resumes")).toHaveLength(0);
@@ -189,7 +198,12 @@ describe("the resume editing tools (RE-REQ-070)", () => {
   });
 
   describe("getResumeReview", () => {
-    it("returns each suggestion's bullet id, placeholders and applied state (RE-REQ-075)", async () => {
+    it("returns each suggestion's bullet id, placeholders and state (RE-REQ-075)", async () => {
+      vi.mocked(loadResumeChanges).mockResolvedValue({
+        ok: true,
+        copy: { resumeId: null, states: { b1: "pending", b2: "applied" } },
+        original: { resumeId: RESUME_ID, states: {} },
+      } as unknown as LoadResumeChangesResult);
       supabase.queue("resume_reviews", {
         data: {
           id: REVIEW_ID,
@@ -200,18 +214,17 @@ describe("the resume editing tools (RE-REQ-070)", () => {
               { bullet_id: "b2", section: "x", original: "o", suggested: "Built", reason: "r", priority: "low" },
             ],
           },
-          resume_review_applied: [{ bullet_id: "b2" }],
         },
         error: null,
       });
 
-      const result = (await execTool(tools.getResumeReview, { reviewId: REVIEW_ID })) as {
+      const result = (await execTool(mcpTools().getResumeReview, { reviewId: REVIEW_ID })) as {
         suggestions: Record<string, unknown>[];
       };
 
       expect(result.suggestions).toMatchObject([
-        { bulletId: "b1", placeholders: ["[X%]"], applied: false },
-        { bulletId: "b2", placeholders: [], applied: true },
+        { id: "b1", placeholders: ["[X%]"], onCopy: "pending" },
+        { id: "b2", placeholders: [], onCopy: "applied" },
       ]);
     });
   });
@@ -283,6 +296,23 @@ describe("setPrimaryResume tool", () => {
   });
 });
 
+describe("changesResultForModel", () => {
+  it("says nothing changed after a discard", () => {
+    const text = changesResultForModel({ status: "discarded", applied: [], skipped: [], changed: [], targetResumeId: null });
+    expect(text).toContain("discarded");
+  });
+
+  it("reports what was applied", () => {
+    const text = changesResultForModel({ status: "applied", applied: ["b1"], skipped: [], changed: [], targetResumeId: "r1" });
+    expect(text).toContain("/resume/r1");
+  });
+
+  // It runs on stored history every turn, so throwing here would 500 the chat.
+  it.each([[undefined], [null], [{}], [{ status: "applied" as const }]])("doesn't throw on a saved result of %j", (output) => {
+    expect(() => changesResultForModel(output)).not.toThrow();
+  });
+});
+
 describe("requestResumeUpload tool", () => {
   it("has no server-side execute", () => {
     expect(tools.requestResumeUpload.execute).toBeUndefined();
@@ -296,127 +326,128 @@ describe("requestResumeUpload tool", () => {
   });
 });
 
-describe("startResumeReview tool", () => {
-  const parsedResume = { id: RESUME_ID, content: { sections: [] }, parsing_failed: false };
-
-  beforeEach(() => {
-    vi.mocked(createResumeReview).mockResolvedValue({ success: true, reviewId: REVIEW_ID });
-    vi.mocked(startReviewAnalysis).mockResolvedValue({ ok: true });
-  });
-
-  it("creates a review against a job and starts the analysis", async () => {
-    supabase.queue("resumes", { data: parsedResume, error: null });
-
-    const result = await execTool(tools.startResumeReview, {
-      resumeId: RESUME_ID,
-      jobId: JOB_ID,
-      name: "Acme review",
-    });
-
-    expect(createResumeReview).toHaveBeenCalledWith(supabase.client, expect.objectContaining({ id: "u1" }), {
-      resumeId: RESUME_ID,
-      jobId: JOB_ID,
-      name: "Acme review",
-    });
-    expect(supabase.callsFor("resume_reviews")).toHaveLength(0);
-    expect(startReviewAnalysis).toHaveBeenCalledWith(supabase.client, "u1", REVIEW_ID);
-    expect(result).toEqual({
-      reviewId: REVIEW_ID,
-      status: "processing",
-      url: `/resume-review/${REVIEW_ID}`,
-      message: "The review usually takes about a minute. The user will get an email when it's ready.",
-    });
-  });
-
-  it("stores a pasted job description on the review before starting", async () => {
-    supabase.queue("resumes", { data: parsedResume, error: null });
-
-    await execTool(tools.startResumeReview, { resumeId: RESUME_ID, jobDescription: JD });
-
-    expect(createResumeReview).toHaveBeenCalledWith(supabase.client, expect.objectContaining({ id: "u1" }), {
-      resumeId: RESUME_ID,
-      jobId: undefined,
-      name: undefined,
-    });
-    expect(supabase.callsFor("resume_reviews")[0].chain).toEqual([
-      { method: "update", args: [{ target_jd: JD }] },
-      { method: "eq", args: ["id", REVIEW_ID] },
-      { method: "eq", args: ["user_id", "u1"] },
-    ]);
-    expect(startReviewAnalysis).toHaveBeenCalled();
-  });
-
-  it.each([
-    ["neither a job nor a description", { resumeId: RESUME_ID }],
-    ["both a job and a description", { resumeId: RESUME_ID, jobId: JOB_ID, jobDescription: JD }],
-    ["a description that's too short", { resumeId: RESUME_ID, jobDescription: "short" }],
-  ])("rejects %s", async (_label, input) => {
-    expect((await validateInput(tools.startResumeReview, input)).success).toBe(false);
-  });
-
-  it.each([
-    ["missing", null, "Resume not found."],
-    [
-      "still parsing",
-      { ...parsedResume, content: null },
-      "This resume is still being processed. Try again in a minute.",
-    ],
-    [
-      "failed to parse",
-      { ...parsedResume, content: null, parsing_failed: true },
-      "This resume couldn't be read. Ask the user to upload it again.",
-    ],
-  ])("refuses a resume that is %s", async (_label, resume, error) => {
-    supabase.queue("resumes", { data: resume, error: null });
-
-    expect(await execTool(tools.startResumeReview, { resumeId: RESUME_ID, jobId: JOB_ID })).toEqual({
-      error,
-    });
-    expect(createResumeReview).not.toHaveBeenCalled();
-  });
-
-  it("maps the helper's credit error", async () => {
-    supabase.queue("resumes", { data: parsedResume, error: null });
-    vi.mocked(createResumeReview).mockResolvedValue({
-      error: "Insufficient AI credits (5 required).",
-    });
-
-    expect(
-      await execTool(tools.startResumeReview, { resumeId: RESUME_ID, jobId: JOB_ID }),
-    ).toMatchObject({ error: "INSUFFICIENT_CREDITS" });
-    expect(startReviewAnalysis).not.toHaveBeenCalled();
-  });
-
-  it("passes other helper errors through", async () => {
-    supabase.queue("resumes", { data: parsedResume, error: null });
-    vi.mocked(createResumeReview).mockResolvedValue({
-      error: "Job description not found for the provided job.",
-    });
-
-    expect(await execTool(tools.startResumeReview, { resumeId: RESUME_ID, jobId: JOB_ID })).toEqual({
-      error: "Job description not found for the provided job.",
-    });
-  });
-
-  it.each([
-    [402, { error: "INSUFFICIENT_CREDITS" }],
-    [422, { error: "Resume not indexed", reviewId: REVIEW_ID, url: `/resume-review/${REVIEW_ID}` }],
-  ])("reports analysis start failures (%i) with the draft review", async (status, expected) => {
-    supabase.queue("resumes", { data: parsedResume, error: null });
-    vi.mocked(startReviewAnalysis).mockResolvedValue({
-      ok: false,
-      status,
-      error: "Resume not indexed",
-    });
-
-    expect(
-      await execTool(tools.startResumeReview, { resumeId: RESUME_ID, jobId: JOB_ID }),
-    ).toMatchObject(expected);
-  });
-});
-
 describe("getResumeReview tool", () => {
+  const states = (copy: Record<string, string>, original: Record<string, string>, copyId: string | null = null) =>
+    ({
+      ok: true,
+      copy: { resumeId: copyId, states: copy },
+      original: { resumeId: RESUME_ID, states: original },
+    }) as unknown as LoadResumeChangesResult;
+  const REVIEW_ROW = {
+    id: REVIEW_ID,
+    name: "Acme review",
+    status: "completed",
+    score: null,
+    analysis_failed: false,
+    created_at: "c",
+    ai_response: {
+      overall_feedback: "Fine.",
+      bullet_points: [
+        { bullet_id: "b1", section: "Experience", original: "o", suggested: "s [X%]", reason: "r", priority: "high" },
+      ],
+      changes: [
+        { kind: "add", id: "add-1", item_id: "i1", anchors: [], suggested: "New line", reason: "r", priority: "low" },
+        { kind: "move", id: "move-1", target_id: "i1", index: 0, reason: "r", priority: "medium" },
+      ],
+    },
+  };
+  type Listed = { id: string; onCopy: string; onOriginal: string };
+
+  it("lists every kind of change with its state on each resume", async () => {
+    supabase.queue("resume_reviews", { data: REVIEW_ROW, error: null });
+    vi.mocked(loadResumeChanges).mockResolvedValue(
+      states(
+        { b1: "applied", "add-1": "pending", "move-1": "changed" },
+        { b1: "pending", "add-1": "pending", "move-1": "pending" },
+        "copy-1",
+      ),
+    );
+
+    const result = (await execTool(mcpTools().getResumeReview, { reviewId: REVIEW_ID })) as { suggestions: Listed[] };
+
+    expect(vi.mocked(loadResumeChanges).mock.calls[0][2]).toBe(REVIEW_ID);
+    expect(result).toMatchObject({ totalSuggestions: 3, pendingOnCopy: 1, pendingOnOriginal: 3, copyResumeId: "copy-1" });
+    expect(result.suggestions.find(({ id }) => id === "b1")).toMatchObject({
+      kind: "rewrite",
+      section: "Experience",
+      placeholders: ["[X%]"],
+      onCopy: "applied",
+      onOriginal: "pending",
+    });
+    expect(result.suggestions.find(({ id }) => id === "add-1")).toMatchObject({ kind: "add", onCopy: "pending" });
+    expect(result.suggestions.find(({ id }) => id === "move-1")).toMatchObject({ kind: "move", onCopy: "changed" });
+  });
+
+  it("puts pending changes first, so the limit can't hide them", async () => {
+    const applied = Array.from({ length: 6 }, (_, index) => ({
+      bullet_id: `a${index}`,
+      section: "S",
+      original: "o",
+      suggested: "s",
+      reason: "r",
+      priority: "high",
+    }));
+    supabase.queue("resume_reviews", {
+      data: {
+        ...REVIEW_ROW,
+        ai_response: { ...REVIEW_ROW.ai_response, bullet_points: applied, changes: [REVIEW_ROW.ai_response.changes[0]] },
+      },
+      error: null,
+    });
+    vi.mocked(loadResumeChanges).mockResolvedValue(
+      states({ ...Object.fromEntries(applied.map(({ bullet_id }) => [bullet_id, "applied"])), "add-1": "pending" }, {}),
+    );
+
+    const result = (await execTool(mcpTools().getResumeReview, { reviewId: REVIEW_ID })) as { suggestions: Listed[] };
+
+    expect(result.suggestions).toHaveLength(5);
+    expect(result.suggestions[0].id).toBe("add-1");
+  });
+
+  it("gives the chat's model none of the text, and points it at the card", async () => {
+    supabase.queue("resume_reviews", { data: REVIEW_ROW, error: null });
+    vi.mocked(loadResumeChanges).mockResolvedValue(states({ b1: "pending", "add-1": "applied" }, {}));
+
+    const result = (await execTool(tools.getResumeReview, { reviewId: REVIEW_ID })) as Record<string, unknown>;
+
+    expect(result).toMatchObject({ pendingOnCopy: 1, totalSuggestions: 3 });
+    expect(result.message).toContain("Now call reviewResumeChanges");
+    expect(result).not.toHaveProperty("suggestions");
+    expect(result).not.toHaveProperty("url");
+    expect(JSON.stringify(result)).not.toContain("New line");
+  });
+
+  it("tells the chat's model when nothing is left to apply", async () => {
+    supabase.queue("resume_reviews", { data: REVIEW_ROW, error: null });
+    vi.mocked(loadResumeChanges).mockResolvedValue(states({ b1: "applied", "add-1": "applied", "move-1": "applied" }, {}));
+
+    const result = (await execTool(tools.getResumeReview, { reviewId: REVIEW_ID })) as Record<string, unknown>;
+
+    expect(result.message).toBe("Nothing is left to apply from this review.");
+  });
+
+  it("says unknown when the reviewed resume is gone", async () => {
+    supabase.queue("resume_reviews", { data: REVIEW_ROW, error: null });
+    vi.mocked(loadResumeChanges).mockResolvedValue({ ok: false, error: "This review isn't available any more." });
+
+    const result = (await execTool(mcpTools().getResumeReview, { reviewId: REVIEW_ID })) as { suggestions: Listed[] };
+
+    expect(result).toMatchObject({ pendingOnCopy: 0, copyResumeId: null });
+    expect(result.suggestions[0]).toMatchObject({ onCopy: "unknown", onOriginal: "unknown" });
+  });
+
+  it("never passes on the contact details the loader reads", async () => {
+    supabase.queue("resume_reviews", { data: REVIEW_ROW, error: null });
+    vi.mocked(loadResumeChanges).mockResolvedValue({
+      ...states({}, {}),
+      copy: { resumeId: null, states: {}, contact: { fullName: "Ada Secret", links: [] } },
+    } as unknown as LoadResumeChangesResult);
+
+    expect(JSON.stringify(await execTool(mcpTools().getResumeReview, { reviewId: REVIEW_ID }))).not.toContain("Ada Secret");
+  });
+
   it("returns a condensed review with the top suggestions first", async () => {
+    vi.mocked(loadResumeChanges).mockResolvedValue({ ok: false, error: "x" });
     supabase.queue("resume_reviews", {
       data: {
         id: REVIEW_ID,
@@ -428,10 +459,11 @@ describe("getResumeReview tool", () => {
         ai_response: {
           overall_feedback: "Good, needs metrics.",
           bullet_points: [
-            { section: "A", original: "o1", suggested: "s1", reason: "r1", priority: "low" },
-            { section: "B", original: "o2", suggested: "s2", reason: "r2", priority: "high" },
-            { section: "C", original: "o3", suggested: "s3", reason: "r3", priority: "medium" },
+            { bullet_id: "a", section: "A", original: "o1", suggested: "s1", reason: "r1", priority: "low" },
+            { bullet_id: "b", section: "B", original: "o2", suggested: "s2", reason: "r2", priority: "high" },
+            { bullet_id: "c", section: "C", original: "o3", suggested: "s3", reason: "r3", priority: "medium" },
             ...Array.from({ length: 5 }, (_, i) => ({
+              bullet_id: `d${i}`,
               section: "D",
               original: `x${i}`,
               suggested: "y",
@@ -444,14 +476,14 @@ describe("getResumeReview tool", () => {
       error: null,
     });
 
-    const result = (await execTool(tools.getResumeReview, { reviewId: REVIEW_ID })) as {
+    const result = (await execTool(mcpTools().getResumeReview, { reviewId: REVIEW_ID })) as {
       suggestions: { priority: string }[];
     };
 
     expect(supabase.callsFor("resume_reviews")[0].chain).toEqual([
       {
         method: "select",
-        args: ["id, name, status, score, analysis_failed, ai_response, created_at, resume_review_applied(bullet_id)"],
+        args: ["id, name, status, score, analysis_failed, ai_response, created_at"],
       },
       { method: "eq", args: ["id", REVIEW_ID] },
       { method: "eq", args: ["user_id", "u1"] },
@@ -464,7 +496,6 @@ describe("getResumeReview tool", () => {
       score: 72,
       overallFeedback: "Good, needs metrics.",
       totalSuggestions: 8,
-      url: `/resume-review/${REVIEW_ID}`,
     });
     expect(result.suggestions).toHaveLength(5);
     expect(result.suggestions.slice(0, 3).map((s) => s.priority)).toEqual(["high", "medium", "low"]);
@@ -476,7 +507,7 @@ describe("getResumeReview tool", () => {
       error: null,
     });
 
-    expect(await execTool(tools.getResumeReview, { reviewId: REVIEW_ID })).toMatchObject({
+    expect(await execTool(mcpTools().getResumeReview, { reviewId: REVIEW_ID })).toMatchObject({
       status: "processing",
       overallFeedback: null,
       suggestions: [],
@@ -490,13 +521,13 @@ describe("getResumeReview tool", () => {
       error: null,
     });
 
-    expect(await execTool(tools.getResumeReview, { reviewId: REVIEW_ID })).toMatchObject({
+    expect(await execTool(mcpTools().getResumeReview, { reviewId: REVIEW_ID })).toMatchObject({
       status: "failed",
     });
   });
 
   it("returns an error for unknown reviews", async () => {
-    expect(await execTool(tools.getResumeReview, { reviewId: REVIEW_ID })).toEqual({
+    expect(await execTool(mcpTools().getResumeReview, { reviewId: REVIEW_ID })).toEqual({
       error: "Resume review not found.",
     });
   });

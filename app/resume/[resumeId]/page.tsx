@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import OriginalResumeWrapper from "@/components/OriginalResumeWrapper";
 import InfoTooltip from "@/components/InfoTooltip";
-import CreateReviewForResume from "@/components/CreateReviewForResume";
+import ImproveResumeLink from "@/components/resume/ImproveResumeLink";
 import { RetryResumeParsing } from "@/components/RetryResumeParsing";
 import ResumeStatusBadge from "@/components/ResumeStatusBadge";
 import ResumeHeaderActions from "@/components/resume/ResumeHeaderActions";
@@ -104,7 +104,9 @@ export default async function ResumeIdPage({
             <>
               {isParsingFailed && signedUrl && <RetryResumeParsing resumeId={resumeId} />}
               {resume.hasContent && <ResumeHeaderActions resumeId={resumeId} />}
-              <CreateReviewForResume userId={user.id} resumeId={resumeId} />
+              {resume.hasContent && user.app_metadata.type === "applicant" && (
+                <ImproveResumeLink prompt={`Improve my resume "${data.name}" (resume ${data.id}).`} />
+              )}
             </>
           }
         />

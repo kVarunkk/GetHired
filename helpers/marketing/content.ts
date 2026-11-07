@@ -1,17 +1,19 @@
 // Copy shared by the marketing pages and their markdown versions (`/hire.md`,
 // `/index.md`, ...), so the two can't drift. Client-safe: no server imports.
 
-import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import { agentPromptHref, COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 import { MCP_PATH } from "@/helpers/mcp/config";
 
 export const SITE_URL = "https://gethired.devhub.co.in";
+
+export const IMPROVE_RESUME_PROMPT = "Improve my resume for a job I like. Ask me which job first.";
 
 export const FAQS = {
   "job-search": [
     {
       question: "What is the GetHired agent?",
       answer:
-        "An AI assistant you chat with. It searches jobs, finds roles matched to your resume, tracks your applications, starts resume reviews and sets up mock interviews. It asks before changing your profile, and AI features use credits as shown in your account.",
+        "An AI assistant you chat with. It searches jobs, finds roles matched to your resume, tracks your applications, improves your resume and sets up mock interviews. It asks before changing your profile, and AI features use credits as shown in your account.",
     },
     {
       question: "How can I find relevant tech jobs on GetHired?",
@@ -148,7 +150,7 @@ export const FAQS = {
     {
       question: "Does it cost anything?",
       answer:
-        "Connecting is free. Tools that use AI, like a resume review or a plain-English job search, spend AI credits from your balance, the same as in the app, and only once they run.",
+        "Connecting is free. Tools that use AI, like improving a resume or a plain-English job search, spend AI credits from your balance, the same as in the app, and only once they run.",
     },
   ],
   "mcp-company": [
@@ -236,7 +238,7 @@ export function howWeHelpCopy(audience: HowWeHelpAudience, jobCount: number) {
       {
         name: "Gets you ready to apply",
         description:
-          "Resume reviews against the job, plus AI mock interviews with feedback.",
+          "Resumes improved for the job, plus AI mock interviews with feedback.",
       },
     ],
   };
@@ -268,9 +270,9 @@ export const MCP_CAPABILITIES: Record<
           "Read a job's application form and apply to jobs posted on GetHired, once you've seen the application and confirmed it.",
       },
       {
-        name: "Resumes and reviews",
+        name: "Resumes",
         description:
-          "Read your resumes, pick the best one for a job, set your primary resume and start an AI resume review.",
+          "Read your resumes, pick the best one for a job, set your primary resume and get changes to tailor it.",
       },
       {
         name: "Applications and interviews",
@@ -448,7 +450,7 @@ export const LANDING_PAGES: Record<LandingPageKey, LandingPageCopy> = {
     heading: "AI Resume Checker",
     subheading: () =>
       "Optimizing your technical presence for the modern ATS. Join the list to get early access to deep semantic analysis.",
-    ctas: [{ label: "Review My Resume", href: "/resume-review" }],
+    ctas: [{ label: "Improve My Resume", href: agentPromptHref(IMPROVE_RESUME_PROMPT) }],
     howWeHelp: "applicant",
     faq: "resume",
   },

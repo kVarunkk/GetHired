@@ -106,48 +106,6 @@ export const previewUpdateResume = resumeEditPreview("updateResume");
 export const previewDeleteResume = resumeEditPreview("deleteResume");
 export const previewApplySuggestions = resumeEditPreview("applyReviewSuggestions");
 
-export const previewResumeReview: McpPreviewBuilder = async (ctx, input) => {
-  const { resumeId, jobId, jobDescription, name } = input as {
-    resumeId: string;
-    jobId?: string;
-    jobDescription?: string;
-    name?: string;
-  };
-
-  const { data: resume, error } = await ctx.supabase
-    .from("resumes")
-    .select("name, content, parsing_failed")
-    .eq("id", resumeId)
-    .eq("user_id", ctx.user.id)
-    .maybeSingle();
-  if (error) throw error;
-  if (!resume) return { ok: false, error: "Resume not found." };
-  const problem = resumeProblem(resume);
-  if (problem) return { ok: false, error: problem };
-
-  let job = `the pasted job description (${jobDescription?.length ?? 0} characters)`;
-  if (jobId) {
-    const { data, error: jobError } = await ctx.supabase
-      .from("all_jobs")
-      .select("job_name, company_name")
-      .eq("id", jobId)
-      .maybeSingle();
-    if (jobError) throw jobError;
-    if (!data) return { ok: false, error: "Job not found." };
-    job = jobLabel(data.job_name, data.company_name);
-  }
-
-  return {
-    ok: true,
-    summary: `Start a resume review? This uses ${credits(TAICredits.AI_SEARCH_ASK_AI_RESUME)} once the analysis succeeds.`,
-    details: [
-      { label: "Resume", value: resume.name ?? "Your resume" },
-      { label: "Job", value: job },
-      ...(name ? [{ label: "Review name", value: name }] : []),
-    ],
-  };
-};
-
 export const previewUpdatePreferences: McpPreviewBuilder = async (ctx, input) => {
   const after = { ...input };
   if (Array.isArray(after.preferredLocations)) {

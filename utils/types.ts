@@ -167,6 +167,8 @@ export enum TAICredits {
   AI_SUMMARY = 2,
   JOB_APPLICATION = 1,
   AI_INTERVIEW = 10,
+  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values -- prices can match, and nothing reverse-maps this enum.
+  RESUME_IMPROVE = 2,
 }
 
 export enum TWaitlistType {
@@ -339,6 +341,7 @@ export enum PostHogEvent {
   ResumeDuplicated = "resume_duplicated",
   ResumeExported = "resume_exported",
   ReviewSuggestionsApplied = "review_suggestions_applied",
+  ResumeImproveRun = "resume_improve_run",
 
   BillingWebhookError = "billing_webhook_error",
   BillingPricingViewed = "billing_pricing_viewed",

@@ -27,6 +27,11 @@ export const APPLICANT_CREDIT_COSTS: CreditCost[] = [
     cost: credits(TAICredits.AI_SUMMARY),
   },
   {
+    feature: "Improve your resume",
+    detail: "The assistant suggests changes, with or without a job. Applying them is free.",
+    cost: credits(TAICredits.RESUME_IMPROVE, "per run"),
+  },
+  {
     feature: "AI Smart Search",
     detail: "Find suitable jobs or companies, and similar jobs.",
     cost: credits(TAICredits.AI_SEARCH_ASK_AI_RESUME, "per search"),
@@ -40,10 +45,6 @@ export const APPLICANT_CREDIT_COSTS: CreditCost[] = [
     feature: "Resume upload",
     detail: "AI reads your resume so it can be matched to jobs.",
     cost: credits(TAICredits.AI_SEARCH_ASK_AI_RESUME, "per resume"),
-  },
-  {
-    feature: "AI resume review",
-    cost: credits(TAICredits.AI_SEARCH_ASK_AI_RESUME, "per review"),
   },
   {
     feature: "AI answers to application questions",

@@ -3,7 +3,13 @@ import { z } from "zod";
 import type { Database } from "@/utils/types/database.types";
 import { readResume } from "@/helpers/resume/read-resume";
 import type { ResumeTemplate } from "@/helpers/resume/config";
-import { ResumeOperationSchema, applyResumeOperations, type ResumeDraft } from "./resume-operations";
+import { hasPlaceholder } from "@/helpers/resume-review/suggestions";
+import {
+  ResumeOperationSchema,
+  applyResumeOperations,
+  type ResumeDraft,
+  type ResumeOperation,
+} from "./resume-operations";
 import {
   RESUME_CHANGED,
   RESUME_CHANGED_ERROR,
@@ -25,18 +31,44 @@ export type UpdateResumeInput = z.input<typeof UpdateResumeInputSchema>;
 
 type PlanFailure = { ok: false; code: "INVALID" | "NOT_FOUND" | typeof RESUME_CHANGED; error: string };
 
-export type ResumeUpdatePlan =
-  | {
-      ok: true;
-      before: ResumeDraft;
-      after: ResumeDraft & { name: string; template: ResumeTemplate };
+type NamedDraft = ResumeDraft & { name: string; template: ResumeTemplate };
+
+export type ResumeUpdatePlan = { ok: true; before: NamedDraft; after: NamedDraft } | PlanFailure;
+
+export const RESUME_PLACEHOLDER_ERROR =
+  "This text still has a bracketed placeholder. Ask the user for the real value, or leave it out.";
+
+/** The text an operation prints on the resume. A link or the resume's own name isn't printed as written. */
+function printedText(operation: ResumeOperation): (string | undefined)[] {
+  switch (operation.op) {
+    case "setBulletText":
+    case "addBullet":
+      return [operation.text];
+    case "setItemFields":
+      return Object.entries(operation.fields).flatMap(([key, value]) => (key === "url" ? [] : [value]));
+    case "addItem":
+      return [
+        ...Object.entries(operation.fields ?? {}).flatMap(([key, value]) => (key === "url" ? [] : [value])),
+        ...(operation.bullets ?? []),
+      ];
+    case "addSection":
+    case "setSectionTitle":
+      return [operation.title];
+    case "setContact": {
+      const { fullName, headline, email, phone, location } = operation.fields;
+      return [fullName, headline, email, phone, location];
     }
-  | PlanFailure;
+    default:
+      return [];
+  }
+}
 
 /**
  * What the operations would do, without writing anything, for the approval card
  * and MCP's confirmation as well as the update itself (RE-REQ-071, RE-REQ-072).
- * An unknown id or a broken limit fails the whole plan.
+ * An unknown id, a broken limit or a `[placeholder]` fails the whole plan
+ * (RI-REQ-006). The editor page doesn't come through here, so a user can still
+ * type brackets on purpose.
  */
 export async function planResumeUpdate(
   supabase: SupabaseClient<Database>,
@@ -48,6 +80,10 @@ export async function planResumeUpdate(
     return { ok: false, code: "INVALID", error: parsed.error.issues[0]?.message ?? "These changes aren't valid." };
   }
   const { resumeId, expectedRevision, operations } = parsed.data;
+
+  if (operations.flatMap(printedText).some((text) => text && hasPlaceholder(text))) {
+    return { ok: false, code: "INVALID", error: RESUME_PLACEHOLDER_ERROR };
+  }
 
   const { data: row, error } = await supabase
     .from("resumes")
@@ -61,7 +97,7 @@ export async function planResumeUpdate(
 
   const resume = readResume(row);
   const name = row.name ?? "Untitled resume";
-  const before: ResumeDraft = {
+  const before: NamedDraft = {
     content: resume.content,
     contact: resume.contact ?? { fullName: "", links: [] },
     name,

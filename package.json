@@ -8,6 +8,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "eval:screening": "vitest run -c evals/screening-interview/vitest.config.mts",
+    "eval:resume-improve": "vitest run -c evals/resume-improve/vitest.config.mts",
     "build:emails": "email build",
     "dev:emails": "email dev",
     "postinstall": "patch-package"
@@ -63,6 +64,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "diff": "^9.0.0",
     "docx": "^9.15.2",
     "dodopayments": "^2.8.2",
     "exceljs": "^4.4.0",

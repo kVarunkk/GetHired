@@ -3,7 +3,6 @@ import {
   Bot,
   FileUser,
   Headset,
-  ScanSearch,
   Settings,
   UserIcon,
 } from "lucide-react";
@@ -231,13 +230,6 @@ export const applicantNavbarItems: INavItem[] = [
     icon: <Headset className="h-4 w-4" />,
   },
   {
-    id: "reviews",
-    label: "CV Reviews",
-    href: "/resume-review",
-    type: "startswith",
-    icon: <ScanSearch className="h-4 w-4" />,
-  },
-  {
     id: "resumes",
     label: "Resumes",
     href: "/resume",
@@ -363,13 +355,10 @@ const verticalNavbarPaths = [
   "/jobs",
   "/companies",
   "/get-started",
-  "/resume-review",
   "/resume",
   "/interview",
   "/agent",
 ];
-
-export const noScrollToTop = ["/resume-review/"];
 
 // Pages that take exactly the viewport height (below the navbar on phones)
 // and scroll inside themselves instead of scrolling the page.

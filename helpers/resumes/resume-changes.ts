@@ -24,6 +24,12 @@ const CONTACT_FIELDS = [
   ["location", "Location"],
 ] as const;
 
+const NAME_LABEL = "Resume name";
+const TEMPLATE_LABEL = "Template";
+
+/** A change the printed resume doesn't show, so a diff of it can't either. */
+export const isUnprintedChange = ({ label }: ResumeChange) => label === NAME_LABEL || label === TEMPLATE_LABEL;
+
 const sectionLabel = (section: ResumeSection) => section.title || RESUME_SECTION_LABELS[section.type];
 
 /** Every editable value, by a key that survives a move, with what to call it. */
@@ -33,8 +39,8 @@ function fields(draft: ResumeDraft) {
     if (text) entries.set(key, { label, text });
   };
 
-  add("name", "Resume name", draft.name);
-  add("template", "Template", draft.template);
+  add("name", NAME_LABEL, draft.name);
+  add("template", TEMPLATE_LABEL, draft.template);
   for (const [field, label] of CONTACT_FIELDS) add(`contact.${field}`, label, draft.contact[field]);
   add("contact.links", "Links", draft.contact.links.map((link) => `${link.label}: ${link.url}`).join(", "));
 

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { hasPlaceholder, placeholdersIn, readSuggestions, reconcileSuggestions } from "./suggestions";
+import {
+  fillPlaceholders,
+  hasPlaceholder,
+  placeholdersIn,
+  readSuggestions,
+  reconcileSuggestions,
+  splitPlaceholders,
+} from "./suggestions";
 
 describe("placeholders (RE-REQ-059)", () => {
   it.each(["Cut latency by [X%]", "Served [number of users] users", "[a] and [b]"])("finds one in %s", (text) => {
@@ -44,5 +51,37 @@ describe("readSuggestions", () => {
   it("skips a malformed suggestion", () => {
     const good = { bullet_id: "b", original: "o", suggested: "s", section: "x", reason: "r", priority: "low" };
     expect(readSuggestions({ bullet_points: [good, { bullet_id: 1 }, null] })).toEqual([good]);
+  });
+});
+
+describe("splitPlaceholders (RI-REQ-026)", () => {
+  it("splits text around each placeholder", () => {
+    expect(splitPlaceholders("Cut [X%] of [N] bills")).toEqual([
+      { text: "Cut ", placeholder: false },
+      { text: "[X%]", placeholder: true },
+      { text: " of ", placeholder: false },
+      { text: "[N]", placeholder: true },
+      { text: " bills", placeholder: false },
+    ]);
+  });
+
+  it("is one part with no placeholder, and handles one at either end", () => {
+    expect(splitPlaceholders("Plain")).toEqual([{ text: "Plain", placeholder: false }]);
+    expect(splitPlaceholders("[A] b [C]").map(({ placeholder }) => placeholder)).toEqual([true, false, true]);
+  });
+});
+
+describe("fillPlaceholders", () => {
+  it("fills in order, and leaves an empty value in place", () => {
+    expect(fillPlaceholders("Cut [X%] of [N] bills", ["30%", ""])).toBe("Cut 30% of [N] bills");
+    expect(fillPlaceholders("Cut [X%] of [N] bills", ["30%", "12"])).toBe("Cut 30% of 12 bills");
+  });
+
+  it("takes a value literally", () => {
+    expect(fillPlaceholders("Saved [X]", ["$& more"])).toBe("Saved $& more");
+  });
+
+  it("treats blank as unfilled", () => {
+    expect(hasPlaceholder(fillPlaceholders("Cut [X%]", ["   "]))).toBe(true);
   });
 });

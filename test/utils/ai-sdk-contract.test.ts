@@ -59,20 +59,20 @@ describe("AI SDK contract", () => {
 
   it("emits a tool-approval-request and does not execute when toolApproval asks the user", async () => {
     const execute = vi.fn(async () => ({ reviewId: "r1" }));
-    const model = mockModel([toolCallStream("startResumeReview", { resumeId: "res-1" })]);
+    const model = mockModel([toolCallStream("submitApplication", { resumeId: "res-1" })]);
 
     const result = streamText({
       model,
       prompt: "review my resume",
       tools: {
-        startResumeReview: tool({
+        submitApplication: tool({
           description: "Start a resume review (costs credits)",
           inputSchema: z.object({ resumeId: z.string() }),
           execute,
         }),
       },
       toolApproval: ({ toolCall }) =>
-        toolCall.toolName === "startResumeReview" ? "user-approval" : undefined,
+        toolCall.toolName === "submitApplication" ? "user-approval" : undefined,
       stopWhen: stepCountIs(5),
     });
 

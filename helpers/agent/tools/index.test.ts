@@ -27,9 +27,10 @@ describe("createAgentTools", () => {
         "listResumes",
         "setPrimaryResume",
         "requestResumeUpload",
-        "startResumeReview",
         "getResumeReview",
         "pickResumeForJob",
+        "improveResume",
+        "reviewResumeChanges",
         "getResumeContent",
         "createResume",
         "updateResume",
@@ -84,17 +85,17 @@ describe("createAgentTools", () => {
       "completeOnboarding",
       "createResume",
       "deleteResume",
-      "startResumeReview",
       "submitApplication",
       "updateMyPreferences",
       "updateResume",
     ]);
   });
 
-  it("leaves requestResumeUpload to the client (REQ-015)", () => {
+  it("leaves requestResumeUpload and the changes card to the client (REQ-015, RI-REQ-020)", () => {
     expect(tools.requestResumeUpload.execute).toBeUndefined();
+    expect(tools.reviewResumeChanges.execute).toBeUndefined();
     for (const [name, tool] of Object.entries(tools)) {
-      if (name !== "requestResumeUpload") expect(tool.execute, name).toBeTypeOf("function");
+      if (!["requestResumeUpload", "reviewResumeChanges"].includes(name)) expect(tool.execute, name).toBeTypeOf("function");
     }
   });
 });

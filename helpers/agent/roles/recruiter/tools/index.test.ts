@@ -133,7 +133,7 @@ describe("createRecruiterTools (RAT-028)", () => {
   });
 
   it("shares no applicant-only tools", () => {
-    for (const name of ["searchJobs", "startResumeReview", "completeOnboarding", "updateMyPreferences"]) {
+    for (const name of ["searchJobs", "improveResume", "completeOnboarding", "updateMyPreferences"]) {
       expect(tools).not.toHaveProperty(name);
     }
   });

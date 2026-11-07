@@ -17,7 +17,6 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/components/OriginalResumeWrapper", () => ({
   default: ({ url }: { url: string }) => <div data-testid="file">{url}</div>,
 }));
-vi.mock("@/components/CreateReviewForResume", () => ({ default: () => <button>Review</button> }));
 vi.mock("@/components/RetryResumeParsing", () => ({ RetryResumeParsing: () => <button>Retry</button> }));
 vi.mock("@/components/resume/ResumeHeaderActions", () => ({ default: () => <button>Edit</button> }));
 vi.mock("@/components/InfoTooltip", () => ({ default: () => null }));

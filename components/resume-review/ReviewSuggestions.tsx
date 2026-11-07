@@ -27,7 +27,7 @@ import type { TResumeReviewServer } from "@/utils/types/review.types";
 import SuggestionCard, { type SuggestionState } from "./SuggestionCard";
 
 type Target = "copy" | "original";
-type ApplyItem = { bulletId: string; text?: string };
+type ApplyItem = { id: string; text?: string };
 
 const APPLY_FAILED = "We couldn't apply that. Please try again.";
 
@@ -83,7 +83,7 @@ export default function ReviewSuggestions({
     stateOf(suggestion.bullet_id) === "ready" &&
     !changedIds.has(suggestion.bullet_id) &&
     !hasPlaceholder(suggestion.suggested);
-  const applyAllItems = suggestions.filter(canApplyAll).map((suggestion) => ({ bulletId: suggestion.bullet_id }));
+  const applyAllItems = suggestions.filter(canApplyAll).map((suggestion) => ({ id: suggestion.bullet_id }));
   const openCount = suggestions.filter(
     (suggestion) => stateOf(suggestion.bullet_id) === "ready" && !changedIds.has(suggestion.bullet_id),
   ).length;
@@ -100,7 +100,7 @@ export default function ReviewSuggestions({
         return false;
       }
 
-      const changed = result.items.filter((item) => item.status !== "applied").map((item) => item.bulletId);
+      const changed = result.items.filter((item) => item.status !== "applied").map((item) => item.id);
       setChangedIds((current) => new Set([...current, ...changed]));
 
       const appliedCount = result.items.length - changed.length;
@@ -231,7 +231,7 @@ export default function ReviewSuggestions({
           isChanged={changedIds.has(suggestion.bullet_id)}
           checkNumbers={isOlderReview}
           onHighlight={setActiveHighlightId}
-          onApply={(text) => requestApply([{ bulletId: suggestion.bullet_id, text }])}
+          onApply={(text) => requestApply([{ id: suggestion.bullet_id, text }])}
           onUndo={() => undo(suggestion.bullet_id)}
         />
       ))}

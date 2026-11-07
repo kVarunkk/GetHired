@@ -92,8 +92,8 @@ describe("stubToolOutput", () => {
   });
 
   it("treats parts without output as omitted", () => {
-    expect(stubToolOutput(toolPart("startResumeReview", undefined, "approval-requested"))).toBe(
-      "[startResumeReview output omitted]",
+    expect(stubToolOutput(toolPart("submitApplication", undefined, "approval-requested"))).toBe(
+      "[submitApplication output omitted]",
     );
   });
 
@@ -182,7 +182,7 @@ describe("selectContextMessages", () => {
   it("leaves text and non-final tool parts alone when stubbing", () => {
     const messages = [
       user("u1"),
-      assistant("a1", [toolPart("startResumeReview", undefined, "approval-requested")]),
+      assistant("a1", [toolPart("submitApplication", undefined, "approval-requested")]),
       ...conversation(4).map((m) => ({ ...m, id: `x-${m.id}` })),
     ];
 
@@ -226,7 +226,7 @@ describe("messagesToSummarise", () => {
 });
 
 describe("dropAbandonedToolCalls", () => {
-  const pending = (state: string, toolName = "startResumeReview") =>
+  const pending = (state: string, toolName = "submitApplication") =>
     ({
       type: `tool-${toolName}`,
       toolCallId: `c-${state}`,

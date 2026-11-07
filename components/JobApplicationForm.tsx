@@ -75,7 +75,7 @@ export default function JobApplicationForm({
   const [loading, setLoading] = useState(false);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [newFile, setNewFile] = useState<File | null>(null);
-  const [share, setShare] = useState<ShareSelection>({ sessionId: null, reviewId: null });
+  const [share, setShare] = useState<ShareSelection>({ sessionId: null });
   const fromContext = useApplicationSource();
   const applicationSource = source ?? fromContext.source;
   const applicationRef = sourceRef ?? fromContext.ref ?? undefined;
@@ -179,27 +179,13 @@ export default function JobApplicationForm({
 
       // Shared only after the application exists; a failed share never
       // fails the application (OR-REQ-030).
-      if (share.sessionId || share.reviewId) {
-        const shares = await Promise.allSettled([
-          share.sessionId
-            ? attachToApplicationAction({
-                applicationId,
-                kind: "interview_session",
-                interviewSessionId: share.sessionId,
-              })
-            : null,
-          share.reviewId
-            ? attachToApplicationAction({
-                applicationId,
-                kind: "resume_review",
-                resumeReviewId: share.reviewId,
-              })
-            : null,
-        ]);
-        const failed = shares.some(
-          (r) => r.status === "rejected" || (r.value !== null && !r.value.ok),
-        );
-        if (failed) toast.error("Your application was sent, but we couldn't share everything you picked.");
+      if (share.sessionId) {
+        const shared = await attachToApplicationAction({
+          applicationId,
+          kind: "interview_session",
+          interviewSessionId: share.sessionId,
+        }).catch(() => null);
+        if (!shared?.ok) toast.error("Your application was sent, but we couldn't share your interview.");
       }
 
       if (submitted.creditsDeducted) {

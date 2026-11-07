@@ -18,6 +18,7 @@ import {
   type AgentToolContext,
 } from "@/helpers/agent/tools/shared";
 import { getResumeDetails } from "@/helpers/resumes/get-resume-details";
+import { TAICredits } from "@/utils/types";
 import {
   RESUME_REVIEWS_DEFAULT_LIMIT,
   RESUME_REVIEWS_MAX_LIMIT,
@@ -28,7 +29,6 @@ import {
   previewCompleteOnboarding,
   previewCreateResume,
   previewDeleteResume,
-  previewResumeReview,
   previewSubmitApplication,
   previewUpdatePreferences,
   previewUpdateResume,
@@ -246,7 +246,7 @@ export const MCP_TOOLS: readonly McpToolDef[] = [
     agentTools: ["applyReviewSuggestions"],
     preview: previewApplySuggestions,
     description:
-      "Apply suggestions from a resume review, by each suggestion's bulletId from get_resume_review_details. They go to a copy by default, which later applies reuse; pass target 'original' only when the user asks to change the reviewed resume. Pass text to use the user's own wording. Text with a [placeholder] is refused: ask the user for the real value, then pass it as text.",
+      "Apply changes from a resume review, by each change's id from improve_resume or get_resume_review_details. They go to a copy by default, which later applies reuse; pass target 'original' only when the user asks to change the reviewed resume. Pass text to use the user's own wording. Text with a [placeholder] is refused: ask the user for the real value, then pass it as text.",
   },
   {
     name: "export_resume",
@@ -255,15 +255,6 @@ export const MCP_TOOLS: readonly McpToolDef[] = [
     agentTools: ["exportResume"],
     description:
       "Get a link that downloads one of the user's resumes as a PDF or Word file. Give it to the user to open in a browser where they're signed in to GetHired. Free.",
-  },
-  {
-    name: "start_resume_review",
-    title: "Review a resume",
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    agentTools: ["startResumeReview"],
-    preview: previewResumeReview,
-    description:
-      "Start an AI review of one of the user's resumes against a job (jobId) or a pasted job description. Costs 5 AI credits once the analysis succeeds. Runs in the background and returns a link.",
   },
   {
     name: "get_resume_reviews",
@@ -292,13 +283,20 @@ export const MCP_TOOLS: readonly McpToolDef[] = [
     annotations: READ,
     agentTools: ["getResumeReview"],
     description:
-      "Get a resume review's status, score, overall feedback and its top suggestions (highest priority first), each with the bulletId that apply_review_suggestions needs, any [placeholders] the user must fill in, and whether it's already applied.",
+      "Get a resume review's status, score, overall feedback and its top changes of every kind (pending first, then highest priority), each with the id that apply_review_suggestions needs, any [placeholders] the user must fill in, and its state on the copy and on the original resume (pending, applied, or changed if the resume moved on since the review).",
   },
   {
     name: "pick_resume_for_job",
     title: "Pick a resume for a job",
     annotations: READ,
     agentTools: ["pickResumeForJob"],
+  },
+  {
+    name: "improve_resume",
+    title: "Improve a resume",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    agentTools: ["improveResume"],
+    description: `Suggest how to improve or tailor one of the user's resumes: rewrites, new bullets, removals, moves, and gaps to ask the user about, each change with its id. Pass a jobId or a pasted jobDescription to tailor it to a job, or neither to judge it on its own. It changes nothing: apply the ones the user chooses with apply_review_suggestions. Costs ${TAICredits.RESUME_IMPROVE} AI credits once it succeeds.`,
   },
 
   // --- Interviews ---
@@ -326,6 +324,7 @@ export const MCP_TOOLS: readonly McpToolDef[] = [
 /** Applicant agent tools MCP leaves out, and why (spec §4.4). */
 export const MCP_EXCLUDED_AGENT_TOOLS: Partial<Record<AgentToolName, string>> = {
   requestResumeUpload: "A browser widget. MCP users upload resumes at /resume.",
+  reviewResumeChanges: "A browser widget. MCP clients apply with `apply_review_suggestions`.",
   getResumeContent: "`get_resume_details` covers it.",
   saveMemory: "Agent memory, which means nothing outside the chat.",
   deleteMemory: "Agent memory, which means nothing outside the chat.",

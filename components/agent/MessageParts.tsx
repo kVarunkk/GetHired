@@ -10,6 +10,7 @@ import { cn } from "@/utils/utils";
 import ResumeUploadWidget, { type ResumeUploadOutput } from "./ResumeUploadWidget";
 import { rehypeAnimateWords } from "./animate-words";
 import { ApplicationApprovalDetails } from "./ApplicationApprovalCard";
+import ResumeChangesCard, { ResumeChangesResult, type ResumeChangesOutput } from "./ResumeChangesCard";
 import { ResumeEditApprovalDetails, isResumeEditTool } from "./ResumeEditApprovalCard";
 import { inlineLink, isInAppHref, NEW_TAB } from "./links";
 import {
@@ -42,7 +43,12 @@ type MessagePart = UIMessage["parts"][number];
 type ToolPart = Extract<MessagePart, { toolCallId: string }>;
 type ApprovalHandler = (response: { id: string; approved: boolean }) => void;
 /** What a client-side tool's widget hands back (helpers/agent/client-updates.ts validates it). */
-export type ClientToolOutput = ResumeUploadOutput | ResumeImportOutput | SpreadsheetImportOutput | CandidateResumeOutput;
+export type ClientToolOutput =
+  | ResumeUploadOutput
+  | ResumeImportOutput
+  | SpreadsheetImportOutput
+  | CandidateResumeOutput
+  | ResumeChangesOutput;
 type ToolOutputHandler = (toolCallId: string, output: ClientToolOutput, tool?: string) => void;
 
 /** Present-tense and past-tense labels for each tool. */
@@ -66,6 +72,8 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   requestResumeUpload: { running: "Waiting for your upload…", done: "Resume upload finished", action: "upload a resume" },
   startResumeReview: { running: "Starting the review…", done: "Started the resume review", action: "start a resume review" },
   pickResumeForJob: { running: "Comparing your resumes…", done: "Compared your resumes", action: "compare your resumes" },
+  improveResume: { running: "Reading your resume…", done: "Suggested changes", action: "suggest changes" },
+  reviewResumeChanges: { running: "Choose your changes", done: "Reviewed the changes", action: "show the changes" },
   getResumeReview: { running: "Loading the review…", done: "Loaded the review", action: "load the review" },
   getResumeContent: { running: "Reading the resume…", done: "Read the resume", action: "read the resume" },
   createResume: { running: "Creating the resume…", done: "Created the resume", action: "create the resume" },
@@ -466,8 +474,6 @@ function OnboardingResume({ resumeId }: { resumeId?: string }) {
 function approvalTitle(name: string, input: unknown) {
   const values = (input ?? {}) as Record<string, unknown>;
   switch (name) {
-    case "startResumeReview":
-      return "Start a resume review? This uses 5 AI credits once the analysis succeeds.";
     case "updateMyPreferences":
       return "Update your job preferences?";
     case "submitApplication":
@@ -901,22 +907,6 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
     );
   }
 
-  if (name === "startResumeReview" && typeof result.url === "string") {
-    return (
-      <Step
-        tone="done"
-        label={
-          <>
-            Review started.{" "}
-            <Link {...NEW_TAB} href={result.url} className={inlineLink}>
-              Open the review
-            </Link>
-          </>
-        }
-      />
-    );
-  }
-
   if (name === "submitApplication" && result.applied === true && typeof result.url === "string") {
     return (
       <Step
@@ -1067,10 +1057,12 @@ function ToolStep({
   part,
   onApprove,
   onToolOutput,
+  latest,
 }: {
   part: ToolPart;
   onApprove: ApprovalHandler;
   onToolOutput: ToolOutputHandler;
+  latest: boolean;
 }) {
   const name = getToolName(part as Parameters<typeof getToolName>[0]);
   const labels = labelsFor(name);
@@ -1126,6 +1118,19 @@ function ToolStep({
           );
         }
       }
+      if (name === "reviewResumeChanges" && part.state === "input-available") {
+        const reviewId = (part.input as { reviewId?: string } | undefined)?.reviewId;
+        if (reviewId) {
+          return (
+            <Step tone="yours" label={labels.running}>
+              <ResumeChangesCard
+                reviewId={reviewId}
+                onComplete={latest ? (output) => onToolOutput(part.toolCallId, output, name) : undefined}
+              />
+            </Step>
+          );
+        }
+      }
       if (name === "requestResumeUpload" && part.state === "input-available") {
         const reason = (part.input as { reason?: string } | undefined)?.reason;
         return (
@@ -1141,6 +1146,16 @@ function ToolStep({
     case "approval-responded":
       return <Step tone="running" label={labels.running} />;
     case "output-available":
+      if (name === "reviewResumeChanges") {
+        const reviewId = (part.input as { reviewId?: string } | undefined)?.reviewId;
+        if (reviewId) {
+          return (
+            <Step tone="done" label={labels.done}>
+              <ResumeChangesResult reviewId={reviewId} output={part.output as ResumeChangesOutput} />
+            </Step>
+          );
+        }
+      }
       return <OutputStep name={name} output={part.output} />;
     case "output-error":
       return <Step tone="failed" label={`Couldn't ${labels.action}.`} />;
@@ -1200,11 +1215,14 @@ function MessageParts({
   onApprove,
   onToolOutput,
   streaming = false,
+  latest = false,
 }: {
   message: UIMessage;
   onApprove: ApprovalHandler;
   onToolOutput: ToolOutputHandler;
   streaming?: boolean;
+  /** Only the latest reply can take a client tool's output. */
+  latest?: boolean;
 }) {
   if (message.role === "user") {
     return (
@@ -1243,6 +1261,7 @@ function MessageParts({
                 part={part}
                 onApprove={onApprove}
                 onToolOutput={onToolOutput}
+                latest={latest}
               />
             ))}
           </ol>

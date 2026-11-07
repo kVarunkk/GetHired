@@ -2,7 +2,7 @@ import { agentToolApproval } from "../approval";
 import { AGENT_CONTENT_FILTER_MESSAGE, AGENT_DAILY_MESSAGE_CAP } from "../config";
 import { loadPromptProfile } from "../persistence";
 import { buildSystemPrompt } from "../system-prompt";
-import { createAgentTools } from "../tools";
+import { createChatTools } from "../tools";
 import type { AgentRole } from "./types";
 
 /** The job seeker's agent, unchanged by the role layer (RA-CON-002). */
@@ -16,7 +16,7 @@ export const applicantRole: AgentRole = {
     return ({ memories, now, summary }) => buildSystemPrompt({ profile, memories, now, summary });
   },
   createTools: ({ supabase, user, sessionId }) =>
-    createAgentTools({ supabase, user, sessionId, surface: "agent" }),
+    createChatTools({ supabase, user, sessionId, surface: "agent" }),
   toolApproval: agentToolApproval,
-  feedbackMilestones: ["submitApplication", "startResumeReview", "completeOnboarding", "updateMyPreferences"],
+  feedbackMilestones: ["submitApplication", "improveResume", "completeOnboarding", "updateMyPreferences"],
 };

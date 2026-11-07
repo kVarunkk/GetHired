@@ -101,7 +101,7 @@ beforeEach(() => {
 });
 
 describe("applyReviewSuggestions: copy target (RE-REQ-057)", () => {
-  const applyOne = () => applyReviewSuggestions(db.client, USER, { reviewId: REVIEW_ID, items: [{ bulletId: "b1" }] });
+  const applyOne = () => applyReviewSuggestions(db.client, USER, { reviewId: REVIEW_ID, items: [{ id: "b1" }] });
 
   it("is the default, and the first apply creates a copy named for the job", async () => {
     queueReview();
@@ -118,7 +118,7 @@ describe("applyReviewSuggestions: copy target (RE-REQ-057)", () => {
       ok: true,
       target: "copy",
       targetResumeId: COPY_ID,
-      items: [{ bulletId: "b1", status: "applied" }],
+      items: [{ id: "b1", status: "applied" }],
     });
     expect(savedInput()).toMatchObject({ resumeId: COPY_ID, expectedRevision: 1, template: "compact" });
     expect(bulletTexts(savedInput().content)).toEqual(["Built the billing API", "Helped with tests"]);
@@ -177,7 +177,7 @@ describe("applyReviewSuggestions: copy target (RE-REQ-057)", () => {
 
     expect(duplicateResume).not.toHaveBeenCalled();
     expect(saveResume).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ ok: true, targetResumeId: null, items: [{ bulletId: "b1", status: "changed" }] });
+    expect(result).toMatchObject({ ok: true, targetResumeId: null, items: [{ id: "b1", status: "changed" }] });
   });
 
   it("passes on the limit when a copy can't be made", async () => {
@@ -198,7 +198,7 @@ describe("applyReviewSuggestions: original target", () => {
     const result = await applyReviewSuggestions(db.client, USER, {
       reviewId: REVIEW_ID,
       target: "original",
-      items: [{ bulletId: "b1" }],
+      items: [{ id: "b1" }],
     });
 
     expect(duplicateResume).not.toHaveBeenCalled();
@@ -214,7 +214,7 @@ describe("applyReviewSuggestions: original target", () => {
     await applyReviewSuggestions(db.client, USER, {
       reviewId: REVIEW_ID,
       target: "original",
-      items: [{ bulletId: "b1" }],
+      items: [{ id: "b1" }],
     });
 
     expect(upgradeResumeFromFile).toHaveBeenCalledTimes(1);
@@ -230,7 +230,7 @@ describe("applyReviewSuggestions: original target", () => {
       await applyReviewSuggestions(db.client, USER, {
         reviewId: REVIEW_ID,
         target: "original",
-        items: [{ bulletId: "b1" }],
+        items: [{ id: "b1" }],
       }),
     ).toEqual({ ok: false, code: "UPGRADE_FAILED", error: "Upload it again." });
     expect(saveResume).not.toHaveBeenCalled();
@@ -242,7 +242,7 @@ describe("applyReviewSuggestions: per-bullet check (RE-REQ-058)", () => {
     applyReviewSuggestions(db.client, USER, {
       reviewId: REVIEW_ID,
       target: "original",
-      items: [{ bulletId: "b1" }, { bulletId: "b2", text: "Cut test time by 30%" }],
+      items: [{ id: "b1" }, { id: "b2", text: "Cut test time by 30%" }],
     });
 
   it("reports a changed bullet, applies the rest, and saves once", async () => {
@@ -254,8 +254,8 @@ describe("applyReviewSuggestions: per-bullet check (RE-REQ-058)", () => {
     expect(result).toMatchObject({
       ok: true,
       items: [
-        { bulletId: "b1", status: "changed" },
-        { bulletId: "b2", status: "applied" },
+        { id: "b1", status: "changed" },
+        { id: "b2", status: "applied" },
       ],
     });
     expect(saveResume).toHaveBeenCalledTimes(1);
@@ -273,10 +273,10 @@ describe("applyReviewSuggestions: per-bullet check (RE-REQ-058)", () => {
     const result = await applyReviewSuggestions(db.client, USER, {
       reviewId: REVIEW_ID,
       target: "original",
-      items: [{ bulletId: "b1" }],
+      items: [{ id: "b1" }],
     });
 
-    expect(result).toMatchObject({ ok: true, items: [{ bulletId: "b1", status: "changed" }] });
+    expect(result).toMatchObject({ ok: true, items: [{ id: "b1", status: "changed" }] });
   });
 
   it("ignores case, spacing and punctuation differences from an older review", async () => {
@@ -286,10 +286,10 @@ describe("applyReviewSuggestions: per-bullet check (RE-REQ-058)", () => {
     const result = await applyReviewSuggestions(db.client, USER, {
       reviewId: REVIEW_ID,
       target: "original",
-      items: [{ bulletId: "b1" }],
+      items: [{ id: "b1" }],
     });
 
-    expect(result).toMatchObject({ ok: true, items: [{ bulletId: "b1", status: "applied" }] });
+    expect(result).toMatchObject({ ok: true, items: [{ id: "b1", status: "applied" }] });
   });
 
   it("reports a bullet the review has no suggestion for", async () => {
@@ -299,14 +299,14 @@ describe("applyReviewSuggestions: per-bullet check (RE-REQ-058)", () => {
     const result = await applyReviewSuggestions(db.client, USER, {
       reviewId: REVIEW_ID,
       target: "original",
-      items: [{ bulletId: "b1" }, { bulletId: "nope" }],
+      items: [{ id: "b1" }, { id: "nope" }],
     });
 
     expect(result).toMatchObject({
       ok: true,
       items: [
-        { bulletId: "b1", status: "applied" },
-        { bulletId: "nope", status: "not_found" },
+        { id: "b1", status: "applied" },
+        { id: "nope", status: "not_found" },
       ],
     });
   });
@@ -327,10 +327,10 @@ describe("applyReviewSuggestions: placeholders (RE-REQ-059)", () => {
 
     const result = await applyReviewSuggestions(db.client, USER, {
       reviewId: REVIEW_ID,
-      items: [{ bulletId: "b1" }, { bulletId: "b2" }],
+      items: [{ id: "b1" }, { id: "b2" }],
     });
 
-    expect(result).toMatchObject({ ok: false, code: PLACEHOLDER_UNFILLED, bulletIds: ["b2"] });
+    expect(result).toMatchObject({ ok: false, code: PLACEHOLDER_UNFILLED, ids: ["b2"] });
     expect(duplicateResume).not.toHaveBeenCalled();
     expect(saveResume).not.toHaveBeenCalled();
   });
@@ -340,10 +340,10 @@ describe("applyReviewSuggestions: placeholders (RE-REQ-059)", () => {
 
     const result = await applyReviewSuggestions(db.client, USER, {
       reviewId: REVIEW_ID,
-      items: [{ bulletId: "b1", text: "Built it for [team]" }],
+      items: [{ id: "b1", text: "Built it for [team]" }],
     });
 
-    expect(result).toMatchObject({ ok: false, code: PLACEHOLDER_UNFILLED, bulletIds: ["b1"] });
+    expect(result).toMatchObject({ ok: false, code: PLACEHOLDER_UNFILLED, ids: ["b1"] });
   });
 
   it("lets a filled-in placeholder through", async () => {
@@ -353,10 +353,10 @@ describe("applyReviewSuggestions: placeholders (RE-REQ-059)", () => {
     const result = await applyReviewSuggestions(db.client, USER, {
       reviewId: REVIEW_ID,
       target: "original",
-      items: [{ bulletId: "b2", text: "Cut test time by 30%" }],
+      items: [{ id: "b2", text: "Cut test time by 30%" }],
     });
 
-    expect(result).toMatchObject({ ok: true, items: [{ bulletId: "b2", status: "applied" }] });
+    expect(result).toMatchObject({ ok: true, items: [{ id: "b2", status: "applied" }] });
   });
 });
 
@@ -368,7 +368,7 @@ describe("applyReviewSuggestions: records and access", () => {
     await applyReviewSuggestions(db.client, USER, {
       reviewId: REVIEW_ID,
       target: "original",
-      items: [{ bulletId: "b1", text: "My own words" }],
+      items: [{ id: "b1", text: "My own words" }],
     });
 
     expect(appliedRows()).toEqual([
@@ -386,12 +386,13 @@ describe("applyReviewSuggestions: records and access", () => {
   it("reports a failed record without failing the apply, which already saved", async () => {
     queueReview();
     queueResume(row(SOURCE_ID));
+    db.queue("resume_review_applied", { data: [], error: null });
     db.queue("resume_review_applied", { data: null, error: { message: "boom" } });
 
     const result = await applyReviewSuggestions(db.client, USER, {
       reviewId: REVIEW_ID,
       target: "original",
-      items: [{ bulletId: "b1" }],
+      items: [{ id: "b1" }],
     });
 
     expect(result).toMatchObject({ ok: true });
@@ -401,7 +402,7 @@ describe("applyReviewSuggestions: records and access", () => {
   it("limits the review to the user, and returns not found for anyone else's", async () => {
     db.queue("resume_reviews", { data: null, error: null });
 
-    const result = await applyReviewSuggestions(db.client, USER, { reviewId: REVIEW_ID, items: [{ bulletId: "b1" }] });
+    const result = await applyReviewSuggestions(db.client, USER, { reviewId: REVIEW_ID, items: [{ id: "b1" }] });
 
     expect(result).toEqual({ ok: false, code: "NOT_FOUND", error: "Review not found." });
     expect(db.callsFor("resume_reviews")[0].chain).toContainEqual({ method: "eq", args: ["user_id", USER.id] });
@@ -421,7 +422,7 @@ describe("applyReviewSuggestions: records and access", () => {
     await applyReviewSuggestions(
       db.client,
       USER,
-      { reviewId: REVIEW_ID, target: "original", items: [{ bulletId: "b1" }] },
+      { reviewId: REVIEW_ID, target: "original", items: [{ id: "b1" }] },
       { surface: "agent" },
     );
     await flushAfter();
@@ -429,7 +430,14 @@ describe("applyReviewSuggestions: records and access", () => {
     expect(eventCaptureServer).toHaveBeenCalledWith({
       event: PostHogEvent.ReviewSuggestionsApplied,
       distinctId: USER.id,
-      properties: { count: 1, target: "original", surface: "agent" },
+      properties: {
+        count: 1,
+        applied: 1,
+        skipped: 0,
+        kind_counts: { rewrite: 1 },
+        target: "original",
+        surface: "agent",
+      },
     });
   });
 });
@@ -483,5 +491,174 @@ describe("undoReviewSuggestion (RE-REQ-060)", () => {
     db.queue("resume_review_applied", { data: null, error: null });
 
     expect(await undo()).toMatchObject({ ok: false, code: "NOT_FOUND" });
+  });
+});
+
+describe("applyReviewSuggestions: every kind of change (RI-REQ-030)", () => {
+  const ADD = { kind: "add", id: "add-1", item_id: "i1", anchors: ["b1"], suggested: "Mentored two engineers", reason: "r", priority: "high" };
+  const REMOVE = { kind: "remove", id: "remove-1", bullet_id: "b2", original: "Helped with tests", reason: "r", priority: "low" };
+  const MOVE = { kind: "move", id: "move-1", target_id: "b2", index: 0, reason: "r", priority: "low" };
+  const PLACEHOLDER_ADD = { ...ADD, id: "add-2", suggested: "Led [N] engineers" };
+
+  const withChanges = (changes: unknown[], overrides: Record<string, unknown> = {}) =>
+    queueReview({ ai_response: { ...REVIEW.ai_response, changes }, ...overrides });
+
+  const apply = (items: { id: string; text?: string }[], target: "copy" | "original" = "original") =>
+    applyReviewSuggestions(db.client, USER, { reviewId: REVIEW_ID, target, items });
+
+  it("applies only what was chosen", async () => {
+    withChanges([ADD, REMOVE]);
+    queueResume(row(SOURCE_ID));
+
+    const result = await apply([{ id: "b1" }, { id: "add-1" }]);
+
+    expect(result).toMatchObject({
+      ok: true,
+      items: [{ id: "b1", status: "applied" }, { id: "add-1", status: "applied" }],
+    });
+    expect(bulletTexts(savedInput().content)).toEqual([
+      "Built the billing API",
+      "Mentored two engineers",
+      "Helped with tests",
+    ]);
+  });
+
+  it("saves once, with the add under its change id", async () => {
+    withChanges([ADD]);
+    queueResume(row(SOURCE_ID));
+
+    await apply([{ id: "add-1" }]);
+
+    expect(saveResume).toHaveBeenCalledTimes(1);
+    expect(savedInput().content.sections[0].items[0].bullets[1].id).toBe("add-1");
+  });
+
+  it("removes and moves", async () => {
+    withChanges([REMOVE]);
+    queueResume(row(SOURCE_ID));
+    await apply([{ id: "remove-1" }]);
+    expect(bulletTexts(savedInput().content)).toEqual(["Worked on billing"]);
+
+    vi.mocked(saveResume).mockClear();
+    withChanges([MOVE]);
+    queueResume(row(SOURCE_ID));
+    await apply([{ id: "move-1" }]);
+    expect(bulletTexts(savedInput().content)).toEqual(["Helped with tests", "Worked on billing"]);
+  });
+
+  it("records each kind, with empty text where a kind has none (RI-REQ-043)", async () => {
+    withChanges([ADD, REMOVE]);
+    queueResume(row(SOURCE_ID));
+
+    await apply([{ id: "add-1" }, { id: "remove-1" }]);
+
+    expect(appliedRows()).toEqual([
+      expect.objectContaining({ bullet_id: "add-1", previous_text: "", applied_text: "Mentored two engineers" }),
+      expect.objectContaining({ bullet_id: "remove-1", previous_text: "Helped with tests", applied_text: "" }),
+    ]);
+  });
+
+  it("skips what's already on the target, so an add can't land twice (RI-REQ-034)", async () => {
+    withChanges([ADD, REMOVE]);
+    queueResume(row(SOURCE_ID));
+    db.queue("resume_review_applied", { data: [{ bullet_id: "add-1" }], error: null });
+
+    const result = await apply([{ id: "add-1" }, { id: "remove-1" }]);
+
+    expect(result).toMatchObject({
+      ok: true,
+      items: [{ id: "add-1", status: "already_applied" }, { id: "remove-1", status: "applied" }],
+    });
+    expect(bulletTexts(savedInput().content)).toEqual(["Worked on billing"]);
+  });
+
+  it("writes nothing when everything chosen is already there", async () => {
+    withChanges([ADD]);
+    queueResume(row(SOURCE_ID));
+    db.queue("resume_review_applied", { data: [{ bullet_id: "add-1" }], error: null });
+
+    const result = await apply([{ id: "add-1" }]);
+
+    expect(result).toEqual({
+      ok: true,
+      target: "original",
+      targetResumeId: null,
+      items: [{ id: "add-1", status: "already_applied" }],
+    });
+    expect(saveResume).not.toHaveBeenCalled();
+  });
+
+  it("checks the copy's record when re-applying to the copy", async () => {
+    withChanges([ADD], { applied_copy_id: COPY_ID });
+    queueResume(row(COPY_ID));
+
+    await apply([{ id: "add-1" }], "copy");
+
+    const read = db.callsFor("resume_review_applied")[0];
+    expect(read.chain).toContainEqual({ method: "eq", args: ["target_resume_id", COPY_ID] });
+    expect(duplicateResume).not.toHaveBeenCalled();
+  });
+
+  it("refuses an add with a placeholder, and the whole call with it (RI-REQ-035)", async () => {
+    withChanges([PLACEHOLDER_ADD]);
+
+    const result = await apply([{ id: "b1" }, { id: "add-2" }]);
+
+    expect(result).toMatchObject({ ok: false, code: PLACEHOLDER_UNFILLED, ids: ["add-2"] });
+    expect(saveResume).not.toHaveBeenCalled();
+  });
+
+  it("takes the user's value for a placeholder in an add", async () => {
+    withChanges([PLACEHOLDER_ADD]);
+    queueResume(row(SOURCE_ID));
+
+    await apply([{ id: "add-2", text: "Led 4 engineers" }]);
+
+    expect(bulletTexts(savedInput().content)).toContain("Led 4 engineers");
+  });
+
+  it("doesn't check a removal's text for placeholders", async () => {
+    withChanges([{ ...REMOVE, original: "Helped with [tests]" }]);
+    queueResume(row(SOURCE_ID, { content: content("Worked on billing", "Helped with [tests]") }));
+
+    expect(await apply([{ id: "remove-1" }])).toMatchObject({ ok: true });
+  });
+
+  it("reports an id the review doesn't have", async () => {
+    withChanges([ADD]);
+    queueResume(row(SOURCE_ID));
+
+    const result = await apply([{ id: "add-1" }, { id: "made-up" }]);
+
+    expect(result).toMatchObject({ items: [{ id: "add-1", status: "applied" }, { id: "made-up", status: "not_found" }] });
+  });
+
+  it("counts by kind in the event, and never the text (RI-REQ-070)", async () => {
+    withChanges([ADD, REMOVE]);
+    queueResume(row(SOURCE_ID));
+
+    await apply([{ id: "b1" }, { id: "add-1" }, { id: "remove-1" }, { id: "made-up" }]);
+    await flushAfter();
+
+    const { properties } = vi.mocked(eventCaptureServer).mock.calls[0][0] as { properties: Record<string, unknown> };
+    expect(properties).toMatchObject({ applied: 3, skipped: 1, kind_counts: { rewrite: 1, add: 1, remove: 1 } });
+    expect(JSON.stringify(properties)).not.toContain("Mentored");
+  });
+});
+
+describe("undoReviewSuggestion: only rewrites (RI-REQ-036)", () => {
+  const undo = (bulletId: string) =>
+    undoReviewSuggestion(db.client, USER, { reviewId: REVIEW_ID, bulletId, targetResumeId: SOURCE_ID });
+
+  it.each([
+    ["an add", { previous_text: "", applied_text: "New bullet" }],
+    ["a removal", { previous_text: "Old bullet", applied_text: "" }],
+    ["a move", { previous_text: "", applied_text: "" }],
+  ])("refuses %s", async (_kind, record) => {
+    db.queue("resume_reviews", { data: { id: REVIEW_ID }, error: null });
+    db.queue("resume_review_applied", { data: record, error: null });
+
+    expect(await undo("change-1")).toEqual({ ok: false, code: "INVALID", error: "Only a rewrite can be undone." });
+    expect(saveResume).not.toHaveBeenCalled();
   });
 });

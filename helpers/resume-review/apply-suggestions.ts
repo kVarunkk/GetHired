@@ -4,15 +4,23 @@ import { z } from "zod";
 import type { Database } from "@/utils/types/database.types";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { reportError } from "@/helpers/posthog/report-error";
-import { sameBulletText } from "@/helpers/resume/carry-bullet-ids";
 import { RESUME_LIMITS } from "@/helpers/resume/config";
 import { readResume } from "@/helpers/resume/read-resume";
+import { buildResumeDocument, type ResumeDocument } from "@/helpers/resume/render/document";
 import type { ResumeContent } from "@/helpers/resume/resume-schema";
 import { duplicateResume } from "@/helpers/resumes/duplicate-resume";
+import { applyResumeOperations } from "@/helpers/resumes/resume-operations";
 import { RESUME_CHANGED, saveResume, type ResumeSurface } from "@/helpers/resumes/save-resume";
 import { upgradeResumeFromFile } from "@/helpers/resumes/upgrade-resume";
 import { PostHogEvent } from "@/utils/types";
-import { hasPlaceholder, readSuggestions, resumeBullets } from "./suggestions";
+import {
+  changeText,
+  planChangeOperations,
+  readChanges,
+  type ChosenChange,
+  type PlannedChange,
+} from "./changes";
+import { hasPlaceholder, resumeBullets } from "./suggestions";
 
 /** Text still holds a `[placeholder]` for the user to fill in (RE-REQ-059). */
 export const PLACEHOLDER_UNFILLED = "PLACEHOLDER_UNFILLED" as const;
@@ -27,7 +35,7 @@ export const ApplySuggestionsInputSchema = z.object({
   items: z
     .array(
       z.object({
-        bulletId: z.string().min(1),
+        id: z.string().min(1),
         text: z.string().trim().min(1, "A bullet can't be empty.").max(RESUME_LIMITS.bulletChars).optional(),
       }),
     )
@@ -37,8 +45,8 @@ export const ApplySuggestionsInputSchema = z.object({
 export type ApplySuggestionsInput = z.input<typeof ApplySuggestionsInputSchema>;
 export type ApplyTarget = z.output<typeof ApplySuggestionsInputSchema>["target"];
 
-export type ApplyItemStatus = "applied" | "changed" | "not_found";
-export type ApplyItemResult = { bulletId: string; status: ApplyItemStatus };
+export type ApplyItemStatus = "applied" | "already_applied" | "changed" | "not_found";
+export type ApplyItemResult = { id: string; status: ApplyItemStatus };
 
 type WriteFailure = { ok: false; code: "NOT_FOUND" | "INVALID" | "UPGRADE_FAILED" | typeof RESUME_CHANGED; error: string };
 
@@ -46,43 +54,12 @@ export type ApplySuggestionsResult =
   | { ok: true; target: ApplyTarget; targetResumeId: string | null; items: ApplyItemResult[] }
   | WriteFailure
   | { ok: false; code: "COPY_FAILED"; error: string }
-  | { ok: false; code: typeof PLACEHOLDER_UNFILLED; error: string; bulletIds: string[] };
+  | { ok: false; code: typeof PLACEHOLDER_UNFILLED; error: string; ids: string[] };
 
 export type UndoSuggestionResult =
   | { ok: true; targetResumeId: string }
   | WriteFailure
   | { ok: false; code: "BULLET_CHANGED"; error: string };
-
-export type PlannedChange = { bulletId: string; original: string; text: string };
-
-export type AppliedChange = { bulletId: string; previousText: string; appliedText: string };
-
-/**
- * Puts each change into `content`, only where the bullet still has the text the
- * suggestion was written for (RE-REQ-058). Pure, so a preview can use it too.
- */
-export function replaceBullets(content: ResumeContent, changes: PlannedChange[]) {
-  const planned = new Map(changes.map((change) => [change.bulletId, change]));
-  const applied: AppliedChange[] = [];
-
-  const next: ResumeContent = {
-    ...content,
-    sections: content.sections.map((section) => ({
-      ...section,
-      items: section.items.map((item) => ({
-        ...item,
-        bullets: item.bullets.map((bullet) => {
-          const change = planned.get(bullet.id);
-          if (!change || !sameBulletText(bullet.text, change.original)) return bullet;
-          applied.push({ bulletId: bullet.id, previousText: bullet.text, appliedText: change.text });
-          return { ...bullet, text: change.text };
-        }),
-      })),
-    })),
-  };
-
-  return { content: next, applied };
-}
 
 const fullResume = (supabase: SupabaseClient<Database>, userId: string, resumeId: string) =>
   supabase
@@ -142,8 +119,8 @@ const saveContent = (
 const copyName = (resumeName: string | null, label: string | null | undefined) =>
   [resumeName ?? "Untitled resume", label].filter(Boolean).join(" – ").slice(0, RESUME_LIMITS.shortFieldChars);
 
-/** The review, and the changes it would make. Reads only, and refuses text with a placeholder. */
-async function planChanges(supabase: SupabaseClient<Database>, user: { id: string }, input: unknown) {
+/** The review, and the changes chosen from it. Reads only, and refuses text with a placeholder. */
+async function loadChosen(supabase: SupabaseClient<Database>, user: { id: string }, input: unknown) {
   const parsed = ApplySuggestionsInputSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -163,25 +140,38 @@ async function planChanges(supabase: SupabaseClient<Database>, user: { id: strin
   if (reviewError) throw new Error(`Failed to read the review: ${reviewError.message}`);
   if (!review) return { ok: false as const, code: "NOT_FOUND" as const, error: REVIEW_NOT_FOUND };
 
-  const suggestions = new Map(readSuggestions(review.ai_response).map((s) => [s.bullet_id, s]));
-  const changes = items.flatMap(({ bulletId, text }): PlannedChange[] => {
-    const suggestion = suggestions.get(bulletId);
-    return suggestion ? [{ bulletId, original: suggestion.original, text: text ?? suggestion.suggested }] : [];
+  const changes = new Map(readChanges(review.ai_response).map((change) => [change.id, change]));
+  const chosen = items.flatMap(({ id, text }): ChosenChange[] => {
+    const change = changes.get(id);
+    return change ? [{ change, text }] : [];
   });
 
-  const unfilled = changes.filter((change) => hasPlaceholder(change.text)).map((change) => change.bulletId);
+  const unfilled = chosen
+    .filter(({ change, text }) => hasPlaceholder(changeText(change, text) ?? ""))
+    .map(({ change }) => change.id);
   if (unfilled.length > 0) {
     return {
       ok: false as const,
       code: PLACEHOLDER_UNFILLED,
       error: "Fill in the bracketed values with real ones first.",
-      bulletIds: unfilled,
+      ids: unfilled,
     };
   }
 
   if (!review.resume_id) return { ok: false as const, code: "NOT_FOUND" as const, error: RESUME_NOT_FOUND };
 
-  return { ok: true as const, review: { ...review, resume_id: review.resume_id }, target, items, suggestions, changes };
+  return { ok: true as const, review: { ...review, resume_id: review.resume_id }, target, items, chosen };
+}
+
+/** The changes already on this resume, so re-applying can't add a bullet twice (RI-REQ-034). */
+async function appliedIds(supabase: SupabaseClient<Database>, reviewId: string, resumeId: string) {
+  const { data, error } = await supabase
+    .from("resume_review_applied")
+    .select("bullet_id")
+    .eq("review_id", reviewId)
+    .eq("target_resume_id", resumeId);
+  if (error) throw new Error(`Failed to read the applied suggestions: ${error.message}`);
+  return new Set((data ?? []).map((row) => row.bullet_id));
 }
 
 export type ApplyPreview =
@@ -191,8 +181,10 @@ export type ApplyPreview =
       /** The resume the changes land on, or a new copy of it. */
       resumeName: string | null;
       makesCopy: boolean;
-      applied: AppliedChange[];
+      applied: PlannedChange[];
       changedCount: number;
+      before: ResumeDocument;
+      after: ResumeDocument;
     }
   | Exclude<ApplySuggestionsResult, { ok: true }>;
 
@@ -205,9 +197,9 @@ export async function previewReviewSuggestions(
   user: { id: string },
   input: unknown,
 ): Promise<ApplyPreview> {
-  const plan = await planChanges(supabase, user, input);
-  if (!plan.ok) return plan;
-  const { review, target, items, changes } = plan;
+  const loaded = await loadChosen(supabase, user, input);
+  if (!loaded.ok) return loaded;
+  const { review, target, items, chosen } = loaded;
 
   const read = async (resumeId: string) => {
     const { data, error } = await fullResume(supabase, user.id, resumeId);
@@ -219,23 +211,38 @@ export async function previewReviewSuggestions(
   const resume = copy ?? (await read(review.resume_id));
   if (!resume) return { ok: false, code: "NOT_FOUND", error: RESUME_NOT_FOUND };
 
-  const { applied } = replaceBullets(readResume(resume).content, changes);
+  const makesCopy = target === "copy" && !copy;
+  const done = makesCopy ? new Set<string>() : await appliedIds(supabase, review.id, resume.id);
+  const { content, contact, template } = readResume(resume);
+  const { operations, planned } = planChangeOperations(
+    content,
+    chosen.filter(({ change }) => !done.has(change.id)),
+  );
+
+  const result = applyResumeOperations(content, contact ?? NO_CONTACT, operations);
+  if (!result.ok) return { ok: false, code: "INVALID", error: result.error };
+
+  const applied = planned.filter((change) => change.status === "applied");
+  const document = (next: ResumeContent) =>
+    buildResumeDocument({ content: next, contact: contact ?? NO_CONTACT, template });
   return {
     ok: true,
     target,
     resumeName: resume.name,
-    makesCopy: target === "copy" && !copy,
+    makesCopy,
     applied,
     changedCount: items.length - applied.length,
+    before: document(content),
+    after: document(result.content),
   };
 }
 
 /**
- * Applies a review's suggestions to one reused copy (the default) or to the
- * reviewed resume, for the page, the agent and MCP (RE-REQ-056). One call is one
- * `saveResume`. A bullet that no longer has the reviewed text is reported and
- * the rest still apply. Text with a placeholder refuses the whole call before
- * anything is written.
+ * Applies a review's changes to one reused copy (the default) or to the reviewed
+ * resume, for the page, the agent and MCP (RE-REQ-056, RI-REQ-030). One call is
+ * one `saveResume`. A change the resume has moved past is reported and the rest
+ * still apply. Text with a placeholder refuses the whole call before anything is
+ * written.
  */
 export async function applyReviewSuggestions(
   supabase: SupabaseClient<Database>,
@@ -243,9 +250,9 @@ export async function applyReviewSuggestions(
   input: ApplySuggestionsInput,
   { surface = "page" }: { surface?: ResumeSurface } = {},
 ): Promise<ApplySuggestionsResult> {
-  const plan = await planChanges(supabase, user, input);
-  if (!plan.ok) return plan;
-  const { review, target, items, suggestions, changes } = plan;
+  const loaded = await loadChosen(supabase, user, input);
+  if (!loaded.ok) return loaded;
+  const { review, target, items, chosen } = loaded;
   const reviewId = review.id;
 
   // The copy this review already made, or else the reviewed resume, which a new
@@ -265,17 +272,21 @@ export async function applyReviewSuggestions(
     resume = source.resume;
   }
 
-  let replaced = replaceBullets(readResume(resume).content, changes);
-  const report = (applied: AppliedChange[]) => {
-    const done = new Set(applied.map((change) => change.bulletId));
-    return items.map(({ bulletId }): ApplyItemResult => ({
-      bulletId,
-      status: done.has(bulletId) ? "applied" : suggestions.has(bulletId) ? "changed" : "not_found",
-    }));
-  };
+  const done = needsCopy ? new Set<string>() : await appliedIds(supabase, reviewId, resume.id);
+  const open = chosen.filter(({ change }) => !done.has(change.id));
+  let plan = planChangeOperations(readResume(resume).content, open);
 
-  if (replaced.applied.length === 0) {
-    return { ok: true, target, targetResumeId: null, items: report([]) };
+  const report = (planned: PlannedChange[]) => {
+    const statuses = new Map(planned.map((change) => [change.id, change.status]));
+    return items.map(({ id }): ApplyItemResult => {
+      if (done.has(id)) return { id, status: "already_applied" };
+      return { id, status: statuses.get(id) ?? (chosen.some(({ change }) => change.id === id) ? "changed" : "not_found") };
+    });
+  };
+  const appliedOf = (planned: PlannedChange[]) => planned.filter((change) => change.status === "applied");
+
+  if (appliedOf(plan.planned).length === 0) {
+    return { ok: true, target, targetResumeId: null, items: report(plan.planned) };
   }
 
   if (needsCopy) {
@@ -293,21 +304,26 @@ export async function applyReviewSuggestions(
       .eq("user_id", user.id);
     if (linkError) reportError("[REVIEW_COPY_LINK_FAILED]:", linkError);
 
-    const loaded = await loadResume(supabase, user.id, copy.resumeId);
-    if (!loaded.ok) return loaded;
-    if (!loaded.resume) return { ok: false, code: "NOT_FOUND", error: RESUME_NOT_FOUND };
-    resume = loaded.resume;
-    replaced = replaceBullets(readResume(resume).content, changes);
+    const copied = await loadResume(supabase, user.id, copy.resumeId);
+    if (!copied.ok) return copied;
+    if (!copied.resume) return { ok: false, code: "NOT_FOUND", error: RESUME_NOT_FOUND };
+    resume = copied.resume;
+    plan = planChangeOperations(readResume(resume).content, open);
   }
 
-  const saved = await saveContent(supabase, user, resume, replaced.content, surface);
+  const { content, contact } = readResume(resume);
+  const result = applyResumeOperations(content, contact ?? NO_CONTACT, plan.operations);
+  if (!result.ok) return { ok: false, code: "INVALID", error: result.error };
+
+  const saved = await saveContent(supabase, user, resume, result.content, surface);
   if (!saved.ok) return saved;
 
+  const applied = appliedOf(plan.planned);
   const appliedAt = new Date().toISOString();
   const { error: recordError } = await supabase.from("resume_review_applied").upsert(
-    replaced.applied.map((change) => ({
+    applied.map((change) => ({
       review_id: reviewId,
-      bullet_id: change.bulletId,
+      bullet_id: change.id,
       target_resume_id: resume.id,
       previous_text: change.previousText,
       applied_text: change.appliedText,
@@ -318,21 +334,31 @@ export async function applyReviewSuggestions(
   // The resume is already saved: only Undo is lost.
   if (recordError) reportError("[REVIEW_APPLIED_RECORD_FAILED]:", recordError);
 
-  const count = replaced.applied.length;
+  const kindCounts: Record<string, number> = {};
+  for (const { kind } of applied) kindCounts[kind] = (kindCounts[kind] ?? 0) + 1;
   after(() =>
     eventCaptureServer({
       event: PostHogEvent.ReviewSuggestionsApplied,
       distinctId: user.id,
-      properties: { count, target, surface },
+      properties: {
+        count: applied.length,
+        applied: applied.length,
+        skipped: items.length - applied.length,
+        kind_counts: kindCounts,
+        target,
+        surface,
+      },
     }),
   );
 
-  return { ok: true, target, targetResumeId: resume.id, items: report(replaced.applied) };
+  return { ok: true, target, targetResumeId: resume.id, items: report(plan.planned) };
 }
 
 /**
  * Puts a bullet back, but only if it still has the applied text, so Undo never
- * overwrites an edit made since (RE-REQ-060).
+ * overwrites an edit made since (RE-REQ-060). Only a rewrite has text to put
+ * back: an add's record has no `previous_text`, and a removal or a move has no
+ * `applied_text` (RI-REQ-036).
  */
 export async function undoReviewSuggestion(
   supabase: SupabaseClient<Database>,
@@ -362,20 +388,25 @@ export async function undoReviewSuggestion(
     .maybeSingle();
   if (recordError) throw new Error(`Failed to read the applied suggestion: ${recordError.message}`);
   if (!record) return { ok: false, code: "NOT_FOUND", error: "That suggestion isn't applied." };
+  if (!record.previous_text || !record.applied_text) {
+    return { ok: false, code: "INVALID", error: "Only a rewrite can be undone." };
+  }
 
   const loaded = await loadResume(supabase, user.id, targetResumeId);
   if (!loaded.ok) return loaded;
   if (!loaded.resume) return { ok: false, code: "NOT_FOUND", error: RESUME_NOT_FOUND };
 
-  const content = readResume(loaded.resume).content;
+  const { content, contact } = readResume(loaded.resume);
   const bullet = resumeBullets(content).find((candidate) => candidate.id === bulletId);
   if (!bullet || bullet.text !== record.applied_text) {
     return { ok: false, code: "BULLET_CHANGED", error: "This bullet was edited after applying, so it wasn't undone." };
   }
 
-  const restored = replaceBullets(content, [
-    { bulletId, original: record.applied_text, text: record.previous_text },
+  const restored = applyResumeOperations(content, contact ?? NO_CONTACT, [
+    { op: "setBulletText", bulletId, text: record.previous_text },
   ]);
+  if (!restored.ok) return { ok: false, code: "INVALID", error: restored.error };
+
   const saved = await saveContent(supabase, user, loaded.resume, restored.content, surface);
   if (!saved.ok) return saved;
 

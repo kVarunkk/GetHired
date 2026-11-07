@@ -180,8 +180,6 @@ export async function updateSession(request: NextRequest) {
   const isApplicantOnboardingPath =
     pathname === "/get-started" && !(searchParams.get("company") === "true");
 
-  const isResumeReviewPath = pathname.startsWith("/resume-review");
-
   // Not /ai-interview, which is the public landing page.
   const isInterviewPath =
     pathname === "/interview" || pathname.startsWith("/interview/");
@@ -393,7 +391,6 @@ export async function updateSession(request: NextRequest) {
         pathname.startsWith("/settings/") ||
         pathname.startsWith("/opportunities") ||
         isApplicantOnboardingPath ||
-        isResumeReviewPath ||
         isInterviewPath ||
         isAgentPath) &&
       !isApplicant

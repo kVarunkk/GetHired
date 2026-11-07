@@ -14,7 +14,6 @@ import {
   previewCompleteOnboarding,
   previewCreateResume,
   previewDeleteResume,
-  previewResumeReview,
   previewSubmitApplication,
   previewText,
   previewUpdatePreferences,
@@ -109,7 +108,7 @@ describe("the resume confirmations (RE-REQ-082)", () => {
       error: null,
     });
 
-    const preview = await previewApplySuggestions(ctx, { reviewId: JOB_ID, items: [{ bulletId: "b1" }] });
+    const preview = await previewApplySuggestions(ctx, { reviewId: JOB_ID, items: [{ id: "b1" }] });
 
     expect(preview).toMatchObject({ ok: false });
     expect(writes()).toEqual([]);
@@ -178,58 +177,6 @@ describe("previewSubmitApplication", () => {
     expect(await previewSubmitApplication(ctx, { jobId: JOB_ID, answers: [] })).toEqual({
       ok: false,
       error: "Some answers need fixing. Why us?: This field is required.",
-    });
-  });
-});
-
-describe("previewResumeReview", () => {
-  it("names the resume and the job, with the cost", async () => {
-    supabase.queue("resumes", { data: { name: "Ada CV", content: "…", parsing_failed: false }, error: null });
-    supabase.queue("all_jobs", { data: { job_name: "Frontend Engineer", company_name: "Acme" }, error: null });
-
-    const preview = await previewResumeReview(ctx, { resumeId: RESUME_ID, jobId: JOB_ID, name: "For Acme" });
-
-    expect(preview).toEqual({
-      ok: true,
-      summary: "Start a resume review? This uses 5 AI credits once the analysis succeeds.",
-      details: [
-        { label: "Resume", value: "Ada CV" },
-        { label: "Job", value: "Frontend Engineer at Acme" },
-        { label: "Review name", value: "For Acme" },
-      ],
-    });
-    expect(supabase.callsFor("resumes")[0].chain).toContainEqual({ method: "eq", args: ["user_id", ctx.user.id] });
-    expect(writes()).toEqual([]);
-  });
-
-  it("describes a pasted job description by its length", async () => {
-    supabase.queue("resumes", { data: { name: "Ada CV", content: "…", parsing_failed: false }, error: null });
-
-    const preview = await previewResumeReview(ctx, { resumeId: RESUME_ID, jobDescription: "x".repeat(120) });
-
-    expect(preview.ok && preview.details[1]).toEqual({
-      label: "Job",
-      value: "the pasted job description (120 characters)",
-    });
-  });
-
-  it.each([
-    ["isn't the user's", null, "Resume not found."],
-    ["couldn't be read", { name: "CV", content: null, parsing_failed: true }, "This resume couldn't be read. Ask the user to upload it again."],
-    ["is still being processed", { name: "CV", content: null, parsing_failed: false }, "This resume is still being processed. Try again in a minute."],
-  ])("refuses a resume that %s", async (_case, resume, error) => {
-    supabase.queue("resumes", { data: resume, error: null });
-
-    expect(await previewResumeReview(ctx, { resumeId: RESUME_ID, jobId: JOB_ID })).toEqual({ ok: false, error });
-  });
-
-  it("refuses a job that doesn't exist", async () => {
-    supabase.queue("resumes", { data: { name: "Ada CV", content: "…", parsing_failed: false }, error: null });
-    supabase.queue("all_jobs", { data: null, error: null });
-
-    expect(await previewResumeReview(ctx, { resumeId: RESUME_ID, jobId: JOB_ID })).toEqual({
-      ok: false,
-      error: "Job not found.",
     });
   });
 });

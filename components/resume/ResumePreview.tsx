@@ -1,7 +1,7 @@
 import type { ResumeDocument, ResumeDocumentLink } from "@/helpers/resume/render/document";
 import { cn } from "@/utils/utils";
 
-const TEMPLATE_CLASSES = {
+export const TEMPLATE_CLASSES = {
   classic: { page: "p-8 text-sm", name: "text-2xl", heading: "text-base", gap: "mt-5", item: "mb-3" },
   compact: { page: "p-6 text-xs", name: "text-xl", heading: "text-sm", gap: "mt-3", item: "mb-2" },
 } as const;
