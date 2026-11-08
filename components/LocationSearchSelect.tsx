@@ -49,6 +49,10 @@ interface LocationSearchSelectProps {
   className?: string;
   showBadges?: boolean;
   isSingleSelect?: boolean;
+  /** The trigger can't be opened and the badges can't be removed. */
+  disabled?: boolean;
+  /** For a trigger labelled by text that isn't a `Label`. */
+  ariaLabelledBy?: string;
 }
 
 export default function LocationSearchSelect({
@@ -60,6 +64,8 @@ export default function LocationSearchSelect({
   className = "",
   showBadges = true,
   isSingleSelect = false,
+  disabled = false,
+  ariaLabelledBy,
 }: LocationSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -133,6 +139,8 @@ export default function LocationSearchSelect({
               variant="outline"
               role="combobox"
               aria-expanded={open}
+              aria-labelledby={ariaLabelledBy}
+              disabled={disabled}
               className="w-full justify-between text-muted-foreground"
             >
               <span className="truncate">
@@ -158,6 +166,8 @@ export default function LocationSearchSelect({
               variant="outline"
               role="combobox"
               aria-expanded={open}
+              aria-labelledby={ariaLabelledBy}
+              disabled={disabled}
               className="w-full justify-between text-muted-foreground"
             >
               <span className="truncate">
@@ -190,6 +200,8 @@ export default function LocationSearchSelect({
               {loc}
               <button
                 type="button"
+                aria-label={`Remove ${loc}`}
+                disabled={disabled}
                 onClick={() => removeLocation(loc)}
                 className="rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
               >

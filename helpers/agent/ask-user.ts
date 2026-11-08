@@ -9,6 +9,8 @@ import { z } from "zod";
 export const ASK_USER_MAX_QUESTIONS = 4;
 export const ASK_USER_MAX_OPTIONS = 6;
 export const ASK_USER_OTHER_MAX_CHARS = 500;
+export const ASK_USER_MAX_LOCATIONS = 20;
+export const ASK_USER_LOCATION_MAX_CHARS = 100;
 
 const option = z.object({
   label: z.string().trim().min(1).max(80).describe("The choice, in a few words."),
@@ -33,7 +35,15 @@ const question = z.object({
   multiSelect: z
     .boolean()
     .optional()
-    .describe("True when the user may pick more than one choice."),
+    .describe(
+      "True when the user may pick more than one choice. Set it whenever the answer fills a list (job titles or desired roles, skills, job types, work styles) or more than one choice could apply; leave it out only when exactly one answer makes sense (which job, which resume).",
+    ),
+  kind: z
+    .enum(["locations"])
+    .optional()
+    .describe(
+      'Set to "locations" for any question whose answer is a place (preferred locations, where to search, where a job is based). The card then shows the app\'s location search, so the user picks one or more real city and country names. Leave out options.',
+    ),
 });
 
 export const askUserInputSchema = z.object({
@@ -61,6 +71,11 @@ export const askUserOutputSchema = z.union([
             .object({
               selected: z.array(z.number().int().min(0).max(ASK_USER_MAX_OPTIONS - 1)).max(ASK_USER_MAX_OPTIONS),
               other: z.string().trim().min(1).max(ASK_USER_OTHER_MAX_CHARS).optional(),
+              locations: z
+                .array(z.string().trim().min(1).max(ASK_USER_LOCATION_MAX_CHARS))
+                .min(1)
+                .max(ASK_USER_MAX_LOCATIONS)
+                .optional(),
             })
             .strict(),
         )
@@ -74,9 +89,21 @@ export const askUserOutputSchema = z.union([
 export type AskUserOutput = z.infer<typeof askUserOutputSchema>;
 export type AskUserAnswer = Extract<AskUserOutput, { answers: unknown }>["answers"][number];
 
+/** Whether a question is answered with the location search, not choices. */
+export const isLocationQuestion = (q: AskUserQuestion) => q.kind === "locations";
+
 /** Whether one answer is complete for its question. Pure. */
 export function answerComplete(q: AskUserQuestion, answer: AskUserAnswer | undefined): boolean {
   if (!answer) return false;
+  const locations = answer.locations ?? [];
+  // A location question takes places picked from the search only: no choices, no typed text.
+  // It's always multi-select, whatever multiSelect says.
+  if (isLocationQuestion(q)) {
+    if (answer.selected.length > 0 || answer.other) return false;
+    const unique = new Set(locations.map((l) => l.toLowerCase()));
+    return unique.size === locations.length && locations.length >= 1;
+  }
+  if (locations.length > 0) return false;
   const options = q.options ?? [];
   const picked = new Set(answer.selected);
   if (picked.size !== answer.selected.length) return false;
@@ -103,6 +130,7 @@ export function outputFitsInput(input: unknown, output: AskUserOutput): boolean 
 
 /** One answer in words: the chosen labels, then what the user typed. */
 export function answerLabels(q: AskUserQuestion, answer: AskUserAnswer): string[] {
+  if (answer.locations) return answer.locations;
   const labels = answer.selected.map((index) => q.options?.[index]?.label).filter((l): l is string => Boolean(l));
   return answer.other ? [...labels, answer.other] : labels;
 }
@@ -126,6 +154,10 @@ export function askUserResultForModel(input: unknown, output: unknown): string {
   const lines = parsed.data.questions.map((q, i) => {
     const answer = answers[i];
     if (!answer) return `${i + 1}. ${q.question}\n   (no answer)`;
+    if (answer.locations) {
+      const places = answer.locations.map((l) => `"${l}"`).join("; ");
+      return `${i + 1}. ${q.question}\n   The user picked these locations from the location search: ${places}`;
+    }
     const chosen = answer.selected
       .map((index) => q.options?.[index]?.label)
       .filter(Boolean)

@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import LocationSearchSelect from "@/components/LocationSearchSelect";
 import { cn } from "@/utils/utils";
 import {
   answerComplete,
   answerLabels,
+  ASK_USER_MAX_LOCATIONS,
   ASK_USER_OTHER_MAX_CHARS,
+  isLocationQuestion,
   type AskUserAnswer,
   type AskUserInput,
   type AskUserOutput,
@@ -19,11 +22,17 @@ import {
 
 export type { AskUserOutput };
 
-type Draft = { selected: number[]; other: string };
+type Draft = { selected: number[]; other: string; locations: string[] };
 
-const toAnswer = ({ selected, other }: Draft): AskUserAnswer => {
+const EMPTY_DRAFT: Draft = { selected: [], other: "", locations: [] };
+
+const toAnswer = ({ selected, other, locations }: Draft): AskUserAnswer => {
   const trimmed = other.trim();
-  return trimmed ? { selected, other: trimmed } : { selected };
+  return {
+    selected,
+    ...(trimmed ? { other: trimmed } : {}),
+    ...(locations.length > 0 ? { locations } : {}),
+  };
 };
 
 function QuestionField({
@@ -53,11 +62,31 @@ function QuestionField({
         </span>
       )}
       <span className="text-sm font-medium text-foreground">{q.question}</span>
-      {options.length > 0 && q.multiSelect && (
+      {((options.length > 0 && q.multiSelect) || isLocationQuestion(q)) && (
         <span className="text-xs text-muted-foreground">Choose all that apply.</span>
       )}
     </div>
   );
+
+  // Places come from the app's location search, so the answer is a real city or country.
+  if (isLocationQuestion(q)) {
+    return (
+      <div className="flex flex-col gap-2">
+        {header}
+        <LocationSearchSelect
+          name="locations"
+          ariaLabelledBy={labelId}
+          initialLocations={draft.locations}
+          isSingleSelect={false}
+          disabled={disabled}
+          placeholder="Search and pick locations"
+          onChange={(_, locations) =>
+            onChange({ ...EMPTY_DRAFT, locations: locations.slice(0, ASK_USER_MAX_LOCATIONS) })
+          }
+        />
+      </div>
+    );
+  }
 
   if (options.length === 0) {
     return (
@@ -70,7 +99,7 @@ function QuestionField({
           disabled={disabled}
           rows={2}
           placeholder="Type your answer"
-          onChange={(event) => onChange({ selected: [], other: event.target.value })}
+          onChange={(event) => onChange({ ...EMPTY_DRAFT, other: event.target.value })}
         />
       </div>
     );
@@ -80,6 +109,7 @@ function QuestionField({
   // A single choice and a typed answer replace each other.
   const pick = (next: string[]) =>
     onChange({
+      ...EMPTY_DRAFT,
       selected: next.map(Number).sort((a, b) => a - b),
       other: q.multiSelect || next.length === 0 ? draft.other : "",
     });
@@ -141,6 +171,7 @@ function QuestionField({
         placeholder="Or type your own answer"
         onChange={(event) =>
           onChange({
+            ...EMPTY_DRAFT,
             selected: q.multiSelect || !event.target.value.trim() ? draft.selected : [],
             other: event.target.value,
           })
@@ -163,7 +194,7 @@ export default function AskUserCard({
   onComplete?: (output: AskUserOutput) => void;
 }) {
   const { questions } = input;
-  const [drafts, setDrafts] = useState<Draft[]>(() => questions.map(() => ({ selected: [], other: "" })));
+  const [drafts, setDrafts] = useState<Draft[]>(() => questions.map(() => EMPTY_DRAFT));
   const disabled = !onComplete;
   const answers = drafts.map(toAnswer);
   const ready = questions.every((q, i) => answerComplete(q, answers[i]));

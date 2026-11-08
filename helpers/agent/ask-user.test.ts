@@ -107,3 +107,48 @@ describe("askUserResultForModel", () => {
     expect(askUserResultForModel(INPUT, { dismissed: true })).toMatch(/closed the questions/);
   });
 });
+
+describe("location questions", () => {
+  const multi = { question: "Where do you want to work?", kind: "locations" as const, multiSelect: true };
+  const single = { question: "Where is the job based?", kind: "locations" as const };
+
+  it("take the kind with no options", () => {
+    expect(askUserInputSchema.safeParse({ questions: [multi, single] }).success).toBe(true);
+    expect(askUserInputSchema.safeParse({ questions: [{ ...single, kind: "cities" }] }).success).toBe(false);
+  });
+
+  it("need picked places only, one or more even without multiSelect", () => {
+    expect(answerComplete(multi, { selected: [], locations: ["Bengaluru", "Remote"] })).toBe(true);
+    expect(answerComplete(single, { selected: [], locations: ["Pune"] })).toBe(true);
+    expect(answerComplete(single, { selected: [], locations: ["Pune", "Delhi"] })).toBe(true);
+    expect(answerComplete(single, { selected: [] })).toBe(false);
+    expect(answerComplete(multi, { selected: [] })).toBe(false);
+    expect(answerComplete(multi, { selected: [], other: "somewhere warm" })).toBe(false);
+    expect(answerComplete(multi, { selected: [0], locations: ["Pune"] })).toBe(false);
+    expect(answerComplete(multi, { selected: [], locations: ["Pune", "pune"] })).toBe(false);
+  });
+
+  it("are the only questions that take locations", () => {
+    expect(answerComplete(INPUT.questions[0], { selected: [0], locations: ["Pune"] })).toBe(false);
+    expect(
+      outputFitsInput({ questions: [multi] }, { answers: [{ selected: [], locations: ["Bengaluru"] }] }),
+    ).toBe(true);
+  });
+
+  it("cap the number and length of places", () => {
+    const many = Array.from({ length: 21 }, (_, i) => `City ${i}`);
+    expect(askUserOutputSchema.safeParse({ answers: [{ selected: [], locations: many }] }).success).toBe(false);
+    expect(askUserOutputSchema.safeParse({ answers: [{ selected: [], locations: ["x".repeat(101)] }] }).success).toBe(
+      false,
+    );
+    expect(askUserOutputSchema.safeParse({ answers: [{ selected: [], locations: [] }] }).success).toBe(false);
+  });
+
+  it("tell the model the places the user picked", () => {
+    const text = askUserResultForModel(
+      { questions: [multi] },
+      { answers: [{ selected: [], locations: ["Bengaluru", "Remote"] }] },
+    );
+    expect(text).toContain('picked these locations from the location search: "Bengaluru"; "Remote"');
+  });
+});

@@ -4,6 +4,34 @@ import userEvent from "@testing-library/user-event";
 import AskUserCard, { AskUserResult, type AskUserOutput } from "./AskUserCard";
 import type { AskUserInput } from "@/helpers/agent/ask-user";
 
+// The real search fetches /api/locations; this stand-in picks places by button.
+vi.mock("@/components/LocationSearchSelect", () => ({
+  default: ({
+    initialLocations = [],
+    onChange,
+    isSingleSelect,
+    disabled,
+  }: {
+    initialLocations?: string[];
+    onChange: (name: string, locations: string[]) => void;
+    isSingleSelect?: boolean;
+    disabled?: boolean;
+  }) => (
+    <div data-testid="location-search" data-single={String(Boolean(isSingleSelect))}>
+      {["Bengaluru", "Remote"].map((place) => (
+        <button
+          key={place}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange("locations", isSingleSelect ? [place] : [...initialLocations, place])}
+        >
+          Pick {place}
+        </button>
+      ))}
+    </div>
+  ),
+}));
+
 const INPUT: AskUserInput = {
   questions: [
     {
@@ -95,5 +123,50 @@ describe("AskUserResult", () => {
     );
     expect(screen.getByText("Frontend Engineer")).toBeInTheDocument();
     expect(screen.getByText("Projects, Awards")).toBeInTheDocument();
+  });
+});
+
+describe("AskUserCard location questions", () => {
+  const LOCATIONS: AskUserInput = {
+    questions: [{ question: "Where do you want to work?", kind: "locations", multiSelect: true }],
+  };
+
+  it("shows the location search instead of a text box and sends the picked places", async () => {
+    render(<AskUserCard input={LOCATIONS} onComplete={onComplete} />);
+    expect(screen.getByTestId("location-search")).toHaveAttribute("data-single", "false");
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    const sendOne = screen.getByRole("button", { name: "Send answer" });
+    expect(sendOne).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Pick Bengaluru" }));
+    await userEvent.click(screen.getByRole("button", { name: "Pick Remote" }));
+    await userEvent.click(sendOne);
+
+    expect(onComplete).toHaveBeenCalledWith({ answers: [{ selected: [], locations: ["Bengaluru", "Remote"] }] });
+  });
+
+  it("is always multi-select, even when the model leaves out multiSelect", async () => {
+    render(
+      <AskUserCard
+        input={{ questions: [{ question: "What are your preferred locations?", kind: "locations" }] }}
+        onComplete={onComplete}
+      />,
+    );
+    expect(screen.getByTestId("location-search")).toHaveAttribute("data-single", "false");
+    expect(screen.getByText("Choose all that apply.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Pick Bengaluru" }));
+    await userEvent.click(screen.getByRole("button", { name: "Pick Remote" }));
+    await userEvent.click(screen.getByRole("button", { name: "Send answer" }));
+    expect(onComplete).toHaveBeenCalledWith({ answers: [{ selected: [], locations: ["Bengaluru", "Remote"] }] });
+  });
+
+  it("can't be changed on an older reply", () => {
+    render(<AskUserCard input={LOCATIONS} />);
+    expect(screen.getByRole("button", { name: "Pick Bengaluru" })).toBeDisabled();
+  });
+
+  it("shows the picked places once answered", () => {
+    render(<AskUserResult input={LOCATIONS} output={{ answers: [{ selected: [], locations: ["Bengaluru", "Remote"] }] }} />);
+    expect(screen.getByText("Bengaluru, Remote")).toBeInTheDocument();
   });
 });
