@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 import { getScreeningInviteForApplication } from "@/helpers/interview/screening/my-interviews";
 import { upgradeResumeFromFile } from "@/helpers/resumes/upgrade-resume";
+import { resumeFromUpload } from "@/helpers/resumes/resume-from-upload";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { submitApplication } from "./submit-application";
@@ -12,6 +13,7 @@ vi.mock("@/helpers/ai/deduct-user-credits", () => ({ deductUserCreditsHelper: vi
 vi.mock("@/helpers/posthog/EventCaptureServer", () => ({ eventCaptureServer: vi.fn() }));
 vi.mock("@/helpers/posthog/report-error", () => ({ reportError: vi.fn() }));
 vi.mock("@/helpers/resumes/upgrade-resume", () => ({ upgradeResumeFromFile: vi.fn() }));
+vi.mock("@/helpers/resumes/resume-from-upload", () => ({ resumeFromUpload: vi.fn() }));
 vi.mock("@/helpers/applications/knockout-reject", () => ({ KNOCKOUT_EMAIL_DELAY_MS: 1, rejectForKnockout: vi.fn() }));
 vi.mock("@/helpers/interview/screening/my-interviews", () => ({ getScreeningInviteForApplication: vi.fn() }));
 
@@ -132,5 +134,76 @@ describe("submitApplication", () => {
 
     expect(await submitApplication(db.client, USER, INPUT)).toMatchObject({ ok: false });
     expect(upgradeResumeFromFile).not.toHaveBeenCalled();
+  });
+
+  describe("with a new resume file", () => {
+    const FILE = new File(["%PDF"], "cv.pdf", { type: "application/pdf" });
+    const FILE_INPUT = { allJobsId: JOB_ID, answers: {} };
+
+    it("parses the file after the checks and applies with the saved resume", async () => {
+      vi.mocked(resumeFromUpload).mockResolvedValue({ ok: true, resumeId: RESUME_ID });
+      seedJob();
+      db.queue("resumes", { data: RESUME, error: null });
+
+      const result = await submitApplication(db.client, USER, FILE_INPUT, { resumeFile: FILE });
+
+      expect(result).toMatchObject({ ok: true, applicationId: "app1" });
+      expect(resumeFromUpload).toHaveBeenCalledWith(db.client, USER, FILE);
+      expect(inserted()).toMatchObject({ resume_id: RESUME_ID });
+      expect(inserted().resume_snapshot).toEqual({ name: "Backend", template: "compact", content: RESUME.content });
+    });
+
+    it.each([
+      ["the job is closed", () => service.queue("job_postings", { data: { ...JOB, status: "closed" }, error: null })],
+      [
+        "the user already applied",
+        () => {
+          service.queue("job_postings", { data: JOB, error: null });
+          service.queue("applications", { data: [{ id: "old" }], error: null });
+        },
+      ],
+    ])("doesn't parse or save the file when %s", async (_, arrange) => {
+      arrange();
+
+      expect(await submitApplication(db.client, USER, FILE_INPUT, { resumeFile: FILE })).toMatchObject({ ok: false });
+      expect(resumeFromUpload).not.toHaveBeenCalled();
+      expect(inserted()).toBeUndefined();
+    });
+
+    it("returns the upload's own error and doesn't apply", async () => {
+      vi.mocked(resumeFromUpload).mockResolvedValue({ ok: false, error: "Insufficient AI credits for resume upload." });
+      seedJob();
+
+      expect(await submitApplication(db.client, USER, FILE_INPUT, { resumeFile: FILE })).toEqual({
+        ok: false,
+        error: "Insufficient AI credits for resume upload.",
+      });
+      expect(inserted()).toBeUndefined();
+      expect(deductUserCreditsHelper).not.toHaveBeenCalled();
+    });
+
+    it("says the file couldn't be read when the parse throws", async () => {
+      vi.mocked(resumeFromUpload).mockRejectedValue(new Error("timeout"));
+      seedJob();
+
+      expect(await submitApplication(db.client, USER, FILE_INPUT, { resumeFile: FILE })).toEqual({
+        ok: false,
+        error: "We couldn't read this resume. Please try again.",
+      });
+      expect(inserted()).toBeUndefined();
+    });
+
+    it("refuses both a resume id and a file, or neither", async () => {
+      expect(await submitApplication(db.client, USER, INPUT, { resumeFile: FILE })).toEqual({
+        ok: false,
+        error: "Pick one of your resumes.",
+      });
+      expect(await submitApplication(db.client, USER, FILE_INPUT)).toEqual({
+        ok: false,
+        error: "Pick one of your resumes.",
+      });
+      expect(resumeFromUpload).not.toHaveBeenCalled();
+      expect(service.calls).toHaveLength(0);
+    });
   });
 });

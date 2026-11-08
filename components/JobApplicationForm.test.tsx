@@ -17,7 +17,6 @@ vi.mock("@/app/actions/applications/attachments", () => ({
   listShareableSignalsAction: vi.fn(),
 }));
 vi.mock("@/app/actions/submit-application", () => ({ submitApplicationAction: vi.fn() }));
-vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
 vi.mock("@/app/actions/revalidate-tag", () => ({ revalidateCacheAction: vi.fn() }));
 vi.mock("react-hot-toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const profile = vi.hoisted(() => ({
@@ -30,7 +29,14 @@ vi.mock("swr", () => ({
   default: () => ({ data: { profile: profile.value }, isLoading: false }),
   mutate: vi.fn(),
 }));
-vi.mock("./ResumeSourceSelector", () => ({ default: () => <div>resume picker</div> }));
+const PICKED_FILE = vi.hoisted(() => new File(["%PDF"], "cv.pdf", { type: "application/pdf" }));
+vi.mock("./ResumeSourceSelector", () => ({
+  default: ({ onFileChange }: { onFileChange: (file: File) => void }) => (
+    <button type="button" onClick={() => onFileChange(PICKED_FILE)}>
+      upload a new resume
+    </button>
+  ),
+}));
 
 const USER_ID = "a0000000-0000-4000-8000-000000000001";
 const RESUME_ID = "f0000000-0000-4000-8000-000000000001";
@@ -157,6 +163,35 @@ describe("JobApplicationForm legacy questions (CPT-000 characterisation, kept th
       answers: { [id(1)]: "Mission", [id(2)]: "30 days" },
     });
     expect(mutate).toHaveBeenCalled();
+  });
+});
+
+describe("JobApplicationForm with a new resume file", () => {
+  beforeEach(() => vi.mocked(listShareableSignalsAction).mockResolvedValue({ sessions: [] }));
+
+  it("sends the file with the application instead of uploading it first", async () => {
+    render(<JobApplicationForm jobPost={JOB} userId={USER_ID} onSuccess={onSuccess} />);
+    fireEvent.click(await screen.findByRole("button", { name: /upload a new resume/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next step/i }));
+
+    submit();
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    const [input, files] = vi.mocked(submitApplicationAction).mock.calls[0];
+    expect(input).toEqual({ allJobsId: ALL_JOBS_ID, answers: {} });
+    expect((files as FormData).get("resume")).toBe(PICKED_FILE);
+  });
+
+  it("shows the server's error, such as running out of credits", async () => {
+    vi.mocked(submitApplicationAction).mockResolvedValue({ ok: false, error: "Insufficient AI credits for resume upload." });
+    render(<JobApplicationForm jobPost={JOB} userId={USER_ID} onSuccess={onSuccess} />);
+    fireEvent.click(await screen.findByRole("button", { name: /upload a new resume/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next step/i }));
+
+    submit();
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Insufficient AI credits for resume upload."));
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 });
 

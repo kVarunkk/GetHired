@@ -9,7 +9,6 @@ import { AllJobWithRelations } from "@/utils/types";
 import ResumeSourceSelector from "./ResumeSourceSelector";
 import { cn, fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
-import { uploadResumeAction } from "@/app/actions/upload-resume-file";
 import useSWR, { mutate } from "swr";
 import { TResumeReviewResume } from "@/utils/types/review.types";
 import { revalidateCacheAction } from "@/app/actions/revalidate-tag";
@@ -142,34 +141,31 @@ export default function JobApplicationForm({
       return;
     }
 
+    if (!newFile && !selectedResumeId) {
+      toast.error("Please select or upload a resume.");
+      return;
+    }
+
     setLoading(true);
     try {
-      let finalResumeId = null;
-
-      if (newFile) {
-        const formData = new FormData();
-        formData.append("file", newFile);
-        const result = await uploadResumeAction(formData);
-        if (result.error) throw new Error(result.error);
-        finalResumeId = result.resumeId;
-      } else if (selectedResumeId) {
-        finalResumeId = selectedResumeId;
-      } else {
-        throw new Error("Please select or upload a resume.");
-      }
-
-      if (!finalResumeId) {
-        throw new Error("Resume processing failed. Please try again.");
-      }
-
       // AF-REQ-007: validated again on the server against the job's form.
-      const submitted = await submitApplicationAction({
+      const input = {
         allJobsId: jobPost.id,
-        resumeId: finalResumeId,
+        ...(newFile ? {} : { resumeId: selectedResumeId! }),
         answers: checked.answers,
         ...(applicationSource ? { source: applicationSource } : {}),
         ...(applicationRef ? { ref: applicationRef } : {}),
-      });
+      };
+      // A new file goes with the application and is parsed on the server
+      // only after the job and answers pass its checks.
+      let submitted;
+      if (newFile) {
+        const files = new FormData();
+        files.append("resume", newFile);
+        submitted = await submitApplicationAction(input, files);
+      } else {
+        submitted = await submitApplicationAction(input);
+      }
       if (!submitted.ok) {
         if (submitted.fieldErrors) setErrors(submitted.fieldErrors);
         toast.error(submitted.error);
@@ -188,7 +184,7 @@ export default function JobApplicationForm({
         if (!shared?.ok) toast.error("Your application was sent, but we couldn't share your interview.");
       }
 
-      if (submitted.creditsDeducted) {
+      if (submitted.creditsDeducted || newFile) {
         await mutate(PROFILE_API_KEY);
       }
       writeDraft(jobPost.id, null);
@@ -362,7 +358,7 @@ export default function JobApplicationForm({
             disabled={loading}
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Submit Application
+            {loading && newFile ? "Reading your resume…" : "Submit Application"}
           </Button>
         )}
       </div>

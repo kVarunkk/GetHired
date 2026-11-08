@@ -10,6 +10,7 @@ import { KNOCKOUT_EMAIL_DELAY_MS, rejectForKnockout } from "@/helpers/applicatio
 import { buildResumeSnapshot } from "@/helpers/applications/resume-snapshot";
 import { validateAnswers } from "@/helpers/applications/validate-answers";
 import { upgradeResumeFromFile } from "@/helpers/resumes/upgrade-resume";
+import { resumeFromUpload } from "@/helpers/resumes/resume-from-upload";
 import { isTextType, liveQuestions, readApplicationForm } from "@/helpers/jobs/application-form-schema";
 import { publicApplicationForm, withRules } from "@/helpers/jobs/public-application-form";
 import {
@@ -22,7 +23,7 @@ import type { Database, Json } from "@/utils/types/database.types";
 const inputSchema = z
   .object({
     allJobsId: z.string().uuid(),
-    resumeId: z.string().uuid(),
+    resumeId: z.string().uuid().optional(),
     answers: z.record(z.unknown()),
     source: z.enum(["applied", "careers_page"]).optional(),
     ref: z
@@ -34,6 +35,10 @@ const inputSchema = z
   .strict();
 
 export type SubmitApplicationInput = z.input<typeof inputSchema>;
+export type SubmitApplicationOptions = {
+  /** A new resume file to apply with, in place of `resumeId`. Parsed and saved only once every other check passes. */
+  resumeFile?: File;
+};
 export type SubmitApplicationResult =
   | { ok: true; applicationId: string; creditsDeducted: boolean; interview: ScreeningInviteSummary | null }
   | { ok: false; error: string; fieldErrors?: Record<string, string> };
@@ -41,6 +46,8 @@ export type SubmitApplicationResult =
 const BAD_INPUT = "Something's off with this application. Reload the page and try again.";
 const NOT_OPEN = "This job isn't taking applications.";
 const ALREADY_APPLIED = "You've already applied to this job.";
+const PICK_RESUME = "Pick one of your resumes.";
+const UNREADABLE_RESUME = "We couldn't read this resume. Please try again.";
 
 /**
  * AF-REQ-007: applies to a platform job, for the apply form's server action
@@ -52,26 +59,36 @@ const ALREADY_APPLIED = "You've already applied to this job.";
  * AF-CON-001: the browser insert path stays open for the deployed client, so
  * the row goes in through the user's client like before (same RLS, same
  * triggers), with `answers` filled for the old readers.
+ *
+ * With `resumeFile`, the file is parsed and saved as a new resume after the
+ * job, answer and duplicate checks, so an application that can't go through
+ * never leaves a resume behind or spends the parse's credits.
  */
 export async function submitApplication(
   supabase: SupabaseClient<Database>,
   user: User,
   input: SubmitApplicationInput,
+  { resumeFile }: SubmitApplicationOptions = {},
 ): Promise<SubmitApplicationResult> {
   const parsed = inputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: BAD_INPUT };
-  const { allJobsId, resumeId, answers: rawAnswers, source = "applied", ref } = parsed.data;
+  const { allJobsId, answers: rawAnswers, source = "applied", ref } = parsed.data;
+  // Exactly one of an existing resume and a new file.
+  if (!parsed.data.resumeId === !resumeFile) return { ok: false, error: PICK_RESUME };
 
-  const readResumeRow = () =>
+  const readResumeRow = (id: string) =>
     supabase
       .from("resumes")
       .select("id, name, content, contact, template, revision, schema_version, resume_path")
-      .eq("id", resumeId)
+      .eq("id", id)
       .eq("user_id", user.id)
       .maybeSingle();
 
-  const { data: resume } = await readResumeRow();
-  if (!resume) return { ok: false, error: "Pick one of your resumes." };
+  let resume: Awaited<ReturnType<typeof readResumeRow>>["data"] = null;
+  if (parsed.data.resumeId) {
+    ({ data: resume } = await readResumeRow(parsed.data.resumeId));
+    if (!resume) return { ok: false, error: PICK_RESUME };
+  }
 
   const service = createServiceRoleClient();
   const { data: job, error: jobError } = await service
@@ -120,13 +137,26 @@ export async function submitApplication(
     .limit(1);
 
   // RE-REQ-061/095: last, so a parse only runs for an application that's going
-  // through. A resume that can't upgrade is sent as it is: it never stops the
-  // application (RE-REQ-100).
+  // through. A new file that can't be read stops the application; a resume
+  // that can't upgrade is sent as it is (RE-REQ-100).
+  if (resumeFile) {
+    try {
+      const uploaded = await resumeFromUpload(supabase, user, resumeFile);
+      if (!uploaded.ok) return { ok: false, error: uploaded.error };
+      ({ data: resume } = await readResumeRow(uploaded.resumeId));
+    } catch (err) {
+      reportError("[apply] couldn't save the uploaded resume", err);
+    }
+    if (!resume) return { ok: false, error: UNREADABLE_RESUME };
+  }
+  if (!resume) return { ok: false, error: PICK_RESUME };
+  const resumeId = resume.id;
+
   let sent = resume;
   if (resume.schema_version === 1) {
     try {
       const upgraded = await upgradeResumeFromFile(resume);
-      if (upgraded.ok) sent = (await readResumeRow()).data ?? resume;
+      if (upgraded.ok) sent = (await readResumeRow(resumeId)).data ?? resume;
     } catch (err) {
       reportError("[apply] couldn't upgrade the resume", err);
     }
