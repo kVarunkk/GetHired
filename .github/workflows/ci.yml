@@ -1,0 +1,52 @@
+name: CI
+
+# Lint, types and tests on every push to the working branch and on every PR
+# into the default branch. Merging stays a PR: make "Lint and types" and
+# "Tests" required checks on google-docker-deployment so a red PR can't merge.
+
+on:
+  push:
+    branches: [google-deployment-dev]
+  pull_request:
+    branches: [google-docker-deployment]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  checks:
+    name: Lint and types
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      # Strict peer deps, the same as the Docker build (see CLAUDE.md).
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit -p .
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
