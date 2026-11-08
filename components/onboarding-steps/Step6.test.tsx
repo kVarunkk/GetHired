@@ -9,11 +9,9 @@ vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn()
 vi.mock("swr", () => ({ default: () => ({ data: { profile: { resumes: [] } }, isLoading: false }) }));
 
 let onFileChange: (file: File | null) => void;
-let onSelectExisting: (id: string | null) => void;
 vi.mock("../ResumeSourceSelector", () => ({
-  default: (props: { onFileChange: typeof onFileChange; onSelectExisting: typeof onSelectExisting }) => {
+  default: (props: { onFileChange: typeof onFileChange }) => {
     onFileChange = props.onFileChange;
-    onSelectExisting = props.onSelectExisting;
     return <div>selector</div>;
   },
 }));
