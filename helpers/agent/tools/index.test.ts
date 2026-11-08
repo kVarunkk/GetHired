@@ -45,6 +45,7 @@ describe("createAgentTools", () => {
         "completeOnboarding",
         "saveMemory",
         "deleteMemory",
+        "askUser",
       ].sort(),
     );
   });
@@ -91,11 +92,12 @@ describe("createAgentTools", () => {
     ]);
   });
 
-  it("leaves requestResumeUpload and the changes card to the client (REQ-015, RI-REQ-020)", () => {
+  it("leaves requestResumeUpload, the changes card and the question card to the client (REQ-015, RI-REQ-020)", () => {
     expect(tools.requestResumeUpload.execute).toBeUndefined();
     expect(tools.reviewResumeChanges.execute).toBeUndefined();
+    expect(tools.askUser.execute).toBeUndefined();
     for (const [name, tool] of Object.entries(tools)) {
-      if (!["requestResumeUpload", "reviewResumeChanges"].includes(name)) expect(tool.execute, name).toBeTypeOf("function");
+      if (!["requestResumeUpload", "reviewResumeChanges", "askUser"].includes(name)) expect(tool.execute, name).toBeTypeOf("function");
     }
   });
 });

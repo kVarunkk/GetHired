@@ -112,6 +112,7 @@ describe("MCP_TOOLS", () => {
       expect(covered.has(name as keyof AgentTools) !== Boolean(reason), name).toBe(true);
     }
     expect(Object.keys(MCP_EXCLUDED_AGENT_TOOLS).sort()).toEqual([
+      "askUser",
       "deleteMemory",
       "getResumeContent",
       "requestResumeUpload",

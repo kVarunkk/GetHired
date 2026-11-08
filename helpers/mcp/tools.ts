@@ -327,6 +327,7 @@ export const MCP_TOOLS: readonly McpToolDef[] = [
 export const MCP_EXCLUDED_AGENT_TOOLS: Partial<Record<AgentToolName, string>> = {
   requestResumeUpload: "A browser widget. MCP users upload resumes at /resume.",
   reviewResumeChanges: "A browser widget. MCP clients apply with `apply_review_suggestions`.",
+  askUser: "A question card in the chat. MCP clients ask the user themselves.",
   getResumeContent: "`get_resume_details` covers it.",
   saveMemory: "Agent memory, which means nothing outside the chat.",
   deleteMemory: "Agent memory, which means nothing outside the chat.",

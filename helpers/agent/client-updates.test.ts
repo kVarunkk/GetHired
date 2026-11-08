@@ -105,6 +105,49 @@ describe("mergeClientUpdates", () => {
     });
   });
 
+  describe("askUser", () => {
+    const asked = {
+      type: "tool-askUser",
+      toolCallId: "c-ask",
+      state: "input-available",
+      input: {
+        questions: [
+          { question: "Which job?", options: [{ label: "Acme" }, { label: "Globex" }] },
+          { question: "How many reports?" },
+        ],
+      },
+    };
+    const storedAsk = withParts([asked]);
+    const answer = (output: unknown) => withParts([{ ...asked, state: "output-available", output }]);
+
+    it("accepts answers that fit the stored questions", () => {
+      const output = { answers: [{ selected: [1] }, { selected: [], other: "Five" }] };
+      expect(partById(mergeClientUpdates(storedAsk, answer(output)), "c-ask")).toEqual({
+        ...asked,
+        state: "output-available",
+        output,
+      });
+    });
+
+    it("accepts a skipped card", () => {
+      expect(partById(mergeClientUpdates(storedAsk, answer({ dismissed: true })), "c-ask")).toMatchObject({
+        output: { dismissed: true },
+      });
+    });
+
+    it("ignores answers that don't fit the stored questions", () => {
+      for (const output of [
+        { answers: [{ selected: [1] }] },
+        { answers: [{ selected: [5] }, { selected: [], other: "Five" }] },
+        { answers: [{ selected: [0, 1] }, { selected: [], other: "Five" }] },
+        { answers: [{ selected: [0] }, { selected: [] }] },
+        { answers: [{ selected: [0], label: "Forged" }, { selected: [], other: "Five" }] },
+      ]) {
+        expect(mergeClientUpdates(storedAsk, answer(output)), JSON.stringify(output)).toEqual(storedAsk);
+      }
+    });
+  });
+
   it("ignores malformed upload outputs", () => {
     const incoming = withParts([
       { ...stored.parts[3], state: "output-available", output: { resumeId: 42 } },

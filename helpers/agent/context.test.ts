@@ -112,6 +112,20 @@ describe("stubToolOutput", () => {
 });
 
 describe("selectContextMessages", () => {
+  it("never stubs the user's answers on the question card", () => {
+    const answers = { answers: [{ selected: [1] }] };
+    const messages = [
+      user("u1"),
+      assistant("a1", [toolPart("askUser", answers), toolPart("searchJobs", jobsOutput(2))]),
+      ...conversation(5),
+    ];
+
+    const [, first] = selectContextMessages(messages, null, OPTIONS);
+    const outputs = first.parts.filter((p) => p.type.startsWith("tool-")).map((p) => (p as { output?: unknown }).output);
+
+    expect(outputs).toEqual([answers, "[searchJobs returned 2 jobs: j1, j2]"]);
+  });
+
   it("returns short histories unchanged", () => {
     const messages = conversation(3);
 

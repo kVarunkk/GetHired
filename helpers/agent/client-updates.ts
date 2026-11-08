@@ -1,5 +1,6 @@
 import type { UIMessage } from "ai";
 import { z } from "zod";
+import { askUserOutputSchema, outputFitsInput } from "./ask-user";
 
 type MessagePart = UIMessage["parts"][number];
 type ToolPart = MessagePart & { toolCallId: string; state: string };
@@ -46,6 +47,14 @@ const CLIENT_TOOL_OUTPUTS: Record<string, z.ZodTypeAny> = {
     z.object({ uploaded: z.literal(true), rescreened: z.number().int().min(0).max(1000) }).strict(),
     z.object({ cancelled: z.literal(true) }),
   ]),
+  // The question card, for both roles. Its answers are checked against the
+  // stored questions below, so they can only be the user's own.
+  "tool-askUser": askUserOutputSchema,
+};
+
+/** Checks of a client output against the tool call's stored input. */
+const CLIENT_TOOL_INPUT_CHECKS: Record<string, (input: unknown, output: never) => boolean> = {
+  "tool-askUser": outputFitsInput,
 };
 
 const approvalResponse = z.object({
@@ -84,6 +93,8 @@ function mergePart(stored: MessagePart, incoming: MessagePart | undefined): Mess
   if (outputSchema && stored.state === "input-available" && incoming.state === "output-available") {
     const parsed = outputSchema.safeParse((incoming as { output?: unknown }).output);
     if (!parsed.success) return stored;
+    const fitsInput = CLIENT_TOOL_INPUT_CHECKS[stored.type];
+    if (fitsInput && !fitsInput((stored as { input?: unknown }).input, parsed.data as never)) return stored;
     return { ...stored, state: "output-available", output: parsed.data } as MessagePart;
   }
 

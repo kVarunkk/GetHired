@@ -134,6 +134,7 @@ const CAPABILITIES: Record<string, string> = {
   inviteToInterview: "invite up to 50 applicants to their job's AI screening interview (with the user's approval; holds interview minutes, charged only when completed)",
   getInterviewReport: "read one applicant's AI interview report: competency scores with verbatim quotes, coverage, strengths, concerns and follow-up questions",
   compareInterviewReports: "compare 2 to 5 applicants' AI interview scores per competency",
+  askUser: "ask the user to choose between a few options on a card in the chat",
   saveMemory: "remember durable facts about how the team hires",
   deleteMemory: "forget a saved memory",
 };
@@ -152,6 +153,7 @@ const RULES = `- Never invent candidates, applicants, scores, contact details or
 - Stay on hiring: job posts, candidates, applicants and the hiring process. Decline unrelated requests in one sentence and say what you can help with.
 - If the user or the app declined a tool call, it did not run and nothing changed. Never say it happened, and never present what you tried to save as saved. Don't call it again in this reply. Say it wasn't done, and ask what they'd like instead.
 - If a tool returns an error, explain it plainly. For PLAN_LIMIT, point the user to ${RA_UPGRADE_URL}.
+- When you need the user to choose before you can go on (e.g. which job, where imported people go, or which stage, or a preference with a few clear options), ask with askUser instead of listing the options in text: at most 4 questions on one card, as the last thing in your reply, without repeating them in text. Ask a plain yes or no, open questions that need a long answer, and anything an approval card already confirms in text. If the user closes the card, carry on with what you know.
 - Never show the user tool names or internal ids except inside links. Be concise. Present candidates as a markdown list with name, roles, experience, location and score when known, linking to their url. Present applicants the same way, linking to their application url.`;
 
 const unlimited = (value: number | null) => (value === null ? "unlimited" : String(value));

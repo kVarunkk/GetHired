@@ -8,6 +8,8 @@ import { ChevronDown, Coins, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 import ResumeUploadWidget, { type ResumeUploadOutput } from "./ResumeUploadWidget";
+import AskUserCard, { AskUserResult, type AskUserOutput } from "./AskUserCard";
+import { askUserInputSchema } from "@/helpers/agent/ask-user";
 import { rehypeAnimateWords } from "./animate-words";
 import { ApplicationApprovalDetails } from "./ApplicationApprovalCard";
 import ResumeChangesCard, { ResumeChangesResult, type ResumeChangesOutput } from "./ResumeChangesCard";
@@ -48,11 +50,13 @@ export type ClientToolOutput =
   | ResumeImportOutput
   | SpreadsheetImportOutput
   | CandidateResumeOutput
-  | ResumeChangesOutput;
+  | ResumeChangesOutput
+  | AskUserOutput;
 type ToolOutputHandler = (toolCallId: string, output: ClientToolOutput, tool?: string) => void;
 
 /** Present-tense and past-tense labels for each tool. */
 const TOOL_LABELS: Record<string, { running: string; done: string; action: string }> = {
+  askUser: { running: "Waiting for your answer", done: "Answered", action: "ask you" },
   getMyProfile: { running: "Reading your profile…", done: "Read your profile", action: "read your profile" },
   updateMyPreferences: { running: "Updating your preferences…", done: "Updated your job preferences", action: "update your job preferences" },
   searchJobs: { running: "Searching jobs…", done: "Searched jobs", action: "search jobs" },
@@ -1118,6 +1122,21 @@ function ToolStep({
           );
         }
       }
+      if (name === "askUser" && part.state === "input-available") {
+        const parsed = askUserInputSchema.safeParse(part.input);
+        if (parsed.success) {
+          // An older reply's card can't be answered any more: the user moved on.
+          if (!latest) return <Step tone="declined" label="Questions not answered" />;
+          return (
+            <Step tone="yours" label={labels.running}>
+              <AskUserCard
+                input={parsed.data}
+                onComplete={(output) => onToolOutput(part.toolCallId, output, name)}
+              />
+            </Step>
+          );
+        }
+      }
       if (name === "reviewResumeChanges" && part.state === "input-available") {
         const reviewId = (part.input as { reviewId?: string } | undefined)?.reviewId;
         if (reviewId) {
@@ -1146,6 +1165,18 @@ function ToolStep({
     case "approval-responded":
       return <Step tone="running" label={labels.running} />;
     case "output-available":
+      if (name === "askUser") {
+        const parsed = askUserInputSchema.safeParse(part.input);
+        const output = part.output as AskUserOutput | undefined;
+        if (output && "dismissed" in output) return <Step tone="declined" label="Questions skipped" />;
+        if (parsed.success && output) {
+          return (
+            <Step tone="done" label={labels.done}>
+              <AskUserResult input={parsed.data} output={output} />
+            </Step>
+          );
+        }
+      }
       if (name === "reviewResumeChanges") {
         const reviewId = (part.input as { reviewId?: string } | undefined)?.reviewId;
         if (reviewId) {

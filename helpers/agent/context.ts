@@ -54,10 +54,17 @@ export function stubToolOutput(part: ToolUIPart | DynamicToolUIPart): string {
   return `[${name} returned ${items.length} ${label}: ${shown}${more}]`;
 }
 
+/**
+ * Tools whose old outputs are never stubbed: the user's answers on the
+ * question card are their own words, short (ASK_USER_* limits), and the
+ * model needs them for the rest of the chat as much as a typed message.
+ */
+const KEEP_FULL_OUTPUT_TOOLS = new Set(["askUser"]);
+
 const stubMessage = (message: UIMessage): UIMessage => ({
   ...message,
   parts: message.parts.map((part) =>
-    isToolUIPart(part) && part.state === "output-available"
+    isToolUIPart(part) && part.state === "output-available" && !KEEP_FULL_OUTPUT_TOOLS.has(getToolName(part))
       ? ({ ...part, output: stubToolOutput(part) } as MessagePart)
       : part,
   ),

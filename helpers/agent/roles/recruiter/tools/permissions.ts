@@ -29,6 +29,8 @@ const p = (keys: ToolPermission["keys"], job: JobSource = "any"): ToolPermission
  */
 export const RECRUITER_TOOL_PERMISSIONS = {
   getMyCompany: p(["agent.use"]),
+  // A question card in the chat; it reads and writes nothing.
+  askUser: p(["agent.use"]),
   listMyJobs: p(["jobs.view"]),
   getJobPost: p(["jobs.view"], "jobPostId"),
   createJobPost: p(["jobs.create"]),

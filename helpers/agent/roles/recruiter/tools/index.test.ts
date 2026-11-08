@@ -106,6 +106,7 @@ describe("createRecruiterTools (RAT-028)", () => {
         "compareInterviewReports",
         "saveMemory",
         "deleteMemory",
+        "askUser",
       ].sort(),
     );
   });
@@ -122,8 +123,9 @@ describe("createRecruiterTools (RAT-028)", () => {
     }
   });
 
-  // BI-REQ-060: the upload widgets run in the browser, like the applicant agent's requestResumeUpload.
-  const CLIENT_TOOLS = ["requestResumeImport", "requestSpreadsheetImport", "requestCandidateResume"];
+  // BI-REQ-060: the upload widgets run in the browser, like the applicant agent's requestResumeUpload,
+  // and so does the question card.
+  const CLIENT_TOOLS = ["requestResumeImport", "requestSpreadsheetImport", "requestCandidateResume", "askUser"];
 
   it("leaves approvals to the toolApproval policy and runs every tool on the server but the upload widgets", () => {
     for (const [name, tool] of Object.entries(tools)) {
