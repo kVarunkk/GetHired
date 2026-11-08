@@ -50,7 +50,7 @@ export type ResumeTemplate = (typeof RESUME_TEMPLATES)[number];
 export const RESUME_DEFAULT_TEMPLATE: ResumeTemplate = "classic";
 
 /** RE-REQ-036: applies to creating, copying and uploading. */
-export const RESUME_MAX_PER_USER = 20;
+export const RESUME_MAX_PER_USER = 50;
 
 /** RE-REQ-012: the upload limit, checked in the browser and on the server. */
 export const RESUME_MAX_FILE_BYTES = 2 * 1024 * 1024;

@@ -65,12 +65,12 @@ describe("ResumeRowActions (RE-REQ-030)", () => {
   });
 
   it("shows a refused copy", async () => {
-    vi.mocked(duplicateResumeAction).mockResolvedValue({ ok: false, error: "You can have up to 20 resumes." });
+    vi.mocked(duplicateResumeAction).mockResolvedValue({ ok: false, error: "You can have up to 50 resumes." });
     open();
 
     click("Make a copy");
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("You can have up to 20 resumes."));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("You can have up to 50 resumes."));
     expect(push).not.toHaveBeenCalled();
   });
 

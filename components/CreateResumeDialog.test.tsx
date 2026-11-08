@@ -34,11 +34,11 @@ describe("New resume (RE-REQ-030)", () => {
   });
 
   it("shows why it couldn't, and stays open", async () => {
-    vi.mocked(createResumeAction).mockResolvedValue({ ok: false, error: "You can have up to 20 resumes." });
+    vi.mocked(createResumeAction).mockResolvedValue({ ok: false, error: "You can have up to 50 resumes." });
 
     fireEvent.click(await open());
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("You can have up to 20 resumes.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("You can have up to 50 resumes.");
     expect(push).not.toHaveBeenCalled();
   });
 });

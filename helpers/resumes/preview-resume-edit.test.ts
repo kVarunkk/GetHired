@@ -1,3 +1,4 @@
+import { RESUME_MAX_PER_USER } from "@/helpers/resume/config";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumeDocument } from "@/helpers/resume/render/document";
 import type { ResumeContent } from "@/helpers/resume/resume-schema";
@@ -249,7 +250,7 @@ describe("previewing createResume", () => {
   });
 
   it("is an error at the limit", async () => {
-    db.queue("resumes", { data: null, error: null, count: 20 });
+    db.queue("resumes", { data: null, error: null, count: RESUME_MAX_PER_USER });
 
     expect(await preview("createResume", {})).toMatchObject({ ok: false });
   });

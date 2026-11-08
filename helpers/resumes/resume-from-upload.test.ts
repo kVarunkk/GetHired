@@ -181,7 +181,7 @@ describe("resumeFromUpload (RE-REQ-010)", () => {
   it("refuses at the resume limit", async () => {
     seed({ resumes: RESUME_MAX_PER_USER });
 
-    expect(await resumeFromUpload(db.client, USER, file())).toMatchObject({ ok: false, error: expect.stringMatching(/up to 20/) });
+    expect(await resumeFromUpload(db.client, USER, file())).toMatchObject({ ok: false, error: expect.stringContaining(`up to ${RESUME_MAX_PER_USER} `) });
     expect(parseResumeUpload).not.toHaveBeenCalled();
   });
 
