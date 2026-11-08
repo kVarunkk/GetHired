@@ -42,7 +42,7 @@ export async function submitOnboardingAction(formData: FormData) {
       finalResumeId = imported.resumeId;
     }
 
-    const result = await completeApplicantOnboarding(supabase, user, profileData, {
+    const result = await completeApplicantOnboarding(user, profileData, {
       resumeId: finalResumeId!,
       shouldParse: false,
     });

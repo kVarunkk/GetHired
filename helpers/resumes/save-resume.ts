@@ -4,7 +4,6 @@ import { z } from "zod";
 import type { Database, Json } from "@/utils/types/database.types";
 import { resumeSectionText } from "@/helpers/embeddings/resume-text";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
-import { reportError } from "@/helpers/posthog/report-error";
 import { RESUME_LIMITS, RESUME_TEMPLATES, type ResumeTemplate } from "@/helpers/resume/config";
 import {
   ResumeContactSchema,
@@ -12,7 +11,7 @@ import {
   type ResumeContact,
   type ResumeContent,
 } from "@/helpers/resume/resume-schema";
-import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
+import { refreshProfileAfterChange } from "@/helpers/user/queue-profile-refresh";
 import { PostHogEvent } from "@/utils/types";
 import { upgradeResumeFromFile } from "./upgrade-resume";
 
@@ -110,10 +109,8 @@ export async function saveResume(
 
   const shouldEmbed = current.is_primary && embeddedTextChanged(current.content, content);
   after(async () => {
-    if (shouldEmbed) {
-      const embedded = await updateUserEmbedding(user.id);
-      if (embedded.error) reportError("[RESUME_SAVE_EMBED_FAILED]:", embedded.error);
-    }
+    // The primary resume feeds the embedding and the matches.
+    if (shouldEmbed) await refreshProfileAfterChange(user.id);
     await eventCaptureServer({
       event: PostHogEvent.ResumeSaved,
       distinctId: user.id,

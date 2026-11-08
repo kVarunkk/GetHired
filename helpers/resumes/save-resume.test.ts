@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import type { ResumeContent } from "@/helpers/resume/resume-schema";
-import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
+import { refreshProfileAfterChange } from "@/helpers/user/queue-profile-refresh";
 import { flushAfter } from "@/test/utils/after";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { PostHogEvent } from "@/utils/types";
@@ -10,7 +10,7 @@ import { upgradeResumeFromFile } from "./upgrade-resume";
 
 vi.mock("@/helpers/posthog/EventCaptureServer", () => ({ eventCaptureServer: vi.fn() }));
 vi.mock("@/helpers/posthog/report-error", () => ({ reportError: vi.fn() }));
-vi.mock("@/helpers/user/update-user-embedding", () => ({ updateUserEmbedding: vi.fn() }));
+vi.mock("@/helpers/user/queue-profile-refresh", () => ({ refreshProfileAfterChange: vi.fn() }));
 vi.mock("./upgrade-resume", () => ({ upgradeResumeFromFile: vi.fn() }));
 
 const USER = { id: "00000000-0000-4000-8000-000000000001" };
@@ -53,7 +53,7 @@ const updateArgs = () => updateCall()?.chain.find((c) => c.method === "update")?
 beforeEach(() => {
   vi.clearAllMocks();
   db = createSupabaseMock();
-  vi.mocked(updateUserEmbedding).mockResolvedValue({ success: true } as never);
+  vi.mocked(refreshProfileAfterChange).mockResolvedValue("queued");
 });
 
 describe("saveResume (RE-REQ-033)", () => {
@@ -87,7 +87,7 @@ describe("saveResume (RE-REQ-033)", () => {
     expect(await saveResume(db.client, USER, INPUT)).toMatchObject({ ok: false, code: RESUME_CHANGED });
     await flushAfter();
     expect(eventCaptureServer).not.toHaveBeenCalled();
-    expect(updateUserEmbedding).not.toHaveBeenCalled();
+    expect(refreshProfileAfterChange).not.toHaveBeenCalled();
   });
 
   it("finds nothing for another user's id", async () => {
@@ -147,16 +147,16 @@ describe("saveResume (RE-REQ-033)", () => {
     });
   });
 
-  describe("re-embedding (RE-REQ-034)", () => {
+  describe("re-embedding and new matches (RE-REQ-034)", () => {
     const primary = { ...CURRENT, is_primary: true };
 
-    it("re-embeds when the primary's experience changed", async () => {
+    it("refreshes the embedding and matches when the primary's experience changed", async () => {
       seed(primary);
       await saveResume(db.client, USER, { ...INPUT, content: contentWith("Shipped the billing API") });
 
-      expect(updateUserEmbedding).not.toHaveBeenCalled();
+      expect(refreshProfileAfterChange).not.toHaveBeenCalled();
       await flushAfter();
-      expect(updateUserEmbedding).toHaveBeenCalledWith(USER.id);
+      expect(refreshProfileAfterChange).toHaveBeenCalledWith(USER.id);
     });
 
     it("doesn't when only other sections changed", async () => {
@@ -164,7 +164,7 @@ describe("saveResume (RE-REQ-033)", () => {
       await saveResume(db.client, USER, { ...INPUT, content: contentWith("Stanford", "education") });
 
       await flushAfter();
-      expect(updateUserEmbedding).not.toHaveBeenCalled();
+      expect(refreshProfileAfterChange).not.toHaveBeenCalled();
     });
 
     it("doesn't when the text is the same", async () => {
@@ -172,7 +172,7 @@ describe("saveResume (RE-REQ-033)", () => {
       await saveResume(db.client, USER, { ...INPUT, name: "Renamed" });
 
       await flushAfter();
-      expect(updateUserEmbedding).not.toHaveBeenCalled();
+      expect(refreshProfileAfterChange).not.toHaveBeenCalled();
     });
 
     it("doesn't for a resume that isn't primary", async () => {
@@ -180,7 +180,7 @@ describe("saveResume (RE-REQ-033)", () => {
       await saveResume(db.client, USER, { ...INPUT, content: contentWith("Shipped the billing API") });
 
       await flushAfter();
-      expect(updateUserEmbedding).not.toHaveBeenCalled();
+      expect(refreshProfileAfterChange).not.toHaveBeenCalled();
     });
   });
 

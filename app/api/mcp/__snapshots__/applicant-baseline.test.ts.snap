@@ -1597,7 +1597,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": false,
       "title": "Delete a resume",
     },
-    "description": "Delete one of the user's resumes, with its reviews. It can't be undone, and the last resume can't be deleted. The user must approve. GetHired asks the user to confirm before it runs.",
+    "description": "Delete one of the user's resumes, with its reviews. It can't be undone. The last resume and the primary resume can't be deleted: to delete the primary, ask which resume should be primary instead and call set_primary_resume first. GetHired asks the user to confirm before it runs.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {

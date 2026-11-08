@@ -65,7 +65,6 @@ describe("completeOnboarding tool", () => {
       { method: "maybeSingle", args: [] },
     ]);
     expect(completeApplicantOnboarding).toHaveBeenCalledWith(
-      supabase.client,
       expect.objectContaining({ id: "u1", email: "ada@example.com" }),
       {
         full_name: "Ada Lovelace",

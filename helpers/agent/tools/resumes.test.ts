@@ -260,38 +260,34 @@ describe("listResumes tool", () => {
 });
 
 describe("setPrimaryResume tool", () => {
-  it("sets the user's own resume as primary", async () => {
-    supabase.queue("resumes", { data: { id: RESUME_ID }, error: null });
-    vi.mocked(setPrimaryResume).mockResolvedValue({ success: true });
+  it("sets the primary through the helper, which checks ownership, and reports the matches", async () => {
+    vi.mocked(setPrimaryResume).mockResolvedValue({ success: true, refresh: "queued" });
 
     const result = await execTool(tools.setPrimaryResume, { resumeId: RESUME_ID });
 
-    expect(supabase.callsFor("resumes")[0].chain).toEqual([
-      { method: "select", args: ["id"] },
-      { method: "eq", args: ["id", RESUME_ID] },
-      { method: "eq", args: ["user_id", "u1"] },
-      { method: "maybeSingle", args: [] },
-    ]);
-    expect(setPrimaryResume).toHaveBeenCalledWith(supabase.client, expect.objectContaining({ id: "u1" }), RESUME_ID);
-    expect(result).toEqual({ resumeId: RESUME_ID, isPrimary: true });
+    expect(setPrimaryResume).toHaveBeenCalledWith(expect.objectContaining({ id: "u1" }), RESUME_ID);
+    expect(result).toEqual({
+      resumeId: RESUME_ID,
+      isPrimary: true,
+      matches: expect.stringContaining("Refreshing"),
+    });
   });
 
-  it("refuses resumes the user doesn't own", async () => {
+  it("says nothing changed when it was already the primary", async () => {
+    vi.mocked(setPrimaryResume).mockResolvedValue({ success: true, refresh: "unchanged" });
+
     expect(await execTool(tools.setPrimaryResume, { resumeId: RESUME_ID })).toEqual({
-      error: "Resume not found.",
+      resumeId: RESUME_ID,
+      isPrimary: true,
+      matches: "It was already the primary resume, so nothing changed.",
     });
-    expect(setPrimaryResume).not.toHaveBeenCalled();
   });
 
   it("passes helper errors through", async () => {
-    supabase.queue("resumes", { data: { id: RESUME_ID }, error: null });
-    vi.mocked(setPrimaryResume).mockResolvedValue({
-      success: false,
-      error: "Background Embedding Failed",
-    });
+    vi.mocked(setPrimaryResume).mockResolvedValue({ success: false, error: "Resume not found." });
 
     expect(await execTool(tools.setPrimaryResume, { resumeId: RESUME_ID })).toEqual({
-      error: "Background Embedding Failed",
+      error: "Resume not found.",
     });
   });
 });

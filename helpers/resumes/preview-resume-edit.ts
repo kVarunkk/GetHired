@@ -5,7 +5,7 @@ import { previewReviewSuggestions } from "@/helpers/resume-review/apply-suggesti
 import type { ReviewChange } from "@/helpers/resume-review/changes";
 import type { Database } from "@/utils/types/database.types";
 import { RESUME_DEFAULT_NAME, ResumeFromChatSchema } from "./create-resume";
-import { LAST_RESUME_ERROR } from "./delete-resume";
+import { LAST_RESUME_ERROR, PRIMARY_RESUME_ERROR } from "./delete-resume";
 import { describeResumeChanges, type ResumeChange } from "./resume-changes";
 import { RESUME_LIMIT_ERROR, hasRoomForResume } from "./resume-limit";
 import { planResumeUpdate } from "./update-resume";
@@ -66,12 +66,13 @@ async function previewDelete(supabase: Client, user: User, input: unknown): Prom
   const resumeId = (input as { resumeId?: unknown } | null)?.resumeId;
   if (typeof resumeId !== "string") return { ok: false, error: "Resume not found." };
 
-  const { data: resumes, error } = await supabase.from("resumes").select("id, name").eq("user_id", user.id);
+  const { data: resumes, error } = await supabase.from("resumes").select("id, name, is_primary").eq("user_id", user.id);
   if (error) throw new Error(`Failed to read the resumes: ${error.message}`);
 
   const target = resumes?.find((resume) => resume.id === resumeId);
   if (!target) return { ok: false, error: "Resume not found." };
   if (resumes!.length === 1) return { ok: false, error: LAST_RESUME_ERROR };
+  if (target.is_primary) return { ok: false, error: PRIMARY_RESUME_ERROR };
 
   const { count: reviews, error: countError } = await supabase
     .from("resume_reviews")

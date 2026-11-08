@@ -1,3 +1,4 @@
+import { profileRefreshMessage } from "@/helpers/user/queue-profile-refresh";
 import { tool } from "ai";
 import { z } from "zod";
 import type { ResumeChangesOutput } from "@/components/agent/ResumeChangesCard";
@@ -201,19 +202,13 @@ export function createResumeTools(ctx: AgentToolContext) {
       inputSchema: z.object({ resumeId: uuidInput("resume") }),
       execute: ({ resumeId }) =>
         withToolErrors(ctx, "setPrimaryResume", async () => {
-          const { data: resume, error } = await supabase
-            .from("resumes")
-            .select("id")
-            .eq("id", resumeId)
-            .eq("user_id", ctx.user.id)
-            .maybeSingle();
-          if (error) throw error;
-          if (!resume) return { error: "Resume not found." };
+          // The ownership check is part of the same statement (set_primary_resume).
+          const result = await setPrimaryResume(ctx.user, resumeId);
+          if (!result.success) return { error: result.error };
 
-          const result = await setPrimaryResume(supabase, ctx.user, resumeId);
-          if (!result.success) return { error: result.error ?? "Could not update the resume." };
-
-          return { resumeId, isPrimary: true };
+          return result.refresh === "unchanged"
+            ? { resumeId, isPrimary: true, matches: "It was already the primary resume, so nothing changed." }
+            : { resumeId, isPrimary: true, matches: profileRefreshMessage(result.refresh) };
         }),
     }),
 
@@ -485,7 +480,7 @@ export function createResumeTools(ctx: AgentToolContext) {
 
     deleteResume: tool({
       description:
-        "Delete one of the user's resumes, with its reviews. It can't be undone, and the last resume can't be deleted. The user must approve.",
+        "Delete one of the user's resumes, with its reviews. It can't be undone. The last resume and the primary resume can't be deleted: to delete the primary, ask which resume should be primary instead and call setPrimaryResume first. The user must approve.",
       inputSchema: z.object({ resumeId: uuidInput("resume") }),
       execute: ({ resumeId }) =>
         withToolErrors(ctx, "deleteResume", async () => {

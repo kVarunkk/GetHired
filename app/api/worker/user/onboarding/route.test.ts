@@ -6,6 +6,7 @@ import { processUserRelevance } from "@/helpers/jobs/relevant-jobs-utils";
 import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
 import { parseResume } from "@/helpers/resume/parse-resume";
 import { sendEmailForStatusUpdate } from "@/utils/email";
+import { finishProfileRefresh } from "@/helpers/user/queue-profile-refresh";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 
 vi.mock("next/headers", () => ({ headers: vi.fn() }));
@@ -15,6 +16,7 @@ vi.mock("@/helpers/user/update-user-embedding", () => ({ updateUserEmbedding: vi
 vi.mock("@/helpers/resume/parse-resume", () => ({ parseResume: vi.fn() }));
 vi.mock("@/helpers/posthog/report-error", () => ({ reportError: vi.fn() }));
 vi.mock("@/utils/email", () => ({ sendEmailForStatusUpdate: vi.fn() }));
+vi.mock("@/helpers/user/queue-profile-refresh", () => ({ finishProfileRefresh: vi.fn() }));
 vi.mock("@/utils/formatters", () => ({ INTERNAL_API_SECRET: "test-secret" }));
 
 const USER_ID = "c1000000-0000-4000-8000-000000000001";
@@ -54,6 +56,7 @@ beforeEach(() => {
   withSecret("test-secret");
   vi.mocked(updateUserEmbedding).mockResolvedValue({ success: true });
   vi.mocked(processUserRelevance).mockResolvedValue({ success: true });
+  vi.mocked(finishProfileRefresh).mockResolvedValue({ requeued: false });
 });
 
 describe("GET /api/worker/user/onboarding", () => {
@@ -86,6 +89,42 @@ describe("GET /api/worker/user/onboarding", () => {
     expect(processUserRelevance).toHaveBeenCalledWith(USER_ID, true, { markFailed: false });
     expect(statusWrites()).toEqual(["progress"]);
     expect(rpcCalls("delete")).toHaveLength(1);
+  });
+
+  it("after a run, checks for profile changes made since it started, so they get one more run", async () => {
+    queueMessages([message(1)]);
+    let embeddedAt = "";
+    vi.mocked(updateUserEmbedding).mockImplementation(async () => {
+      embeddedAt = new Date().toISOString();
+      return { success: true };
+    });
+
+    await GET();
+
+    expect(finishProfileRefresh).toHaveBeenCalledTimes(1);
+    const [userId, startedAt] = vi.mocked(finishProfileRefresh).mock.calls[0];
+    expect(userId).toBe(USER_ID);
+    // The start is taken before the profile is read for the embedding.
+    expect(startedAt <= embeddedAt).toBe(true);
+  });
+
+  it("handles a refresh message, which has no resume", async () => {
+    queueMessages([{ msg_id: 8, read_ct: 1, message: { userId: USER_ID, shouldParse: false } }]);
+
+    await GET();
+
+    expect(parseResume).not.toHaveBeenCalled();
+    expect(updateUserEmbedding).toHaveBeenCalledWith(USER_ID);
+    expect(rpcCalls("delete")).toHaveLength(1);
+  });
+
+  it("starts no follow-up after a failed run: its retry reads the profile again", async () => {
+    queueMessages([message(1)]);
+    vi.mocked(processUserRelevance).mockResolvedValue({ success: false, error: "rerank down" });
+
+    await GET();
+
+    expect(finishProfileRefresh).not.toHaveBeenCalled();
   });
 
   it.each([1, 2])(

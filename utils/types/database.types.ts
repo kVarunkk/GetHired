@@ -3930,6 +3930,7 @@ export type Database = {
           max_salary: number | null
           min_salary: number | null
           preferred_locations: string[] | null
+          profile_refresh_requested_at: string | null
           referral_code: string | null
           relevant_jobs_update_status: Database["public"]["Enums"]["job_posting_matching_status"]
           salary_currency: string
@@ -3970,6 +3971,7 @@ export type Database = {
           max_salary?: number | null
           min_salary?: number | null
           preferred_locations?: string[] | null
+          profile_refresh_requested_at?: string | null
           referral_code?: string | null
           relevant_jobs_update_status?: Database["public"]["Enums"]["job_posting_matching_status"]
           salary_currency?: string
@@ -4006,6 +4008,7 @@ export type Database = {
           max_salary?: number | null
           min_salary?: number | null
           preferred_locations?: string[] | null
+          profile_refresh_requested_at?: string | null
           referral_code?: string | null
           relevant_jobs_update_status?: Database["public"]["Enums"]["job_posting_matching_status"]
           salary_currency?: string
@@ -4365,6 +4368,17 @@ export type Database = {
         Args: { p_company_id: string; p_key: string }
         Returns: string
       }
+      complete_applicant_onboarding: {
+        Args: {
+          p_email: string
+          p_profile: Json
+          p_resume_id: string
+          p_should_parse: boolean
+          p_stale_seconds?: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
       confirm_candidate_import: {
         Args: { p_batch_id: string; p_options?: Json; p_rows: Json }
         Returns: Json
@@ -4473,6 +4487,10 @@ export type Database = {
       expire_screening_interviews: { Args: never; Returns: string[] }
       finalize_interview_analysis_session: {
         Args: { p_session_id: string }
+        Returns: Json
+      }
+      finish_profile_refresh: {
+        Args: { p_started_at: string; p_user_id: string }
         Returns: Json
       }
       finish_screening_session: {
@@ -4865,6 +4883,10 @@ export type Database = {
         Args: { p_status: Database["public"]["Enums"]["application_status"] }
         Returns: Database["public"]["Enums"]["pipeline_stage_kind"]
       }
+      queue_profile_refresh: {
+        Args: { p_stale_seconds?: number; p_user_id: string }
+        Returns: Json
+      }
       record_profile_view: { Args: { p_candidate: string }; Returns: undefined }
       record_screening_consent: {
         Args: { p_id: string; p_version: string }
@@ -5111,6 +5133,10 @@ export type Database = {
         Returns: Json
       }
       set_my_display_name: { Args: { p_name: string }; Returns: Json }
+      set_primary_resume: {
+        Args: { p_resume_id: string; p_user_id: string }
+        Returns: Json
+      }
       sign: {
         Args: { algorithm?: string; payload: Json; secret: string }
         Returns: string

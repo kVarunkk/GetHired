@@ -664,7 +664,7 @@ No saved memories.",
       },
     },
     "deleteResume": {
-      "description": "Delete one of the user's resumes, with its reviews. It can't be undone, and the last resume can't be deleted. The user must approve.",
+      "description": "Delete one of the user's resumes, with its reviews. It can't be undone. The last resume and the primary resume can't be deleted: to delete the primary, ask which resume should be primary instead and call setPrimaryResume first. The user must approve.",
       "input": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false,

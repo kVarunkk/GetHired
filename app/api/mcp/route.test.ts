@@ -27,6 +27,10 @@ vi.mock("@/helpers/mcp/auth", async (importOriginal) => ({
 vi.mock("@/helpers/jobs/search-jobs", () => ({ searchJobs: vi.fn() }));
 vi.mock("@/helpers/jobs/parse-job-query", () => ({ parseJobQuery: vi.fn() }));
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
+vi.mock("@/helpers/user/queue-profile-refresh", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/helpers/user/queue-profile-refresh")>()),
+  refreshProfileAfterChange: vi.fn(async () => "queued"),
+}));
 vi.mock("@/helpers/applications/preview-agent-application", () => ({ previewAgentApplication: vi.fn() }));
 vi.mock("@/helpers/applications/submit-application", () => ({ submitApplication: vi.fn() }));
 vi.mock("@/helpers/applications/agent-application", async (importOriginal) => ({
@@ -342,7 +346,10 @@ describe("/api/mcp confirm tools (§4.6)", () => {
       }),
     );
 
-    expect(retry.body.result.structuredContent).toEqual({ updated: ["desiredRoles"] });
+    expect(retry.body.result.structuredContent).toEqual({
+      updated: ["desiredRoles"],
+      matches: expect.stringContaining("Refreshing"),
+    });
     expect(updates("user_info")).toEqual([{ desired_roles: ["Frontend Engineer"] }]);
     expect(outcomes()).toEqual(["needs_confirmation", "ok"]);
   });

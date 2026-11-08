@@ -32,11 +32,14 @@ import { useResumeActions } from "./use-resume-actions";
 export default function ResumeRowActions({
   resume,
   canDelete,
+  isPrimary = false,
   onDeleted,
 }: {
   resume: { id: string; name: string | null; isUnreadable: boolean };
-  /** False for the user's last resume (RE-REQ-037). */
+  /** False for the user's last resume (RE-REQ-037) and their primary one. */
   canDelete: boolean;
+  /** Says why Delete is off: another resume has to be made primary first. */
+  isPrimary?: boolean;
   onDeleted: (id: string) => void;
 }) {
   const { isBusy, copy, download } = useResumeActions(resume.id);
@@ -91,7 +94,14 @@ export default function ResumeRowActions({
           )}
           <DropdownMenuItem disabled={!canDelete} onSelect={() => setIsConfirming(true)}>
             <Trash2 className="h-4 w-4" />
-            Delete
+            {isPrimary ? (
+              <span className="flex flex-col">
+                Delete
+                <span className="text-xs text-muted-foreground">Make another resume primary first</span>
+              </span>
+            ) : (
+              "Delete"
+            )}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

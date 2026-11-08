@@ -1,43 +1,43 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/utils/types/database.types";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
-import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import {
+  refreshProfileAfterChange,
+  type ProfileRefreshOutcome,
+} from "@/helpers/user/queue-profile-refresh";
+
+export type SetPrimaryResumeResult =
+  | { success: true; refresh: ProfileRefreshOutcome | "unchanged"; error?: undefined }
+  | { success: false; error: string };
 
 /**
- * Makes `resumeId` the user's primary resume and re-embeds their profile.
- * Shared by `setPrimaryResumeAction`, the agent and MCP. `user` must come
- * from the session or tool context, never from input.
+ * Makes `resumeId` the user's primary resume, in one statement
+ * (set_primary_resume), then refreshes their embedding and matches, which read
+ * the primary resume. Shared by `setPrimaryResumeAction`, the agent and MCP.
+ * `user` must come from the session or tool context, never from input.
  */
 export async function setPrimaryResume(
-  supabase: SupabaseClient<Database>,
   user: { id: string },
   resumeId: string,
-): Promise<{ success: true; error?: undefined } | { success: false; error: string }> {
+): Promise<SetPrimaryResumeResult> {
   try {
-    const { error: clearError } = await supabase
-      .from("resumes")
-      .update({ is_primary: false })
-      .eq("user_id", user.id);
+    const { data, error } = await createServiceRoleClient().rpc("set_primary_resume", {
+      p_user_id: user.id,
+      p_resume_id: resumeId,
+    });
+    if (error) throw error;
 
-    if (clearError) throw clearError;
+    const outcome = data as { ok: boolean; changed?: boolean; reason?: string } | null;
+    if (!outcome?.ok) {
+      return {
+        success: false,
+        error: outcome?.reason === "resume_not_found" ? "Resume not found." : "Could not update the resume.",
+      };
+    }
+    // Already the primary: nothing the matches read has changed.
+    if (!outcome.changed) return { success: true, refresh: "unchanged" };
 
-    const { error: setError } = await supabase
-      .from("resumes")
-      .update({ is_primary: true })
-      .eq("id", resumeId)
-      .eq("user_id", user.id);
-
-    if (setError) throw setError;
-
-    const embedRes = await updateUserEmbedding(user.id);
-    if (embedRes.error) throw new Error("Background Embedding Failed");
-
-    return { success: true };
+    return { success: true, refresh: await refreshProfileAfterChange(user.id) };
   } catch (err) {
-    const error =
-      err instanceof Error
-        ? err.message
-        : "An unexpected error occurred while updating primary resume.";
     await eventCaptureServerException({
       error: err,
       distinctId: user.id,
@@ -46,10 +46,6 @@ export async function setPrimaryResume(
         resume_id: resumeId,
       },
     });
-
-    return {
-      success: false,
-      error,
-    };
+    return { success: false, error: "Could not update the primary resume. Please try again." };
   }
 }

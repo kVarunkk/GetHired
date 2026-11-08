@@ -62,7 +62,6 @@ describe("submitOnboardingAction", () => {
     expect(await submitOnboardingAction(form({ resumeId: RESUME_ID }))).toEqual({ success: true });
 
     expect(completeApplicantOnboarding).toHaveBeenCalledWith(
-      supabase.client,
       SESSION_USER,
       PROFILE,
       { resumeId: RESUME_ID, shouldParse: false },
@@ -134,7 +133,7 @@ describe("submitOnboardingAction", () => {
       form({ profile: { ...PROFILE, user_id: "someone-else" }, resumeId: RESUME_ID }),
     );
 
-    expect(vi.mocked(completeApplicantOnboarding).mock.calls[0][1]).toEqual(SESSION_USER);
+    expect(vi.mocked(completeApplicantOnboarding).mock.calls[0][0]).toEqual(SESSION_USER);
   });
 
   describe("the claimed company's resume (BIT-105)", () => {
@@ -146,14 +145,14 @@ describe("submitOnboardingAction", () => {
       expect(await submitOnboardingAction(form({ claimToken: TOKEN }))).toEqual({ success: true });
 
       expect(importClaimResume).toHaveBeenCalledWith(supabase.client, expect.anything(), SESSION_USER, TOKEN);
-      expect(vi.mocked(completeApplicantOnboarding).mock.calls[0][3]).toEqual({ resumeId: "imported", shouldParse: false });
+      expect(vi.mocked(completeApplicantOnboarding).mock.calls[0][2]).toEqual({ resumeId: "imported", shouldParse: false });
     });
 
     it("is ignored when they chose another resume", async () => {
       await submitOnboardingAction(form({ claimToken: TOKEN, resumeId: RESUME_ID }));
 
       expect(importClaimResume).not.toHaveBeenCalled();
-      expect(vi.mocked(completeApplicantOnboarding).mock.calls[0][3]).toEqual({ resumeId: RESUME_ID, shouldParse: false });
+      expect(vi.mocked(completeApplicantOnboarding).mock.calls[0][2]).toEqual({ resumeId: RESUME_ID, shouldParse: false });
     });
 
     it("saves nothing when the import is refused", async () => {

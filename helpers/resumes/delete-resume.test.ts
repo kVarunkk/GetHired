@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
 import { flushAfter } from "@/test/utils/after";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import { LAST_RESUME_ERROR, deleteResume } from "./delete-resume";
+import { LAST_RESUME_ERROR, PRIMARY_RESUME_ERROR, deleteResume } from "./delete-resume";
 
 vi.mock("@/helpers/posthog/report-error", () => ({ reportError: vi.fn() }));
 vi.mock("@/helpers/user/update-user-embedding", () => ({ updateUserEmbedding: vi.fn() }));
@@ -57,30 +57,26 @@ describe("deleteResume (RE-REQ-037)", () => {
     expect(steps().some((step) => step.method === "delete")).toBe(false);
   });
 
-  it("promotes the most recently updated resume when the primary goes, and re-embeds", async () => {
+  it("refuses the primary resume: the user picks the next one", async () => {
+    db.queue("resumes", { data: [{ id: "newest", is_primary: false }, { id: "r1", is_primary: true }], error: null });
+
+    expect(await deleteResume(db.client, USER, { resumeId: "r1" })).toEqual({ ok: false, error: PRIMARY_RESUME_ERROR });
+    expect(steps().some((step) => step.method === "delete" || step.method === "update")).toBe(false);
+    expect(db.calls.map((c) => c.target)).toEqual(["resumes"]);
+  });
+
+  it("only deletes it while it still isn't primary", async () => {
     seed([
-      { id: "newest", is_primary: false },
-      { id: "r1", is_primary: true },
-      { id: "oldest", is_primary: false },
+      { id: "r2", is_primary: true },
+      { id: "r1", is_primary: false },
     ]);
 
     await deleteResume(db.client, USER, { resumeId: "r1" });
 
-    expect(db.callsFor("resumes")[0].chain).toContainEqual({
-      method: "order",
-      args: ["updated_at", { ascending: false, nullsFirst: false }],
-    });
-    const promote = db.callsFor("resumes")[2];
-    expect(promote.chain).toContainEqual({ method: "update", args: [{ is_primary: true }] });
-    expect(promote.chain).toContainEqual({ method: "eq", args: ["id", "newest"] });
-    expect(promote.chain).toContainEqual({ method: "eq", args: ["user_id", USER.id] });
-
-    expect(updateUserEmbedding).not.toHaveBeenCalled();
-    await flushAfter();
-    expect(updateUserEmbedding).toHaveBeenCalledWith(USER.id);
+    expect(db.callsFor("resumes")[1].chain).toContainEqual({ method: "eq", args: ["is_primary", false] });
   });
 
-  it("changes nothing else when the resume isn't primary", async () => {
+  it("changes nothing else", async () => {
     seed([
       { id: "r2", is_primary: true },
       { id: "r1", is_primary: false },
@@ -106,12 +102,15 @@ describe("deleteResume (RE-REQ-037)", () => {
     expect(storage).not.toHaveBeenCalled();
   });
 
-  it("reports a resume that went in the meantime", async () => {
-    db.queue("resumes", { data: [{ id: "r1", is_primary: true }, { id: "r2", is_primary: false }], error: null });
+  it("reports a resume that went or became primary in the meantime", async () => {
+    db.queue("resumes", { data: [{ id: "r1", is_primary: false }, { id: "r2", is_primary: true }], error: null });
     db.queue("resume_reviews", { data: null, error: null, count: 0 });
     db.queue("resumes", { data: [], error: null });
 
-    expect(await deleteResume(db.client, USER, { resumeId: "r1" })).toEqual({ ok: false, error: "Resume not found." });
+    expect(await deleteResume(db.client, USER, { resumeId: "r1" })).toEqual({
+      ok: false,
+      error: "This resume changed. Refresh and try again.",
+    });
     expect(steps().some((step) => step.method === "update")).toBe(false);
   });
 });

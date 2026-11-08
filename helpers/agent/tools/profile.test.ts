@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createProfileTools } from "./profile";
 import { execTool, toolContext, validateInput } from "@/test/utils/tools";
-import { flushAfter } from "@/test/utils/after";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { getProfile } from "@/helpers/user/get-profile";
-import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
 import { canonicalizeLocations } from "@/helpers/locations/aliases";
+import { refreshProfileAfterChange } from "@/helpers/user/queue-profile-refresh";
 
 vi.mock("@/helpers/user/get-profile", () => ({ getProfile: vi.fn() }));
-vi.mock("@/helpers/user/update-user-embedding", () => ({ updateUserEmbedding: vi.fn() }));
 vi.mock("@/helpers/locations/aliases", () => ({ canonicalizeLocations: vi.fn() }));
+vi.mock("@/helpers/user/queue-profile-refresh", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/helpers/user/queue-profile-refresh")>()),
+  refreshProfileAfterChange: vi.fn(),
+}));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
@@ -21,7 +23,12 @@ beforeEach(() => {
   supabase = createSupabaseMock();
   tools = createProfileTools(toolContext(supabase.client));
   vi.mocked(canonicalizeLocations).mockImplementation(async (names) => names);
+  vi.mocked(refreshProfileAfterChange).mockReset();
+  vi.mocked(refreshProfileAfterChange).mockResolvedValue("queued");
 });
+
+const REFRESHING =
+  "Refreshing. New matches appear on the jobs page in a few minutes, and the user gets an email.";
 
 describe("getMyProfile tool", () => {
   it("returns the profile summary for the ctx user", async () => {
@@ -44,7 +51,7 @@ describe("getMyProfile tool", () => {
 });
 
 describe("updateMyPreferences tool", () => {
-  it("maps fields to user_info columns and refreshes the embedding after responding", async () => {
+  it("maps fields to user_info columns and queues the embedding and matches refresh", async () => {
     supabase.queue("user_info", { data: [{ user_id: "u1" }], error: null });
 
     const result = await execTool(tools.updateMyPreferences, {
@@ -92,10 +99,29 @@ describe("updateMyPreferences tool", () => {
         "workStylePreferences",
       ],
       preferredLocations: ["Remote"],
+      matches: REFRESHING,
     });
-    expect(updateUserEmbedding).not.toHaveBeenCalled();
-    await flushAfter();
-    expect(updateUserEmbedding).toHaveBeenCalledWith("u1");
+    expect(refreshProfileAfterChange).toHaveBeenCalledWith("u1");
+  });
+
+  it("says the matches will be generated again when a run was already going", async () => {
+    supabase.queue("user_info", { data: [{ user_id: "u1" }], error: null });
+    vi.mocked(refreshProfileAfterChange).mockResolvedValue("deferred");
+
+    expect(await execTool(tools.updateMyPreferences, { topSkills: ["Go"] })).toEqual({
+      updated: ["topSkills"],
+      matches: expect.stringContaining("generated again with this change"),
+    });
+  });
+
+  it("says the matches weren't refreshed when nothing was queued", async () => {
+    supabase.queue("user_info", { data: [{ user_id: "u1" }], error: null });
+    vi.mocked(refreshProfileAfterChange).mockResolvedValue("not_refreshed");
+
+    expect(await execTool(tools.updateMyPreferences, { topSkills: ["Go"] })).toEqual({
+      updated: ["topSkills"],
+      matches: expect.stringContaining("weren't refreshed"),
+    });
   });
 
   it("saves canonical location names and reports them (REQ-023)", async () => {
@@ -113,6 +139,7 @@ describe("updateMyPreferences tool", () => {
     expect(result).toEqual({
       updated: ["preferredLocations"],
       preferredLocations: ["Bengaluru", "Remote"],
+      matches: REFRESHING,
     });
   });
 
@@ -124,7 +151,7 @@ describe("updateMyPreferences tool", () => {
     expect(supabase.callsFor("user_info")[0].chain[0].args[0]).toEqual({
       desired_roles: ["Backend Engineer"],
     });
-    expect(result).toEqual({ updated: ["desiredRoles"] });
+    expect(result).toEqual({ updated: ["desiredRoles"], matches: REFRESHING });
     expect(canonicalizeLocations).not.toHaveBeenCalled();
   });
 
@@ -134,8 +161,7 @@ describe("updateMyPreferences tool", () => {
     expect(await execTool(tools.updateMyPreferences, { topSkills: ["Go"] })).toEqual({
       error: "Profile not found. Ask the user to complete onboarding at /get-started.",
     });
-    await flushAfter();
-    expect(updateUserEmbedding).not.toHaveBeenCalled();
+    expect(refreshProfileAfterChange).not.toHaveBeenCalled();
   });
 
   it.each([

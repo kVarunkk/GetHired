@@ -121,7 +121,8 @@ export default function ResumesTable({ data }: ResumesTableProps) {
               // RE-REQ-098: nothing to edit, copy or export without content.
               isUnreadable: !row.original.has_content,
             }}
-            canDelete={items.length > 1}
+            canDelete={items.length > 1 && !row.original.is_primary}
+            isPrimary={row.original.is_primary}
             onDeleted={(id) => {
               setItems((prev) => prev.filter((item) => item.id !== id));
               router.refresh();

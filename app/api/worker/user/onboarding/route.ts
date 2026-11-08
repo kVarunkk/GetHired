@@ -8,13 +8,15 @@ import { revalidateTag } from "next/cache";
 import { processUserRelevance } from "@/helpers/jobs/relevant-jobs-utils";
 import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
+import { finishProfileRefresh } from "@/helpers/user/queue-profile-refresh";
 
 export type OnboardingMessage = {
   msg_id: number;
   read_ct: number;
   message: {
     userId: string;
-    resumeId: string;
+    /** Absent when a profile change (queue_profile_refresh) queued the run. */
+    resumeId?: string | null;
     shouldParse: boolean;
   };
 };
@@ -102,6 +104,10 @@ export async function GET() {
             return;
           }
 
+          // A change after this moment isn't in this run (it reads the
+          // profile below), so finishProfileRefresh queues a follow-up for it.
+          const startedAt = new Date().toISOString();
+
           // 1. PARSE RESUME
           if (shouldParse && resumeId) {
             try {
@@ -151,6 +157,9 @@ export async function GET() {
             queue_name: "onboarding_pipeline",
             message_id: msg.msg_id,
           });
+
+          // Profile changes made during this run get one more run.
+          await finishProfileRefresh(userId, startedAt);
         } catch (err) {
           reportError("[onboarding worker] message failed", err);
           // Last attempt: give up now rather than on an extra read. Otherwise
