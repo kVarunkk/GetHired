@@ -8,6 +8,7 @@ import { readSource, sourceFiles } from "@/test/utils/source";
 const ALLOWED: Record<string, string> = {
   "app/resume/[resumeId]/page.tsx": "the owner's resume page",
   "app/resume/[resumeId]/edit/page.tsx": "the owner's editor",
+  "components/ResumeSourceSelector.tsx": "previews the owner's picked resume in a dialog, through the browser client, so RLS limits it to them",
   "app/api/resumes/[resume_id]/export/route.ts": "the owner's own download, checked against the session user",
   "helpers/resumes/duplicate-resume.ts": "copies the owner's contact into their new resume",
   "helpers/resume-review/apply-suggestions.ts": "saveResume needs the owner's contact to write it back unchanged",

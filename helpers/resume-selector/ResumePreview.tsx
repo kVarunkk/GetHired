@@ -1,4 +1,5 @@
 import ResumePreviewDialog from "@/components/ResumePreviewDialog";
+import type { ResumeDocument } from "@/helpers/resume/render/document";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 
@@ -8,13 +9,16 @@ import Link from "next/link";
  */
 export const ResumePreview = ({
   previewUrl,
+  document,
   pageHref,
   noPreview = false,
   name,
 }: {
   /** A file to show. null while the signed URL loads. */
   previewUrl: string | null;
-  /** A resume with no stored file opens on its own page instead. */
+  /** A resume with no stored file, shown from its content. */
+  document?: ResumeDocument | null;
+  /** A resume with nothing to show here (no file, no content) opens on its own page. */
   pageHref?: string | null;
   /** Nothing to show yet, e.g. a Word file before it's uploaded. */
   noPreview?: boolean;
@@ -34,6 +38,8 @@ export const ResumePreview = ({
             <Link href={pageHref} target="_blank" className="underline">
               View
             </Link>
+          ) : document ? (
+            <ResumePreviewDialog document={document} />
           ) : previewUrl ? (
             <ResumePreviewDialog displayUrl={previewUrl} />
           ) : (
