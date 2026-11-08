@@ -76,6 +76,7 @@ const view = (changes: ReviewChange[], extra: Partial<Extract<LoadResumeChangesR
     reviewId: REVIEW_ID,
     summary: "Too many task descriptions.",
     resumeName: "Backend",
+    target: { job: null, pastedJob: false, focus: null },
     changes,
     gaps: [],
     original: target(SOURCE_ID, pending(changes)),
@@ -106,6 +107,22 @@ beforeEach(() => {
 });
 
 describe("ResumeChangesCard", () => {
+  it("says which job the changes are tailored for, linking to it", async () => {
+    await show(
+      view([REWRITE], { target: { job: { id: "j1", title: "AI Engineer", company: "Acme" }, pastedJob: false, focus: null } }),
+    );
+
+    expect(screen.getByRole("link", { name: "AI Engineer at Acme" })).toHaveAttribute("href", "/jobs/j1");
+  });
+
+  it("says the role it's tailored for without a job, or that it wasn't tailored", async () => {
+    await show(view([REWRITE], { target: { job: null, pastedJob: false, focus: "AI engineer roles" } }));
+    expect(screen.getByText("AI engineer roles")).toBeInTheDocument();
+
+    await show(view([REWRITE]));
+    expect(screen.getByText(/Not tailored to a job/)).toBeInTheDocument();
+  });
+
   it("loads by id, and shows the summary and each reason (RI-REQ-023, 024)", async () => {
     await show(view([REWRITE, REMOVE]));
 

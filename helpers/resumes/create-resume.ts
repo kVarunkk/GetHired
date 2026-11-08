@@ -68,7 +68,7 @@ const blankContent = (): ResumeContent => ({
 });
 
 /** What the profile already knows, so a blank resume doesn't start from nothing. */
-async function contactFromProfile(supabase: SupabaseClient<Database>, userId: string): Promise<ResumeContact> {
+export async function contactFromProfile(supabase: SupabaseClient<Database>, userId: string): Promise<ResumeContact> {
   const { data: profile } = await supabase
     .from("user_info")
     .select("full_name, email, linkedin_url, github_url")

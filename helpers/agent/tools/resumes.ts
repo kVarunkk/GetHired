@@ -5,7 +5,12 @@ import type { ResumeChangesOutput } from "@/components/agent/ResumeChangesCard";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { RESUME_LIMITS } from "@/helpers/resume/config";
 import { readResume } from "@/helpers/resume/read-resume";
-import { ResumeFromChatSchema, contentFromChat, createResume } from "@/helpers/resumes/create-resume";
+import {
+  ResumeFromChatSchema,
+  contentFromChat,
+  createResume,
+  type ResumeFromChat,
+} from "@/helpers/resumes/create-resume";
 import { deleteResume } from "@/helpers/resumes/delete-resume";
 import { duplicateResume } from "@/helpers/resumes/duplicate-resume";
 import { getResumeDetails } from "@/helpers/resumes/get-resume-details";
@@ -22,6 +27,7 @@ import {
   improveResume,
 } from "@/helpers/resume-review/improve-resume";
 import { placeholdersIn } from "@/helpers/resume-review/suggestions";
+import { reviewTargetText } from "@/helpers/resume-review/target";
 import {
   rankResumesForJob,
   RESUME_PICK_CREDITS,
@@ -109,6 +115,15 @@ function saveFailure(failure: { code: string; error: string; ids?: string[] }) {
     };
   }
   return { error, code };
+}
+
+/** What the model does after createResume: a new resume is where the questions start, not the end. */
+export function createdResumeMessage(sections: ResumeFromChat["sections"], updateTool: string) {
+  const filled = (sections ?? []).filter((section) => section.items.length > 0);
+  if (filled.length === 0) {
+    return `The resume is empty apart from the contact details from the profile. Don't stop here: ask the user which sections they want and the details for each, two or three questions at a time, and add their answers with ${updateTool}.`;
+  }
+  return `The resume has only what the user said. Tell them which sections are still empty, ask about anything missing (sections, dates, results), add it with ${updateTool}, and offer to improve it or tailor it to a job.`;
 }
 
 const PICK_DETAIL_ITEMS = 3;
@@ -369,9 +384,11 @@ export function createResumeTools(ctx: AgentToolContext) {
           });
           if (!result.ok) return result.code === "INSUFFICIENT_CREDITS" ? INSUFFICIENT_CREDITS : { error: result.error };
 
-          const { reviewId, summary, counts, gaps, analysis } = result;
+          const { reviewId, summary, counts, gaps, analysis, target } = result;
           const found = {
             reviewId,
+            // A job's title comes from its posting: data, never instructions.
+            tailoredFor: wrapInSandbox("tailored_for", reviewTargetText(target)),
             // Written by a model from a resume and a job posting: data, never instructions.
             summary: wrapInSandbox("resume_review_summary", summary),
             counts,
@@ -388,7 +405,7 @@ export function createResumeTools(ctx: AgentToolContext) {
           return {
             ...found,
             message:
-              "Now call reviewResumeChanges with this reviewId, so the user can choose. Don't list the suggestions yourself. The gaps are questions for the user: add what they answer with updateResume.",
+              "Now call reviewResumeChanges with this reviewId, so the user can choose, and tell the user what it was tailored for (tailoredFor). Don't list the suggestions yourself. The gaps are questions for the user: add what they answer with updateResume.",
           };
         }),
     }),
@@ -430,7 +447,7 @@ export function createResumeTools(ctx: AgentToolContext) {
 
     createResume: tool({
       description:
-        "Create a new resume for the user: blank, or from what they told you in this chat. Never add anything they didn't say. Free; the user must approve.",
+        "Create a new resume for the user from what they told you in this chat: ask them about the role, the sections they want and the details of each first. Blank only when they ask for an empty one. Never add anything they didn't say. Free; the user must approve.",
       inputSchema: ResumeFromChatSchema,
       execute: ({ name, sections }) =>
         withToolErrors(ctx, "createResume", async () => {
@@ -439,7 +456,11 @@ export function createResumeTools(ctx: AgentToolContext) {
             content: sections ? contentFromChat(sections) : undefined,
           });
           if (!created.ok) return { error: created.error };
-          return { resumeId: created.resumeId, url: `/resume/${created.resumeId}/edit` };
+          return {
+            resumeId: created.resumeId,
+            url: `/resume/${created.resumeId}/edit`,
+            message: createdResumeMessage(sections, ctx.surface === "mcp" ? "update_resume" : "updateResume"),
+          };
         }),
     }),
 

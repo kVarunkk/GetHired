@@ -119,7 +119,7 @@ describe("the resume confirmations (RE-REQ-082)", () => {
 
     expect(await previewCreateResume(ctx, { name: "Design" })).toMatchObject({
       ok: true,
-      summary: 'Create the resume "Design"?',
+      summary: 'Create the resume "Design"? It starts empty.',
     });
   });
 });

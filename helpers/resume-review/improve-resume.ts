@@ -10,6 +10,7 @@ import { PostHogEvent, TAICredits } from "@/utils/types";
 import type { Database, Json } from "@/utils/types/database.types";
 import { analyzeResumeForImprovement } from "./analyze-resume";
 import { reconcileChanges, type ReviewGap } from "./changes";
+import type { ReviewTarget } from "./target";
 
 export const RESUME_IMPROVE_FOCUS_MAX_CHARS = 300;
 export const RESUME_IMPROVE_JOB_MAX_CHARS = 4000;
@@ -30,6 +31,8 @@ export type ImproveResumeResult =
       summary: string;
       counts: ImproveCounts;
       gaps: ReviewGap[];
+      /** What it was tailored for, so the user is told. */
+      target: ReviewTarget;
       /** For MCP, which has no card to show them (RI-REQ-054). The chat's model never sees these. */
       analysis: ReturnType<typeof reconcileChanges>;
     }
@@ -70,19 +73,19 @@ export async function improveResume(
   const { content, revision, hasContent } = readResume(row);
   if (!hasContent) return invalid("This resume has no content yet.");
 
-  let jobName: string | null = null;
+  let job: ReviewTarget["job"] = null;
   let description = jobDescription ?? null;
   if (jobId) {
-    const { data: job, error } = await supabase
+    const { data, error } = await supabase
       .from("all_jobs")
-      .select("job_name, description")
+      .select("job_name, company_name, description")
       .eq("id", jobId)
       .maybeSingle();
     if (error) throw error;
-    if (!job) return { ok: false, code: "NOT_FOUND", error: "Job not found." };
-    if (!job.description?.trim()) return invalid("This job has no description to compare the resume against.");
-    jobName = job.job_name;
-    description = job.description;
+    if (!data) return { ok: false, code: "NOT_FOUND", error: "Job not found." };
+    if (!data.description?.trim()) return invalid("This job has no description to compare the resume against.");
+    job = { id: jobId, title: data.job_name, company: data.company_name };
+    description = data.description;
   }
 
   let cleanDescription: string | undefined;
@@ -115,9 +118,10 @@ export async function improveResume(
     .insert({
       user_id: user.id,
       resume_id: row.id,
-      name: jobName ?? `Improve ${row.name ?? "resume"}`,
+      name: job?.title ?? `Improve ${row.name ?? "resume"}`,
       job_id: jobId ?? null,
       target_jd: description,
+      focus: cleanFocus ?? null,
       ai_response: analysis as unknown as Json,
       score: null,
       status: "completed",
@@ -157,6 +161,7 @@ export async function improveResume(
     summary: analysis.overall_feedback,
     counts,
     gaps: analysis.gaps,
+    target: { job, pastedJob: !job && Boolean(cleanDescription), focus: cleanFocus ?? null },
     analysis,
   };
 }

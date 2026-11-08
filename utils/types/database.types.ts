@@ -3501,6 +3501,7 @@ export type Database = {
           analysis_failed: boolean | null
           applied_copy_id: string | null
           created_at: string
+          focus: string | null
           id: string
           job_id: string | null
           name: string | null
@@ -3517,6 +3518,7 @@ export type Database = {
           analysis_failed?: boolean | null
           applied_copy_id?: string | null
           created_at?: string
+          focus?: string | null
           id?: string
           job_id?: string | null
           name?: string | null
@@ -3533,6 +3535,7 @@ export type Database = {
           analysis_failed?: boolean | null
           applied_copy_id?: string | null
           created_at?: string
+          focus?: string | null
           id?: string
           job_id?: string | null
           name?: string | null

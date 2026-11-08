@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { changesResultForModel, createResumeTools } from "./resumes";
+import { changesResultForModel, createdResumeMessage, createResumeTools } from "./resumes";
 import { execTool, toolContext, validateInput } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { duplicateResume } from "@/helpers/resumes/duplicate-resume";
@@ -817,5 +817,23 @@ describe("pickResumeForJob tool", () => {
       error: "Something went wrong while running pickResumeForJob. Please try again.",
     });
     expect(deductUserCreditsHelper).not.toHaveBeenCalled();
+  });
+});
+
+describe("createdResumeMessage", () => {
+  it("sends the model back to the user's questions after a blank resume", () => {
+    expect(createdResumeMessage(undefined, "updateResume")).toMatch(/empty.*ask the user which sections.*updateResume/);
+    expect(
+      createdResumeMessage([{ type: "experience", items: [] }], "update_resume"),
+    ).toMatch(/empty.*update_resume/);
+  });
+
+  it("asks for what's missing after a resume with content", () => {
+    const message = createdResumeMessage(
+      [{ type: "experience", items: [{ heading: "Engineer", bullets: ["Built the app"] }] }],
+      "updateResume",
+    );
+    expect(message).toMatch(/only what the user said/);
+    expect(message).toMatch(/still empty/);
   });
 });

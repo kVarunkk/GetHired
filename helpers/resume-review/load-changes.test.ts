@@ -30,6 +30,10 @@ const REVIEW = {
   id: REVIEW_ID,
   resume_id: SOURCE_ID,
   applied_copy_id: null as string | null,
+  job_id: "j1" as string | null,
+  target_jd: "Build agents." as string | null,
+  focus: null as string | null,
+  all_jobs: { job_name: "AI Engineer", company_name: "Acme" } as { job_name: string | null; company_name: string | null } | null,
   resume_review_applied: [] as { bullet_id: string; target_resume_id: string; previous_text: string; applied_text: string }[],
   ai_response: {
     overall_feedback: "Solid, but vague.",
@@ -61,6 +65,23 @@ describe("loadResumeChanges (RI-REQ-023)", () => {
     expect(result).toMatchObject({ ok: true, summary: "Solid, but vague.", resumeName: "Backend", gaps: REVIEW.ai_response.gaps });
     expect(result.ok && result.changes.map(({ id }) => id)).toEqual(["b1", "add-1"]);
     expect(result.ok && result.original.states).toEqual({ b1: "pending", "add-1": "pending" });
+    expect(result.ok && result.target).toEqual({
+      job: { id: "j1", title: "AI Engineer", company: "Acme" },
+      pastedJob: false,
+      focus: null,
+    });
+  });
+
+  it("reads a review without a job as aimed at its focus", async () => {
+    db.queue("resume_reviews", {
+      data: { ...REVIEW, job_id: null, target_jd: null, all_jobs: null, focus: "AI engineer roles" },
+      error: null,
+    });
+    db.queue("resumes", { data: [resume(SOURCE_ID)], error: null });
+
+    const result = await load();
+
+    expect(result.ok && result.target).toEqual({ job: null, pastedJob: false, focus: "AI engineer roles" });
   });
 
   it("has no copy id until a copy exists, and starts it from the original (RI-REQ-028)", async () => {

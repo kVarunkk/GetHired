@@ -1053,7 +1053,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": false,
       "title": "Create a resume",
     },
-    "description": "Create a new resume for the user: blank, or from what they told you in this chat. Never add anything they didn't say. Free; the user must approve. GetHired asks the user to confirm before it runs.",
+    "description": "Create a new resume for the user from what they told you in this chat: ask them about the role, the sections they want and the details of each first. Blank only when they ask for an empty one. Never add anything they didn't say. Free; the user must approve. GetHired asks the user to confirm before it runs.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {

@@ -1,13 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { RESUME_SECTION_LABELS } from "@/helpers/resume/config";
+import { RESUME_DEFAULT_TEMPLATE, RESUME_SECTION_LABELS } from "@/helpers/resume/config";
 import { buildResumeDocument, type ResumeDocument } from "@/helpers/resume/render/document";
+import { ResumeContentSchema } from "@/helpers/resume/resume-schema";
 import { previewReviewSuggestions } from "@/helpers/resume-review/apply-suggestions";
 import type { ReviewChange } from "@/helpers/resume-review/changes";
 import type { Database } from "@/utils/types/database.types";
-import { RESUME_DEFAULT_NAME, ResumeFromChatSchema } from "./create-resume";
+import { RESUME_DEFAULT_NAME, ResumeFromChatSchema, contactFromProfile, contentFromChat } from "./create-resume";
 import { LAST_RESUME_ERROR, PRIMARY_RESUME_ERROR } from "./delete-resume";
 import { describeResumeChanges, type ResumeChange } from "./resume-changes";
 import { RESUME_LIMIT_ERROR, hasRoomForResume } from "./resume-limit";
+import type { ResumeDraft } from "./resume-operations";
 import { planResumeUpdate } from "./update-resume";
 
 export const RESUME_EDIT_TOOLS = ["createResume", "updateResume", "deleteResume", "applyReviewSuggestions"] as const;
@@ -54,13 +56,34 @@ async function previewCreate(supabase: Client, user: User, input: unknown): Prom
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "This resume isn't valid." };
   if (!(await hasRoomForResume(supabase, user.id))) return { ok: false, error: RESUME_LIMIT_ERROR };
 
-  const { name, sections } = parsed.data;
-  const summary = `Create the resume "${name?.trim() || RESUME_DEFAULT_NAME}"?`;
-  if (!sections) return { ok: true, summary, changes: [] };
+  const { sections } = parsed.data;
+  const name = parsed.data.name?.trim() || RESUME_DEFAULT_NAME;
+  const summary = `Create the resume "${name}"?`;
+  if (!sections) return { ok: true, summary: `${summary} It starts empty.`, changes: [] };
 
-  const after = sections.map((section) => section.title || RESUME_SECTION_LABELS[section.type]).join(", ");
-  return { ok: true, summary, changes: [{ label: "Sections", before: "", after }] };
+  const content = ResumeContentSchema.safeParse(contentFromChat(sections));
+  if (!content.success) return { ok: false, error: content.error.issues[0]?.message ?? "This resume isn't valid." };
+
+  // Everything in it is new, so the card shows the whole resume as added. The
+  // name and template aren't changes; the summary names the resume.
+  const template = RESUME_DEFAULT_TEMPLATE;
+  const empty: ResumeDraft = { name, template, contact: NO_CONTACT, content: { version: 2, sections: [] } };
+  const created: ResumeDraft = { ...empty, content: content.data };
+  // The listed changes reach MCP, so they leave out the profile's contact details.
+  const changes = describeResumeChanges(empty, created);
+  const sectionNames = sections.map((section) => section.title || RESUME_SECTION_LABELS[section.type]).join(", ");
+
+  return {
+    ok: true,
+    summary,
+    changes: [{ label: "Sections", before: "", after: sectionNames }, ...changes.filter(isNotSectionName)],
+    before: buildResumeDocument({ ...empty, template }),
+    after: buildResumeDocument({ ...created, template, contact: await contactFromProfile(supabase, user.id) }),
+  };
 }
+
+const NO_CONTACT = { fullName: "", links: [] };
+const isNotSectionName = ({ label }: ResumeChange) => label !== "Section";
 
 async function previewDelete(supabase: Client, user: User, input: unknown): Promise<ResumeEditPreview> {
   const resumeId = (input as { resumeId?: unknown } | null)?.resumeId;

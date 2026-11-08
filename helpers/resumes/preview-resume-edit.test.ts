@@ -201,12 +201,51 @@ describe("previewing createResume", () => {
       sections: [{ type: "skills", items: [] }, { type: "other", title: "Talks", items: [] }],
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ok: true,
       summary: 'Create the resume "Design"?',
       changes: [{ label: "Sections", before: "", after: "Skills, Talks" }],
     });
     expect(writes()).toEqual([]);
+  });
+
+  it("shows every item and bullet, with the profile's contact only on the card", async () => {
+    db.queue("resumes", { data: null, error: null, count: 1 });
+    db.queue("user_info", { data: { full_name: "Ada", email: "ada@example.com" }, error: null });
+
+    const result = await preview("createResume", {
+      name: "Frontend",
+      sections: [
+        {
+          type: "experience",
+          items: [{ heading: "Engineer", subheading: "Acme", startDate: "Jan 2022", bullets: ["Built the checkout"] }],
+        },
+      ],
+    });
+
+    if (!result.ok) throw new Error(result.error);
+    expect(result.changes).toEqual(
+      expect.arrayContaining([
+        { label: "Sections", before: "", after: "Experience" },
+        { label: "Experience, Engineer: Subheading", before: "", after: "Acme" },
+        { label: "Experience, Engineer", before: "", after: "Built the checkout" },
+      ]),
+    );
+    expect(JSON.stringify(result.changes)).not.toContain("ada@example.com");
+    expect(result.before?.sections).toEqual([]);
+    expect(result.after?.name).toBe("Ada");
+    expect(JSON.stringify(result.after?.sections)).toContain("Built the checkout");
+    expect(writes()).toEqual([]);
+  });
+
+  it("says a resume without sections starts empty", async () => {
+    db.queue("resumes", { data: null, error: null, count: 1 });
+
+    expect(await preview("createResume", {})).toEqual({
+      ok: true,
+      summary: 'Create the resume "Untitled resume"? It starts empty.',
+      changes: [],
+    });
   });
 
   it("is an error at the limit", async () => {

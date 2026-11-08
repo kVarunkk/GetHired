@@ -17,6 +17,7 @@ import type { ResumeContent } from "@/helpers/resume/resume-schema";
 import { changeText, planChangeOperations, type ReviewChange } from "@/helpers/resume-review/changes";
 import type { ChangesTarget, ResumeChangesView } from "@/helpers/resume-review/load-changes";
 import { fillPlaceholders, hasPlaceholder, splitPlaceholders } from "@/helpers/resume-review/suggestions";
+import { reviewJobLabel, type ReviewTarget } from "@/helpers/resume-review/target";
 import { diffResume } from "@/helpers/resumes/resume-diff";
 import { runResumeOperations } from "@/helpers/resumes/resume-operations";
 
@@ -44,6 +45,36 @@ const LOAD_FAILED = "We couldn't load these changes. Please try again.";
 const APPLY_FAILED = "We couldn't apply that. Please try again.";
 
 const count = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** What the review was tailored for. Text only: a job title comes from its posting. */
+function TailoredFor({ target }: { target: ReviewTarget }) {
+  const { job, pastedJob, focus } = target;
+  return (
+    <div className="flex flex-col gap-0.5 rounded-md border px-2.5 py-1.5">
+      <p className="break-words text-muted-foreground">
+        {job ? (
+          <>
+            Tailored for{" "}
+            <Link href={`/jobs/${job.id}`} target="_blank" className="font-medium text-foreground underline underline-offset-2">
+              {reviewJobLabel(job)}
+            </Link>
+          </>
+        ) : pastedJob ? (
+          <>
+            Tailored for <span className="font-medium text-foreground">the job description you pasted</span>
+          </>
+        ) : focus ? (
+          <>
+            Tailored for <span className="font-medium text-foreground">{focus}</span>
+          </>
+        ) : (
+          "Not tailored to a job: reviewed on its own"
+        )}
+      </p>
+      {(job || pastedJob) && focus && <p className="break-words text-muted-foreground">Focus: {focus}</p>}
+    </div>
+  );
+}
 
 function ErrorNote({ children }: { children: string }) {
   return (
@@ -317,6 +348,7 @@ function ChangesForm({
 
   return (
     <div className="flex flex-col gap-3 text-xs">
+      <TailoredFor target={view.target} />
       {view.summary && <p className="whitespace-pre-line break-words text-foreground">{view.summary}</p>}
 
       {open.length > 0 ? (
@@ -457,6 +489,7 @@ export function ResumeChangesResult({ reviewId, output }: { reviewId: string; ou
 
   return (
     <div className="flex flex-col gap-2 text-xs">
+      {view && <TailoredFor target={view.target} />}
       <p className="text-foreground">
         Applied {count(stillApplied.length, "change")}.{" "}
         {targetResumeId && (

@@ -140,12 +140,19 @@ describe("improveResume", () => {
 
   it("loads the job itself", async () => {
     queueBasics();
-    db.queue("all_jobs", { data: { job_name: "Staff Engineer", description: "Build payment systems at scale." }, error: null });
+    db.queue("all_jobs", {
+      data: { job_name: "Staff Engineer", company_name: "Stripe", description: "Build payment systems at scale." },
+      error: null,
+    });
     queueSaved();
     const model = mockGenerateModel(JSON.stringify(ANALYSIS));
 
-    await run({ jobId: JOB_ID }, model);
+    const result = await run({ jobId: JOB_ID }, model);
 
+    expect(result).toMatchObject({
+      ok: true,
+      target: { job: { id: JOB_ID, title: "Staff Engineer", company: "Stripe" }, pastedJob: false, focus: null },
+    });
     expect(promptOf(model)).toContain("Build payment systems at scale.");
     expect(promptOf(model)).toContain("JD ALIGNMENT RULES");
     expect(inserted()).toMatchObject({ name: "Staff Engineer", job_id: JOB_ID });
@@ -174,6 +181,7 @@ describe("improveResume", () => {
 
     expect(promptOf(model)).toContain("<user_focus>");
     expect(promptOf(model)).toContain("focus on leadership");
+    expect(inserted()).toMatchObject({ focus: "focus on leadership" });
   });
 
   it("never sends contact details to the model", async () => {

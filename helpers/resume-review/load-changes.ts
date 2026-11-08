@@ -4,6 +4,7 @@ import { readResume } from "@/helpers/resume/read-resume";
 import type { ResumeContact, ResumeContent } from "@/helpers/resume/resume-schema";
 import type { Database } from "@/utils/types/database.types";
 import { planChangeOperations, readChanges, readGaps, type ReviewChange, type ReviewGap } from "./changes";
+import { reviewTarget, type ReviewTarget } from "./target";
 
 export type ChangeState = "pending" | "applied" | "changed";
 
@@ -25,6 +26,7 @@ export type ResumeChangesView = {
   reviewId: string;
   summary: string;
   resumeName: string | null;
+  target: ReviewTarget;
   changes: ReviewChange[];
   gaps: ReviewGap[];
   original: ChangesTarget;
@@ -70,7 +72,9 @@ export async function loadResumeChanges(
 ): Promise<LoadResumeChangesResult> {
   const { data: review, error } = await supabase
     .from("resume_reviews")
-    .select("id, resume_id, applied_copy_id, ai_response, resume_review_applied(bullet_id, target_resume_id, previous_text, applied_text)")
+    .select(
+      "id, resume_id, applied_copy_id, ai_response, job_id, target_jd, focus, all_jobs(job_name, company_name), resume_review_applied(bullet_id, target_resume_id, previous_text, applied_text)",
+    )
     .eq("id", reviewId)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -103,6 +107,7 @@ export async function loadResumeChanges(
     reviewId: review.id,
     summary: typeof feedback === "string" ? feedback : "",
     resumeName: source.name,
+    target: reviewTarget(review),
     changes,
     gaps: readGaps(review.ai_response),
     original: toTarget(source, source.id, changes, appliedTo(source.id)),
