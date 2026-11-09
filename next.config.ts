@@ -1,5 +1,16 @@
 import type { NextConfig } from "next";
 
+// Read at runtime by the PDF export (helpers/resume/render/pdf.tsx), so tracing can't see them:
+// - the Noto Sans files, loaded by path;
+// - pdfkit's standard fonts, required through its `#standard-fonts/*` subpath import,
+//   which tracing doesn't follow. pdfkit loads Helvetica on every new document, even
+//   when the page uses only registered fonts.
+const RESUME_PDF_FILES = [
+  "./node_modules/@fontsource/noto-sans/files/noto-sans-{latin,latin-ext,cyrillic,greek}-{400,700}-normal.woff",
+  "./node_modules/@fontsource/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-{400,700}-normal.woff",
+  "./node_modules/pdfkit/js/standard-fonts/**/*.cjs",
+];
+
 const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: false,
@@ -30,11 +41,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["pdf-parse", "@napi-rs/canvas", "@react-pdf/renderer"],
   outputFileTracingIncludes: {
     "/**": ["./app/content/**/*"],
-    // Read by path at runtime (helpers/resume/render/pdf.tsx), so tracing can't see them.
-    "/api/resumes/[resume_id]/export": [
-      "./node_modules/@fontsource/noto-sans/files/noto-sans-{latin,latin-ext,cyrillic,greek}-{400,700}-normal.woff",
-      "./node_modules/@fontsource/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-{400,700}-normal.woff",
-    ],
+    "/api/resumes/[resume_id]/export": RESUME_PDF_FILES,
+    "/api/company/applications/[id]/resume/export": RESUME_PDF_FILES,
   },
   // The company "Applicants" pages became "Applications". Old links (in sent
   // emails, bookmarks and agent chats) keep working.
