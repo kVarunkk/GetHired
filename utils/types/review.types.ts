@@ -12,8 +12,17 @@ const resumeReviewServerQuery = supabase
         id,
         name,
         content,
+        contact,
+        template,
+        revision,
+        schema_version,
         resume_path,
         parsing_failed
+      ),
+      resume_review_applied (
+        bullet_id,
+        target_resume_id,
+        applied_text
       )
     `,
   )

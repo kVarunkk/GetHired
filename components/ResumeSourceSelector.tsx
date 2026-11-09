@@ -9,6 +9,13 @@ import { UploadResumeParent } from "@/helpers/resume-selector/UploadResumeParent
 import { SelectResumeParent } from "@/helpers/resume-selector/SelectResumeParent";
 import { ResumePreview } from "@/helpers/resume-selector/ResumePreview";
 import { TResumeReviewResume } from "@/utils/types/review.types";
+import {
+  buildResumeDocument,
+  type ResumeDocument,
+} from "@/helpers/resume/render/document";
+import { readResume } from "@/helpers/resume/read-resume";
+
+const isPdfFile = (file: File) => /\.pdf$/i.test(file.name);
 
 interface ResumeSourceSelectorProps {
   existingResumes: (TResumeReviewResume & {
@@ -33,11 +40,12 @@ export default function ResumeSourceSelector({
 }: ResumeSourceSelectorProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fetchedName, setFetchedName] = useState<string | null>(null);
+  const [resumeDocument, setResumeDocument] = useState<ResumeDocument | null>(null);
+  const [pageHref, setPageHref] = useState<string | null>(null);
 
   const selectedResume = selectedId
     ? existingResumes.find((r) => r.id === selectedId)
     : undefined;
-  const knownPath = selectedResume?.resume_path ?? null;
   const selectedName = file
     ? file.name
     : selectedResume?.name || fetchedName || null;
@@ -49,8 +57,11 @@ export default function ResumeSourceSelector({
     let ignore = false;
     setPreviewUrl(null);
     setFetchedName(null);
+    setResumeDocument(null);
+    setPageHref(null);
 
     if (file) {
+      if (!isPdfFile(file)) return;
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
       return () => {
@@ -63,22 +74,38 @@ export default function ResumeSourceSelector({
     (async () => {
       try {
         const supabase = createClient();
-        let path = knownPath;
-        if (!path) {
-          const { data: resumeData, error: fetchError } = await supabase
-            .from("resumes")
-            .select("resume_path, name")
-            .eq("id", selectedId)
-            .single();
-          if (fetchError || !resumeData?.resume_path)
-            throw new Error("Resume not found");
-          path = resumeData.resume_path;
-          if (!ignore) setFetchedName(resumeData.name || null);
+        const { data: row, error: fetchError } = await supabase
+          .from("resumes")
+          .select("resume_path, name, content, contact, schema_version, template")
+          .eq("id", selectedId)
+          .single();
+        if (fetchError || !row) throw new Error("Resume not found");
+        if (ignore) return;
+        setFetchedName(row.name || null);
+
+        // Same rule as the resume page: an older-format resume shows its file
+        // (RE-REQ-031), anything else is shown from its content (RE-REQ-100).
+        // With neither, its page asks for the file again.
+        const resume = readResume(row);
+        const showFile = resume.schemaVersion === 1 && !!row.resume_path;
+        if (!showFile && resume.hasContent) {
+          setResumeDocument(
+            buildResumeDocument({
+              contact: resume.contact ?? { fullName: "", links: [] },
+              content: resume.content,
+              template: resume.template,
+            }),
+          );
+          return;
+        }
+        if (!row.resume_path) {
+          setPageHref(`/resume/${selectedId}`);
+          return;
         }
 
         const { data, error: signedError } = await supabase.storage
           .from("resumes")
-          .createSignedUrl(path, 3600);
+          .createSignedUrl(row.resume_path, 3600);
         if (signedError) throw signedError;
         if (!ignore) setPreviewUrl(data?.signedUrl || null);
       } catch (error) {
@@ -89,7 +116,7 @@ export default function ResumeSourceSelector({
     return () => {
       ignore = true;
     };
-  }, [file, selectedId, knownPath]);
+  }, [file, selectedId]);
 
   // min-w-0 so a grid or flex-row parent can't size it to its longest
   // (truncated) resume name.
@@ -151,7 +178,13 @@ export default function ResumeSourceSelector({
           when it first appears and not on every pick. */}
       {hasSelection && (
         <div className="animate-in fade-in duration-200">
-          <ResumePreview previewUrl={previewUrl} name={selectedName} />
+          <ResumePreview
+            previewUrl={previewUrl}
+            document={resumeDocument}
+            pageHref={pageHref}
+            noPreview={!!file && !isPdfFile(file)}
+            name={selectedName}
+          />
         </div>
       )}
     </div>

@@ -21,6 +21,7 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
+import { createResumeAction } from "@/app/actions/resumes/create-resume";
 import { uploadResumeAction } from "@/app/actions/upload-resume-file";
 import { useProgress } from "react-transition-progress";
 import { TResumeReviewResume } from "@/utils/types/review.types";
@@ -29,6 +30,8 @@ export default function CreateResumeDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
   const startProgress = useProgress();
 
@@ -40,10 +43,32 @@ export default function CreateResumeDialog() {
   const existingResumes: TResumeReviewResume[] =
     data && data.profile ? data.profile.resumes : [];
 
+  const openEditor = (resumeId: string) => {
+    setIsOpen(false);
+    setSelectedFile(null);
+    startTransition(() => {
+      startProgress();
+      router.push(`/resume/${resumeId}/edit`);
+    });
+  };
+
+  const handleStartBlank = async () => {
+    if (isCreating) return;
+
+    setIsCreating(true);
+    setUploadError(null);
+    const result = await createResumeAction().catch(() => null);
+    setIsCreating(false);
+
+    if (result?.ok) openEditor(result.resumeId);
+    else setUploadError(result?.error ?? "We couldn't create this resume. Please try again.");
+  };
+
   const handleStartProcessing = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || isUploading) return;
 
     setIsUploading(true);
+    setUploadError(null);
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
@@ -51,22 +76,14 @@ export default function CreateResumeDialog() {
       const result = await uploadResumeAction(formData);
 
       if (result.success && result.resumeId) {
-        toast.success("Resume added succesfully!");
-        setIsOpen(false);
-        setSelectedFile(null);
-        startTransition(() => {
-          startProgress();
-          router.push(`/resume/${result.resumeId}`);
-        });
+        toast.success("Resume added. Check it over.");
+        // RE-REQ-020: the parse opens in the editor.
+        openEditor(result.resumeId);
       } else {
-        throw new Error(result.error);
+        setUploadError(result.error ?? "Upload failed. Please try again.");
       }
-    } catch (err: unknown) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "An unexpected error occurred. Please try again later.",
-      );
+    } catch {
+      setUploadError("Upload failed. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -77,18 +94,18 @@ export default function CreateResumeDialog() {
       <ResponsiveDialogTrigger asChild>
         <Button variant="brand" className="max-w-full">
           <Plus className="w-4 h-4" />
-          <span>Add Resume</span>
+          <span>New resume</span>
         </Button>
       </ResponsiveDialogTrigger>
 
       <ResponsiveDialogContent className="sm:max-w-[440px] ">
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>
-            Add New Resume
+            New resume
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
-            Upload a PDF version of your resume. Our AI will index it for
-            further analysis.
+            Upload a PDF or Word file and we&apos;ll read it into a resume you
+            can edit, without keeping the file. Or start blank.
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
@@ -97,7 +114,9 @@ export default function CreateResumeDialog() {
             <div className="flex flex-col items-center justify-center py-12 gap-4 animate-in fade-in duration-300">
               <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
 
-              <p className="text-sm text-muted-foreground">Processing Upload</p>
+              <p className="text-sm text-muted-foreground">
+                Reading your resume. This can take a few seconds.
+              </p>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
@@ -113,18 +132,35 @@ export default function CreateResumeDialog() {
                 selectedId={null}
                 onSelectExisting={() => {}}
                 file={selectedFile}
-                onFileChange={(file) => setSelectedFile(file)}
+                onFileChange={(file) => {
+                  setSelectedFile(file);
+                  setUploadError(null);
+                }}
                 view="upload"
               />
+              {uploadError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {uploadError}
+                </p>
+              )}
             </div>
           )}
         </ResponsiveDialogBody>
         <ResponsiveDialogFooter>
           <Button
+            onClick={handleStartBlank}
+            disabled={isUploading || isCreating}
+            variant="outline"
+            className="w-full"
+          >
+            {isCreating && <Loader2 className="h-4 w-4 animate-spin" />}
+            Start blank
+          </Button>
+          <Button
             onClick={() => {
               handleStartProcessing();
             }}
-            disabled={!selectedFile || isUploading}
+            disabled={!selectedFile || isUploading || isCreating}
             variant="brand"
             className="w-full"
           >

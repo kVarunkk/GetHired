@@ -49,7 +49,7 @@ export default function EmailPreferences({
             id="settings_job_digest_details"
             className="text-sm text-muted-foreground"
           >
-            Top AI-matched job recommendations every 3 days, built from your{" "}
+            Top AI-matched job recommendations every two weeks, built from your{" "}
             <Link
               href="/resume"
               className="font-medium text-foreground underline underline-offset-4 transition-colors hover:text-brand"

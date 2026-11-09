@@ -4,12 +4,14 @@ import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 import { createClient } from "@/lib/supabase/server";
 import { Database } from "@/utils/types/database.types";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
+import { reportError } from "@/helpers/posthog/report-error";
 import { getMyCompany, type MyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import type { AgentRoleId } from "./roles/types";
 
 /** Reports an unexpected error and returns a generic 500 (SEC-006). */
 export async function internalError(error: unknown, userId: string, flow: string) {
+  if (process.env.NODE_ENV === "development") reportError(`[${flow}]`, error);
   await eventCaptureServerException({
     error,
     distinctId: userId,

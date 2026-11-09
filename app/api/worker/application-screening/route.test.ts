@@ -121,6 +121,30 @@ describe("GET /api/worker/application-screening (MT-TEST-004)", () => {
     expect(db.calls).toHaveLength(0);
   });
 
+  it("screens what the application sent, and never loads its contact snapshot (RE-REQ-062, RE-SEC-006)", async () => {
+    const sent = {
+      name: "Sent",
+      template: "classic",
+      content: {
+        version: 2,
+        sections: [{ id: "s1", type: "skills", items: [{ id: "i1", bullets: [{ id: "b1", text: "Text as sent" }] }] }],
+      },
+    };
+    queueMessages(message(7));
+    db.queue("application_screenings", { data: screeningRow(), error: null });
+    db.queue("applications", { data: { ...APPLICATION, resume_snapshot: sent }, error: null });
+    db.queue("job_postings", { data: JOB_POST, error: null });
+    db.queue("user_info", { data: CANDIDATE_PROFILE, error: null });
+
+    await run();
+
+    expect(JSON.stringify(vi.mocked(screenApplication).mock.calls[0][0].resume)).toContain("Text as sent");
+    expect(db.callsFor("resumes")).toHaveLength(0);
+    const select = String(db.callsFor("applications")[0].chain.find((c) => c.method === "select")?.args[0]);
+    expect(select).not.toContain("contact_snapshot");
+    expect(select).not.toContain("*");
+  });
+
   it("reads up to a batch with a 120-second visibility timeout", async () => {
     queueMessages();
 

@@ -85,6 +85,41 @@ describe("loadCandidateContext", () => {
     expect(mock.callsFor("user_info")[0].chain[0]).toEqual({ method: "select", args: ["full_name"] });
   });
 
+  it("prefers what the application sent, and never reads its contact details (RE-REQ-062)", async () => {
+    const mock = createSupabaseMock();
+    const content = {
+      version: 2,
+      sections: [{ id: "s1", type: "skills", items: [{ id: "i1", bullets: [{ id: "b1", text: "Sent text" }] }] }],
+    };
+    mock.queue("applications", {
+      data: { resume_id: "r1", applicant_user_id: USER, resume_snapshot: { name: "x", template: "classic", content } },
+      error: null,
+    });
+    mock.queue("user_info", { data: { full_name: "Priya Sharma" }, error: null });
+
+    const result = await loadCandidateContext(mock.client, APP);
+
+    expect(result).toMatchObject({ ok: true, firstName: "Priya" });
+    expect(result).toMatchObject({ context: expect.stringContaining("Sent text") });
+    expect(mock.callsFor("resumes")).toHaveLength(0);
+    expect(String(mock.callsFor("applications")[0].chain[0].args[0])).not.toContain("contact");
+  });
+
+  it("uses the snapshot even when the resume it came from was deleted", async () => {
+    const mock = createSupabaseMock();
+    mock.queue("applications", {
+      data: {
+        resume_id: null,
+        applicant_user_id: USER,
+        resume_snapshot: { name: "x", template: "classic", content: { version: 2, sections: [] } },
+      },
+      error: null,
+    });
+    mock.queue("user_info", { data: { full_name: "Priya Sharma" }, error: null });
+
+    expect(await loadCandidateContext(mock.client, APP)).toMatchObject({ ok: true });
+  });
+
   it("returns an error when the application has no resume", async () => {
     const mock = createSupabaseMock();
     mock.queue("applications", { data: { resume_id: null, applicant_user_id: USER }, error: null });

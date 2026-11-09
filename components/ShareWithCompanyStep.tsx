@@ -9,7 +9,7 @@ import {
 } from "@/app/actions/applications/attachments";
 import { cn } from "@/utils/utils";
 
-export type ShareSelection = { sessionId: string | null; reviewId: string | null };
+export type ShareSelection = { sessionId: string | null };
 
 function Option({
   selected,
@@ -40,8 +40,7 @@ function Option({
 
 /**
  * "Share with this company (optional)" in the application form (OR-REQ-030):
- * one completed mock interview and/or one completed resume review. Nothing
- * is shared unless picked. Also suggests a mock interview (OR-REQ-033).
+ * one completed mock interview. Nothing is shared unless picked. Also suggests a mock interview (OR-REQ-033).
  */
 export default function ShareWithCompanyStep({
   allJobsId,
@@ -58,7 +57,7 @@ export default function ShareWithCompanyStep({
     let active = true;
     listShareableSignalsAction()
       .then((result) => active && setSignals(result))
-      .catch(() => active && setSignals({ sessions: [], reviews: [] }));
+      .catch(() => active && setSignals({ sessions: [] }));
     return () => {
       active = false;
     };
@@ -94,21 +93,6 @@ export default function ShareWithCompanyStep({
                   onClick={() => onChange({ ...value, sessionId: value.sessionId === s.id ? null : s.id })}
                   title={s.label}
                   detail={s.endedAt ? new Date(s.endedAt).toLocaleDateString() : null}
-                />
-              ))}
-            </div>
-          )}
-
-          {signals.reviews.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Resume review</p>
-              {signals.reviews.map((r) => (
-                <Option
-                  key={r.id}
-                  selected={value.reviewId === r.id}
-                  onClick={() => onChange({ ...value, reviewId: value.reviewId === r.id ? null : r.id })}
-                  title={r.label}
-                  detail={r.score !== null ? `Score ${r.score}` : null}
                 />
               ))}
             </div>

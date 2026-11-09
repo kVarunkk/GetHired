@@ -27,7 +27,7 @@ export function AskAgentAboutJobs() {
   );
 }
 
-// listResumes, setPrimaryResume, requestResumeUpload, startResumeReview.
+// listResumes, setPrimaryResume, requestResumeUpload, improveResume, createResume.
 export const RESUMES_SUGGESTIONS: AgentSuggestion[] = [
   { label: "Which resume is my primary?", prompt: "List my resumes and tell me which one is my primary." },
   {
@@ -35,7 +35,8 @@ export const RESUMES_SUGGESTIONS: AgentSuggestion[] = [
     prompt: "Help me pick which of my resumes should be my primary one for job matches, then set it.",
   },
   { label: "Upload a new resume", prompt: "I want to upload a new resume." },
-  { label: "Review my resume for a job", prompt: "Review my resume against a job I like. Ask me which job first." },
+  { label: "Start a blank resume", prompt: "Create a blank resume for me." },
+  { label: "Tailor my resume for a job", prompt: "Tailor my resume for a job I like. Ask me which job first." },
 ];
 
 export function AskAgentAboutResumes() {
@@ -46,31 +47,6 @@ export function AskAgentAboutResumes() {
       basePath={AGENT_PATH}
       suggestions={RESUMES_SUGGESTIONS}
       toPrompt={(question) => `About my resumes: ${question.trim()}`}
-    />
-  );
-}
-
-// startResumeReview (a job or a pasted description), findRelevantJobs.
-export const RESUME_REVIEWS_SUGGESTIONS: AgentSuggestion[] = [
-  { label: "Review my resume for a job", prompt: "Review my resume against a job I like. Ask me which job first." },
-  {
-    label: "Review against a job description",
-    prompt: "Review my resume against a job description. I'll paste it next.",
-  },
-  {
-    label: "Find jobs to review against",
-    prompt: "Find jobs that match my profile, so I can pick one to review my resume against.",
-  },
-];
-
-export function AskAgentAboutResumeReviews() {
-  return (
-    <AskAgentBox
-      title="Let the agent review your resume"
-      placeholder="Review my resume for the Stripe frontend role…"
-      basePath={AGENT_PATH}
-      suggestions={RESUME_REVIEWS_SUGGESTIONS}
-      toPrompt={(question) => `About my resume reviews: ${question.trim()}`}
     />
   );
 }

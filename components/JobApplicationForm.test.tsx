@@ -17,7 +17,6 @@ vi.mock("@/app/actions/applications/attachments", () => ({
   listShareableSignalsAction: vi.fn(),
 }));
 vi.mock("@/app/actions/submit-application", () => ({ submitApplicationAction: vi.fn() }));
-vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
 vi.mock("@/app/actions/revalidate-tag", () => ({ revalidateCacheAction: vi.fn() }));
 vi.mock("react-hot-toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const profile = vi.hoisted(() => ({
@@ -30,13 +29,19 @@ vi.mock("swr", () => ({
   default: () => ({ data: { profile: profile.value }, isLoading: false }),
   mutate: vi.fn(),
 }));
-vi.mock("./ResumeSourceSelector", () => ({ default: () => <div>resume picker</div> }));
+const PICKED_FILE = vi.hoisted(() => new File(["%PDF"], "cv.pdf", { type: "application/pdf" }));
+vi.mock("./ResumeSourceSelector", () => ({
+  default: ({ onFileChange }: { onFileChange: (file: File) => void }) => (
+    <button type="button" onClick={() => onFileChange(PICKED_FILE)}>
+      upload a new resume
+    </button>
+  ),
+}));
 
 const USER_ID = "a0000000-0000-4000-8000-000000000001";
 const RESUME_ID = "f0000000-0000-4000-8000-000000000001";
 const APPLICATION_ID = "e0000000-0000-4000-8000-000000000001";
 const SESSION_ID = "15000000-0000-4000-8000-000000000001";
-const REVIEW_ID = "2e000000-0000-4000-8000-000000000001";
 const ALL_JOBS_ID = "b1000000-0000-4000-8000-000000000001";
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
@@ -60,15 +65,15 @@ beforeEach(() => {
   vi.mocked(attachToApplicationAction).mockResolvedValue({ ok: true, attachmentId: "x", analysisQueued: true });
   vi.mocked(listShareableSignalsAction).mockResolvedValue({
     sessions: [{ id: SESSION_ID, label: "Backend mock", endedAt: "2026-10-10T00:00:00.000Z" }],
-    reviews: [{ id: REVIEW_ID, label: "Resume review", score: 82 }],
   });
 });
 
 describe("JobApplicationForm share step (ORT-064, OR-REQ-030/033)", () => {
-  it("lists completed sessions and reviews, and shares nothing unless picked", async () => {
+  it("lists completed sessions, offers no review, and shares nothing unless picked", async () => {
     await goToStep2();
     expect(await screen.findByRole("button", { name: /backend mock/i })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByText("Share with this company (optional)")).toBeInTheDocument();
+    expect(screen.queryByText("Resume review")).not.toBeInTheDocument();
 
     submit();
 
@@ -76,10 +81,9 @@ describe("JobApplicationForm share step (ORT-064, OR-REQ-030/033)", () => {
     expect(attachToApplicationAction).not.toHaveBeenCalled();
   });
 
-  it("attaches the picked session and review after the application is created", async () => {
+  it("attaches the picked session after the application is created", async () => {
     await goToStep2();
     fireEvent.click(await screen.findByRole("button", { name: /backend mock/i }));
-    fireEvent.click(screen.getByRole("button", { name: /resume review/i }));
 
     submit();
 
@@ -88,11 +92,6 @@ describe("JobApplicationForm share step (ORT-064, OR-REQ-030/033)", () => {
       applicationId: APPLICATION_ID,
       kind: "interview_session",
       interviewSessionId: SESSION_ID,
-    });
-    expect(attachToApplicationAction).toHaveBeenCalledWith({
-      applicationId: APPLICATION_ID,
-      kind: "resume_review",
-      resumeReviewId: REVIEW_ID,
     });
   });
 
@@ -121,7 +120,7 @@ describe("JobApplicationForm share step (ORT-064, OR-REQ-030/033)", () => {
   });
 
   it("suggests a mock interview for this job when there's none to share", async () => {
-    vi.mocked(listShareableSignalsAction).mockResolvedValue({ sessions: [], reviews: [] });
+    vi.mocked(listShareableSignalsAction).mockResolvedValue({ sessions: [] });
     await goToStep2();
 
     const link = await screen.findByRole("link", { name: /stand out: share a 10-minute ai interview/i });
@@ -132,7 +131,7 @@ describe("JobApplicationForm share step (ORT-064, OR-REQ-030/033)", () => {
 describe("JobApplicationForm legacy questions (CPT-000 characterisation, kept through CPT-016)", () => {
   const LEGACY = jobWith({ questions: ["Why us?", "Notice period?"] });
 
-  beforeEach(() => vi.mocked(listShareableSignalsAction).mockResolvedValue({ sessions: [], reviews: [] }));
+  beforeEach(() => vi.mocked(listShareableSignalsAction).mockResolvedValue({ sessions: [] }));
 
   it("shows one text box per question, each labelled with the question", async () => {
     await goToStep2(LEGACY);
@@ -167,6 +166,35 @@ describe("JobApplicationForm legacy questions (CPT-000 characterisation, kept th
   });
 });
 
+describe("JobApplicationForm with a new resume file", () => {
+  beforeEach(() => vi.mocked(listShareableSignalsAction).mockResolvedValue({ sessions: [] }));
+
+  it("sends the file with the application instead of uploading it first", async () => {
+    render(<JobApplicationForm jobPost={JOB} userId={USER_ID} onSuccess={onSuccess} />);
+    fireEvent.click(await screen.findByRole("button", { name: /upload a new resume/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next step/i }));
+
+    submit();
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    const [input, files] = vi.mocked(submitApplicationAction).mock.calls[0];
+    expect(input).toEqual({ allJobsId: ALL_JOBS_ID, answers: {} });
+    expect((files as FormData).get("resume")).toBe(PICKED_FILE);
+  });
+
+  it("shows the server's error, such as running out of credits", async () => {
+    vi.mocked(submitApplicationAction).mockResolvedValue({ ok: false, error: "Insufficient AI credits for resume upload." });
+    render(<JobApplicationForm jobPost={JOB} userId={USER_ID} onSuccess={onSuccess} />);
+    fireEvent.click(await screen.findByRole("button", { name: /upload a new resume/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next step/i }));
+
+    submit();
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Insufficient AI credits for resume upload."));
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+});
+
 describe("JobApplicationForm typed forms (CPT-016, AF-REQ-006)", () => {
   const FORM: ApplicationForm = {
     version: 1,
@@ -178,7 +206,7 @@ describe("JobApplicationForm typed forms (CPT-016, AF-REQ-006)", () => {
   };
   const TYPED = jobWith({ application_form: FORM });
 
-  beforeEach(() => vi.mocked(listShareableSignalsAction).mockResolvedValue({ sessions: [], reviews: [] }));
+  beforeEach(() => vi.mocked(listShareableSignalsAction).mockResolvedValue({ sessions: [] }));
 
   it("renders the typed form, prefills from the profile and skips empty optional fields", async () => {
     await goToStep2(TYPED, { source: "careers_page", sourceRef: "linkedin" });

@@ -159,6 +159,7 @@ describe("RECRUITER_MCP_TOOLS", () => {
       expect(covered.includes(name as never) !== excluded, name).toBe(true);
     }
     expect(Object.keys(RECRUITER_MCP_EXCLUDED_TOOLS).sort()).toEqual([
+      "askUser",
       "deleteMemory",
       "requestCandidateResume",
       "requestResumeImport",

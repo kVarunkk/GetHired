@@ -330,96 +330,6 @@ export type Database = {
         }
         Relationships: []
       }
-      all_jobs_archive: {
-        Row: {
-          ai_summary: string | null
-          company_name: string | null
-          company_url: string | null
-          created_at: string
-          description: string | null
-          embedding_new: string | null
-          embedding_updated_at: string | null
-          equity_max: number | null
-          equity_min: number | null
-          equity_range: string | null
-          experience: string | null
-          experience_max: number | null
-          experience_min: number | null
-          id: string
-          is_platform_job: boolean
-          job_name: string | null
-          job_type: string | null
-          job_url: string | null
-          locations: string[]
-          normalized_locations: string[] | null
-          platform: string | null
-          salary_max: number | null
-          salary_min: number | null
-          salary_range: string | null
-          status: Database["public"]["Enums"]["job_posting_status"]
-          updated_at: string | null
-          visa_requirement: string | null
-        }
-        Insert: {
-          ai_summary?: string | null
-          company_name?: string | null
-          company_url?: string | null
-          created_at?: string
-          description?: string | null
-          embedding_new?: string | null
-          embedding_updated_at?: string | null
-          equity_max?: number | null
-          equity_min?: number | null
-          equity_range?: string | null
-          experience?: string | null
-          experience_max?: number | null
-          experience_min?: number | null
-          id?: string
-          is_platform_job?: boolean
-          job_name?: string | null
-          job_type?: string | null
-          job_url?: string | null
-          locations?: string[]
-          normalized_locations?: string[] | null
-          platform?: string | null
-          salary_max?: number | null
-          salary_min?: number | null
-          salary_range?: string | null
-          status?: Database["public"]["Enums"]["job_posting_status"]
-          updated_at?: string | null
-          visa_requirement?: string | null
-        }
-        Update: {
-          ai_summary?: string | null
-          company_name?: string | null
-          company_url?: string | null
-          created_at?: string
-          description?: string | null
-          embedding_new?: string | null
-          embedding_updated_at?: string | null
-          equity_max?: number | null
-          equity_min?: number | null
-          equity_range?: string | null
-          experience?: string | null
-          experience_max?: number | null
-          experience_min?: number | null
-          id?: string
-          is_platform_job?: boolean
-          job_name?: string | null
-          job_type?: string | null
-          job_url?: string | null
-          locations?: string[]
-          normalized_locations?: string[] | null
-          platform?: string | null
-          salary_max?: number | null
-          salary_min?: number | null
-          salary_range?: string | null
-          status?: Database["public"]["Enums"]["job_posting_status"]
-          updated_at?: string | null
-          visa_requirement?: string | null
-        }
-        Relationships: []
-      }
       application_attachments: {
         Row: {
           application_id: string
@@ -805,8 +715,10 @@ export type Database = {
           import_batch_id: string | null
           job_post_id: string | null
           merged_into_application_id: string | null
+          resume_contact_snapshot: Json | null
           resume_id: string | null
           resume_path: string | null
+          resume_snapshot: Json | null
           resume_url: string | null
           source: string
           source_detail: string | null
@@ -827,8 +739,10 @@ export type Database = {
           import_batch_id?: string | null
           job_post_id?: string | null
           merged_into_application_id?: string | null
+          resume_contact_snapshot?: Json | null
           resume_id?: string | null
           resume_path?: string | null
+          resume_snapshot?: Json | null
           resume_url?: string | null
           source?: string
           source_detail?: string | null
@@ -849,8 +763,10 @@ export type Database = {
           import_batch_id?: string | null
           job_post_id?: string | null
           merged_into_application_id?: string | null
+          resume_contact_snapshot?: Json | null
           resume_id?: string | null
           resume_path?: string | null
+          resume_snapshot?: Json | null
           resume_url?: string | null
           source?: string
           source_detail?: string | null
@@ -3452,6 +3368,62 @@ export type Database = {
         }
         Relationships: []
       }
+      resume_migration_items: {
+        Row: {
+          attempts: number
+          coverage: number | null
+          created_at: string
+          error: string | null
+          file_deleted_at: string | null
+          file_path: string
+          id: string
+          notified_at: string | null
+          queued_at: string | null
+          resume_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          coverage?: number | null
+          created_at?: string
+          error?: string | null
+          file_deleted_at?: string | null
+          file_path: string
+          id?: string
+          notified_at?: string | null
+          queued_at?: string | null
+          resume_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          coverage?: number | null
+          created_at?: string
+          error?: string | null
+          file_deleted_at?: string | null
+          file_path?: string
+          id?: string
+          notified_at?: string | null
+          queued_at?: string | null
+          resume_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resume_migration_items_resume_id_fkey"
+            columns: ["resume_id"]
+            isOneToOne: true
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resume_public_sections: {
         Row: {
           resume_id: string
@@ -3478,15 +3450,63 @@ export type Database = {
           },
         ]
       }
+      resume_review_applied: {
+        Row: {
+          applied_at: string
+          applied_text: string
+          bullet_id: string
+          id: string
+          previous_text: string
+          review_id: string
+          target_resume_id: string
+        }
+        Insert: {
+          applied_at?: string
+          applied_text: string
+          bullet_id: string
+          id?: string
+          previous_text: string
+          review_id: string
+          target_resume_id: string
+        }
+        Update: {
+          applied_at?: string
+          applied_text?: string
+          bullet_id?: string
+          id?: string
+          previous_text?: string
+          review_id?: string
+          target_resume_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resume_review_applied_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "resume_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resume_review_applied_target_resume_id_fkey"
+            columns: ["target_resume_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resume_reviews: {
         Row: {
           ai_response: Json | null
           analysis_failed: boolean | null
+          applied_copy_id: string | null
           created_at: string
+          focus: string | null
           id: string
           job_id: string | null
           name: string | null
           resume_id: string | null
+          resume_revision: number | null
           score: number | null
           status: string | null
           target_jd: string | null
@@ -3496,11 +3516,14 @@ export type Database = {
         Insert: {
           ai_response?: Json | null
           analysis_failed?: boolean | null
+          applied_copy_id?: string | null
           created_at?: string
+          focus?: string | null
           id?: string
           job_id?: string | null
           name?: string | null
           resume_id?: string | null
+          resume_revision?: number | null
           score?: number | null
           status?: string | null
           target_jd?: string | null
@@ -3510,11 +3533,14 @@ export type Database = {
         Update: {
           ai_response?: Json | null
           analysis_failed?: boolean | null
+          applied_copy_id?: string | null
           created_at?: string
+          focus?: string | null
           id?: string
           job_id?: string | null
           name?: string | null
           resume_id?: string | null
+          resume_revision?: number | null
           score?: number | null
           status?: string | null
           target_jd?: string | null
@@ -3554,39 +3580,64 @@ export type Database = {
       }
       resumes: {
         Row: {
+          contact: Json | null
           content: Json | null
           created_at: string
           id: string
           is_primary: boolean
           name: string | null
+          parse_notes: Json | null
           parsing_failed: boolean
           resume_path: string | null
+          revision: number
+          schema_version: number
+          source_resume_id: string | null
+          template: string
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          contact?: Json | null
           content?: Json | null
           created_at?: string
           id?: string
           is_primary?: boolean
           name?: string | null
+          parse_notes?: Json | null
           parsing_failed?: boolean
           resume_path?: string | null
+          revision?: number
+          schema_version?: number
+          source_resume_id?: string | null
+          template?: string
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          contact?: Json | null
           content?: Json | null
           created_at?: string
           id?: string
           is_primary?: boolean
           name?: string | null
+          parse_notes?: Json | null
           parsing_failed?: boolean
           resume_path?: string | null
+          revision?: number
+          schema_version?: number
+          source_resume_id?: string | null
+          template?: string
           updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "resumes_source_resume_id_fkey"
+            columns: ["source_resume_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "resumes_user_id_fkey"
             columns: ["user_id"]
@@ -3882,6 +3933,7 @@ export type Database = {
           max_salary: number | null
           min_salary: number | null
           preferred_locations: string[] | null
+          profile_refresh_requested_at: string | null
           referral_code: string | null
           relevant_jobs_update_status: Database["public"]["Enums"]["job_posting_matching_status"]
           salary_currency: string
@@ -3922,6 +3974,7 @@ export type Database = {
           max_salary?: number | null
           min_salary?: number | null
           preferred_locations?: string[] | null
+          profile_refresh_requested_at?: string | null
           referral_code?: string | null
           relevant_jobs_update_status?: Database["public"]["Enums"]["job_posting_matching_status"]
           salary_currency?: string
@@ -3958,6 +4011,7 @@ export type Database = {
           max_salary?: number | null
           min_salary?: number | null
           preferred_locations?: string[] | null
+          profile_refresh_requested_at?: string | null
           referral_code?: string | null
           relevant_jobs_update_status?: Database["public"]["Enums"]["job_posting_matching_status"]
           salary_currency?: string
@@ -4317,6 +4371,17 @@ export type Database = {
         Args: { p_company_id: string; p_key: string }
         Returns: string
       }
+      complete_applicant_onboarding: {
+        Args: {
+          p_email: string
+          p_profile: Json
+          p_resume_id: string
+          p_should_parse: boolean
+          p_stale_seconds?: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
       confirm_candidate_import: {
         Args: { p_batch_id: string; p_options?: Json; p_rows: Json }
         Returns: Json
@@ -4425,6 +4490,10 @@ export type Database = {
       expire_screening_interviews: { Args: never; Returns: string[] }
       finalize_interview_analysis_session: {
         Args: { p_session_id: string }
+        Returns: Json
+      }
+      finish_profile_refresh: {
+        Args: { p_started_at: string; p_user_id: string }
         Returns: Json
       }
       finish_screening_session: {
@@ -4817,6 +4886,10 @@ export type Database = {
         Args: { p_status: Database["public"]["Enums"]["application_status"] }
         Returns: Database["public"]["Enums"]["pipeline_stage_kind"]
       }
+      queue_profile_refresh: {
+        Args: { p_stale_seconds?: number; p_user_id: string }
+        Returns: Json
+      }
       record_profile_view: { Args: { p_candidate: string }; Returns: undefined }
       record_screening_consent: {
         Args: { p_id: string; p_version: string }
@@ -5063,6 +5136,10 @@ export type Database = {
         Returns: Json
       }
       set_my_display_name: { Args: { p_name: string }; Returns: Json }
+      set_primary_resume: {
+        Args: { p_resume_id: string; p_user_id: string }
+        Returns: Json
+      }
       sign: {
         Args: { algorithm?: string; payload: Json; secret: string }
         Returns: string

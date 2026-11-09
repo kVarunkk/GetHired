@@ -60,7 +60,7 @@ export async function processUserDigest(user: RelevanceJobMessage["message"]) {
       };
     }
 
-    const cutoffDays = "3";
+    const cutoffDays = "14";
 
     params.set("sortBy", "relevance");
     params.set("createdAfter", cutoffDays);
@@ -129,7 +129,7 @@ export async function sendJobDigestEmail(
   try {
     await sendEmail({
       toEmail: email,
-      subject: `Your Daily Job Digest for ${digestDate}`,
+      subject: `Your Job Digest for ${digestDate}`,
       htmlContent: emailHtml,
       textContent: emailText,
     });

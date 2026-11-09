@@ -4,8 +4,8 @@ import { setPrimaryResume } from "@/helpers/resumes/set-primary-resume";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Server action to update the user's primary resume
- * and trigger necessary background workers.
+ * Server action to update the user's primary resume. It refreshes the
+ * embedding and queues new matches (setPrimaryResume).
  */
 export async function setPrimaryResumeAction(resumeId: string) {
   const supabase = await createClient();
@@ -17,5 +17,5 @@ export async function setPrimaryResumeAction(resumeId: string) {
     return { success: false, error: "Unauthorized access." };
   }
 
-  return setPrimaryResume(supabase, user, resumeId);
+  return setPrimaryResume(user, resumeId);
 }

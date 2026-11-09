@@ -230,6 +230,34 @@ describe("getApplication tool", () => {
     });
   }
 
+  it("reads what the application sent, and never its contact snapshot (RE-REQ-062, RE-SEC-006)", async () => {
+    supabase.queue("applications", {
+      data: {
+        ...APPLICATION,
+        resume_snapshot: {
+          name: "Sent",
+          template: "classic",
+          content: {
+            version: 2,
+            sections: [
+              { id: "s1", type: "experience", items: [{ id: "i1", bullets: [{ id: "b1", text: "Text as sent" }] }] },
+            ],
+          },
+        },
+        job_postings: { id: JOB_POST.id, title: JOB_POST.title, company_id: COMPANY_A.id, questions: [] },
+        user_info: CANDIDATE_PROFILE,
+      },
+      error: null,
+    });
+
+    const result = (await execTool(tools.getApplication, { applicationId: APP_ID })) as Record<string, unknown>;
+
+    expect(String(result.resumeExcerpt)).toContain("Text as sent");
+    expect(supabase.callsFor("resumes")).toHaveLength(0);
+    const select = String(supabase.callsFor("applications")[0].chain.find((c) => c.method === "select")?.args[0]);
+    expect(select).not.toContain("resume_contact_snapshot");
+  });
+
   it("pairs answers with questions and sandboxes candidate text, with no contact details", async () => {
     queueApplication();
 

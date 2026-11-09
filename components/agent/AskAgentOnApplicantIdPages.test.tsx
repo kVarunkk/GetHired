@@ -5,7 +5,6 @@ import { agentPromptHref } from "@/helpers/agent/prompt-draft";
 import {
   AskAgentAboutInterviewAnalysis,
   AskAgentAboutResume,
-  AskAgentAboutResumeReview,
   interviewAnalysisSuggestions,
   resumeSuggestions,
 } from "./AskAgentOnApplicantIdPages";
@@ -13,7 +12,6 @@ import {
 vi.mock("next/navigation", () => ({ useRouter: vi.fn() }));
 
 const RESUME = { id: "r1", name: "Backend CV", isPrimary: false, parsingFailed: false };
-const REVIEW = { id: "rv1", name: "Stripe review" };
 const SESSION = { interviewId: "i1", sessionId: "s2", interviewName: "Frontend", hasEarlier: true };
 
 let push: ReturnType<typeof vi.fn>;
@@ -30,7 +28,6 @@ describe("applicant id page agent helpers", () => {
     render(
       <>
         <AskAgentAboutResume resume={RESUME} />
-        <AskAgentAboutResumeReview review={REVIEW} />
         <AskAgentAboutInterviewAnalysis session={SESSION} />
       </>,
     );
@@ -45,11 +42,14 @@ describe("applicant id page agent helpers", () => {
 
   it("only offers what the resume's state allows", () => {
     expect(labels(resumeSuggestions(RESUME))).toEqual([
-      "Review it for a job",
+      "Tailor it for a job",
+      "Improve my summary",
+      "Make a copy",
+      "Download it",
       "Mock interview with it",
       "Make it my primary resume",
     ]);
-    // startResumeReview and createInterview refuse a resume that failed to parse.
+    // improveResume and createInterview refuse a resume that failed to parse.
     expect(labels(resumeSuggestions({ ...RESUME, isPrimary: true, parsingFailed: true }))).toEqual([]);
   });
 
@@ -68,19 +68,6 @@ describe("applicant id page agent helpers", () => {
 
     expect(push).toHaveBeenCalledWith(
       agentPromptHref('About my resume "Backend CV" (resume r1): Is it too long?'),
-    );
-  });
-
-  it("opens the agent with the review's id from the small handoff", () => {
-    render(<AskAgentAboutResumeReview review={REVIEW} />);
-    expect(screen.queryByRole("link")).toBeNull();
-    fireEvent.change(screen.getByLabelText("Describe it for the assistant"), {
-      target: { value: "What should I fix first?" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Open in the assistant" }));
-
-    expect(push).toHaveBeenCalledWith(
-      agentPromptHref('About my resume review "Stripe review" (review rv1): What should I fix first?'),
     );
   });
 });

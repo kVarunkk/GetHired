@@ -27,9 +27,17 @@ describe("createAgentTools", () => {
         "listResumes",
         "setPrimaryResume",
         "requestResumeUpload",
-        "startResumeReview",
         "getResumeReview",
         "pickResumeForJob",
+        "improveResume",
+        "reviewResumeChanges",
+        "getResumeContent",
+        "createResume",
+        "updateResume",
+        "duplicateResume",
+        "deleteResume",
+        "applyReviewSuggestions",
+        "exportResume",
         "listInterviews",
         "listScreeningInterviews",
         "getInterviewAnalysis",
@@ -37,6 +45,7 @@ describe("createAgentTools", () => {
         "completeOnboarding",
         "saveMemory",
         "deleteMemory",
+        "askUser",
       ].sort(),
     );
   });
@@ -73,17 +82,22 @@ describe("createAgentTools", () => {
       .sort();
 
     expect(needingApproval).toEqual([
+      "applyReviewSuggestions",
       "completeOnboarding",
-      "startResumeReview",
+      "createResume",
+      "deleteResume",
       "submitApplication",
       "updateMyPreferences",
+      "updateResume",
     ]);
   });
 
-  it("leaves requestResumeUpload to the client (REQ-015)", () => {
+  it("leaves requestResumeUpload, the changes card and the question card to the client (REQ-015, RI-REQ-020)", () => {
     expect(tools.requestResumeUpload.execute).toBeUndefined();
+    expect(tools.reviewResumeChanges.execute).toBeUndefined();
+    expect(tools.askUser.execute).toBeUndefined();
     for (const [name, tool] of Object.entries(tools)) {
-      if (name !== "requestResumeUpload") expect(tool.execute, name).toBeTypeOf("function");
+      if (!["requestResumeUpload", "reviewResumeChanges", "askUser"].includes(name)) expect(tool.execute, name).toBeTypeOf("function");
     }
   });
 });

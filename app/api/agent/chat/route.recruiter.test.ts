@@ -133,7 +133,7 @@ describe("POST /api/agent/chat for a company user (RA-TEST-007)", () => {
     expect(toolNames()).toContain("searchCandidates");
     expect(toolNames()).toContain("createJobPost");
     expect(toolNames()).not.toContain("searchJobs");
-    expect(toolNames()).not.toContain("startResumeReview");
+    expect(toolNames()).not.toContain("improveResume");
     expect(supabase.callsFor("user_info")).toHaveLength(0);
   });
 
@@ -258,7 +258,13 @@ describe("POST /api/agent/chat for a company user (RA-TEST-007)", () => {
     await res.text();
     await flushAfter();
 
-    const context = { sessionId: SESSION_ID, userId: USER_ID, companyId: COMPANY_A.id };
+    const context = {
+      sessionId: SESSION_ID,
+      userId: USER_ID,
+      role: "company",
+      userText: "hi",
+      companyId: COMPANY_A.id,
+    };
     expect(agentTelemetry).toHaveBeenCalledWith("recruiter-agent-chat", context);
     expect(agentTelemetry).toHaveBeenCalledWith("recruiter-agent-suggestions", context);
     expect(generateFollowUps).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ role: "company" }));

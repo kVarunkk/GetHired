@@ -196,6 +196,7 @@ export const RECRUITER_MCP_EXCLUDED_TOOLS: Partial<Record<RecruiterToolName, str
   requestResumeImport: `A browser widget. Resumes are uploaded in the GetHired app (${candidateImportPath("resumes")}, or a job's Import candidates section).`,
   requestSpreadsheetImport: `A browser widget. Spreadsheets are uploaded in the GetHired app (${candidateImportPath("spreadsheet")}, or a job's Import candidates section).`,
   requestCandidateResume: "A browser widget. A candidate's resume is uploaded on their page in the GetHired app.",
+  askUser: "A question card in the chat. MCP clients ask the user themselves.",
   saveMemory: "Agent memory, which means nothing outside the chat.",
   deleteMemory: "Agent memory, which means nothing outside the chat.",
 };

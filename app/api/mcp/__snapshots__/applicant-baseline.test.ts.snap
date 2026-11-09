@@ -2,11 +2,31 @@
 
 exports[`applicant MCP baseline > the confirm and credit flags of each applicant tool 1`] = `
 {
+  "apply_review_suggestions": {
+    "confirm": true,
+    "credit": false,
+  },
   "complete_onboarding": {
     "confirm": true,
     "credit": false,
   },
   "create_interview": {
+    "confirm": false,
+    "credit": false,
+  },
+  "create_resume": {
+    "confirm": true,
+    "credit": false,
+  },
+  "delete_resume": {
+    "confirm": true,
+    "credit": false,
+  },
+  "duplicate_resume": {
+    "confirm": false,
+    "credit": false,
+  },
+  "export_resume": {
     "confirm": false,
     "credit": false,
   },
@@ -62,6 +82,10 @@ exports[`applicant MCP baseline > the confirm and credit flags of each applicant
     "confirm": false,
     "credit": false,
   },
+  "improve_resume": {
+    "confirm": false,
+    "credit": true,
+  },
   "list_applications": {
     "confirm": false,
     "credit": false,
@@ -90,10 +114,6 @@ exports[`applicant MCP baseline > the confirm and credit flags of each applicant
     "confirm": false,
     "credit": false,
   },
-  "start_resume_review": {
-    "confirm": true,
-    "credit": true,
-  },
   "submit_application": {
     "confirm": true,
     "credit": true,
@@ -103,6 +123,10 @@ exports[`applicant MCP baseline > the confirm and credit flags of each applicant
     "credit": false,
   },
   "update_my_preferences": {
+    "confirm": true,
+    "credit": false,
+  },
+  "update_resume": {
     "confirm": true,
     "credit": false,
   },
@@ -977,7 +1001,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": true,
       "title": "Resume details",
     },
-    "description": "Get one of the user's resumes with its parsed content.",
+    "description": "Get one of the user's resumes: its contact details, every section, item and bullet with its id, and the revision that update_resume needs.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -1027,9 +1051,9 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "idempotentHint": false,
       "openWorldHint": false,
       "readOnlyHint": false,
-      "title": "Review a resume",
+      "title": "Create a resume",
     },
-    "description": "Start an AI review of one of the user's resumes against a job (jobId) or a pasted job description. Costs 5 AI credits once the analysis succeeds. Runs in the background and returns a link. GetHired asks the user to confirm before it runs.",
+    "description": "Create a new resume for the user from what they told you in this chat: ask them about the role, the sections they want and the details of each first. Blank only when they ask for an empty one. Never add anything they didn't say. Free; the user must approve. GetHired asks the user to confirm before it runs.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -1037,20 +1061,517 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
           "type": "string",
         },
-        "jobDescription": {
-          "description": "A job description the user pasted, when there is no jobId.",
-          "maxLength": 4000,
-          "minLength": 50,
+        "name": {
+          "maxLength": 300,
+          "minLength": 1,
           "type": "string",
         },
-        "jobId": {
-          "description": "The job id, exactly as returned by another tool.",
+        "sections": {
+          "description": "Only what the user gave you. Leave out for a blank resume.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "items": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "bullets": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "endDate": {
+                      "description": "As the user wrote it, e.g. 'Present'.",
+                      "type": "string",
+                    },
+                    "heading": {
+                      "description": "A role, degree, project or skill group.",
+                      "type": "string",
+                    },
+                    "location": {
+                      "type": "string",
+                    },
+                    "startDate": {
+                      "description": "As the user wrote it, e.g. 'Jan 2022'.",
+                      "type": "string",
+                    },
+                    "subheading": {
+                      "description": "A company or school.",
+                      "type": "string",
+                    },
+                    "url": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "bullets",
+                  ],
+                  "type": "object",
+                },
+                "type": "array",
+              },
+              "title": {
+                "description": "The heading as the user wrote it. Required for type 'other'.",
+                "type": "string",
+              },
+              "type": {
+                "enum": [
+                  "summary",
+                  "experience",
+                  "projects",
+                  "skills",
+                  "education",
+                  "achievements",
+                  "certifications",
+                  "languages",
+                  "publications",
+                  "volunteering",
+                  "awards",
+                  "other",
+                ],
+                "type": "string",
+              },
+            },
+            "required": [
+              "type",
+              "items",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+      },
+      "type": "object",
+    },
+    "name": "create_resume",
+    "title": "Create a resume",
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Edit a resume",
+    },
+    "description": "Edit one of the user's resumes with a list of operations. Read it with get_resume_details first, and pass the revision and ids from there. An unknown id fails the whole call. Free. GetHired asks the user to confirm before it runs.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmation_token": {
+          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "type": "string",
+        },
+        "expectedRevision": {
+          "description": "The revision from getResumeContent.",
+          "exclusiveMinimum": 0,
+          "type": "integer",
+        },
+        "operations": {
+          "items": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "bulletId": {
+                    "type": "string",
+                  },
+                  "op": {
+                    "const": "setBulletText",
+                    "type": "string",
+                  },
+                  "text": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "bulletId",
+                  "text",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "index": {
+                    "minimum": 0,
+                    "type": "integer",
+                  },
+                  "itemId": {
+                    "type": "string",
+                  },
+                  "op": {
+                    "const": "addBullet",
+                    "type": "string",
+                  },
+                  "text": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "itemId",
+                  "text",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "bulletId": {
+                    "type": "string",
+                  },
+                  "op": {
+                    "const": "removeBullet",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "bulletId",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fields": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "endDate": {
+                        "type": "string",
+                      },
+                      "heading": {
+                        "type": "string",
+                      },
+                      "location": {
+                        "type": "string",
+                      },
+                      "startDate": {
+                        "type": "string",
+                      },
+                      "subheading": {
+                        "type": "string",
+                      },
+                      "url": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "itemId": {
+                    "type": "string",
+                  },
+                  "op": {
+                    "const": "setItemFields",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "itemId",
+                  "fields",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "bullets": {
+                    "items": {
+                      "type": "string",
+                    },
+                    "type": "array",
+                  },
+                  "fields": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "endDate": {
+                        "type": "string",
+                      },
+                      "heading": {
+                        "type": "string",
+                      },
+                      "location": {
+                        "type": "string",
+                      },
+                      "startDate": {
+                        "type": "string",
+                      },
+                      "subheading": {
+                        "type": "string",
+                      },
+                      "url": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "index": {
+                    "minimum": 0,
+                    "type": "integer",
+                  },
+                  "op": {
+                    "const": "addItem",
+                    "type": "string",
+                  },
+                  "sectionId": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "sectionId",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "itemId": {
+                    "type": "string",
+                  },
+                  "op": {
+                    "const": "removeItem",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "itemId",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "index": {
+                    "minimum": 0,
+                    "type": "integer",
+                  },
+                  "op": {
+                    "const": "addSection",
+                    "type": "string",
+                  },
+                  "sectionType": {
+                    "enum": [
+                      "summary",
+                      "experience",
+                      "projects",
+                      "skills",
+                      "education",
+                      "achievements",
+                      "certifications",
+                      "languages",
+                      "publications",
+                      "volunteering",
+                      "awards",
+                      "other",
+                    ],
+                    "type": "string",
+                  },
+                  "title": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "sectionType",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "op": {
+                    "const": "setSectionTitle",
+                    "type": "string",
+                  },
+                  "sectionId": {
+                    "type": "string",
+                  },
+                  "title": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "sectionId",
+                  "title",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "op": {
+                    "const": "removeSection",
+                    "type": "string",
+                  },
+                  "sectionId": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "sectionId",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "description": "The section, item or bullet to move, within its parent.",
+                    "type": "string",
+                  },
+                  "index": {
+                    "description": "Its new position. Past the end means last.",
+                    "minimum": 0,
+                    "type": "integer",
+                  },
+                  "op": {
+                    "const": "move",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "index",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fields": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                      },
+                      "fullName": {
+                        "type": "string",
+                      },
+                      "headline": {
+                        "type": "string",
+                      },
+                      "links": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "label": {
+                              "type": "string",
+                            },
+                            "url": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "label",
+                            "url",
+                          ],
+                          "type": "object",
+                        },
+                        "type": "array",
+                      },
+                      "location": {
+                        "type": "string",
+                      },
+                      "phone": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "op": {
+                    "const": "setContact",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "fields",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                  },
+                  "op": {
+                    "const": "rename",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "name",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "op": {
+                    "const": "setTemplate",
+                    "type": "string",
+                  },
+                  "template": {
+                    "enum": [
+                      "classic",
+                      "compact",
+                    ],
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "op",
+                  "template",
+                ],
+                "type": "object",
+              },
+            ],
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "type": "array",
+        },
+        "resumeId": {
+          "description": "The resume id, exactly as returned by another tool.",
           "format": "uuid",
           "type": "string",
         },
+      },
+      "required": [
+        "resumeId",
+        "expectedRevision",
+        "operations",
+      ],
+      "type": "object",
+    },
+    "name": "update_resume",
+    "title": "Edit a resume",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Copy a resume",
+    },
+    "description": "Make a copy of one of the user's resumes, to keep a version. Don't copy a resume to tailor it: applying suggested changes makes its own copy. The copy is identical until it's edited. It's never the primary resume. Free.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
         "name": {
-          "description": "Optional name for the review.",
-          "maxLength": 80,
+          "maxLength": 300,
           "minLength": 1,
           "type": "string",
         },
@@ -1065,8 +1586,129 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       ],
       "type": "object",
     },
-    "name": "start_resume_review",
-    "title": "Review a resume",
+    "name": "duplicate_resume",
+    "title": "Copy a resume",
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Delete a resume",
+    },
+    "description": "Delete one of the user's resumes, with its reviews. It can't be undone. The last resume and the primary resume can't be deleted: to delete the primary, ask which resume should be primary instead and call set_primary_resume first. GetHired asks the user to confirm before it runs.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmation_token": {
+          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "type": "string",
+        },
+        "resumeId": {
+          "description": "The resume id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "resumeId",
+      ],
+      "type": "object",
+    },
+    "name": "delete_resume",
+    "title": "Delete a resume",
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Apply review suggestions",
+    },
+    "description": "Apply changes from a resume review, by each change's id from improve_resume or get_resume_review_details. They go to a copy by default, which later applies reuse; pass target 'original' only when the user asks to change the reviewed resume. Pass text to use the user's own wording. Text with a [placeholder] is refused: ask the user for the real value, then pass it as text. GetHired asks the user to confirm before it runs.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmation_token": {
+          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "type": "string",
+        },
+        "items": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "description": "The suggestion's id, from getResumeReview.",
+                "type": "string",
+              },
+              "text": {
+                "description": "The final text, when the user edited the suggestion or gave a real value for a placeholder.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+            ],
+            "type": "object",
+          },
+          "minItems": 1,
+          "type": "array",
+        },
+        "reviewId": {
+          "description": "The resume review id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+        "target": {
+          "enum": [
+            "copy",
+            "original",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "reviewId",
+        "items",
+      ],
+      "type": "object",
+    },
+    "name": "apply_review_suggestions",
+    "title": "Apply review suggestions",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Download a resume",
+    },
+    "description": "Get a link that downloads one of the user's resumes as a PDF or Word file. Give it to the user to open in a browser where they're signed in to GetHired. Free.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "description": "Defaults to pdf.",
+          "enum": [
+            "pdf",
+            "docx",
+          ],
+          "type": "string",
+        },
+        "resumeId": {
+          "description": "The resume id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "resumeId",
+      ],
+      "type": "object",
+    },
+    "name": "export_resume",
+    "title": "Download a resume",
   },
   {
     "annotations": {
@@ -1096,7 +1738,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": true,
       "title": "Resume review details",
     },
-    "description": "Get a resume review's status, score, overall feedback and its top suggestions (highest priority first).",
+    "description": "Get a resume review's status, score, overall feedback and its top changes of every kind (pending first, then highest priority), each with the id that apply_review_suggestions needs, any [placeholders] the user must fill in, and its state on the copy and on the original resume (pending, applied, or changed if the resume moved on since the review).",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -1151,6 +1793,48 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
     },
     "name": "pick_resume_for_job",
     "title": "Pick a resume for a job",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Improve a resume",
+    },
+    "description": "Suggest how to improve or tailor one of the user's resumes: rewrites, new bullets, removals, moves, and gaps to ask the user about, each change with its id. Pass a jobId or a pasted jobDescription to tailor it to a job, or neither to judge it on its own. It changes nothing: apply the ones the user chooses with apply_review_suggestions. Costs 2 AI credits once it succeeds.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "focus": {
+          "description": "What the user asked for, in their words, such as 'make it shorter' or 'focus on leadership'.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "jobDescription": {
+          "description": "A job description the user pasted, when there is no jobId.",
+          "maxLength": 4000,
+          "minLength": 50,
+          "type": "string",
+        },
+        "jobId": {
+          "description": "The job id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+        "resumeId": {
+          "description": "The resume id, exactly as returned by another tool.",
+          "format": "uuid",
+          "type": "string",
+        },
+      },
+      "required": [
+        "resumeId",
+      ],
+      "type": "object",
+    },
+    "name": "improve_resume",
+    "title": "Improve a resume",
   },
   {
     "annotations": {

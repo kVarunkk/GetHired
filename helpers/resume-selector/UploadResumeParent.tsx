@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { RESUME_FILE_ACCEPT, resumeFileProblem } from "@/helpers/resume/config";
 import { TAICredits } from "@/utils/types";
 import { cn, fetcher, PROFILE_API_KEY } from "@/utils/utils";
 import { AlertTriangle, FileText, UploadCloud, X } from "lucide-react";
@@ -26,19 +27,9 @@ export const UploadResumeParent = ({
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    const isPdf =
-      selectedFile.type === "application/pdf" ||
-      selectedFile.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
-      toast.error("Only PDF files are allowed.");
-      e.target.value = "";
-      return;
-    }
-
-    const MAX_SIZE_MB = 2;
-    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
-    if (selectedFile.size > MAX_SIZE_BYTES) {
-      toast.error(`File is too large. Maximum limit is ${MAX_SIZE_MB}MB.`);
+    const problem = resumeFileProblem(selectedFile);
+    if (problem) {
+      toast.error(problem);
       e.target.value = "";
       return;
     }
@@ -111,7 +102,8 @@ export const UploadResumeParent = ({
             >
               <input
                 type="file"
-                accept=".pdf"
+                accept={RESUME_FILE_ACCEPT}
+                aria-label="Resume file"
                 className="absolute inset-0 opacity-0 cursor-pointer"
                 onChange={(e) => {
                   handleInternalFileChange(e);
@@ -124,10 +116,10 @@ export const UploadResumeParent = ({
                 )}
               />
               <p className="text-sm font-medium text-muted-foreground">
-                {"Click to upload PDF"}
+                Click to upload your resume
               </p>
               <p className="text-[10px] text-zinc-500 uppercase tracking-tighter">
-                PDF only • Max 5MB
+                PDF or Word • Max 2MB
               </p>
             </div>
           )}

@@ -27,9 +27,14 @@ const nextConfig: NextConfig = {
     // call (plan/bulk-import, BI-DEC-004); the default limit is 1 MB.
     serverActions: { bodySizeLimit: "8mb" },
   },
-  serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
+  serverExternalPackages: ["pdf-parse", "@napi-rs/canvas", "@react-pdf/renderer"],
   outputFileTracingIncludes: {
     "/**": ["./app/content/**/*"],
+    // Read by path at runtime (helpers/resume/render/pdf.tsx), so tracing can't see them.
+    "/api/resumes/[resume_id]/export": [
+      "./node_modules/@fontsource/noto-sans/files/noto-sans-{latin,latin-ext,cyrillic,greek}-{400,700}-normal.woff",
+      "./node_modules/@fontsource/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-{400,700}-normal.woff",
+    ],
   },
   // The company "Applicants" pages became "Applications". Old links (in sent
   // emails, bookmarks and agent chats) keep working.
@@ -44,6 +49,9 @@ const nextConfig: NextConfig = {
       },
       // API keys were replaced by OAuth sign-in to the MCP server.
       { source: "/dashboard/api-keys", destination: "/mcp", permanent: true },
+      // Old emails link to these pages (RI-REQ-062).
+      { source: "/resume-review", destination: "/resume", permanent: true },
+      { source: "/resume-review/:path*", destination: "/resume", permanent: true },
     ];
   },
 };

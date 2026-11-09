@@ -133,6 +133,11 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/candidate-imports/expire",
     // Candidate pool: the candidate embeddings worker (X-Internal-Secret).
     "/api/worker/candidate-embeddings",
+    // Resume file migration: the re-parse enqueue and worker, and the file
+    // deletion cron (X-Internal-Secret, spec §10).
+    "/api/updates/resumes/reparse/enqueue",
+    "/api/worker/resume-reparse",
+    "/api/updates/resumes/delete-files",
     "/api/ai-search/jobs",
     "/api/ai-search/profiles",
     "/api/dodo/webhook",
@@ -174,8 +179,6 @@ export async function updateSession(request: NextRequest) {
 
   const isApplicantOnboardingPath =
     pathname === "/get-started" && !(searchParams.get("company") === "true");
-
-  const isResumeReviewPath = pathname.startsWith("/resume-review");
 
   // Not /ai-interview, which is the public landing page.
   const isInterviewPath =
@@ -388,7 +391,6 @@ export async function updateSession(request: NextRequest) {
         pathname.startsWith("/settings/") ||
         pathname.startsWith("/opportunities") ||
         isApplicantOnboardingPath ||
-        isResumeReviewPath ||
         isInterviewPath ||
         isAgentPath) &&
       !isApplicant

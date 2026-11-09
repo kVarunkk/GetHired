@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendEmailForStatusUpdate } from "@/utils/email";
 import { processUserRelevance } from "@/helpers/jobs/relevant-jobs-utils";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
+import { finishProfileRefresh } from "@/helpers/user/queue-profile-refresh";
 
 type RelevanceJobMessage = {
   msg_id: number;
@@ -56,6 +57,8 @@ export async function GET() {
     const results = await Promise.allSettled(
       messages.map(async (msg) => {
         const { userId } = msg.message;
+        // Profile changes during this run get a follow-up (finishProfileRefresh).
+        const startedAt = new Date().toISOString();
 
         const result = await processUserRelevance(
           userId,
@@ -68,6 +71,7 @@ export async function GET() {
             queue_name: "relevance_jobs",
             message_id: msg.msg_id,
           });
+          await finishProfileRefresh(userId, startedAt);
         } else {
           console.warn(
             `[WORKER] Message ${msg.msg_id} failed. Attempt count: ${msg.read_ct}`,

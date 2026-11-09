@@ -326,6 +326,7 @@ export default function ChatPane({
                     onApprove={handleApprove}
                     onToolOutput={handleToolOutput}
                     streaming={message.id === streamingId}
+                    latest={message.id === messages.at(-1)?.id}
                   />
                   {suggestions.length > 0 && (
                     <div

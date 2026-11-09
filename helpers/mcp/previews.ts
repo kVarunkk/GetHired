@@ -9,6 +9,7 @@ import { previewAgentApplication } from "@/helpers/applications/preview-agent-ap
 import { canonicalizeLocations } from "@/helpers/locations/aliases";
 import { PREFERENCE_COLUMNS } from "@/helpers/agent/tools/profile";
 import type { AgentToolContext } from "@/helpers/agent/tools/shared";
+import { previewResumeEdit, type ResumeEditTool } from "@/helpers/resumes/preview-resume-edit";
 import { deploymentUrl } from "@/utils/formatters";
 import { TAICredits } from "@/utils/types";
 
@@ -84,47 +85,26 @@ export const previewSubmitApplication: McpPreviewBuilder = async (ctx, input) =>
   };
 };
 
-export const previewResumeReview: McpPreviewBuilder = async (ctx, input) => {
-  const { resumeId, jobId, jobDescription, name } = input as {
-    resumeId: string;
-    jobId?: string;
-    jobDescription?: string;
-    name?: string;
+/** One builder per resume tool: the agent's approval card, as a confirmation (RE-REQ-082). */
+const resumeEditPreview =
+  (tool: ResumeEditTool): McpPreviewBuilder =>
+  async (ctx, input) => {
+    const preview = await previewResumeEdit(ctx.supabase, ctx.user, tool, input);
+    if (!preview.ok) return preview;
+    return {
+      ok: true,
+      summary: preview.summary,
+      details: preview.changes.map(({ label, before, after }) => ({
+        label,
+        value: `${display(before)} → ${display(after)}`,
+      })),
+    };
   };
 
-  const { data: resume, error } = await ctx.supabase
-    .from("resumes")
-    .select("name, content, parsing_failed")
-    .eq("id", resumeId)
-    .eq("user_id", ctx.user.id)
-    .maybeSingle();
-  if (error) throw error;
-  if (!resume) return { ok: false, error: "Resume not found." };
-  const problem = resumeProblem(resume);
-  if (problem) return { ok: false, error: problem };
-
-  let job = `the pasted job description (${jobDescription?.length ?? 0} characters)`;
-  if (jobId) {
-    const { data, error: jobError } = await ctx.supabase
-      .from("all_jobs")
-      .select("job_name, company_name")
-      .eq("id", jobId)
-      .maybeSingle();
-    if (jobError) throw jobError;
-    if (!data) return { ok: false, error: "Job not found." };
-    job = jobLabel(data.job_name, data.company_name);
-  }
-
-  return {
-    ok: true,
-    summary: `Start a resume review? This uses ${credits(TAICredits.AI_SEARCH_ASK_AI_RESUME)} once the analysis succeeds.`,
-    details: [
-      { label: "Resume", value: resume.name ?? "Your resume" },
-      { label: "Job", value: job },
-      ...(name ? [{ label: "Review name", value: name }] : []),
-    ],
-  };
-};
+export const previewCreateResume = resumeEditPreview("createResume");
+export const previewUpdateResume = resumeEditPreview("updateResume");
+export const previewDeleteResume = resumeEditPreview("deleteResume");
+export const previewApplySuggestions = resumeEditPreview("applyReviewSuggestions");
 
 export const previewUpdatePreferences: McpPreviewBuilder = async (ctx, input) => {
   const after = { ...input };

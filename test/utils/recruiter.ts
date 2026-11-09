@@ -20,6 +20,7 @@ export const FORBIDDEN_CANDIDATE_COLUMNS = [
   "is_job_digest_active",
   "last_promo_version_seen",
   "relevant_jobs_update_status",
+  "profile_refresh_requested_at",
   "matched_at",
   "embedding_new",
   "embedding_updated_at",
@@ -144,6 +145,7 @@ function applicant(n: number, name: string, isPublic: boolean): ApplicantFixture
       embedding_new: "[0.1,0.2,0.3]",
       embedding_updated_at: CREATED_AT,
       relevant_jobs_update_status: "completed",
+      profile_refresh_requested_at: null,
       matched_at: CREATED_AT,
       created_at: CREATED_AT,
       updated_at: CREATED_AT,
@@ -214,6 +216,8 @@ export function applicationOf(
   applicationSeq += 1;
   return {
     id: seqId("e0000000", applicationSeq),
+    resume_snapshot: null,
+    resume_contact_snapshot: null,
     applicant_user_id: candidate.id,
     job_post_id: posting.id,
     all_jobs_id: posting.job_id,

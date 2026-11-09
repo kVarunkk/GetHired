@@ -165,11 +165,57 @@ describe("company profile page shapes (ORT-044, OR-TEST-004)", () => {
 
     expect(service.callsFor("user_info")).toHaveLength(0);
     const select = String(rls.callsFor("user_info")[0].chain.find((c) => c.method === "select")?.args[0]);
-    expect(select).toBe(`${RECRUITER_CANDIDATE_COLUMNS}, resumes(resume_path)`);
+    expect(select).toBe(
+      `${RECRUITER_CANDIDATE_COLUMNS}, resumes(resume_path, content, contact, template, schema_version)`,
+    );
     expect(createSignedUrl).toHaveBeenCalledWith("resumes/a/cv.pdf", 3600);
     expect(DirectoryProfile).not.toHaveBeenCalled();
     const props = vi.mocked(ProfileClientHydrator).mock.calls[0][0].applicantProfile;
     expect(props).toMatchObject({ email: PUBLIC_APPLICANT.info.email, signedUrl: "https://signed" });
+    expect(props.resumeDocument).toBeUndefined();
+  });
+
+  it("renders a version 2 resume with no file, and asks for no signed URL (RE-REQ-064)", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+    rls.queueRpc("company_has_candidate_access", { data: true, error: null });
+    rls.queue("user_info", {
+      data: {
+        ...PUBLIC_APPLICANT.info,
+        resumes: [
+          {
+            resume_path: null,
+            schema_version: 2,
+            template: "classic",
+            contact: { fullName: "Ada Lovelace", links: [] },
+            content: {
+              version: 2,
+              sections: [
+                { id: "s1", type: "skills", items: [{ id: "i1", heading: "Go", bullets: [] }] },
+              ],
+            },
+          },
+        ],
+      },
+      error: null,
+    });
+
+    render(await visit(PUBLIC_APPLICANT.id));
+
+    expect(createSignedUrl).not.toHaveBeenCalled();
+    const props = vi.mocked(ProfileClientHydrator).mock.calls[0][0].applicantProfile;
+    expect(props.resumeDocument).toMatchObject({ name: "Ada Lovelace" });
+    expect(props).not.toHaveProperty("resumes");
+  });
+
+  it("asks for no signed URL when there's no resume at all", async () => {
+    rls.queueRpc("company_can_view_candidate", { data: true, error: null });
+    rls.queueRpc("company_has_candidate_access", { data: true, error: null });
+    rls.queue("user_info", { data: { ...PUBLIC_APPLICANT.info, resumes: [] }, error: null });
+
+    render(await visit(PUBLIC_APPLICANT.id));
+
+    expect(createSignedUrl).not.toHaveBeenCalled();
+    expect(vi.mocked(ProfileClientHydrator).mock.calls[0][0].applicantProfile.resumeDocument).toBeUndefined();
   });
 
   it("falls back to the directory profile when the access check errors", async () => {

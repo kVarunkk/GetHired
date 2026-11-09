@@ -1,18 +1,10 @@
 "use client";
 
-import { cn, copyToClipboard } from "@/utils/utils";
-import {
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  Eye,
-  Info,
-  Loader2,
-  Target,
-} from "lucide-react";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { cn } from "@/utils/utils";
+import { ChevronDown, ChevronUp, Loader2, Target } from "lucide-react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { TResumeReviewServer } from "@/utils/types/review.types";
-import { Button } from "../ui/button";
+import ReviewSuggestions from "./ReviewSuggestions";
 
 export default function AnalysisPane({
   isParsed,
@@ -22,6 +14,8 @@ export default function AnalysisPane({
   isAnalyzing,
   setActiveHighlightId,
   activeHighlightId,
+  onRerun,
+  readOnly = false,
 }: {
   isParsed: boolean;
   isResumeLinked: boolean;
@@ -30,15 +24,11 @@ export default function AnalysisPane({
   isAnalyzing: boolean;
   setActiveHighlightId: Dispatch<SetStateAction<string | null>>;
   activeHighlightId: string | null;
+  onRerun?: () => void;
+  /** The landing page's sample review, which has nothing to apply to. */
+  readOnly?: boolean;
 }) {
   const [isOverallOpen, setIsOverallOpen] = useState(true);
-
-  const [isMounted, setIsMounted] = useState(false);
-
-  // 2. Set it to true when the component initialises in the browser
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   return (
     <div className="h-[400px] sm:h-full sm:flex-1 overflow-y-scroll p-6 space-y-8 ">
@@ -130,111 +120,15 @@ export default function AnalysisPane({
         </div>
       )}
 
-      {currentReview?.ai_response?.bullet_points?.map((bp) => (
-        <button
-          key={bp.bullet_id}
-          onMouseEnter={() => {
-            if (
-              typeof window !== "undefined" &&
-              window.matchMedia("(hover: hover)").matches
-            ) {
-              setActiveHighlightId(bp.bullet_id);
-            }
-          }}
-          onMouseLeave={() => {
-            if (
-              typeof window !== "undefined" &&
-              window.matchMedia("(hover: hover)").matches
-            ) {
-              setActiveHighlightId(null);
-            }
-          }}
-          className={cn(
-            "w-full text-start group space-y-4 p-5 rounded-xl border transition-colors",
-            activeHighlightId === bp.bullet_id
-              ? "border-brand/40 bg-brandSoft"
-              : "bg-background",
-          )}
-          onClick={() => {
-            // Only trigger card-wide click on devices that can hover (laptops)
-            if (
-              typeof window !== "undefined" &&
-              window.matchMedia("(hover: hover)").matches
-            ) {
-              copyToClipboard(bp.suggested, "Suggestion copied!");
-            }
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
-              {bp.section}
-            </span>
-            <span
-              className={cn(
-                "text-xs font-medium capitalize",
-                bp.priority === "high"
-                  ? "text-destructive"
-                  : bp.priority === "medium"
-                    ? "text-warning"
-                    : "text-muted-foreground",
-              )}
-            >
-              {bp.priority}
-            </span>
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs line-through opacity-40 ">{bp.original}</p>
-            <p className="text-sm font-medium leading-relaxed">
-              {bp.suggested}
-              <Copy className="h-4 w-4 hidden group-hover:inline ml-2 transition-all" />
-            </p>
-          </div>
-
-          {/* TOUCH SCREEN ACTION BUTTONS 
-                   Hiding logic: 
-                   - 'hidden' by default.
-                   - '[@media(hover:none)]:flex' only shows these on touchscreens (mobile/tablet).
-                */}
-          {isMounted && (
-            <div className="hidden [@media(hover:none)]:flex items-center gap-2 pt-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation(); // Prevent duplicate trigger from card click
-                  copyToClipboard(bp.suggested, "Suggestion copied!");
-                }}
-                className="flex-1 gap-2 text-xs h-9 active:bg-brandSoft"
-              >
-                <Copy size={12} />
-                Copy
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  setActiveHighlightId(bp.bullet_id);
-                }}
-                className={cn(
-                  "flex-1 gap-2 text-xs h-9 transition-colors",
-                  activeHighlightId === bp.bullet_id
-                    ? "border-brand/30 bg-brandSoft text-brandSoft-foreground"
-                    : "active:bg-brandSoft",
-                )}
-              >
-                <Eye size={12} />
-                {activeHighlightId === bp.bullet_id ? "Focused" : "Focus"}
-              </Button>
-            </div>
-          )}
-
-          <p className="text-[11px] text-muted-foreground border-t pt-3 leading-relaxed flex items-center gap-2">
-            <Info className="w-3 h-3  text-muted-foreground shrink-0" />
-            {bp.reason}
-          </p>
-        </button>
-      ))}
+      {currentReview?.ai_response && !isAnalyzing && (
+        <ReviewSuggestions
+          review={currentReview}
+          activeHighlightId={activeHighlightId}
+          setActiveHighlightId={setActiveHighlightId}
+          onRerun={onRerun}
+          readOnly={readOnly}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import ResumePreviewDialog from "@/components/ResumePreviewDialog";
+import type { ResumeDocument } from "@/helpers/resume/render/document";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 
 /**
  * Stays mounted while the selection changes: only the name and the View
@@ -7,10 +9,19 @@ import { Loader2 } from "lucide-react";
  */
 export const ResumePreview = ({
   previewUrl,
+  document,
+  pageHref,
+  noPreview = false,
   name,
 }: {
-  /** null while the signed URL loads. */
+  /** A file to show. null while the signed URL loads. */
   previewUrl: string | null;
+  /** A resume with no stored file, shown from its content. */
+  document?: ResumeDocument | null;
+  /** A resume with nothing to show here (no file, no content) opens on its own page. */
+  pageHref?: string | null;
+  /** Nothing to show yet, e.g. a Word file before it's uploaded. */
+  noPreview?: boolean;
   name: string | null;
 }) => {
   return (
@@ -21,16 +32,24 @@ export const ResumePreview = ({
         </span>
         <span className="truncate text-sm font-medium">{name}</span>
       </div>
-      <div className="shrink-0 rounded-md border bg-background px-2 py-1 text-xs">
-        {previewUrl ? (
-          <ResumePreviewDialog displayUrl={previewUrl} />
-        ) : (
-          <span className="inline-flex items-center gap-1 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            View
-          </span>
-        )}
-      </div>
+      {!noPreview && (
+        <div className="shrink-0 rounded-md border bg-background px-2 py-1 text-xs">
+          {pageHref ? (
+            <Link href={pageHref} target="_blank" className="underline">
+              View
+            </Link>
+          ) : document ? (
+            <ResumePreviewDialog document={document} />
+          ) : previewUrl ? (
+            <ResumePreviewDialog displayUrl={previewUrl} />
+          ) : (
+            <span className="inline-flex items-center gap-1 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              View
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 };

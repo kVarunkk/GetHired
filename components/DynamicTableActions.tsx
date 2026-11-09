@@ -20,8 +20,6 @@ import { Button } from "./ui/button";
 import { Loader2, Pencil, Trash } from "lucide-react";
 import { Input } from "./ui/input";
 import { BookmarkRow } from "@/utils/types";
-import { TResumeReviewTableData } from "./ResumeReviewsTable";
-import { TResumeReviewResume } from "@/utils/types/review.types";
 import { TInterviewPageServer } from "@/utils/types/interview.types";
 
 interface FormField {
@@ -33,8 +31,6 @@ interface FormField {
 }
 
 type Item =
-  | TResumeReviewResume
-  | TResumeReviewTableData
   | BookmarkRow
   | TInterviewPageServer;
 

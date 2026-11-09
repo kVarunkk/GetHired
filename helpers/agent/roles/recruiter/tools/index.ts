@@ -1,4 +1,5 @@
 import type { Tool } from "ai";
+import { createAskUserTool } from "@/helpers/agent/tools/ask-user";
 import { createApplicantTools } from "./applicants";
 import { createCandidateTools } from "./candidates";
 import { createCareersTools } from "./careers";
@@ -41,6 +42,7 @@ export function createAllRecruiterTools(ctx: RecruiterToolContext) {
     ...createCareersTools(ctx),
     ...createInterviewTools(ctx),
     ...createRecruiterMemoryTools(ctx),
+    ...createAskUserTool(),
   };
 }
 

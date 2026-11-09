@@ -23,7 +23,7 @@ export default function ProfileCompletionBanner() {
         </div>
         <div className="flex items-center gap-1.5">
           <Mail className="shrink-0 h-4 w-4" />
-          <p>Daily Job Digest</p>
+          <p>Job digest every two weeks</p>
         </div>
         <div className="flex items-center gap-1.5">
           <Timer className="shrink-0 h-4 w-4" />

@@ -13,12 +13,15 @@ import { Mail } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
 import { TApplicantProfile } from "@/utils/types/user.types";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
+import ResumePreview from "@/components/resume/ResumePreview";
+import type { ResumeDocument } from "@/helpers/resume/render/document";
 
 export default function ProfileClientHydrator({
   applicantProfile,
 }: {
-  applicantProfile: TApplicantProfile & {
+  applicantProfile: Omit<TApplicantProfile, "resumes"> & {
     signedUrl?: string;
+    resumeDocument?: ResumeDocument;
   };
 }) {
   const { data: currentUserData, isLoading } = useSWR(
@@ -215,6 +218,8 @@ export default function ProfileClientHydrator({
           </Card>
         </div>
       </div>
+
+      {applicantProfile.resumeDocument && <ResumePreview document={applicantProfile.resumeDocument} />}
     </div>
   );
 }

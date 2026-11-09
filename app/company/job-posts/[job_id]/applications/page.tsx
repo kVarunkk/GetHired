@@ -64,7 +64,7 @@ export default async function JobApplicationsPage({
           company_id,
           questions,
           application_form,
-          applications(*, user_info(${RECRUITER_CANDIDATE_COLUMNS}), ${COMPANY_CANDIDATE_PERSON_COLUMNS}, job_postings(*), application_screenings(status, fit_score, recommendation), application_knockouts(failed, reasons, action_taken))
+          applications(id, created_at, status, resume_url, answers_v2, applicant_user_id, company_candidate_id, stage_id, user_info(${RECRUITER_CANDIDATE_COLUMNS}), ${COMPANY_CANDIDATE_PERSON_COLUMNS}, job_postings(*), application_screenings(status, fit_score, recommendation), application_knockouts(failed, reasons, action_taken))
         ` as const,
       )
       .eq("id", job_id)

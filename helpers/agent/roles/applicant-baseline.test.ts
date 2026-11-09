@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ModelMessage } from "ai";
 import { buildSystemPrompt, type AgentProfileSummary } from "../system-prompt";
-import { createAgentTools } from "../tools";
+import { createChatTools } from "../tools";
 import { agentToolApproval } from "../approval";
 import { inputJsonSchema, toolContext } from "@/test/utils/tools";
 import { createSupabaseMock } from "@/test/utils/supabase-mock";
@@ -51,7 +51,7 @@ async function applicantSurface({
   approval,
 }: {
   prompt: typeof buildSystemPrompt;
-  tools: typeof createAgentTools;
+  tools: typeof createChatTools;
   approval: typeof agentToolApproval;
 }) {
   const toolSet = tools(toolContext(createSupabaseMock().client));
@@ -69,7 +69,7 @@ async function applicantSurface({
     afterTwoCreditCalls: [
       user("x"),
       ...ran("naturalLanguageJobSearch", "c1"),
-      ...ran("startResumeReview", "c2"),
+      ...ran("improveResume", "c2"),
     ],
   };
   const decisions = Object.fromEntries(
@@ -97,7 +97,7 @@ describe("applicant agent baseline (RA-TEST-001)", () => {
   it("matches the snapshot taken before the role layer", async () => {
     const surface = await applicantSurface({
       prompt: buildSystemPrompt,
-      tools: createAgentTools,
+      tools: createChatTools,
       approval: agentToolApproval,
     });
     expect(surface).toMatchSnapshot();

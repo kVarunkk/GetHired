@@ -46,7 +46,7 @@ describe("attachToApplicationAction (ORT-061, OR-TEST-006)", () => {
   it.each([
     ["a non-UUID application", { applicationId: "x", kind: "interview_session", interviewSessionId: SESSION_ID }],
     ["an unknown kind", { applicationId: APPLICATION_ID, kind: "transcript", interviewSessionId: SESSION_ID }],
-    ["a session id on a review", { applicationId: APPLICATION_ID, kind: "resume_review", interviewSessionId: SESSION_ID }],
+    ["a resume review, since new ones can't be shared (RI-REQ-064)", { applicationId: APPLICATION_ID, kind: "resume_review", resumeReviewId: REVIEW_ID }],
     ["a forged applicant id", { applicationId: APPLICATION_ID, kind: "interview_session", interviewSessionId: SESSION_ID, applicant_user_id: COMPANY_A.user.id }],
   ])("rejects %s without a query", async (_label, input) => {
     const result = await attachToApplicationAction(input as never);
@@ -75,21 +75,6 @@ describe("attachToApplicationAction (ORT-061, OR-TEST-006)", () => {
     expect(supabase.callsFor("enqueue_company_interview_analysis")).toHaveLength(0);
   });
 
-  it("refuses another user's review", async () => {
-    ownsApplication();
-    supabase.queue("resume_reviews", { data: null, error: null });
-
-    const result = await attachToApplicationAction({
-      applicationId: APPLICATION_ID,
-      kind: "resume_review",
-      resumeReviewId: REVIEW_ID,
-    });
-
-    expect(result.ok).toBe(false);
-    expect(eqs(supabase.callsFor("resume_reviews")[0])).toContainEqual(["user_id", PUBLIC_APPLICANT.user.id]);
-    expect(inserts()).toHaveLength(0);
-  });
-
   it("attaches a session and queues the company analysis through the RPC", async () => {
     ownsApplication();
     ownsSession();
@@ -104,7 +89,6 @@ describe("attachToApplicationAction (ORT-061, OR-TEST-006)", () => {
       application_id: APPLICATION_ID,
       kind: "interview_session",
       interview_session_id: SESSION_ID,
-      resume_review_id: null,
     });
     expect(supabase.callsFor("enqueue_company_interview_analysis")[0].chain[0].args[1]).toEqual({
       p_session: SESSION_ID,
@@ -132,21 +116,6 @@ describe("attachToApplicationAction (ORT-061, OR-TEST-006)", () => {
       ok: false,
       error: "You've already shared an interview with this application.",
     });
-    expect(supabase.callsFor("enqueue_company_interview_analysis")).toHaveLength(0);
-  });
-
-  it("attaches a review without queueing anything", async () => {
-    ownsApplication();
-    supabase.queue("resume_reviews", { data: { id: REVIEW_ID }, error: null });
-    inserted();
-
-    const result = await attachToApplicationAction({
-      applicationId: APPLICATION_ID,
-      kind: "resume_review",
-      resumeReviewId: REVIEW_ID,
-    });
-
-    expect(result).toEqual({ ok: true, attachmentId: ATTACHMENT_ID, analysisQueued: false });
     expect(supabase.callsFor("enqueue_company_interview_analysis")).toHaveLength(0);
   });
 });
@@ -195,25 +164,18 @@ describe("detachFromApplicationAction (ORT-061)", () => {
 });
 
 describe("listShareableSignalsAction", () => {
-  it("lists only the user's completed sessions and reviews", async () => {
+  it("lists only the user's completed sessions, and no reviews", async () => {
     supabase.queue("interview_sessions", {
       data: [{ id: SESSION_ID, ended_at: "2026-10-10T00:00:00.000Z", started_at: "2026-10-10T00:00:00.000Z", interviews: { name: "Backend mock", user_id: PUBLIC_APPLICANT.user.id } }],
-      error: null,
-    });
-    supabase.queue("resume_reviews", {
-      data: [{ id: REVIEW_ID, name: null, score: 82, created_at: "2026-10-09T00:00:00.000Z" }],
       error: null,
     });
 
     expect(await listShareableSignalsAction()).toEqual({
       sessions: [{ id: SESSION_ID, label: "Backend mock", endedAt: "2026-10-10T00:00:00.000Z" }],
-      reviews: [{ id: REVIEW_ID, label: "Resume review", score: 82 }],
     });
     expect(eqs(supabase.callsFor("interview_sessions")[0])).toEqual(
       expect.arrayContaining([["interviews.user_id", PUBLIC_APPLICANT.user.id], ["status", "completed"]]),
     );
-    expect(eqs(supabase.callsFor("resume_reviews")[0])).toEqual(
-      expect.arrayContaining([["user_id", PUBLIC_APPLICANT.user.id], ["status", "completed"]]),
-    );
+    expect(supabase.callsFor("resume_reviews")).toHaveLength(0);
   });
 });

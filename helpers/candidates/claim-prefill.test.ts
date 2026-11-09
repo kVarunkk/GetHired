@@ -2,19 +2,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { canonicalizeLocations } from "@/helpers/locations/aliases";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { fillEmptyFromClaim } from "./claim-prefill-form";
-import { copyClaimResume, hasPrefill, loadClaimPrefill } from "./claim-prefill";
+import { resumeFromUpload } from "@/helpers/resumes/resume-from-upload";
+import { hasPrefill, importClaimResume, loadClaimPrefill } from "./claim-prefill";
 import { hashClaimToken } from "./claim-token";
 import { RESUME_BUCKET } from "./resume-files";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/helpers/locations/aliases", () => ({ canonicalizeLocations: vi.fn() }));
+vi.mock("@/helpers/resumes/resume-from-upload", () => ({ resumeFromUpload: vi.fn() }));
 
 const TOKEN = "t".repeat(43);
 const USER_ID = "00000000-0000-4000-8000-000000000001";
+const USER = { id: USER_ID };
 let admin: SupabaseMock;
 let supabase: SupabaseMock;
 let download: ReturnType<typeof vi.fn>;
-let upload: ReturnType<typeof vi.fn>;
 let buckets: string[];
 
 const candidate = (over: Record<string, unknown> = {}) => ({
@@ -41,9 +43,9 @@ beforeEach(() => {
   supabase = createSupabaseMock();
   buckets = [];
   download = vi.fn().mockResolvedValue({ data: new Blob([new Uint8Array(100)]), error: null });
-  upload = vi.fn().mockResolvedValue({ error: null });
+  vi.mocked(resumeFromUpload).mockResolvedValue({ ok: true, resumeId: "r1" });
   Object.assign(admin.client, { storage: { from: (b: string) => (buckets.push(b), { download }) } });
-  Object.assign(supabase.client, { storage: { from: (b: string) => (buckets.push(b), { upload }) } });
+  Object.assign(supabase.client, { storage: { from: (b: string) => (buckets.push(b), {}) } });
 });
 
 describe("loadClaimPrefill (BIT-105)", () => {
@@ -61,7 +63,7 @@ describe("loadClaimPrefill (BIT-105)", () => {
         linkedin_url: "https://linkedin.com/in/ada",
         github_url: "https://github.com/ada",
       },
-      resume: { name: "Resume from Acme.pdf" },
+      resume: { name: "Resume from Acme" },
     });
     const chain = admin.callsFor("company_candidate_claims")[0].chain;
     expect(chain).toContainEqual({ method: "eq", args: ["token_hash", hashClaimToken(TOKEN)] });
@@ -85,8 +87,13 @@ describe("loadClaimPrefill (BIT-105)", () => {
     expect(admin.callsFor("company_candidate_claims")).toHaveLength(0);
   });
 
-  it("offers no resume for a Word file, since applicant resumes are PDFs", async () => {
+  it("offers a Word file too (RE-REQ-023)", async () => {
     admin.queue("company_candidate_claims", claim({ company_candidates: candidate({ resume_path: "c/x.docx" }) }));
+    expect((await loadClaimPrefill(admin.client, TOKEN, USER_ID))?.resume).toEqual({ name: "Resume from Acme" });
+  });
+
+  it("offers no resume when the candidate has no file", async () => {
+    admin.queue("company_candidate_claims", claim({ company_candidates: candidate({ resume_path: null }) }));
     expect((await loadClaimPrefill(admin.client, TOKEN, USER_ID))?.resume).toBeNull();
   });
 });
@@ -113,43 +120,67 @@ describe("hasPrefill", () => {
   });
 });
 
-describe("copyClaimResume (BIT-105)", () => {
-  it("copies the company's file into the user's own resumes, not as primary", async () => {
-    admin.queue("company_candidate_claims", claim());
-    supabase.queue("resumes", { data: { id: "r1" }, error: null });
+describe("importClaimResume (RE-REQ-023)", () => {
+  it.each(["company/cand/file.pdf", "company/cand/file.docx"])("reads %s into the user's own resumes, not as primary", async (resume_path) => {
+    admin.queue("company_candidate_claims", claim({ company_candidates: candidate({ resume_path }) }));
 
-    expect(await copyClaimResume(supabase.client, admin.client, USER_ID, TOKEN)).toEqual({ ok: true, resumeId: "r1" });
-    expect(download).toHaveBeenCalledWith("company/cand/file.pdf");
-    expect(buckets).toEqual([RESUME_BUCKET, "resumes"]);
-    expect(upload).toHaveBeenCalledWith(
-      expect.stringMatching(new RegExp(`^resumes/${USER_ID}/\\d+-Resume_from_Acme\\.pdf$`)),
-      expect.anything(),
-      { contentType: "application/pdf" },
-    );
-    expect(supabase.callsFor("resumes")[0].chain[0]).toEqual({
-      method: "insert",
-      args: [expect.objectContaining({ user_id: USER_ID, name: "Resume from Acme.pdf", is_primary: false, content: null })],
-    });
+    expect(await importClaimResume(supabase.client, admin.client, USER, TOKEN)).toEqual({ ok: true, resumeId: "r1" });
+
+    expect(download).toHaveBeenCalledWith(resume_path);
+    const [client, user, file, options] = vi.mocked(resumeFromUpload).mock.calls[0];
+    expect(client).toBe(supabase.client);
+    expect(user).toBe(USER);
+    expect(file.name).toBe(resume_path.split("/").pop());
+    expect(file.size).toBe(100);
+    expect(options).toEqual({ name: "Resume from Acme" });
   });
 
-  it("copies nothing for another person's or company's candidate", async () => {
+  it("only reads the company's file, and uploads nothing", async () => {
+    admin.queue("company_candidate_claims", claim());
+
+    await importClaimResume(supabase.client, admin.client, USER, TOKEN);
+
+    expect(buckets).toEqual([RESUME_BUCKET]);
+    expect(admin.callsFor("resumes")).toHaveLength(0);
+    expect(admin.callsFor("company_candidates")).toHaveLength(0);
+  });
+
+  it("imports nothing for another person's or company's candidate", async () => {
     admin.queue("company_candidate_claims", claim({ company_candidates: candidate({ claimed_user_id: "someone-else" }) }));
 
-    expect(await copyClaimResume(supabase.client, admin.client, USER_ID, TOKEN)).toMatchObject({ ok: false });
+    expect(await importClaimResume(supabase.client, admin.client, USER, TOKEN)).toMatchObject({ ok: false });
     expect(download).not.toHaveBeenCalled();
-    expect(upload).not.toHaveBeenCalled();
-    expect(supabase.callsFor("resumes")).toHaveLength(0);
+    expect(resumeFromUpload).not.toHaveBeenCalled();
+  });
+
+  it("imports nothing when the candidate has no file", async () => {
+    admin.queue("company_candidate_claims", claim({ company_candidates: candidate({ resume_path: null }) }));
+
+    expect(await importClaimResume(supabase.client, admin.client, USER, TOKEN)).toEqual({
+      ok: false,
+      error: "That resume is no longer available. Upload your own.",
+    });
   });
 
   it("refuses a file over the applicant limit", async () => {
     admin.queue("company_candidate_claims", claim());
     download.mockResolvedValue({ data: new Blob([new Uint8Array(2 * 1024 * 1024 + 1)]), error: null });
 
-    expect(await copyClaimResume(supabase.client, admin.client, USER_ID, TOKEN)).toEqual({
+    expect(await importClaimResume(supabase.client, admin.client, USER, TOKEN)).toEqual({
       ok: false,
       error: "That resume is larger than 2 MB. Upload your own.",
     });
-    expect(upload).not.toHaveBeenCalled();
+    expect(resumeFromUpload).not.toHaveBeenCalled();
+  });
+
+  it("passes on a failed parse", async () => {
+    admin.queue("company_candidate_claims", claim());
+    vi.mocked(resumeFromUpload).mockResolvedValue({ ok: false, error: "We couldn't read this file." });
+
+    expect(await importClaimResume(supabase.client, admin.client, USER, TOKEN)).toEqual({
+      ok: false,
+      error: "We couldn't read this file.",
+    });
   });
 });
 

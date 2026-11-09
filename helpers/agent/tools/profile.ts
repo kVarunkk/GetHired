@@ -1,10 +1,9 @@
 import { canonicalizeLocations } from "@/helpers/locations/aliases";
 import { tool } from "ai";
-import { after } from "next/server";
 import { z } from "zod";
 import { getProfile } from "@/helpers/user/get-profile";
 import { TablesUpdate } from "@/utils/types/database.types";
-import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
+import { profileRefreshMessage, refreshProfileAfterChange } from "@/helpers/user/queue-profile-refresh";
 import { AgentToolContext, withToolErrors } from "./shared";
 
 export const SALARY_CURRENCIES = ["₹", "$", "€", "£", "C$", "A$"] as const;
@@ -90,11 +89,12 @@ export function createProfileTools(ctx: AgentToolContext) {
             };
           }
 
-          after(() => updateUserEmbedding(ctx.user.id));
+          // Every field here feeds the embedding and the matches.
+          const matches = profileRefreshMessage(await refreshProfileAfterChange(ctx.user.id));
 
           return preferredLocations
-            ? { updated: fields, preferredLocations }
-            : { updated: fields };
+            ? { updated: fields, preferredLocations, matches }
+            : { updated: fields, matches };
         }),
     }),
   };

@@ -143,7 +143,6 @@ export function createOnboardingTools(ctx: AgentToolContext) {
           );
 
           const result = await completeApplicantOnboarding(
-            supabase,
             ctx.user,
             toProfileColumns(input, preferredLocations),
             // The agent's upload already parsed (and charged for) the resume.

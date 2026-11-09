@@ -5,7 +5,6 @@ import {
   cn,
   fullHeightPaths,
   getNavbarVairantByPath,
-  noScrollToTop,
 } from "../utils/utils";
 import { usePathname } from "next/navigation";
 import { User } from "@supabase/supabase-js";
@@ -43,9 +42,7 @@ export default function LayoutWrapper({ user, children }: LayoutWrapperProps) {
       >
         {children}
       </div>
-      {!noScrollToTop.find((_) => pathname.startsWith(_)) && (
-        <ScrollToTopButton />
-      )}
+      <ScrollToTopButton />
     </div>
   );
 }

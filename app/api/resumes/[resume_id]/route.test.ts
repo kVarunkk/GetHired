@@ -49,7 +49,10 @@ describe("GET /api/resumes/[resume_id]", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ data: RESUME });
     expect(supabase.callsFor("resumes")[0].chain).toEqual([
-      { method: "select", args: ["id, name, content, created_at, updated_at, is_primary"] },
+      {
+        method: "select",
+        args: ["id, name, content, contact, template, revision, schema_version, resume_path, created_at, updated_at, is_primary"],
+      },
       { method: "eq", args: ["user_id", "u1"] },
       { method: "eq", args: ["id", RESUME_ID] },
       { method: "maybeSingle", args: [] },

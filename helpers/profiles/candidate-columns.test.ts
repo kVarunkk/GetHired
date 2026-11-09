@@ -42,6 +42,7 @@ const USER_INFO_COLUMNS = {
   max_salary: true,
   min_salary: true,
   preferred_locations: true,
+  profile_refresh_requested_at: true,
   referral_code: true,
   relevant_jobs_update_status: true,
   salary_currency: true,

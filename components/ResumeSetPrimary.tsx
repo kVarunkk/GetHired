@@ -6,7 +6,7 @@ import { Star } from "lucide-react";
 import { Dispatch, SetStateAction } from "react";
 import toast from "react-hot-toast";
 
-export default function ResumeSetPrimary({
+export default function ResumeSetPrimary<T extends TResumeReviewResume>({
   isProcessing,
   setIsProcessing,
   isPrimary,
@@ -17,8 +17,8 @@ export default function ResumeSetPrimary({
   isProcessing: boolean;
   setIsProcessing: Dispatch<SetStateAction<boolean>>;
   isPrimary: boolean;
-  setItems: Dispatch<SetStateAction<TResumeReviewResume[]>>;
-  items: TResumeReviewResume[];
+  setItems: Dispatch<SetStateAction<T[]>>;
+  items: T[];
   resumeId: string;
 }) {
   const handleSetPrimary = async (resumeId: string) => {

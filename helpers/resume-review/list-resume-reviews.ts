@@ -5,8 +5,8 @@ export const RESUME_REVIEWS_DEFAULT_LIMIT = 10;
 export const RESUME_REVIEWS_MAX_LIMIT = 50;
 
 /**
- * The user's resume reviews, newest first. Shared by GET /api/resume-review
- * and MCP. `user` must come from the session or tool context.
+ * The user's resume reviews, newest first, for MCP. `user` must come from the
+ * session or tool context.
  */
 export async function listResumeReviews(
   supabase: SupabaseClient<Database>,

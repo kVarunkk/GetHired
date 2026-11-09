@@ -2,7 +2,7 @@ import { generateText, NoObjectGeneratedError, NoOutputGeneratedError, Output, t
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
 import { wrapInSandbox } from "@/helpers/ai/security";
-import { ResumeSchema, withBulletIds } from "@/helpers/resume/resume-schema";
+import { ResumeParseSchema, withResumeIds, type SectionWithIds } from "@/helpers/resume/resume-schema";
 import { candidateFieldsSchema, SKILLS_LIMIT, type CandidateFields } from "./candidate-schema";
 
 // One Gemini call turns a resume's text into a company candidate's fields and
@@ -44,7 +44,7 @@ const OutputSchema = z.object({
     portfolio_url: nullableText,
     skills: z.array(z.string()).describe("Skills, tools and technologies, as written."),
   }),
-  sections: ResumeSchema.shape.sections,
+  sections: ResumeParseSchema.shape.sections,
 });
 
 const SYSTEM_PROMPT = `
@@ -59,12 +59,14 @@ RULES:
 
 export type CandidateResumeWarning = { field: string; message: string; value: string };
 
+type ParsedResumeSections = { sections: SectionWithIds<z.infer<typeof OutputSchema>["sections"][number]>[] };
+
 export type ParsedCandidateResume =
   | {
       ok: true;
       /** The fields that passed the candidate schema; empty ones are left out. */
       fields: Partial<CandidateFields>;
-      resume: ReturnType<typeof withBulletIds>;
+      resume: ParsedResumeSections;
       /** The fields that didn't, with the value the model read (BI-REQ-023). */
       warnings: CandidateResumeWarning[];
     }
@@ -143,5 +145,5 @@ export async function parseCandidateResume(
   }
 
   const { fields, warnings } = validateFields(output.contact);
-  return { ok: true, fields, resume: withBulletIds({ sections: output.sections }), warnings };
+  return { ok: true, fields, resume: withResumeIds({ sections: output.sections }), warnings };
 }

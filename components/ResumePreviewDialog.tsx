@@ -1,6 +1,8 @@
 "use client";
 
 import OriginalResumeWrapper from "./OriginalResumeWrapper";
+import ResumePreview from "@/components/resume/ResumePreview";
+import type { ResumeDocument } from "@/helpers/resume/render/document";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -10,11 +12,10 @@ import {
 } from "@/components/ui/responsive-dialog";
 import { FileText } from "lucide-react";
 
-export default function ResumePreviewDialog({
-  displayUrl,
-}: {
-  displayUrl: string;
-}) {
+/** Shows a stored file, or a resume built in the editor (no file). */
+export default function ResumePreviewDialog(
+  props: { displayUrl: string } | { document: ResumeDocument },
+) {
   return (
     <ResponsiveDialog>
       <ResponsiveDialogTrigger asChild>
@@ -34,9 +35,18 @@ export default function ResumePreviewDialog({
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>Resume Preview</ResponsiveDialogTitle>
         </ResponsiveDialogHeader>
-        <div className="min-h-0 flex-1">
-          <OriginalResumeWrapper url={displayUrl} />
-        </div>
+        {"displayUrl" in props ? (
+          <div className="min-h-0 flex-1">
+            <OriginalResumeWrapper url={props.displayUrl} />
+          </div>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <ResumePreview
+              className="mx-auto max-w-3xl"
+              document={props.document}
+            />
+          </div>
+        )}
       </ResponsiveDialogContent>
     </ResponsiveDialog>
   );

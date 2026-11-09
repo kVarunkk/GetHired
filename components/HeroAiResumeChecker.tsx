@@ -1,6 +1,7 @@
 import { Sparkles } from "lucide-react";
 import Hero, { HeroEyebrow } from "@/components/landing-page/Hero";
 import { agentPromptHref } from "@/helpers/agent/prompt-draft";
+import { IMPROVE_RESUME_PROMPT } from "@/helpers/marketing/content";
 import { LANDING_PAGES } from "@/helpers/marketing/content";
 import ResumeCheckerHeroDemo from "@/components/landing-page/ResumeCheckerHeroDemo";
 
@@ -11,10 +12,10 @@ export default function HeroAiResumeChecker() {
     <Hero
       eyebrow={
         <HeroEyebrow
-          href={agentPromptHref("Review my resume against a job I like. Ask me which job first.")}
+          href={agentPromptHref(IMPROVE_RESUME_PROMPT)}
           icon={<Sparkles className="h-3.5 w-3.5" />}
           label="Ask the agent"
-          detail="Review your resume against a job you like"
+          detail="Improve your resume for a job you like"
         />
       }
       heading={page.heading}

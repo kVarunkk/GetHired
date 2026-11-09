@@ -1,4 +1,5 @@
 import { createApplicationTools } from "./applications";
+import { createAskUserTool } from "./ask-user";
 import { createInterviewTools } from "./interviews";
 import { createJobTools } from "./jobs";
 import { createMemoryTools } from "./memory";
@@ -19,7 +20,18 @@ export function createAgentTools(ctx: AgentToolContext) {
     ...createResumeTools(ctx),
     ...createInterviewTools(ctx),
     ...createMemoryTools(ctx),
+    ...createAskUserTool(),
   };
 }
 
 export type AgentTools = ReturnType<typeof createAgentTools>;
+
+/**
+ * The tools in the chat. The changes card is the chat's one way to apply a
+ * review, so `applyReviewSuggestions` is MCP's alone (RI-REQ-051).
+ */
+export function createChatTools(ctx: AgentToolContext) {
+  const { applyReviewSuggestions: mcpOnly, ...tools } = createAgentTools(ctx);
+  void mcpOnly;
+  return tools;
+}

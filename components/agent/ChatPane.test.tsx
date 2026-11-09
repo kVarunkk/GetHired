@@ -586,7 +586,7 @@ describe("ChatPane", () => {
           role: "assistant",
           parts: [
             {
-              type: "tool-startResumeReview",
+              type: "tool-submitApplication",
               toolCallId: "c1",
               state: "approval-requested",
               input: {},

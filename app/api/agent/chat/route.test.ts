@@ -137,7 +137,12 @@ beforeEach(async () => {
 
 /** The options agentTelemetry returned for `functionId` in this test. */
 const traced = (functionId: string) => ({ isEnabled: false, functionId });
-const TRACE_CONTEXT = { sessionId: SESSION_ID, userId: "u1" };
+const TRACE_CONTEXT = {
+  sessionId: SESSION_ID,
+  userId: "u1",
+  role: "applicant",
+  userText: "hi",
+};
 
 describe("POST /api/agent/chat: guards", () => {
   it("returns 401 without a user", async () => {
@@ -430,7 +435,7 @@ describe("POST /api/agent/chat: history rules", () => {
       role: "assistant",
       parts: [
         {
-          type: "tool-startResumeReview",
+          type: "tool-submitApplication",
           toolCallId: "c1",
           state: "approval-requested",
           input: { resumeId: "22222222-2222-4222-8222-222222222222", jobId: "11111111-1111-4111-8111-111111111111" },

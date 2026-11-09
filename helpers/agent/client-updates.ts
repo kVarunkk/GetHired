@@ -1,10 +1,19 @@
 import type { UIMessage } from "ai";
 import { z } from "zod";
+import { askUserOutputSchema, outputFitsInput } from "./ask-user";
 
 type MessagePart = UIMessage["parts"][number];
 type ToolPart = MessagePart & { toolCallId: string; state: string };
 
-const MAX_REASON_LENGTH = 200;
+/**
+ * What the model reads after the user declines. Without it the provider sends
+ * a bare "Tool call execution denied.", and the model has reported the change
+ * as done. Set here, for every tool, so the browser can't supply the text.
+ */
+export const DECLINED_REASON =
+  "The user declined this, so it did not run and nothing changed. Don't say it happened. Ask what they'd like to do instead.";
+
+const changeIds = z.array(z.string().min(1).max(64)).max(200);
 
 /** Client-side tools whose output the browser provides (REQ-015). */
 const CLIENT_TOOL_OUTPUTS: Record<string, z.ZodTypeAny> = {
@@ -12,6 +21,17 @@ const CLIENT_TOOL_OUTPUTS: Record<string, z.ZodTypeAny> = {
     z.object({ resumeId: z.string().min(1).max(64) }),
     z.object({ cancelled: z.literal(true) }),
   ]),
+  // What the user did on the changes card. The write already happened in a
+  // server action, so a forged output can only mislead the model (RI-REQ-022).
+  "tool-reviewResumeChanges": z
+    .object({
+      status: z.enum(["applied", "discarded"]),
+      applied: changeIds,
+      skipped: changeIds,
+      changed: changeIds,
+      targetResumeId: z.string().uuid().nullable(),
+    })
+    .strict(),
   // The recruiter agent's import widgets (BI-REQ-060). The ids only point the
   // server tools at an import; they read everything else themselves, scoped
   // to the session's company.
@@ -27,12 +47,19 @@ const CLIENT_TOOL_OUTPUTS: Record<string, z.ZodTypeAny> = {
     z.object({ uploaded: z.literal(true), rescreened: z.number().int().min(0).max(1000) }).strict(),
     z.object({ cancelled: z.literal(true) }),
   ]),
+  // The question card, for both roles. Its answers are checked against the
+  // stored questions below, so they can only be the user's own.
+  "tool-askUser": askUserOutputSchema,
+};
+
+/** Checks of a client output against the tool call's stored input. */
+const CLIENT_TOOL_INPUT_CHECKS: Record<string, (input: unknown, output: never) => boolean> = {
+  "tool-askUser": outputFitsInput,
 };
 
 const approvalResponse = z.object({
   id: z.string(),
   approved: z.boolean(),
-  reason: z.string().optional(),
 });
 
 const isToolPart = (part: MessagePart): part is ToolPart =>
@@ -49,14 +76,14 @@ function mergePart(stored: MessagePart, incoming: MessagePart | undefined): Mess
     const parsed = approvalResponse.safeParse((incoming as { approval?: unknown }).approval);
     if (!parsed.success || parsed.data.id !== storedApproval?.id) return stored;
 
-    const { id, approved, reason } = parsed.data;
+    const { id, approved } = parsed.data;
     return {
       ...stored,
       state: "approval-responded",
       approval: {
         id,
         approved,
-        ...(reason ? { reason: reason.slice(0, MAX_REASON_LENGTH) } : {}),
+        ...(approved ? {} : { reason: DECLINED_REASON }),
       },
     } as MessagePart;
   }
@@ -66,6 +93,8 @@ function mergePart(stored: MessagePart, incoming: MessagePart | undefined): Mess
   if (outputSchema && stored.state === "input-available" && incoming.state === "output-available") {
     const parsed = outputSchema.safeParse((incoming as { output?: unknown }).output);
     if (!parsed.success) return stored;
+    const fitsInput = CLIENT_TOOL_INPUT_CHECKS[stored.type];
+    if (fitsInput && !fitsInput((stored as { input?: unknown }).input, parsed.data as never)) return stored;
     return { ...stored, state: "output-available", output: parsed.data } as MessagePart;
   }
 

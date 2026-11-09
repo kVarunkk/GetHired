@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
-import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
+import { refreshProfileAfterChange } from "@/helpers/user/queue-profile-refresh";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { setPrimaryResumeAction } from "./set-primary-resume";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/helpers/user/update-user-embedding", () => ({ updateUserEmbedding: vi.fn() }));
+vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
+vi.mock("@/helpers/user/queue-profile-refresh", () => ({ refreshProfileAfterChange: vi.fn() }));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
@@ -15,6 +17,7 @@ const USER_ID = "00000000-0000-4000-8000-000000000001";
 const RESUME_ID = "22222222-2222-4222-8222-222222222222";
 
 let supabase: SupabaseMock;
+let service: SupabaseMock;
 
 function signIn(user: { id: string } | null) {
   supabase = createSupabaseMock({ user });
@@ -23,7 +26,9 @@ function signIn(user: { id: string } | null) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(updateUserEmbedding).mockResolvedValue({ error: null } as never);
+  service = createSupabaseMock();
+  vi.mocked(createServiceRoleClient).mockReturnValue(service.client);
+  vi.mocked(refreshProfileAfterChange).mockResolvedValue("queued");
   signIn({ id: USER_ID });
 });
 
@@ -35,47 +40,47 @@ describe("setPrimaryResumeAction", () => {
       success: false,
       error: "Unauthorized access.",
     });
-    expect(supabase.calls).toHaveLength(0);
+    expect(service.calls).toHaveLength(0);
   });
 
-  it("clears the user's primary resume, sets the new one and re-embeds the profile", async () => {
-    expect(await setPrimaryResumeAction(RESUME_ID)).toEqual({ success: true });
+  it("swaps the primary in one call for the session user, then refreshes the embedding and matches", async () => {
+    service.queueRpc("set_primary_resume", { data: { ok: true, changed: true }, error: null });
 
-    const [clear, set] = supabase.callsFor("resumes");
-    expect(clear.chain).toEqual([
-      { method: "update", args: [{ is_primary: false }] },
-      { method: "eq", args: ["user_id", USER_ID] },
-    ]);
-    expect(set.chain).toEqual([
-      { method: "update", args: [{ is_primary: true }] },
-      { method: "eq", args: ["id", RESUME_ID] },
-      { method: "eq", args: ["user_id", USER_ID] },
-    ]);
-    expect(updateUserEmbedding).toHaveBeenCalledWith(USER_ID);
+    expect(await setPrimaryResumeAction(RESUME_ID)).toEqual({ success: true, refresh: "queued" });
+    expect(service.calls).toHaveLength(1);
+    expect(service.callsFor("set_primary_resume")[0].chain[0].args[1]).toEqual({
+      p_user_id: USER_ID,
+      p_resume_id: RESUME_ID,
+    });
+    expect(refreshProfileAfterChange).toHaveBeenCalledWith(USER_ID);
+  });
+
+  it("starts no refresh when it was already the primary", async () => {
+    service.queueRpc("set_primary_resume", { data: { ok: true, changed: false }, error: null });
+
+    expect(await setPrimaryResumeAction(RESUME_ID)).toEqual({ success: true, refresh: "unchanged" });
+    expect(refreshProfileAfterChange).not.toHaveBeenCalled();
+  });
+
+  it("refuses a resume that isn't the user's", async () => {
+    service.queueRpc("set_primary_resume", { data: { ok: false, reason: "resume_not_found" }, error: null });
+
+    expect(await setPrimaryResumeAction(RESUME_ID)).toEqual({ success: false, error: "Resume not found." });
+    expect(refreshProfileAfterChange).not.toHaveBeenCalled();
   });
 
   it("returns and reports a database error", async () => {
-    supabase.queue("resumes", { data: null, error: new Error("update failed") });
+    service.queueRpc("set_primary_resume", { data: null, error: new Error("update failed") });
 
     expect(await setPrimaryResumeAction(RESUME_ID)).toEqual({
       success: false,
-      error: "update failed",
+      error: "Could not update the primary resume. Please try again.",
     });
-    expect(supabase.callsFor("resumes")).toHaveLength(1);
     expect(eventCaptureServerException).toHaveBeenCalledWith(
       expect.objectContaining({
         distinctId: USER_ID,
         properties: { flow: "set_primary_resume", resume_id: RESUME_ID },
       }),
     );
-  });
-
-  it("returns an error when the embedding update fails", async () => {
-    vi.mocked(updateUserEmbedding).mockResolvedValue({ error: "boom" } as never);
-
-    expect(await setPrimaryResumeAction(RESUME_ID)).toEqual({
-      success: false,
-      error: "Background Embedding Failed",
-    });
   });
 });
