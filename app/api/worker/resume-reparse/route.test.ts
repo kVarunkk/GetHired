@@ -176,6 +176,27 @@ describe("GET /api/worker/resume-reparse (RE-REQ-092/093/094)", () => {
     expect(archived()).toEqual([7]);
   });
 
+  it("parses a file whose name has a double dot", async () => {
+    message();
+    queueItem({ file_path: `resumes/${USER}/1-cv..pdf` });
+
+    const body = await (await run()).json();
+
+    expect(body.parsed).toBe(1);
+    expect(parseResumeUpload).toHaveBeenCalledWith(new Uint8Array([1, 2, 3]), { fileName: "1-cv..pdf" });
+    expect(itemUpdates()[0]).toMatchObject({ status: "parsed" });
+  });
+
+  it("never downloads a path with a .. segment", async () => {
+    message();
+    queueItem({ file_path: `resumes/${USER}/../other/1-cv.pdf` });
+
+    await run();
+
+    expect(download).not.toHaveBeenCalled();
+    expect(archived()).toEqual([7]);
+  });
+
   it("skips an item whose row is gone", async () => {
     message();
     db.queue("resume_migration_items", { data: null, error: null });
