@@ -106,7 +106,9 @@ export async function GET(request: NextRequest) {
     const item = row as Item | null;
 
     // Gone, or already settled by an earlier delivery: nothing to do twice.
-    if (!item || item.status !== "pending" || item.file_path.includes("..")) {
+    // A ".." segment would climb out of the bucket path; a name like
+    // "cv..pdf" is just a file name and has to be parsed like any other.
+    if (!item || item.status !== "pending" || item.file_path.split("/").includes("..")) {
       if (item && item.status !== "pending") counts.skipped++;
       await archive(msg_id);
       return;

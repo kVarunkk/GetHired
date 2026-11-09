@@ -147,6 +147,7 @@ describe("completeOnboarding tool", () => {
     ["an unknown company size", { ...INPUT, companySizePreference: "Huge" }],
     ["an unknown currency", { ...INPUT, salaryCurrency: "BTC" }],
     ["max below min salary", { ...INPUT, maxSalary: 10 }],
+    ["fractional experience years", { ...INPUT, experienceYears: 0.5 }],
     ["a user id", { ...INPUT, userId: "someone-else" }],
   ])("rejects input with %s", async (_label, input) => {
     expect((await validateInput(tools.completeOnboarding, input)).success).toBe(false);

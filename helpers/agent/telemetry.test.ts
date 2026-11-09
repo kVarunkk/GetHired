@@ -10,8 +10,11 @@ import {
   ARIZE_OTLP_URL,
   flushAgentTraces,
   mcpToolTelemetry,
+  redactContactDetails,
   resetAgentTelemetryForTests,
+  turnRequestText,
 } from "./telemetry";
+import type { UIMessage } from "ai";
 import { AGENT_TRACE_CONTENT } from "./config";
 
 // An in-memory stand-in for the OTLP exporter: no network, spans kept for assertions.
@@ -488,6 +491,147 @@ describe("agentTelemetry with Arize credentials", () => {
     expect(evaluated).not.toContain("tool_call");
   });
 
+  it("marks a turn that ends on a card as paused, without the tool payloads", async () => {
+    configure();
+
+    const result = streamText({
+      model: mockModel([
+        toolCallStream("getMyProfile", {}),
+        toolCallStream("askUser", { questions: [{ question: "Which skills?" }] }),
+      ]),
+      messages: [{ role: "user", content: "i want to add some more skills" }],
+      tools: {
+        getMyProfile: tool({
+          inputSchema: z.object({}),
+          execute: async () => ({ email: "someone@private.example", phone: "+91 8320313890" }),
+        }),
+        // A client tool: no execute, so the turn stops for the user.
+        askUser: tool({ inputSchema: z.object({ questions: z.array(z.object({ question: z.string() })) }) }),
+      },
+      stopWhen: stepCountIs(4),
+      telemetry: agentTelemetry("agent-chat", CONTEXT),
+    });
+    await result.consumeStream();
+    await flushAgentTraces();
+
+    const root = exporter.spans.find((span) => span.name === "agent-chat");
+    expect(root?.attributes["gethired.turn_end"]).toBe("paused");
+    const output = String(root?.attributes["output.value"]);
+    expect(output).toContain("no reply yet");
+    expect(output).toContain("askUser(");
+    // The raw output carried the profile's tool response; the evaluated text doesn't.
+    expect(output).not.toContain("private.example");
+    expect(output).not.toContain("tool_call");
+    // The summary keeps the profile result, with the contact details masked.
+    const results = String(root?.attributes["gethired.tool_results"]);
+    expect(results).toContain("getMyProfile");
+    expect(results).toContain("[email]");
+    expect(results).toContain("[phone]");
+    expect(results).not.toContain("private.example");
+    expect(results).not.toContain("8320313890");
+  });
+
+  it("marks a finished reply as a reply", async () => {
+    configure();
+
+    const result = streamText({
+      model: mockModel([textStream("Hello there.")]),
+      messages: [{ role: "user", content: "hi" }],
+      telemetry: agentTelemetry("agent-chat", CONTEXT),
+    });
+    await result.consumeStream();
+    await flushAgentTraces();
+
+    const root = exporter.spans.find((span) => span.name === "agent-chat");
+    expect(root?.attributes["gethired.turn_end"]).toBe("reply");
+  });
+
+  it("shows a continuation's card answers and approvals as the user's, and keeps its earlier steps", async () => {
+    configure();
+
+    const result = streamText({
+      model: mockModel([textStream("I've added LangChain to your skills.")]),
+      messages: [
+        { role: "user", content: "i want to add some more skills" },
+        {
+          role: "assistant",
+          content: [
+            { type: "tool-call", toolCallId: "c-ask", toolName: "askUser", input: { questions: [] } },
+          ],
+        },
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: "c-ask",
+              toolName: "askUser",
+              output: { type: "text", value: 'The user answered your questions:\n1. Which skills?\n   "LangChain"' },
+            },
+          ],
+        },
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "tool-call",
+              toolCallId: "c-save",
+              toolName: "updateMyPreferences",
+              input: { topSkills: ["LangChain"] },
+            },
+            { type: "tool-approval-request", approvalId: "a-1", toolCallId: "c-save" },
+          ],
+        },
+        { role: "tool", content: [{ type: "tool-approval-response", approvalId: "a-1", approved: true }] },
+      ],
+      tools: {
+        askUser: tool({ inputSchema: z.object({ questions: z.array(z.unknown()) }) }),
+        updateMyPreferences: tool({
+          inputSchema: z.object({ topSkills: z.array(z.string()) }),
+          execute: async () => ({ updated: ["topSkills"] }),
+        }),
+      },
+      stopWhen: stepCountIs(4),
+      telemetry: agentTelemetry("agent-chat", CONTEXT),
+    });
+    await result.consumeStream();
+    await flushAgentTraces();
+
+    const root = exporter.spans.find((span) => span.name === "agent-chat");
+    const input = String(root?.attributes["input.value"]);
+    // The judge saw the skills saved with no sign the user had picked them.
+    expect(input).toContain("user (on the askUser card): The user answered your questions");
+    expect(input).toContain('"LangChain"');
+    expect(input).toContain("user: [approved updateMyPreferences]");
+    expect(root?.attributes["output.value"]).toBe("assistant: I've added LangChain to your skills.");
+
+    // The earlier step (the card) comes first, then the call this request ran,
+    // with its arguments: the result alone doesn't say what was saved.
+    const calls = String(root?.attributes["gethired.tool_calls"]).split("\n");
+    expect(calls[0]).toContain("askUser");
+    expect(calls[1]).toContain('updateMyPreferences({"topSkills":["LangChain"]})');
+    expect(calls).toHaveLength(2);
+    expect(String(root?.attributes["gethired.tool_results"])).toContain('"topSkills":["LangChain"]');
+  });
+
+  it("keeps long tool results well past the old 600-character cut", async () => {
+    configure();
+
+    const resumes = Array.from({ length: 12 }, (_, i) => ({ id: `r-${i}`, name: `Resume number ${i}` }));
+    const result = streamText({
+      model: mockModel([toolCallStream("listResumes", {}), textStream("You have 12 resumes.")]),
+      messages: [{ role: "user", content: "what resumes do i have" }],
+      tools: { listResumes: tool({ inputSchema: z.object({}), execute: async () => ({ resumes }) }) },
+      stopWhen: stepCountIs(4),
+      telemetry: agentTelemetry("agent-chat", CONTEXT),
+    });
+    await result.consumeStream();
+    await flushAgentTraces();
+
+    const root = exporter.spans.find((span) => span.name === "agent-chat");
+    expect(String(root?.attributes["gethired.tool_results"])).toContain("Resume number 11");
+  });
+
   it("keeps prior turns in the input but only the final reply in the output", async () => {
     configure();
 
@@ -561,6 +705,54 @@ describe("agentTelemetry with Arize credentials", () => {
     exporter.flushError = new Error("arize down");
 
     await expect(flushAgentTraces()).resolves.toBeUndefined();
+  });
+});
+
+describe("redactContactDetails", () => {
+  it("masks emails and phone numbers", () => {
+    expect(redactContactDetails("varun@devhub.co.in, +91 8320313890, (555) 123-4567, 9876543210")).toBe(
+      "[email], [phone], [phone], [phone]",
+    );
+  });
+
+  it("leaves dates, ids and salaries alone", () => {
+    const text = '2026-11-08 18:16:25 8fabf370-d588-4c42-a713-536bf3347419 {"minSalary":1000000} INR 15,00,000';
+    expect(redactContactDetails(text)).toBe(text);
+  });
+});
+
+describe("turnRequestText", () => {
+  const user = (id: string, text: string): UIMessage => ({ id, role: "user", parts: [{ type: "text", text }] });
+
+  it("is the latest user message", () => {
+    expect(turnRequestText([user("1", "find jobs"), user("2", "only remote")])).toBe("only remote");
+  });
+
+  it("adds the card answers a continuation was sent", () => {
+    const history: UIMessage[] = [
+      user("1", "i want to add some more skills"),
+      {
+        id: "2",
+        role: "assistant",
+        parts: [
+          {
+            type: "tool-askUser",
+            toolCallId: "c1",
+            state: "output-available",
+            input: { questions: [{ question: "Which skills?", options: [{ label: "LangChain" }, { label: "PyTorch" }] }] },
+            output: { answers: [{ selected: [0] }] },
+          } as UIMessage["parts"][number],
+        ],
+      },
+    ];
+    const text = turnRequestText(history);
+    expect(text).toContain("i want to add some more skills");
+    expect(text).toContain("Which skills?");
+    expect(text).toContain("LangChain");
+  });
+
+  it("is undefined without a user message", () => {
+    expect(turnRequestText([])).toBeUndefined();
   });
 });
 

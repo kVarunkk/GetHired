@@ -24,7 +24,12 @@ const onboardingInput = z
       .describe("Minimum yearly salary as a plain integer."),
     maxSalary: z.number().int().min(0).optional(),
     preferredLocations: list(10),
-    experienceYears: z.number().min(0).max(60),
+    experienceYears: z
+      .number()
+      .int()
+      .min(0)
+      .max(60)
+      .describe("Whole years of experience, rounded to the nearest year: 6 months is 1, 2 months is 0."),
     topSkills: list(30),
     workStylePreferences: list(10).describe(
       "e.g. Remote, Hybrid, On-site, Startup Environment.",

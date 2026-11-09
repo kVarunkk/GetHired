@@ -33,7 +33,8 @@ export const onboardingProfileSchema = z
     min_salary: z.number().min(0),
     max_salary: z.number().min(0).nullish(),
     preferred_locations: requiredList,
-    experience_years: z.number().min(0),
+    // `user_info.experience_years` is an integer column: a fraction fails the write.
+    experience_years: z.number().int().min(0),
     top_skills: requiredList,
     work_style_preferences: requiredList,
     company_size_preference: z.string().trim().min(1),

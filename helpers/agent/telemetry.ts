@@ -13,7 +13,9 @@ import type { ExportResult } from "@opentelemetry/core";
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-node";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
-import type { TelemetryOptions } from "ai";
+import { isTextUIPart, type TelemetryOptions, type UIMessage } from "ai";
+import { askUserResultForModel } from "./ask-user";
+import { CLIENT_TOOL_NAMES } from "./client-updates";
 import { AGENT_TRACE_CONTENT } from "./config";
 import type { AgentRoleId } from "./roles/types";
 
@@ -67,55 +69,200 @@ function visibleTextOf(message: unknown): string | null {
  * a user's contact details into a span (Arize evals read it, the AGENT root
  * is what the chat tasks filter on). The input keeps every user and assistant
  * turn so follow-up questions still have their context.
+ *
+ * What the user did on a card is part of the conversation too, though it
+ * isn't text: an `askUser` answer or an approval. Without it, a judge saw
+ * "i want to add some more skills" followed by skills being saved, and
+ * scored the agent for inventing them when the user had picked them.
+ *
+ * A turn that ends on a tool call (an approval, a card, the step cap) has no
+ * reply yet. Its output says so instead of carrying the raw tool payloads,
+ * and `gethired.turn_end` is `paused`, so the reply evals can skip it.
  */
-function withVisibleTurnText(span: ReadableSpan): ReadableSpan {
+function withVisibleTurnText(span: ReadableSpan, executedCallIds: ReadonlySet<string> = new Set()): ReadableSpan {
   const attributes = span.attributes;
   if (!isTurnSpan(attributes)) return span;
 
-  const rewrite = (key: "input.value" | "output.value", keepAll: boolean) => {
-    const raw = attributes[key];
-    if (typeof raw !== "string") return;
-    let messages: unknown;
-    try {
-      messages = JSON.parse(raw);
-    } catch {
-      return; // Not the shape we expect; leave the SDK's value alone.
-    }
-    if (!Array.isArray(messages)) return;
+  const input = parseMessages(attributes["input.value"]);
+  if (input) {
+    const lines = conversationLines(input, executedCallIds);
+    if (lines.length > 0) span.attributes["input.value"] = lines.join("\n\n");
+  }
 
-    const turns = messages
-      .map((message) => ({ message, text: visibleTextOf(message) }))
-      .filter((turn): turn is { message: unknown; text: string } => turn.text !== null);
-    if (turns.length === 0) return;
-
-    const kept = keepAll ? turns : turns.slice(-1);
-    if (kept.length === 1 && kept[0].text === raw) return; // Already plain text.
-
-    span.attributes[key] = kept
-      .map((turn) => {
-        const role = (turn.message as { role?: unknown }).role;
-        return `${typeof role === "string" ? role : "assistant"}: ${turn.text}`;
-      })
-      .join("\n\n");
-  };
-
-  // Every user/assistant turn, so a follow-up has its context.
-  rewrite("input.value", true);
-  // Only the final reply: that is what the user was shown.
-  rewrite("output.value", false);
+  const rawOutput = attributes["output.value"];
+  const output = parseMessages(rawOutput);
+  if (output) {
+    const { text, turnEnd } = finalReply(output);
+    span.attributes[TURN_END_ATTRIBUTE] = turnEnd;
+    if (text !== null) span.attributes["output.value"] = text;
+  } else if (typeof rawOutput !== "string" || rawOutput.trim() === "") {
+    span.attributes[TURN_END_ATTRIBUTE] = "empty";
+  } else {
+    span.attributes[TURN_END_ATTRIBUTE] = "reply"; // Already plain text.
+  }
 
   return span;
 }
 
+/** Root-span attribute: `reply`, `paused` (waiting on the user) or `empty`. */
+const TURN_END_ATTRIBUTE = "gethired.turn_end";
+
+/** A serialized message part, as the AI SDK writes it into a span. */
+type SerializedPart = {
+  type?: unknown;
+  id?: unknown;
+  name?: unknown;
+  arguments?: unknown;
+  response?: unknown;
+};
+
+/** The serialized messages in a span value, or null when it isn't that shape. */
+function parseMessages(raw: unknown): unknown[] | null {
+  if (typeof raw !== "string") return null;
+  try {
+    const messages = JSON.parse(raw);
+    return Array.isArray(messages) ? messages : null;
+  } catch {
+    return null; // Not the shape we expect; leave the SDK's value alone.
+  }
+}
+
+const roleOf = (message: unknown) => (message as { role?: unknown } | null)?.role;
+
+function partsOf(message: unknown): SerializedPart[] {
+  const parts = (message as { parts?: unknown } | null)?.parts;
+  return Array.isArray(parts) ? (parts.filter((part) => typeof part === "object" && part) as SerializedPart[]) : [];
+}
+
+/** The tool calls in a serialized message, with their ids and names. */
+function toolCallsOf(message: unknown) {
+  return partsOf(message).flatMap((part) =>
+    part.type === "tool_call" && typeof part.id === "string" && typeof part.name === "string"
+      ? [{ id: part.id, name: part.name, args: part.arguments }]
+      : [],
+  );
+}
+
+const asText = (value: unknown) => (typeof value === "string" ? value : JSON.stringify(value ?? null));
+const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}…` : text);
+
+const EMAIL_PATTERN = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
+// International (+91 …), US-style ((555) 123-4567) and bare 10-digit numbers.
+// Dates, UUIDs and salaries don't match: no "+", and no run of 10 digits.
+const PHONE_PATTERN = /\+\d[\d\s().-]{7,16}\d|\(\d{3}\)\s?\d{3}[\s.-]\d{4}|(?<![\w-])\d{10}(?![\w-])/g;
+
+/**
+ * Masks emails and phone numbers. Tool results (a profile, a resume) carry
+ * the user's contact details, and the trace-level summaries are read by
+ * Arize's evaluators, which don't need them.
+ */
+export function redactContactDetails(text: string): string {
+  return text.replace(EMAIL_PATTERN, "[email]").replace(PHONE_PATTERN, "[phone]");
+}
+
+/**
+ * The conversation as `role: text` lines, with what the user did on a card
+ * (a client tool's output, an approval) written as a user line.
+ */
+function conversationLines(messages: unknown[], executedCallIds: ReadonlySet<string>): string[] {
+  const toolNames = new Map<string, string>();
+  const answered = new Set<string>();
+  for (const message of messages) {
+    for (const call of toolCallsOf(message)) toolNames.set(call.id, call.name);
+    for (const part of partsOf(message)) {
+      if (part.type === "tool_call_response" && typeof part.id === "string") answered.add(part.id);
+    }
+  }
+
+  const lines: string[] = [];
+  let lastCalls: { id: string; name: string }[] = [];
+  for (const message of messages) {
+    const role = roleOf(message);
+    const text = visibleTextOf(message);
+    if (text !== null) lines.push(`${typeof role === "string" ? role : "assistant"}: ${text}`);
+
+    if (role === "assistant") {
+      const calls = toolCallsOf(message);
+      if (calls.length > 0) lastCalls = calls;
+      continue;
+    }
+    if (role !== "tool") continue;
+
+    for (const part of partsOf(message)) {
+      const name = typeof part.id === "string" ? toolNames.get(part.id) : undefined;
+      if (part.type === "tool_call_response" && name && CLIENT_TOOL_NAMES.has(name)) {
+        lines.push(`user (on the ${name} card): ${clip(asText(part.response), 1500)}`);
+      }
+      if (part.type === "tool-approval-response") {
+        // The serialized response doesn't say which way it went; whether the
+        // call ran in this trace does. Calls answered earlier aren't pending.
+        for (const call of lastCalls.filter((c) => !answered.has(c.id) && !CLIENT_TOOL_NAMES.has(c.name))) {
+          lines.push(`user: [${executedCallIds.has(call.id) ? "approved" : "declined"} ${call.name}]`);
+        }
+        lastCalls = [];
+      }
+    }
+  }
+  return lines;
+}
+
+/** The reply the user was shown, and how the turn ended. */
+function finalReply(messages: unknown[]): { text: string | null; turnEnd: "reply" | "paused" | "empty" } {
+  const last = messages.at(-1);
+  const replyMessage = messages.findLast((message) => visibleTextOf(message) !== null);
+  const reply = replyMessage ? `${asText(roleOf(replyMessage) ?? "assistant")}: ${visibleTextOf(replyMessage)}` : null;
+  const pending = toolCallsOf(last);
+  const finish = (last as { finish_reason?: unknown } | undefined)?.finish_reason;
+
+  if (finish === "tool_call" || (reply === null && pending.length > 0)) {
+    const waiting = pending
+      .map((call) => `${call.name}(${clip(redactContactDetails(asText(call.args ?? {})), 300)})`)
+      .join(", ");
+    const note = `assistant: [no reply yet: the turn is waiting on the user for ${waiting || "a tool call"}]`;
+    return { text: reply ? `${reply}\n\n${note}` : note, turnEnd: "paused" };
+  }
+  if (reply === null) return { text: "assistant: [empty reply]", turnEnd: "empty" };
+  return { text: reply, turnEnd: "reply" };
+}
+
+/**
+ * The tool calls this turn made in earlier requests, read from the root
+ * span's input: after an approval or a card the turn continues in a new
+ * request (a new trace), and its first steps are only in the messages it
+ * was sent. Without them the reply's facts looked unsupported.
+ */
+function earlierStepCalls(rawInput: unknown): ToolCallRecord[] {
+  const messages = parseMessages(rawInput);
+  if (!messages) return [];
+  const turnStart = messages.findLastIndex((message) => roleOf(message) === "user" && visibleTextOf(message) !== null);
+  const turn = messages.slice(turnStart + 1);
+
+  const responses = new Map<string, unknown>();
+  for (const message of turn) {
+    for (const part of partsOf(message)) {
+      if (part.type === "tool_call_response" && typeof part.id === "string") responses.set(part.id, part.response);
+    }
+  }
+  return turn.flatMap((message) =>
+    toolCallsOf(message)
+      .filter((call) => responses.has(call.id))
+      .map((call) => ({ id: call.id, name: call.name, args: asText(call.args ?? {}), result: asText(responses.get(call.id)) })),
+  );
+}
+
 /** One tool call of a turn, in the order it ran. */
-type ToolCallRecord = { name: string; args: string; result: string };
+type ToolCallRecord = { id?: string; name: string; args: string; result: string };
 
 /** Root-span attributes holding the turn's tool work, for trace-level evals. */
 const TOOL_CALLS_ATTRIBUTE = "gethired.tool_calls";
 const TOOL_RESULTS_ATTRIBUTE = "gethired.tool_results";
 
-/** Keeps a trace-level eval inside a reasonable prompt size. */
-const TOOL_RESULT_MAX_CHARS = 600;
+/**
+ * Keeps a trace-level eval inside a reasonable prompt size. At 600, a
+ * resume list or profile was cut off before the facts the reply used.
+ */
+const TOOL_RESULT_MAX_CHARS = 2500;
+const TOOL_ARGS_MAX_CHARS = 1000;
 
 /**
  * Renders the turn's tool calls as the ordered list a trajectory eval reads.
@@ -125,24 +272,26 @@ const TOOL_RESULT_MAX_CHARS = 600;
 function formatToolCalls(calls: ToolCallRecord[]): string {
   return calls
     .map((call, index) => {
-      const result = call.result.length > 120 ? `${call.result.slice(0, 120)}…` : call.result;
-      return `${index + 1}. ${call.name}(${call.args}) -> ${result}`;
+      const args = clip(redactContactDetails(call.args), TOOL_ARGS_MAX_CHARS);
+      // One line per call: a card's answer has line breaks of its own.
+      const result = clip(redactContactDetails(call.result).replace(/\s+/g, " "), 120);
+      return `${index + 1}. ${call.name}(${args}) -> ${result}`;
     })
     .join("\n");
 }
 
 /**
- * Renders the tool results as the context a groundedness eval checks the
- * reply against, so an invented job or salary can be caught.
+ * Renders the tool calls and results as the context a groundedness eval
+ * checks the reply against, so an invented job or salary can be caught. The
+ * arguments are part of it: a write's result often doesn't repeat the values
+ * it saved ("updated: desiredRoles"), so they're the evidence for them.
  */
 function formatToolResults(calls: ToolCallRecord[]): string {
   return calls
     .map((call, index) => {
-      const result =
-        call.result.length > TOOL_RESULT_MAX_CHARS
-          ? `${call.result.slice(0, TOOL_RESULT_MAX_CHARS)}…`
-          : call.result;
-      return `[${index + 1}] ${call.name}: ${result}`;
+      const args = clip(redactContactDetails(call.args), TOOL_ARGS_MAX_CHARS);
+      const result = clip(redactContactDetails(call.result), TOOL_RESULT_MAX_CHARS);
+      return `[${index + 1}] ${call.name}(${args}): ${result}`;
     })
     .join("\n\n");
 }
@@ -183,7 +332,13 @@ class VisibleTurnExporter extends OTLPTraceExporter {
       // The root span closes the trace: give it the turn's tool work, then
       // forget the trace so a long-lived process doesn't accumulate.
       if (isTurnSpan(attributes)) {
-        const prepared = withToolSummary(withVisibleTurnText(span), this.#toolCalls.get(traceId));
+        // Read the earlier steps before the input is rewritten to text.
+        const earlier = earlierStepCalls(attributes["input.value"]);
+        const executed = this.#toolCalls.get(traceId) ?? [];
+        const earlierIds = new Set(earlier.map((call) => call.id));
+        const calls = [...earlier, ...executed.filter((call) => !call.id || !earlierIds.has(call.id))];
+        const executedIds = new Set(executed.flatMap((call) => (call.id ? [call.id] : [])));
+        const prepared = withToolSummary(withVisibleTurnText(span, executedIds), calls);
         this.#catalogues.delete(traceId);
         this.#toolCalls.delete(traceId);
         return prepared;
@@ -200,8 +355,14 @@ class VisibleTurnExporter extends OTLPTraceExporter {
     const text = (value: unknown) => (typeof value === "string" ? value : JSON.stringify(value ?? null));
     const args = attributes["gen_ai.tool.call.arguments"] ?? attributes["input.value"];
     const result = attributes["gen_ai.tool.call.result"] ?? attributes["output.value"];
+    const id = attributes["gen_ai.tool.call.id"] ?? attributes[SemanticConventions.TOOL_CALL_ID];
     const calls = this.#toolCalls.get(traceId) ?? [];
-    calls.push({ name, args: text(args ?? {}), result: text(result ?? null) });
+    calls.push({
+      ...(typeof id === "string" ? { id } : {}),
+      name,
+      args: text(args ?? {}),
+      result: text(result ?? null),
+    });
     this.#toolCalls.set(traceId, calls);
   }
 }
@@ -421,6 +582,34 @@ export type AgentTraceContext = {
   /** This turn's user message, for tool spans that have no prompt of their own. */
   userText?: string;
 };
+
+/**
+ * The request a turn answers, for `AgentTraceContext.userText`: the latest
+ * user message, plus any answers the user gave on a question card since. A
+ * turn that continues after an approval or a card has no user message of its
+ * own, and its tool spans were judged with no request at all.
+ */
+export function turnRequestText(history: readonly UIMessage[]): string | undefined {
+  const userIndex = history.findLastIndex((message) => message.role === "user");
+  if (userIndex === -1) return undefined;
+
+  const lines = [
+    history[userIndex].parts
+      .filter(isTextUIPart)
+      .map((part) => part.text)
+      .join("\n"),
+  ];
+  for (const message of history.slice(userIndex + 1)) {
+    for (const part of message.parts) {
+      const tool = part as { type: string; state?: string; input?: unknown; output?: unknown };
+      if (tool.type === "tool-askUser" && tool.state === "output-available") {
+        lines.push(askUserResultForModel(tool.input, tool.output));
+      }
+    }
+  }
+  const text = lines.filter((line) => line.trim()).join("\n");
+  return text || undefined;
+}
 
 /** The span attribute for the recruiter's company (RA spec §4.9). */
 const COMPANY_ID_ATTRIBUTE = "gethired.company_id";
