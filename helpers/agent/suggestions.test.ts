@@ -101,4 +101,16 @@ describe("generateFollowUps telemetry (REQ-025)", () => {
     expect(prompt).toContain("candidates");
     expect(prompt).not.toContain("job seeker");
   });
+
+  it("tells both roles never to put facts the user didn't give in their mouth", async () => {
+    for (const role of ["applicant", "company"] as const) {
+      const model = mockGenerateModel(JSON.stringify({ suggestions: [] }));
+      await generateFollowUps({ userText: "a", replyText: "b" }, { model, role });
+      expect(promptOf(model)).toContain("Never state a fact in the user's voice");
+    }
+
+    const applicant = mockGenerateModel(JSON.stringify({ suggestions: [] }));
+    await generateFollowUps({ userText: "a", replyText: "b" }, { model: applicant });
+    expect(promptOf(applicant)).toContain("can't send emails");
+  });
 });
