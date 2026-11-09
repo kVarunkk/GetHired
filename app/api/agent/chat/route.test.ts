@@ -52,7 +52,9 @@ vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
 vi.mock("@/helpers/posthog/EventCaptureServer", () => ({ eventCaptureServer: vi.fn() }));
-vi.mock("@/helpers/agent/telemetry", () => ({
+vi.mock("@/helpers/agent/telemetry", async (importOriginal) => ({
+  // Pure: picks the turn's request out of the history.
+  turnRequestText: (await importOriginal<typeof import("@/helpers/agent/telemetry")>()).turnRequestText,
   agentTelemetry: vi.fn(),
   flushAgentTraces: vi.fn(),
 }));

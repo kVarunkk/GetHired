@@ -51,7 +51,7 @@ import {
 } from "@/helpers/agent/feedback-trigger";
 import { stoppedReply } from "@/helpers/agent/stopped";
 import { canRegenerate, withRegeneration } from "@/helpers/agent/regenerations";
-import { agentTelemetry, flushAgentTraces } from "@/helpers/agent/telemetry";
+import { agentTelemetry, flushAgentTraces, turnRequestText } from "@/helpers/agent/telemetry";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
@@ -213,15 +213,10 @@ export async function POST(request: NextRequest) {
       sessionId,
       userId: user.id,
       role: role.id,
-      // This turn's request, so a tool span can be judged in context.
-      ...(incoming?.role === "user"
-        ? {
-            userText: incoming.parts
-              .filter((part) => part.type === "text")
-              .map((part) => (typeof part.text === "string" ? part.text : ""))
-              .join("\n"),
-          }
-        : {}),
+      // This turn's request, so a tool span can be judged in context. A
+      // continuation (after an approval or a card) has no user message of
+      // its own, so this reads the latest one and the card answers since.
+      userText: turnRequestText(history),
       ...(company ? { companyId: company.id } : {}),
     };
     const traceId = (name: string) => `${role.telemetryPrefix}-${name}`;

@@ -52,6 +52,14 @@ const CLIENT_TOOL_OUTPUTS: Record<string, z.ZodTypeAny> = {
   "tool-askUser": askUserOutputSchema,
 };
 
+/**
+ * The client tools' names (`askUser`, …): their output is what the user did
+ * on a card, so traces show it as the user's turn (`helpers/agent/telemetry.ts`).
+ */
+export const CLIENT_TOOL_NAMES: ReadonlySet<string> = new Set(
+  Object.keys(CLIENT_TOOL_OUTPUTS).map((type) => type.replace(/^tool-/, "")),
+);
+
 /** Checks of a client output against the tool call's stored input. */
 const CLIENT_TOOL_INPUT_CHECKS: Record<string, (input: unknown, output: never) => boolean> = {
   "tool-askUser": outputFitsInput,
