@@ -864,9 +864,10 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "experienceYears": {
+          "description": "Whole years of experience, rounded to the nearest year: 6 months is 1, 2 months is 0.",
           "maximum": 60,
           "minimum": 0,
-          "type": "number",
+          "type": "integer",
         },
         "fullName": {
           "maxLength": 100,

@@ -133,6 +133,7 @@ describe("completeApplicantOnboarding", () => {
     ["an unknown job type", { ...REQUIRED, job_type: ["Gig"] }, "job_type"],
     ["no locations", { ...REQUIRED, preferred_locations: [] }, "preferred_locations"],
     ["negative experience", { ...REQUIRED, experience_years: -1 }, "experience_years"],
+    ["fractional experience (an integer column)", { ...REQUIRED, experience_years: 0.5 }, "experience_years"],
     ["no skills", { ...REQUIRED, top_skills: [] }, "top_skills"],
     ["no work style", { ...REQUIRED, work_style_preferences: [] }, "work_style_preferences"],
     ["no company size", { ...REQUIRED, company_size_preference: "" }, "company_size_preference"],
