@@ -291,6 +291,34 @@ begin
 end $$;
 reset role;
 
+-- Followed website links: the website must be on the owner's email domain
+-- (hr@acme.test), or an admin sets careers_website_followed.
+do $$
+begin
+  assert public.url_host('https://user@WWW.Acme.test:443/jobs?x#y') = 'acme.test', 'url_host parsed the wrong host';
+  assert public.url_host('acme.test/') = 'acme.test', 'url_host needs a scheme';
+  assert public.url_host('https://localhost') is null, 'a host without a dot was accepted';
+  assert public.url_host('') is null and public.url_host(null) is null, 'an empty url has a host';
+end $$;
+update public.company_info set website = 'https://evil.test@careers.acme.test/' where id = 'c0000000-0000-4000-8000-000000000001';
+do $$ begin assert (public.get_careers_page('acme-careers') ->> 'website_verified')::boolean, 'a subdomain of the owner''s domain is not verified'; end $$;
+update public.company_info set website = 'https://notacme.test' where id = 'c0000000-0000-4000-8000-000000000001';
+do $$ begin assert not (public.get_careers_page('acme-careers') ->> 'website_verified')::boolean, 'a look-alike domain is verified'; end $$;
+update public.company_info set website = 'https://acme.test@evil.test' where id = 'c0000000-0000-4000-8000-000000000001';
+do $$ begin assert not (public.get_careers_page('acme-careers') ->> 'website_verified')::boolean, 'userinfo fooled the host check'; end $$;
+
+-- Members can't set the admin override.
+select pg_temp.act('c1000000-0000-4000-8000-000000000001');
+set local role authenticated;
+update public.company_info set careers_website_followed = true where id = 'c0000000-0000-4000-8000-000000000001';
+reset role;
+do $$ begin assert not (select careers_website_followed from public.company_info where id = 'c0000000-0000-4000-8000-000000000001'),
+  'a member set careers_website_followed'; end $$;
+update public.company_info set careers_website_followed = true where id = 'c0000000-0000-4000-8000-000000000001';
+do $$ begin assert (public.get_careers_page('acme-careers') ->> 'website_verified')::boolean, 'the admin override is ignored'; end $$;
+update public.company_info set website = null, careers_website_followed = false
+ where id = 'c0000000-0000-4000-8000-000000000001';
+
 -- Jobs: only active platform postings of a published page (CP-REQ-006).
 update public.job_postings set status = 'active' where id = 'b0000000-0000-4000-8000-000000000001';
 update public.job_postings set status = 'active' where id = 'b0000000-0000-4000-8000-000000000002';

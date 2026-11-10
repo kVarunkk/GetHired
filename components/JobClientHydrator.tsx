@@ -103,6 +103,7 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
             {jobData.company_url ? (
               <Link
                 target="_blank"
+                rel="nofollow noopener noreferrer"
                 href={jobData.company_url}
                 className="hover:underline"
               >

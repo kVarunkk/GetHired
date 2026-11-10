@@ -70,7 +70,8 @@ export default async function JobPage({
       {jsonLd ? (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          // Escape "<" so job text like "</script>" can't end the tag.
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
       ) : null}
       <BackLink href="/jobs" label="Back to jobs" />
