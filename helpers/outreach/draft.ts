@@ -1,4 +1,5 @@
 import "server-only";
+import { isExplanationReady } from "@/helpers/matching/explanation-status";
 import { reportError } from "@/helpers/posthog/report-error";
 import { generateText, Output, type LanguageModel } from "ai";
 import { google } from "@ai-sdk/google";
@@ -115,7 +116,7 @@ export async function draftOutreach(
       .eq("job_posting_id", jobPostId)
       .eq("user_id", candidateId)
       .maybeSingle();
-    if (match?.explanation_status === "completed") {
+    if (isExplanationReady(match?.explanation_status)) {
       matchSummary = parseStoredExplanation(match.explanation)?.summary ?? null;
     }
   }

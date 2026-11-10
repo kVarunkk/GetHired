@@ -20,6 +20,8 @@ import {
 } from "@/helpers/interview/screening/analysis";
 import { notifyCompanyOfCompletedInterview } from "@/helpers/interview/screening/notify-company";
 import { storedScreeningReportSchema } from "@/helpers/interview/screening/schemas";
+import { claimForRun, notUnderLiveClaim, transition } from "@/helpers/db/transition";
+import type { Json } from "@/utils/types/database.types";
 
 type ServiceClient = ReturnType<typeof createServiceRoleClient>;
 
@@ -32,6 +34,52 @@ type AnalysisMessage = {
 const BATCH_SIZE = 2;
 const VISIBILITY_TIMEOUT = 300;
 const MAX_RETRIES = 3;
+
+/**
+ * The states a run may claim an analysis from (SM-REQ-003). `completed` is
+ * claimed only when its stored result doesn't parse, which is the one case
+ * the worker re-runs a completed row.
+ */
+const CLAIM_FROM = ["queued", "failed", "completed"] as const;
+
+type AnalysisRow = {
+  id: string;
+  perspective: string;
+  status: string;
+  result: unknown;
+  notification_sent_at: string | null;
+  claimed_at: string | null;
+};
+
+/**
+ * What a run did with its message: `done` archives it. `busy` leaves it,
+ * because another run holds the row (it comes back after the visibility
+ * timeout). `superseded` archives it with no notification: the row was
+ * re-queued or claimed again while this run went on, so its result wasn't
+ * saved, and the newer run notifies.
+ */
+type RunOutcome = "done" | "busy" | "superseded";
+
+/** Claims the row for this run; anything but `claimed` means don't run. */
+function claim(supabase: ServiceClient, analysis: AnalysisRow, claimedAt: string) {
+  return claimForRun(
+    supabase,
+    "interview_analyses",
+    { id: analysis.id, state: analysis.status, claimedAt: analysis.claimed_at },
+    { from: CLAIM_FROM, claim: claimedAt, liveForMs: VISIBILITY_TIMEOUT * 1000, patch: { error_code: null } },
+  );
+}
+
+/** Saves the run's result, only if the row is still this run's. */
+function saveResult(supabase: ServiceClient, analysisId: string, claimedAt: string, result: unknown) {
+  const now = new Date().toISOString();
+  return transition(
+    supabase,
+    "interview_analyses",
+    { id: analysisId, claim: claimedAt },
+    { from: ["processing"], to: "completed", patch: { result: result as Json, completed_at: now, updated_at: now } },
+  );
+}
 
 /**
  * The job a company report is scored against (difference 10): the posting of
@@ -80,16 +128,11 @@ function formatTranscript(turns: unknown): string {
  */
 async function processScreeningAnalysis(
   supabase: ServiceClient,
-  analysis: {
-    id: string;
-    perspective: string;
-    status: string;
-    result: unknown;
-    notification_sent_at: string | null;
-  },
+  analysis: AnalysisRow,
   session: { turns: unknown },
   applicationInterviewId: string | null,
-) {
+  claimedAt: string,
+): Promise<RunOutcome> {
   if (analysis.perspective !== "company") {
     throw new Error("A screening session only has a company analysis.");
   }
@@ -104,11 +147,7 @@ async function processScreeningAnalysis(
       session.turns,
     );
 
-    const { error: processingError } = await supabase
-      .from("interview_analyses")
-      .update({ status: "processing", error_code: null })
-      .eq("id", analysis.id);
-    if (processingError) throw processingError;
+    if ((await claim(supabase, analysis, claimedAt)) !== "claimed") return "busy";
 
     const report = await generateScreeningReport({
       snapshot,
@@ -117,16 +156,7 @@ async function processScreeningAnalysis(
       trace: { analysisId: analysis.id, companyId },
     });
 
-    const { error: saveError } = await supabase
-      .from("interview_analyses")
-      .update({
-        status: "completed",
-        result: report,
-        completed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", analysis.id);
-    if (saveError) throw saveError;
+    if (!(await saveResult(supabase, analysis.id, claimedAt, report)).applied) return "superseded";
   }
 
   if (!analysis.notification_sent_at) {
@@ -142,6 +172,7 @@ async function processScreeningAnalysis(
       .is("notification_sent_at", null);
     if (notificationError) throw notificationError;
   }
+  return "done";
 }
 
 async function sendAnalysisEmail(
@@ -194,6 +225,9 @@ export async function GET() {
   const supabase = createServiceRoleClient();
 
   try {
+    // Each run's claim (SM-REQ-003) is the time the message was read, so the
+    // next delivery, a visibility timeout later, finds it dead.
+    const claimedAt = new Date().toISOString();
     const { data, error } = await supabase.schema("pgmq_public").rpc("read", {
       queue_name: "interview_analysis_queue",
       sleep_seconds: VISIBILITY_TIMEOUT,
@@ -207,12 +241,13 @@ export async function GET() {
     const messages = (data ?? []) as AnalysisMessage[];
     let completed = 0;
     let failed = 0;
+    let skipped = 0;
 
     for (const message of messages) {
       try {
         const { data: analysis, error: analysisError } = await supabase
           .from("interview_analyses")
-          .select("id, interview_session_id, perspective, status, result, notification_sent_at")
+          .select("id, interview_session_id, perspective, status, result, notification_sent_at, claimed_at")
           .eq("id", message.message.analysisId)
           .single();
 
@@ -242,9 +277,16 @@ export async function GET() {
         }
 
         if (interview.kind === "screening") {
-          await processScreeningAnalysis(supabase, analysis, session, interview.application_interview_id);
-          await deleteMessage(supabase, message.msg_id);
-          completed++;
+          const outcome = await processScreeningAnalysis(
+            supabase,
+            analysis,
+            session,
+            interview.application_interview_id,
+            claimedAt,
+          );
+          if (outcome !== "busy") await deleteMessage(supabase, message.msg_id);
+          if (outcome === "done") completed++;
+          else skipped++;
           continue;
         }
 
@@ -289,11 +331,10 @@ export async function GET() {
             job = data ? { title: data.job_name ?? "", description: data.description ?? "" } : null;
           }
 
-          const { error: processingError } = await supabase
-            .from("interview_analyses")
-            .update({ status: "processing", error_code: null })
-            .eq("id", analysis.id);
-          if (processingError) throw processingError;
+          if ((await claim(supabase, analysis, claimedAt)) !== "claimed") {
+            skipped++;
+            continue;
+          }
 
           const generated = await generateInterviewAnalysis({
             perspective: isCompany ? "company" : "candidate",
@@ -303,16 +344,12 @@ export async function GET() {
             transcript,
           });
 
-          const { error: saveError } = await supabase
-            .from("interview_analyses")
-            .update({
-              status: "completed",
-              result: generated,
-              completed_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", analysis.id);
-          if (saveError) throw saveError;
+          if (!(await saveResult(supabase, analysis.id, claimedAt, generated)).applied) {
+            // Re-queued or claimed again meanwhile: the newer run notifies.
+            await deleteMessage(supabase, message.msg_id);
+            skipped++;
+            continue;
+          }
           result = schema.safeParse(generated);
         }
 
@@ -363,7 +400,7 @@ export async function GET() {
         });
 
         if (message.read_ct >= MAX_RETRIES) {
-          const { error: updateError } = await supabase
+          const { data: givenUp, error: updateError } = await supabase
             .from("interview_analyses")
             .update({
               status: "failed",
@@ -371,14 +408,20 @@ export async function GET() {
               updated_at: new Date().toISOString(),
             })
             .eq("id", message.message.analysisId)
-            .neq("status", "completed");
+            .neq("status", "completed")
+            // A newer run's live claim decides that row (SM-REQ-003).
+            .or(notUnderLiveClaim({ claim: claimedAt, liveForMs: VISIBILITY_TIMEOUT * 1000 }))
+            .select("id");
           if (updateError) throw updateError;
 
           await deleteMessage(supabase, message.msg_id);
 
-          await sendEmailForStatusUpdate(
-            `INTERVIEW ANALYSIS POISON ALERT: Analysis ${message.message.analysisId} failed after ${message.read_ct} attempts.`,
-          );
+          // SM-REQ-002: alert only when this give-up is what failed the row.
+          if ((givenUp?.length ?? 0) > 0) {
+            await sendEmailForStatusUpdate(
+              `INTERVIEW ANALYSIS POISON ALERT: Analysis ${message.message.analysisId} failed after ${message.read_ct} attempts.`,
+            );
+          }
         }
       }
     }
@@ -388,6 +431,7 @@ export async function GET() {
       processed: messages.length,
       completed,
       failed,
+      skipped,
     });
   } catch (error) {
     reportError("[INTERVIEW_ANALYSIS_WORKER_CRITICAL_FAILURE]:", error);

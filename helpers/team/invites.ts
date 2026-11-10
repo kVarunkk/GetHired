@@ -53,8 +53,8 @@ export async function resendInvite(
     .select("id, email, role_id")
     .eq("id", inviteId)
     .eq("company_id", deps.company.id)
-    .is("accepted_at", null)
-    .is("revoked_at", null)
+    // Open: not accepted or revoked. An expired invite can be resent (SM-REQ-010).
+    .in("company_invite_state", ["pending", "expired"])
     .maybeSingle();
   if (loadError) return { ok: false, error: teamErrorMessage("unknown") };
   if (!invite) return { ok: false, error: teamErrorMessage("not_found") };

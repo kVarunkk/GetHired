@@ -26,7 +26,7 @@ const EMPTY: MockResponse = { data: null, error: null };
  *
  * Every `from(...)` / `rpc(...)` chain is recorded in `calls`. Awaiting a chain
  * resolves the next response queued for that table (or rpc), in FIFO order,
- * falling back to `{ data: null, error: null }`.
+ * falling back to `options.fallback(call)`, or `{ data: null, error: null }`.
  *
  * @example
  * const mock = createSupabaseMock({ user: { id: "u1" } });
@@ -34,7 +34,13 @@ const EMPTY: MockResponse = { data: null, error: null };
  * await listResumes(mock.client, "u1");
  * expect(mock.callsFor("resumes")[0].chain).toContainEqual({ method: "eq", args: ["user_id", "u1"] });
  */
-export function createSupabaseMock(options: { user?: Partial<User> | null } = {}) {
+export function createSupabaseMock(
+  options: {
+    user?: Partial<User> | null;
+    /** Answers a chain with nothing queued for it. */
+    fallback?: (call: RecordedCall) => MockResponse;
+  } = {},
+) {
   const calls: RecordedCall[] = [];
   const queues = new Map<string, QueuedResponse[]>();
   let user = (options.user ?? null) as User | null;
@@ -44,7 +50,7 @@ export function createSupabaseMock(options: { user?: Partial<User> | null } = {}
 
   const resolveFor = (call: RecordedCall): MockResponse => {
     const next = queues.get(key(call.kind, call.schema, call.target))?.shift();
-    if (!next) return EMPTY;
+    if (!next) return options.fallback?.(call) ?? EMPTY;
     return typeof next === "function" ? next(call) : next;
   };
 

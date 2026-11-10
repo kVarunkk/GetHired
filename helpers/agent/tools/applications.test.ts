@@ -105,6 +105,13 @@ describe("listApplications tool", () => {
   it("rejects unknown statuses", async () => {
     expect((await validateInput(tools.listApplications, { status: "hired" })).success).toBe(false);
   });
+
+  it("reports a platform application by its status, never the company's stage (PL-REQ-002)", async () => {
+    await execTool(tools.listApplications, {});
+
+    const select = String(supabase.callsFor("applications")[0].chain[0].args[0]);
+    expect(select).not.toMatch(/stage/);
+  });
 });
 
 describe("updateApplicationStatus tool", () => {

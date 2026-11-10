@@ -43,9 +43,8 @@ export async function findOpenInvite(
     .from("company_invites")
     .select("id, email, role_id, expires_at, invited_by, company_id, company_info(id, name, logo_url)")
     .eq("token_hash", hashInviteToken(token))
-    .is("accepted_at", null)
-    .is("revoked_at", null)
-    .gt("expires_at", new Date().toISOString())
+    // Usable: not accepted, revoked or expired (SM-REQ-010).
+    .eq("company_invite_state", "pending")
     .maybeSingle();
   if (error || !data) return null;
 

@@ -68,6 +68,15 @@ const updatesOf = () =>
     .callsFor("interview_analyses")
     .filter((c) => has(c, "update"))
     .map((c) => c.chain.find((m) => m.method === "update")!.args[0] as Record<string, unknown>);
+// The guarded writes (SM-REQ-001/003) report whether a row moved: by default
+// the claim and the save both apply. The notification write has no select.
+function queueWrites({ claim = true, save = true }: { claim?: boolean; save?: boolean } = {}) {
+  for (const applies of [claim, save]) {
+    supabase.queue("interview_analyses", (call) =>
+      has(call, "select") ? { data: applies ? [{ id: ANALYSIS_ID }] : [], error: null } : { data: null, error: null },
+    );
+  }
+}
 const deletes = () =>
   supabase.calls.filter((c) => c.kind === "rpc" && c.schema === "pgmq_public" && c.target === "delete");
 
@@ -75,6 +84,7 @@ function queueRow(
   perspective: "candidate" | "company",
   overrides: Record<string, unknown> = {},
   readCount = 1,
+  writes: { claim?: boolean; save?: boolean } = {},
 ) {
   supabase.queueRpc(
     "read",
@@ -93,6 +103,7 @@ function queueRow(
     },
     error: null,
   });
+  queueWrites(writes);
   supabase.queue("interview_sessions", {
     data: { id: SESSION_ID, interview_id: INTERVIEW_ID, turns: TURNS },
     error: null,
@@ -214,5 +225,108 @@ describe("GET /api/updates/interview-analysis/worker: screening (SIT-042, SI-TES
     expect(generateInterviewAnalysis).not.toHaveBeenCalled();
     expect(sendEmail).not.toHaveBeenCalled();
     spy.mockRestore();
+  });
+
+  describe("claims (SMT-013, SM-REQ-003)", () => {
+    const writeOf = (status: string) =>
+      supabase
+        .callsFor("interview_analyses")
+        .find((c) => c.chain.some((m) => m.method === "update" && (m.args[0] as { status?: string }).status === status));
+
+    it("claims a queued row: moves it from queued only and sets claimed_at", async () => {
+      queueRow("company");
+
+      await GET();
+
+      const claimCall = writeOf("processing")!;
+      const update = claimCall.chain[0].args[0] as Record<string, unknown>;
+      expect(update).toMatchObject({ status: "processing", error_code: null, claimed_at: expect.any(String) });
+      expect(claimCall.chain).toContainEqual({ method: "in", args: ["status", ["queued"]] });
+    });
+
+    it("saves completed only from processing under its own claim", async () => {
+      queueRow("company");
+
+      await GET();
+
+      const claimedAt = (writeOf("processing")!.chain[0].args[0] as { claimed_at: string }).claimed_at;
+      const save = writeOf("completed")!;
+      expect(save.chain).toContainEqual({ method: "in", args: ["status", ["processing"]] });
+      expect(save.chain).toContainEqual({ method: "eq", args: ["claimed_at", claimedAt] });
+    });
+
+    it("leaves a row under a live claim alone: no model call, no write, message kept", async () => {
+      queueRow("company", { status: "processing", claimed_at: new Date(Date.now() - 10_000).toISOString() });
+
+      const res = await GET();
+
+      expect(await res.json()).toMatchObject({ completed: 0, failed: 0, skipped: 1 });
+      expect(generateScreeningReport).not.toHaveBeenCalled();
+      expect(updatesOf()).toHaveLength(0);
+      expect(notifyCompanyOfCompletedInterview).not.toHaveBeenCalled();
+      expect(deletes()).toHaveLength(0);
+    });
+
+    it("re-claims a dead claim, filtering on the old one", async () => {
+      const old = new Date(Date.now() - 301_000).toISOString();
+      queueRow("company", { status: "processing", claimed_at: old });
+
+      const res = await GET();
+
+      expect(await res.json()).toMatchObject({ completed: 1 });
+      const claimCall = writeOf("processing")!;
+      expect(claimCall.chain).toContainEqual({ method: "in", args: ["status", ["processing"]] });
+      expect(claimCall.chain).toContainEqual({ method: "eq", args: ["claimed_at", old] });
+      expect(generateScreeningReport).toHaveBeenCalledTimes(1);
+    });
+
+    it("doesn't run when another worker claims the row first, and keeps the message", async () => {
+      queueRow("company", {}, 1, { claim: false });
+
+      const res = await GET();
+
+      expect(await res.json()).toMatchObject({ completed: 0, skipped: 1 });
+      expect(generateScreeningReport).not.toHaveBeenCalled();
+      expect(deletes()).toHaveLength(0);
+    });
+
+    it("archives without notifying when the run lost its claim before saving (SM-TEST-002)", async () => {
+      queueRow("company", {}, 1, { save: false });
+
+      const res = await GET();
+
+      expect(await res.json()).toMatchObject({ completed: 0, skipped: 1 });
+      expect(generateScreeningReport).toHaveBeenCalledTimes(1);
+      expect(notifyCompanyOfCompletedInterview).not.toHaveBeenCalled();
+      expect(updatesOf()).not.toContainEqual(expect.objectContaining({ notification_sent_at: expect.any(String) }));
+      expect(deletes()).toHaveLength(1);
+    });
+
+    it("keeps the give-up guard: failed only for a row that isn't completed", async () => {
+      queueRow("company", {}, 3);
+      vi.mocked(generateScreeningReport).mockRejectedValue(new Error("model down"));
+      const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await GET();
+
+      expect(writeOf("failed")!.chain).toContainEqual({ method: "neq", args: ["status", "completed"] });
+      // Nor a row another run holds under a live claim (SM-REQ-003).
+      const or = writeOf("failed")!.chain.find((m) => m.method === "or");
+      expect(or?.args[0]).toMatch(/^status\.neq\.processing,claimed_at\.is\.null,claimed_at\.lte\."[^"]+",claimed_at\.eq\."[^"]+"$/);
+      spy.mockRestore();
+    });
+
+    it("sends no poison alert when the give-up moved nothing (completed, or another run's live claim)", async () => {
+      queueRow("company", {}, 3, { save: false });
+      vi.mocked(generateScreeningReport).mockRejectedValue(new Error("model down"));
+      const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await GET();
+
+      expect(writeOf("failed")).toBeDefined();
+      expect(deletes()).toHaveLength(1);
+      expect(sendEmailForStatusUpdate).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
   });
 });

@@ -24,12 +24,11 @@ export async function GET(request: NextRequest) {
   }
 
   const service = createServiceRoleClient();
-  const now = new Date().toISOString();
+  // Due: past its due date, not sent or cancelled (application_knockout_state, SM-REQ-010).
   const { data: due, error } = await service
     .from("application_knockouts")
     .select("application_id, company_id")
-    .lte("reject_email_due_at", now)
-    .is("reject_email_sent_at", null)
+    .eq("application_knockout_state", "due")
     .order("reject_email_due_at", { ascending: true })
     .limit(KNOCKOUT_WORKER_BATCH);
   if (error) {
@@ -37,8 +36,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: "Couldn't read due emails." }, { status: 500 });
   }
 
+  // A cancel keeps the due date, so it reads apart from "never due". Both
+  // writes move only a row that is still due.
   const cancel = (applicationId: string) =>
-    service.from("application_knockouts").update({ reject_email_due_at: null }).eq("application_id", applicationId);
+    service
+      .from("application_knockouts")
+      .update({ reject_email_cancelled_at: new Date().toISOString() })
+      .eq("application_id", applicationId)
+      .eq("application_knockout_state", "due");
 
   const counts: Record<Outcome, number> = { sent: 0, cancelled: 0, failed: 0 };
   for (const row of due ?? []) {
@@ -95,7 +100,8 @@ export async function GET(request: NextRequest) {
       await service
         .from("application_knockouts")
         .update({ reject_email_sent_at: new Date().toISOString() })
-        .eq("application_id", row.application_id);
+        .eq("application_id", row.application_id)
+        .eq("application_knockout_state", "due");
       await service.from("application_events").insert({
         company_id: row.company_id,
         application_id: row.application_id,

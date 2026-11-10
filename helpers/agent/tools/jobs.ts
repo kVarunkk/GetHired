@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { isRelevanceInProgress } from "@/helpers/jobs/relevance-jobs-queue";
 import { tool } from "ai";
 import { z } from "zod";
 import {
@@ -259,7 +260,7 @@ export function createJobTools(ctx: AgentToolContext) {
         withToolErrors(ctx, "findRelevantJobs", async () => {
           const { data: profile, error } = await supabase
             .from("user_info")
-            .select("embedding_new, filled, relevant_jobs_update_status")
+            .select("embedding_new, filled, relevant_jobs_update_status, relevance_started_at, updated_at")
             .eq("user_id", ctx.user.id)
             .maybeSingle();
           if (error) throw error;
@@ -277,15 +278,24 @@ export function createJobTools(ctx: AgentToolContext) {
             if (feedError) throw feedError;
 
             if (!count) {
+              // One reading of the run (SM-REQ-005): `pending` never ran, and
+              // a `progress` past its timeout is dead, like `failed`.
               const status = profile.relevant_jobs_update_status;
-              if (status === "pending" || status === "progress") {
+              if (isRelevanceInProgress(profile)) {
                 return {
                   error: "MATCHES_PROCESSING",
                   message:
                     "The user's personalised matches are still being generated after onboarding (usually a few minutes, and they get an email when it's ready). Offer a regular job search in the meantime.",
                 };
               }
-              if (status === "failed") {
+              if (status === "pending") {
+                return {
+                  error: "MATCHES_NOT_RUN",
+                  message:
+                    "The user's personalised matches haven't been generated yet. Suggest generating them from /jobs?sortBy=relevance (it takes a few minutes), and offer a regular job search meanwhile.",
+                };
+              }
+              if (status === "failed" || status === "progress") {
                 return {
                   error: "MATCHES_FAILED",
                   message:

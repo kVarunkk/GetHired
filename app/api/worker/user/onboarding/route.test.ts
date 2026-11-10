@@ -79,14 +79,14 @@ describe("GET /api/worker/user/onboarding", () => {
     });
   });
 
-  it("embeds, builds the feed without letting it mark failure, and deletes the message", async () => {
+  it("embeds, builds the feed and deletes the message", async () => {
     queueMessages([message(1)]);
 
     await GET();
 
     expect(parseResume).not.toHaveBeenCalled();
     expect(updateUserEmbedding).toHaveBeenCalledWith(USER_ID);
-    expect(processUserRelevance).toHaveBeenCalledWith(USER_ID, true, { markFailed: false });
+    expect(processUserRelevance).toHaveBeenCalledWith(USER_ID, true);
     expect(statusWrites()).toEqual(["progress"]);
     expect(rpcCalls("delete")).toHaveLength(1);
   });
@@ -153,6 +153,36 @@ describe("GET /api/worker/user/onboarding", () => {
     expect(sendEmailForStatusUpdate).toHaveBeenCalledWith(
       expect.stringContaining("POISON ALERT"),
     );
+  });
+
+  it("moves the user back into progress only from a finished state, keeping a running start time (SM-REQ-004)", async () => {
+    queueMessages([message(1)]);
+
+    await GET();
+
+    const progressWrite = supabase
+      .callsFor("user_info")
+      .find((c) => (c.chain.find((m) => m.method === "update")?.args[0] as Record<string, unknown> | undefined)
+        ?.relevant_jobs_update_status === "progress")!;
+    expect(progressWrite.chain).toContainEqual({ method: "in", args: ["user_id", [USER_ID]] });
+    expect(progressWrite.chain).toContainEqual({
+      method: "in",
+      args: ["relevant_jobs_update_status", ["pending", "failed", "completed"]],
+    });
+  });
+
+  it("moves the user to failed from progress only when it gives up (SM-REQ-013)", async () => {
+    queueMessages([message(3)]);
+    vi.mocked(processUserRelevance).mockResolvedValue({ success: false, error: "rerank down" });
+
+    await GET();
+
+    const failedWrite = supabase
+      .callsFor("user_info")
+      .find((c) => (c.chain.find((m) => m.method === "update")?.args[0] as Record<string, unknown> | undefined)
+        ?.relevant_jobs_update_status === "failed")!;
+    expect(failedWrite.chain).toContainEqual({ method: "in", args: ["user_id", [USER_ID]] });
+    expect(failedWrite.chain).toContainEqual({ method: "in", args: ["relevant_jobs_update_status", ["progress"]] });
   });
 
   it("succeeds on the third attempt", async () => {

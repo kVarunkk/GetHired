@@ -2,12 +2,13 @@ import { reportError } from "@/helpers/posthog/report-error";
 import { RelevantProfilesUpdateEmail } from "@/emails/RelevantProfilesUpdateEmail";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { sendEmail, sendEmailForStatusUpdate } from "@/utils/email";
+import { sendEmail } from "@/utils/email";
 import { deploymentUrl, INTERNAL_API_SECRET } from "@/utils/formatters";
 import { AllProfileWithRelations, ProfileMatchScores } from "@/utils/types";
 import { render } from "react-email";
 import { headers } from "next/headers";
 import { enqueueTopExplanations } from "@/helpers/matching/enqueue-explanations";
+import { transition, transitionMany } from "@/helpers/db/transition";
 
 const URL = deploymentUrl();
 
@@ -64,6 +65,11 @@ export const sendEmailForRelevantProfilesStatusUpdate = async (
   }
 };
 
+/**
+ * Rebuilds a job's stored candidate matches and moves the job from `progress`
+ * to `completed`. A failure is returned, not written: the caller decides
+ * whether to retry or give up (SM-REQ-013).
+ */
 export async function processJobPostingRelevance(
   userId: string,
   jobPostingId: string,
@@ -142,8 +148,11 @@ export async function processJobPostingRelevance(
     const now = new Date().toISOString();
 
     // Upsert rather than delete-and-insert, so cached explanations survive a
-    // re-run (MT-REQ-003). `explanation` is never in the payload.
-    const rowsToUpsert = profiles.map((profile, index) => {
+    // re-run (MT-REQ-003). Neither `explanation` nor `explanation_status` is
+    // in the payload: a new row gets `none`, and an existing one keeps its
+    // state, which a worker may be changing meanwhile (SM-REQ-001). The
+    // statuses worked out here only pick what to mark stale and enqueue.
+    const ranked = profiles.map((profile, index) => {
       const score = matchScores[profile.user_id];
       const matchScore = score ? toMatchScore(score.aggregate) : null;
       const previous = existing.get(profile.user_id);
@@ -155,17 +164,21 @@ export async function processJobPostingRelevance(
           : previous.explanation_status;
 
       return {
-        job_posting_id: jobPostingId,
-        user_id: profile.user_id,
-        relevance_rank: index + 1,
-        match_score: matchScore,
-        skills_score: score ? round2(score.skills) : null,
-        experience_score: score ? round2(score.experience) : null,
-        preference_conflict: score ? round2(score.preferenceConflict) : null,
+        row: {
+          job_posting_id: jobPostingId,
+          user_id: profile.user_id,
+          relevance_rank: index + 1,
+          match_score: matchScore,
+          skills_score: score ? round2(score.skills) : null,
+          experience_score: score ? round2(score.experience) : null,
+          preference_conflict: score ? round2(score.preferenceConflict) : null,
+          updated_at: now,
+        },
         explanation_status: explanationStatus,
-        updated_at: now,
+        madeStale: previous?.explanation_status === "completed" && explanationStatus === "stale",
       };
     });
+    const rowsToUpsert = ranked.map((entry) => entry.row);
 
     if (rowsToUpsert.length > 0) {
       const { error: upsertError } = await admin
@@ -173,6 +186,18 @@ export async function processJobPostingRelevance(
         .upsert(rowsToUpsert, { onConflict: "job_posting_id,user_id" });
 
       if (upsertError) throw new Error(`Upsert failed: ${upsertError.message}`);
+    }
+
+    // A changed score makes a stored explanation out of date: from
+    // `completed` only.
+    const madeStale = ranked.filter((entry) => entry.madeStale).map((entry) => entry.row.user_id);
+    if (madeStale.length > 0) {
+      await transitionMany(
+        admin,
+        "job_relevant_profiles",
+        { key: "user_id", ids: madeStale, match: { job_posting_id: jobPostingId }, column: "explanation_status" },
+        { from: ["completed"], to: "stale" },
+      );
     }
 
     // Remove candidates who no longer match.
@@ -194,24 +219,28 @@ export async function processJobPostingRelevance(
     // Background "why" for the top candidates. Never fails the digest:
     // anything not queued can still be explained on demand.
     try {
-      await enqueueTopExplanations(admin, jobPostingId, rowsToUpsert);
+      await enqueueTopExplanations(
+        admin,
+        jobPostingId,
+        ranked.map((entry) => ({ user_id: entry.row.user_id, explanation_status: entry.explanation_status })),
+      );
     } catch (err) {
       reportError("[relevant profiles] couldn't queue explanations", err);
     }
 
-    const { error: updateError } = await supabase
-      .from("job_postings")
-      .update({
-        matching_status: "completed",
-        matching_error: null,
-        matched_at: new Date().toISOString(),
-      })
-      .eq("id", jobPostingId);
-
-    if (updateError)
-      throw new Error(
-        "Some error occured while updating relevant profiles generation info",
-      );
+    // From `progress` only (SM-REQ-013): a job that left it (e.g. a give-up
+    // written meanwhile) isn't this run's to finish, and gets no email.
+    const { applied } = await transition(
+      supabase,
+      "job_postings",
+      { id: jobPostingId, column: "matching_status" },
+      {
+        from: ["progress"],
+        to: "completed",
+        patch: { matching_error: null, matched_at: new Date().toISOString() },
+      },
+    );
+    if (!applied) return { success: true };
 
     await sendEmailForRelevantProfilesStatusUpdate(
       companyData.email!,
@@ -223,23 +252,11 @@ export async function processJobPostingRelevance(
 
     return { success: true };
   } catch (error) {
+    // The worker retries and, on its last attempt, writes `failed` and emails
+    // the admin (SM-REQ-013), so a failed attempt leaves the job in progress.
     reportError("[relevant profiles] update failed", error);
     const msg =
       error instanceof Error ? error.message : "Unknown error occured.";
-
-    await supabase
-      .from("job_postings")
-      .update({
-        matching_status: "failed",
-        matching_error: msg,
-        matched_at: new Date().toISOString(),
-      })
-      .eq("id", jobPostingId);
-
-    // to admin
-    await sendEmailForStatusUpdate(
-      `[JOB POSTING RELEVANCE UPDATE] Failed for job posting id ${jobPostingId}: ${msg}.`,
-    );
     return {
       success: false,
       error: msg,

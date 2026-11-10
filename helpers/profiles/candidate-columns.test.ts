@@ -44,6 +44,7 @@ const USER_INFO_COLUMNS = {
   preferred_locations: true,
   profile_refresh_requested_at: true,
   referral_code: true,
+  relevance_started_at: true,
   relevant_jobs_update_status: true,
   salary_currency: true,
   top_skills: true,

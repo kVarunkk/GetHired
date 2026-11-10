@@ -43,12 +43,18 @@ const rowUpdates = () =>
     .filter(Boolean) as Record<string, unknown>[];
 const lastUpdate = () => rowUpdates().at(-1)!;
 
+/** A guarded row write that matched the row, or one that matched nothing. */
+const APPLIED = { data: [{ id: ROW }], error: null };
+const NOT_APPLIED = { data: [], error: null };
+
+/** Queues the message, the row's read and (for a row the worker will claim) the applied claim. */
 function queueMessage({ status = "queued", read_ct = 1 } = {}) {
   db.queueRpc("read", { data: [{ msg_id: 7, read_ct, message: { row_id: ROW } }], error: null }, "pgmq_public");
   db.queue("candidate_import_rows", {
     data: { id: ROW, batch_id: BATCH, company_id: COMPANY_A.id, file_path: `${COMPANY_A.id}/${BATCH}/${ROW}.pdf`, status },
     error: null,
   });
+  if (status === "queued" || status === "parsing") db.queue("candidate_import_rows", APPLIED); // status -> parsing
 }
 
 const PARSED = {
@@ -93,8 +99,8 @@ describe("GET /api/worker/candidate-import (BIT-045)", () => {
   it("parses a file, flags a duplicate, consumes the hold and settles the batch", async () => {
     queueMessage();
     db.queue("company_candidates", { data: { id: EXISTING }, error: null });
-    db.queue("candidate_import_rows", { data: null, error: null }); // status -> parsing
     db.queue("candidate_import_rows", { data: null, error: null, count: 1 }); // the same email in the batch
+    db.queue("candidate_import_rows", APPLIED); // status -> parsed
 
     expect(await (await run()).json()).toMatchObject({ parsed: 1, failed: 0 });
 
@@ -124,6 +130,7 @@ describe("GET /api/worker/candidate-import (BIT-045)", () => {
   ])("fails a file as %s and releases its hold", async (code, arrange) => {
     arrange();
     queueMessage();
+    db.queue("candidate_import_rows", APPLIED); // status -> failed
 
     expect(await (await run()).json()).toMatchObject({ parsed: 0, failed: 1 });
     expect(lastUpdate()).toMatchObject({ status: "failed", error_code: code });
@@ -145,6 +152,7 @@ describe("GET /api/worker/candidate-import (BIT-045)", () => {
   it("fails and releases after the third try, and reports it", async () => {
     vi.mocked(parseCandidateResume).mockRejectedValue(new RetryableParseError(new Error("503")));
     queueMessage({ read_ct: 3 });
+    db.queue("candidate_import_rows", APPLIED); // status -> failed
 
     expect(await (await run()).json()).toMatchObject({ failed: 1 });
     expect(lastUpdate()).toMatchObject({ status: "failed", error_code: "parse_failed" });
@@ -156,8 +164,55 @@ describe("GET /api/worker/candidate-import (BIT-045)", () => {
   it("retries a Storage download error the same way", async () => {
     download.mockResolvedValue({ data: null, error: { message: "timeout" } });
     queueMessage();
+    db.queue("candidate_import_rows", { data: { status: "parsing" }, error: null }); // re-read after the error
     expect(await (await run()).json()).toMatchObject({ retried: 1 });
     expect(parseCandidateResume).not.toHaveBeenCalled();
+    expect(archived()).toEqual([]);
+  });
+
+  describe("a row removed while it's being parsed (SM-ISS-012, SM-TEST-003)", () => {
+    it("isn't charged or counted when the parsed write matches no row, and its hold is released", async () => {
+      queueMessage();
+      db.queue("company_candidates", { data: null, error: null });
+      db.queue("candidate_import_rows", { data: null, error: null, count: 0 }); // the same email in the batch
+      db.queue("candidate_import_rows", NOT_APPLIED); // status -> parsed: the row was removed
+
+      expect(await (await run()).json()).toMatchObject({ parsed: 0, failed: 0, skipped: 1 });
+
+      // The final write is guarded and asks for the rows it changed.
+      const finalWrite = db.callsFor("candidate_import_rows").at(-1)!.chain;
+      expect(finalWrite).toContainEqual({ method: "in", args: ["status", ["queued", "parsing"]] });
+      expect(finalWrite.some((m) => m.method === "select")).toBe(true);
+      expect(consumeEntitlement).not.toHaveBeenCalled();
+      expect(releaseHold).toHaveBeenCalledWith(COMPANY_A.id, "resume_imports", REF);
+      expect(archived()).toEqual([7]);
+    });
+
+    it("skips a row removed between the read and the claim", async () => {
+      db.queueRpc("read", { data: [{ msg_id: 7, read_ct: 1, message: { row_id: ROW } }], error: null }, "pgmq_public");
+      db.queue("candidate_import_rows", {
+        data: { id: ROW, batch_id: BATCH, company_id: COMPANY_A.id, file_path: `${COMPANY_A.id}/${BATCH}/${ROW}.pdf`, status: "queued" },
+        error: null,
+      });
+      db.queue("candidate_import_rows", NOT_APPLIED); // status -> parsing
+
+      expect(await (await run()).json()).toMatchObject({ skipped: 1 });
+      expect(download).not.toHaveBeenCalled();
+      expect(consumeEntitlement).not.toHaveBeenCalled();
+      expect(archived()).toEqual([7]);
+    });
+
+    it("archives a download error when a re-read shows the row was removed, without retrying or reporting", async () => {
+      download.mockResolvedValue({ data: null, error: { message: "Object not found" } });
+      queueMessage({ read_ct: 3 });
+      db.queue("candidate_import_rows", { data: { status: "removed" }, error: null }); // re-read after the error
+
+      expect(await (await run()).json()).toMatchObject({ skipped: 1, retried: 0, failed: 0 });
+      expect(rowUpdates().map((u) => u.status)).toEqual(["parsing"]);
+      expect(releaseHold).toHaveBeenCalledWith(COMPANY_A.id, "resume_imports", REF);
+      expect(sendEmailForStatusUpdate).not.toHaveBeenCalled();
+      expect(archived()).toEqual([7]);
+    });
   });
 
   it("never parses a row twice: a redelivered message for a parsed row is skipped", async () => {

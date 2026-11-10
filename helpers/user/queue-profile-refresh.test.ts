@@ -1,3 +1,4 @@
+import { RELEVANCE_TIMEOUT_MS } from "@/helpers/jobs/relevance-jobs-queue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
@@ -26,7 +27,7 @@ describe("queueProfileRefresh", () => {
     expect(service.calls).toHaveLength(1);
     expect(service.callsFor("queue_profile_refresh")[0].chain[0].args[1]).toEqual({
       p_user_id: "u1",
-      p_stale_seconds: 900,
+      p_stale_seconds: RELEVANCE_TIMEOUT_MS / 1000,
     });
   });
 

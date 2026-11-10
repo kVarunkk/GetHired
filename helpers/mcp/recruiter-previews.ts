@@ -44,6 +44,7 @@ import { PROTECTED_KINDS } from "@/helpers/pipeline/stages";
 import { statusForKind } from "@/helpers/pipeline/status-map";
 import { loadVisibleCandidates } from "@/helpers/profiles/visible-candidates";
 import { formatDate } from "@/utils/date";
+import { isMatchingInProgress } from "@/helpers/profiles/relevance-queue";
 import { display, type McpPreview, type McpPreviewBuilder } from "./previews";
 
 type Builder = McpPreviewBuilder<RecruiterToolContext>;
@@ -500,9 +501,12 @@ async function companyJob(ctx: RecruiterToolContext, jobPostId: unknown, columns
 }
 
 const previewRunMatching = gated("runMatchingForJob", async (ctx, input) => {
-  const job = await companyJob(ctx, input.jobPostId, "id, title, matching_status");
+  const job = await companyJob(ctx, input.jobPostId, "id, title, matching_status, matching_started_at, updated_at");
   if (!job) return refuse("Job posting not found.");
-  if (job.matching_status === "progress") return refuse("Matching is already in progress for this job.");
+  // The same reading as start_matching: a dead run previews as restartable.
+  if (isMatchingInProgress(job as unknown as Parameters<typeof isMatchingInProgress>[0])) {
+    return refuse("Matching is already in progress for this job.");
+  }
   return preview("Start matching candidates to this job? It runs in the background, and the company gets an email when it's done.", [
     { label: "Job", value: job.title },
     { label: "Uses", value: "AI processing; it counts toward the hourly limit on calls that use credits or allowances." },

@@ -204,7 +204,7 @@ describe("findRelevantJobs tool", () => {
     });
 
     expect(supabase.callsFor("user_info")[0].chain).toEqual([
-      { method: "select", args: ["embedding_new, filled, relevant_jobs_update_status"] },
+      { method: "select", args: ["embedding_new, filled, relevant_jobs_update_status, relevance_started_at, updated_at"] },
       { method: "eq", args: ["user_id", "u1"] },
       { method: "maybeSingle", args: [] },
     ]);
@@ -234,18 +234,24 @@ describe("findRelevantJobs tool", () => {
 });
 
 describe("findRelevantJobs tool for an onboarded user", () => {
-  const onboarded = (status: string) => ({
+  const onboarded = (status: string, relevance_started_at: string | null = new Date().toISOString()) => ({
     embedding_new: "[0.1]",
     filled: true,
     relevant_jobs_update_status: status,
+    relevance_started_at,
+    updated_at: new Date().toISOString(),
   });
+  const longAgo = () => new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
   it.each([
-    ["pending", "MATCHES_PROCESSING"],
-    ["progress", "MATCHES_PROCESSING"],
-    ["failed", "MATCHES_FAILED"],
-  ])("explains an empty feed while it is %s", async (status, code) => {
-    supabase.queue("user_info", { data: onboarded(status), error: null });
+    // SM-REQ-005: `pending` means never run, not "still generating".
+    ["pending", "MATCHES_NOT_RUN", undefined],
+    ["progress", "MATCHES_PROCESSING", undefined],
+    // A run past its timeout is dead: the user can regenerate it.
+    ["progress", "MATCHES_FAILED", "dead"],
+    ["failed", "MATCHES_FAILED", undefined],
+  ])("explains an empty feed while it is %s (%s)", async (status, code, dead) => {
+    supabase.queue("user_info", { data: onboarded(status, dead ? longAgo() : undefined), error: null });
     supabase.queue("user_relevant_jobs", { data: null, count: 0, error: null });
 
     expect(await execTool(tools.findRelevantJobs, {})).toMatchObject({ error: code });
@@ -254,6 +260,24 @@ describe("findRelevantJobs tool for an onboarded user", () => {
       args: ["user_id", "u1"],
     });
     expect(searchJobs).not.toHaveBeenCalled();
+  });
+
+  it("offers to generate matches that never ran, instead of waiting for an email", async () => {
+    supabase.queue("user_info", { data: onboarded("pending", null), error: null });
+    supabase.queue("user_relevant_jobs", { data: null, count: 0, error: null });
+
+    const result = (await execTool(tools.findRelevantJobs, {})) as { message: string };
+    expect(result.message).toContain("/jobs?sortBy=relevance");
+    expect(result.message).not.toMatch(/email/i);
+  });
+
+  it("reads the user's start time, not only the status", async () => {
+    supabase.queue("user_info", { data: onboarded("progress"), error: null });
+    supabase.queue("user_relevant_jobs", { data: null, count: 0, error: null });
+
+    await execTool(tools.findRelevantJobs, {});
+    const select = supabase.callsFor("user_info")[0].chain.find((m) => m.method === "select")!.args[0] as string;
+    expect(select).toContain("relevance_started_at");
   });
 
   it("searches the old feed while a refresh is in progress", async () => {

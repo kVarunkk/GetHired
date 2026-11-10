@@ -1,7 +1,8 @@
 import { reportError } from "@/helpers/posthog/report-error";
 import { render } from "react-email";
 import RelevantJobsSetupUpdateEmail from "@/emails/RelevantJobsSetupUpdateEmail";
-import { sendEmail, sendEmailForStatusUpdate } from "@/utils/email";
+import { sendEmail } from "@/utils/email";
+import { transitionMany } from "@/helpers/db/transition";
 import { AllJobWithRelations, TAICredits } from "@/utils/types";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { createClient } from "@/lib/supabase/server";
@@ -51,14 +52,12 @@ export const sendEmailForRelevantJobsStatusUpdate = async (
 
 /**
  * Rebuilds the user's stored feed (user_relevant_jobs) and marks it completed.
- * On failure it marks the status failed unless `markFailed` is false: a caller
- * that will retry (the onboarding worker) keeps it at "progress" and sets
- * "failed" itself once it gives up.
+ * A failure is returned, not written: the calling worker retries and writes
+ * `failed` (and emails the admin) only when it gives up (SM-REQ-013).
  */
 export async function processUserRelevance(
   userId: string,
   isInternalCall: boolean = false,
-  { markFailed = true }: { markFailed?: boolean } = {},
 ) {
   const supabase = isInternalCall
     ? createServiceRoleClient()
@@ -126,19 +125,20 @@ export async function processUserRelevance(
       }
     }
 
-    // this will run even if the user has Insufficient AI Credits
-    const { error: updateError } = await supabase
-      .from("user_info")
-      .update({
-        relevant_jobs_update_status: "completed",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId);
-
-    if (updateError)
-      throw new Error(
-        "Some error occured while updating relevant jobs generation info",
-      );
+    // This runs even if the user has insufficient AI credits. From every
+    // state: the daily cron (relevant-jobs/enqueue) queues users without
+    // marking them `progress`, so a cron run must still land on a `completed`
+    // or `failed` feed.
+    await transitionMany(
+      supabase,
+      "user_info",
+      { key: "user_id", ids: [userId], column: "relevant_jobs_update_status" },
+      {
+        from: ["pending", "progress", "failed", "completed"],
+        to: "completed",
+        patch: { updated_at: new Date().toISOString() },
+      },
+    );
 
     // email to user in case of success
 
@@ -152,23 +152,8 @@ export async function processUserRelevance(
     return { success: true };
   } catch (error) {
     reportError("[relevant jobs] update failed", error);
-    if (markFailed) {
-      await supabase
-        .from("user_info")
-        .update({
-          relevant_jobs_update_status: "failed",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", userId);
-    }
-
     const msg =
       error instanceof Error ? error.message : "unknown error occured.";
-
-    // emmail to admin in case of error
-    await sendEmailForStatusUpdate(
-      `[RELEVANCE UPDATE] Failed for ${userId}: ${msg}.`,
-    );
     return { success: false, error: msg };
   }
 }

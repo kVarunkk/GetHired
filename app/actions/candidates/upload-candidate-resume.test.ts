@@ -98,6 +98,8 @@ describe("uploadCandidateResumeAction (BIT-049, BI-REQ-008)", () => {
   function queueAttach(result: Record<string, unknown> = { ok: true, replaced_path: OLD_PATH, application_ids: [APP_OPEN] }) {
     rls.queueRpc("set_company_candidate_resume", { data: result, error: null });
     admin.queue("applications", { data: [{ id: APP_OPEN, job_post_id: "j1" }], error: null });
+    // The re-screen's insert adds the missing screening (SMT-018).
+    admin.queue("application_screenings", { data: [{ application_id: APP_OPEN }], error: null });
   }
 
   it("fills empty fields only, charges once, deletes the old file and re-screens open applications", async () => {

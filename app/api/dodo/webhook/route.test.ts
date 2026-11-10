@@ -62,7 +62,12 @@ beforeEach(() => {
   vi.mocked(SendPaymentUpdateEmail).mockResolvedValue({ error: null, success: true });
 
   for (let i = 0; i < 5; i++) {
-    service.queue("payments", { data: { ...PAYMENT, credits_fulfilled: false }, error: null });
+    // A read gets the row; a status update matched it (it returns the changed rows).
+    service.queue("payments", (call) =>
+      call.chain.some((m) => m.method === "update")
+        ? { data: [{ id: PAYMENT.id }], error: null }
+        : { data: { ...PAYMENT, credits_fulfilled: false }, error: null },
+    );
     service.queue("user_info", {
       data: { full_name: "Ada", email: "ada@example.com", ai_credits: 10 },
       error: null,
@@ -277,13 +282,94 @@ describe("POST /api/dodo/webhook (dispatcher)", () => {
     expect(SendPaymentUpdateEmail).not.toHaveBeenCalled();
   });
 
-  it("never moves a completed payment back to failed or pending", async () => {
-    await deliver("payment.processing", paymentData());
+  it("moves a payment to failed from pending only", async () => {
+    await deliver("payment.failed", paymentData());
 
     const statusUpdate = service
       .callsFor("payments")
       .find((c) => c.chain.some((m) => m.method === "update" && "status" in (m.args[0] as object)))!;
-    expect(statusUpdate.chain).toContainEqual({ method: "neq", args: ["status", "complete"] });
+    expect(statusUpdate.chain).toContainEqual({ method: "in", args: ["status", ["pending"]] });
+    expect(statusUpdate.chain.some((m) => m.method === "select")).toBe(true);
+  });
+});
+
+// SM-ISS-013, SM-REQ-012, SM-TEST-004: distinct events that arrive out of order.
+describe("POST /api/dodo/webhook (payment status order)", () => {
+  let status: string;
+  let creditsFulfilled: boolean;
+
+  /**
+   * A payments table with one row whose status the mock keeps: a status
+   * update applies only when the row's status is in its `.in("status", …)`
+   * list, like Postgres would, and returns the rows it changed.
+   */
+  function statefulPayments(initial: string) {
+    status = initial;
+    creditsFulfilled = initial === "complete";
+    service.reset();
+    for (let i = 0; i < 30; i++) {
+      service.queue("payments", (call) => {
+        const update = call.chain.find((m) => m.method === "update")?.args[0] as Record<string, unknown> | undefined;
+        if (!update) return { data: { ...PAYMENT, status, credits_fulfilled: creditsFulfilled }, error: null };
+        if (!("status" in update)) return { data: null, error: null };
+        const from = call.chain.find((m) => m.method === "in" && m.args[0] === "status")?.args[1] as string[] | undefined;
+        if (from && !from.includes(status)) return { data: [], error: null };
+        status = update.status as string;
+        if ("credits_fulfilled" in update) creditsFulfilled = update.credits_fulfilled as boolean;
+        return { data: [{ id: PAYMENT.id }], error: null };
+      });
+      service.queue("user_info", { data: { full_name: "Ada", email: "ada@example.com" }, error: null });
+    }
+    service.queueRpc("fulfil_payment", () => {
+      const already = status === "complete";
+      status = "complete";
+      creditsFulfilled = true;
+      return {
+        data: { status: already ? "already_fulfilled" : "fulfilled", user_id: USER_ID, credit_amount: 50 },
+        error: null,
+      };
+    });
+  }
+
+  const emailedStatuses = () =>
+    vi.mocked(SendPaymentUpdateEmail).mock.calls.map((c) => c[0].paymentDetails.status);
+
+  it("succeeded then failed: stays complete, emails only the success, keeps credits_fulfilled", async () => {
+    statefulPayments("pending");
+
+    await deliver("payment.succeeded", paymentData(), { webhookId: "wh_1" });
+    await deliver("payment.failed", paymentData({ error_message: "declined" }), { webhookId: "wh_2" });
+
+    expect(status).toBe("complete");
+    expect(creditsFulfilled).toBe(true);
+    expect(emailedStatuses()).toEqual(["complete"]);
+  });
+
+  it.each([
+    ["failed", "payment.processing"],
+    ["cancelled", "payment.processing"],
+    ["failed", "payment.cancelled"],
+    ["cancelled", "payment.failed"],
+  ])("a %s payment ignores a late %s and sends no email", async (initial, type) => {
+    statefulPayments(initial);
+
+    const res = await deliver(type, paymentData({ error_message: "late" }));
+
+    expect(res.status).toBe(200);
+    expect(status).toBe(initial);
+    expect(SendPaymentUpdateEmail).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["payment.failed", "failed"],
+    ["payment.cancelled", "cancelled"],
+  ])("pending -> %s still applies and emails once", async (type, next) => {
+    statefulPayments("pending");
+
+    await deliver(type, paymentData({ error_message: "declined" }));
+
+    expect(status).toBe(next);
+    expect(emailedStatuses()).toEqual([next]);
   });
 });
 

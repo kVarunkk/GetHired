@@ -33,7 +33,8 @@ type FailCode = "no_text" | "unreadable" | "parse_failed";
  * provider or network error leaves the message for a retry, up to
  * CANDIDATE_IMPORT_MAX_READS. A row that's no longer queued (parsed,
  * removed, confirmed) is skipped, so a redelivered message never parses
- * twice. A batch is `ready` once none of its files are in flight.
+ * twice, and a row removed while it was parsed is neither charged nor
+ * counted. A batch is `ready` once none of its files are in flight.
  */
 export async function GET(request: NextRequest) {
   if (!INTERNAL_API_SECRET || request.headers.get("X-Internal-Secret") !== INTERNAL_API_SECRET) {
@@ -84,27 +85,46 @@ export async function GET(request: NextRequest) {
     batches.add(row.batch_id);
     const filePath = row.file_path;
 
-    const setRow = async (values: Record<string, unknown>) => {
-      const { error: updateError } = await admin
+    // Every write moves the row out of queued/parsing only, and says whether
+    // it did (SM-REQ-001/002): a row removed meanwhile matches nothing.
+    const setRow = async (values: Record<string, unknown>): Promise<{ applied: boolean }> => {
+      const { data: updated, error: updateError } = await admin
         .from("candidate_import_rows")
         .update({ ...values, updated_at: new Date().toISOString() })
         .eq("id", row.id)
-        .in("status", ["queued", "parsing"]);
+        .in("status", ["queued", "parsing"])
+        .select("id");
       if (updateError) throw new Error(`Couldn't update the row: ${updateError.message}`);
+      return { applied: (updated?.length ?? 0) > 0 };
+    };
+
+    // The row left queued/parsing under us (removed, most likely): nothing is
+    // charged, and the hold, if one is left, is released.
+    const skipLost = async () => {
+      await releaseRowHolds(row.company_id, [row.id]);
+      counts.skipped++;
+      await archive(msg_id);
     };
 
     const fail = async (code: FailCode) => {
-      await setRow({ status: "failed", error_code: code });
+      const { applied } = await setRow({ status: "failed", error_code: code });
+      if (!applied) return await skipLost();
       await releaseRowHolds(row.company_id, [row.id]);
       counts.failed++;
       await archive(msg_id);
     };
 
-    await setRow({ status: "parsing", attempts: read_ct });
+    if (!(await setRow({ status: "parsing", attempts: read_ct })).applied) return await skipLost();
 
     try {
       const { data: file, error: downloadError } = await admin.storage.from(RESUME_BUCKET).download(filePath);
-      if (downloadError || !file) throw new Error(`Couldn't download the file: ${downloadError?.message ?? "no data"}`);
+      if (downloadError || !file) {
+        // A remove deletes the file, so a missing file usually means the row
+        // was removed: that isn't a provider error to retry.
+        const { data: now } = await admin.from("candidate_import_rows").select("status").eq("id", row.id).maybeSingle();
+        if (now?.status === "removed") return await skipLost();
+        throw new Error(`Couldn't download the file: ${downloadError?.message ?? "no data"}`);
+      }
 
       let lines: string[];
       try {
@@ -146,13 +166,16 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      await setRow({
+      const { applied } = await setRow({
         status: "parsed",
         error_code: null,
         extracted: { fields, resume: parsed.resume } as unknown as Json,
         warnings: warnings as unknown as Json,
         duplicate_of: duplicateOf,
       });
+      // SM-ISS-012: removed while it was parsed. Consuming here would charge
+      // fresh allowance, since the remove already released the hold.
+      if (!applied) return await skipLost();
       try {
         // The hold's member is charged (RP-REQ-043): the worker passes no actor.
         await consumeEntitlement(row.company_id, "resume_imports", 1, importRowRef(row.id), null);

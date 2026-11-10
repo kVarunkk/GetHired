@@ -3,8 +3,10 @@ import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendEmailForStatusUpdate } from "@/utils/email";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
+import { transitionMany } from "@/helpers/db/transition";
 import {
   isMatchingInProgress,
+  MATCHING_TIMEOUT_MS,
   RELEVANCE_PROFILES_QUEUE,
   type RelevanceProfilesMessage,
 } from "@/helpers/profiles/relevance-queue";
@@ -62,7 +64,7 @@ export async function GET() {
     const { data: jobs, error: jobsError } = await supabase
       .from("job_postings")
       // company_info.user_id is the owner (TM-CON-001), who the worker runs as.
-      .select("id, matched_at, matching_status, updated_at, company_info(user_id)")
+      .select("id, matched_at, matching_status, matching_started_at, updated_at, company_info(user_id)")
       .eq("status", "active");
     if (jobsError) throw new Error(`Couldn't read job postings: ${jobsError.message}`);
 
@@ -80,18 +82,26 @@ export async function GET() {
       return NextResponse.json({ success: true, queued: 0, message: "Every job's matches are up to date." });
     }
 
-    const ids = stale.map((job) => job.id);
-    const timestamp = new Date(now).toISOString();
+    // Each job starts through start_matching (SM-REQ-004), like
+    // queueJobPostingRelevance, so a company's own start between the read
+    // above and here wins and this run skips the job. A job whose start
+    // errors is skipped too: it gets no `progress` it would never leave.
+    const started: typeof stale = [];
+    let startErrors = 0;
+    for (const job of stale) {
+      const { data, error } = await supabase.rpc("start_matching", {
+        p_job_id: job.id,
+        p_timeout_seconds: MATCHING_TIMEOUT_MS / 1000,
+      });
+      if (error) startErrors += 1;
+      else if ((data as { ok?: boolean } | null)?.ok) started.push(job);
+    }
 
-    // Marked first, like triggerJobPostingRelevanceUpdate, so a company
-    // can't start a second run while this one waits in the queue.
-    const { error: markError } = await supabase
-      .from("job_postings")
-      .update({ matching_status: "progress", matching_error: null, updated_at: timestamp })
-      .in("id", ids);
-    if (markError) throw new Error(`Couldn't mark jobs in progress: ${markError.message}`);
+    if (started.length === 0) {
+      return NextResponse.json({ success: true, queued: 0, message: "Every stale job was already being matched." });
+    }
 
-    const messages: RelevanceProfilesMessage[] = stale.map((job) => ({
+    const messages: RelevanceProfilesMessage[] = started.map((job) => ({
       userId: job.company_info!.user_id!,
       jobId: job.id,
     }));
@@ -101,15 +111,23 @@ export async function GET() {
       sleep_seconds: 0,
     });
     if (sendError) {
-      await supabase
-        .from("job_postings")
-        .update({ matching_status: "failed", matching_error: "Couldn't queue matching.", updated_at: timestamp })
-        .in("id", ids);
+      // From `progress` only: nothing was queued, so these runs are over.
+      await transitionMany(
+        supabase,
+        "job_postings",
+        { ids: started.map((job) => job.id), column: "matching_status" },
+        {
+          from: ["progress"],
+          to: "failed",
+          patch: { matching_error: "Couldn't queue matching.", updated_at: new Date().toISOString() },
+        },
+      ).catch(() => undefined);
       throw new Error(`Couldn't queue matching: ${sendError.message}`);
     }
 
     await sendEmailForStatusUpdate(
-      `PROFILE RELEVANCE CRON: Queued ${messages.length} jobs for a candidate match refresh.`,
+      `PROFILE RELEVANCE CRON: Queued ${messages.length} jobs for a candidate match refresh.` +
+        (startErrors ? ` ${startErrors} couldn't be started.` : ""),
     );
     return NextResponse.json({ success: true, queued: messages.length });
   } catch (error) {

@@ -6,10 +6,10 @@ import { claimViewFor, loadClaim } from "./claim-page";
 vi.mock("server-only", () => ({}));
 
 const TOKEN = "t".repeat(43);
-const NOW = new Date("2026-10-25T12:00:00.000Z");
 let admin: SupabaseMock;
 
 const row = (over: Record<string, unknown> = {}) => ({
+  state: "unused",
   expires_at: "2026-10-30T12:00:00.000Z",
   used_at: null,
   used_by: null,
@@ -29,14 +29,13 @@ describe("loadClaim (BIT-064, BI-REQ-041)", () => {
     expect(await loadClaim(admin.client, TOKEN)).toEqual({
       companyName: "Acme",
       jobTitle: "Backend Engineer",
-      expiresAt: "2026-10-30T12:00:00.000Z",
-      usedAt: null,
+      state: "unused",
       usedBy: null,
     });
-    expect(admin.callsFor("company_candidate_claims")[0].chain).toContainEqual({
-      method: "eq",
-      args: ["token_hash", hashClaimToken(TOKEN)],
-    });
+    const chain = admin.callsFor("company_candidate_claims")[0].chain;
+    expect(chain).toContainEqual({ method: "eq", args: ["token_hash", hashClaimToken(TOKEN)] });
+    // The state comes from company_candidate_claim_state, the same reading the claim RPC uses (SM-REQ-010).
+    expect(String(chain[0].args[0])).toContain("state:company_candidate_claim_state");
   });
 
   it("returns null for an unknown or malformed token, without a lookup for the malformed one", async () => {
@@ -48,20 +47,25 @@ describe("loadClaim (BIT-064, BI-REQ-041)", () => {
 });
 
 describe("claimViewFor", () => {
-  const claim = { companyName: "Acme", jobTitle: "Backend Engineer", expiresAt: "2026-10-30T12:00:00.000Z", usedAt: null, usedBy: null };
+  const claim = { companyName: "Acme", jobTitle: "Backend Engineer", state: "unused" as const, usedBy: null };
 
   it("tells each state apart", () => {
-    expect(claimViewFor(null, null, NOW)).toBe("invalid");
-    expect(claimViewFor({ ...claim, expiresAt: "2026-10-20T00:00:00Z" }, null, NOW)).toBe("expired");
-    expect(claimViewFor({ ...claim, usedAt: "2026-10-24T00:00:00Z", usedBy: "u2" }, null, NOW)).toBe("used");
-    expect(claimViewFor(claim, null, NOW)).toBe("signed_out");
-    expect(claimViewFor(claim, { id: "u1", type: "company" }, NOW)).toBe("company_account");
-    expect(claimViewFor(claim, { id: "u1", type: "applicant" }, NOW)).toBe("confirm");
+    expect(claimViewFor(null, null)).toBe("invalid");
+    expect(claimViewFor({ ...claim, state: "expired" }, null)).toBe("expired");
+    expect(claimViewFor({ ...claim, state: "used", usedBy: "u2" }, null)).toBe("used");
+    expect(claimViewFor(claim, null)).toBe("signed_out");
+    expect(claimViewFor(claim, { id: "u1", type: "company" })).toBe("company_account");
+    expect(claimViewFor(claim, { id: "u1", type: "applicant" })).toBe("confirm");
   });
 
   it("lets the account that used it open it again, even after the deadline", () => {
-    const used = { ...claim, expiresAt: "2026-10-20T00:00:00Z", usedAt: "2026-10-19T00:00:00Z", usedBy: "u1" };
-    expect(claimViewFor(used, { id: "u1", type: "applicant" }, NOW)).toBe("confirm");
-    expect(claimViewFor(used, { id: "u2", type: "applicant" }, NOW)).toBe("used");
+    // A used link stays "used" once it's past its deadline.
+    const used = { ...claim, state: "used" as const, usedBy: "u1" };
+    expect(claimViewFor(used, { id: "u1", type: "applicant" })).toBe("confirm");
+    expect(claimViewFor(used, { id: "u2", type: "applicant" })).toBe("used");
+  });
+
+  it("reads an unknown state from the database as invalid", () => {
+    expect(claimViewFor({ ...claim, state: "archived" as never }, null)).toBe("invalid");
   });
 });

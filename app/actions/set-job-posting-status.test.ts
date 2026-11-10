@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { revalidateTag } from "next/cache";
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { assertLimit } from "@/helpers/billing/entitlements";
 import { EntitlementError } from "@/helpers/billing/errors";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
@@ -11,27 +10,27 @@ import { setJobPostingStatusAction } from "./set-job-posting-status";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
 vi.mock("@/helpers/billing/entitlements", () => ({ assertLimit: vi.fn() }));
 
 const POST = jobPostingOf(COMPANY_A, { status: "inactive" });
 
 let rls: SupabaseMock;
-let service: SupabaseMock;
 
-const updates = (table: string) =>
-  service.callsFor(table).filter((c) => c.chain.some((m) => m.method === "update"));
+const OK = { data: { ok: true, job_id: POST.job_id, changed: true }, error: null };
+/** The statuses passed to set_job_post_status (SM-REQ-007). */
+const statusCalls = () =>
+  rls.callsFor("set_job_post_status").map((c) => (c.chain[0].args[1] as { p_status: string }).p_status);
 
 async function signIn(user = COMPANY_A.user, posting: unknown = POST) {
   rls = createSupabaseMock({ user });
   rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
   rls.queue("job_postings", { data: posting, error: null });
+  rls.queueRpc("set_job_post_status", OK);
   await setRequestUser(user, rls.client);
 }
 
 beforeEach(async () => {
-  service = createSupabaseMock();
-  vi.mocked(createServiceRoleClient).mockReturnValue(service.client);
+  vi.clearAllMocks();
   await signIn();
 });
 
@@ -45,23 +44,24 @@ describe("setJobPostingStatusAction", () => {
       ok: false,
       error: "Your role can't open, pause or close job posts.",
     });
-    expect(service.calls).toHaveLength(0);
+    expect(statusCalls()).toEqual([]);
   });
 
   it("lets an admin activate a job", async () => {
     rls = createSupabaseMock({ user: ADMIN_A.user });
     rls.queueRpc("my_company_access", { data: ADMIN_A.membership, error: null });
     rls.queue("job_postings", { data: POST, error: null });
+    rls.queueRpc("set_job_post_status", OK);
     await setRequestUser(ADMIN_A.user, rls.client);
 
     expect(await setJobPostingStatusAction({ jobPostingId: POST.id, status: "active" })).toEqual({ ok: true });
-    expect(updates("job_postings")).toHaveLength(1);
+    expect(statusCalls()).toEqual(["active"]);
   });
 
   it("refuses an applicant", async () => {
     await signIn(mockUser({ type: "applicant" }));
     expect(await setJobPostingStatusAction({ jobPostingId: POST.id, status: "active" })).toMatchObject({ ok: false });
-    expect(service.calls).toHaveLength(0);
+    expect(statusCalls()).toEqual([]);
   });
 
   it("treats another company's posting as not found", async () => {
@@ -74,13 +74,12 @@ describe("setJobPostingStatusAction", () => {
     expect(lookup).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
   });
 
-  it("checks the limit before activating, then updates the posting and listing", async () => {
+  it("checks the limit before activating, then sets the posting and listing in one call", async () => {
     const res = await setJobPostingStatusAction({ jobPostingId: POST.id, status: "active" });
 
     expect(res).toEqual({ ok: true });
     expect(assertLimit).toHaveBeenCalledWith(COMPANY_A.id, "active_job_posts");
-    expect(updates("job_postings")[0].chain[0].args[0]).toMatchObject({ status: "active" });
-    expect(updates("all_jobs")[0].chain[0].args[0]).toEqual({ status: "active" });
+    expect(statusCalls()).toEqual(["active"]);
     expect(revalidateTag).toHaveBeenCalledWith(`job-${POST.job_id}`);
   });
 
@@ -103,7 +102,7 @@ describe("setJobPostingStatusAction", () => {
     const res = await setJobPostingStatusAction({ jobPostingId: POST.id, status: "active" });
 
     expect(res).toMatchObject({ ok: false, error: { code: "entitlement", key: "active_job_posts" } });
-    expect(service.calls).toHaveLength(0);
+    expect(statusCalls()).toEqual([]);
   });
 
   it("deactivates without checking the limit", async () => {
@@ -111,6 +110,6 @@ describe("setJobPostingStatusAction", () => {
 
     expect(await setJobPostingStatusAction({ jobPostingId: POST.id, status: "inactive" })).toEqual({ ok: true });
     expect(assertLimit).not.toHaveBeenCalled();
-    expect(updates("job_postings")[0].chain[0].args[0]).toMatchObject({ status: "inactive" });
+    expect(statusCalls()).toEqual(["inactive"]);
   });
 });

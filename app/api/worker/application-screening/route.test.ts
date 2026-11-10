@@ -104,7 +104,15 @@ const entitlementError = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  db = createSupabaseMock();
+  // The guarded writes (SM-REQ-001/003) report whether a row moved, and the
+  // claim check before the charge reads the row: unless a test queues
+  // otherwise, they all find this run's row.
+  db = createSupabaseMock({
+    fallback: (call) =>
+      call.target === "application_screenings" && has(call, "select")
+        ? { data: has(call, "update") ? [{ id: SCREENING_ID }] : { id: SCREENING_ID }, error: null }
+        : { data: null, error: null },
+  });
   vi.mocked(createServiceRoleClient).mockReturnValue(db.client);
   vi.mocked(screenApplication).mockResolvedValue({ ok: true, result: screeningResultOf() });
   vi.mocked(consumeEntitlement).mockResolvedValue({ source: "allowance", creditsSpent: 0, duplicate: false });
@@ -407,7 +415,15 @@ describe("GET /api/worker/application-screening (MT-TEST-004)", () => {
       expect(consumeEntitlement).not.toHaveBeenCalled();
       expect(db.callsFor("application_events")).toHaveLength(0);
       expect(inviteAboveFitThreshold).not.toHaveBeenCalled();
-      expect(updates()).toEqual([expect.objectContaining({ status: "insufficient_info", error_code: null })]);
+      // Claimed first (SM-REQ-003), so the mark can't overwrite a live run.
+      expect(updates()).toEqual([
+        expect.objectContaining({ status: "processing" }),
+        expect.objectContaining({ status: "insufficient_info", error_code: null }),
+      ]);
+      const mark = db.callsFor("application_screenings").find((c) =>
+        c.chain.some((m) => m.method === "update" && (m.args[0] as { status: string }).status === "insufficient_info"),
+      )!;
+      expect(mark.chain).toContainEqual({ method: "in", args: ["status", ["processing"]] });
       expect(archived()).toEqual([7]);
     });
 
@@ -448,7 +464,7 @@ describe("GET /api/worker/application-screening (MT-TEST-004)", () => {
       await run();
 
       expect(screenApplication).not.toHaveBeenCalled();
-      expect(updates()).toEqual([expect.objectContaining({ status: "insufficient_info" })]);
+      expect(updates().at(-1)).toEqual(expect.objectContaining({ status: "insufficient_info" }));
     });
 
     it("uses the person's own resume when the application has one", async () => {
@@ -557,8 +573,8 @@ describe("GET /api/worker/application-screening (MT-TEST-004)", () => {
   it("summarises failures in one admin email", async () => {
     queueMessages(message(7), message(8, 1, "e0000000-0000-4000-8000-000000000099"));
     screeningData(screeningRow({ attempts: MATCH_MAX_ATTEMPTS - 1 }));
-    db.queue("application_screenings", { data: null, error: null }); // message 7's "processing" update
-    db.queue("application_screenings", { data: null, error: null }); // message 7's "failed" update
+    db.queue("application_screenings", { data: [{ id: SCREENING_ID }], error: null }); // message 7's claim
+    db.queue("application_screenings", { data: [{ id: SCREENING_ID }], error: null }); // message 7's "failed" update
     screeningData();
     vi.mocked(screenApplication).mockResolvedValue({ ok: false, errorCode: "model_error" });
 
@@ -594,5 +610,265 @@ describe("GET /api/worker/application-screening (MT-TEST-004)", () => {
     db.queueRpc("read", { data: null, error: { message: "no queue" } }, "pgmq_public");
 
     expect((await run()).status).toBe(500);
+  });
+});
+
+describe("GET /api/worker/application-screening: claims (SMT-015, SM-REQ-001/002/003)", () => {
+  const writeTo = (status: string) =>
+    db
+      .callsFor("application_screenings")
+      .find((c) => c.chain.some((m) => m.method === "update" && (m.args[0] as { status?: string }).status === status));
+  const claimOf = () => (writeTo("processing")!.chain[0].args[0] as { claimed_at: string }).claimed_at;
+
+  it("claims from the state it read and sets claimed_at", async () => {
+    queueMessages(message(7));
+    screeningData(screeningRow({ status: "stale" }));
+
+    await run();
+
+    const claim = writeTo("processing")!;
+    expect(claim.chain[0].args[0]).toMatchObject({ status: "processing", attempts: 1, claimed_at: expect.any(String) });
+    expect(claim.chain).toContainEqual({ method: "in", args: ["status", ["stale"]] });
+  });
+
+  it.each([
+    ["completed", () => screeningData()],
+    ["queued after a model error", () => {
+      screeningData(screeningRow({ attempts: MATCH_MAX_ATTEMPTS - 2 }));
+      vi.mocked(screenApplication).mockResolvedValue({ ok: false, errorCode: "model_error" });
+    }],
+    ["failed on the last attempt", () => {
+      screeningData(screeningRow({ attempts: MATCH_MAX_ATTEMPTS - 1 }));
+      vi.mocked(screenApplication).mockResolvedValue({ ok: false, errorCode: "model_error" });
+    }],
+    ["skipped_quota", () => {
+      screeningData();
+      vi.mocked(consumeEntitlement).mockRejectedValue(entitlementError());
+    }],
+  ])("moves to %s from processing under its own claim only", async (_label, arrange) => {
+    queueMessages(message(7));
+    arrange();
+
+    await run();
+
+    const finals = db
+      .callsFor("application_screenings")
+      .filter((c) => c.chain.some((m) => m.method === "update" && (m.args[0] as { status?: string }).status !== "processing"));
+    expect(finals).toHaveLength(1);
+    expect(finals[0].chain).toContainEqual({ method: "in", args: ["status", ["processing"]] });
+    expect(finals[0].chain).toContainEqual({ method: "eq", args: ["claimed_at", claimOf()] });
+  });
+
+  it("leaves a row under a live claim alone: no model call, no charge, no write, message kept", async () => {
+    queueMessages(message(7));
+    screeningData(screeningRow({ status: "processing", attempts: 1, claimed_at: new Date(Date.now() - 10_000).toISOString() }));
+
+    const res = await run();
+
+    expect(await res.json()).toEqual({ processed: 0, failed: 0, skipped: 1 });
+    expect(screenApplication).not.toHaveBeenCalled();
+    expect(consumeEntitlement).not.toHaveBeenCalled();
+    expect(updates()).toHaveLength(0);
+    expect(archived()).toEqual([]);
+    expect(sendEmailForStatusUpdate).not.toHaveBeenCalled();
+  });
+
+  it("re-claims a dead claim, filtering on the old one", async () => {
+    const old = new Date(Date.now() - 121_000).toISOString();
+    queueMessages(message(7));
+    screeningData(screeningRow({ status: "processing", attempts: 1, claimed_at: old }));
+
+    const res = await run();
+
+    expect(await res.json()).toEqual({ processed: 1, failed: 0 });
+    expect(writeTo("processing")!.chain).toContainEqual({ method: "eq", args: ["claimed_at", old] });
+    expect(screenApplication).toHaveBeenCalledTimes(1);
+  });
+
+  it("does nothing when another run claims the row first", async () => {
+    queueMessages(message(7));
+    screeningData();
+    db.queue("application_screenings", { data: [], error: null }); // the claim matches nothing
+
+    const res = await run();
+
+    expect(await res.json()).toEqual({ processed: 0, failed: 0, skipped: 1 });
+    expect(screenApplication).not.toHaveBeenCalled();
+    expect(archived()).toEqual([]);
+  });
+
+  it("doesn't charge when the claim was lost during the model call (SM-TEST-009)", async () => {
+    queueMessages(message(7));
+    screeningData();
+    db.queue("application_screenings", { data: [{ id: SCREENING_ID }], error: null }); // the claim
+    db.queue("application_screenings", { data: null, error: null }); // the check before the charge: re-queued
+
+    const res = await run();
+
+    expect(await res.json()).toEqual({ processed: 1, failed: 0 });
+    expect(screenApplication).toHaveBeenCalledTimes(1);
+    expect(consumeEntitlement).not.toHaveBeenCalled();
+    expect(writeTo("completed")).toBeUndefined();
+    expect(db.callsFor("application_events")).toHaveLength(0);
+    expect(inviteAboveFitThreshold).not.toHaveBeenCalled();
+    expect(archived()).toEqual([7]);
+  });
+
+  it("writes no event or invite when the completed save is refused", async () => {
+    queueMessages(message(7));
+    screeningData();
+    db.queue("application_screenings", { data: [{ id: SCREENING_ID }], error: null }); // the claim
+    db.queue("application_screenings", { data: { id: SCREENING_ID }, error: null }); // still ours before the charge
+    db.queue("application_screenings", { data: [], error: null }); // re-queued between the charge and the save
+
+    const res = await run();
+
+    expect(await res.json()).toEqual({ processed: 1, failed: 0 });
+    // The charge is by application, so the newer run's is a duplicate.
+    expect(consumeEntitlement).toHaveBeenCalledTimes(1);
+    expect(db.callsFor("application_events")).toHaveLength(0);
+    expect(inviteAboveFitThreshold).not.toHaveBeenCalled();
+    expect(archived()).toEqual([7]);
+  });
+
+  it("keeps the give-up guard: failed only for a screening that isn't completed", async () => {
+    queueMessages(message(7, MATCH_MAX_ATTEMPTS));
+    db.queue("application_screenings", { data: null, error: { message: "db down" } });
+
+    await run();
+
+    expect(writeTo("failed")!.chain).toContainEqual({ method: "neq", args: ["status", "completed"] });
+    // Nor a row a newer run holds under a live claim (SM-REQ-003).
+    const or = writeTo("failed")!.chain.find((m) => m.method === "or");
+    expect(or?.args[0]).toMatch(/^status\.neq\.processing,claimed_at\.is\.null,claimed_at\.lte\."[^"]+",claimed_at\.eq\."[^"]+"$/);
+  });
+});
+
+/**
+ * One screening row held in memory, which applies a chain's filters the way
+ * PostgREST would (eq, neq, in, is), so concurrent runs interact through real
+ * state instead of scripted answers.
+ */
+function screeningTable(initial: Record<string, unknown>) {
+  const row: Record<string, unknown> = { ...initial };
+  const matches = (call: RecordedCall) =>
+    call.chain.every(({ method, args }) => {
+      const [column, value] = args as [string, unknown];
+      if (method === "eq") return row[column] === value;
+      if (method === "neq") return row[column] !== value;
+      if (method === "in") return (value as unknown[]).includes(row[column]);
+      if (method === "is") return row[column] === value;
+      return true;
+    });
+  const answer = (call: RecordedCall) => {
+    if (call.target !== "application_screenings") return { data: null, error: null };
+    const upsert = call.chain.find((m) => m.method === "upsert");
+    if (upsert) return { data: [], error: null }; // the row exists: nothing inserted
+    const update = call.chain.find((m) => m.method === "update");
+    if (update) {
+      if (!matches(call)) return { data: [], error: null };
+      Object.assign(row, update.args[0] as Record<string, unknown>);
+      return { data: [{ id: row.id, application_id: row.application_id }], error: null };
+    }
+    return { data: matches(call) ? { ...row } : null, error: null };
+  };
+  return { row, answer };
+}
+
+describe("GET /api/worker/application-screening: a re-queue during a run (SM-TEST-009)", () => {
+  /** What one run reads besides the screening: the application, the job and the candidate. */
+  function runData() {
+    db.queue("applications", { data: APPLICATION, error: null });
+    db.queue("job_postings", { data: JOB_POST, error: null });
+    db.queue("user_info", { data: CANDIDATE_PROFILE, error: null });
+    db.queue("resumes", { data: { content: RESUME_CONTENT }, error: null });
+  }
+
+  it("refuses run A's result and charges nothing for it; run B screens and saves", async () => {
+    const { requeueScreenings } = await import("@/helpers/matching/queue-screenings");
+    const table = screeningTable({ ...screeningRow(), job_post_id: JOB_POST.id, requested_by: null, claimed_at: null });
+    db = createSupabaseMock({ fallback: table.answer });
+    vi.mocked(createServiceRoleClient).mockReturnValue(db.client);
+
+    // Run A: a resume is attached while the model call is in flight.
+    queueMessages(message(7));
+    runData();
+    vi.mocked(screenApplication).mockImplementationOnce(async () => {
+      await requeueScreenings(db.client, {
+        companyId: COMPANY_A.id,
+        applications: [{ id: APPLICATION.id, job_post_id: JOB_POST.id }],
+        requestedBy: "u-attach",
+      });
+      return { ok: true, result: screeningResultOf({ fit_score: 40 }) };
+    });
+
+    await run();
+
+    expect(table.row).toMatchObject({ status: "queued", claimed_at: null });
+    expect(table.row.fit_score).toBeUndefined();
+    expect(consumeEntitlement).not.toHaveBeenCalled();
+    expect(db.callsFor("application_events")).toHaveLength(0);
+    expect(archived()).toEqual([7]);
+
+    // Run B: the re-queue's message.
+    queueMessages(message(8));
+    runData();
+    vi.mocked(screenApplication).mockResolvedValueOnce({ ok: true, result: screeningResultOf({ fit_score: 90 }) });
+
+    await run();
+
+    expect(table.row).toMatchObject({ status: "completed", fit_score: 90 });
+    expect(consumeEntitlement).toHaveBeenCalledTimes(1);
+    expect(archived()).toEqual([7, 8]);
+  });
+});
+
+describe("GET /api/worker/application-screening: a job edit during a run (SM-TEST-006)", () => {
+  const EDITED_JOB = { ...JOB_POST, description: `${JOB_POST.description} Now also needs Kubernetes.` };
+
+  function runData(job: typeof JOB_POST) {
+    db.queue("applications", { data: APPLICATION, error: null });
+    db.queue("job_postings", { data: job, error: null });
+    db.queue("user_info", { data: CANDIDATE_PROFILE, error: null });
+    db.queue("resumes", { data: { content: RESUME_CONTENT }, error: null });
+  }
+
+  it("refuses run A's result against the old job; run B screens the edited job", async () => {
+    const { markJobResultsStale } = await import("@/helpers/matching/mark-stale");
+    const table = screeningTable({ ...screeningRow(), job_post_id: JOB_POST.id, requested_by: null, claimed_at: null });
+    db = createSupabaseMock({ fallback: table.answer });
+    vi.mocked(createServiceRoleClient).mockReturnValue(db.client);
+
+    // Run A: the job is edited while the model call is in flight.
+    queueMessages(message(7));
+    runData(JOB_POST);
+    vi.mocked(screenApplication).mockImplementationOnce(async () => {
+      await markJobResultsStale(db.client, JOB_POST.id);
+      return { ok: true, result: screeningResultOf({ fit_score: 40 }) };
+    });
+
+    await run();
+
+    expect(table.row).toMatchObject({ status: "queued", claimed_at: null });
+    expect(table.row.fit_score).toBeUndefined();
+    expect(consumeEntitlement).not.toHaveBeenCalled();
+    const [send] = db.callsFor("send_batch");
+    expect(send.chain[0].args[1]).toMatchObject({ messages: [{ application_id: APPLICATION.id }] });
+    expect(archived()).toEqual([7]);
+
+    // Run B: the stale pass's message, against the edited job.
+    queueMessages(message(8));
+    runData(EDITED_JOB);
+    vi.mocked(screenApplication).mockResolvedValueOnce({ ok: true, result: screeningResultOf({ fit_score: 90 }) });
+
+    await run();
+
+    expect(table.row).toMatchObject({
+      status: "completed",
+      fit_score: 90,
+      job_snapshot_hash: jobSnapshotHash(EDITED_JOB),
+    });
+    expect(consumeEntitlement).toHaveBeenCalledTimes(1);
+    expect(archived()).toEqual([7, 8]);
   });
 });

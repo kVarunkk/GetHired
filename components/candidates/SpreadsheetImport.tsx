@@ -1,20 +1,18 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useReducer } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Download, FileSpreadsheet, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { checkImportEmailsAction } from "@/app/actions/candidates/check-import-emails";
 import { confirmSpreadsheetImportAction } from "@/app/actions/candidates/confirm-spreadsheet-import";
-import { getImportMappingAction } from "@/app/actions/candidates/import-mapping";
 import { startImportAction } from "@/app/actions/candidates/start-import";
 import ColumnMapper from "@/components/candidates/ColumnMapper";
 import ImportDestination, {
   destinationReady,
   destinationValue,
   initialDestination,
-  type Destination,
 } from "@/components/candidates/ImportDestination";
 import ImportPreviewGrid, { type GridField } from "@/components/candidates/ImportPreviewGrid";
 import LawfulBasisCheck from "@/components/candidates/LawfulBasisCheck";
@@ -26,16 +24,7 @@ import { CANDIDATE_FIELD_KEYS } from "@/helpers/candidates/candidate-schema";
 import type { ImportCounts } from "@/helpers/candidates/copy";
 import type { ImportPage } from "@/helpers/candidates/import-page";
 import { templateCsv, TEMPLATE_FILE_NAME } from "@/helpers/candidates/import-template";
-import {
-  applyMapping,
-  guessMapping,
-  headerHash,
-  mappingProblem,
-  sanitizeMapping,
-  type ColumnMapping,
-  type MappedRow,
-} from "@/helpers/candidates/map-columns";
-import { parseSheet, SheetError, type ParsedSheet } from "@/helpers/candidates/parse-sheet";
+import { applyMapping, mappingProblem } from "@/helpers/candidates/map-columns";
 import { CANDIDATES_LIST_PATH } from "@/helpers/candidates/paths";
 import {
   IMPORTED_STATUSES,
@@ -44,17 +33,12 @@ import {
   type DuplicateAction,
   type EmailMatches,
 } from "@/helpers/candidates/preview-rows";
-import { matchStages, stageMapOf, stageValues, type StageChoices } from "@/helpers/candidates/stage-map";
-
-type Step = "upload" | "map" | "review" | "done";
-
-type Result = {
-  counts: ImportCounts;
-  jobId: string | null;
-  list: { name: string; slug: string } | null;
-};
+import { matchStages, stageMapOf, stageValues } from "@/helpers/candidates/stage-map";
+import { loadSheet, sheetErrorMessage } from "./load-sheet";
+import { initialSpreadsheetImport, spreadsheetImportReducer } from "./spreadsheet-import-machine";
 
 const NO_MATCHES: EmailMatches = { existing: [], known: [] };
+const NO_ROWS: never[] = [];
 
 function downloadTemplate() {
   const url = URL.createObjectURL(new Blob([templateCsv()], { type: "text/csv;charset=utf-8" }));
@@ -93,25 +77,18 @@ export function resultLines(counts: ImportCounts): string[] {
  */
 export default function SpreadsheetImport({ page }: { page: ImportPage }) {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("upload");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [file, setFile] = useState<File | null>(null);
-  const [sheet, setSheet] = useState<ParsedSheet | null>(null);
-  const [hash, setHash] = useState<string | null>(null);
-  const [columns, setColumns] = useState<ColumnMapping>([]);
-  const [savedStageMap, setSavedStageMap] = useState<Record<string, string>>({});
-
-  const [rows, setRows] = useState<MappedRow[]>([]);
-  const [matches, setMatches] = useState<EmailMatches>(NO_MATCHES);
-  const [destination, setDestination] = useState<Destination>(() => initialDestination(page));
-  const [stageChoices, setStageChoices] = useState<StageChoices>({});
-  const [overrides, setOverrides] = useState<Record<number, DuplicateAction>>({});
-  const [attested, setAttested] = useState(false);
-  const [basisNote, setBasisNote] = useState("");
-  const [batchId, setBatchId] = useState<string | null>(null);
-  const [result, setResult] = useState<Result | null>(null);
+  // SM-REQ-011: the flow lives in one reducer (spreadsheet-import-machine.ts);
+  // each step carries only its own data.
+  const [state, dispatch] = useReducer(spreadsheetImportReducer, page, (p: ImportPage) =>
+    initialSpreadsheetImport(initialDestination(p)),
+  );
+  const { busy } = state;
+  const review = state.step === "review" ? state : null;
+  const loaded = state.step === "map" || state.step === "review" ? state : null;
+  const columns = loaded?.columns ?? NO_ROWS;
+  const rows = review?.rows ?? NO_ROWS;
+  const matches = review?.matches ?? NO_MATCHES;
+  const destination = loaded?.settings.destination ?? state.blankDestination;
 
   const canUseJob = page.jobs.length > 0 || !!page.fixedJob;
   const withJob = destination.jobId !== null;
@@ -127,91 +104,76 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
   const importable = preview.rows.filter((r) => IMPORTED_STATUSES.includes(r.status)).length;
 
   const read = async (picked: File, sheetName?: string) => {
-    setBusy(true);
-    setError(null);
+    dispatch({ type: "busy" });
     try {
-      const parsed = await parseSheet(picked, { sheet: sheetName });
-      const nextHash = await headerHash(parsed.headers);
-      const saved = await getImportMappingAction({ headerHash: nextHash }).catch(() => null);
-      const savedMapping = saved?.ok ? saved.mapping : null;
-      let mapping = savedMapping ? sanitizeMapping(parsed.headers, savedMapping.columns) : guessMapping(parsed.headers);
-      if (!canUseJob) mapping = mapping.map((t) => (t === "stage" ? "ignore" : t));
-      setFile(picked);
-      setSheet(parsed);
-      setHash(nextHash);
-      setColumns(mapping);
-      setSavedStageMap(savedMapping?.stageMap ?? {});
-      setBatchId(null);
-      setStep("map");
+      dispatch({ type: "loaded", sheet: await loadSheet(picked, { sheetName, allowStage: canUseJob }) });
     } catch (err) {
-      setError(err instanceof SheetError ? err.message : "Couldn't read this file. Try again.");
-    } finally {
-      setBusy(false);
+      dispatch({ type: "failed", error: sheetErrorMessage(err) });
     }
   };
 
+  const fail = (message: string) => {
+    toast.error(message);
+    dispatch({ type: "failed" });
+  };
+
   const toPreview = async () => {
-    if (!sheet) return;
-    setBusy(true);
+    if (state.step !== "map") return;
+    const { sheet, savedStageMap } = state;
+    dispatch({ type: "busy" });
     try {
-      const mapped = applyMapping(sheet.rows, sheet.headers, columns);
+      const mapped = applyMapping(sheet.rows, sheet.headers, state.columns);
       const emails = mapped.flatMap((r) => (r.email ? [r.email] : []));
       const checked = await checkImportEmailsAction({ emails });
-      if (!checked.ok) {
-        toast.error(checked.error);
-        return;
-      }
-      setRows(mapped);
-      setMatches({ existing: checked.existing, known: checked.known });
-      setOverrides({});
-      setStageChoices(matchStages(stageValues(mapped), page.stages, savedStageMap));
-      setStep("review");
+      if (!checked.ok) return fail(checked.error);
+      dispatch({
+        type: "previewed",
+        rows: mapped,
+        matches: { existing: checked.existing, known: checked.known },
+        stageChoices: matchStages(stageValues(mapped), page.stages, savedStageMap),
+      });
     } catch {
-      toast.error("Couldn't check the emails. Try again.");
-    } finally {
-      setBusy(false);
+      fail("Couldn't check the emails. Try again.");
     }
   };
 
   const edit = useCallback((index: number, field: GridField, value: string) => {
-    setRows((current) => current.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+    dispatch({ type: "edit", index, field, value });
     // A new email may already be someone's (BI-REQ-014/019). Extra: the confirm checks again.
     if (field === "email" && value.includes("@")) {
       checkImportEmailsAction({ emails: [value] })
         .then((checked) => {
           if (!checked.ok) return;
-          setMatches((m) => ({ existing: [...m.existing, ...checked.existing], known: [...m.known, ...checked.known] }));
+          dispatch({ type: "addMatches", matches: { existing: checked.existing, known: checked.known } });
         })
         .catch(() => {});
     }
   }, []);
   const override = useCallback(
-    (index: number, action: DuplicateAction) => setOverrides((o) => ({ ...o, [index]: action })),
+    (index: number, action: DuplicateAction) => dispatch({ type: "override", index, action }),
     [],
   );
 
   const listReady = destinationReady(destination);
   const confirm = async () => {
-    if (!file || !hash) return;
-    setBusy(true);
+    if (state.step !== "review") return;
+    const { file, hash, settings, stageChoices, overrides } = state;
+    dispatch({ type: "busy" });
     try {
-      let id = batchId;
+      let id = settings.batchId;
       if (!id) {
         const started = await startImportAction({ fileName: file.name.slice(0, 255) });
-        if (!started.ok) {
-          toast.error(started.error);
-          return;
-        }
+        if (!started.ok) return fail(started.error);
         id = started.batchId;
-        setBatchId(id);
+        dispatch({ type: "batchStarted", batchId: id });
       }
-      const target = destinationValue(page, destination);
+      const target = destinationValue(page, settings.destination);
       const jobId = target.jobPostId;
       const stageMap = jobId && values.length > 0 ? stageMapOf(stageChoices) : undefined;
       const confirmed = await confirmSpreadsheetImportAction({
         batchId: id,
-        rows: rowsToConfirm(preview, { overrides, defaultAction: destination.duplicateAction }),
-        duplicateAction: destination.duplicateAction,
+        rows: rowsToConfirm(preview, { overrides, defaultAction: settings.destination.duplicateAction }),
+        duplicateAction: settings.destination.duplicateAction,
         ...(jobId
           ? {
               jobPostId: jobId,
@@ -225,40 +187,25 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
           : target.talentListId
             ? { talentListId: target.talentListId }
             : {}),
-        attested,
-        ...(basisNote.trim() ? { lawfulBasisNote: basisNote.trim() } : {}),
-        mapping: { headerHash: hash, columns },
+        attested: settings.attested,
+        ...(settings.basisNote.trim() ? { lawfulBasisNote: settings.basisNote.trim() } : {}),
+        mapping: { headerHash: hash, columns: state.columns },
       });
-      if (!confirmed.ok) {
-        toast.error(confirmed.error);
-        return;
-      }
+      if (!confirmed.ok) return fail(confirmed.error);
       const list =
         confirmed.newList ??
         (target.talentListId ? (page.lists?.find((l) => l.id === target.talentListId) ?? null) : null);
-      setResult({ counts: confirmed.counts, jobId, list });
-      setStep("done");
+      dispatch({ type: "confirmed", result: { counts: confirmed.counts, jobId, list } });
       router.refresh();
     } catch {
-      toast.error("Couldn't finish the import. Try again.");
-    } finally {
-      setBusy(false);
+      fail("Couldn't finish the import. Try again.");
     }
   };
 
-  const reset = () => {
-    setStep("upload");
-    setFile(null);
-    setSheet(null);
-    setRows([]);
-    setResult(null);
-    setAttested(false);
-    setBasisNote("");
-    setBatchId(null);
-    setDestination(initialDestination(page));
-  };
+  const reset = () => dispatch({ type: "reset" });
 
-  if (step === "done" && result) {
+  if (state.step === "done") {
+    const { result } = state;
     const lines = resultLines(result.counts);
     return (
       <section className="flex flex-col gap-4 rounded-xl border p-6" aria-label="Import result">
@@ -290,7 +237,8 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
     );
   }
 
-  if (step === "upload" || !sheet) {
+  if (state.step === "upload") {
+    const { error } = state;
     return (
       <section className="flex flex-col gap-4" aria-label="Upload">
         <div className="flex flex-col gap-3 rounded-xl border border-dashed p-6">
@@ -336,7 +284,8 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
     );
   }
 
-  if (step === "map") {
+  if (state.step === "map") {
+    const { file, sheet, error } = state;
     const problem = mappingProblem(columns);
     return (
       <div className="flex flex-col gap-6">
@@ -345,14 +294,14 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
             <div>
               <h2 className="text-lg font-semibold">Match the columns</h2>
               <p className="text-sm text-muted-foreground">
-                {file?.name}: {plural(sheet.rows.length, "row", "rows")}. Columns you don&apos;t need can be ignored, or
+                {file.name}: {plural(sheet.rows.length, "row", "rows")}. Columns you don&apos;t need can be ignored, or
                 kept as tags or notes.
               </p>
             </div>
             {sheet.sheets && (
               <div className="flex flex-col gap-2">
                 <Label htmlFor="import-sheet">Sheet</Label>
-                <Select value={sheet.sheet} onValueChange={(name) => file && void read(file, name)} disabled={busy}>
+                <Select value={sheet.sheet} onValueChange={(name) => void read(file, name)} disabled={busy}>
                   <SelectTrigger id="import-sheet" aria-label="Sheet" className="w-48">
                     <SelectValue />
                   </SelectTrigger>
@@ -371,11 +320,16 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
             headers={sheet.headers}
             samples={sheet.rows.slice(0, 3)}
             columns={columns}
-            onChange={setColumns}
+            onChange={(next) => dispatch({ type: "setColumns", columns: next })}
             allowStage={canUseJob}
             disabled={busy}
           />
           {problem && <p className="text-sm text-destructive">{problem}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
         </section>
         <StickyActionBar className="justify-end">
           <Button type="button" variant="outline" disabled={busy} onClick={reset}>
@@ -390,6 +344,7 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
     );
   }
 
+  const { stageChoices, overrides, settings: decided } = state;
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-4" aria-label="Destination">
@@ -397,10 +352,10 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
         <ImportDestination
           page={page}
           value={destination}
-          onChange={setDestination}
+          onChange={(next) => dispatch({ type: "setDestination", destination: next })}
           stageValues={values}
           stageChoices={stageChoices}
-          onStageChoicesChange={setStageChoices}
+          onStageChoicesChange={(next) => dispatch({ type: "setStageChoices", stageChoices: next })}
           jobPreview={preview.job}
           disabled={busy}
         />
@@ -428,22 +383,22 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
 
       <section className="border-t pt-6" aria-label="Lawful basis">
         <LawfulBasisCheck
-          attested={attested}
-          onAttestedChange={setAttested}
-          note={basisNote}
-          onNoteChange={setBasisNote}
+          attested={decided.attested}
+          onAttestedChange={(attested) => dispatch({ type: "setAttested", attested })}
+          note={decided.basisNote}
+          onNoteChange={(note) => dispatch({ type: "setBasisNote", note })}
           disabled={busy}
         />
       </section>
 
       <StickyActionBar className="justify-end">
-        <Button type="button" variant="outline" disabled={busy} onClick={() => setStep("map")}>
+        <Button type="button" variant="outline" disabled={busy} onClick={() => dispatch({ type: "back" })}>
           Back to columns
         </Button>
         <Button
           type="button"
           variant="brand"
-          disabled={busy || !attested || importable === 0 || !listReady}
+          disabled={busy || !decided.attested || importable === 0 || !listReady}
           onClick={() => void confirm()}
         >
           {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

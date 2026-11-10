@@ -141,6 +141,23 @@ export interface INavItemWithActive extends INavItem {
   active: boolean;
 }
 
+/**
+ * `applications.status`: the only status the applicant sees (PL-REQ-002).
+ *
+ * - External rows (no `job_post_id`): set by the applicant, and that's all
+ *   there is.
+ * - Platform rows: a projection of `stage_id`, kept by the trigger
+ *   `applications_sync_status` (20261015190000_recruiter_pipeline.sql).
+ *   A stage change sets `status` from the stage's kind
+ *   (`application_status_for_kind`: applied → submitted; screening,
+ *   interview, offer → reviewed; hired → selected; rejected → rejected;
+ *   on_hold → stand_by). A write of `status` alone moves the row to the
+ *   first active stage of that kind, which resets a custom stage, so company
+ *   code moves `stage_id` instead.
+ *
+ * The projection is lossy, so a company reader that needs a platform
+ * application's real position reads the stage, not this (SM-REQ-009).
+ */
 export enum TApplicationStatus {
   SUBMITTED = "submitted",
   REVIEWED = "reviewed",
@@ -154,12 +171,6 @@ export enum TPaymentStatus {
   FAILED = "failed",
   PENDING = "pending",
   CANCELLED = "cancelled",
-}
-
-export enum TResumeReviewStatus {
-  DRAFT = "draft",
-  COMPLETED = "completed",
-  FAILED = "failed",
 }
 
 export enum TAICredits {

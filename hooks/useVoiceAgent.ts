@@ -8,7 +8,16 @@ import {
 } from "@/app/actions/interview-session-lock";
 import { finalizeInterviewSessionAction } from "@/app/actions/finalize-interview-session";
 import { savePracticeTurnsAction } from "@/app/actions/interviews/save-practice-turns";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import {
+  VOICE_BUSY_MESSAGE,
+  initialVoiceState,
+  voiceAgentReducer,
+  voiceErrorMessage,
+} from "./voice-agent-machine";
+
+export { VOICE_BUSY_MESSAGE };
+export type { Status } from "./voice-agent-machine";
 
 const SAMPLE_RATE = 16000;
 
@@ -19,8 +28,6 @@ export type Line = {
   streaming?: boolean;
   interrupted?: boolean;
 };
-
-export type Status = "idle" | "connecting" | "live" | "error" | "stopped";
 
 type Turn = {
   turn_id: string;
@@ -40,7 +47,6 @@ type Options = {
   | { mode: "screening"; applicationInterviewId: string }
 );
 
-export const VOICE_BUSY_MESSAGE = "Our interview server is busy. Please try again in a minute.";
 const VOICE_BUSY_CLOSE_CODE = 1013;
 
 export function useVoiceAgent(interviewId: string, opts: Options = {}) {
@@ -48,9 +54,11 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
   const screening = opts.mode === "screening";
   const applicationInterviewId = opts.mode === "screening" ? opts.applicationInterviewId : null;
 
-  const [status, setStatus] = useState<Status>("idle");
+  // SM-REQ-011: the flow state lives in one reducer (voice-agent-machine.ts).
+  const [state, dispatch] = useReducer(voiceAgentReducer, initialVoiceState);
+  const { status } = state;
+  const errorMessage = voiceErrorMessage(state);
   const [lines, setLines] = useState<Line[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -73,7 +81,6 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
   const sessionIdRef = useRef<string | null>(null);
   const interviewSessionIdRef = useRef<string | null>(null);
   const finalizingRef = useRef(false);
-  const sessionLockLostRef = useRef(false);
   const [analysisSession, setAnalysisSession] = useState<{
     sessionId: string;
     status: "completed" | "ineligible";
@@ -295,14 +302,12 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
 
     const stale = () => runIdRef.current !== runId;
 
-    setStatus("connecting");
-    setErrorMessage(null);
+    dispatch({ type: "start" });
     setLines([]);
     setAnalysisSession(null);
     turnsRef.current = [];
     interviewSessionIdRef.current = null;
     finalizingRef.current = false;
-    sessionLockLostRef.current = false;
 
     try {
       /*
@@ -474,26 +479,26 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
 
           console.log("Mic capture graph initialized.");
 
-          setStatus("live");
+          dispatch({ type: "ready" });
         } catch (err) {
           reportClientError(err);
 
           if (!stale()) {
-            setErrorMessage(
-              err instanceof Error
-                ? err.message
-                : "Failed to start the interview.",
-            );
             cleanup();
-            setStatus("error");
+            dispatch({
+              type: "fail",
+              message:
+                err instanceof Error
+                  ? err.message
+                  : "Failed to start the interview.",
+            });
           }
         }
       };
 
       ws.onerror = () => {
         if (!stale()) {
-          setErrorMessage("The voice connection failed.");
-          setStatus("error");
+          dispatch({ type: "fail", message: "The voice connection failed." });
         }
       };
 
@@ -509,8 +514,7 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
         const finish = async () => {
           await finalizeCurrentSession();
           cleanup();
-          if (busy) setErrorMessage(VOICE_BUSY_MESSAGE);
-          setStatus(sessionLockLostRef.current || busy ? "error" : "stopped");
+          dispatch({ type: "end", busy });
         };
 
         // Ensure we wait for all audio chunks to finish playing before tearing down
@@ -652,11 +656,12 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
       reportClientError(err);
 
       if (!stale()) {
-        setErrorMessage(
-          err instanceof Error ? err.message : "Failed to start the interview.",
-        );
         cleanup();
-        setStatus("error");
+        dispatch({
+          type: "fail",
+          message:
+            err instanceof Error ? err.message : "Failed to start the interview.",
+        });
       }
     } finally {
       if (!stale()) {
@@ -674,14 +679,15 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
     saveTurns,
   ]);
 
+  // Heartbeat while live, until the lock is lost.
+  const heartbeating = state.status === "live" && !state.lockLost;
+
   useEffect(() => {
-    if (status !== "live") return;
+    if (!heartbeating) return;
 
     let active = true;
     let heartbeatInFlight = false;
     const heartbeat = window.setInterval(async () => {
-      if (sessionLockLostRef.current) return;
-
       const sessionId = sessionIdRef.current;
       if (!sessionId || heartbeatInFlight) return;
 
@@ -694,10 +700,10 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
         if (!active || sessionIdRef.current !== sessionId) return;
 
         if (result.status === "lost") {
-          sessionLockLostRef.current = true;
-          setErrorMessage(
-            result.error ?? "The interview session lock was lost.",
-          );
+          dispatch({
+            type: "lockLost",
+            message: result.error ?? "The interview session lock was lost.",
+          });
         } else if (result.status === "error") {
           reportClientError("[INTERVIEW_SESSION_HEARTBEAT_RETRY]:", result.error);
         }
@@ -714,7 +720,7 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
       active = false;
       window.clearInterval(heartbeat);
     };
-  }, [status, interviewId, cleanup]);
+  }, [heartbeating, interviewId]);
 
   const stop = useCallback(() => {
     void (async () => {
@@ -732,7 +738,7 @@ export function useVoiceAgent(interviewId: string, opts: Options = {}) {
 
       await finalizeCurrentSession();
       cleanup();
-      setStatus(sessionLockLostRef.current ? "error" : "stopped");
+      dispatch({ type: "end" });
     })();
   }, [cleanup, finalizeCurrentSession]);
 

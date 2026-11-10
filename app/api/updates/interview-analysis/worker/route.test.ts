@@ -49,10 +49,23 @@ const updatesOf = () =>
     .callsFor("interview_analyses")
     .filter((c) => has(c, "update"))
     .map((c) => c.chain.find((m) => m.method === "update")!.args[0] as Record<string, unknown>);
+// The guarded writes (SM-REQ-001/003) report whether a row moved: by default
+// the claim and the save both apply. The notification write has no select.
+function queueWrites({ claim = true, save = true }: { claim?: boolean; save?: boolean } = {}) {
+  for (const applies of [claim, save]) {
+    supabase.queue("interview_analyses", (call) =>
+      has(call, "select") ? { data: applies ? [{ id: ANALYSIS_ID }] : [], error: null } : { data: null, error: null },
+    );
+  }
+}
 const deletes = () =>
   supabase.calls.filter((c) => c.kind === "rpc" && c.schema === "pgmq_public" && c.target === "delete");
 
-function queueRow(perspective: "candidate" | "company", overrides: Record<string, unknown> = {}) {
+function queueRow(
+  perspective: "candidate" | "company",
+  overrides: Record<string, unknown> = {},
+  writes: { claim?: boolean; save?: boolean } = {},
+) {
   supabase.queueRpc("read", { data: [{ msg_id: 9, read_ct: 1, message: { analysisId: ANALYSIS_ID } }], error: null }, "pgmq_public");
   supabase.queue("interview_analyses", {
     data: {
@@ -66,6 +79,7 @@ function queueRow(perspective: "candidate" | "company", overrides: Record<string
     },
     error: null,
   });
+  queueWrites(writes);
   supabase.queue("interview_sessions", {
     data: { id: SESSION_ID, interview_id: INTERVIEW_ID, turns: [{ assistant: "Tell me about a bug.", user: "A memory leak." }] },
     error: null,
@@ -162,6 +176,34 @@ describe("GET /api/updates/interview-analysis/worker", () => {
       expect(generateInterviewAnalysis).not.toHaveBeenCalled();
       expect(deletes()).toHaveLength(0);
       spy.mockRestore();
+    });
+  });
+
+  describe("claims (SMT-013)", () => {
+    it("doesn't email the candidate when the run lost its claim before saving", async () => {
+      queueRow("candidate", {}, { save: false });
+      supabase.queue("user_info", { data: { email: "ada@example.com", full_name: "Ada" }, error: null });
+      supabase.queue("all_jobs", { data: { job_name: "Engineer", description: "Build things." }, error: null });
+      vi.mocked(generateInterviewAnalysis).mockResolvedValue(CANDIDATE_REPORT);
+
+      const res = await GET();
+
+      expect(await res.json()).toMatchObject({ completed: 0, skipped: 1 });
+      expect(sendEmail).not.toHaveBeenCalled();
+      expect(updatesOf()).not.toContainEqual(expect.objectContaining({ notification_sent_at: expect.any(String) }));
+      expect(deletes()).toHaveLength(1);
+    });
+
+    it("skips a practice row under a live claim without a model call", async () => {
+      queueRow("candidate", { status: "processing", claimed_at: new Date().toISOString() });
+      supabase.queue("user_info", { data: { email: "ada@example.com", full_name: "Ada" }, error: null });
+      supabase.queue("all_jobs", { data: { job_name: "Engineer", description: "Build things." }, error: null });
+
+      const res = await GET();
+
+      expect(await res.json()).toMatchObject({ completed: 0, skipped: 1 });
+      expect(generateInterviewAnalysis).not.toHaveBeenCalled();
+      expect(deletes()).toHaveLength(0);
     });
   });
 });

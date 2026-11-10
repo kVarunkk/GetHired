@@ -98,10 +98,8 @@ describe("sendSignupEmail: invite mode (TM-TEST-006, difference 5)", () => {
     const [lookup] = service.callsFor("company_invites");
     expect(lookup.chain).toContainEqual({ method: "eq", args: ["token_hash", INVITE.row.token_hash] });
     expect(JSON.stringify(lookup.chain)).not.toContain(INVITE.token);
-    for (const filter of ["accepted_at", "revoked_at"]) {
-      expect(lookup.chain).toContainEqual({ method: "is", args: [filter, null] });
-    }
-    expect(lookup.chain.some((m) => m.method === "gt" && m.args[0] === "expires_at")).toBe(true);
+    // Usable: not accepted, revoked or expired, through the named state (SM-REQ-010).
+    expect(lookup.chain).toContainEqual({ method: "eq", args: ["company_invite_state", "pending"] });
   });
 
   it("refuses without an open invite, before creating a user", async () => {

@@ -44,14 +44,55 @@ function seed(db: SupabaseMock) {
   db.queue("job_postings", { data: { title: JOB_POST.title }, error: null });
 }
 
+/** The job's matching_status as stored, for the guarded completed write. */
+let jobStatus = "progress";
+
+/** Each row's explanation_status as stored, for the guarded writes. */
+let statusOf = new Map<string, string>();
+
 /** Rows currently stored for the job, as the digest reads them before writing. */
 function existingRows(rows: { user_id: string; match_score: number | null; explanation_status: string }[]) {
+  statusOf = new Map(rows.map((row) => [row.user_id, row.explanation_status]));
   admin.queue("job_relevant_profiles", { data: rows, error: null });
 }
 
 const relevanceCalls = (db: SupabaseMock) => db.callsFor("job_relevant_profiles");
 const has = (call: RecordedCall, method: string) => call.chain.some((m) => m.method === method);
 const argsOf = (call: RecordedCall, method: string) => call.chain.find((m) => m.method === method)?.args;
+const inArgs = (call: RecordedCall, column: string) =>
+  (call.chain.find((m) => m.method === "in" && m.args[0] === column)?.args[1] ?? []) as string[];
+
+// The writes answer like the database (SMT-021): the upsert adds new rows as
+// `none` and never changes a status; a guarded move applies its from-filter.
+function answerRelevanceWrite(call: RecordedCall) {
+  if (call.target === "job_postings" && has(call, "update")) {
+    const from = inArgs(call, "matching_status");
+    return { data: from.includes(jobStatus) ? [{ id: JOB_ID }] : [], error: null };
+  }
+  if (call.target !== "job_relevant_profiles") return { data: null, error: null };
+  const upsert = argsOf(call, "upsert");
+  if (upsert) {
+    for (const row of upsert[0] as { user_id: string }[]) {
+      if (!statusOf.has(row.user_id)) statusOf.set(row.user_id, "none");
+    }
+    return { data: null, error: null };
+  }
+  const update = argsOf(call, "update");
+  if (update && has(call, "select")) {
+    const to = (update[0] as { explanation_status: string }).explanation_status;
+    const from = inArgs(call, "explanation_status");
+    const moved = inArgs(call, "user_id").filter((id) => from.includes(statusOf.get(id) ?? ""));
+    for (const id of moved) statusOf.set(id, to);
+    return { data: moved.map((user_id) => ({ user_id })), error: null };
+  }
+  return { data: null, error: null };
+}
+
+/** The guarded moves to one explanation_status. */
+const movesTo = (status: string) =>
+  relevanceCalls(admin).filter(
+    (c) => has(c, "update") && (argsOf(c, "update")![0] as Record<string, unknown>).explanation_status === status,
+  );
 
 /** The rows written for the job, whether by insert or upsert. */
 function writtenRows(db: SupabaseMock) {
@@ -63,7 +104,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("fetch", fetchMock);
   session = createSupabaseMock({ user: COMPANY_A.user });
-  admin = createSupabaseMock();
+  statusOf = new Map();
+  jobStatus = "progress";
+  admin = createSupabaseMock({ fallback: answerRelevanceWrite });
   vi.mocked(createClient).mockResolvedValue(session.client);
   vi.mocked(createServiceRoleClient).mockReturnValue(admin.client);
 });
@@ -87,16 +130,37 @@ describe("processJobPostingRelevance (characterisation)", () => {
     expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ toEmail: COMPANY_A.info.email }));
   });
 
-  it("marks the job failed and emails the admin when the digest fetch fails", async () => {
+  it("returns the failure without writing failed or emailing: the worker owns both (SM-REQ-013)", async () => {
     seed(admin);
     fetchMock.mockResolvedValue(new Response("{}", { status: 500 }));
 
     const result = await processJobPostingRelevance(COMPANY_A.user.id, JOB_ID, true);
 
-    expect(result).toMatchObject({ success: false });
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining("500") });
+    expect(admin.callsFor("job_postings").filter((c) => has(c, "update"))).toHaveLength(0);
+    expect(sendEmailForStatusUpdate).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("moves the job to completed from progress only", async () => {
+    seed(admin);
+    digestResponds(["u1"]);
+
+    await processJobPostingRelevance(COMPANY_A.user.id, JOB_ID, true);
+
     const jobUpdate = admin.callsFor("job_postings").find((c) => has(c, "update"))!;
-    expect(argsOf(jobUpdate, "update")![0]).toMatchObject({ matching_status: "failed" });
-    expect(sendEmailForStatusUpdate).toHaveBeenCalledWith(expect.stringContaining(JOB_ID));
+    expect(jobUpdate.chain).toContainEqual({ method: "eq", args: ["id", JOB_ID] });
+    expect(jobUpdate.chain).toContainEqual({ method: "in", args: ["matching_status", ["progress"]] });
+  });
+
+  it("doesn't email the company when the job had left progress", async () => {
+    seed(admin);
+    digestResponds(["u1"]);
+    jobStatus = "failed";
+
+    const result = await processJobPostingRelevance(COMPANY_A.user.id, JOB_ID, true);
+
+    expect(result).toEqual({ success: true });
     expect(sendEmail).not.toHaveBeenCalled();
   });
 });
@@ -185,8 +249,19 @@ describe("processJobPostingRelevance scores (MT-REQ-001)", () => {
 
     await processJobPostingRelevance(COMPANY_A.user.id, JOB_ID, true);
 
-    const status = Object.fromEntries(writtenRows(admin).map((r) => [r.user_id, r.explanation_status]));
-    expect(status).toEqual({ changed: "stale", same: "completed", queued: "queued", new: "none" });
+    // The upsert never writes a status (SM-REQ-001): a worker may be moving it.
+    for (const row of writtenRows(admin)) expect(row).not.toHaveProperty("explanation_status");
+    const [stale] = movesTo("stale");
+    expect(inArgs(stale, "user_id")).toEqual(["changed"]);
+    expect(inArgs(stale, "explanation_status")).toEqual(["completed"]);
+    expect(stale.chain).toContainEqual({ method: "eq", args: ["job_posting_id", JOB_ID] });
+    // "changed" and "new" are then queued; "same" and "queued" keep their state.
+    expect(Object.fromEntries(statusOf)).toEqual({
+      changed: "queued",
+      same: "completed",
+      queued: "queued",
+      new: "queued",
+    });
   });
 
   it("writes the rows with the service role on a user-triggered run", async () => {
@@ -209,17 +284,15 @@ describe("processJobPostingRelevance scores (MT-REQ-001)", () => {
 
     const result = await processJobPostingRelevance(COMPANY_A.user.id, JOB_ID, true);
 
-    expect(result).toMatchObject({ success: false });
-    expect(sendEmailForStatusUpdate).toHaveBeenCalled();
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining("boom") });
+    // The worker emails on give-up, not per attempt (SM-REQ-013).
+    expect(sendEmailForStatusUpdate).not.toHaveBeenCalled();
   });
 });
 
 describe("processJobPostingRelevance background explanations (MT-REQ-002, MTT-040)", () => {
   const sends = () => admin.callsFor("send").map((c) => c.chain[0].args[1] as Record<string, unknown>);
-  const queuedUpdate = () =>
-    relevanceCalls(admin).find(
-      (c) => has(c, "update") && (argsOf(c, "update")![0] as Record<string, unknown>).explanation_status === "queued",
-    );
+  const queuedUpdate = () => movesTo("queued")[0];
 
   it("queues the top N rows that have no explanation, one message each", async () => {
     const ids = Array.from({ length: MATCH_EXPLAIN_TOP_N + 5 }, (_, i) => `u${i}`);
@@ -240,6 +313,9 @@ describe("processJobPostingRelevance background explanations (MT-REQ-002, MTT-04
     const update = queuedUpdate()!;
     expect(update.chain).toContainEqual({ method: "eq", args: ["job_posting_id", JOB_ID] });
     expect(update.chain).toContainEqual({ method: "in", args: ["user_id", top] });
+    // Marked before the sends, from none or stale only (SM-TEST-010).
+    expect(inArgs(update, "explanation_status")).toEqual(["none", "stale"]);
+    expect(admin.calls.indexOf(update)).toBeLessThan(admin.calls.indexOf(admin.callsFor("send")[0]));
   });
 
   it("re-queues stale explanations and skips completed and queued ones", async () => {
@@ -261,7 +337,7 @@ describe("processJobPostingRelevance background explanations (MT-REQ-002, MTT-04
     expect(sends().map((m) => (m.message as { userId: string }).userId)).toEqual(["old", "new"]);
   });
 
-  it("only marks rows queued once their message is sent", async () => {
+  it("moves a row back from queued, to its earlier state, when its message can't be sent", async () => {
     seed(admin);
     existingRows([]);
     admin.queueRpc("send", { data: [1], error: null }, "pgmq_public");
@@ -270,7 +346,23 @@ describe("processJobPostingRelevance background explanations (MT-REQ-002, MTT-04
 
     await processJobPostingRelevance(COMPANY_A.user.id, JOB_ID, true);
 
-    expect(queuedUpdate()!.chain).toContainEqual({ method: "in", args: ["user_id", ["a"]] });
+    const [back] = movesTo("none");
+    expect(inArgs(back, "user_id")).toEqual(["b"]);
+    expect(inArgs(back, "explanation_status")).toEqual(["queued"]);
+    expect(Object.fromEntries(statusOf)).toEqual({ a: "queued", b: "none" });
+  });
+
+  it("never turns a row completed meanwhile back into queued (SM-TEST-010)", async () => {
+    seed(admin);
+    existingRows([{ user_id: "a", match_score: 75, explanation_status: "stale" }]);
+    // An on-demand "Why?" completes it between the digest's read and its writes.
+    statusOf.set("a", "completed");
+    digestResponds(["a"], { a: scoreOf(3) });
+
+    await processJobPostingRelevance(COMPANY_A.user.id, JOB_ID, true);
+
+    expect(statusOf.get("a")).toBe("completed");
+    expect(admin.callsFor("send")).toHaveLength(0);
   });
 
   it("doesn't fail the digest when enqueueing fails", async () => {
@@ -284,7 +376,8 @@ describe("processJobPostingRelevance background explanations (MT-REQ-002, MTT-04
     const result = await processJobPostingRelevance(COMPANY_A.user.id, JOB_ID, true);
 
     expect(result).toEqual({ success: true });
-    expect(queuedUpdate()).toBeUndefined();
+    // Queued, then back to none when the send failed.
+    expect(statusOf.get("a")).toBe("none");
   });
 
   it("sends nothing when nothing matched", async () => {

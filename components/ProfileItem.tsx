@@ -10,6 +10,7 @@ import ProfileFavoriteStar from "./ProfileFavoriteStar";
 import { AllProfileWithRelations } from "@/utils/types";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
 import MatchScoreBadge from "./matching/MatchScoreBadge";
+import { isExplanationReady } from "@/helpers/matching/explanation-status";
 import MatchExplanationCard from "./matching/MatchExplanationCard";
 import AddToListMenu from "./pipeline/AddToListMenu";
 import OutreachStatusBadge from "./outreach/OutreachStatusBadge";
@@ -42,7 +43,7 @@ const ProfileItem = React.memo(
     const match = jobPostId ? profile.job_relevant_profiles?.[0] : undefined;
     // A stale explanation describes an older version of the job.
     const summary =
-      match?.explanation_status === "completed" ? summaryOf(match.explanation) : null;
+      isExplanationReady(match?.explanation_status) ? summaryOf(match?.explanation) : null;
     const profileHref = `/company/profiles/${profile.user_id}${
       jobPostId ? `?job_post=${encodeURIComponent(jobPostId)}` : ""
     }`;
@@ -88,7 +89,7 @@ const ProfileItem = React.memo(
               <p className="text-sm text-muted-foreground">{summary}</p>
             )}
             <ProfileDetailBadges profile={profile} isSuitable={isSuitable} />
-            {jobPostId && match && match.explanation_status !== "completed" && (
+            {jobPostId && match && !isExplanationReady(match.explanation_status) && (
               <MatchExplanationCard
                 compact
                 jobPostId={jobPostId}

@@ -63,48 +63,38 @@ describe("triggerJobPostingRelevanceUpdate", () => {
     expect(sent()).toHaveLength(0);
   });
 
+  // The start is one start_matching call on the caller's session (SM-REQ-004):
+  // the database checks matching.run and whether a live run holds the job.
+  // supabase/tests/state_machines.sql block 3 covers its decisions.
+  const startAnswers = (data: unknown) => supabase.queueRpc("start_matching", { data, error: null });
+  const starts = () => supabase.callsFor("start_matching").map((c) => c.chain[0].args[1]);
+
   it("refuses a posting outside the session company and schedules nothing", async () => {
-    supabase.queue("job_postings", { data: null, error: null });
+    startAnswers({ ok: false, reason: "forbidden" });
 
-    expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toMatchObject({ success: false });
+    expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toEqual({ success: false, error: "Job posting not found." });
 
-    const [lookup] = supabase.callsFor("job_postings");
-    expect(lookup.chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
     expect(sent()).toHaveLength(0);
     expect(updatesOf("progress")).toHaveLength(0);
   });
 
-  it("refuses while a recent run is still in progress", async () => {
-    supabase.queue("job_postings", {
-      data: { id: OWN.id, matching_status: "progress", updated_at: new Date().toISOString() },
-      error: null,
-    });
+  it("refuses while a live run holds the job", async () => {
+    startAnswers({ ok: false, reason: "in_progress" });
 
     expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toMatchObject({ success: false });
 
     expect(sent()).toHaveLength(0);
   });
 
-  it("restarts a run that has been stuck in progress for too long", async () => {
-    supabase.queue("job_postings", {
-      data: { id: OWN.id, matching_status: "progress", updated_at: "2020-01-01T00:00:00.000Z" },
-      error: null,
-    });
-
-    expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toMatchObject({ success: true });
-  });
-
-  it("marks the posting in progress and queues one message for the worker", async () => {
-    supabase.queue("job_postings", {
-      data: { id: OWN.id, matching_status: "completed", updated_at: OWN.updated_at },
-      error: null,
-    });
+  it("starts the posting and queues one message for the worker", async () => {
+    startAnswers({ ok: true });
 
     expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toEqual({
       success: true,
       message: "processing started",
     });
-    expect(updatesOf("progress")).toHaveLength(1);
+    expect(starts()).toEqual([{ p_job_id: OWN.id, p_timeout_seconds: 1200 }]);
+    expect(updatesOf("progress")).toHaveLength(0);
     expect(sent()).toEqual([
       {
         queue_name: "relevance_profiles",
@@ -114,25 +104,19 @@ describe("triggerJobPostingRelevanceUpdate", () => {
     ]);
   });
 
-  it("lets a member run matching, queued under the owner's id (TM-CON-001)", async () => {
+  it("lets a member run matching, started with the member's session and queued under the owner's id (TM-CON-001)", async () => {
     supabase = createSupabaseMock({ user: MEMBER_A.user });
     supabase.queueRpc("my_company_access", { data: MEMBER_A.membership, error: null });
-    supabase.queue("job_postings", {
-      data: { id: OWN.id, matching_status: "completed", updated_at: OWN.updated_at },
-      error: null,
-    });
+    startAnswers({ ok: true });
     await setRequestUser(MEMBER_A.user, supabase.client);
 
     expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toMatchObject({ success: true });
+    expect(starts()).toHaveLength(1);
     expect(sent()[0]).toMatchObject({ message: { userId: COMPANY_A.user.id, jobId: OWN.id } });
-    expect(updatesOf("progress")[0].chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
   });
 
   it("marks the posting failed and reports it when the message can't be queued", async () => {
-    supabase.queue("job_postings", {
-      data: { id: OWN.id, matching_status: "pending", updated_at: OWN.updated_at },
-      error: null,
-    });
+    startAnswers({ ok: true });
     service.queueRpc("send", { data: null, error: { message: "queue down" } }, "pgmq_public");
 
     expect(await triggerJobPostingRelevanceUpdate(OWN.id)).toEqual({

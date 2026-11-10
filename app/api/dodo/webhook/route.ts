@@ -325,14 +325,28 @@ async function fulfil(
   return "processed";
 }
 
+/**
+ * SM-REQ-012: the states each event may move a payment out of. Only a
+ * pending payment can fail or be cancelled, and "processing" never moves a
+ * payment back: it only refreshes a pending one. `complete` is set by
+ * fulfil_payment alone, from any state but complete.
+ */
+const ALLOWED_FROM: Partial<Record<TPaymentStatus, TPaymentStatus[]>> = {
+  [TPaymentStatus.FAILED]: [TPaymentStatus.PENDING],
+  [TPaymentStatus.CANCELLED]: [TPaymentStatus.PENDING],
+  [TPaymentStatus.PENDING]: [TPaymentStatus.PENDING],
+};
+
 async function updateStatus(
   supabase: ServiceClient,
   payment: WebhookPayload.Payment,
   status: TPaymentStatus,
 ): Promise<WebhookStatus> {
   const row = await findPaymentRow(supabase, payment);
+  const from = ALLOWED_FROM[status];
+  if (!from) throw new Error(`No transition into ${status}`);
 
-  const { error } = await supabase
+  const { data: moved, error } = await supabase
     .from("payments")
     .update({
       ...paymentDetails(payment),
@@ -343,9 +357,14 @@ async function updateStatus(
         : { failure_reason: payment.error_message ?? "unknown" }),
     })
     .eq("id", row.id)
-    // Events can arrive out of order: a late "processing" mustn't undo a success.
-    .neq("status", "complete");
+    // Distinct events can arrive out of order: a late one mustn't undo a
+    // success or bring a failed payment back to pending.
+    .in("status", from)
+    .select("id");
   if (error) throw new Error(`payments update: ${error.message}`);
+
+  // A late event that changed nothing sends nothing (SM-ISS-013).
+  if ((moved?.length ?? 0) === 0) return "processed";
 
   await emailUser(supabase, row, payment, status, row.credit_amount ?? 0);
   return "processed";

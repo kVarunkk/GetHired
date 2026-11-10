@@ -1,4 +1,5 @@
 import { reportError } from "@/helpers/posthog/report-error";
+import { isExplanationReady } from "@/helpers/matching/explanation-status";
 import { tool } from "ai";
 import { after } from "next/server";
 import { z } from "zod";
@@ -16,6 +17,7 @@ import { addCandidatesToJob } from "@/helpers/candidates/add-to-job";
 import { describeAddToJob } from "@/helpers/candidates/copy";
 import { candidateImportPath, candidatePath } from "@/helpers/candidates/paths";
 import { listPoolMatches } from "@/helpers/candidates/pool-matches";
+import { isMatchingInProgress } from "@/helpers/profiles/relevance-queue";
 import { RA_MAX_COMPARE, RA_UPGRADE_URL } from "../config";
 import {
   AGENT_CANDIDATE_COLUMNS,
@@ -58,8 +60,16 @@ const sandboxedDetails = (explanation: MatchExplanation | null) =>
   explanation ? wrapInSandbox("match_explanation", JSON.stringify(explanation)) : null;
 
 const completedExplanation = (row: { explanation: unknown; explanation_status: string | null }) =>
-  row.explanation_status === "completed" ? parseStoredExplanation(row.explanation) : null;
+  isExplanationReady(row.explanation_status) ? parseStoredExplanation(row.explanation) : null;
 
+
+/**
+ * An application's pipeline stage. `status` is only the applicant's coarse
+ * projection of it (screening, interview and offer all read `reviewed`), so a
+ * recruiter reader reports the stage as the real position (SM-REQ-009).
+ */
+const stageOf = (stage: { id: string; name: string; kind: string } | null) =>
+  stage ? { id: stage.id, name: stage.name, kind: stage.kind } : null;
 
 export function createCandidateTools(ctx: RecruiterToolContext) {
   const { supabase, company } = ctx;
@@ -81,7 +91,13 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
       .eq("company_id", company.id)
       .maybeSingle();
     if (error) throw error;
-    return data as unknown as { id: string; title: string; matching_status?: string } | null;
+    return data as unknown as {
+      id: string;
+      title: string;
+      matching_status?: string;
+      matching_started_at?: string | null;
+      updated_at?: string | null;
+    } | null;
   };
 
   return {
@@ -141,15 +157,21 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
       inputSchema: z.object({ jobPostId: uuidInput("job post"), limit: limitInput }),
       execute: ({ jobPostId, limit }) =>
         withToolErrors(ctx, "findMatchesForJob", async () => {
-          const job = await loadOwnJob(jobPostId, "id, title, matching_status");
+          const job = await loadOwnJob(jobPostId, "id, title, matching_status, matching_started_at, updated_at");
           if (!job) return JOB_NOT_FOUND;
           if (job.matching_status !== "completed") {
-            const status =
-              job.matching_status === "progress"
-                ? "processing"
-                : job.matching_status === "failed"
-                  ? "failed"
-                  : "not_run";
+            // A `progress` past its timeout is a dead run (SM-REQ-005): it
+            // reads as failed, so the model offers runMatchingForJob.
+            const live = isMatchingInProgress({
+              matching_status: job.matching_status ?? "pending",
+              matching_started_at: job.matching_started_at ?? null,
+              updated_at: job.updated_at ?? null,
+            });
+            const status = live
+              ? "processing"
+              : job.matching_status === "failed" || job.matching_status === "progress"
+                ? "failed"
+                : "not_run";
             return { status, jobPostId };
           }
 
@@ -269,7 +291,7 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
               getCandidateMatches(supabase, candidateId, company.id, jobPostId),
               supabase
                 .from("applications")
-                .select("id, status, created_at, job_postings!inner(id, title, company_id)")
+                .select("id, status, created_at, job_postings!inner(id, title, company_id), pipeline_stages(id, name, kind)")
                 .eq("applicant_user_id", candidateId)
                 .eq("job_postings.company_id", company.id),
               supabase
@@ -309,6 +331,7 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
               applicationId: application.id,
               jobTitle: application.job_postings.title,
               status: application.status,
+              stage: stageOf(application.pipeline_stages),
               appliedAt: application.created_at,
               url: applicationUrl(application.id),
             })),
@@ -347,7 +370,9 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
               .in("user_id", ids),
             supabase
               .from("applications")
-              .select("id, applicant_user_id, status, application_screenings(status, fit_score, recommendation)")
+              .select(
+                "id, applicant_user_id, status, pipeline_stages(id, name, kind), application_screenings(status, fit_score, recommendation)",
+              )
               .eq("job_post_id", jobPostId)
               .in("applicant_user_id", ids),
           ]);
@@ -370,6 +395,7 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
                   ? {
                       id: application.id,
                       status: application.status,
+                      stage: stageOf(application.pipeline_stages),
                       fitScore: completed?.fit_score ?? null,
                       recommendation: completed?.recommendation ?? null,
                       url: applicationUrl(application.id),

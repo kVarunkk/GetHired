@@ -558,6 +558,8 @@ export type Database = {
       }
       application_knockouts: {
         Row: {
+          application_knockout_state: string | null
+          reject_email_cancelled_at: string | null
           action_taken: string
           application_id: string
           company_id: string
@@ -569,6 +571,8 @@ export type Database = {
           reject_email_sent_at: string | null
         }
         Insert: {
+          application_knockout_state?: never
+          reject_email_cancelled_at?: string | null
           action_taken: string
           application_id: string
           company_id: string
@@ -580,6 +584,8 @@ export type Database = {
           reject_email_sent_at?: string | null
         }
         Update: {
+          application_knockout_state?: never
+          reject_email_cancelled_at?: string | null
           action_taken?: string
           application_id?: string
           company_id?: string
@@ -618,6 +624,7 @@ export type Database = {
         Row: {
           application_id: string
           attempts: number
+          claimed_at: string | null
           company_id: string
           completed_at: string | null
           created_at: string
@@ -639,6 +646,7 @@ export type Database = {
         Insert: {
           application_id: string
           attempts?: number
+          claimed_at?: string | null
           company_id: string
           completed_at?: string | null
           created_at?: string
@@ -660,6 +668,7 @@ export type Database = {
         Update: {
           application_id?: string
           attempts?: number
+          claimed_at?: string | null
           company_id?: string
           completed_at?: string | null
           created_at?: string
@@ -1426,6 +1435,7 @@ export type Database = {
       }
       company_candidate_claims: {
         Row: {
+          company_candidate_claim_state: string | null
           application_interview_id: string | null
           candidate_id: string
           company_id: string
@@ -1436,6 +1446,7 @@ export type Database = {
           used_by: string | null
         }
         Insert: {
+          company_candidate_claim_state?: never
           application_interview_id?: string | null
           candidate_id: string
           company_id: string
@@ -1446,6 +1457,7 @@ export type Database = {
           used_by?: string | null
         }
         Update: {
+          company_candidate_claim_state?: never
           application_interview_id?: string | null
           candidate_id?: string
           company_id?: string
@@ -1822,7 +1834,6 @@ export type Database = {
           headquarters: string | null
           id: string
           industry: string | null
-          is_relevant_profiles_generated: boolean
           job_posts_created: number
           last_applicant_digest_at: string | null
           logo_url: string | null
@@ -1856,7 +1867,6 @@ export type Database = {
           headquarters?: string | null
           id?: string
           industry?: string | null
-          is_relevant_profiles_generated?: boolean
           job_posts_created?: number
           last_applicant_digest_at?: string | null
           logo_url?: string | null
@@ -1890,7 +1900,6 @@ export type Database = {
           headquarters?: string | null
           id?: string
           industry?: string | null
-          is_relevant_profiles_generated?: boolean
           job_posts_created?: number
           last_applicant_digest_at?: string | null
           logo_url?: string | null
@@ -1923,6 +1932,7 @@ export type Database = {
       }
       company_invites: {
         Row: {
+          company_invite_state: string | null
           accepted_at: string | null
           accepted_by: string | null
           company_id: string
@@ -1936,6 +1946,7 @@ export type Database = {
           token_hash: string
         }
         Insert: {
+          company_invite_state?: never
           accepted_at?: string | null
           accepted_by?: string | null
           company_id: string
@@ -1949,6 +1960,7 @@ export type Database = {
           token_hash: string
         }
         Update: {
+          company_invite_state?: never
           accepted_at?: string | null
           accepted_by?: string | null
           company_id?: string
@@ -2497,6 +2509,7 @@ export type Database = {
       }
       interview_analyses: {
         Row: {
+          claimed_at: string | null
           completed_at: string | null
           created_at: string
           error_code: string | null
@@ -2509,6 +2522,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          claimed_at?: string | null
           completed_at?: string | null
           created_at?: string
           error_code?: string | null
@@ -2521,6 +2535,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          claimed_at?: string | null
           completed_at?: string | null
           created_at?: string
           error_code?: string | null
@@ -2891,6 +2906,7 @@ export type Database = {
           location: string[]
           matched_at: string | null
           matching_error: string | null
+          matching_started_at: string | null
           matching_status: Database["public"]["Enums"]["job_posting_matching_status"]
           max_equity: number | null
           max_experience: number | null
@@ -2926,6 +2942,7 @@ export type Database = {
           location?: string[]
           matched_at?: string | null
           matching_error?: string | null
+          matching_started_at?: string | null
           matching_status?: Database["public"]["Enums"]["job_posting_matching_status"]
           max_equity?: number | null
           max_experience?: number | null
@@ -2961,6 +2978,7 @@ export type Database = {
           location?: string[]
           matched_at?: string | null
           matching_error?: string | null
+          matching_started_at?: string | null
           matching_status?: Database["public"]["Enums"]["job_posting_matching_status"]
           max_equity?: number | null
           max_experience?: number | null
@@ -2997,6 +3015,7 @@ export type Database = {
       }
       job_relevant_profiles: {
         Row: {
+          claimed_at: string | null
           created_at: string
           experience_score: number | null
           explained_at: string | null
@@ -3013,6 +3032,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          claimed_at?: string | null
           created_at?: string
           experience_score?: number | null
           explained_at?: string | null
@@ -3029,6 +3049,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          claimed_at?: string | null
           created_at?: string
           experience_score?: number | null
           explained_at?: string | null
@@ -3085,6 +3106,7 @@ export type Database = {
       }
       mcp_confirmations: {
         Row: {
+          mcp_confirmation_state: string | null
           code: string | null
           digest: string | null
           expires_at: string
@@ -3094,6 +3116,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          mcp_confirmation_state?: never
           code?: string | null
           digest?: string | null
           expires_at: string
@@ -3103,6 +3126,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          mcp_confirmation_state?: never
           code?: string | null
           digest?: string | null
           expires_at?: string
@@ -3935,6 +3959,7 @@ export type Database = {
           preferred_locations: string[] | null
           profile_refresh_requested_at: string | null
           referral_code: string | null
+          relevance_started_at: string | null
           relevant_jobs_update_status: Database["public"]["Enums"]["job_posting_matching_status"]
           salary_currency: string
           top_skills: string[] | null
@@ -3976,6 +4001,7 @@ export type Database = {
           preferred_locations?: string[] | null
           profile_refresh_requested_at?: string | null
           referral_code?: string | null
+          relevance_started_at?: string | null
           relevant_jobs_update_status?: Database["public"]["Enums"]["job_posting_matching_status"]
           salary_currency?: string
           top_skills?: string[] | null
@@ -4013,6 +4039,7 @@ export type Database = {
           preferred_locations?: string[] | null
           profile_refresh_requested_at?: string | null
           referral_code?: string | null
+          relevance_started_at?: string | null
           relevant_jobs_update_status?: Database["public"]["Enums"]["job_posting_matching_status"]
           salary_currency?: string
           top_skills?: string[] | null
@@ -4195,6 +4222,22 @@ export type Database = {
       }
     }
     Functions: {
+      application_knockout_state: {
+        Args: { "": Database["public"]["Tables"]["application_knockouts"]["Row"] }
+        Returns: string
+      }
+      company_candidate_claim_state: {
+        Args: { "": Database["public"]["Tables"]["company_candidate_claims"]["Row"] }
+        Returns: string
+      }
+      company_invite_state: {
+        Args: { "": Database["public"]["Tables"]["company_invites"]["Row"] }
+        Returns: string
+      }
+      mcp_confirmation_state: {
+        Args: { "": Database["public"]["Tables"]["mcp_confirmations"]["Row"] }
+        Returns: string
+      }
       accept_company_invite: {
         Args: { p_display_name?: string; p_token: string }
         Returns: Json
@@ -5024,6 +5067,15 @@ export type Database = {
         Returns: boolean
       }
       rollover_free_periods: { Args: never; Returns: Json }
+      run_in_progress: {
+        Args: {
+          p_started_at: string
+          p_status: Database["public"]["Enums"]["job_posting_matching_status"]
+          p_timeout_seconds: number
+          p_updated_at: string
+        }
+        Returns: boolean
+      }
       save_careers_page: {
         Args: {
           p_accent_color: string
@@ -5095,6 +5147,13 @@ export type Database = {
         Returns: Json
       }
       set_careers_published: { Args: { p_published: boolean }; Returns: Json }
+      set_job_post_status: {
+        Args: {
+          p_job_post_id: string
+          p_status: Database["public"]["Enums"]["job_posting_status"]
+        }
+        Returns: Json
+      }
       set_company_cancel_at_period_end: {
         Args: { p_cancel: boolean; p_company_id: string }
         Returns: undefined
@@ -5147,6 +5206,14 @@ export type Database = {
       slugify_company_name: { Args: { p_name: string }; Returns: string }
       stage_spreadsheet_import: {
         Args: { p_batch_id: string; p_job_id: string; p_rows: Json }
+        Returns: Json
+      }
+      start_matching: {
+        Args: { p_job_id: string; p_timeout_seconds: number }
+        Returns: Json
+      }
+      start_relevance: {
+        Args: { p_timeout_seconds: number; p_user_id: string }
         Returns: Json
       }
       start_candidate_import: {
