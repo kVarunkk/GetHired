@@ -30,6 +30,7 @@ const PAGE: CareersPage = {
   description: "We make <b>rockets</b> and **engines**.",
   logoUrl: null,
   website: "https://acme.dev",
+  websiteVerified: false,
   headquarters: "Bengaluru",
   companySize: "11-50",
   industry: "Aerospace",
@@ -83,6 +84,18 @@ describe("/careers/[slug] (CPT-045)", () => {
     expect(screen.queryByText("Secret plans")).not.toBeInTheDocument();
     expect((container.querySelector("[data-careers-page]") as HTMLElement).style.getPropertyValue("--careers-accent")).toBe("#0f766e");
     expect(screen.getByText("Powered by")).toBeInTheDocument();
+  });
+
+  it("follows the Website link only for a verified company", async () => {
+    await show();
+    expect(screen.getByRole("link", { name: /Website/ })).toHaveAttribute("rel", "nofollow noopener noreferrer");
+  });
+
+  it("follows a verified company's Website link and keeps social links nofollow", async () => {
+    vi.mocked(getCareersPage).mockResolvedValue({ page: { ...PAGE, websiteVerified: true } });
+    await show();
+    expect(screen.getByRole("link", { name: /Website/ })).toHaveAttribute("rel", "noopener");
+    expect(screen.getByRole("link", { name: /LinkedIn/ })).toHaveAttribute("rel", "nofollow noopener noreferrer");
   });
 
   it("renders markdown without raw HTML (CP-SEC-002)", async () => {

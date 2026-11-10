@@ -45,7 +45,8 @@ export default function CareersHeader({ page }: { page: CareersPage }) {
             <a
               href={page.website}
               target="_blank"
-              rel="nofollow noopener noreferrer"
+              // A verified company's site gets a followed link and sees the referral.
+              rel={page.websiteVerified ? "noopener" : "nofollow noopener noreferrer"}
               className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[var(--careers-accent)] hover:underline"
             >
               <Globe className="h-3.5 w-3.5" aria-hidden />

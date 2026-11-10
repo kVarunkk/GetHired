@@ -11,6 +11,7 @@ const PAGE: CareersPage = {
   description: "About Acme.",
   logoUrl: "https://cdn.acme.test/logo.png",
   website: "https://acme.dev",
+  websiteVerified: false,
   headquarters: "Bengaluru",
   companySize: null,
   industry: null,

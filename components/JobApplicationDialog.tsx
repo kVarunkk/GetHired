@@ -166,6 +166,7 @@ export default function JobApplicationDialog({
                       <Link
                         href={jobPost.company_url}
                         target="_blank"
+                        rel="nofollow noopener noreferrer"
                         className="underline underline-offset-[4px] flex items-center gap-1"
                       >
                         Visit Company Page <ExternalLink className="h-4 w-4" />
