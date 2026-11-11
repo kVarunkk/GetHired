@@ -80,6 +80,7 @@ function company(n: number, name: string): CompanyFixture {
     last_applicant_digest_at: null,
     careers_slug: name.toLowerCase(),
     careers_published: false,
+    careers_website_followed: false,
     careers_accent_color: null,
     careers_cover_url: null,
     careers_sections: [],

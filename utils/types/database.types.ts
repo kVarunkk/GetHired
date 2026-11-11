@@ -559,7 +559,6 @@ export type Database = {
       application_knockouts: {
         Row: {
           application_knockout_state: string | null
-          reject_email_cancelled_at: string | null
           action_taken: string
           application_id: string
           company_id: string
@@ -567,12 +566,12 @@ export type Database = {
           failed: boolean
           job_post_id: string
           reasons: Json
+          reject_email_cancelled_at: string | null
           reject_email_due_at: string | null
           reject_email_sent_at: string | null
         }
         Insert: {
           application_knockout_state?: never
-          reject_email_cancelled_at?: string | null
           action_taken: string
           application_id: string
           company_id: string
@@ -580,12 +579,12 @@ export type Database = {
           failed: boolean
           job_post_id: string
           reasons?: Json
+          reject_email_cancelled_at?: string | null
           reject_email_due_at?: string | null
           reject_email_sent_at?: string | null
         }
         Update: {
           application_knockout_state?: never
-          reject_email_cancelled_at?: string | null
           action_taken?: string
           application_id?: string
           company_id?: string
@@ -593,6 +592,7 @@ export type Database = {
           failed?: boolean
           job_post_id?: string
           reasons?: Json
+          reject_email_cancelled_at?: string | null
           reject_email_due_at?: string | null
           reject_email_sent_at?: string | null
         }
@@ -1822,6 +1822,7 @@ export type Database = {
           careers_published: boolean
           careers_sections: Json
           careers_slug: string | null
+          careers_website_followed: boolean
           company_size: string | null
           created_at: string
           default_role_id: string | null
@@ -1855,6 +1856,7 @@ export type Database = {
           careers_published?: boolean
           careers_sections?: Json
           careers_slug?: string | null
+          careers_website_followed?: boolean
           company_size?: string | null
           created_at?: string
           default_role_id?: string | null
@@ -1888,6 +1890,7 @@ export type Database = {
           careers_published?: boolean
           careers_sections?: Json
           careers_slug?: string | null
+          careers_website_followed?: boolean
           company_size?: string | null
           created_at?: string
           default_role_id?: string | null
@@ -4222,22 +4225,6 @@ export type Database = {
       }
     }
     Functions: {
-      application_knockout_state: {
-        Args: { "": Database["public"]["Tables"]["application_knockouts"]["Row"] }
-        Returns: string
-      }
-      company_candidate_claim_state: {
-        Args: { "": Database["public"]["Tables"]["company_candidate_claims"]["Row"] }
-        Returns: string
-      }
-      company_invite_state: {
-        Args: { "": Database["public"]["Tables"]["company_invites"]["Row"] }
-        Returns: string
-      }
-      mcp_confirmation_state: {
-        Args: { "": Database["public"]["Tables"]["mcp_confirmations"]["Row"] }
-        Returns: string
-      }
       accept_company_invite: {
         Args: { p_display_name?: string; p_token: string }
         Returns: Json
@@ -4264,6 +4251,12 @@ export type Database = {
       }
       application_job_id: {
         Args: { p_application_id: string }
+        Returns: string
+      }
+      application_knockout_state: {
+        Args: {
+          k: Database["public"]["Tables"]["application_knockouts"]["Row"]
+        }
         Returns: string
       }
       application_stage_closed: {
@@ -4361,6 +4354,10 @@ export type Database = {
         Returns: boolean
       }
       careers_slug_valid: { Args: { p_slug: string }; Returns: boolean }
+      careers_website_verified: {
+        Args: { c: Database["public"]["Tables"]["company_info"]["Row"] }
+        Returns: boolean
+      }
       check_entitlement: {
         Args: { p_company_id: string; p_key: string; p_qty?: number }
         Returns: Json
@@ -4388,6 +4385,12 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      company_candidate_claim_state: {
+        Args: {
+          c: Database["public"]["Tables"]["company_candidate_claims"]["Row"]
+        }
+        Returns: string
+      }
       company_candidate_company: {
         Args: { p_candidate_id: string }
         Returns: string
@@ -4409,6 +4412,10 @@ export type Database = {
       company_has_candidate_access: {
         Args: { p_user_id: string }
         Returns: boolean
+      }
+      company_invite_state: {
+        Args: { i: Database["public"]["Tables"]["company_invites"]["Row"] }
+        Returns: string
       }
       company_permission_scope: {
         Args: { p_company_id: string; p_key: string }
@@ -4879,6 +4886,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      mcp_confirmation_state: {
+        Args: { c: Database["public"]["Tables"]["mcp_confirmations"]["Row"] }
+        Returns: string
+      }
       member_can_view_notes: {
         Args: { p_company_id: string; p_job_post_id: string; p_user_id: string }
         Returns: boolean
@@ -5147,13 +5158,6 @@ export type Database = {
         Returns: Json
       }
       set_careers_published: { Args: { p_published: boolean }; Returns: Json }
-      set_job_post_status: {
-        Args: {
-          p_job_post_id: string
-          p_status: Database["public"]["Enums"]["job_posting_status"]
-        }
-        Returns: Json
-      }
       set_company_cancel_at_period_end: {
         Args: { p_cancel: boolean; p_company_id: string }
         Returns: undefined
@@ -5194,6 +5198,13 @@ export type Database = {
         Args: { p_actor_kind?: string; p_role_id: string }
         Returns: Json
       }
+      set_job_post_status: {
+        Args: {
+          p_job_post_id: string
+          p_status: Database["public"]["Enums"]["job_posting_status"]
+        }
+        Returns: Json
+      }
       set_my_display_name: { Args: { p_name: string }; Returns: Json }
       set_primary_resume: {
         Args: { p_resume_id: string; p_user_id: string }
@@ -5208,16 +5219,16 @@ export type Database = {
         Args: { p_batch_id: string; p_job_id: string; p_rows: Json }
         Returns: Json
       }
+      start_candidate_import: {
+        Args: { p_file_name?: string; p_kind: string }
+        Returns: Json
+      }
       start_matching: {
         Args: { p_job_id: string; p_timeout_seconds: number }
         Returns: Json
       }
       start_relevance: {
         Args: { p_timeout_seconds: number; p_user_id: string }
-        Returns: Json
-      }
-      start_candidate_import: {
-        Args: { p_file_name?: string; p_kind: string }
         Returns: Json
       }
       start_resume_import: {
@@ -5282,6 +5293,7 @@ export type Database = {
       }
       url_decode: { Args: { data: string }; Returns: string }
       url_encode: { Args: { data: string }; Returns: string }
+      url_host: { Args: { p_url: string }; Returns: string }
       valid_role_limits: { Args: { p_limits: Json }; Returns: boolean }
       verify: {
         Args: { algorithm?: string; secret: string; token: string }
