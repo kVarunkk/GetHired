@@ -1,3 +1,4 @@
+import { shareImages } from "@/helpers/seo/share-image";
 import FootComponent from "@/components/FootComponent";
 import FAQSection from "@/components/landing-page/FAQSection";
 import Footer from "@/components/landing-page/Footer";
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
     description:
       "Search developer and tech jobs, including remote roles, and use AI tools to focus your job search.",
     url: "/",
-    images: ["/opengraph-image.jpg"],
+    ...shareImages,
   },
 };
 

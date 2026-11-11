@@ -1,3 +1,4 @@
+import { shareImages, twitterShareImages } from "@/helpers/seo/share-image";
 import { notFound } from "next/navigation";
 import { BackLink } from "@/components/PageHeader";
 import JobClientHydrator from "@/components/JobClientHydrator";
@@ -42,9 +43,10 @@ export async function generateMetadata({
       title,
       description,
       url: canonical,
+      ...shareImages,
     },
     twitter: {
-      card: "summary",
+      ...twitterShareImages,
       title,
       description,
     },

@@ -1,3 +1,4 @@
+import { shareImages, twitterShareImages } from "@/helpers/seo/share-image";
 import type { Metadata } from "next";
 import McpLandingPage from "@/components/mcp/McpLandingPage";
 import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
@@ -20,8 +21,9 @@ export const metadata: Metadata = {
     title: TITLE,
     description: page.description,
     url: page.path,
+    ...shareImages,
   },
-  twitter: { card: "summary", title: TITLE, description: page.description },
+  twitter: { ...twitterShareImages, title: TITLE, description: page.description },
   keywords: [
     "GetHired MCP server",
     "MCP job search",

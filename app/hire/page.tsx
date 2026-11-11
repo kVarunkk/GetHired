@@ -1,3 +1,4 @@
+import { shareImages, twitterShareImages } from "@/helpers/seo/share-image";
 import FootComponent from "@/components/FootComponent";
 import AgentHeroDemo from "@/components/landing-page/AgentHeroDemo";
 import { RECRUITER_DEMO } from "@/components/landing-page/agent-demos";
@@ -30,9 +31,10 @@ export const metadata: Metadata = {
     description:
       "Post tech roles, review applicants, and use AI recruiting tools to help identify qualified candidates with GetHired.",
     url: "/hire",
+    ...shareImages,
   },
   twitter: {
-    card: "summary",
+    ...twitterShareImages,
     title: "AI Recruiting Software to Hire Tech Talent",
     description:
       "Post tech roles, review applicants, and use AI recruiting tools to help identify qualified candidates with GetHired.",

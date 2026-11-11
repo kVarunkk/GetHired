@@ -1,3 +1,4 @@
+import { shareImages, twitterShareImages } from "@/helpers/seo/share-image";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect, unstable_rethrow } from "next/navigation";
@@ -41,7 +42,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title,
     alternates: { canonical },
-    openGraph: { type: "website", siteName: "GetHired", title, url: canonical },
+    openGraph: { type: "website", siteName: "GetHired", title, url: canonical, ...shareImages },
+    twitter: { ...twitterShareImages, title },
   };
 }
 
