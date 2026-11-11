@@ -18,6 +18,7 @@ import { changeText, planChangeOperations, type ReviewChange } from "@/helpers/r
 import type { ChangesTarget, ResumeChangesView } from "@/helpers/resume-review/load-changes";
 import { fillPlaceholders, hasPlaceholder, splitPlaceholders } from "@/helpers/resume-review/suggestions";
 import { reviewJobLabel, type ReviewTarget } from "@/helpers/resume-review/target";
+import type { ApplySuggestionsInput } from "@/helpers/resume-review/apply-suggestions";
 import { diffResume } from "@/helpers/resumes/resume-diff";
 import { runResumeOperations } from "@/helpers/resumes/resume-operations";
 
@@ -239,14 +240,21 @@ function previewOf(target: ChangesTarget, chosen: { change: ReviewChange; text?:
   );
 }
 
-function ChangesForm({
+/** How the form writes the chosen changes. The landing-page demo passes a local one. */
+export type ApplyChanges = (input: ApplySuggestionsInput) => ReturnType<typeof applyReviewSuggestionsAction>;
+
+const applyFromAgent: ApplyChanges = (input) => applyReviewSuggestionsAction(input, "agent");
+
+export function ChangesForm({
   view,
   onDone,
   onReload,
+  applyChanges = applyFromAgent,
 }: {
   view: ResumeChangesView;
   onDone: (output: ResumeChangesOutput) => void;
   onReload: () => void;
+  applyChanges?: ApplyChanges;
 }) {
   const [target, setTarget] = useState<Target>("copy");
   const [busy, setBusy] = useState(false);
@@ -297,17 +305,14 @@ function ChangesForm({
     setBusy(true);
     setError(null);
     try {
-      const result = await applyReviewSuggestionsAction(
-        {
-          reviewId: view.reviewId,
-          target,
-          items: chosenTexts.map(({ change, text }) => ({
-            id: change.id,
-            ...(text !== undefined && text !== changeText(change) ? { text } : {}),
-          })),
-        },
-        "agent",
-      );
+      const result = await applyChanges({
+        reviewId: view.reviewId,
+        target,
+        items: chosenTexts.map(({ change, text }) => ({
+          id: change.id,
+          ...(text !== undefined && text !== changeText(change) ? { text } : {}),
+        })),
+      });
       if (!result.ok) {
         setError(result.error);
         return;

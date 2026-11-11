@@ -1,13 +1,22 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import ResumeCheckerHeroDemo, { DEMO_ANALYSIS_MS } from "./ResumeCheckerHeroDemo";
+import { applyReviewSuggestionsAction } from "@/app/actions/resume-review/apply-suggestions";
+import ResumeCheckerHeroDemo from "./ResumeCheckerHeroDemo";
+import { DEMO_APPLY_MS } from "./resume-checker-demo";
 
-vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: () => ({ auth: { getSession: () => Promise.resolve({ data: { session: null } }) } }),
+}));
+vi.mock("@/app/actions/resume-review/apply-suggestions", () => ({ applyReviewSuggestionsAction: vi.fn() }));
+vi.mock("@/app/actions/resume-review/load-resume-changes", () => ({ loadResumeChangesAction: vi.fn() }));
+vi.mock("@/app/actions/resume-review/undo-suggestion", () => ({ undoReviewSuggestionAction: vi.fn() }));
+
+const applyButton = () => screen.getByRole("button", { name: /^Apply \d+ of \d+$/ });
 
 describe("ResumeCheckerHeroDemo", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
-    window.matchMedia = vi.fn().mockReturnValue({ matches: true }) as unknown as typeof window.matchMedia;
+    vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
   afterEach(() => {
@@ -15,65 +24,53 @@ describe("ResumeCheckerHeroDemo", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders the review page's analysis next to the parsed resume", () => {
+  it("shows the agent tailoring a resume, with the changes card under the reply", () => {
     render(<ResumeCheckerHeroDemo />);
 
-    expect(screen.getByText("Analysis Pane")).toBeInTheDocument();
-    expect(screen.getByText("82")).toBeInTheDocument();
-    expect(screen.getByText("Overall Strategy")).toBeInTheDocument();
+    expect(screen.getByText(/Tailor my resume for this Senior Frontend Engineer role/)).toBeInTheDocument();
+    expect(screen.getByText("Suggested changes")).toBeInTheDocument();
+    expect(screen.getByText("Choose your changes")).toBeInTheDocument();
     expect(screen.getByText(/Led the React and TypeScript component library/)).toBeInTheDocument();
-    // The resume line the suggestion rewrites, in the original and in the mirror.
-    expect(screen.getAllByText(/Worked on the company's React component library/)).toHaveLength(2);
+    expect(screen.getByText("Questions for you")).toBeInTheDocument();
   });
 
-  it("highlights the resume line a suggestion rewrites on hover", () => {
+  it("leaves a change with values to fill in unticked, and ticks it once they're filled", () => {
     render(<ResumeCheckerHeroDemo />);
 
-    const card = screen.getByText(/Led the React and TypeScript component library/).closest("div.rounded-xl")!;
-    fireEvent.mouseEnter(card);
-    expect(document.getElementById("bullet-demo-b1")).toHaveClass("bg-brandSoft");
-
-    fireEvent.mouseLeave(card);
-    expect(document.getElementById("bullet-demo-b1")).not.toHaveClass("bg-brandSoft");
+    // Six changes, five ticked: the new bullet has [X] and [N].
+    expect(applyButton()).toHaveTextContent("Apply 5 of 6");
+    fireEvent.change(screen.getByLabelText("Value for [X]"), { target: { value: "2.5" } });
+    fireEvent.change(screen.getByLabelText("Value for [N]"), { target: { value: "30" } });
+    expect(applyButton()).toHaveTextContent("Apply 6 of 6");
   });
 
-  it("has nothing to apply", () => {
+  it("previews the whole resume with the chosen changes", () => {
     render(<ResumeCheckerHeroDemo />);
 
-    expect(screen.getAllByRole("button", { name: "Copy" }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Apply all/ })).not.toBeInTheDocument();
+    expect(screen.getByText("Your resume with these changes")).toBeInTheDocument();
   });
 
-  it("replays the analysis when Tailor Resume is pressed", () => {
-    render(<ResumeCheckerHeroDemo />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Tailor Resume" }));
-    expect(screen.getByText("Analyzing your Resume")).toBeInTheDocument();
-    expect(screen.queryByText("82")).not.toBeInTheDocument();
-
-    act(() => vi.advanceTimersByTime(DEMO_ANALYSIS_MS));
-    expect(screen.getByText("82")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tailor Resume" })).toBeEnabled();
-  });
-
-  it("opens the job description and needs one to tailor", () => {
-    render(<ResumeCheckerHeroDemo />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Expand job description" }));
-    const jd = screen.getByLabelText("Target Job Description");
-    expect((jd as HTMLTextAreaElement).value).toContain("Senior Frontend Engineer");
-
-    fireEvent.change(jd, { target: { value: "  " } });
-    expect(screen.getByRole("button", { name: "Tailor Resume" })).toBeDisabled();
-  });
-
-  it("never calls the network", () => {
+  it("applies locally, never through the server action, and can start over", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
     render(<ResumeCheckerHeroDemo />);
-    fireEvent.click(screen.getByRole("button", { name: "Tailor Resume" }));
-    act(() => vi.advanceTimersByTime(DEMO_ANALYSIS_MS));
+
+    fireEvent.click(applyButton());
+    await act(() => vi.advanceTimersByTimeAsync(DEMO_APPLY_MS));
+
+    expect(screen.getByText("Reviewed the changes")).toBeInTheDocument();
+    expect(screen.getByText(/Applied 5 changes to a copy of your resume/)).toBeInTheDocument();
+    expect(applyReviewSuggestionsAction).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Try it again" }));
+    expect(applyButton()).toHaveTextContent("Apply 5 of 6");
+  });
+
+  it("says nothing changed on Discard", () => {
+    render(<ResumeCheckerHeroDemo />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(screen.getByText("Nothing was changed.")).toBeInTheDocument();
   });
 });
