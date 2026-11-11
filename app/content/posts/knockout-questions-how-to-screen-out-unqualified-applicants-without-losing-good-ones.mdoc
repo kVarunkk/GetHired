@@ -1,0 +1,164 @@
+---
+title: 'Knockout Questions: How to Screen Out Unqualified Applicants Without Losing Good Ones'
+publishedAt: 2026-11-11
+type: companies
+---
+**Quick answer:** Knockout questions are application questions with a rule attached: if an applicant gives a certain answer, their application is rejected or flagged automatically. Use them only for true, non-negotiable requirements, such as legal right to work, a required office location, a notice period you can't wait beyond, or a salary expectation far outside your budget. Keep them to two or three per job, phrase them clearly and neutrally, prefer flagging over rejecting when you're unsure, and never use them for preferences or protected characteristics.
+
+Popular roles can attract hundreds of applicants, and many don't meet basic requirements: they need visa sponsorship you can't offer, live in a country you can't hire in, or expect twice your budget. Knockout questions handle these cases before anyone on your team spends time on them. Used badly, they also reject the great candidate who misread a question.
+
+## What are knockout questions?
+
+A knockout question is a typed application question (yes/no, a choice or a number) with a rule like:
+
+- **"Do you have the right to work in the UK?" → No → reject**
+- **"What's your notice period in days?" → more than 90 → flag**
+- **"Which of these locations can you work from?" → none of Pune or Bengaluru → reject**
+
+Most applicant tracking systems support them, sometimes called screening questions, pre-qualifying questions or disqualifying questions.
+
+## When should you use knockout questions?
+
+Use them for requirements that are **objective, essential and unchangeable** for this role:
+
+{% table %}
+- Good knockout
+- Why
+---
+- Right to work in the country, when you can't sponsor
+- Legal requirement
+---
+- Ability to work from a specific office on set days
+- Real constraint of the role
+---
+- Located in a country or time zone you can legally hire in
+- Legal or operational requirement
+---
+- Notice period longer than you can wait
+- Hard deadline, if genuinely hard
+---
+- Required licence or certification by law
+- Legal requirement
+{% /table %}
+
+Avoid them for:
+
+{% table %}
+- Bad knockout
+- Why it's a problem
+---
+- "Do you have 5+ years of experience?"
+- Strong people with 4 years get rejected
+---
+- "Do you have a computer science degree?"
+- Excludes self-taught and career-change engineers
+---
+- "Have you used our exact tech stack?"
+- Good engineers learn new tools quickly
+---
+- Age, marital status, religion, health or similar
+- Discriminatory and often illegal
+---
+- "Are you a culture fit?"
+- Meaningless as a yes/no question
+{% /table %}
+
+## Reject or flag?
+
+Many systems give you two actions:
+
+- **Reject**: the application is moved to Rejected automatically.
+- **Flag**: the application stays in your pipeline with a marker so a person can check it.
+
+Use **reject** only when the answer clearly makes the person ineligible, such as no right to work and no sponsorship. Use **flag** when there's room for judgement, such as a notice period slightly over your target or a salary expectation above your range, where a strong candidate might still be worth a conversation.
+
+## How to write knockout questions well
+
+### Be precise
+
+"Are you authorised to work in Germany?" is ambiguous for people with pending permits. Better:
+
+> Do you currently have the right to work in Germany without visa sponsorship?
+
+### Ask about the requirement, not a proxy
+
+Instead of "Do you live in Bengaluru?", ask what you actually need:
+
+> This role requires working from our Bengaluru office on Tuesdays and Thursdays. Can you do this?
+
+### Explain why, in help text
+
+> We can't sponsor visas for this role, so we can only consider applicants who already have the right to work in the UK.
+
+Applicants who understand the reason are less frustrated, and those who don't qualify are less likely to answer dishonestly.
+
+### Use numbers for numeric requirements
+
+For notice period or salary expectations, a number question with a threshold works better than a yes/no. "What is your notice period in days?" with a flag at more than 60 days lets you see the real value.
+
+### Keep it short
+
+Two or three knockout questions per job is enough. Each one is a chance for a good applicant to misunderstand and be rejected.
+
+## Knockout questions and candidate experience
+
+Instant automated rejections can feel cold, especially if the candidate spent time on the rest of the form. Good practice:
+
+- **State hard requirements in the job post** so people self-select before applying.
+- **Delay the rejection email** rather than sending it seconds after submission.
+- **Make the rejection email kind and clear.** See our [rejection email templates](https://gethired.devhub.co.in/blog/how-to-reject-candidates-kindly-rejection-email-templates-and-candidate-experience-tips).
+- **Review flagged applications regularly** so they don't sit forever.
+
+## How knockout questions work on GetHired
+
+On GetHired, you build each job's application form with typed questions (short and long text, yes/no, single and multiple choice, numbers, dates and more) plus standard fields like notice period, expected salary, earliest start date and work authorisation.
+
+For yes/no, choice and number questions, you can add a knockout rule:
+
+- **Conditions**: equals yes or no, any of chosen options, less than or greater than a number.
+- **Actions**: **flag** for a person to review, or **reject**.
+
+A few safeguards are built in:
+
+- **Applicants never see the rules.** Rules are stored separately from the public form, so they don't appear on your careers page, in the API or in the browser extension.
+- **It's your rule, not the AI's.** A knockout applies only the exact condition you wrote.
+- **Rejections aren't instant.** A rejected application moves to Rejected, and the email is sent 24 hours later.
+- **Question text is checked for fairness.** Questions about protected characteristics are refused when you save them.
+
+Answers are typed, so you can also filter applicants by them ("notice period under 30 days") and they feed into [AI applicant screening](https://gethired.devhub.co.in/blog/ai-applicant-screening-how-to-sort-200-applicants-by-fit-without-reading-them-all). Read more about the [application form builder](https://gethired.devhub.co.in/blog/build-a-branded-careers-page-and-custom-application-form-in-minutes).
+
+## Example knockout set for a remote engineering role in India
+
+1. **Do you currently live in India and have the right to work here?** (yes/no) → No → reject
+2. **What is your notice period, in days?** (number) → greater than 60 → flag
+3. **What is your expected annual base salary?** (salary) → no rule; filter and discuss instead
+
+That's enough to remove clear mismatches without losing strong candidates.
+
+## Frequently asked questions
+
+### Are knockout questions legal?
+
+Yes, when they're based on genuine job requirements and applied the same way to everyone. Questions about protected characteristics, like age, religion or marital status, are discriminatory and illegal in many places.
+
+### How many knockout questions should a job have?
+
+Two or three at most. More than that increases the risk of rejecting good people.
+
+### Should salary expectation be a knockout question?
+
+Usually not a hard reject. Flag answers above your range so you can decide case by case, because some candidates are flexible for the right role.
+
+### What if a good candidate is knocked out by mistake?
+
+Review rejected applications occasionally, and use flags rather than rejection for anything open to interpretation. On GetHired you can move any application back to an active stage.
+
+### Do knockout questions reduce the number of applicants?
+
+They can slightly, mostly among people who don't meet the requirement. That's the point. Keep the rest of the form short so qualified applicants aren't put off.
+
+## Next steps
+
+1. List your job's true non-negotiables, and limit them to three.
+2. Build your form with knockout rules on GetHired: [create a company account](https://gethired.devhub.co.in/auth/sign-up?company=true).
+3. Put the same requirements in your [job description](https://gethired.devhub.co.in/blog/how-to-write-a-software-engineer-job-description-that-attracts-the-right-applicants-template) so applicants know before they apply.

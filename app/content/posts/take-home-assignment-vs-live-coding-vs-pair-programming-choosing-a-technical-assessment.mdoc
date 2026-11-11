@@ -1,0 +1,208 @@
+---
+title: 'Take-Home Assignment vs Live Coding vs Pair Programming: Choosing a Technical Assessment'
+publishedAt: 2026-11-11
+type: companies
+---
+**Quick answer:** Choose the technical assessment that looks most like the real job and respects the candidate's time. **Take-home assignments** (2–4 hours) show realistic code quality but take candidates' evenings, so keep them short or pay for them. **Live coding** (45–60 minutes) is quick and shows problem solving under time pressure, but can unfairly penalise nervous candidates. **Pair programming** (60–90 minutes) on a realistic task shows how someone actually works with a teammate and is often the best signal for product engineering roles. Whatever you choose, use a written rubric, tell candidates what to expect, and allow AI tools if your team uses them at work.
+
+The technical assessment is usually the most expensive step in tech hiring, for you and for the candidate. Get it wrong and you'll either lose strong people who won't spend a weekend on your assignment, or hire people who are good at puzzles but struggle with real work.
+
+## The three main options compared
+
+{% table %}
+-
+- Take-home assignment
+- Live coding
+- Pair programming
+---
+- Typical length
+- 2–4 hours
+- 45–60 minutes
+- 60–90 minutes
+---
+- Realism
+- High
+- Low to medium
+- High
+---
+- Time cost to candidate
+- High
+- Low
+- Low
+---
+- Time cost to your team
+- Medium (review)
+- Medium
+- Medium to high
+---
+- Shows collaboration
+- No (unless you add a review call)
+- Somewhat
+- Yes
+---
+- Stress level
+- Low
+- High
+- Medium
+---
+- Risk of outside help
+- Higher
+- Low
+- Low
+---
+- Best for
+- Roles where code quality and design matter most
+- High-volume screening, algorithm-heavy roles
+- Product engineering, senior roles
+{% /table %}
+
+## Take-home assignments
+
+A take-home is a small project the candidate builds on their own time, then submits for review.
+
+**Pros:**
+
+- Candidates work in their own environment, with fewer nerves.
+- You see realistic code: structure, tests, naming, README.
+- Good for people who think best without an audience.
+
+**Cons:**
+
+- Senior candidates and people with caregiving responsibilities often drop out.
+- Scope creep: a "2-hour" task often takes 8.
+- Harder to know who, or what, wrote the code.
+
+**How to do it well:**
+
+- **Cap the time** and say so: "Please spend no more than 3 hours. We'll judge it with that in mind."
+- **Pay for longer assignments.** It signals respect and widens your pool.
+- **Use a realistic, small task**, like "Add pagination and filtering to this API", not "Build a clone of our product."
+- **Give a starter repository**, so candidates don't spend an hour on setup.
+- **Follow up with a 30-minute review call** where they walk you through their choices and you ask what they'd change. This also confirms they understand the code.
+
+## Live coding interviews
+
+The candidate solves one or two problems while sharing their screen or in a shared editor, talking through their approach.
+
+**Pros:**
+
+- Fast and easy to schedule.
+- Shows how someone breaks down a problem and responds to hints.
+- Hard to outsource.
+
+**Cons:**
+
+- Pressure affects performance, often more than skill does.
+- Algorithm puzzles rarely reflect day-to-day work.
+- Can favour people who've spent months practising puzzle sites.
+
+**How to do it well:**
+
+- **Use practical problems**: parsing a log file, building a small function with edge cases, fixing a failing test. Avoid trick questions.
+- **Let candidates choose their language.**
+- **Allow them to look things up.** Nobody memorises every API.
+- **Give hints** and score how they use them.
+- **Start with a warm-up** question to settle nerves.
+
+## Pair programming sessions
+
+The candidate and an engineer from your team work together on a realistic task in a real codebase (or a simplified copy).
+
+**Pros:**
+
+- The closest thing to working together.
+- Shows communication, how they ask questions, how they take suggestions.
+- Gives candidates a real look at your codebase and team.
+
+**Cons:**
+
+- Needs a well-prepared task and a trained interviewer.
+- The interviewer's style affects the candidate's performance.
+
+**How to do it well:**
+
+- **Prepare a task with a clear goal** and room to go further, such as "Add rate limiting to this endpoint."
+- **Explain the roles**: "You drive, I'll navigate and answer questions like a teammate would."
+- **Score collaboration and approach**, not only whether they finish.
+
+## What about AI coding tools?
+
+Most engineering teams now use AI coding assistants every day. Decide your policy and tell candidates in advance:
+
+- **Allowed (recommended for most roles):** you're testing how they work in practice. Ask them to explain any generated code and how they checked it.
+- **Not allowed:** useful when you specifically want to test fundamentals, for example for very junior roles. Say so clearly.
+
+Either way, the follow-up conversation matters more than ever. Ask "Why this approach?" and "What would break first in production?"
+
+## Which assessment should you use?
+
+- **Founding or senior product engineer:** pair programming, or a short paid take-home plus a review call.
+- **Junior or graduate roles:** a short practical live coding exercise, with hints.
+- **Infrastructure or SRE:** a debugging exercise on a broken system, done live or as pair programming.
+- **Data roles:** a short take-home with a real dataset and a review call.
+- **High-volume hiring:** a brief live exercise after an [AI screening interview](https://gethired.devhub.co.in/blog/ai-screening-interviews-replace-30-phone-screens-with-one-page-reports).
+
+## Use a rubric for every assessment
+
+Decide what you're scoring before you see any submissions. A simple rubric for a backend take-home:
+
+{% table %}
+- Area
+- What "strong" looks like
+---
+- Correctness
+- Works for the main case and handles edge cases
+---
+- Code clarity
+- Easy to read, sensible names and structure
+---
+- Testing
+- Meaningful tests for important behaviour
+---
+- Design choices
+- Reasonable trade-offs, explained in the README or call
+---
+- Communication
+- Can explain what they did and what they'd change
+{% /table %}
+
+See our guide to [structured interviews and scorecards](https://gethired.devhub.co.in/blog/structured-interviews-for-tech-hiring-how-to-build-scorecards-and-rubrics) for how to score and debrief.
+
+## Tell candidates what to expect
+
+Put the assessment format in your job post and invite email:
+
+- What type of exercise it is and how long it takes.
+- Which languages and tools they can use, including AI.
+- What you're looking for.
+- Whether it's paid.
+
+On GetHired, you can add an assessment stage like "Take-home" or "Pair programming" to your [pipeline](https://gethired.devhub.co.in/blog/a-lightweight-ats-for-startups-pipeline-stages-boards-notes-and-email-templates) and send the details with an email template when you move candidates into it.
+
+## Frequently asked questions
+
+### How long should a take-home assignment be?
+
+Two to four hours at most. If it needs longer, pay candidates for their time.
+
+### Are LeetCode-style interviews still useful?
+
+They test algorithmic problem solving, which matters for some roles. For most product engineering jobs, practical exercises predict performance better.
+
+### Should I pay candidates for take-home assignments?
+
+It's increasingly common for longer assignments, and it helps you keep senior candidates and people with less free time in your process.
+
+### How do I stop candidates cheating on take-homes?
+
+Follow every take-home with a short review call where they explain and extend their code. Someone who didn't write or understand it will struggle.
+
+### Can I skip technical assessments for senior hires?
+
+Some teams replace them with a deep technical conversation about past work. It saves time but gives less direct evidence, so use a strong rubric.
+
+## Next steps
+
+1. Pick the format that matches your role and write the rubric first.
+2. Add the assessment as a stage in your GetHired pipeline.
+3. [Post your job](https://gethired.devhub.co.in/auth/sign-up?company=true) with the full interview process in the description.

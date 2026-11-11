@@ -1,0 +1,194 @@
+---
+title: 'System Design Interview Preparation: A Step-by-Step Framework for 2026'
+publishedAt: 2026-11-11
+type: job-seekers
+---
+**Quick answer:** A system design interview tests whether you can design a large software system and explain your trade-offs. Use a repeatable framework: clarify requirements (5 minutes), estimate scale (3 minutes), define the API and data model (7 minutes), draw a high-level design (10 minutes), go deep on one or two components (15 minutes), and finish with bottlenecks and trade-offs (5 minutes). Prepare by learning the core building blocks (load balancers, caches, databases, queues, CDNs), then practise ten classic problems out loud until the framework feels natural.
+
+System design interviews feel open-ended because they are. There's no single correct answer. Interviewers are looking at how you think: whether you ask the right questions, make sensible choices, and know what each choice costs.
+
+## What is a system design interview?
+
+In a system design interview, you're asked to design a system like "a URL shortener", "a chat app" or "a news feed". You talk through the design, usually on a whiteboard or a shared drawing tool, in 45 to 60 minutes.
+
+They're most common for mid-level and senior roles. Junior candidates sometimes get a lighter version focused on APIs and databases.
+
+## What are interviewers looking for?
+
+{% table %}
+- Signal
+- What it looks like
+---
+- Requirements thinking
+- You ask what the system must do before designing it
+---
+- Structured approach
+- You move from high level to detail in a clear order
+---
+- Trade-off awareness
+- You explain why you chose SQL over NoSQL, or a queue over direct calls
+---
+- Depth
+- You can go deep on at least one component
+---
+- Communication
+- You think out loud and check in with the interviewer
+---
+- Practicality
+- You don't add Kafka and microservices to a system with 100 users
+{% /table %}
+
+## The 6-step system design framework
+
+### Step 1: Clarify requirements (about 5 minutes)
+
+Never start drawing straight away. Ask about:
+
+- **Functional requirements**: what the system does. "Users can shorten a URL and be redirected. Do we need custom aliases? Analytics? Expiry?"
+- **Non-functional requirements**: scale, latency, availability, consistency. "Is it fine if a new link takes a second to work everywhere?"
+- **Out of scope**: agree what you won't cover.
+
+Write the requirements down where the interviewer can see them.
+
+### Step 2: Estimate scale (about 3 minutes)
+
+Rough numbers guide your design. For a URL shortener:
+
+- 100 million new URLs a month ≈ 40 writes per second.
+- A 100:1 read-to-write ratio ≈ 4,000 reads per second.
+- 500 bytes per record × 100 million × 12 months × 5 years ≈ 3 TB.
+
+You don't need exact maths. You need the right order of magnitude: is this thousands of requests per second or millions?
+
+### Step 3: Define the API and data model (about 7 minutes)
+
+Sketch the main endpoints:
+
+```
+POST /urls        { long_url, custom_alias? } -> { short_code }
+GET  /{short_code} -> 301 redirect
+```
+
+Then the core tables or documents, with key fields and indexes. This shows you think about access patterns, not just boxes.
+
+### Step 4: Draw a high-level design (about 10 minutes)
+
+Draw the main components and how requests flow:
+
+Client → CDN → load balancer → application servers → cache → database, plus any queues or background workers.
+
+Walk through one request end to end. Keep it simple first; you'll improve it in the next step.
+
+### Step 5: Deep dive (about 15 minutes)
+
+Pick one or two components that matter most for this problem, or ask the interviewer which they'd like to explore. Common deep dives:
+
+- How you generate unique short codes without collisions.
+- How you cache hot keys and handle cache misses.
+- How you shard the database as it grows.
+- How you fan out a news feed to millions of followers.
+- How you deliver chat messages to offline users.
+
+### Step 6: Bottlenecks, failures and trade-offs (about 5 minutes)
+
+Finish by stress-testing your own design:
+
+- What fails first at 10× traffic?
+- What happens if the cache or a database replica goes down?
+- Where is there a single point of failure?
+- What would you monitor?
+
+Saying "this design is eventually consistent, which is fine for a feed but wouldn't be for payments" shows maturity.
+
+## The building blocks you must know
+
+Learn what each one does, when to use it and what it costs:
+
+- **Load balancers**: spread traffic across servers.
+- **Caches** (Redis, Memcached, CDN): reduce latency and database load. Know cache-aside, write-through and eviction.
+- **Relational databases** (PostgreSQL, MySQL): strong consistency, joins, transactions.
+- **NoSQL databases** (DynamoDB, Cassandra, MongoDB): flexible schemas and horizontal scale.
+- **Replication and sharding**: how databases scale reads and writes.
+- **Message queues and streams** (SQS, RabbitMQ, Kafka): decouple services and absorb spikes.
+- **Object storage** (S3, GCS): files, images, video.
+- **Search indexes** (Elasticsearch, OpenSearch) and **vector search** (pgvector) for search and recommendations.
+- **Rate limiting**, **idempotency** and **retries with backoff**.
+- **CAP theorem** and **consistency models** in plain language.
+
+## 10 system design questions to practise
+
+1. Design a URL shortener.
+2. Design a rate limiter.
+3. Design a chat application like a team messenger.
+4. Design a news feed.
+5. Design a notification system (email, push, SMS).
+6. Design a file storage and sharing service.
+7. Design a ride-matching service.
+8. Design a job search engine with filters and recommendations.
+9. Design a payment system with retries.
+10. Design a web crawler.
+
+Our list of [25 software engineer interview questions](https://gethired.devhub.co.in/blog/top-25-software-engineer-interview-questions-and-how-to-answer-them) has short model answers for several of these.
+
+## A 4-week preparation plan
+
+{% table %}
+- Week
+- Focus
+- Practice
+---
+- 1
+- Building blocks: caching, databases, queues, load balancing
+- Read and summarise each in your own words
+---
+- 2
+- The framework and estimation
+- Do 3 problems on paper, timed
+---
+- 3
+- Deep dives: sharding, consistency, fan-out, idempotency
+- Do 3 more problems out loud
+---
+- 4
+- Mock interviews
+- 2 to 3 full mocks with feedback
+{% /table %}
+
+Practise out loud. Explaining a design is a different skill from understanding it. An [AI mock interview](https://gethired.devhub.co.in/ai-interview) on GetHired lets you rehearse for a specific job and get feedback on your answers.
+
+## Common mistakes
+
+- Jumping into the design without clarifying requirements.
+- Over-engineering a small system.
+- Naming technologies without explaining why.
+- Going silent while thinking.
+- Spending 30 minutes on one box and never finishing the design.
+- Ignoring failure cases.
+
+## Frequently asked questions
+
+### Do junior developers get system design interviews?
+
+Some do, usually a lighter version. Expect questions on API design, database schemas and simple scaling rather than distributed systems at global scale.
+
+### How long should I prepare for a system design interview?
+
+Most people need three to six weeks of regular practice, depending on experience. Engineers who've worked on large systems may need less.
+
+### Is there a right answer in system design interviews?
+
+No. There are many good designs. Interviewers care about your reasoning and trade-offs more than the exact architecture.
+
+### Should I use real technology names?
+
+Yes, when you can explain why. "A Redis cache, because reads outnumber writes 100 to 1 and the data fits in memory" is better than just "add a cache".
+
+### What should I draw first?
+
+Start with the client, the API layer and the main data store. Add caches, queues and other components as the requirements call for them.
+
+## Next steps
+
+1. Pick one question from the list above and run through the six steps today.
+2. Find [senior engineering roles](https://gethired.devhub.co.in/jobs) and note which systems each company runs. Those are likely interview topics.
+3. Book a practice session before the real one.
