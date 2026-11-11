@@ -27,6 +27,14 @@ export default config({
           })),
           defaultValue: "job-seekers",
         }),
+        // The search result snippet. Left empty, the post's first paragraph
+        // (its "Quick answer") is used instead.
+        description: fields.text({
+          label: "Description",
+          description: "Shown in search results, up to 160 characters. Leave empty to use the first paragraph.",
+          multiline: true,
+          validation: { length: { max: 160 } },
+        }),
         image: fields.image({
           label: "Image",
           directory: "public/images/posts",

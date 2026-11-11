@@ -17,8 +17,43 @@ import {
 } from "@/helpers/blog/post-types";
 import { deploymentUrl } from "@/utils/formatters";
 import { markdownAlternate } from "@/helpers/marketing/content";
+import {
+  blogPostingJsonLd,
+  faqPageJsonLd,
+  postDescription,
+  postFaqs,
+  serializeJsonLd,
+  type PostNode,
+} from "@/helpers/blog/seo";
 
 const reader = createReader(process.cwd(), keystaticConfig);
+
+type BlogPost = {
+  title: string;
+  description: string;
+  image: string | null;
+  content: () => Promise<{ node: unknown }>;
+};
+
+function siteUrl() {
+  return deploymentUrl().replace(/\/$/, "");
+}
+
+/** The post's image, or the site's default share image, as an absolute URL. */
+function postImageUrl(post: BlogPost) {
+  return `${siteUrl()}${post.image ?? "/opengraph-image.jpg"}`;
+}
+
+async function postSeo(post: BlogPost) {
+  const { node } = await post.content();
+  const root = node as unknown as PostNode;
+  return {
+    description:
+      postDescription(root, post.description) ??
+      `Read "${post.title}" on the GetHired blog.`,
+    faqs: postFaqs(root),
+  };
+}
 
 // Wrap tables in a horizontally scrollable container so wide tables don't
 // make the whole page scroll sideways on small screens.
@@ -27,13 +62,29 @@ const markdocConfig = {
     table: {
       ...Markdoc.nodes.table,
       transform(node: Node, config: Config) {
-        return new Markdoc.Tag("div", { class: "overflow-x-auto" }, [
-          new Markdoc.Tag(
-            "table",
-            node.transformAttributes(config),
-            node.transformChildren(config),
-          ),
-        ]);
+        // A bordered, rounded frame with a muted header row. Prose's default
+        // row borders are fixed grays (harsh on the dark theme), so borders,
+        // header and text use theme tokens instead. Cells keep a minimum
+        // width, so on narrow screens the table scrolls sideways instead of
+        // squeezing each column to a word per line.
+        return new Markdoc.Tag(
+          "div",
+          {
+            class:
+              "not-prose my-8 overflow-x-auto rounded-lg border border-border",
+          },
+          [
+            new Markdoc.Tag(
+              "table",
+              {
+                ...node.transformAttributes(config),
+                class:
+                  "w-full border-collapse text-left text-sm leading-6 text-primary sm:text-base [&_th]:min-w-[9rem] [&_td]:min-w-[9rem] [&_th]:bg-muted [&_th]:px-3 [&_th]:py-2.5 [&_th]:align-bottom [&_th]:font-semibold [&_td]:px-3 [&_td]:py-2.5 sm:[&_th]:px-4 sm:[&_th]:py-3 sm:[&_td]:px-4 sm:[&_td]:py-3 [&_td]:align-top [&_tr]:border-b [&_tr]:border-border [&_tbody_tr:last-child]:border-b-0 [&_tbody_tr:hover]:bg-muted/40 [&_a]:font-medium [&_a]:underline [&_a]:underline-offset-2",
+              },
+              node.transformChildren(config),
+            ),
+          ],
+        );
       },
     },
     // Inline code: prose's default code colour is a fixed dark gray (unreadable
@@ -68,19 +119,13 @@ export async function generateMetadata({
     return {};
   }
 
-  const baseUrl = deploymentUrl();
-
-  const metadataBase = new URL(baseUrl);
-
-  const postImagePath = post.image;
-
-  const absoluteImageUrl = postImagePath
-    ? `${metadataBase.href.replace(/\/$/, "")}${postImagePath}`
-    : `${metadataBase}/opengraph-image.jpg`;
+  const baseUrl = siteUrl();
+  const absoluteImageUrl = postImageUrl(post);
+  const { description } = await postSeo(post);
 
   return {
     title: post.title,
-    description: `Read the latest blog post "${post.title}" on GetHired.`,
+    description,
     alternates: {
       canonical: `/blog/${slug}`,
       types: markdownAlternate(`/blog/${slug}`),
@@ -88,7 +133,7 @@ export async function generateMetadata({
 
     openGraph: {
       title: post.title,
-      description: `Read the latest blog post "${post.title}" on GetHired.`,
+      description,
       url: `${baseUrl}/blog/${slug}`,
       siteName: "GetHired",
       images: [
@@ -107,7 +152,7 @@ export async function generateMetadata({
     twitter: {
       card: "summary_large_image",
       title: post.title,
-      description: `Read the latest blog post "${post.title}" on GetHired.`,
+      description,
       images: [absoluteImageUrl],
     },
   };
@@ -144,8 +189,29 @@ export default async function Post({
   // @ts-expect-error some motherfucking type error
   const renderable = Markdoc.transform(markdocNode, markdocConfig);
 
+  const { description, faqs } = await postSeo(post);
+  const jsonLd = [
+    blogPostingJsonLd({
+      url: `${siteUrl()}/blog/${finalParms.slug}`,
+      title: post.title,
+      description,
+      publishedAt: post.publishedAt,
+      imageUrl: postImageUrl(post),
+      siteUrl: siteUrl(),
+    }),
+    faqPageJsonLd(faqs),
+  ].filter(Boolean);
+
   return (
     <div className="mx-auto max-w-6xl px-4">
+      {jsonLd.map((data, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          // Escaped so post text like "</script>" can't end the tag.
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
+        />
+      ))}
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-12">
         <article className="min-w-0">
           <Link href={"/blog"}>
@@ -181,8 +247,11 @@ export default async function Post({
           </div>
 
           {/* overflow-wrap: anywhere lets bare URLs and other long strings
-              wrap instead of pushing the page sideways on small screens. */}
-          <div className="prose prose-xl [overflow-wrap:anywhere] mt-8 mb-12 leading-8 text-lg !text-primary prose-headings:text-primary prose-strong:text-primary prose-a:text-primary lg:mb-20">
+              wrap instead of pushing the page sideways on small screens.
+              Blockquotes: prose's default quote colour is a fixed near-black
+              (unreadable on the dark theme), so they use theme tokens, drop
+              the italics and the added quote marks. */}
+          <div className="prose prose-xl [overflow-wrap:anywhere] mt-8 mb-12 leading-8 text-lg !text-primary prose-headings:text-primary prose-strong:text-primary prose-a:text-primary prose-blockquote:rounded-r-lg prose-blockquote:border-l-muted-foreground/40 prose-blockquote:bg-muted/50 prose-blockquote:py-1 prose-blockquote:pr-4 prose-blockquote:font-normal prose-blockquote:not-italic prose-blockquote:text-primary [&_blockquote_p]:before:content-none [&_blockquote_p]:after:content-none lg:mb-20">
             {Markdoc.renderers.react(renderable, React)}
           </div>
         </article>
