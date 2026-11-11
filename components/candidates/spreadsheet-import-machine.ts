@@ -9,7 +9,7 @@ import type { GridField } from "@/components/candidates/ImportPreviewGrid";
 import type { ImportCounts } from "@/helpers/candidates/copy";
 import type { ColumnMapping, MappedRow } from "@/helpers/candidates/map-columns";
 import type { ParsedSheet } from "@/helpers/candidates/parse-sheet";
-import type { DuplicateAction, EmailMatches } from "@/helpers/candidates/preview-rows";
+import type { DuplicateAction, EmailMatches, ExcludedRows } from "@/helpers/candidates/preview-rows";
 import type { StageChoices } from "@/helpers/candidates/stage-map";
 
 /** A file that was read, with its columns matched. */
@@ -35,6 +35,8 @@ export type ReviewData = {
   matches: EmailMatches;
   stageChoices: StageChoices;
   overrides: Record<number, DuplicateAction>;
+  /** The rows the user unticked; every other importable row is imported. */
+  excluded: ExcludedRows;
 };
 
 export type ImportResult = {
@@ -65,6 +67,7 @@ export type SpreadsheetImportEvent =
   | { type: "edit"; index: number; field: GridField; value: string }
   | { type: "addMatches"; matches: EmailMatches }
   | { type: "override"; index: number; action: DuplicateAction }
+  | { type: "select"; indices: number[]; selected: boolean }
   | { type: "setDestination"; destination: Destination }
   | { type: "setStageChoices"; stageChoices: StageChoices }
   | { type: "setAttested"; attested: boolean }
@@ -140,6 +143,7 @@ export function spreadsheetImportReducer(
         matches: event.matches,
         stageChoices: event.stageChoices,
         overrides: {},
+        excluded: {},
         busy: false,
         blankDestination,
       };
@@ -177,6 +181,15 @@ export function spreadsheetImportReducer(
 
     case "override":
       return { ...state, overrides: { ...state.overrides, [event.index]: event.action } };
+
+    case "select": {
+      const excluded: Record<number, true> = { ...state.excluded };
+      for (const index of event.indices) {
+        if (event.selected) delete excluded[index];
+        else excluded[index] = true;
+      }
+      return { ...state, excluded };
+    }
 
     case "setDestination":
       return { ...state, settings: { ...state.settings, destination: event.destination } };

@@ -49,6 +49,8 @@ export type PreviewRow = {
   noEmailForJob: boolean;
   /** A job destination: the row gets an application with enough detail to be scored (BI-REQ-018). */
   scored: boolean;
+  /** Goes to the confirm: an importable status the user didn't untick. */
+  selected: boolean;
 };
 
 export type JobPreview = {
@@ -65,28 +67,34 @@ export type JobPreview = {
 export type Preview = {
   rows: PreviewRow[];
   counts: Record<PreviewStatus, number>;
-  /** Null without a job destination. */
+  /** Rows that will be imported: importable and ticked. */
+  selected: number;
+  /** Null without a job destination; counts the selected rows only. */
   job: JobPreview | null;
 };
 
-/** The statuses that go to the confirm action. Errors and later duplicates are left out. */
+/** Rows the user unticked, by index. Untouched rows are selected. */
+export type ExcludedRows = Readonly<Record<number, true>>;
+
+/** The statuses that can go to the confirm action. Errors and later duplicates are left out. */
 export const IMPORTED_STATUSES: readonly PreviewStatus[] = ["ready", "existing", "known"];
 
 export function previewRows(
   rows: readonly MappedRow[],
-  { matches, withJob }: { matches: EmailMatches; withJob: boolean },
+  { matches, withJob, excluded = {} }: { matches: EmailMatches; withJob: boolean; excluded?: ExcludedRows },
 ): Preview {
   const existing = new Map(matches.existing.map((m) => [m.email.toLowerCase(), m.id]));
   const known = new Map(matches.known.map((m) => [m.email.toLowerCase(), m.userId]));
   const seen = new Set<string>();
   const counts = Object.fromEntries(PREVIEW_STATUSES.map((s) => [s, 0])) as Record<PreviewStatus, number>;
   const job: JobPreview = { scored: 0, unscored: 0, noEmail: 0, known: 0 };
+  let selected = 0;
 
   const out = rows.map((row, index): PreviewRow => {
     // The stage column only means something with a job (BI-REQ-015a).
     const { stage, ...fields } = row;
     const parsed = parseCandidateFields(withJob && stage !== undefined ? { ...fields, stage } : fields, { withJob });
-    const base = { index, existingId: null, knownUserId: null, noEmailForJob: false, scored: false };
+    const base = { index, existingId: null, knownUserId: null, noEmailForJob: false, scored: false, selected: false };
 
     if (!parsed.ok) {
       counts.error++;
@@ -98,8 +106,11 @@ export function previewRows(
     if (email && seen.has(email)) status = "duplicate_in_file";
     else if (email && known.has(email)) status = "known";
     else if (email && existing.has(email)) status = "existing";
-    if (email) seen.add(email);
+    // An unticked row doesn't claim its email: a later repeat is imported instead.
+    const isSelected = !excluded[index] && IMPORTED_STATUSES.includes(status);
+    if (email && !excluded[index]) seen.add(email);
     counts[status]++;
+    if (isSelected) selected++;
 
     const result: PreviewRow = {
       ...base,
@@ -109,7 +120,9 @@ export function previewRows(
       email,
       existingId: status === "existing" ? existing.get(email!)! : null,
       knownUserId: status === "known" ? known.get(email!)! : null,
+      selected: isSelected,
     };
+    if (!isSelected) return result;
     if (withJob && (status === "ready" || status === "existing")) {
       if (!email) {
         result.noEmailForJob = true;
@@ -125,7 +138,45 @@ export function previewRows(
     return result;
   });
 
-  return { rows: out, counts, job: withJob ? job : null };
+  return { rows: out, counts, selected, job: withJob ? job : null };
+}
+
+export type SelectionFilter = "selected" | "not_selected";
+
+export type PreviewFilters = {
+  status: PreviewStatus | null;
+  selection: SelectionFilter | null;
+  /** The column the search looks in; null for every shown column. */
+  field: string | null;
+  query: string;
+};
+
+export const NO_PREVIEW_FILTERS: PreviewFilters = { status: null, selection: null, field: null, query: "" };
+
+export const previewFiltersActive = (f: PreviewFilters) =>
+  f.status !== null || f.selection !== null || f.field !== null || f.query.trim() !== "";
+
+/**
+ * The preview rows the grid shows: by status, by whether they're ticked, and
+ * a case-insensitive search of the cells as edited (`rows`), in one column or
+ * in every one of `fields`.
+ */
+export function filterPreviewRows(
+  previewed: readonly PreviewRow[],
+  rows: readonly MappedRow[],
+  fields: readonly (keyof MappedRow)[],
+  { status, selection, field, query }: PreviewFilters,
+): PreviewRow[] {
+  const needle = query.trim().toLowerCase();
+  const searched = (field ? fields.filter((f) => f === field) : fields) as (keyof MappedRow)[];
+  return previewed.filter((r) => {
+    if (status && r.status !== status) return false;
+    if (selection === "selected" && !r.selected) return false;
+    if (selection === "not_selected" && r.selected) return false;
+    if (!needle) return true;
+    const row = rows[r.index] ?? {};
+    return searched.some((f) => (row[f] ?? "").toLowerCase().includes(needle));
+  });
 }
 
 /**
@@ -141,8 +192,8 @@ export function screeningWarning(scored: number, remaining: number | null): stri
 export type ConfirmRow = Record<string, unknown> & { duplicate_action?: DuplicateAction };
 
 /**
- * The rows to confirm: ready, already a candidate (with its duplicate action
- * when it differs from the import's) and known users. Blank fields are sent
+ * The rows to confirm: the selected ready rows, already a candidate (with its
+ * duplicate action when it differs from the import's) and known users. Blank fields are sent
  * as null, so "overwrite" clears them.
  */
 export function rowsToConfirm(
@@ -150,7 +201,7 @@ export function rowsToConfirm(
   { overrides = {}, defaultAction }: { overrides?: Record<number, DuplicateAction>; defaultAction: DuplicateAction },
 ): ConfirmRow[] {
   return preview.rows.flatMap((row) => {
-    if (!IMPORTED_STATUSES.includes(row.status) || !row.data) return [];
+    if (!row.selected || !row.data) return [];
     const fields = Object.fromEntries(Object.entries(row.data).filter(([, v]) => v !== undefined));
     const action = overrides[row.index];
     return [row.status === "existing" && action && action !== defaultAction ? { ...fields, duplicate_action: action } : fields];

@@ -27,7 +27,6 @@ import { templateCsv, TEMPLATE_FILE_NAME } from "@/helpers/candidates/import-tem
 import { applyMapping, mappingProblem } from "@/helpers/candidates/map-columns";
 import { CANDIDATES_LIST_PATH } from "@/helpers/candidates/paths";
 import {
-  IMPORTED_STATUSES,
   previewRows,
   rowsToConfirm,
   type DuplicateAction,
@@ -38,6 +37,7 @@ import { loadSheet, sheetErrorMessage } from "./load-sheet";
 import { initialSpreadsheetImport, spreadsheetImportReducer } from "./spreadsheet-import-machine";
 
 const NO_MATCHES: EmailMatches = { existing: [], known: [] };
+const NO_EXCLUDED = {};
 const NO_ROWS: never[] = [];
 
 function downloadTemplate() {
@@ -88,11 +88,15 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
   const columns = loaded?.columns ?? NO_ROWS;
   const rows = review?.rows ?? NO_ROWS;
   const matches = review?.matches ?? NO_MATCHES;
+  const excluded = review?.excluded ?? NO_EXCLUDED;
   const destination = loaded?.settings.destination ?? state.blankDestination;
 
   const canUseJob = page.jobs.length > 0 || !!page.fixedJob;
   const withJob = destination.jobId !== null;
-  const preview = useMemo(() => previewRows(rows, { matches, withJob }), [rows, matches, withJob]);
+  const preview = useMemo(
+    () => previewRows(rows, { matches, withJob, excluded }),
+    [rows, matches, withJob, excluded],
+  );
   const values = useMemo(() => (withJob ? stageValues(rows) : []), [rows, withJob]);
   const fields = useMemo<GridField[]>(() => {
     const mapped = new Set<string>(columns);
@@ -101,7 +105,7 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
     if (columns.includes("note")) mapped.add("notes");
     return [...CANDIDATE_FIELD_KEYS.filter((k) => mapped.has(k)), ...(withJob && mapped.has("stage") ? ["stage" as const] : [])];
   }, [columns, withJob]);
-  const importable = preview.rows.filter((r) => IMPORTED_STATUSES.includes(r.status)).length;
+  const importable = preview.selected;
 
   const read = async (picked: File, sheetName?: string) => {
     dispatch({ type: "busy" });
@@ -151,6 +155,10 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
   }, []);
   const override = useCallback(
     (index: number, action: DuplicateAction) => dispatch({ type: "override", index, action }),
+    [],
+  );
+  const select = useCallback(
+    (indices: number[], selected: boolean) => dispatch({ type: "select", indices, selected }),
     [],
   );
 
@@ -365,8 +373,8 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
         <div>
           <h2 className="text-lg font-semibold">Check the rows</h2>
           <p className="text-sm text-muted-foreground">
-            Fix a highlighted cell to import that row. Rows that still have errors, and repeats of an email earlier in
-            the file, are skipped.
+            Untick the people you don&apos;t want to import. Fix a highlighted cell to import that row. Rows that still
+            have errors, and repeats of an email earlier in the file, are skipped.
           </p>
         </div>
         <ImportPreviewGrid
@@ -377,6 +385,7 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
           defaultAction={destination.duplicateAction}
           onEdit={edit}
           onOverride={override}
+          onSelect={select}
           disabled={busy}
         />
       </section>

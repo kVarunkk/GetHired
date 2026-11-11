@@ -45,6 +45,7 @@ const events: Record<string, SpreadsheetImportEvent> = {
   edit: { type: "edit", index: 0, field: "email", value: "ada@example.com" },
   addMatches: { type: "addMatches", matches: { existing: ["ada@example.com"], known: [] } as never },
   override: { type: "override", index: 0, action: "update" as never },
+  select: { type: "select", indices: [0], selected: false },
   setDestination: { type: "setDestination", destination: toJob },
   setStageChoices: { type: "setStageChoices", stageChoices: { Interview: "stage-1" } as never },
   setAttested: { type: "setAttested", attested: true },
@@ -68,6 +69,7 @@ const steps: Record<string, [SpreadsheetImportState, Record<keyof typeof events,
       edit: "upload",
       addMatches: "upload",
       override: "upload",
+      select: "upload",
       setDestination: "upload",
       setStageChoices: "upload",
       setAttested: "upload",
@@ -89,6 +91,7 @@ const steps: Record<string, [SpreadsheetImportState, Record<keyof typeof events,
       edit: "map",
       addMatches: "map",
       override: "map",
+      select: "map",
       setDestination: "map",
       setStageChoices: "map",
       setAttested: "map",
@@ -110,6 +113,7 @@ const steps: Record<string, [SpreadsheetImportState, Record<keyof typeof events,
       edit: "review",
       addMatches: "review",
       override: "review",
+      select: "review",
       setDestination: "review",
       setStageChoices: "review",
       setAttested: "review",
@@ -131,6 +135,7 @@ const steps: Record<string, [SpreadsheetImportState, Record<keyof typeof events,
       edit: "done",
       addMatches: "done",
       override: "done",
+      select: "done",
       setDestination: "done",
       setStageChoices: "done",
       setAttested: "done",
@@ -151,6 +156,7 @@ const edits: Record<string, (keyof typeof events)[]> = {
     "edit",
     "addMatches",
     "override",
+    "select",
     "setDestination",
     "setStageChoices",
     "setAttested",
@@ -194,6 +200,7 @@ describe("spreadsheetImportReducer", () => {
         "columns",
         "file",
         "hash",
+        "excluded",
         "matches",
         "overrides",
         "rows",
@@ -240,9 +247,17 @@ describe("loading a file", () => {
 });
 
 describe("reviewing", () => {
-  it("resets the duplicate overrides on every preview", () => {
-    const overridden = run(review, events.override, events.back, events.previewed);
-    expect(overridden).toMatchObject({ step: "review", overrides: {} });
+  it("resets the duplicate overrides and the unticked rows on every preview", () => {
+    const overridden = run(review, events.override, events.select, events.back, events.previewed);
+    expect(overridden).toMatchObject({ step: "review", overrides: {}, excluded: {} });
+  });
+
+  it("unticks and ticks rows", () => {
+    const off = spreadsheetImportReducer(review, { type: "select", indices: [0, 2, 5], selected: false });
+    expect(off).toMatchObject({ excluded: { 0: true, 2: true, 5: true } });
+    expect(spreadsheetImportReducer(off, { type: "select", indices: [2, 5], selected: true })).toMatchObject({
+      excluded: { 0: true },
+    });
   });
 
   it("keeps the decisions and the batch going back to the columns", () => {

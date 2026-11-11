@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { previewRows, rowsToConfirm, screeningWarning, type EmailMatches } from "./preview-rows";
+import {
+  filterPreviewRows,
+  NO_PREVIEW_FILTERS,
+  previewRows,
+  rowsToConfirm,
+  screeningWarning,
+  type EmailMatches,
+} from "./preview-rows";
 
 const NONE: EmailMatches = { existing: [], known: [] };
 const CANDIDATE = "cc000000-0000-4000-8000-000000000001";
@@ -136,5 +143,66 @@ describe("rowsToConfirm", () => {
       full_name: "Ben",
       email: "ben@mail.test",
     });
+  });
+});
+
+describe("unticked rows", () => {
+  const rows = [
+    { full_name: "Asha", email: "asha@mail.test", current_title: "Engineer", skills: "Go" },
+    { full_name: "Asha again", email: "asha@mail.test", current_title: "Designer" },
+    { full_name: "", email: "x@mail.test" },
+    { full_name: "Ben", email: "ben@mail.test" },
+  ];
+
+  it("selects every importable row by default", () => {
+    const preview = previewRows(rows, { matches: NONE, withJob: false });
+    expect(preview.rows.map((r) => r.selected)).toEqual([true, false, false, true]);
+    expect(preview.selected).toBe(2);
+  });
+
+  it("leaves unticked rows out of the confirm, and lets a later repeat of their email in", () => {
+    const preview = previewRows(rows, { matches: NONE, withJob: false, excluded: { 0: true } });
+    expect(preview.rows.map((r) => [r.status, r.selected])).toEqual([
+      ["ready", false],
+      ["ready", true],
+      ["error", false],
+      ["ready", true],
+    ]);
+    expect(preview.selected).toBe(2);
+    expect(rowsToConfirm(preview, { defaultAction: "skip" }).map((r) => r.full_name)).toEqual(["Asha again", "Ben"]);
+  });
+
+  it("counts only the selected rows for a job", () => {
+    const preview = previewRows(rows, { matches: NONE, withJob: true, excluded: { 0: true, 1: true } });
+    expect(preview.job).toEqual({ scored: 0, unscored: 1, noEmail: 0, known: 0 });
+  });
+});
+
+describe("filterPreviewRows", () => {
+  const rows = [
+    { full_name: "Asha Rao", email: "asha@mail.test", location: "Bengaluru" },
+    { full_name: "Ben", email: "ben@mail", location: "Pune" },
+    { full_name: "Cid", email: "cid@mail.test", location: "bengaluru" },
+  ];
+  const fields = ["full_name", "email", "location"] as const;
+  const preview = previewRows(rows, { matches: NONE, withJob: false, excluded: { 2: true } });
+  const shown = (f: Partial<typeof NO_PREVIEW_FILTERS>) =>
+    filterPreviewRows(preview.rows, rows, fields, { ...NO_PREVIEW_FILTERS, ...f }).map((r) => r.index);
+
+  it("shows everything with no filters", () => {
+    expect(shown({})).toEqual([0, 1, 2]);
+  });
+
+  it("searches every column, or one, ignoring case and outer spaces", () => {
+    expect(shown({ query: " BENGALURU " })).toEqual([0, 2]);
+    expect(shown({ query: "a", field: "full_name" })).toEqual([0]);
+    expect(shown({ query: "ben", field: "email" })).toEqual([1]);
+  });
+
+  it("filters by status and by selection, together with the search", () => {
+    expect(shown({ status: "error" })).toEqual([1]);
+    expect(shown({ selection: "selected" })).toEqual([0]);
+    expect(shown({ selection: "not_selected" })).toEqual([1, 2]);
+    expect(shown({ selection: "not_selected", query: "bengaluru" })).toEqual([2]);
   });
 });
