@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { isUuid } from "@/helpers/agent/auth";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
-import { can } from "@/helpers/companies/permissions";
+import { can, canAny } from "@/helpers/companies/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { listImportJobs } from "./candidates-tab";
 
@@ -80,6 +80,10 @@ export const loadCandidateFrame = cache(async (candidateId: string) => {
     applications,
     /** Jobs they can still be added to (BI-REQ-005). */
     jobs: importJobs.filter((job) => !inJobs.has(job.id)),
+    /** Shows "Add to a job" (disabled when `jobs` is empty). */
+    canAddToJob: canAny(company, "applicants.import"),
+    /** Active jobs they could be added to, counting ones they're in. */
+    importJobCount: importJobs.length,
     // What update_company_candidate checks: applicants.import unscoped, or
     // for one of the candidate's jobs.
     canEdit:

@@ -55,6 +55,8 @@ function frameOf(overrides: Partial<CandidateFrame> = {}, candidate: Partial<Can
       },
     ],
     jobs: [{ id: "b0000000-0000-4000-8000-0000000000a2", title: "Frontend Engineer" }],
+    canAddToJob: true,
+    importJobCount: 2,
     canEdit: true,
     canDelete: true,
     ...overrides,
@@ -113,7 +115,7 @@ describe("candidate page layout (BI-REQ-004)", () => {
   });
 
   it("leaves out the actions the member can't take", async () => {
-    vi.mocked(loadCandidateFrame).mockResolvedValue(frameOf({ jobs: [], canEdit: false, canDelete: false }));
+    vi.mocked(loadCandidateFrame).mockResolvedValue(frameOf({ jobs: [], canAddToJob: false, importJobCount: 0, canEdit: false, canDelete: false }));
     await renderLayout();
 
     expect(screen.queryByRole("button", { name: "Add to a job" })).not.toBeInTheDocument();
