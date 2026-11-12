@@ -188,7 +188,7 @@ describe("BulkActionBar (PL-TEST-006)", () => {
       }),
     );
     expect(toast.success).toHaveBeenCalledWith(
-      "Moved 2 applications to Rejected. Emailing 1. 1 email couldn't be sent.",
+      "Moved 2 applications to Rejected. Emailing 1 in 2 minutes. Move back to cancel. 1 email couldn't be sent.",
     );
   });
 
@@ -209,7 +209,7 @@ describe("BulkActionBar (PL-TEST-006)", () => {
 
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith(
-        "Moved 3 applications to Rejected. Emailing 1. 1 not emailed: unsubscribed. 1 not emailed: no email.",
+        "Moved 3 applications to Rejected. Emailing 1 in 2 minutes. Move back to cancel. 1 not emailed: unsubscribed. 1 not emailed: no email.",
       ),
     );
   });

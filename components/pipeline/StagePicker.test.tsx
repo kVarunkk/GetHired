@@ -136,7 +136,7 @@ describe("StagePicker (PLT-032)", () => {
         email: EMAIL,
       }),
     );
-    expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("The email is on its way"));
+    expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("Email sends in 2 minutes. Move back to cancel it."));
   });
 
   it("keeps the move but says so when the email fails", async () => {

@@ -24,7 +24,9 @@ const SEND_CONCURRENCY = 5;
  * Sends the emails queued by stage moves (`helpers/pipeline/move.ts`), every
  * minute. The recipient is loaded from the database at send time; an
  * application that's gone, moved to another company or has no address is
- * dropped. An imported application's email goes to the company candidate,
+ * dropped, and so is one that has left the stage the move put it in (or left
+ * and came back, a later move with its own message: QF-REQ-011), which is
+ * archived with no `email_sent` event and no alert. An imported application's email goes to the company candidate,
  * with their unsubscribe link, unless they've unsubscribed since (BI-REQ-032/
  * 034). Each sent email is logged as an `email_sent` event with the
  * member who moved it. A failed send stays in the queue and is retried until
@@ -62,7 +64,7 @@ export async function GET(request: NextRequest) {
   const { data: rows, error: loadError } = await admin
     .from("applications")
     .select(
-      "id, user_info(email), company_candidate_id, company_candidates(email, email_opted_out_at), job_postings!inner(company_id)",
+      "id, stage_id, stage_entered_at, user_info(email), company_candidate_id, company_candidates(email, email_opted_out_at), job_postings!inner(company_id)",
     )
     .in("id", ids);
   if (loadError) {
@@ -79,7 +81,7 @@ export async function GET(request: NextRequest) {
     const row = byId.get(message.applicationId);
     const candidate = row?.company_candidates ?? null;
     const toEmail = row?.user_info?.email ?? (candidate?.email_opted_out_at ? null : candidate?.email);
-    if (!row || row.job_postings.company_id !== message.companyId || !toEmail) {
+    if (!row || row.job_postings.company_id !== message.companyId || !toEmail || !stillInStage(message, row)) {
       dropped++;
       await archive(msg_id);
       return;
@@ -133,4 +135,21 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ sent: events.length, dropped, failed: failures.length });
+}
+
+/**
+ * QF-REQ-011: the application is still where the move put it. Comparing
+ * `stage_entered_at` catches A → B → A, where only the later move's message
+ * matches. Compared as instants: PostgREST and JS format timestamps differently.
+ */
+function stillInStage(
+  message: PipelineEmailMessage,
+  row: { stage_id: string | null; stage_entered_at: string },
+): boolean {
+  // TODO(QF-REQ-013): remove the old-shape fallback a day after PR B deploys (QFT-018).
+  if (message.toStageId === undefined || message.stageEnteredAt === undefined) return true;
+  return (
+    row.stage_id === message.toStageId &&
+    Date.parse(row.stage_entered_at) === Date.parse(message.stageEnteredAt)
+  );
 }

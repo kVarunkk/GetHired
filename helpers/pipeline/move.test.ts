@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
+import { createSupabaseMock, type RecordedCall, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, COMPANY_B } from "@/test/utils/recruiter";
 import { pipelineAppOf, stageOf, templateOf } from "@/test/utils/pipeline";
 import { enqueuePipelineEmails } from "./email-queue";
@@ -27,8 +27,20 @@ const eventInserts = () =>
 const argsOf = (chain: { method: string; args: unknown[] }[], method: string) =>
   chain.find((c) => c.method === method)?.args;
 
+/** What the DB sets `stage_entered_at` to; not the test clock, so a client-side timestamp would show. */
+const DB_STAGE_ENTERED_AT = "2026-10-15T11:59:58.123456+00:00";
+
+/** The move's update returns the rows it wrote (QF-REQ-010), unless a test queues something else. */
+const updateReturnsRows = (call: RecordedCall) => {
+  const update = call.chain.find((m) => m.method === "update");
+  if (call.target !== "applications" || !update) return { data: null, error: null };
+  const ids = (call.chain.find((m) => m.method === "in")?.args[1] ?? []) as string[];
+  const stageId = (update.args[0] as { stage_id: string }).stage_id;
+  return { data: ids.map((id) => ({ id, stage_id: stageId, stage_entered_at: DB_STAGE_ENTERED_AT })), error: null };
+};
+
 beforeEach(() => {
-  supabase = createSupabaseMock({ user: COMPANY_A.user });
+  supabase = createSupabaseMock({ user: COMPANY_A.user, fallback: updateReturnsRows });
 });
 
 describe("moveApplications input (PL-TEST-002)", () => {
@@ -283,6 +295,8 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
       companyName: COMPANY_A.info.name,
       companyEmail: COMPANY_A.info.email,
       logoUrl: null,
+      toStageId: INTERVIEW.id,
+      stageEnteredAt: DB_STAGE_ENTERED_AT,
     });
     // One batch, after the move.
     expect(enqueuePipelineEmails).toHaveBeenCalledTimes(1);
@@ -525,6 +539,41 @@ describe("moveApplications with email (PLT-061, PL-TEST-002, PL-SEC-005)", () =>
       skipped: apps.map((a) => ({ id: a.id, reason: "email_failed" })),
     });
     expect(updates()).toHaveLength(1);
+    expect(insertedEvents().filter((e) => e.type === "stage_changed")).toHaveLength(2);
+  });
+
+  it("puts the DB's stage and stage_entered_at from the update in each message (QF-REQ-010)", async () => {
+    setUp();
+    const app = loaded();
+    supabase.queue("applications", { data: [app], error: null });
+
+    await moveApplications(ctx(), { applicationIds: [app.id], stageId: INTERVIEW.id, email: { templateId: ADVANCE.id } });
+
+    const [update] = updates();
+    expect(argsOf(update.chain, "select")).toEqual(["id, stage_id, stage_entered_at"]);
+    expect(sent()).toEqual([
+      expect.objectContaining({ applicationId: app.id, toStageId: INTERVIEW.id, stageEnteredAt: DB_STAGE_ENTERED_AT }),
+    ]);
+    expect(sent()[0].stageEnteredAt).not.toBe(new Date().toISOString());
+  });
+
+  it("doesn't email an application the update didn't return, and reports it as email_failed", async () => {
+    setUp();
+    const [returned, missing] = [loaded(), loaded()];
+    supabase.queue("applications", { data: [returned, missing], error: null });
+    supabase.queue("applications", {
+      data: [{ id: returned.id, stage_id: INTERVIEW.id, stage_entered_at: DB_STAGE_ENTERED_AT }],
+      error: null,
+    });
+
+    const result = await moveApplications(ctx(), {
+      applicationIds: [returned.id, missing.id],
+      stageId: INTERVIEW.id,
+      email: { templateId: ADVANCE.id },
+    });
+
+    expect(result).toMatchObject({ ok: true, moved: 2, emailed: 1, skipped: [{ id: missing.id, reason: "email_failed" }] });
+    expect(sent().map((m) => m.applicationId)).toEqual([returned.id]);
     expect(insertedEvents().filter((e) => e.type === "stage_changed")).toHaveLength(2);
   });
 
