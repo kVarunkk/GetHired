@@ -1,13 +1,17 @@
 import { reportError } from "@/helpers/posthog/report-error";
-import { headers } from "next/headers";
 import {
   AllProfileWithRelations,
+  CandidateState,
+  JobPostingsRow,
   ProfileMatchScores,
   TResumeRowContent,
 } from "../../utils/types";
-import { INTERNAL_API_SECRET } from "@/utils/formatters";
-import { getBaseUrl } from "@/utils/get-base-url";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { rerankWithJev } from "@/utils/rerank-jev";
 import { extractSectionText } from "@/utils/extract-resume-content";
+
+/** The rerank sees at most this many profiles; the rest keep their order after them. */
+const RERANK_MAX_PROFILES = 50;
 
 interface RerankResult {
   initialProfiles: AllProfileWithRelations[];
@@ -19,128 +23,118 @@ interface RerankResult {
 export async function rerankProfilesIfApplicable({
   initialProfiles,
   initialCount,
-  userId,
   jobId,
   relevanceSearchType,
   cursor,
   companyId,
-  isInternalCall,
 }: {
   initialProfiles: AllProfileWithRelations[];
   initialCount: number;
-  userId: string;
   jobId: string | null;
-  aiCredits: number;
-  matchedProfileIds: string[];
   cursor: string | null;
+  /** The caller's company, from the session or the internal digest's lookup. Never from input. */
   companyId: string;
   relevanceSearchType: "digest" | "standard" | null;
-  isInternalCall: boolean;
 }): Promise<RerankResult> {
-  let finalProfiles = initialProfiles;
-  let finalCount = initialCount;
-  let removedProfiles: AllProfileWithRelations[] = [];
-  let matchScores: Record<string, ProfileMatchScores> | undefined;
-
-  const headersList = await headers();
-
-  const url = await getBaseUrl();
-
   if (
     cursor ||
-    !finalProfiles ||
-    finalProfiles.length === 0 ||
+    !initialProfiles ||
+    initialProfiles.length === 0 ||
     !relevanceSearchType ||
     relevanceSearchType === "standard" ||
-    (relevanceSearchType === "digest" && !jobId)
+    !jobId
   ) {
-    return { initialProfiles: finalProfiles, totalCount: finalCount };
+    return { initialProfiles, totalCount: initialCount };
   }
+
+  const ranked = initialProfiles.slice(0, RERANK_MAX_PROFILES);
+  const rest = initialProfiles.slice(RERANK_MAX_PROFILES);
 
   try {
-    const requestHeaders: Record<string, string> = {};
-    const cookie = headersList.get("Cookie");
+    const result = await rerankProfilesForJob({ jobId, companyId, profiles: ranked });
+    if (!result) return { initialProfiles, totalCount: initialCount };
 
-    if (isInternalCall) {
-      requestHeaders["X-Internal-Secret"] = INTERNAL_API_SECRET;
-    } else if (cookie) {
-      requestHeaders["Cookie"] = cookie;
-    }
-    removedProfiles = initialProfiles.splice(50);
+    const uniqueRerankedIds = Array.from(new Set(result.rerankedIds));
+    const filteredOut = new Set(result.filteredOutIds);
+    const byId = new Map(ranked.map((p) => [p.user_id, p]));
 
-    const aiRerankRes = await fetch(`${url}/api/ai-search/profiles`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...requestHeaders,
-      },
-      body: JSON.stringify({
-        userId: userId,
-        jobId,
-        companyId,
-        profiles: initialProfiles.map((profile) => {
-          const resumeContent = publicResumeContent(profile);
-          const { experience, skills, projects } = extractSectionText(
-            ["experience", "skills", "projects"],
-            resumeContent,
-          );
+    const reordered = uniqueRerankedIds
+      .map((id) => byId.get(id))
+      .filter((p): p is AllProfileWithRelations => !!p && !filteredOut.has(p.user_id))
+      .concat(rest);
 
-          return {
-            user_id: profile.user_id,
-            desired_roles: profile.desired_roles,
-            experience_years: profile.experience_years,
-            preferred_locations: profile.preferred_locations,
-            top_skills: profile.top_skills,
-            work_style_preferences: profile.work_style_preferences,
-            company_size_preference: profile.company_size_preference,
-            career_goals_short_term: profile.career_goals_short_term,
-            career_goals_long_term: profile.career_goals_long_term,
-            job_type: profile.job_type,
-            industry_preferences: profile.industry_preferences,
-            resume_experience: experience ?? "",
-            resume_skills: skills ?? "",
-            resume_projects: projects ?? "",
-            min_salary: profile.min_salary,
-            max_salary: profile.max_salary,
-            visa_sponsorship_required: profile.visa_sponsorship_required,
-          };
-        }),
-      }),
-    });
-
-    const aiRerankResult: {
-      rerankedProfiles: string[];
-      filteredOutProfiles: string[];
-      scores?: Record<string, ProfileMatchScores>;
-    } = await aiRerankRes.json();
-
-    if (aiRerankRes.ok && aiRerankResult.rerankedProfiles) {
-      const uniqueRerankedIds = Array.from(
-        new Set(aiRerankResult.rerankedProfiles as string[]),
-      );
-      const filteredOutIdsSet = new Set(
-        aiRerankResult.filteredOutProfiles || [],
-      );
-
-      const jobMap = new Map(initialProfiles.map((job) => [job.user_id, job]));
-
-      const reorderedJobs = uniqueRerankedIds
-        .map((id: string) => jobMap.get(id))
-        .filter(
-          (job): job is AllProfileWithRelations =>
-            !!job && !filteredOutIdsSet.has(job.user_id),
-        )
-        .concat(removedProfiles);
-
-      finalProfiles = reorderedJobs;
-      finalCount = reorderedJobs.length;
-      matchScores = aiRerankResult.scores ?? {};
-    }
+    return { initialProfiles: reordered, totalCount: reordered.length, matchScores: result.scores };
   } catch (e) {
-    reportError("Error during AI Rerank fetch:", e);
+    reportError("Error during AI Rerank:", e);
+    return { initialProfiles, totalCount: initialCount };
   }
+}
 
-  return { initialProfiles: finalProfiles, totalCount: finalCount, matchScores };
+/**
+ * Reranks profiles against one of the company's own jobs (QF-REQ-001/003).
+ * Returns null when the job isn't the company's (or is gone): a stale or
+ * foreign job id is a normal input, so the caller keeps the vector order.
+ */
+export async function rerankProfilesForJob({
+  jobId,
+  companyId,
+  profiles,
+}: {
+  jobId: string;
+  companyId: string;
+  profiles: AllProfileWithRelations[];
+}): Promise<{
+  rerankedIds: string[];
+  filteredOutIds: string[];
+  scores: Record<string, ProfileMatchScores>;
+} | null> {
+  const { data: job, error } = await createServiceRoleClient()
+    .from("job_postings")
+    .select("id, title, description, location, job_type, salary_range, experience")
+    .eq("id", jobId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!job) return null;
+
+  const result = await rerankWithJev({
+    type: "relevant_profiles",
+    reference: job as JobPostingsRow,
+    items: profiles.map(toCandidateState),
+  });
+
+  return {
+    rerankedIds: result.reranked_job_ids ?? [],
+    filteredOutIds: result.filtered_out_ids ?? [],
+    scores: result.scores ?? {},
+  };
+}
+
+function toCandidateState(profile: AllProfileWithRelations): CandidateState {
+  const { experience, skills, projects } = extractSectionText(
+    ["experience", "skills", "projects"],
+    publicResumeContent(profile),
+  );
+  return {
+    id: profile.user_id,
+    preferences: {
+      desired_roles: profile.desired_roles ?? undefined,
+      top_skills: profile.top_skills ?? undefined,
+      experience_years: profile.experience_years ?? undefined,
+      preferred_locations: profile.preferred_locations ?? undefined,
+      min_salary: profile.min_salary ?? undefined,
+      max_salary: profile.max_salary ?? undefined,
+      work_style_preferences: profile.work_style_preferences ?? undefined,
+      job_type: profile.job_type ?? undefined,
+      company_size_preference: profile.company_size_preference ?? undefined,
+      career_goals_short_term: profile.career_goals_short_term ?? undefined,
+      career_goals_long_term: profile.career_goals_long_term ?? undefined,
+      visa_sponsorship_required: profile.visa_sponsorship_required ?? undefined,
+    },
+    experienceText: experience ?? "",
+    skillsText: skills ?? "",
+    projectsText: projects ?? "",
+  };
 }
 
 /**

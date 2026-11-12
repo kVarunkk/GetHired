@@ -333,6 +333,12 @@ describe("middleware: screening interview routes", () => {
   });
 });
 
+describe("middleware: the profiles rerank route is gone (QF-REQ-002)", () => {
+  it("doesn't treat /api/ai-search/profiles as public", async () => {
+    expect(passesThrough(await updateSession(request("/api/ai-search/profiles")))).toBe(false);
+  });
+});
+
 describe("middleware: bulk import routes", () => {
   it("lets the resume worker and the expiry cron through without a session (each checks its own secret)", async () => {
     for (const path of ["/api/worker/candidate-import", "/api/updates/candidate-imports/expire"]) {

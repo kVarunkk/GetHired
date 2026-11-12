@@ -10,6 +10,7 @@ import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-moc
 import { COMPANY_A } from "@/test/utils/recruiter";
 import { OWNER_A } from "@/test/utils/team";
 import { expandProfileLocations } from "@/helpers/locations/aliases";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { GET } from "./route";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
@@ -145,6 +146,49 @@ describe("GET /api/profiles matchScores (MT-TASK-001)", () => {
     const body = await (await get(params)).json();
 
     expect(body).not.toHaveProperty("matchScores");
+  });
+});
+
+describe("GET /api/profiles rerank scope (QF-REQ-003)", () => {
+  const JOB_ID = "b0000000-0000-4000-8000-000000000001";
+
+  it("passes the session company's id, never one from the request", async () => {
+    await signIn(TIER_STARTUP);
+
+    await get({ sortBy: "relevance", job_post: JOB_ID, companyId: "c-someone-else" });
+
+    const args = vi.mocked(rerankProfilesIfApplicable).mock.calls[0][0];
+    expect(args.companyId).toBe(COMPANY_A.id);
+    expect(args).not.toHaveProperty("isInternalCall");
+  });
+
+  it("passes the owner's company on an internal digest call", async () => {
+    const admin = createSupabaseMock();
+    admin.queue("company_info", {
+      data: { id: COMPANY_A.id, ai_credits: 0, filled: true, job_postings: [] },
+      error: null,
+    });
+    Object.assign(admin.client.auth, {
+      admin: { getUserById: vi.fn().mockResolvedValue({ data: { user: COMPANY_A.user }, error: null }) },
+    });
+    vi.mocked(createServiceRoleClient).mockReturnValue(admin.client as never);
+    vi.mocked(getEntitlements).mockResolvedValue(mapped(entitlementsOf(TIER_STARTUP)) as never);
+    vi.stubEnv("INTERNAL_API_SECRET", "s3cret");
+
+    await GET(
+      buildRequest("/api/profiles", {
+        searchParams: { sortBy: "relevance", job_post: JOB_ID, type: "digest", userId: COMPANY_A.user.id },
+        headers: { "X-Internal-Secret": "s3cret" },
+      }),
+    );
+    vi.unstubAllEnvs();
+
+    const [lookup] = admin.callsFor("company_info");
+    expect(lookup.chain).toContainEqual({ method: "eq", args: ["user_id", COMPANY_A.user.id] });
+    expect(vi.mocked(rerankProfilesIfApplicable).mock.calls[0][0]).toMatchObject({
+      companyId: COMPANY_A.id,
+      relevanceSearchType: "digest",
+    });
   });
 });
 

@@ -139,7 +139,6 @@ export async function updateSession(request: NextRequest) {
     "/api/worker/resume-reparse",
     "/api/updates/resumes/delete-files",
     "/api/ai-search/jobs",
-    "/api/ai-search/profiles",
     "/api/dodo/webhook",
     // Billing: the public pricing page, the daily cron (X-Internal-Secret) and
     // the admin grant route (x-api-key). Each route checks its own secret.

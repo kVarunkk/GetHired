@@ -212,7 +212,7 @@ flowchart LR
 flowchart TD
   P["/company/profiles"] --> API["GET /api/profiles<br/>getMyCompany + entitlements"]
   API --> PQB["profilesFilterQueryBuilder<br/>view candidate_directory, rpc match_user_profiles,<br/>get_unique_profile_filters, *_search RPCs, expandLocations"]
-  API --> AIR["ai-rerank-profiles → POST /api/ai-search/profiles → JEV"]
+  API --> AIR["ai-rerank-profiles → rerankWithJev (JEV)"]
   P --> PP["/company/profiles/[id]<br/>rpc company_has_candidate_access, record_profile_view<br/>→ candidate_profile_views"]
   P & PP --> FAV["ProfileFavoriteStar → setProfileFavoriteAction<br/>(company_can_view_candidate) → company_favorites"]
 

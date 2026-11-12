@@ -151,7 +151,7 @@ flowchart LR
 | A10/C12 | `/api/dodo/create-checkout-session`, `/api/dodo/webhook`, `/api/dodo/download-invoice/[id]`, `/api/company/billing`, `/api/company/billing/checkout`, `/api/internal/billing/grant` |
 | A12/C14 | `/api/agent/chat`, `/api/agent/sessions(/[id])`, `/api/agent/memories(/[id])` |
 | C3/C5/C6/C10 | `/api/job-posting`, `/api/company/job-posts/[id]/pipeline`, `/screen`, `/interview`, `/api/company/applications/[id]/screening` |
-| C8/C9 | `/api/profiles`, `/api/profiles/filters`, `/api/ai-search/profiles`, `/api/company/matches/explain`, `/api/company/outreach` |
+| C8/C9 | `/api/profiles`, `/api/profiles/filters`, `/api/company/matches/explain`, `/api/company/outreach` |
 | C13 | `/api/careers/[slug]/jobs` |
 | Ops | `/api/health`, `/api/debug/heapdump`, `/api/debug/memory`, `/api/keystatic/[...params]` |
 | Crons | see [04-background-jobs](04-background-jobs.md) |
