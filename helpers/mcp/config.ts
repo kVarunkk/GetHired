@@ -6,8 +6,25 @@ import { deploymentUrl } from "@/utils/formatters";
 
 export const MCP_PATH = "/api/mcp";
 
+/** The public page that explains the server and how to connect a client. */
+export const MCP_PAGE_PATH = "/mcp";
+
 /** The server's version in serverInfo. 1.x was the separate Render server. */
 export const MCP_SERVER_VERSION = "2.0.0";
+
+/**
+ * The rest of serverInfo (2026-07-28 `Implementation`): what the server is
+ * for, the public setup page and the app icon (app/icon.png, served by Next
+ * at /icon.png and outside the middleware's auth).
+ */
+export const mcpServerInfo = () => ({
+  name: "gethired",
+  title: "GetHired",
+  description:
+    "GetHired's job platform for AI agents. For job seekers: search jobs and get personalised matches, read and submit application forms, track applications, create, edit, tailor and download resumes, and set up mock interviews. For hiring teams: post jobs, find and review candidates, run the pipeline and screening interviews, and manage the team, within their role's permissions.",
+  websiteUrl: `${deploymentUrl()}${MCP_PAGE_PATH}`,
+  icons: [{ src: `${deploymentUrl()}/icon.png`, mimeType: "image/png", sizes: ["377x377"] }],
+});
 
 /** How long a client may cache tools/list (2026-07-28 `ttlMs`, private scope). */
 export const MCP_TOOLS_LIST_TTL_MS = 5 * 60 * 1000;

@@ -195,12 +195,9 @@ describe("RECRUITER_MCP_TOOLS", () => {
     for (const tool of RECRUITER_MCP_TOOLS) {
       const a = tool.annotations;
       expect(typeof a.openWorldHint, tool.name).toBe("boolean");
-      if (a.readOnlyHint) {
-        expect(a.destructiveHint, tool.name).toBeUndefined();
-      } else {
-        expect(typeof a.destructiveHint, tool.name).toBe("boolean");
-        expect(typeof a.idempotentHint, tool.name).toBe("boolean");
-      }
+      expect(typeof a.destructiveHint, tool.name).toBe("boolean");
+      expect(typeof a.idempotentHint, tool.name).toBe("boolean");
+      if (a.readOnlyHint) expect(a.destructiveHint, tool.name).toBe(false);
     }
   });
 

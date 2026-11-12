@@ -34,16 +34,20 @@ import {
   previewUpdateResume,
   type McpPreviewBuilder,
 } from "./previews";
+import type { McpInputDescriptions } from "./schema";
+import { MCP_INPUT_DESCRIPTIONS, MCP_OUTPUT_SCHEMAS } from "./tool-docs";
 import type { McpToolset } from "./toolsets";
 
 export type AgentToolName = keyof AgentTools;
 
 /**
- * MCP tool annotations (MCP-REQ-008). Read-only tools leave out the
- * destructive and idempotent hints, which only mean something for writes.
+ * MCP tool annotations (MCP-REQ-008). Every tool declares all four hints, so
+ * clients and directories don't have to assume the spec's defaults (which
+ * treat an unannotated tool as destructive). A read-only tool is never
+ * destructive; it is idempotent unless each call spends AI credits.
  */
 export type McpToolAnnotations =
-  | { readOnlyHint: true; openWorldHint: boolean; destructiveHint?: never; idempotentHint?: never }
+  | { readOnlyHint: true; openWorldHint: boolean; destructiveHint: false; idempotentHint: boolean }
   | { readOnlyHint: false; openWorldHint: boolean; destructiveHint: boolean; idempotentHint: boolean };
 
 /** A role's agent tools. The recruiter's are partial, since the role filters them. */
@@ -84,9 +88,15 @@ export type McpToolDef<
   preview?: McpPreviewBuilder<TCtx>;
   /** Emails someone, so it counts toward the per-hour email limit (RMCP spec §4.7). */
   email?: boolean;
+  /** MCP-only descriptions for the inputs (schema.ts `describeInputs`). */
+  inputDescriptions?: McpInputDescriptions;
+  /** The shape of a successful result's structuredContent. */
+  outputSchema?: z.ZodTypeAny;
 };
 
-const READ = { readOnlyHint: true, openWorldHint: false } as const;
+const READ = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
+/** Reads that can spend AI credits, so a repeat isn't free. */
+const PAID_READ = { ...READ, idempotentHint: false } as const;
 const SAFE_WRITE = {
   readOnlyHint: false,
   destructiveHint: false,
@@ -99,21 +109,35 @@ const ADD = { readOnlyHint: false, destructiveHint: false, idempotentHint: false
 /** Changes or removes what's there. */
 const CHANGE = { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false } as const;
 
-export const MCP_TOOLS: readonly McpToolDef[] = [
+const ROWS: readonly McpToolDef[] = [
   // --- Jobs ---
   { name: "search_jobs", title: "Search jobs", annotations: READ, agentTools: ["searchJobs"] },
   {
     name: "natural_language_job_search",
     title: "Search jobs from a description",
-    annotations: { readOnlyHint: true, openWorldHint: true },
+    annotations: { ...PAID_READ, openWorldHint: true },
     agentTools: ["naturalLanguageJobSearch"],
     description:
       "Turn a plain-English job request into filters with AI, then search. Costs 5 AI credits per call; prefer search_jobs when you can build the filters yourself.",
   },
   { name: "get_relevant_jobs", title: "Jobs matched to me", annotations: READ, agentTools: ["findRelevantJobs"] },
-  { name: "get_similar_jobs", title: "Similar jobs", annotations: READ, agentTools: ["findSimilarJobs"] },
+  {
+    name: "get_similar_jobs",
+    title: "Similar jobs",
+    annotations: PAID_READ,
+    agentTools: ["findSimilarJobs"],
+    description:
+      "Find jobs similar to a given job, most similar first. Returns compact jobs (id, title, company, locations, salary, job type, experience, posted date and link) with totalCount. May spend 5 AI credits to re-rank the results with AI when the user has enough credits.",
+  },
   { name: "get_job_details", title: "Job details", annotations: READ, agentTools: ["getJobDetails"] },
-  { name: "get_saved_jobs", title: "Saved jobs", annotations: READ, agentTools: ["listSavedJobs"] },
+  {
+    name: "get_saved_jobs",
+    title: "Saved jobs",
+    annotations: READ,
+    agentTools: ["listSavedJobs"],
+    description:
+      "List the jobs the user has saved (bookmarked) on GetHired, as compact jobs (id, title, company, locations, salary, job type, experience, posted date and link) with totalCount. Save or unsave a job with favorite_job.",
+  },
   {
     name: "get_applied_jobs",
     title: "Applied jobs",
@@ -290,8 +314,10 @@ export const MCP_TOOLS: readonly McpToolDef[] = [
   {
     name: "pick_resume_for_job",
     title: "Pick a resume for a job",
-    annotations: READ,
+    annotations: PAID_READ,
     agentTools: ["pickResumeForJob"],
+    description:
+      "Compare the user's resumes against a job (jobId) or a pasted job description and pick the one that fits best. Returns the best resume with its score (the share of the job's requirements it shows, 0-100), up to 3 requirements it matches with a quote from the resume and up to 3 it misses, then the other resumes compared, best first, each with its score and what it misses. Pass resumeIds to compare specific resumes; otherwise all ready resumes are compared, and with more than 5 only the closest 5 are compared in detail. Costs 1 AI credit when two or more resumes are compared; free with one.",
   },
   {
     name: "improve_resume",
@@ -314,6 +340,7 @@ export const MCP_TOOLS: readonly McpToolDef[] = [
     title: "Set up a mock interview",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     agentTools: ["createInterview"],
+    description: `Set up an AI mock interview for a job, using a resume (the primary one by default). Returns the new interview's id and the link where the user starts it. Free to create; each session uses ${TAICredits.AI_INTERVIEW} AI credits when it starts.`,
   },
   {
     name: "list_screening_interviews",
@@ -322,6 +349,13 @@ export const MCP_TOOLS: readonly McpToolDef[] = [
     agentTools: ["listScreeningInterviews"],
   },
 ];
+
+/** The applicant catalog, with each row's MCP input descriptions and output schema (tool-docs.ts). */
+export const MCP_TOOLS: readonly McpToolDef[] = ROWS.map((def) => ({
+  ...def,
+  inputDescriptions: MCP_INPUT_DESCRIPTIONS[def.name],
+  outputSchema: MCP_OUTPUT_SCHEMAS[def.name],
+}));
 
 /** Applicant agent tools MCP leaves out, and why (spec §4.4). */
 export const MCP_EXCLUDED_AGENT_TOOLS: Partial<Record<AgentToolName, string>> = {

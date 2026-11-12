@@ -34,7 +34,7 @@ import { deploymentUrl } from "@/utils/formatters";
 import { MCP_CONFIRMATION_TTL_SECONDS } from "./config";
 import { withOutcome, type McpRunResult } from "./limits";
 import { previewText, type McpPreview } from "./previews";
-import { jsonResult, textResult } from "./results";
+import { jsonResult, messageResult, textResult } from "./results";
 import { CONFIRMATION_TOKEN_KEY } from "./schema";
 
 export type ConfirmationBinding = {
@@ -257,12 +257,12 @@ async function viaElicitation(gate: ConfirmGate, input: Record<string, unknown>)
     if (verified.ok) {
       const answer = acceptedContent<{ confirm?: unknown }>(gate.request.mcpReq.inputResponses, "confirm");
       if (answer?.confirm !== true) {
-        return withOutcome(textResult("The user declined, so nothing was done."), "denied");
+        return withOutcome(messageResult("The user declined, so nothing was done."), "denied");
       }
       const { ran } = await claimAndRun(gate, input, verified.jti);
       return (
         ran ??
-        withOutcome(textResult("This was already confirmed and done, so it wasn't run again."), "denied")
+        withOutcome(messageResult("This was already confirmed and done, so it wasn't run again."), "denied")
       );
     }
   }
