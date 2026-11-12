@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import toast from "react-hot-toast";
 import { checkImportEmailsAction } from "@/app/actions/candidates/check-import-emails";
 import { confirmResumeImportAction } from "@/app/actions/candidates/confirm-resume-import";
+import { discardResumeImportAction } from "@/app/actions/candidates/discard-resume-import";
 import { createResumeUploadUrlsAction } from "@/app/actions/candidates/create-resume-upload-urls";
+import { importRowFileUrlAction } from "@/app/actions/candidates/import-row-file-url";
 import { importStatusAction } from "@/app/actions/candidates/import-status";
 import { removeImportRowAction } from "@/app/actions/candidates/remove-import-row";
 import { retryImportRowAction } from "@/app/actions/candidates/retry-import-row";
 import { submitResumeBatchAction } from "@/app/actions/candidates/submit-resume-batch";
 import { updateImportRowAction } from "@/app/actions/candidates/update-import-row";
+import { IMPORT_LAWFUL_BASIS_TEXT } from "./LawfulBasisCheck";
 import type { ImportBatchView, ImportRowView } from "@/helpers/candidates/import-rows";
 import type { DestinationPage } from "./ImportDestination";
 import type { ImportJob } from "@/helpers/candidates/import-page";
@@ -20,8 +23,18 @@ vi.mock("@/components/ui/select", () => import("@/test/utils/select-mock"));
 vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/app/actions/candidates/check-import-emails", () => ({ checkImportEmailsAction: vi.fn() }));
 vi.mock("@/app/actions/candidates/confirm-resume-import", () => ({ confirmResumeImportAction: vi.fn() }));
+vi.mock("@/app/actions/candidates/discard-resume-import", () => ({ discardResumeImportAction: vi.fn() }));
 vi.mock("@/app/actions/candidates/create-resume-upload-urls", () => ({ createResumeUploadUrlsAction: vi.fn() }));
 vi.mock("@/app/actions/candidates/import-status", () => ({ importStatusAction: vi.fn() }));
+vi.mock("@/app/actions/candidates/import-row-file-url", () => ({ importRowFileUrlAction: vi.fn() }));
+// The PDF viewer needs a canvas; the dialog is checked by what it was given.
+vi.mock("@/components/ResumePreviewDialog", () => ({
+  default: (props: { displayUrl: string; triggerLabel?: string; onOpenChange?: (open: boolean) => void }) => (
+    <button type="button" aria-label={props.triggerLabel} data-url={props.displayUrl} onClick={() => props.onOpenChange?.(true)}>
+      View
+    </button>
+  ),
+}));
 vi.mock("@/app/actions/candidates/remove-import-row", () => ({ removeImportRowAction: vi.fn() }));
 vi.mock("@/app/actions/candidates/retry-import-row", () => ({ retryImportRowAction: vi.fn() }));
 vi.mock("@/app/actions/candidates/submit-resume-batch", () => ({ submitResumeBatchAction: vi.fn() }));
@@ -98,7 +111,7 @@ const COUNTS = {
   not_found: 0,
 };
 
-const attest = () => fireEvent.click(screen.getByRole("checkbox"));
+const attest = () => fireEvent.click(screen.getByRole("checkbox", { name: IMPORT_LAWFUL_BASIS_TEXT }));
 const confirmButton = () => screen.getByRole("button", { name: /^Import \d+ (person|people)$/ });
 
 beforeEach(() => {
@@ -120,6 +133,25 @@ describe("ResumeImport: upload (BI-REQ-020/021)", () => {
     });
     expect(screen.getByText("Use a PDF or Word (.docx) file.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Upload and read 1 resume" })).toBeEnabled();
+  });
+
+  it("views a chosen PDF before it's uploaded, from a local link", () => {
+    const createObjectURL = vi.fn(() => "blob:local-a");
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL, revokeObjectURL }));
+    render(<ResumeImport page={jobPage()} />);
+    const a = pdf("a.pdf");
+    const docx = new File(["x"], "b.docx", {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    fireEvent.change(screen.getByLabelText("Choose resumes"), { target: { files: [a, docx] } });
+    // A browser can't show a Word file.
+    expect(screen.queryByRole("button", { name: "View b.docx" })).not.toBeInTheDocument();
+    const view = screen.getByRole("button", { name: "View a.pdf" });
+    fireEvent.click(view);
+    expect(createObjectURL).toHaveBeenCalledWith(a);
+    expect(view).toHaveAttribute("data-url", "blob:local-a");
+    expect(createResumeUploadUrlsAction).not.toHaveBeenCalled();
   });
 
   it("uploads to the signed URLs, submits the batch and shows the rows as they're read", async () => {
@@ -196,7 +228,7 @@ describe("ResumeImport: review (BI-REQ-023/024)", () => {
         await vi.advanceTimersByTimeAsync(3000);
       });
       expect(importStatusAction).toHaveBeenCalledWith({ batchId: BATCH });
-      expect(screen.getByText("2 resumes read. Fix a highlighted cell, or remove the row.")).toBeInTheDocument();
+      expect(screen.getByText("2 resumes read. Fix a highlighted cell, or untick a resume to leave it out.")).toBeInTheDocument();
       vi.mocked(importStatusAction).mockClear();
       await act(async () => {
         await vi.advanceTimersByTimeAsync(6000);
@@ -242,9 +274,104 @@ describe("ResumeImport: review (BI-REQ-023/024)", () => {
     expect(screen.getByText("No text found: is it a scan?")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry cv-2.pdf" }));
     expect(retryImportRowAction).toHaveBeenCalledWith({ rowId: ROW(2) });
-    fireEvent.click(screen.getByRole("button", { name: "Remove cv-1.pdf" }));
-    expect(removeImportRowAction).toHaveBeenCalledWith({ rowId: ROW(1) });
-    expect(screen.queryByText("cv-1.pdf")).not.toBeInTheDocument();
+    // A read row is left out with its box, not removed.
+    expect(screen.queryByRole("button", { name: "Remove cv-1.pdf" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove cv-2.pdf" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent("Remove this resume?");
+    expect(removeImportRowAction).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remove" }));
+    await waitFor(() => expect(removeImportRowAction).toHaveBeenCalledWith({ rowId: ROW(2) }));
+    expect(screen.queryByText("cv-2.pdf")).not.toBeInTheDocument();
+  });
+
+  it("asks before it stops reading a file", async () => {
+    render(
+      <ResumeImport
+        page={jobPage()}
+        initial={{ batch: { ...BATCH_VIEW, status: "parsing" }, rows: [row(1), row(2, { status: "queued", fields: {} })] }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Stop reading cv-2.pdf" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent("Its resume import is handed back.");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(removeImportRowAction).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Stop reading cv-2.pdf" }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Stop reading" }));
+    await waitFor(() => expect(removeImportRowAction).toHaveBeenCalledWith({ rowId: ROW(2) }));
+  });
+
+  it("discards the open import and shows the upload again", async () => {
+    vi.mocked(discardResumeImportAction).mockResolvedValue({ ok: true });
+    render(<ResumeImport page={jobPage()} initial={{ batch: BATCH_VIEW, rows: [row(1)] }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Discard import" }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Discard" }));
+    await waitFor(() => expect(discardResumeImportAction).toHaveBeenCalledWith({ batchId: BATCH }));
+    await waitFor(() => expect(screen.queryByText("Check what was read")).not.toBeInTheDocument());
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("goes back to the upload through the same discard", async () => {
+    vi.mocked(discardResumeImportAction).mockResolvedValue({ ok: true });
+    render(<ResumeImport page={jobPage()} initial={{ batch: BATCH_VIEW, rows: [row(1)] }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Back to upload" }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Discard" }));
+    await waitFor(() => expect(discardResumeImportAction).toHaveBeenCalledWith({ batchId: BATCH }));
+    await waitFor(() => expect(screen.queryByText("Check what was read")).not.toBeInTheDocument());
+  });
+
+  it("stays on the review when the discard is refused", async () => {
+    vi.mocked(discardResumeImportAction).mockResolvedValue({ ok: false, error: "This import was already confirmed." });
+    render(<ResumeImport page={jobPage()} initial={{ batch: BATCH_VIEW, rows: [row(1)] }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Discard import" }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Discard" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("This import was already confirmed."));
+    expect(screen.getByText("Check what was read")).toBeInTheDocument();
+  });
+
+  it("imports only the ticked resumes", async () => {
+    render(
+      <ResumeImport
+        page={jobPage()}
+        initial={{ batch: BATCH_VIEW, rows: [row(1), row(2, { fields: { full_name: "No Mail" } }), row(3)] }}
+      />,
+    );
+    attest();
+    // The one without an email blocks Confirm until it's left out.
+    expect(confirmButton()).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Import cv-2.pdf" }));
+    expect(screen.queryByText("1 person needs an email to join the job.")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Import 2 people" })).toBeEnabled();
+    expect(screen.getByRole("checkbox", { name: "Select all resumes" })).toHaveAttribute("data-state", "indeterminate");
+
+    fireEvent.click(confirmButton());
+    await screen.findByRole("heading", { name: "Import finished" });
+    expect(confirmResumeImportAction).toHaveBeenCalledWith(expect.objectContaining({ rowIds: [ROW(1), ROW(3)] }));
+  });
+
+  it("ticks and unticks every resume from the header", () => {
+    render(<ResumeImport page={jobPage()} initial={{ batch: BATCH_VIEW, rows: [row(1), row(2)] }} />);
+    attest();
+    const all = screen.getByRole("checkbox", { name: "Select all resumes" });
+    fireEvent.click(all);
+    expect(screen.getByRole("checkbox", { name: "Import cv-1.pdf" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Import cv-2.pdf" })).not.toBeChecked();
+    expect(confirmButton()).toBeDisabled();
+    fireEvent.click(all);
+    expect(screen.getByRole("button", { name: "Import 2 people" })).toBeEnabled();
+  });
+
+  it("opens an uploaded resume through a signed link", async () => {
+    vi.mocked(importRowFileUrlAction).mockResolvedValue({ ok: true, url: "https://files.test/cv-1.pdf" });
+    render(<ResumeImport page={jobPage()} initial={{ batch: BATCH_VIEW, rows: [row(1)] }} />);
+    const view = screen.getByRole("button", { name: "View cv-1.pdf" });
+    fireEvent.click(view);
+    await waitFor(() => expect(view).toHaveAttribute("data-url", "https://files.test/cv-1.pdf"));
+    expect(importRowFileUrlAction).toHaveBeenCalledWith({ rowId: ROW(1) });
   });
 
   it("doesn't count people already on GetHired (BI-REQ-019)", async () => {
@@ -282,6 +409,7 @@ describe("ResumeImport: confirm (BI-REQ-025)", () => {
       batchId: BATCH,
       talentListId: null,
       stageId: ONSITE,
+      rowIds: [ROW(1), ROW(2)],
       duplicateAction: "skip",
       rowActions: [{ rowId: ROW(2), duplicateAction: "fill" }],
       autoInvite: true,

@@ -22,7 +22,9 @@ import { importStatusAction } from "./import-status";
 import { updateImportRowAction } from "./update-import-row";
 import { retryImportRowAction } from "./retry-import-row";
 import { removeImportRowAction } from "./remove-import-row";
+import { discardResumeImportAction } from "./discard-resume-import";
 import { confirmResumeImportAction } from "./confirm-resume-import";
+import { importRowFileUrlAction } from "./import-row-file-url";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -48,11 +50,7 @@ const LIST = "70000000-0000-4000-8000-000000000001";
 
 let rls: SupabaseMock;
 let admin: SupabaseMock;
-const storage = {
-  createSignedUploadUrl: vi.fn(),
-  list: vi.fn(),
-  remove: vi.fn(),
-};
+const storage = { createSignedUploadUrl: vi.fn(), createSignedUrl: vi.fn(), list: vi.fn(), remove: vi.fn() };
 
 async function signIn(member: MemberFixture = OWNER_A) {
   rls = createSupabaseMock({ user: member.user });
@@ -357,6 +355,57 @@ describe("submitResumeBatchAction (BIT-044, BI-REQ-021/022)", () => {
   });
 });
 
+describe("importRowFileUrlAction", () => {
+  beforeEach(() => {
+    storage.createSignedUrl.mockImplementation(async (p: string) => ({
+      data: { signedUrl: `https://storage.test/sign/${p}` },
+      error: null,
+    }));
+  });
+
+  it("signs the session company's file through RLS: a PDF to view, a Word file to download", async () => {
+    rls.queue("candidate_import_rows", {
+      data: { file_path: path(ROW_1), file_name: "ada.pdf", status: "parsed" },
+      error: null,
+    });
+    expect(await importRowFileUrlAction({ rowId: ROW_1 })).toEqual({
+      ok: true,
+      url: `https://storage.test/sign/${path(ROW_1)}`,
+    });
+    expect(rls.callsFor("candidate_import_rows")[0].chain).toContainEqual({
+      method: "eq",
+      args: ["company_id", COMPANY_A.id],
+    });
+    expect(storage.createSignedUrl).toHaveBeenCalledWith(path(ROW_1), 600, undefined);
+
+    await signIn();
+    rls.queue("candidate_import_rows", {
+      data: { file_path: path(ROW_2, "docx"), file_name: "bo.docx", status: "queued" },
+      error: null,
+    });
+    await importRowFileUrlAction({ rowId: ROW_2 });
+    expect(storage.createSignedUrl).toHaveBeenLastCalledWith(path(ROW_2, "docx"), 600, { download: "bo.docx" });
+  });
+
+  it("signs nothing for a row it can't see or that was removed", async () => {
+    rls.queue("candidate_import_rows", { data: null, error: null });
+    expect(await importRowFileUrlAction({ rowId: ROW_1 })).toEqual({ ok: false, error: IMPORT_MESSAGES.not_found });
+    await signIn();
+    rls.queue("candidate_import_rows", {
+      data: { file_path: path(ROW_1), file_name: "ada.pdf", status: "removed" },
+      error: null,
+    });
+    expect(await importRowFileUrlAction({ rowId: ROW_1 })).toEqual({ ok: false, error: IMPORT_MESSAGES.not_found });
+    expect(storage.createSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it("needs applicants.import", async () => {
+    await signIn(memberWith([]));
+    expect(await importRowFileUrlAction({ rowId: ROW_1 })).toMatchObject({ ok: false });
+    expect(rls.callsFor("candidate_import_rows")).toHaveLength(0);
+  });
+});
+
 describe("the review grid's actions (BIT-046)", () => {
   it("importStatusAction returns the rows with edits over what was read", async () => {
     rls.queue("candidate_import_batches", {
@@ -457,6 +506,40 @@ describe("the review grid's actions (BIT-046)", () => {
     expect(storage.remove).toHaveBeenCalledWith([path(ROW_1)]);
   });
 
+  it("discardResumeImportAction releases every row's hold and deletes the files", async () => {
+    rls.queueRpc("discard_resume_import", {
+      data: {
+        ok: true,
+        rows: [
+          { id: ROW_1, file_path: path(ROW_1) },
+          { id: ROW_2, file_path: null },
+        ],
+      },
+      error: null,
+    });
+    expect(await discardResumeImportAction({ batchId: BATCH })).toEqual({ ok: true });
+    expect(rls.callsFor("discard_resume_import")).toHaveLength(1);
+    expect(releaseHold).toHaveBeenCalledWith(COMPANY_A.id, "resume_imports", {
+      type: "candidate_import_row",
+      id: ROW_1,
+    });
+    expect(releaseHold).toHaveBeenCalledWith(COMPANY_A.id, "resume_imports", {
+      type: "candidate_import_row",
+      id: ROW_2,
+    });
+    expect(storage.remove).toHaveBeenCalledWith([path(ROW_1)]);
+  });
+
+  it("discardResumeImportAction leaves everything when refused", async () => {
+    rls.queueRpc("discard_resume_import", { data: { ok: false, reason: "already_confirmed" }, error: null });
+    expect(await discardResumeImportAction({ batchId: BATCH })).toEqual({
+      ok: false,
+      error: IMPORT_MESSAGES.already_confirmed,
+    });
+    expect(releaseHold).not.toHaveBeenCalled();
+    expect(storage.remove).not.toHaveBeenCalled();
+  });
+
   it("removeImportRowAction leaves the hold and file when refused", async () => {
     rls.queueRpc("remove_import_row", { data: { ok: false, reason: "forbidden" }, error: null });
     expect(await removeImportRowAction({ rowId: ROW_1 })).toEqual({ ok: false, error: IMPORT_MESSAGES.forbidden });
@@ -527,6 +610,36 @@ describe("confirmResumeImportAction (BIT-047, BI-REQ-025)", () => {
       ok: false,
       error: "Fix the highlighted rows first.",
       rowIds: [ROW_2],
+    });
+    expect(rls.callsFor("confirm_candidate_import")).toHaveLength(0);
+  });
+
+  it("sends only the ticked rows, and doesn't check the unticked ones", async () => {
+    rls.queue("candidate_import_rows", {
+      data: [
+        parsedRows[0],
+        { id: ROW_2, extracted: { fields: { full_name: "Bo" } }, edited: { email: "not an email" } },
+      ],
+      error: null,
+    });
+    rls.queueRpc("confirm_candidate_import", {
+      data: { ok: true, counts: { created: 1 }, delete_paths: [`${COMPANY_A.id}/${BATCH}/${ROW_2}.pdf`] },
+      error: null,
+    });
+    rls.queue("candidate_import_batches", { data: { job_post_id: JOB_A1 }, error: null });
+
+    const result = await confirmResumeImportAction({ batchId: BATCH, rowIds: [ROW_1], attested: true });
+
+    expect(result).toMatchObject({ ok: true });
+    expect(rpcArgs("confirm_candidate_import").p_options).toMatchObject({ row_ids: [ROW_1] });
+    // The unticked row's file comes back from the RPC to be deleted.
+    expect(storage.remove).toHaveBeenCalledWith([`${COMPANY_A.id}/${BATCH}/${ROW_2}.pdf`]);
+  });
+
+  it("refuses an empty selection", async () => {
+    expect(await confirmResumeImportAction({ batchId: BATCH, rowIds: [], attested: true })).toEqual({
+      ok: false,
+      error: IMPORT_MESSAGES.invalid,
     });
     expect(rls.callsFor("confirm_candidate_import")).toHaveLength(0);
   });

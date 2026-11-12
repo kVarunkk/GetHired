@@ -4514,6 +4514,7 @@ export type Database = {
         }
         Returns: Json
       }
+      discard_resume_import: { Args: { p_batch_id: string }; Returns: Json }
       desired_roles_search: {
         Args: { "": Database["public"]["Tables"]["user_info"]["Row"] }
         Returns: {

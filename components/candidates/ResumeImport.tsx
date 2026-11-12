@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { checkImportEmailsAction } from "@/app/actions/candidates/check-import-emails";
 import { confirmResumeImportAction } from "@/app/actions/candidates/confirm-resume-import";
+import { discardResumeImportAction } from "@/app/actions/candidates/discard-resume-import";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { importStatusAction } from "@/app/actions/candidates/import-status";
 import { removeImportRowAction } from "@/app/actions/candidates/remove-import-row";
 import { retryImportRowAction } from "@/app/actions/candidates/retry-import-row";
@@ -23,7 +25,7 @@ import LawfulBasisCheck from "@/components/candidates/LawfulBasisCheck";
 import ResumeDropzone from "@/components/candidates/ResumeDropzone";
 import ResumeReviewGrid, { type KnownUsers, type ResumeGridField } from "@/components/candidates/ResumeReviewGrid";
 import { resultLines } from "@/components/candidates/SpreadsheetImport";
-import { failureOf, uploadResumeBatch } from "@/components/candidates/upload-resume-batch";
+import { failureOf, uploadResumeBatch, useResumeUploadGuard } from "@/components/candidates/upload-resume-batch";
 import StickyActionBar from "@/components/StickyActionBar";
 import { Button } from "@/components/ui/button";
 import type { ImportCounts } from "@/helpers/candidates/copy";
@@ -77,13 +79,18 @@ export default function ResumeImport({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const uploadGuard = useResumeUploadGuard(busy);
   const [known, setKnown] = useState<KnownUsers>(() => new Map());
+  // The read rows the member unticked. Kept as exclusions so a row the worker
+  // finishes later starts ticked.
+  const [excluded, setExcluded] = useState<ReadonlySet<string>>(() => new Set());
   const checked = useRef(new Set<string>());
 
   const [destination, setDestination] = useState<Destination>(() => destinationOf(page, initial?.batch ?? null));
   const [attested, setAttested] = useState(false);
   const [basisNote, setBasisNote] = useState("");
   const [result, setResult] = useState<Result | null>(null);
+  const [discarding, setDiscarding] = useState(false);
 
   const batchId = batch?.id ?? null;
   const reading = rows.some(isInFlight);
@@ -133,6 +140,7 @@ export default function ResumeImport({
       // import into their jobs.
       const startJob = page.fixedJob?.id ?? (page.allowNoJob ? null : destination.jobId);
       const uploaded = await uploadResumeBatch(files, { jobPostId: startJob, onProgress: setProgress });
+      if (!uploadGuard.isMounted()) return uploadGuard.finishedAway(uploaded, files.length);
       if (!uploaded.ok) {
         setUploadError(uploaded.error);
         return;
@@ -152,6 +160,7 @@ export default function ResumeImport({
         setRows(status.rows);
       }
     } catch {
+      if (!uploadGuard.isMounted()) return uploadGuard.finishedAway(null, files.length);
       setUploadError("Couldn't upload the resumes. Try again.");
     } finally {
       setBusy(false);
@@ -218,7 +227,19 @@ export default function ResumeImport({
       .catch(() => toast.error("Couldn't remove the file. Try again."));
   }, []);
 
-  const parsed = rows.filter((r) => r.status === "parsed");
+  const select = useCallback((rowIds: string[], selected: boolean) => {
+    setExcluded((current) => {
+      const next = new Set(current);
+      for (const id of rowIds) {
+        if (selected) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const read = rows.filter((r) => r.status === "parsed");
+  const parsed = read.filter((r) => !excluded.has(r.id));
   const importable = parsed.filter((r) => {
     const email = typeof r.fields.email === "string" ? r.fields.email.trim().toLowerCase() : "";
     return !known.has(email);
@@ -249,6 +270,8 @@ export default function ResumeImport({
           ? { newListName: target.newListName }
           : { talentListId: target.talentListId ?? null }),
         stageId: target.stageId,
+        // Only the ticked rows; the unticked ones are dropped with their files.
+        rowIds: parsed.map((r) => r.id),
         duplicateAction: destination.duplicateAction,
         rowActions,
         autoInvite: target.autoInvite,
@@ -273,9 +296,29 @@ export default function ResumeImport({
     setBatch(null);
     setRows([]);
     setResult(null);
+    setExcluded(new Set());
     setAttested(false);
     setBasisNote("");
     setDestination(initialDestination(page));
+  };
+
+  // Throws the open import away so the upload shows again.
+  const discard = async () => {
+    if (!batchId) return;
+    setBusy(true);
+    try {
+      const res = await discardResumeImportAction({ batchId });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      reset();
+      router.refresh();
+    } catch {
+      toast.error("Couldn't discard the import. Try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (result) {
@@ -314,19 +357,34 @@ export default function ResumeImport({
   }
 
   if (!batch) {
-    return <ResumeDropzone onSubmit={(files) => void upload(files)} busy={busy} progress={progress} error={uploadError} />;
+    return (
+      <ResumeDropzone onSubmit={(files) => void upload(files)} busy={busy} progress={progress} error={uploadError} sticky />
+    );
   }
 
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-4" aria-label="Resumes">
-        <div>
-          <h2 className="text-lg font-semibold">Check what was read</h2>
-          <p className="text-sm text-muted-foreground" role="status">
-            {reading
-              ? `Reading ${plural(rows.filter(isInFlight).length, "resume", "resumes")}. You can fix the ones that are done.`
-              : `${plural(parsed.length, "resume", "resumes")} read${failed ? `, ${failed} failed` : ""}. Fix a highlighted cell, or remove the row.`}
-          </p>
+        <div className="flex flex-col items-start gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="-ml-2 text-muted-foreground"
+            disabled={busy}
+            onClick={() => setDiscarding(true)}
+          >
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Back to upload
+          </Button>
+          <div>
+            <h2 className="text-lg font-semibold">Check what was read</h2>
+            <p className="text-sm text-muted-foreground" role="status">
+              {reading
+                ? `Reading ${plural(rows.filter(isInFlight).length, "resume", "resumes")}. You can fix the ones that are done.`
+                : `${plural(read.length, "resume", "resumes")} read${failed ? `, ${failed} failed` : ""}. Fix a highlighted cell, or untick a resume to leave it out.`}
+            </p>
+          </div>
         </div>
         <ResumeReviewGrid
           rows={rows}
@@ -336,6 +394,8 @@ export default function ResumeImport({
           onDuplicateAction={setDuplicateAction}
           onRetry={retry}
           onRemove={remove}
+          excluded={excluded}
+          onSelect={select}
           emailRequired={!!job}
           disabled={busy}
         />
@@ -370,6 +430,9 @@ export default function ResumeImport({
             {plural(missingEmail, "person needs", "people need")} an email to join the job.
           </span>
         )}
+        <Button type="button" variant="outline" disabled={busy} onClick={() => setDiscarding(true)}>
+          Discard import
+        </Button>
         <Button
           type="button"
           variant="brand"
@@ -382,6 +445,15 @@ export default function ResumeImport({
           Import {plural(importable, "person", "people")}
         </Button>
       </StickyActionBar>
+
+      <ConfirmDialog
+        open={discarding}
+        onOpenChange={setDiscarding}
+        title="Discard this import?"
+        description="Going back to the upload discards these resumes: nobody is imported and the files are deleted. Resumes that are still being read are handed back; ones already read stay used."
+        confirmLabel="Discard"
+        onConfirm={() => void discard()}
+      />
     </div>
   );
 }

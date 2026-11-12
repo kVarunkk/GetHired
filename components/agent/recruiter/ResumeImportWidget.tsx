@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ResumeDropzone from "@/components/candidates/ResumeDropzone";
-import { uploadResumeBatch } from "@/components/candidates/upload-resume-batch";
+import { uploadResumeBatch, useResumeUploadGuard } from "@/components/candidates/upload-resume-batch";
 
 export type ResumeImportOutput = { batchId: string; files: number } | { cancelled: true };
 
@@ -27,15 +27,19 @@ export default function ResumeImportWidget({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const uploadGuard = useResumeUploadGuard(busy);
 
   const upload = async (files: File[]) => {
     setBusy(true);
     setError(null);
     try {
       const result = await uploadResumeBatch(files, { jobPostId, onProgress: setProgress });
+      // The chat that asked is gone, so nobody's waiting for the tool output.
+      if (!uploadGuard.isMounted()) return uploadGuard.finishedAway(result, files.length);
       if (result.ok) onComplete({ batchId: result.batchId, files: files.length });
       else setError(result.error);
     } catch {
+      if (!uploadGuard.isMounted()) return uploadGuard.finishedAway(null, files.length);
       setError("Couldn't upload the resumes. Try again.");
     } finally {
       setBusy(false);

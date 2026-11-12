@@ -12,15 +12,28 @@ import {
 } from "@/components/ui/responsive-dialog";
 import { FileText } from "lucide-react";
 
-/** Shows a stored file, or a resume built in the editor (no file). */
+type Options = {
+  /** The dialog's title. */
+  title?: string;
+  /** The trigger's accessible name, when "View" alone isn't enough (a list of files). */
+  triggerLabel?: string;
+  /** Told when the dialog opens or closes, e.g. to fetch a signed URL only on open. */
+  onOpenChange?: (open: boolean) => void;
+};
+
+/**
+ * Shows a stored file, or a resume built in the editor (no file). A
+ * `displayUrl` of "" keeps the loading placeholder up until it arrives.
+ */
 export default function ResumePreviewDialog(
-  props: { displayUrl: string } | { document: ResumeDocument },
+  props: ({ displayUrl: string } | { document: ResumeDocument }) & Options,
 ) {
   return (
-    <ResponsiveDialog>
+    <ResponsiveDialog onOpenChange={props.onOpenChange}>
       <ResponsiveDialogTrigger asChild>
         <button
           type="button"
+          aria-label={props.triggerLabel}
           className="inline-flex items-center gap-1 font-medium underline-offset-4 transition-colors hover:text-brand hover:underline"
         >
           <FileText className="w-4 h-4" />
@@ -33,7 +46,7 @@ export default function ResumePreviewDialog(
         drawerClassName="h-[85dvh] overflow-hidden"
       >
         <ResponsiveDialogHeader>
-          <ResponsiveDialogTitle>Resume Preview</ResponsiveDialogTitle>
+          <ResponsiveDialogTitle>{props.title ?? "Resume Preview"}</ResponsiveDialogTitle>
         </ResponsiveDialogHeader>
         {"displayUrl" in props ? (
           <div className="min-h-0 flex-1">

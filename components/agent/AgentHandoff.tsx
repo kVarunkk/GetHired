@@ -43,6 +43,7 @@ export default function AgentHandoff({
   return (
     <form
       aria-label={label}
+      data-leaves-page
       className="agent-glow flex flex-col gap-1.5 rounded-lg p-2.5"
       onSubmit={(event) => {
         // Dialog forms can sit around this one in the React tree (portals).

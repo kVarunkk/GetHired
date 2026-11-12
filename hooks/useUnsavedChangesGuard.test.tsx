@@ -183,3 +183,24 @@ describe("useUnsavedChangesGuard and the browser's back button", () => {
     expect(confirm).not.toHaveBeenCalled();
   });
 });
+
+describe("useUnsavedChangesGuard's message", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("asks with the given message on an in-app link", () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderHook(() => useUnsavedChangesGuard(true, { current: false }, "Resumes are still uploading."));
+    const link = document.createElement("a");
+    link.href = "/company/candidates";
+    document.body.appendChild(link);
+
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    link.dispatchEvent(event);
+    link.remove();
+
+    expect(confirm).toHaveBeenCalledWith("Resumes are still uploading.");
+    expect(event.defaultPrevented).toBe(true);
+  });
+});
