@@ -92,7 +92,7 @@ export function startOfDayIst(now = new Date()): string {
   return new Date(ist.getTime() - IST_OFFSET_MS).toISOString();
 }
 
-const firstName = (fullName: string | null) => fullName?.trim().split(/\s+/)[0] || null;
+export const firstName = (fullName: string | null) => fullName?.trim().split(/\s+/)[0] || null;
 
 type EmailPlan = {
   templateId: string;

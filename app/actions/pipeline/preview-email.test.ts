@@ -60,6 +60,29 @@ describe("previewEmailAction (PLT-063)", () => {
     expect(load.chain).toContainEqual({ method: "eq", args: ["job_postings.company_id", COMPANY_A.id] });
   });
 
+  it("uses an imported candidate's name when there's no applicant account", async () => {
+    supabase.queue("applications", {
+      data: {
+        id: APP.id,
+        user_info: null,
+        company_candidates: { full_name: "Grace Hopper" },
+        job_postings: { title: "Backend Engineer" },
+      },
+      error: null,
+    });
+    supabase.queue("company_info", { data: { name: "Acme", scheduling_url: null }, error: null });
+
+    const result = await previewEmailAction({
+      applicationId: APP.id,
+      subject: "Update",
+      body: "Hi {{candidate_first_name}}",
+    });
+
+    expect(result).toMatchObject({ ok: true, body: "Hi Grace", missingVariables: [] });
+    const [load] = supabase.callsFor("applications");
+    expect(JSON.stringify(load.chain)).toContain("company_candidates(full_name)");
+  });
+
   it("refuses another company's application", async () => {
     supabase.queue("applications", { data: null, error: null });
 

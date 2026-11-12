@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
-import { actorName } from "@/helpers/pipeline/move";
+import { actorName, firstName } from "@/helpers/pipeline/move";
 import {
   MAX_TEMPLATE_BODY,
   MAX_TEMPLATE_SUBJECT,
@@ -48,7 +48,7 @@ export async function previewEmailAction(
   const [{ data: app }, { data: settings }] = await Promise.all([
     supabase
       .from("applications")
-      .select("id, user_info(full_name), job_postings!inner(title, company_id)")
+      .select("id, user_info(full_name), company_candidates(full_name), job_postings!inner(title, company_id)")
       .eq("id", applicationId)
       .eq("job_postings.company_id", company.id)
       .maybeSingle(),
@@ -59,7 +59,8 @@ export async function previewEmailAction(
   return renderTemplate(
     { subject, body_md: body },
     {
-      candidate_first_name: app.user_info?.full_name?.trim().split(/\s+/)[0] || null,
+      // Same name as `moveApplications` uses, so imported candidates get theirs too.
+      candidate_first_name: firstName(app.user_info?.full_name ?? app.company_candidates?.full_name ?? null),
       job_title: app.job_postings.title,
       company_name: settings?.name ?? company.name,
       scheduling_link: settings?.scheduling_url ?? null,
