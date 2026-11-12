@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can, canAny } from "@/helpers/companies/permissions";
+import { loadCompanyApplications } from "@/helpers/applications/company-list";
+import { parseApplicationListParams } from "@/helpers/applications/list-params";
 import ErrorComponent from "@/components/Error";
 import PageHeader from "@/components/PageHeader";
-import ApplicantsTable from "@/components/ApplicantsTable";
+import CompanyApplicationsTable from "@/components/applications/CompanyApplicationsTable";
 import { AskAgentAboutApplicants } from "@/components/agent/recruiter/AskAgentOnMainPages";
 import type { Metadata } from "next";
 
@@ -13,7 +15,15 @@ export const metadata: Metadata = {
     "Every application to your job posts.",
 };
 
-export default async function CompanyApplicationsPage() {
+/**
+ * Every application to the company's job posts, 25 at a time, filtered,
+ * sorted and paged by the server from the URL (QF-REQ-021).
+ */
+export default async function CompanyApplicationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   try {
     const supabase = await createClient();
     const {
@@ -24,58 +34,15 @@ export default async function CompanyApplicationsPage() {
     if (error) throw error;
     if (!user) throw new Error("User not found");
 
-    // Fetch company info to get the company_id
     const companyInfo = await getMyCompany(supabase, user);
 
     if (!companyInfo) {
       throw new Error("Company profile not found");
     }
 
-    // Fetch all applications for the company's job postings
-    const { data: applicants, error: applicantsError } = await supabase
-      .from("applications")
-      .select(
-        `
-        id,
-        created_at,
-        status,
-        resume_url,
-        answers_v2,
-        applicant_user_id,
-        company_candidate_id,
-        job_postings(
-          id,
-          title
-        ),
-        user_info(
-          full_name
-        ),
-        company_candidates(
-          id,
-          full_name,
-          email,
-          resume_path
-        ),
-        application_screenings(
-          status,
-          fit_score,
-          recommendation
-        ),
-        application_knockouts(
-          failed,
-          reasons,
-          action_taken
-        )
-      `,
-      )
-      .eq("job_postings.company_id", companyInfo.id)
-      // BI-REQ-042: a merged import shows through the application it joined.
-      .is("merged_into_application_id", null)
-      .order("created_at", { ascending: false });
-
-    if (applicantsError) {
-      throw applicantsError;
-    }
+    const params = parseApplicationListParams(await searchParams);
+    const list = await loadCompanyApplications({ supabase, company: companyInfo }, params);
+    if (!list.ok) throw new Error(list.error);
 
     return (
       <div className="flex flex-col w-full gap-6 p-4 mb-20">
@@ -90,7 +57,7 @@ export default async function CompanyApplicationsPage() {
             canMove={canAny(companyInfo, "pipeline.move")}
           />
         )}
-        <ApplicantsTable data={applicants || []} />
+        <CompanyApplicationsTable list={list} params={{ ...params, page: list.page }} />
       </div>
     );
   } catch {

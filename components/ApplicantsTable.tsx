@@ -1,30 +1,26 @@
 "use client";
 
-import KnockoutBadge from "@/components/applications/KnockoutBadge";
-import ImportedBadge from "@/components/candidates/ImportedBadge";
+import {
+  ApplicantNameCell,
+  DateCell,
+  FitCell,
+  JobTitleCell,
+  StatusCell,
+  ViewApplicationCell,
+} from "@/components/applications/application-columns";
 import { applicationPersonOrNull, type ApplicationPerson } from "@/helpers/applications/application-person";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { formatDate } from "@/utils/date";
-import { ChevronRight, ArrowUpDown, Loader2 } from "lucide-react";
+import { ArrowUpDown, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import DataTable, { FilterSelect, SelectFilter, SortableHeader, TextFilter } from "@/components/DataTable";
 import type { StageOption } from "@/components/pipeline/StagePicker";
-import ApplicationStatusBadge from "./ApplicationStatusBadge";
-import MatchScoreBadge from "./matching/MatchScoreBadge";
 import { TApplicationServer } from "@/utils/types/application.types";
-import { TApplicationStatus } from "@/utils/types";
 import { RECOMMENDATION_LABELS, type ScreeningRecommendation } from "@/helpers/matching/config";
-import {
-  isScreeningInProgress,
-  needsScreening,
-  NOT_SCORED_LABEL,
-  type ScreeningStatus,
-} from "@/helpers/matching/screening-view";
+import { needsScreening } from "@/helpers/matching/screening-view";
 import { useEntitlementError } from "@/hooks/useEntitlementError";
 import InterviewStatusBadge from "@/components/interviews/InterviewStatusBadge";
 import type { InterviewSummary } from "@/helpers/interview/screening/summary-view";
@@ -198,16 +194,11 @@ export default function ApplicantsTable({
           <SortableHeader column={column} label="Applicant Name" />
         ),
         cell: ({ row }) => (
-          <div className="flex flex-wrap items-center gap-2">
-            <div
-              className="max-w-[14rem] truncate font-medium"
-              title={row.original.applicantName || undefined}
-            >
-              {row.original.applicantName || "N/A"}
-            </div>
-            {row.original.person && <ImportedBadge person={row.original.person} />}
-            <KnockoutBadge knockout={row.original.application_knockouts} />
-          </div>
+          <ApplicantNameCell
+            name={row.original.applicantName}
+            person={row.original.person}
+            knockout={row.original.application_knockouts}
+          />
         ),
         filterFn: "includesString",
       },
@@ -223,16 +214,7 @@ export default function ApplicantsTable({
         header: ({ column }) => (
           <SortableHeader column={column} label="Job Title" />
         ),
-        cell: ({ row }) => (
-          <div className="max-w-[16rem] truncate text-sm" title={row.original.jobTitle}>
-            <Link
-              href={`/company/job-posts/${row.original.job_postings?.id}`}
-              className="hover:underline underline underline-offset-4 sm:no-underline"
-            >
-              {row.original.jobTitle}
-            </Link>
-          </div>
-        ),
+        cell: ({ row }) => <JobTitleCell jobId={row.original.job_postings?.id} title={row.original.jobTitle} />,
         filterFn: "equals",
       },
       {
@@ -247,24 +229,12 @@ export default function ApplicantsTable({
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => {
-          const s = row.original.application_screenings;
-          if (isScreeningInProgress(s?.status as ScreeningStatus | undefined)) {
-            return (
-              <span className="flex items-center gap-1.5 text-sm text-muted-foreground whitespace-nowrap">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Screening…
-              </span>
-            );
-          }
-          if (s?.fit_score !== null && s?.fit_score !== undefined) {
-            return <MatchScoreBadge score={s.fit_score} className="whitespace-nowrap" />;
-          }
-          if (s?.status === "insufficient_info") {
-            return <span className="whitespace-nowrap text-sm text-muted-foreground">{NOT_SCORED_LABEL}</span>;
-          }
-          return <span className="text-muted-foreground">—</span>;
-        },
+        cell: ({ row }) => (
+          <FitCell
+            fitScore={row.original.application_screenings?.fit_score}
+            screeningStatus={row.original.application_screenings?.status}
+          />
+        ),
       },
       ...(interviews ? [interviewColumn] : []),
       {
@@ -278,11 +248,7 @@ export default function ApplicantsTable({
         header: ({ column }) => (
           <SortableHeader column={column} label="Status" />
         ),
-        cell: ({ row }) => (
-          <ApplicationStatusBadge
-            status={row.original.status as TApplicationStatus}
-          />
-        ),
+        cell: ({ row }) => <StatusCell status={row.original.status} />,
         filterFn: "equals",
       },
       ...(stages ? [stageColumn] : []),
@@ -291,23 +257,12 @@ export default function ApplicantsTable({
         header: ({ column }) => (
           <SortableHeader column={column} label="Date Applied" />
         ),
-        cell: ({ row }) => (
-          <div className="text-sm ">
-            {formatDate(row.original.created_at)}
-          </div>
-        ),
+        cell: ({ row }) => <DateCell date={row.original.created_at} />,
       },
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => (
-          <Link href={`/company/applications/${row.original.id}`}>
-            <Button variant="ghost" size="sm">
-              View Application
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-        ),
+        cell: ({ row }) => <ViewApplicationCell id={row.original.id} />,
       },
     ];
   }, [stages, interviews]);

@@ -4215,6 +4215,73 @@ export type Database = {
         }
         Relationships: []
       }
+      company_application_list: {
+        Row: {
+          applicant_user_id: string | null
+          candidate_has_resume: boolean | null
+          company_candidate_id: string | null
+          company_id: string | null
+          created_at: string | null
+          fit_score: number | null
+          id: string | null
+          job_post_id: string | null
+          job_title: string | null
+          knockout_failed: boolean | null
+          knockout_reasons: Json | null
+          person_name: string | null
+          recommendation:
+            | Database["public"]["Enums"]["screening_recommendation"]
+            | null
+          screening_status: string | null
+          source: string | null
+          stage_id: string | null
+          status: Database["public"]["Enums"]["application_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_applicant_user_id_fkey"
+            columns: ["applicant_user_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_directory"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "applications_applicant_user_id_fkey"
+            columns: ["applicant_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_info"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "applications_company_candidate_id_fkey"
+            columns: ["company_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "company_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_postings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flat_locations: {
         Row: {
           city: string | null
