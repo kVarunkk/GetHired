@@ -1,3 +1,4 @@
+import { shareImages } from "@/helpers/seo/share-image";
 import { createReader } from "@keystatic/core/reader";
 import keystaticConfig from "../keystatic.config";
 import FootComponent from "@/components/FootComponent";
@@ -22,6 +23,7 @@ export const metadata: Metadata = {
     title: "Job Search Advice, Career Tips & Hiring Insights",
     description: BLOG_DESCRIPTION,
     url: "/blog",
+    ...shareImages,
   },
 };
 

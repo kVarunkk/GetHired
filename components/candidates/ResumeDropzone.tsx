@@ -2,6 +2,8 @@
 
 import { useId, useRef, useState, type DragEvent } from "react";
 import { FileText, Loader2, Upload, X } from "lucide-react";
+import { LocalResumeView } from "@/components/candidates/ImportResumeView";
+import StickyActionBar from "@/components/StickyActionBar";
 import { Button } from "@/components/ui/button";
 import { MAX_RESUME_FILES, RESUME_ACCEPT, resumeFileError } from "@/helpers/candidates/resume-files";
 import { cn } from "@/utils/utils";
@@ -12,13 +14,16 @@ const sizeOf = (bytes: number) =>
 /**
  * BI-REQ-020: choose or drop up to 100 resumes (PDF or DOCX, 10 MB each).
  * Wrong types and oversized files are listed with the reason and never
- * uploaded. `onSubmit` gets the files that pass.
+ * uploaded. A PDF can be viewed before it's sent. `onSubmit` gets the files
+ * that pass. On a page, `sticky` keeps the upload button in a StickyActionBar;
+ * in the agent's chat it stays inline.
  */
 export default function ResumeDropzone({
   onSubmit,
   busy = false,
   progress,
   error,
+  sticky = false,
 }: {
   onSubmit: (files: File[]) => void;
   busy?: boolean;
@@ -26,6 +31,8 @@ export default function ResumeDropzone({
   progress?: string | null;
   /** The upload or allowance result, e.g. "Your plan covers 20 of these 30 resumes." */
   error?: string | null;
+  /** Put the upload button in a StickyActionBar (full pages, not the chat widget). */
+  sticky?: boolean;
 }) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,8 +58,18 @@ export default function ResumeDropzone({
     if (!busy) add(e.dataTransfer.files);
   };
 
+  const actions = (
+    <>
+      {progress && <span className="text-sm text-muted-foreground">{progress}</span>}
+      <Button type="button" disabled={busy || accepted.length === 0 || tooMany} onClick={() => onSubmit(accepted)}>
+        {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Upload and read {accepted.length === 1 ? "1 resume" : `${accepted.length} resumes`}
+      </Button>
+    </>
+  );
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className={cn("flex flex-col", sticky ? "gap-6" : "gap-4")}>
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -102,7 +119,10 @@ export default function ResumeDropzone({
                 {reason ? (
                   <span className="text-destructive">{reason}</span>
                 ) : (
-                  <span className="text-muted-foreground">{sizeOf(file.size)}</span>
+                  <>
+                    <LocalResumeView file={file} />
+                    <span className="text-muted-foreground">{sizeOf(file.size)}</span>
+                  </>
                 )}
                 <Button
                   type="button"
@@ -132,13 +152,11 @@ export default function ResumeDropzone({
         </p>
       )}
 
-      <div className="flex items-center justify-end gap-3">
-        {progress && <span className="text-sm text-muted-foreground">{progress}</span>}
-        <Button type="button" disabled={busy || accepted.length === 0 || tooMany} onClick={() => onSubmit(accepted)}>
-          {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Upload and read {accepted.length === 1 ? "1 resume" : `${accepted.length} resumes`}
-        </Button>
-      </div>
+      {sticky ? (
+        <StickyActionBar className="justify-end">{actions}</StickyActionBar>
+      ) : (
+        <div className="flex items-center justify-end gap-3">{actions}</div>
+      )}
     </div>
   );
 }

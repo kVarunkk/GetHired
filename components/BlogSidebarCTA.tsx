@@ -1,51 +1,38 @@
-import Link from "next/link";
-import { ArrowRight, FileCheck2, Mic } from "lucide-react";
-import { Button } from "./ui/button";
+"use client";
+
+import { FileCheck2, ListChecks, Mic } from "lucide-react";
 import { platforms } from "@/utils/utils";
+import { AGENT_PATH } from "@/helpers/agent/prompt-draft";
+import BlogSidebarAgentCTA from "./BlogSidebarAgentCTA";
 
-const tools = [
-  {
-    href: "/ai-resume-checker",
-    label: "Check your resume for ATS issues",
-    icon: FileCheck2,
-  },
-  {
-    href: "/ai-interview",
-    label: "Practice with an AI interviewer",
-    icon: Mic,
-  },
-];
-
+// The sidebar CTA on posts written for job seekers.
 export default function BlogSidebarCTA() {
   return (
-    <div className="rounded-xl border bg-card p-5">
-      <h2 className="text-lg font-semibold tracking-tight leading-snug">
-        Find your next role faster
-      </h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Browse jobs from {platforms.length} ATS platforms like Greenhouse,
-        Workday and Ashby, matched to your resume with AI.
-      </p>
-      <Button asChild variant="brand" className="mt-4 w-full">
-        <Link href="/jobs">
-          Browse jobs
-          <ArrowRight className="ms-2 h-4 w-4" />
-        </Link>
-      </Button>
-
-      <ul className="mt-5 space-y-1 border-t pt-4">
-        {tools.map(({ href, label, icon: Icon }) => (
-          <li key={href}>
-            <Link
-              href={href}
-              className="flex items-center gap-3 rounded-md px-2 py-2 text-sm underline underline-offset-4 transition-colors hover:bg-muted"
-            >
-              <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-              {label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <BlogSidebarAgentCTA
+      title="Let the AI agent run your job search"
+      description={`Ask in plain words. The agent searches jobs from ${platforms.length} ATS platforms like Greenhouse, Workday and Ashby, matched to your resume.`}
+      agentPath={AGENT_PATH}
+      primary={{
+        label: "Find jobs that match me",
+        prompt: "Find jobs that match my profile, best matches first.",
+      }}
+      prompts={[
+        {
+          label: "Review my resume for ATS issues",
+          prompt: "Review my resume and suggest improvements for ATS.",
+          icon: FileCheck2,
+        },
+        {
+          label: "Set up a mock interview",
+          prompt: "Set up a mock interview for the role I'm targeting.",
+          icon: Mic,
+        },
+        {
+          label: "Track my applications",
+          prompt: "Show my applications, saved jobs and upcoming interviews.",
+          icon: ListChecks,
+        },
+      ]}
+    />
   );
 }

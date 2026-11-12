@@ -1,3 +1,4 @@
+import { shareImages } from "@/helpers/seo/share-image";
 import Error from "@/components/Error";
 import { Metadata } from "next";
 
@@ -24,6 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description:
         "Explore companies hiring developers and engineers by industry, size, and location.",
       url: "/companies",
+      ...shareImages,
     },
   };
 }

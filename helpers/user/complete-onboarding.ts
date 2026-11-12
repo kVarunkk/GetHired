@@ -1,7 +1,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { setUserAppMetadata } from "@/helpers/user/set-app-metadata";
 import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
-import { STALE_PROGRESS_MS } from "@/helpers/profiles/relevance-queue";
+import { RELEVANCE_TIMEOUT_MS } from "@/helpers/jobs/relevance-jobs-queue";
 import { describeProfileError, onboardingProfileSchema } from "./onboarding-profile";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -37,7 +37,7 @@ export async function completeApplicantOnboarding(
     p_profile: parsed.data,
     p_email: user.email ?? "",
     p_should_parse: shouldParse,
-    p_stale_seconds: STALE_PROGRESS_MS / 1000,
+    p_stale_seconds: RELEVANCE_TIMEOUT_MS / 1000,
   });
   if (error) throw error;
   const outcome = data as { ok: boolean; queued?: boolean; reason?: string } | null;

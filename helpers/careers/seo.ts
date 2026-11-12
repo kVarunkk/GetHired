@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { CareersPage } from "./get-careers-page";
 import { LINK_KEYS } from "./page-schema";
 import { careersPath } from "./slug";
+import { shareImages, twitterShareImages } from "@/helpers/seo/share-image";
 
 const SITE_URL = "https://gethired.devhub.co.in";
 
@@ -39,8 +40,10 @@ export function careersMetadata(page: CareersPage, { openRoles }: { openRoles: n
       title,
       description,
       url: canonical,
-      ...(image ? { images: [{ url: image }] } : {}),
+      ...(image ? { images: [{ url: image }] } : shareImages),
     },
-    twitter: { card: image ? "summary_large_image" : "summary", title, description },
+    twitter: image
+      ? { card: "summary_large_image", title, description }
+      : { ...twitterShareImages, title, description },
   };
 }

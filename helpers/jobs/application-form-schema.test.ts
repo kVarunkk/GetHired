@@ -33,6 +33,12 @@ describe("applicationFormSchema (AF-REQ-001)", () => {
     expect(ok(emptyApplicationForm())).toBe(true);
   });
 
+  it("fills in version 1 when it's left out, as the agent sometimes does", () => {
+    const parsed = applicationFormSchema.safeParse({ questions: [], standard_fields: { phone: "required" } });
+    expect(parsed.success && parsed.data.version).toBe(1);
+    expect(applicationFormSchema.safeParse({ version: 2, questions: [], standard_fields: {} }).success).toBe(false);
+  });
+
   it("accepts one question of each type with valid settings", () => {
     expect(
       ok(

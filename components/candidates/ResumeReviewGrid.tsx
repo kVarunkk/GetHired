@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Loader2, RotateCw, Trash2 } from "lucide-react";
+import { Loader2, RotateCw, Trash2, X } from "lucide-react";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import DataTable from "@/components/DataTable";
 import { EditableCell } from "@/components/candidates/ImportPreviewGrid";
+import { ImportRowResumeView } from "@/components/candidates/ImportResumeView";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { CandidateFieldKey } from "@/helpers/candidates/candidate-schema";
 import { isInFlight, needsEmail, type ImportRowStatus, type ImportRowView } from "@/helpers/candidates/import-rows";
@@ -52,13 +55,62 @@ const textOf = (value: unknown) =>
 
 export type KnownUsers = Map<string, { userId: string; fullName: string | null }>;
 
+type Selection = {
+  /** Every read row, on every page: the ones a box can tick. */
+  parsed: ImportRowView[];
+  excluded: ReadonlySet<string>;
+  onSelect: (rowIds: string[], selected: boolean) => void;
+  disabled: boolean;
+};
+
+// The boxes read the selection from here rather than from the column
+// definitions, so ticking a box doesn't rebuild the columns and remount the
+// cells (which would drop an edit in progress and the keyboard focus).
+const SelectionContext = createContext<Selection | null>(null);
+
+function SelectAllBox() {
+  const { parsed, excluded, onSelect, disabled } = useContext(SelectionContext)!;
+  const ticked = parsed.filter((r) => !excluded.has(r.id)).length;
+  const checked: boolean | "indeterminate" =
+    parsed.length > 0 && ticked === parsed.length ? true : ticked > 0 ? "indeterminate" : false;
+  return (
+    <Checkbox
+      aria-label="Select all resumes"
+      checked={checked}
+      disabled={disabled || parsed.length === 0}
+      onCheckedChange={() =>
+        onSelect(
+          parsed.map((r) => r.id),
+          checked !== true,
+        )
+      }
+    />
+  );
+}
+
+function RowBox({ row }: { row: ImportRowView }) {
+  const { excluded, onSelect, disabled } = useContext(SelectionContext)!;
+  if (row.status !== "parsed") return null;
+  return (
+    <Checkbox
+      aria-label={`Import ${row.fileName}`}
+      checked={!excluded.has(row.id)}
+      disabled={disabled}
+      onCheckedChange={(value) => onSelect([row.id], value === true)}
+    />
+  );
+}
+
 /**
- * BI-REQ-023/024: one row per resume with its status, what was read (edited
- * in place; a warning shows under its cell until the field is edited), the
- * existing candidate with the same email and what to do with them, and
- * Retry (failed) or Remove. A read row without an email is highlighted
- * when it blocks Confirm (a job, BI-REQ-025); without a job it's only noted
- * (CP-REQ-002).
+ * BI-REQ-023/024: one row per resume with its status, a link to view the
+ * file, what was read (edited in place; a warning shows under its cell until
+ * the field is edited), the existing candidate with the same email and what
+ * to do with them. A read row has a box: unticked rows aren't imported, and
+ * their files are deleted at Confirm. A row still being read can be stopped
+ * (which hands back its resume import), and a failed one retried or removed;
+ * both ask first, since the file is deleted. A read row without an email is
+ * highlighted when it blocks Confirm (a job, BI-REQ-025); without a job it's
+ * only noted (CP-REQ-002).
  */
 export default function ResumeReviewGrid({
   rows,
@@ -68,6 +120,8 @@ export default function ResumeReviewGrid({
   onDuplicateAction,
   onRetry,
   onRemove,
+  excluded,
+  onSelect,
   emailRequired = true,
   disabled = false,
 }: {
@@ -79,12 +133,29 @@ export default function ResumeReviewGrid({
   onDuplicateAction: (rowId: string, action: DuplicateAction) => void;
   onRetry: (rowId: string) => void;
   onRemove: (rowId: string) => void;
+  /** The read rows the member unticked. */
+  excluded: ReadonlySet<string>;
+  onSelect: (rowIds: string[], selected: boolean) => void;
   /** Everyone needs an email: the import goes to a job. */
   emailRequired?: boolean;
   disabled?: boolean;
 }) {
+  const [removing, setRemoving] = useState<ImportRowView | null>(null);
+
+  const parsed = useMemo(() => rows.filter((r) => r.status === "parsed"), [rows]);
+  const selection = useMemo<Selection>(
+    () => ({ parsed, excluded, onSelect, disabled }),
+    [parsed, excluded, onSelect, disabled],
+  );
+
   const columns = useMemo<ColumnDef<ImportRowView>[]>(
     () => [
+      {
+        id: "select",
+        header: () => <SelectAllBox />,
+        cell: ({ row }) => <RowBox row={row.original} />,
+        meta: { className: "w-8", headerClassName: "w-8" },
+      },
       {
         id: "file",
         header: "Resume",
@@ -95,6 +166,7 @@ export default function ResumeReviewGrid({
           return (
             <div className="flex min-w-[12rem] max-w-[16rem] flex-col items-start gap-1 whitespace-normal">
               <span className="break-all text-sm font-medium">{r.fileName}</span>
+              <ImportRowResumeView rowId={r.id} fileName={r.fileName} />
               <Badge variant={STATUS_VARIANT[r.status]}>
                 {isInFlight(r) && <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden />}
                 {STATUS_LABELS[r.status]}
@@ -181,46 +253,82 @@ export default function ResumeReviewGrid({
           return (
             <div className="flex justify-end gap-1">
               {r.status === "failed" && (
+                <>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={disabled}
+                    aria-label={`Retry ${r.fileName}`}
+                    onClick={() => onRetry(r.id)}
+                  >
+                    <RotateCw className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={disabled}
+                    aria-label={`Remove ${r.fileName}`}
+                    onClick={() => setRemoving(r)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+              {isInFlight(r) && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
                   disabled={disabled}
-                  aria-label={`Retry ${r.fileName}`}
-                  onClick={() => onRetry(r.id)}
+                  aria-label={`Stop reading ${r.fileName}`}
+                  title="Stop reading"
+                  onClick={() => setRemoving(r)}
                 >
-                  <RotateCw className="h-4 w-4" />
+                  <X className="h-4 w-4" />
                 </Button>
               )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                disabled={disabled || isInFlight(r)}
-                aria-label={`Remove ${r.fileName}`}
-                onClick={() => onRemove(r.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </div>
           );
         },
         meta: { className: "w-24" },
       },
     ],
-    [known, defaultAction, onEdit, onDuplicateAction, onRetry, onRemove, emailRequired, disabled],
+    [known, defaultAction, onEdit, onDuplicateAction, onRetry, emailRequired, disabled],
   );
 
+  const stopping = removing ? isInFlight(removing) : false;
+
   return (
-    <DataTable
-      data={rows}
-      columns={columns}
-      noun="resumes"
-      pageSize={25}
-      getRowId={(r) => r.id}
-      aria-label="Resumes to import"
-    />
+    <SelectionContext.Provider value={selection}>
+      <DataTable
+        data={rows}
+        columns={columns}
+        noun="resumes"
+        pageSize={25}
+        getRowId={(r) => r.id}
+        aria-label="Resumes to import"
+      />
+      <ConfirmDialog
+        open={removing !== null}
+        onOpenChange={(open) => {
+          if (!open) setRemoving(null);
+        }}
+        title={stopping ? "Stop reading this resume?" : "Remove this resume?"}
+        description={
+          stopping
+            ? `${removing?.fileName} won't be read or imported, and the file is deleted. Its resume import is handed back.`
+            : `${removing?.fileName} is taken out of this import and the file is deleted.`
+        }
+        confirmLabel={stopping ? "Stop reading" : "Remove"}
+        onConfirm={() => {
+          if (removing) onRemove(removing.id);
+        }}
+      />
+    </SelectionContext.Provider>
   );
 }

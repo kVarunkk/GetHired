@@ -25,6 +25,15 @@ export function textResult(text: string, isError = false): CallToolResult {
   return { content: [{ type: "text", text }], ...(isError ? { isError: true } : {}) };
 }
 
+/**
+ * A plain sentence that isn't an error, e.g. that the user declined. It
+ * carries `{ message }` as structuredContent too, because the SDK refuses a
+ * successful result without one from a tool that declares an outputSchema.
+ */
+export function messageResult(text: string): CallToolResult {
+  return { content: [{ type: "text", text }], structuredContent: { message: text } };
+}
+
 /** `structuredContent` plus the same JSON as text, as the MCP spec says it SHOULD be. */
 export function jsonResult(value: Record<string, unknown>, isError = false): CallToolResult {
   return {

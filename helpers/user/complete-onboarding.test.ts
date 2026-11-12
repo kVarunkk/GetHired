@@ -1,3 +1,4 @@
+import { RELEVANCE_TIMEOUT_MS } from "@/helpers/jobs/relevance-jobs-queue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { setUserAppMetadata } from "@/helpers/user/set-app-metadata";
@@ -59,7 +60,7 @@ describe("completeApplicantOnboarding", () => {
       p_profile: { ...REQUIRED, max_salary: 2500000 },
       p_email: USER.email,
       p_should_parse: false,
-      p_stale_seconds: 900,
+      p_stale_seconds: RELEVANCE_TIMEOUT_MS / 1000,
     });
     // The pipeline embeds.
     expect(updateUserEmbedding).not.toHaveBeenCalled();

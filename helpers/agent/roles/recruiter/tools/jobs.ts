@@ -267,7 +267,7 @@ export function createJobTools(ctx: RecruiterToolContext) {
 
     createJobPost: tool({
       description:
-        "Create a job post from what the user described. It's saved as inactive (not published); setJobPostStatus publishes it. Write the description yourself from the conversation.",
+        "Create a job post from what the user described. It's saved as inactive (not published); setJobPostStatus publishes it. Write the description yourself from the conversation. Before calling it, offer the optional parts the user hasn't covered (screening questions, application fields, knockout rules) and include what they choose in this call.",
       inputSchema: z.object(jobPostFields).strict(),
       execute: (fields) =>
         withToolErrors(ctx, "createJobPost", async () => {

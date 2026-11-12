@@ -69,6 +69,18 @@ describe("loadResumeImportPage (CP-REQ-010/011)", () => {
     expect(chain).not.toContainEqual(expect.objectContaining({ args: ["job_post_id", expect.anything()] }));
   });
 
+  it("starts a new import when every file was taken out of the open one", async () => {
+    vi.mocked(loadImportPage).mockResolvedValue(PAGE);
+    const mock = db();
+    mock.reset();
+    mock.queue("candidate_import_batches", { data: { id: BATCH, status: "ready" }, error: null });
+    mock.queue("candidate_import_rows", { data: [], error: null });
+
+    const page = await loadResumeImportPage(mock.client, ADMIN_A.myCompany, { userId: ADMIN_A.user.id });
+
+    expect(page?.open).toBeNull();
+  });
+
   it("picks up the job page's batch for that job", async () => {
     vi.mocked(loadImportPage).mockResolvedValue({ ...PAGE, fixedJob: FIXED });
     const mock = db();

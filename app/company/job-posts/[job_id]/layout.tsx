@@ -39,8 +39,8 @@ export async function generateMetadata({
 }
 
 /**
- * A job post's frame: the sections sidebar (overview, applications, from
- * your candidates, import, AI interview, hiring team, edit) and the header with the job's controls. Each
+ * A job post's frame: the sections sidebar (overview, edit, applications,
+ * from your candidates, import, AI interview, hiring team) and the header with the job's controls. Each
  * section page checks its own permission too.
  */
 export default async function JobPostLayout({
@@ -77,8 +77,9 @@ export default async function JobPostLayout({
     const base = `/company/job-posts/${job.id}`;
     const items: EntityNavItem[] = [
       { href: base, label: "Overview", icon: <FileText />, exact: true },
-      { href: `${base}/applications`, label: "Applications", icon: <Users /> },
     ];
+    if (controls.edit) items.push({ href: `${base}/edit`, label: "Edit job post", icon: <Pencil /> });
+    items.push({ href: `${base}/applications`, label: "Applications", icon: <Users /> });
     // CP-REQ-060: the company's own candidates who may fit, for talent.view.
     if (can(company, "talent.view")) {
       items.push({ href: jobPoolMatchesPath(job.id), label: "From your candidates", icon: <UserSearch /> });
@@ -101,7 +102,6 @@ export default async function JobPostLayout({
     if (can(company, "jobs.assign", job.id)) {
       items.push({ href: `${base}/hiring-team`, label: "Hiring team", icon: <UserCog /> });
     }
-    if (controls.edit) items.push({ href: `${base}/edit`, label: "Edit job post", icon: <Pencil /> });
 
     return (
       <EntityLayout

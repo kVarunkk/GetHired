@@ -80,4 +80,49 @@ describe("GET /api/updates/company/relevant-profiles/worker", () => {
     expect(deleted).toEqual([2]);
     expect(sendEmailForStatusUpdate).toHaveBeenCalledWith(expect.stringContaining("POISON"));
   });
+
+  describe("retries keep the running state (SM-REQ-013, SM-TEST-011)", () => {
+    const jobWrites = () => supabase.callsFor("job_postings").filter((c) => c.chain.some((m) => m.method === "update"));
+
+    it.each([1, 2])("leaves the job in progress, emails nobody and keeps the message after failed attempt %i", async (readCt) => {
+      queueMessages([{ msg_id: 1, read_ct: readCt, message: { userId: USER_ID, jobId: JOB_ID } }]);
+      vi.mocked(processJobPostingRelevance).mockResolvedValue({ success: false, error: "rerank down" });
+
+      await GET();
+
+      expect(jobWrites()).toHaveLength(0);
+      expect(sendEmailForStatusUpdate).not.toHaveBeenCalled();
+      expect(rpcCalls("delete")).toHaveLength(0);
+    });
+
+    it("on the last attempt moves the job to failed from progress only, emails once and drops the message", async () => {
+      queueMessages([{ msg_id: 2, read_ct: 3, message: { userId: USER_ID, jobId: JOB_ID } }]);
+      supabase.queue("job_postings", { data: [{ id: JOB_ID }], error: null });
+      vi.mocked(processJobPostingRelevance).mockResolvedValue({ success: false, error: "rerank down" });
+
+      await GET();
+
+      const [write] = jobWrites();
+      expect(jobWrites()).toHaveLength(1);
+      expect(write.chain).toContainEqual({ method: "eq", args: ["id", JOB_ID] });
+      expect(write.chain).toContainEqual({ method: "in", args: ["matching_status", ["progress"]] });
+      expect(write.chain.find((m) => m.method === "update")!.args[0]).toMatchObject({
+        matching_status: "failed",
+        matching_error: expect.stringContaining("rerank down"),
+      });
+      expect(sendEmailForStatusUpdate).toHaveBeenCalledTimes(1);
+      expect(rpcCalls("delete")).toHaveLength(1);
+    });
+
+    it("still drops the message when the job had already left progress", async () => {
+      queueMessages([{ msg_id: 2, read_ct: 3, message: { userId: USER_ID, jobId: JOB_ID } }]);
+      supabase.queue("job_postings", { data: [], error: null });
+      vi.mocked(processJobPostingRelevance).mockResolvedValue({ success: false, error: "rerank down" });
+
+      await GET();
+
+      expect(rpcCalls("delete")).toHaveLength(1);
+      expect(sendEmailForStatusUpdate).toHaveBeenCalledTimes(1);
+    });
+  });
 });

@@ -20,6 +20,12 @@ export const confirmResumeSchema = z
     newListName: z.string().trim().min(1).max(200).optional(),
     stageId: z.string().uuid().nullable().optional(),
     duplicateAction: duplicateAction.optional(),
+    /**
+     * The read rows to import (the grid's ticked boxes). The batch's other
+     * read rows are dropped with their files. Absent: every read row (the
+     * agent's confirmImport).
+     */
+    rowIds: z.array(z.string().uuid()).min(1).max(100).optional(),
     rowActions: z
       .array(z.object({ rowId: z.string().uuid(), duplicateAction }).strict())
       .max(100)
@@ -74,7 +80,10 @@ export async function confirmResumeBatch(auth: ImportSession, data: ConfirmResum
     .eq("status", "parsed");
   if (rowsError) throw new Error(`Failed to load the import: ${rowsError.message}`);
 
-  const invalid = (rows ?? []).filter((row) => !parseCandidateFields(mergedFields(row.extracted, row.edited)).ok);
+  const chosen = data.rowIds ? new Set(data.rowIds) : null;
+  const invalid = (rows ?? []).filter(
+    (row) => (!chosen || chosen.has(row.id)) && !parseCandidateFields(mergedFields(row.extracted, row.edited)).ok,
+  );
   if (invalid.length > 0) {
     return { ok: false, error: "Fix the highlighted rows first.", rowIds: invalid.map((r) => r.id) };
   }
@@ -99,6 +108,7 @@ export async function confirmResumeBatch(auth: ImportSession, data: ConfirmResum
       ...(data.jobPostId !== undefined ? { job_post_id: data.jobPostId } : {}),
       ...(listId !== undefined ? { talent_list_id: listId } : {}),
       stage_id: data.stageId ?? null,
+      ...(data.rowIds ? { row_ids: data.rowIds } : {}),
       duplicate_action: data.duplicateAction ?? "skip",
       auto_invite: data.autoInvite ?? false,
       attested: true,

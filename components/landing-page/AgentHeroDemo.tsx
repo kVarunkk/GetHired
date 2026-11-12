@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUp, Brain } from "lucide-react";
@@ -37,7 +37,14 @@ function loginHref(agentPath: string, href: string) {
   return `/auth/login?${params}`;
 }
 
-export default function AgentHeroDemo({ demo = APPLICANT_DEMO }: { demo?: AgentDemo }) {
+export default function AgentHeroDemo({
+  demo = APPLICANT_DEMO,
+  children,
+}: {
+  demo?: AgentDemo;
+  /** Shown under the reply, above the suggested replies: an interactive card. */
+  children?: ReactNode;
+}) {
   const router = useRouter();
   const [input, setInput] = useState("");
   // null until the session is read (from cookies, no request).
@@ -94,6 +101,7 @@ export default function AgentHeroDemo({ demo = APPLICANT_DEMO }: { demo?: AgentD
             ) : (
               <div key={message.id} className="flex flex-col gap-4">
                 <MessageParts message={message} onApprove={noop} onToolOutput={noop} />
+                {children}
                 <div
                   role="group"
                   aria-label="Suggested replies"

@@ -20,6 +20,34 @@ const appId = (n: number) => `e1000000-0000-4000-8000-00000000000${n}`;
 
 let rls: SupabaseMock;
 let admin: SupabaseMock;
+/** The job's screenings as the database has them, for the guarded writes. */
+let statusOf = new Map<string, string>();
+
+const inArgs = (call: RecordedCall, column: string) =>
+  (call.chain.find((m) => m.method === "in" && m.args[0] === column)?.args[1] ?? []) as string[];
+
+// The writes answer like the database (SMT-018): the insert returns the rows
+// with no screening, the guarded move the ids whose status it starts from.
+function answerScreeningWrite(call: RecordedCall) {
+  if (call.target !== "application_screenings") return { data: null, error: null };
+  if (has(call, "upsert")) {
+    const rows = call.chain.find((m) => m.method === "upsert")!.args[0] as { application_id: string }[];
+    return {
+      data: rows.filter((r) => !statusOf.has(r.application_id)).map((r) => ({ application_id: r.application_id })),
+      error: null,
+    };
+  }
+  if (has(call, "update")) {
+    const from = inArgs(call, "status");
+    return {
+      data: inArgs(call, "application_id")
+        .filter((id) => from.includes(statusOf.get(id) ?? ""))
+        .map((id) => ({ application_id: id })),
+      error: null,
+    };
+  }
+  return { data: null, error: null };
+}
 
 async function signInCompany() {
   rls = createSupabaseMock({ user: COMPANY_A.user });
@@ -29,6 +57,7 @@ async function signInCompany() {
 
 /** The company owns the job, which has these applications and screenings. */
 function ownsJob(applicationIds: string[], screenings: { application_id: string; status: string }[]) {
+  statusOf = new Map(screenings.map((s) => [s.application_id, s.status]));
   rls.queue("job_postings", { data: { id: JOB_POST.id }, error: null });
   admin.queue("applications", { data: applicationIds.map((id) => ({ id })), error: null });
   admin.queue("application_screenings", { data: screenings, error: null });
@@ -54,7 +83,7 @@ const sentIds = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  admin = createSupabaseMock();
+  admin = createSupabaseMock({ fallback: answerScreeningWrite });
   vi.mocked(createServiceRoleClient).mockReturnValue(admin.client);
   vi.mocked(assertAllowance).mockResolvedValue(undefined);
 });
@@ -123,8 +152,10 @@ describe("POST /api/company/job-posts/[job_id]/screen (MTT-072)", () => {
     );
     // Upserted on the application, before the messages go out.
     const upsertCall = admin.callsFor("application_screenings").find((c) => has(c, "upsert"))!;
+    // Missing rows are inserted, never overwritten (SMT-018).
     expect(upsertCall.chain.find((m) => m.method === "upsert")!.args[1]).toEqual({
       onConflict: "application_id",
+      ignoreDuplicates: true,
     });
     expect(admin.calls.indexOf(upsertCall)).toBeLessThan(admin.calls.indexOf(admin.callsFor("send_batch")[0]));
   });
@@ -157,17 +188,19 @@ describe("POST /api/company/job-posts/[job_id]/screen (MTT-072)", () => {
   it("marks the rows failed and 502s when the messages can't be sent", async () => {
     await signInCompany();
     ownsJob([appId(1)], []);
-    admin.queue("application_screenings", { data: null, error: null }); // the upsert
     admin.queueRpc("send_batch", { data: null, error: { message: "queue down" } }, "pgmq_public");
 
     const res = await post();
 
     expect(res.status).toBe(502);
-    const update = admin
+    const failed = admin
       .callsFor("application_screenings")
-      .find((c) => has(c, "update"))!
-      .chain.find((m) => m.method === "update")!.args[0];
-    expect(update).toEqual(expect.objectContaining({ status: "failed", error_code: "worker_error" }));
+      .filter((c) => has(c, "update"))
+      .at(-1)!;
+    expect(failed.chain.find((m) => m.method === "update")!.args[0]).toEqual(
+      expect.objectContaining({ status: "failed", error_code: "worker_error" }),
+    );
+    expect(failed.chain).toContainEqual({ method: "in", args: ["status", ["queued"]] });
   });
 
   it("402s with the entitlement payload and queues nothing when no screening can be paid for", async () => {

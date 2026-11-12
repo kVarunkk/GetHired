@@ -48,18 +48,20 @@ export async function loadResumeImportPage(
       .order("created_at")
       .order("id");
     if (error) throw error;
-    open = {
-      batch: {
-        id: batch.id,
-        status: batch.status,
-        jobPostId: batch.job_post_id,
-        talentListId: batch.talent_list_id,
-        stageId: batch.stage_id,
-        autoInvite: batch.auto_invite,
-        expiresAt: batch.expires_at,
-      },
-      rows: (rows ?? []).map(importRowView),
-    };
+    // Every file was taken out: start a new import instead of an empty grid.
+    if (rows?.length)
+      open = {
+        batch: {
+          id: batch.id,
+          status: batch.status,
+          jobPostId: batch.job_post_id,
+          talentListId: batch.talent_list_id,
+          stageId: batch.stage_id,
+          autoInvite: batch.auto_invite,
+          expiresAt: batch.expires_at,
+        },
+        rows: (rows ?? []).map(importRowView),
+      };
   }
 
   return { ...page, open };

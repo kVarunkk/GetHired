@@ -20,6 +20,8 @@ import { loadCompanyCandidate } from "@/helpers/matching/load-company-candidate"
 import { inviteAboveFitThreshold } from "@/helpers/interview/screening/fit-threshold";
 import { sendEmailForStatusUpdate } from "@/utils/email";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
+import { claimForRun, notUnderLiveClaim, transition, type TransitionPatch } from "@/helpers/db/transition";
+import type { Json } from "@/utils/types/database.types";
 
 type QueueMessage = {
   msg_id: number;
@@ -30,7 +32,15 @@ type QueueMessage = {
 /** Seconds a read message stays hidden while it's being processed. */
 const VISIBILITY_TIMEOUT = 120;
 
-type Outcome = "done" | "retry" | "failed";
+/**
+ * The states a run may claim a screening from (SM-REQ-003): any but
+ * `processing`, which only a dead run's claim releases. A `completed` row is
+ * re-run only when its job changed (checked before the claim).
+ */
+const CLAIM_FROM = ["queued", "stale", "failed", "skipped_quota", "insufficient_info", "completed"] as const;
+
+/** `busy`: another run holds the row; the message is left for later. */
+type Outcome = "done" | "retry" | "failed" | "busy";
 
 const now = () => new Date().toISOString();
 
@@ -41,6 +51,9 @@ const now = () => new Date().toISOString();
  * X-Internal-Secret.
  */
 export async function GET(request: NextRequest) {
+  // Each run's claim (SM-REQ-003): the time the messages were read, so the
+  // next delivery, a visibility timeout later, finds it dead.
+  const claimedAt = now();
   if (
     !INTERNAL_API_SECRET ||
     request.headers.get("X-Internal-Secret") !== INTERNAL_API_SECRET
@@ -75,7 +88,7 @@ export async function GET(request: NextRequest) {
 
     const { data: screening, error: screeningError } = await admin
       .from("application_screenings")
-      .select("id, application_id, company_id, status, job_snapshot_hash, result, attempts, requested_by")
+      .select("id, application_id, company_id, status, job_snapshot_hash, result, attempts, requested_by, claimed_at")
       .eq("application_id", applicationId)
       .maybeSingle();
     if (screeningError) throw new Error(`Screening load failed: ${screeningError.message}`);
@@ -116,6 +129,34 @@ export async function GET(request: NextRequest) {
       return "done";
     }
 
+    // SM-REQ-003: claim the row, so a second run of it does nothing, and
+    // every write below moves it from `processing` under this claim only. A
+    // re-queue or a stale pass during the run gets its result refused.
+    const attempts = screening.attempts + 1;
+    const claim = await claimForRun(
+      admin,
+      "application_screenings",
+      { id: screening.id, state: screening.status, claimedAt: screening.claimed_at },
+      { from: CLAIM_FROM, claim: claimedAt, liveForMs: VISIBILITY_TIMEOUT * 1000, patch: { attempts, updated_at: now() } },
+    );
+    // Lost to another run: this message comes back after the visibility
+    // timeout and finds the row finished.
+    if (claim !== "claimed") return "busy";
+
+    const finish = (to: string, patch: TransitionPatch<"application_screenings"> = {}) =>
+      transition(
+        admin,
+        "application_screenings",
+        { id: screening.id, claim: claimedAt },
+        { from: ["processing"], to, patch: { ...patch, updated_at: now() } },
+      );
+    // Re-queued or claimed again meanwhile: the newer run screens and
+    // charges, so this message is done.
+    const superseded = async (): Promise<Outcome> => {
+      await archive(msg_id);
+      return "done";
+    };
+
     // BI-REQ-031: an imported application (claimed or not, BIT-103) has no
     // resume of the person's own, so it's read from the company's record. Too
     // little detail isn't worth a model call or a charge (BI-REQ-036): it's
@@ -125,21 +166,10 @@ export async function GET(request: NextRequest) {
         ? await loadCompanyCandidate(admin, application.company_candidate_id)
         : null;
     if (companyCandidate && !companyCandidate.screenable) {
-      const { error: unscoredError } = await admin
-        .from("application_screenings")
-        .update({ status: "insufficient_info", error_code: null, updated_at: now() })
-        .eq("id", screening.id);
-      if (unscoredError) throw new Error(`Status update failed: ${unscoredError.message}`);
+      await finish("insufficient_info", { error_code: null });
       await archive(msg_id);
       return "done";
     }
-
-    const attempts = screening.attempts + 1;
-    const { error: processingError } = await admin
-      .from("application_screenings")
-      .update({ status: "processing", attempts, updated_at: now() })
-      .eq("id", screening.id);
-    if (processingError) throw new Error(`Status update failed: ${processingError.message}`);
 
     // A missing profile still leaves the answers and the resume to screen.
     const candidate =
@@ -163,17 +193,25 @@ export async function GET(request: NextRequest) {
 
     if (!result.ok) {
       const lastAttempt = attempts >= MATCH_MAX_ATTEMPTS;
-      await admin
-        .from("application_screenings")
-        .update({
-          status: lastAttempt ? "failed" : "queued",
-          error_code: result.errorCode,
-          updated_at: now(),
-        })
-        .eq("id", screening.id);
+      const { applied } = await finish(lastAttempt ? "failed" : "queued", { error_code: result.errorCode });
+      if (!applied) return superseded();
       if (lastAttempt) await archive(msg_id);
       return lastAttempt ? "failed" : "retry";
     }
+
+    // SM-REQ-002: a run that lost its claim doesn't charge. Checked just
+    // before the charge; the save below is guarded too, and a charge in the
+    // gap between them is the same idempotent unit (by application) that the
+    // newer run pays.
+    const { data: stillOurs, error: claimError } = await admin
+      .from("application_screenings")
+      .select("id")
+      .eq("id", screening.id)
+      .eq("status", "processing")
+      .eq("claimed_at", claimedAt)
+      .maybeSingle();
+    if (claimError) throw new Error(`Claim check failed: ${claimError.message}`);
+    if (!stillOurs) return superseded();
 
     // Charged after the model call (BL-TASK-030). The ref is the application,
     // so a retried message and every later re-screen are free.
@@ -189,31 +227,23 @@ export async function GET(request: NextRequest) {
       );
     } catch (err) {
       if (!(err instanceof EntitlementError)) throw err;
-      await admin
-        .from("application_screenings")
-        .update({ status: "skipped_quota", updated_at: now() })
-        .eq("id", screening.id);
+      await finish("skipped_quota");
       await archive(msg_id);
       return "done";
     }
 
-    const { error: saveError } = await admin
-      .from("application_screenings")
-      .update({
-        status: "completed",
-        fit_score: result.result.fit_score,
-        recommendation: result.result.recommendation,
-        result: result.result,
-        // One level of history (MT-RISK-003) until the pipeline spec's events.
-        ...(screening.result ? { previous_result: screening.result } : {}),
-        job_snapshot_hash: snapshotHash,
-        model: MT_MODEL,
-        error_code: null,
-        completed_at: now(),
-        updated_at: now(),
-      })
-      .eq("id", screening.id);
-    if (saveError) throw new Error(`Save failed: ${saveError.message}`);
+    const { applied: saved } = await finish("completed", {
+      fit_score: result.result.fit_score,
+      recommendation: result.result.recommendation,
+      result: result.result as unknown as Json,
+      // One level of history (MT-RISK-003) until the pipeline spec's events.
+      ...(screening.result ? { previous_result: screening.result } : {}),
+      job_snapshot_hash: snapshotHash,
+      model: MT_MODEL,
+      error_code: null,
+      completed_at: now(),
+    });
+    if (!saved) return superseded();
 
     // The re-screen audit trail (pipeline tasks, difference 6). A system event:
     // no actor. A failed insert doesn't undo the screening.
@@ -246,6 +276,7 @@ export async function GET(request: NextRequest) {
 
   let processed = 0;
   let failed = 0;
+  let skipped = 0;
   const failures: string[] = [];
 
   for (const message of messages) {
@@ -254,6 +285,8 @@ export async function GET(request: NextRequest) {
       const outcome = await process(message);
       if (outcome === "done") {
         processed++;
+      } else if (outcome === "busy") {
+        skipped++;
       } else {
         failed++;
         failures.push(`${applicationId}: ${outcome}`);
@@ -270,7 +303,9 @@ export async function GET(request: NextRequest) {
             .from("application_screenings")
             .update({ status: "failed", error_code: "worker_error", updated_at: now() })
             .eq("application_id", applicationId)
-            .neq("status", "completed");
+            .neq("status", "completed")
+            // A newer run's live claim decides that row (SM-REQ-003).
+            .or(notUnderLiveClaim({ claim: claimedAt, liveForMs: VISIBILITY_TIMEOUT * 1000 }));
           await archive(message.msg_id);
         } catch (giveUpError) {
           reportError(`[screening worker] couldn't give up on ${message.msg_id}`, giveUpError);
@@ -285,5 +320,5 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ processed, failed });
+  return NextResponse.json({ processed, failed, ...(skipped > 0 ? { skipped } : {}) });
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 
-const LEAVE_WARNING = "You have unsaved changes. Leave without saving?";
+export const UNSAVED_CHANGES_WARNING = "You have unsaved changes. Leave without saving?";
 const SPARE_ENTRY = "__unsavedChangesGuard";
 
 /**
@@ -17,16 +17,23 @@ const SPARE_ENTRY = "__unsavedChangesGuard";
  * The spare entry stays after a save, and a clean page passes Back straight on,
  * so it never costs an extra press.
  *
- * Set `bypass.current` before a deliberate reload.
+ * Set `bypass.current` before a deliberate reload. `message` is what the
+ * in-app prompts ask; closing or reloading shows the browser's own text.
  */
-export function useUnsavedChangesGuard(isDirty: boolean, bypass: RefObject<boolean>) {
+export function useUnsavedChangesGuard(
+  isDirty: boolean,
+  bypass: RefObject<boolean>,
+  message: string = UNSAVED_CHANGES_WARNING,
+) {
   const dirty = useRef(isDirty);
+  const warning = useRef(message);
   // A ref, not history.state alone: Next replaces that state when the tree changes.
   const onSpareEntry = useRef(false);
 
   useEffect(() => {
     dirty.current = isDirty;
-  }, [isDirty]);
+    warning.current = message;
+  }, [isDirty, message]);
 
   useEffect(() => {
     onSpareEntry.current = window.history.state?.[SPARE_ENTRY] === true;
@@ -43,7 +50,7 @@ export function useUnsavedChangesGuard(isDirty: boolean, bypass: RefObject<boole
 
       // Same page, so Next has nothing to do here.
       event.stopImmediatePropagation();
-      if (dirty.current && !window.confirm(LEAVE_WARNING)) {
+      if (dirty.current && !window.confirm(warning.current)) {
         returning = true;
         window.history.forward();
         return;
@@ -74,7 +81,7 @@ export function useUnsavedChangesGuard(isDirty: boolean, bypass: RefObject<boole
     const onClick = (event: MouseEvent) => {
       const link = (event.target as Element | null)?.closest?.("a[href]");
       if (!link || link.getAttribute("target") === "_blank") return;
-      if (!window.confirm(LEAVE_WARNING)) {
+      if (!window.confirm(warning.current)) {
         event.preventDefault();
         event.stopPropagation();
       }
@@ -82,7 +89,7 @@ export function useUnsavedChangesGuard(isDirty: boolean, bypass: RefObject<boole
 
     const onSubmit = (event: SubmitEvent) => {
       if (!(event.target as Element | null)?.closest?.("[data-leaves-page]")) return;
-      if (!window.confirm(LEAVE_WARNING)) {
+      if (!window.confirm(warning.current)) {
         event.preventDefault();
         event.stopPropagation();
       }

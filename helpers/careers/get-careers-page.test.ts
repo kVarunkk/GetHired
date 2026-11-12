@@ -16,6 +16,7 @@ const RAW = {
   description: "About Acme",
   logo_url: "https://cdn.acme.test/logo.png",
   website: "https://acme.dev",
+  website_verified: true,
   headquarters: "Bengaluru",
   company_size: "11-50",
   industry: "Software",
@@ -48,6 +49,7 @@ describe("getCareersPage (CP-SEC-001)", () => {
         description: "About Acme",
         logoUrl: "https://cdn.acme.test/logo.png",
         website: "https://acme.dev",
+        websiteVerified: true,
         headquarters: "Bengaluru",
         companySize: "11-50",
         industry: "Software",
@@ -64,6 +66,11 @@ describe("getCareersPage (CP-SEC-001)", () => {
     expect(await getCareersPage("acme")).toEqual({ redirect: "acme-careers" });
     db.queueRpc("get_careers_page", { data: null, error: null });
     expect(await getCareersPage("nope")).toBeNull();
+  });
+
+  it("treats anything but website_verified: true as not verified", () => {
+    expect(toCareersPage({ ...RAW, website_verified: "true" })?.websiteVerified).toBe(false);
+    expect(toCareersPage({ ...RAW, website_verified: undefined })?.websiteVerified).toBe(false);
   });
 
   it("rejects an accent that isn't #rrggbb", () => {

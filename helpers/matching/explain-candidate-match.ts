@@ -1,16 +1,32 @@
 import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { TelemetryOptions } from "ai";
-import type { Database } from "@/utils/types/database.types";
+import type { Database, Json } from "@/utils/types/database.types";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
 import { consumeEntitlement } from "@/helpers/billing/entitlements";
 import { EntitlementError } from "@/helpers/billing/errors";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { transition } from "@/helpers/db/transition";
+import { isExplanationReady } from "@/helpers/matching/explanation-status";
 import { MATCH_EXPLAIN_TIMEOUT_MS } from "./config";
 import type { MatchErrorCode } from "./errors";
 import { explainMatch } from "./explain-match";
 import { loadCandidate, loadDirectoryCandidate, MATCH_JOB_COLUMNS } from "./load-candidate";
 import { parseStoredExplanation, type MatchExplanation } from "./schemas";
+
+/**
+ * SM-ISS-003, SM-TEST-010: an on-demand failure never overwrites an
+ * explanation (`completed`), nor a row a worker is running (`processing`),
+ * whose own write decides it.
+ */
+const FAIL_FROM = ["none", "queued", "stale", "failed", "skipped_quota"] as const;
+
+/**
+ * An on-demand result is saved over anything but an explanation a worker
+ * saved meanwhile. A running worker's save is then refused by its claim, and
+ * it doesn't charge.
+ */
+const SAVE_FROM = [...FAIL_FROM, "processing"] as const;
 
 export type ExplainCandidateMatchResult =
   | { ok: true; explanation: MatchExplanation; cached: boolean }
@@ -52,7 +68,7 @@ export async function explainCandidateMatch(
     if (!canView) return { ok: false, reason: "not_found" };
   }
 
-  if (match?.explanation_status === "completed") {
+  if (isExplanationReady(match?.explanation_status)) {
     const cached = parseStoredExplanation(match.explanation);
     if (cached) return { ok: true, explanation: cached, cached: true };
   }
@@ -72,10 +88,12 @@ export async function explainCandidateMatch(
 
   if (!result.ok) {
     if (match) {
-      await admin
-        .from("job_relevant_profiles")
-        .update({ explanation_status: "failed", explanation_error: result.errorCode })
-        .eq("id", match.id);
+      await transition(
+        admin,
+        "job_relevant_profiles",
+        { id: match.id, column: "explanation_status" },
+        { from: FAIL_FROM, to: "failed", patch: { explanation_error: result.errorCode } },
+      );
     }
     return { ok: false, reason: "model", errorCode: result.errorCode };
   }
@@ -96,16 +114,24 @@ export async function explainCandidateMatch(
   }
 
   if (match) {
-    const { error } = await admin
-      .from("job_relevant_profiles")
-      .update({
-        explanation: result.explanation,
-        explanation_status: "completed",
-        explanation_error: null,
-        explained_at: new Date().toISOString(),
-      })
-      .eq("id", match.id);
-    if (error) reportError("[matches/explain] couldn't store the explanation", error.message);
+    try {
+      await transition(
+        admin,
+        "job_relevant_profiles",
+        { id: match.id, column: "explanation_status" },
+        {
+          from: SAVE_FROM,
+          to: "completed",
+          patch: {
+            explanation: result.explanation as unknown as Json,
+            explanation_error: null,
+            explained_at: new Date().toISOString(),
+          },
+        },
+      );
+    } catch (err) {
+      reportError("[matches/explain] couldn't store the explanation", err);
+    }
   }
 
   return { ok: true, explanation: result.explanation, cached: false };

@@ -163,6 +163,11 @@ describe("invite tools (ralph-misc-1 D10)", () => {
     db.queueRpc("revoke_company_invite", { data: { ok: true }, error: null });
 
     expect(await execTool(toolsFor().resendInvite, { inviteId: INVITE.row.id })).toMatchObject({ invited: "priya@acme.dev" });
+    // An open invite: pending, or expired (which can be resent) (SM-REQ-010).
+    expect(db.callsFor("company_invites")[0].chain).toContainEqual({
+      method: "in",
+      args: ["company_invite_state", ["pending", "expired"]],
+    });
     expect(rpcArgs("create_company_invite")[0]).toEqual({
       p_email: "priya@acme.dev",
       p_role_id: ROLES_A.admin.id,

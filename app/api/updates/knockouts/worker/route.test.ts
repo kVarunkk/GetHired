@@ -52,12 +52,19 @@ describe("GET /api/updates/knockouts/worker (AF-DEC-002, CPT-032)", () => {
     expect(db.calls).toHaveLength(0);
   });
 
-  it("reads only due, unsent rows", async () => {
+  it("reads only due rows, through the named state (SM-REQ-010)", async () => {
     db.queue("application_knockouts", { data: [], error: null });
     await call();
     const chain = db.callsFor("application_knockouts")[0].chain;
-    expect(chain.find((m) => m.method === "lte")?.args[0]).toBe("reject_email_due_at");
-    expect(chain).toContainEqual({ method: "is", args: ["reject_email_sent_at", null] });
+    expect(chain).toContainEqual({ method: "eq", args: ["application_knockout_state", "due"] });
+    expect(chain.some((m) => m.method === "lte" || m.method === "is")).toBe(false);
+  });
+
+  it("marks a send only on a row that is still due", async () => {
+    queueDue();
+    await call();
+    const write = db.callsFor("application_knockouts")[1].chain;
+    expect(write).toContainEqual({ method: "eq", args: ["application_knockout_state", "due"] });
   });
 
   it("sends the company's rejection template once and marks it sent", async () => {
@@ -83,7 +90,12 @@ describe("GET /api/updates/knockouts/worker (AF-DEC-002, CPT-032)", () => {
 
     expect(await (await call()).json()).toEqual({ sent: 0, cancelled: 1, failed: 0 });
     expect(sendCompanyMessage).not.toHaveBeenCalled();
-    expect(updates("application_knockouts")).toEqual([{ reject_email_due_at: null }]);
+    // A cancel is told apart from "never due": the due date stays.
+    expect(updates("application_knockouts")).toEqual([{ reject_email_cancelled_at: expect.any(String) }]);
+    expect(db.callsFor("application_knockouts")[1].chain).toContainEqual({
+      method: "eq",
+      args: ["application_knockout_state", "due"],
+    });
   });
 
   it("cancels when the company has no rejection template", async () => {

@@ -21,6 +21,7 @@ import { RESUME_MAX_OPERATIONS, updateResume } from "@/helpers/resumes/update-re
 import { PLACEHOLDER_UNFILLED, applyReviewSuggestions } from "@/helpers/resume-review/apply-suggestions";
 import { readChanges, type ReviewChange } from "@/helpers/resume-review/changes";
 import { loadResumeChanges } from "@/helpers/resume-review/load-changes";
+import { reviewStatus } from "@/helpers/resume-review/review-status";
 import {
   RESUME_IMPROVE_FOCUS_MAX_CHARS,
   RESUME_IMPROVE_JOB_MAX_CHARS,
@@ -608,7 +609,7 @@ export function createResumeTools(ctx: AgentToolContext) {
           const summary = {
             id: review.id,
             name: review.name,
-            status: review.analysis_failed ? "failed" : review.status,
+            status: reviewStatus(review),
             score: review.score,
             overallFeedback: analysis.overall_feedback ?? null,
             totalSuggestions: changes.length,

@@ -22,7 +22,7 @@ beforeEach(() => {
 
 describe("CandidateActions (BI-REQ-005/007)", () => {
   it("opens add to a job", () => {
-    render(<CandidateActions candidate={MEERA} jobs={JOBS} canDelete listHref={LIST} />);
+    render(<CandidateActions candidate={MEERA} jobs={JOBS} canAddToJob importJobCount={1} canDelete listHref={LIST} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Add to a job" }));
 
@@ -30,21 +30,51 @@ describe("CandidateActions (BI-REQ-005/007)", () => {
   });
 
   it("can't add someone without an email", () => {
-    render(<CandidateActions candidate={{ ...MEERA, email: null }} jobs={JOBS} canDelete listHref={LIST} />);
+    render(<CandidateActions candidate={{ ...MEERA, email: null }} jobs={JOBS} canAddToJob importJobCount={1} canDelete listHref={LIST} />);
 
     const button = screen.getByRole("button", { name: "Add to a job" });
     expect(button).toBeDisabled();
     expect(button.parentElement).toHaveAttribute("title", "Add an email first");
   });
 
+  it("says why they can't be added when they're in every active job", () => {
+    render(
+      <CandidateActions candidate={MEERA} jobs={[]} canAddToJob importJobCount={2} canDelete={false} listHref={LIST} />,
+    );
+
+    const button = screen.getByRole("button", { name: "Add to a job" });
+    expect(button).toBeDisabled();
+    expect(button.parentElement).toHaveAttribute("title", "Already in all your active jobs");
+  });
+
+  it("says why when there are no active jobs", () => {
+    render(
+      <CandidateActions candidate={MEERA} jobs={[]} canAddToJob importJobCount={0} canDelete={false} listHref={LIST} />,
+    );
+
+    expect(screen.getByRole("button", { name: "Add to a job" }).parentElement).toHaveAttribute(
+      "title",
+      "No active jobs to add them to",
+    );
+  });
+
   it("hides what the member can't do", () => {
-    render(<CandidateActions candidate={MEERA} jobs={[]} canDelete={false} listHref={LIST} />);
+    render(
+      <CandidateActions
+        candidate={MEERA}
+        jobs={[]}
+        canAddToJob={false}
+        importJobCount={0}
+        canDelete={false}
+        listHref={LIST}
+      />,
+    );
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("deletes after asking, then goes back to the list", async () => {
-    render(<CandidateActions candidate={MEERA} jobs={JOBS} canDelete listHref={LIST} />);
+    render(<CandidateActions candidate={MEERA} jobs={JOBS} canAddToJob importJobCount={1} canDelete listHref={LIST} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     const dialog = screen.getByRole("alertdialog");
@@ -59,7 +89,7 @@ describe("CandidateActions (BI-REQ-005/007)", () => {
 
   it("stays put on a refusal", async () => {
     vi.mocked(deleteCandidatesAction).mockResolvedValue({ ok: false, error: "Your role can't import applicants." });
-    render(<CandidateActions candidate={MEERA} jobs={JOBS} canDelete listHref={LIST} />);
+    render(<CandidateActions candidate={MEERA} jobs={JOBS} canAddToJob importJobCount={1} canDelete listHref={LIST} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Delete" }));

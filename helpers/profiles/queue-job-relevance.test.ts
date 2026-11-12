@@ -31,28 +31,69 @@ beforeEach(() => {
 });
 
 describe("queueJobPostingRelevance (RMT-025a)", () => {
-  it("queues under the owner's id with the given session, without reading the request", async () => {
-    supabase.queue("job_postings", { data: { id: OWN.id, matching_status: "completed", updated_at: OWN.updated_at }, error: null });
+  const start = (data: unknown, error: unknown = null) => supabase.queueRpc("start_matching", { data, error });
+  const ctx = () => ({ supabase: supabase.client, company: myCompanyOf(COMPANY_A), user: OWNER_A.user });
 
-    const result = await queueJobPostingRelevance(
-      { supabase: supabase.client, company: myCompanyOf(COMPANY_A), user: OWNER_A.user },
-      OWN.id,
-    );
+  it("starts through start_matching with the given session, then queues under the owner's id, without reading the request", async () => {
+    start({ ok: true });
+
+    const result = await queueJobPostingRelevance(ctx(), OWN.id);
 
     expect(result).toEqual({ success: true, message: "processing started" });
+    // SM-REQ-004: one atomic start, checked by the database for the session.
+    expect(supabase.callsFor("start_matching")[0].chain[0].args[1]).toEqual({
+      p_job_id: OWN.id,
+      p_timeout_seconds: 1200,
+    });
     expect(sent()).toEqual([
       { queue_name: "relevance_profiles", message: { userId: COMPANY_A.user.id, jobId: OWN.id }, sleep_seconds: 0 },
     ]);
-    expect(supabase.callsFor("job_postings")[0].chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
+    expect(service.callsFor("job_postings")).toHaveLength(0);
     expect(getUserFromRequest).not.toHaveBeenCalled();
     expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it("sends no message when a run is going (SM-TEST-005)", async () => {
+    start({ ok: false, reason: "in_progress" });
+
+    const result = await queueJobPostingRelevance(ctx(), OWN.id);
+
+    expect(result).toEqual({ success: false, error: "Matching is already in progress for this job." });
+    expect(sent()).toHaveLength(0);
+  });
+
+  it.each(["not_found", "forbidden"])("answers not found when the start says %s", async (reason) => {
+    start({ ok: false, reason });
+
+    expect(await queueJobPostingRelevance(ctx(), OWN.id)).toEqual({ success: false, error: "Job posting not found." });
+    expect(sent()).toHaveLength(0);
+  });
+
+  it("fails without sending when the start errors", async () => {
+    start(null, { message: "db down" });
+
+    expect(await queueJobPostingRelevance(ctx(), OWN.id)).toEqual({ success: false, error: "Failed to start matching." });
+    expect(sent()).toHaveLength(0);
+  });
+
+  it("moves the job to failed from progress only when the message can't be sent", async () => {
+    start({ ok: true });
+    service.queueRpc("send", { data: null, error: { message: "queue down" } }, "pgmq_public");
+
+    const result = await queueJobPostingRelevance(ctx(), OWN.id);
+
+    expect(result).toEqual({ success: false, error: "Failed to start matching." });
+    const [failed] = service.callsFor("job_postings");
+    expect(failed.chain.find((m) => m.method === "update")!.args[0]).toMatchObject({ matching_status: "failed" });
+    expect(failed.chain).toContainEqual({ method: "eq", args: ["id", OWN.id] });
+    expect(failed.chain).toContainEqual({ method: "in", args: ["matching_status", ["progress"]] });
   });
 
   it("re-checks matching.run for the job", async () => {
     const company = HIRING_MANAGER_A.myCompany;
     const result = await queueJobPostingRelevance({ supabase: supabase.client, company, user: HIRING_MANAGER_A.user }, JOB_A2);
     expect(result).toEqual({ success: false, error: forbiddenMessage("matching.run", { forJob: true }) });
-    expect(supabase.callsFor("job_postings")).toHaveLength(0);
+    expect(supabase.calls).toHaveLength(0);
     expect(sent()).toHaveLength(0);
   });
 

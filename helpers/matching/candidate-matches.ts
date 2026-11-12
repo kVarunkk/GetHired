@@ -1,4 +1,5 @@
 import { reportError } from "@/helpers/posthog/report-error";
+import { isExplanationReady } from "@/helpers/matching/explanation-status";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import { parseStoredExplanation, type MatchExplanation } from "./schemas";
@@ -45,7 +46,7 @@ export async function getCandidateMatches(
       jobTitle: row.job_postings.title,
       matchScore: row.match_score,
       explanation:
-        row.explanation_status === "completed" ? parseStoredExplanation(row.explanation) : null,
+        isExplanationReady(row.explanation_status) ? parseStoredExplanation(row.explanation) : null,
     }))
     .sort(
       (a, b) =>

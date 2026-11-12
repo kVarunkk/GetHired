@@ -72,6 +72,13 @@ const file = () => new File(["x"], "people.csv", { type: "text/csv" });
 const choose = (label: string, option: string) =>
   fireEvent.change(screen.getByRole("combobox", { name: label }), { target: { value: option } });
 
+const attest = () => fireEvent.click(screen.getByRole("checkbox", { name: /lawful basis/ }));
+const shownRows = () =>
+  within(screen.getByRole("table", { name: "Rows to import" }))
+    .getAllByRole("row")
+    .slice(1)
+    .map((row) => within(row).queryAllByRole("cell")[1]?.textContent);
+
 async function upload() {
   fireEvent.change(screen.getByLabelText("Choose a .csv or .xlsx file"), { target: { files: [file()] } });
   await screen.findByRole("heading", { name: "Match the columns" });
@@ -226,6 +233,70 @@ describe("SpreadsheetImport: preview and destination (BI-REQ-013–018)", () => 
   });
 });
 
+describe("SpreadsheetImport: choosing rows and filtering", () => {
+  it("ticks every importable row, and leaves an error row unticked and locked", async () => {
+    render(<SpreadsheetImport page={PAGE} />);
+    await toReview();
+    expect(screen.getByRole("checkbox", { name: "Import row 1" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Import row 2" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Import row 2" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Import row 3" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Select all rows" })).toBeChecked();
+    expect(screen.getByText("2 of 2 importable rows selected")).toBeInTheDocument();
+  });
+
+  it("imports only the ticked rows", async () => {
+    render(<SpreadsheetImport page={PAGE} />);
+    await toReview();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Import row 1" }));
+    expect(screen.getByRole("checkbox", { name: "Select all rows" })).toHaveAttribute("aria-checked", "mixed");
+    expect(screen.getByText("Not selected: won’t be imported".replace("’", "'"))).toBeInTheDocument();
+    attest();
+    fireEvent.click(screen.getByRole("button", { name: "Import 1 person" }));
+    expect(await screen.findByRole("heading", { name: "Import finished" })).toBeInTheDocument();
+    expect(confirmSpreadsheetImportAction).toHaveBeenCalledWith(
+      expect.objectContaining({ rows: [expect.objectContaining({ full_name: "Cid" })] }),
+    );
+  });
+
+  it("unticks and ticks every row with the header box", async () => {
+    render(<SpreadsheetImport page={PAGE} />);
+    await toReview();
+    attest();
+    const all = screen.getByRole("checkbox", { name: "Select all rows" });
+    fireEvent.click(all);
+    expect(screen.getByRole("checkbox", { name: "Import row 1" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Import row 3" })).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Import 0 people" })).toBeDisabled();
+    fireEvent.click(all);
+    expect(screen.getByRole("button", { name: "Import 2 people" })).toBeEnabled();
+  });
+
+  it("searches the cells, in every column or one, and the header box acts on the shown rows only", async () => {
+    render(<SpreadsheetImport page={PAGE} />);
+    await toReview();
+    const search = screen.getByRole("searchbox", { name: "Search rows" });
+    fireEvent.change(search, { target: { value: "ASHA" } });
+    expect(shownRows()).toEqual(["1"]);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select all shown rows" }));
+    expect(screen.getByRole("button", { name: "Import 1 person" })).toBeInTheDocument();
+
+    // "Designer" is Ben's title; "mail.test" is in two emails and no title.
+    fireEvent.change(search, { target: { value: "designer" } });
+    choose("Search in column", "current_title");
+    expect(shownRows()).toEqual(["2"]);
+    fireEvent.change(search, { target: { value: "mail.test" } });
+    expect(screen.getByText("No rows match the filters.")).toBeInTheDocument();
+    choose("Search in column", "email");
+    expect(shownRows()).toEqual(["1", "3"]);
+
+    choose("Filter by selection", "not_selected");
+    expect(shownRows()).toEqual(["1"]);
+    fireEvent.click(screen.getByRole("button", { name: "Clear Filters" }));
+    expect(shownRows()).toEqual(["1", "2", "3"]);
+  });
+});
+
 describe("SpreadsheetImport on a job page (CPT-016, CP-REQ-010/023)", () => {
   const FIXED = { ...PAGE, fixedJob: PAGE.jobs[0] };
 
@@ -241,7 +312,7 @@ describe("SpreadsheetImport on a job page (CPT-016, CP-REQ-010/023)", () => {
   it("imports into the job, and offers to import more", async () => {
     render(<SpreadsheetImport page={FIXED} />);
     await toReview();
-    fireEvent.click(screen.getByRole("checkbox"));
+    attest();
     fireEvent.click(screen.getByRole("button", { name: "Import 2 people" }));
     expect(await screen.findByRole("heading", { name: "Import finished" })).toBeInTheDocument();
     expect(confirmSpreadsheetImportAction).toHaveBeenCalledWith(
@@ -258,7 +329,7 @@ describe("SpreadsheetImport: confirm (BI-REQ-016/017)", () => {
     await toReview();
     const confirm = screen.getByRole("button", { name: "Import 2 people" });
     expect(confirm).toBeDisabled();
-    fireEvent.click(screen.getByRole("checkbox"));
+    attest();
     expect(confirm).toBeEnabled();
   });
 
@@ -270,7 +341,7 @@ describe("SpreadsheetImport: confirm (BI-REQ-016/017)", () => {
     choose("Stage for “Phone screen”", APPLIED);
     fireEvent.click(screen.getByRole("switch", { name: "Auto-invite to AI interview" }));
     choose("Duplicate action, row 3", "fill");
-    fireEvent.click(screen.getByRole("checkbox"));
+    attest();
     fireEvent.change(screen.getByLabelText("Basis (optional)"), { target: { value: "consented in our old ATS" } });
     fireEvent.click(screen.getByRole("button", { name: "Import 2 people" }));
 
@@ -306,7 +377,7 @@ describe("SpreadsheetImport: confirm (BI-REQ-016/017)", () => {
     await toReview();
     choose("Add them to", "list");
     choose("Talent list", "new");
-    fireEvent.click(screen.getByRole("checkbox"));
+    attest();
     const confirm = screen.getByRole("button", { name: "Import 2 people" });
     expect(confirm).toBeDisabled();
     fireEvent.change(screen.getByRole("textbox", { name: "New list name" }), { target: { value: "Old ATS 2" } });

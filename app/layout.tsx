@@ -1,3 +1,4 @@
+import { shareImages, twitterShareImages } from "@/helpers/seo/share-image";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
@@ -28,12 +29,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "GetHired",
-    images: ["/opengraph-image.jpg"],
+    ...shareImages,
   },
-  twitter: {
-    card: "summary_large_image",
-    images: ["/opengraph-image.jpg"],
-  },
+  twitter: twitterShareImages,
   robots: {
     index: true,
     follow: true,

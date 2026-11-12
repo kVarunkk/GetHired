@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/components/DataTable";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { CandidateApplication } from "@/helpers/candidates/candidate-page";
 import { formatDate } from "@/utils/date";
 
@@ -29,6 +30,18 @@ const columns: ColumnDef<CandidateApplication>[] = [
     id: "added",
     header: "Added",
     cell: ({ row }) => <span className="text-sm">{formatDate(row.original.createdAt) || "—"}</span>,
+  },
+  {
+    id: "actions",
+    header: () => <span className="sr-only">Actions</span>,
+    meta: { className: "text-right", headerClassName: "text-right" },
+    cell: ({ row }) => (
+      <Button variant="ghost" size="sm" asChild>
+        <Link href={`/company/applications/${row.original.id}`} aria-label={`View application for ${row.original.jobTitle}`}>
+          View
+        </Link>
+      </Button>
+    ),
   },
 ];
 

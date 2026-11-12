@@ -208,7 +208,8 @@ const standardKnockoutsSchema = z
 
 export const applicationFormSchema = z
   .object({
-    version: z.literal(1),
+    // Defaults so the agent can leave it out: a missing version used to fail createJobPost.
+    version: z.literal(1).default(1),
     questions: z.array(questionSchema).max(MAX_FORM_QUESTIONS, `You can add at most ${MAX_FORM_QUESTIONS} questions.`),
     standard_fields: standardFieldsSchema,
     standard_knockouts: standardKnockoutsSchema.optional(),

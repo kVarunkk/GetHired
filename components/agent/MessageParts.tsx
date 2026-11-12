@@ -228,7 +228,7 @@ export function StepNode({ tone }: { tone: StepTone }) {
   );
 }
 
-function Step({
+export function Step({
   tone,
   label,
   children,

@@ -1,12 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
+import { withReviewStatus } from "@/helpers/resume-review/review-status";
 
 export const RESUME_REVIEWS_DEFAULT_LIMIT = 10;
 export const RESUME_REVIEWS_MAX_LIMIT = 50;
 
 /**
  * The user's resume reviews, newest first, for MCP. `user` must come from the
- * session or tool context.
+ * session or tool context. `status` is read through `reviewStatus`, so
+ * `analysis_failed` isn't returned.
  */
 export async function listResumeReviews(
   supabase: SupabaseClient<Database>,
@@ -26,5 +28,5 @@ export async function listResumeReviews(
     .order("created_at", { ascending: false })
     .limit(size);
   if (error) throw error;
-  return data;
+  return data.map(withReviewStatus);
 }

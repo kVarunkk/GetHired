@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CareersPage } from "./get-careers-page";
 import { careersMetadata, careersOrganizationJsonLd, careersUrl } from "./seo";
+import { SHARE_IMAGE, TWITTER_SHARE_IMAGE } from "@/helpers/seo/share-image";
 
 const PAGE: CareersPage = {
   id: "c0000000-0000-4000-8000-000000000001",
@@ -11,6 +12,7 @@ const PAGE: CareersPage = {
   description: "About Acme.",
   logoUrl: "https://cdn.acme.test/logo.png",
   website: "https://acme.dev",
+  websiteVerified: false,
   headquarters: "Bengaluru",
   companySize: null,
   industry: null,
@@ -45,5 +47,11 @@ describe("careers SEO (CP-REQ-011)", () => {
     const meta = careersMetadata({ ...PAGE, coverUrl: null, tagLine: null }, { openRoles: 1 });
     expect(meta.description).toBe("Open roles at Acme. 1 open role.");
     expect(meta.openGraph).toMatchObject({ images: [{ url: "https://cdn.acme.test/logo.png" }] });
+  });
+
+  it("falls back to the site share image without a cover or logo", () => {
+    const meta = careersMetadata({ ...PAGE, coverUrl: null, logoUrl: null }, { openRoles: 2 });
+    expect(meta.openGraph).toMatchObject({ images: [SHARE_IMAGE] });
+    expect(meta.twitter).toMatchObject({ card: "summary_large_image", images: [TWITTER_SHARE_IMAGE] });
   });
 });

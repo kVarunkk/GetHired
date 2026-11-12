@@ -1,3 +1,4 @@
+import { shareImages } from "@/helpers/seo/share-image";
 import FootComponent from "@/components/FootComponent";
 import HeroAiInterview from "@/components/HeroAIInterview";
 import FAQSection from "@/components/landing-page/FAQSection";
@@ -25,6 +26,7 @@ export const metadata: Metadata = {
     url: "https://gethired.devhub.co.in/ai-interview",
     siteName: "GetHired",
     type: "website",
+    ...shareImages,
   },
   keywords: [
     "AI Interview Prep",

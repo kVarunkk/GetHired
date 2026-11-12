@@ -38,7 +38,7 @@ export default async function CandidateLayout({
     const { candidate_id } = await params;
     const frame = await loadCandidateFrame(candidate_id);
     if (!frame) notFound();
-    const { candidate, applications, jobs, canDelete } = frame;
+    const { candidate, applications, jobs, canAddToJob, importJobCount, canDelete } = frame;
 
     const base = candidatePath(candidate.id);
     return (
@@ -71,6 +71,8 @@ export default async function CandidateLayout({
               <CandidateActions
                 candidate={{ id: candidate.id, name: candidate.full_name, email: candidate.email }}
                 jobs={jobs}
+                canAddToJob={canAddToJob}
+                importJobCount={importJobCount}
                 canDelete={canDelete}
                 listHref={CANDIDATES_LIST_PATH}
               />

@@ -122,7 +122,8 @@ function CompanyDetailBadges({
           onClick={(e) => e.stopPropagation()}
           href={company.website}
           target="_blank"
-          rel="noopener noreferrer"
+          // Followed links are only given on verified careers pages.
+          rel="nofollow noopener noreferrer"
           prefetch={false}
         >
           <Badge

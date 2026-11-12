@@ -2,21 +2,14 @@
 
 import { useId, useState } from "react";
 import { FileSpreadsheet, Loader2 } from "lucide-react";
-import { getImportMappingAction } from "@/app/actions/candidates/import-mapping";
 import { stageSpreadsheetImportAction } from "@/app/actions/candidates/stage-spreadsheet-import";
 import ColumnMapper from "@/components/candidates/ColumnMapper";
+import { loadSheet, sheetErrorMessage } from "@/components/candidates/load-sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  applyMapping,
-  guessMapping,
-  headerHash,
-  mappingProblem,
-  sanitizeMapping,
-  type ColumnMapping,
-} from "@/helpers/candidates/map-columns";
-import { parseSheet, SheetError, type ParsedSheet } from "@/helpers/candidates/parse-sheet";
+import { applyMapping, mappingProblem, type ColumnMapping } from "@/helpers/candidates/map-columns";
+import type { ParsedSheet } from "@/helpers/candidates/parse-sheet";
 
 export type SpreadsheetImportOutput = { batchId: string; rows: number } | { cancelled: true };
 
@@ -50,19 +43,13 @@ export default function SpreadsheetImportWidget({
     setBusy(true);
     setError(null);
     try {
-      const parsed = await parseSheet(picked, { sheet: sheetName });
-      const nextHash = await headerHash(parsed.headers);
-      const saved = await getImportMappingAction({ headerHash: nextHash }).catch(() => null);
-      const savedMapping = saved?.ok ? saved.mapping : null;
-      let mapping = savedMapping ? sanitizeMapping(parsed.headers, savedMapping.columns) : guessMapping(parsed.headers);
-      // A Stage column only means something with a job (BI-REQ-015a).
-      if (!jobPostId) mapping = mapping.map((t) => (t === "stage" ? "ignore" : t));
-      setFile(picked);
-      setSheet(parsed);
-      setHash(nextHash);
-      setColumns(mapping);
+      const loaded = await loadSheet(picked, { sheetName, allowStage: !!jobPostId });
+      setFile(loaded.file);
+      setSheet(loaded.sheet);
+      setHash(loaded.hash);
+      setColumns(loaded.columns);
     } catch (err) {
-      setError(err instanceof SheetError ? err.message : "Couldn't read this file. Try again.");
+      setError(sheetErrorMessage(err));
     } finally {
       setBusy(false);
     }

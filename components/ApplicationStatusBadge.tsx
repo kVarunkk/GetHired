@@ -3,11 +3,8 @@
 import { Badge, BadgeProps } from "./ui/badge";
 import { useMemo } from "react";
 import { cn } from "@/utils/utils";
-import {
-  TApplicationStatus,
-  TPaymentStatus,
-  TResumeReviewStatus,
-} from "@/utils/types";
+import { TApplicationStatus, TPaymentStatus } from "@/utils/types";
+import type { TResumeReviewStatus } from "@/helpers/resume-review/review-status";
 
 export default function ApplicationStatusBadge({
   status,

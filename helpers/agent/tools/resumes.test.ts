@@ -522,6 +522,20 @@ describe("getResumeReview tool", () => {
     });
   });
 
+  it("reads the status through reviewStatus", async () => {
+    supabase.queue("resume_reviews", {
+      data: { id: REVIEW_ID, name: null, status: null, score: 70, analysis_failed: null, ai_response: null, created_at: "c" },
+      error: null,
+    });
+    expect(await execTool(mcpTools().getResumeReview, { reviewId: REVIEW_ID })).toMatchObject({ status: "completed" });
+
+    supabase.queue("resume_reviews", {
+      data: { id: REVIEW_ID, name: null, status: "completed", score: null, analysis_failed: true, ai_response: null, created_at: "c" },
+      error: null,
+    });
+    expect(await execTool(mcpTools().getResumeReview, { reviewId: REVIEW_ID })).toMatchObject({ status: "failed" });
+  });
+
   it("returns an error for unknown reviews", async () => {
     expect(await execTool(mcpTools().getResumeReview, { reviewId: REVIEW_ID })).toEqual({
       error: "Resume review not found.",

@@ -35,6 +35,7 @@ const PAGE: CareersPage = {
   description: "About Acme.",
   logoUrl: null,
   website: null,
+  websiteVerified: false,
   headquarters: null,
   companySize: null,
   industry: null,

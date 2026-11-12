@@ -1,3 +1,4 @@
+import { shareImages, twitterShareImages } from "@/helpers/seo/share-image";
 import { notFound } from "next/navigation";
 import { BackLink } from "@/components/PageHeader";
 import JobClientHydrator from "@/components/JobClientHydrator";
@@ -42,9 +43,10 @@ export async function generateMetadata({
       title,
       description,
       url: canonical,
+      ...shareImages,
     },
     twitter: {
-      card: "summary",
+      ...twitterShareImages,
       title,
       description,
     },
@@ -70,7 +72,8 @@ export default async function JobPage({
       {jsonLd ? (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          // Escape "<" so job text like "</script>" can't end the tag.
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
       ) : null}
       <BackLink href="/jobs" label="Back to jobs" />

@@ -137,6 +137,8 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
 [
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Search jobs",
@@ -146,6 +148,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "companies": {
+          "description": "Only jobs at these companies, by company name, e.g. ['Stripe', 'Razorpay'].",
           "items": {
             "maxLength": 80,
             "minLength": 1,
@@ -155,10 +158,11 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "cursor": {
-          "description": "nextCursor from a previous searchJobs call.",
+          "description": "For the next page: the nextCursor from the previous search_jobs result, sent with the same filters. Leave out for the first page.",
           "type": "string",
         },
         "jobTypes": {
+          "description": "Only these kinds of employment: full-time, contract or internship.",
           "items": {
             "enum": [
               "Fulltime",
@@ -170,7 +174,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "keywords": {
-          "description": "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end']. Leave out seniority words such as junior, senior, lead or fresher: use minExperience/maxExperience.",
+          "description": "Words to look for in the job title. Add the common spellings of the same role, e.g. ['frontend', 'front-end', 'front end']. Put seniority (junior, senior, lead, fresher) in minExperience/maxExperience, not here.",
           "items": {
             "maxLength": 50,
             "minLength": 1,
@@ -180,13 +184,13 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "limit": {
-          "description": "How many results to return (default 10).",
+          "description": "How many to return in this call. Defaults to 10.",
           "maximum": 20,
           "minimum": 1,
           "type": "integer",
         },
         "locations": {
-          "description": "Locations, e.g. ['Remote', 'Bengaluru'].",
+          "description": "Where the user wants to work, e.g. ['Remote', 'Bengaluru']. Different spellings of a city, such as Bangalore and Bengaluru, find the same jobs.",
           "items": {
             "maxLength": 60,
             "minLength": 1,
@@ -196,24 +200,24 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "maxExperience": {
-          "description": "Upper end of the user's experience range in years: only jobs requiring at most this much. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+          "description": "The top of the user's experience range, in years: only jobs asking for at most this much. Seniority maps to this range: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5.",
           "maximum": 30,
           "minimum": 0,
           "type": "integer",
         },
         "minExperience": {
-          "description": "Lower end of the user's experience range in years. Jobs match when their experience range overlaps the user's. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+          "description": "The bottom of the user's experience range, in years. A job matches when the experience it asks for overlaps the user's range. Seniority maps to this range: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5.",
           "maximum": 30,
           "minimum": 0,
           "type": "integer",
         },
         "minSalary": {
-          "description": "Minimum salary as a plain integer.",
+          "description": "The lowest salary the user would accept, as a plain whole number without a currency symbol or separators, e.g. 1500000.",
           "minimum": 0,
           "type": "integer",
         },
         "platforms": {
-          "description": "Job source platforms.",
+          "description": "Only jobs found on these applicant tracking systems or job boards. gethired is jobs posted on GetHired itself, which can be applied to with submit_application.",
           "items": {
             "enum": [
               "greenhouse",
@@ -234,12 +238,13 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "postedWithinDays": {
-          "description": "Only jobs posted within this many days.",
+          "description": "Only jobs posted in the last this many days, e.g. 7 for the past week.",
           "maximum": 90,
           "minimum": 1,
           "type": "integer",
         },
         "visaRequirements": {
+          "description": "Only jobs whose posting states one of these visa terms. 'Will Sponsor' is for users who need the employer to sponsor a visa.",
           "items": {
             "enum": [
               "Will Sponsor",
@@ -254,10 +259,109 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "search_jobs",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "jobs": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "company": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "experience": {
+                "description": "The experience the posting asks for, as it gives it.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "id": {
+                "description": "The job id, for get_job_details, favorite_job and the other job tools.",
+                "type": "string",
+              },
+              "jobType": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "locations": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "postedAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "salary": {
+                "description": "The salary range as the posting gives it.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "url": {
+                "description": "The job's page on GetHired.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "title",
+              "company",
+              "locations",
+              "salary",
+              "jobType",
+              "experience",
+              "postedAt",
+              "url",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "nextCursor": {
+          "description": "Pass to search_jobs as cursor for the next page; null on the last page.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "totalCount": {
+          "description": "How many jobs match in all, across pages.",
+          "type": [
+            "number",
+            "null",
+          ],
+        },
+      },
+      "required": [
+        "jobs",
+        "totalCount",
+        "nextCursor",
+      ],
+      "type": "object",
+    },
     "title": "Search jobs",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
       "openWorldHint": true,
       "readOnlyHint": true,
       "title": "Search jobs from a description",
@@ -267,13 +371,13 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "limit": {
-          "description": "How many results to return (default 10).",
+          "description": "How many to return in this call. Defaults to 10.",
           "maximum": 20,
           "minimum": 1,
           "type": "integer",
         },
         "query": {
-          "description": "The user's request in their words.",
+          "description": "What the user is looking for, in their own words, e.g. 'remote React jobs at fintech startups paying over 20 LPA'.",
           "maxLength": 300,
           "minLength": 1,
           "type": "string",
@@ -285,10 +389,115 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "natural_language_job_search",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "filters": {
+          "additionalProperties": {},
+          "description": "The filters the AI read from the query.",
+          "type": "object",
+        },
+        "jobs": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "company": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "experience": {
+                "description": "The experience the posting asks for, as it gives it.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "id": {
+                "description": "The job id, for get_job_details, favorite_job and the other job tools.",
+                "type": "string",
+              },
+              "jobType": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "locations": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "postedAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "salary": {
+                "description": "The salary range as the posting gives it.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "url": {
+                "description": "The job's page on GetHired.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "title",
+              "company",
+              "locations",
+              "salary",
+              "jobType",
+              "experience",
+              "postedAt",
+              "url",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "nextCursor": {
+          "description": "Pass to search_jobs as cursor for the next page; null on the last page.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "totalCount": {
+          "description": "How many jobs match in all, across pages.",
+          "type": [
+            "number",
+            "null",
+          ],
+        },
+      },
+      "required": [
+        "jobs",
+        "totalCount",
+        "nextCursor",
+        "filters",
+      ],
+      "type": "object",
+    },
     "title": "Search jobs from a description",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Jobs matched to me",
@@ -299,9 +508,10 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "properties": {
         "filters": {
           "additionalProperties": false,
-          "description": "Optional filters to narrow the matches.",
+          "description": "Narrows the user's matches. Leave out to get their best matches overall.",
           "properties": {
             "companies": {
+              "description": "Only jobs at these companies, by company name, e.g. ['Stripe', 'Razorpay'].",
               "items": {
                 "maxLength": 80,
                 "minLength": 1,
@@ -311,6 +521,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
               "type": "array",
             },
             "jobTypes": {
+              "description": "Only these kinds of employment: full-time, contract or internship.",
               "items": {
                 "enum": [
                   "Fulltime",
@@ -322,7 +533,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
               "type": "array",
             },
             "keywords": {
-              "description": "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end']. Leave out seniority words such as junior, senior, lead or fresher: use minExperience/maxExperience.",
+              "description": "Words to look for in the job title. Add the common spellings of the same role, e.g. ['frontend', 'front-end', 'front end']. Put seniority (junior, senior, lead, fresher) in minExperience/maxExperience, not here.",
               "items": {
                 "maxLength": 50,
                 "minLength": 1,
@@ -332,7 +543,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
               "type": "array",
             },
             "locations": {
-              "description": "Locations, e.g. ['Remote', 'Bengaluru'].",
+              "description": "Where the user wants to work, e.g. ['Remote', 'Bengaluru']. Different spellings of a city, such as Bangalore and Bengaluru, find the same jobs.",
               "items": {
                 "maxLength": 60,
                 "minLength": 1,
@@ -342,24 +553,24 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
               "type": "array",
             },
             "maxExperience": {
-              "description": "Upper end of the user's experience range in years: only jobs requiring at most this much. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+              "description": "The top of the user's experience range, in years: only jobs asking for at most this much. Seniority maps to this range: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5.",
               "maximum": 30,
               "minimum": 0,
               "type": "integer",
             },
             "minExperience": {
-              "description": "Lower end of the user's experience range in years. Jobs match when their experience range overlaps the user's. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+              "description": "The bottom of the user's experience range, in years. A job matches when the experience it asks for overlaps the user's range. Seniority maps to this range: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5.",
               "maximum": 30,
               "minimum": 0,
               "type": "integer",
             },
             "minSalary": {
-              "description": "Minimum salary as a plain integer.",
+              "description": "The lowest salary the user would accept, as a plain whole number without a currency symbol or separators, e.g. 1500000.",
               "minimum": 0,
               "type": "integer",
             },
             "platforms": {
-              "description": "Job source platforms.",
+              "description": "Only jobs found on these applicant tracking systems or job boards. gethired is jobs posted on GetHired itself, which can be applied to with submit_application.",
               "items": {
                 "enum": [
                   "greenhouse",
@@ -380,12 +591,13 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
               "type": "array",
             },
             "postedWithinDays": {
-              "description": "Only jobs posted within this many days.",
+              "description": "Only jobs posted in the last this many days, e.g. 7 for the past week.",
               "maximum": 90,
               "minimum": 1,
               "type": "integer",
             },
             "visaRequirements": {
+              "description": "Only jobs whose posting states one of these visa terms. 'Will Sponsor' is for users who need the employer to sponsor a visa.",
               "items": {
                 "enum": [
                   "Will Sponsor",
@@ -400,7 +612,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "object",
         },
         "limit": {
-          "description": "How many results to return (default 10).",
+          "description": "How many to return in this call. Defaults to 10.",
           "maximum": 20,
           "minimum": 1,
           "type": "integer",
@@ -409,25 +621,124 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "get_relevant_jobs",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "jobs": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "company": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "experience": {
+                "description": "The experience the posting asks for, as it gives it.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "id": {
+                "description": "The job id, for get_job_details, favorite_job and the other job tools.",
+                "type": "string",
+              },
+              "jobType": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "locations": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "postedAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "salary": {
+                "description": "The salary range as the posting gives it.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "url": {
+                "description": "The job's page on GetHired.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "title",
+              "company",
+              "locations",
+              "salary",
+              "jobType",
+              "experience",
+              "postedAt",
+              "url",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "nextCursor": {
+          "description": "Pass to search_jobs as cursor for the next page; null on the last page.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "totalCount": {
+          "description": "How many jobs match in all, across pages.",
+          "type": [
+            "number",
+            "null",
+          ],
+        },
+      },
+      "required": [
+        "jobs",
+        "totalCount",
+        "nextCursor",
+      ],
+      "type": "object",
+    },
     "title": "Jobs matched to me",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Similar jobs",
     },
-    "description": "Find jobs similar to a given job. May spend 5 AI credits to re-rank results with AI when the user has enough credits.",
+    "description": "Find jobs similar to a given job, most similar first. Returns compact jobs (id, title, company, locations, salary, job type, experience, posted date and link) with totalCount. May spend 5 AI credits to re-rank the results with AI when the user has enough credits.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
         "jobId": {
-          "description": "The job id, exactly as returned by another tool.",
+          "description": "The job to find similar jobs to: an id from search_jobs, get_relevant_jobs, get_saved_jobs or another job list.",
           "format": "uuid",
           "type": "string",
         },
         "limit": {
-          "description": "How many results to return (default 10).",
+          "description": "How many to return in this call. Defaults to 10.",
           "maximum": 20,
           "minimum": 1,
           "type": "integer",
@@ -439,10 +750,109 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "get_similar_jobs",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "jobs": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "company": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "experience": {
+                "description": "The experience the posting asks for, as it gives it.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "id": {
+                "description": "The job id, for get_job_details, favorite_job and the other job tools.",
+                "type": "string",
+              },
+              "jobType": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "locations": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "postedAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "salary": {
+                "description": "The salary range as the posting gives it.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "url": {
+                "description": "The job's page on GetHired.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "title",
+              "company",
+              "locations",
+              "salary",
+              "jobType",
+              "experience",
+              "postedAt",
+              "url",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "nextCursor": {
+          "description": "Pass to search_jobs as cursor for the next page; null on the last page.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "totalCount": {
+          "description": "How many jobs match in all, across pages.",
+          "type": [
+            "number",
+            "null",
+          ],
+        },
+      },
+      "required": [
+        "jobs",
+        "totalCount",
+        "nextCursor",
+      ],
+      "type": "object",
+    },
     "title": "Similar jobs",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Job details",
@@ -452,7 +862,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "jobId": {
-          "description": "The job id, exactly as returned by another tool.",
+          "description": "The job to read: an id from search_jobs, get_relevant_jobs, get_saved_jobs or another job list.",
           "format": "uuid",
           "type": "string",
         },
@@ -463,20 +873,132 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "get_job_details",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "applyUrl": {
+          "description": "Where the user applies.",
+          "type": "string",
+        },
+        "company": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "description": {
+          "description": "The posting's text, delimited as data.",
+          "type": "string",
+        },
+        "experience": {
+          "description": "The experience the posting asks for, as it gives it.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "id": {
+          "description": "The job id, for get_job_details, favorite_job and the other job tools.",
+          "type": "string",
+        },
+        "isPlatformJob": {
+          "description": "true for jobs on GetHired, which submit_application can apply to.",
+          "type": [
+            "boolean",
+            "null",
+          ],
+        },
+        "jobType": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "locations": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "platform": {
+          "description": "Where the job was found; gethired for jobs posted on GetHired.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "postedAt": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "salary": {
+          "description": "The salary range as the posting gives it.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "summary": {
+          "description": "A short AI summary of the posting, delimited as data.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "title": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "url": {
+          "description": "The job's page on GetHired.",
+          "type": "string",
+        },
+        "visaRequirement": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+      },
+      "required": [
+        "id",
+        "title",
+        "company",
+        "locations",
+        "salary",
+        "jobType",
+        "experience",
+        "postedAt",
+        "url",
+        "description",
+        "visaRequirement",
+        "platform",
+        "summary",
+        "isPlatformJob",
+        "applyUrl",
+      ],
+      "type": "object",
+    },
     "title": "Job details",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Saved jobs",
     },
-    "description": "List the jobs the user has saved.",
+    "description": "List the jobs the user has saved (bookmarked) on GetHired, as compact jobs (id, title, company, locations, salary, job type, experience, posted date and link) with totalCount. Save or unsave a job with favorite_job.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
         "limit": {
-          "description": "How many results to return (default 10).",
+          "description": "How many to return in this call. Defaults to 10.",
           "maximum": 20,
           "minimum": 1,
           "type": "integer",
@@ -485,10 +1007,109 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "get_saved_jobs",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "jobs": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "company": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "experience": {
+                "description": "The experience the posting asks for, as it gives it.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "id": {
+                "description": "The job id, for get_job_details, favorite_job and the other job tools.",
+                "type": "string",
+              },
+              "jobType": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "locations": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "postedAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "salary": {
+                "description": "The salary range as the posting gives it.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "url": {
+                "description": "The job's page on GetHired.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "title",
+              "company",
+              "locations",
+              "salary",
+              "jobType",
+              "experience",
+              "postedAt",
+              "url",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "nextCursor": {
+          "description": "Pass to search_jobs as cursor for the next page; null on the last page.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "totalCount": {
+          "description": "How many jobs match in all, across pages.",
+          "type": [
+            "number",
+            "null",
+          ],
+        },
+      },
+      "required": [
+        "jobs",
+        "totalCount",
+        "nextCursor",
+      ],
+      "type": "object",
+    },
     "title": "Saved jobs",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Applied jobs",
@@ -498,7 +1119,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "limit": {
-          "description": "How many results to return (default 10).",
+          "description": "How many to return in this call. Defaults to 10.",
           "maximum": 20,
           "minimum": 1,
           "type": "integer",
@@ -507,6 +1128,103 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "get_applied_jobs",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "jobs": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "company": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "experience": {
+                "description": "The experience the posting asks for, as it gives it.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "id": {
+                "description": "The job id, for get_job_details, favorite_job and the other job tools.",
+                "type": "string",
+              },
+              "jobType": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "locations": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "postedAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "salary": {
+                "description": "The salary range as the posting gives it.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "url": {
+                "description": "The job's page on GetHired.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "title",
+              "company",
+              "locations",
+              "salary",
+              "jobType",
+              "experience",
+              "postedAt",
+              "url",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "nextCursor": {
+          "description": "Pass to search_jobs as cursor for the next page; null on the last page.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "totalCount": {
+          "description": "How many jobs match in all, across pages.",
+          "type": [
+            "number",
+            "null",
+          ],
+        },
+      },
+      "required": [
+        "jobs",
+        "totalCount",
+        "nextCursor",
+      ],
+      "type": "object",
+    },
     "title": "Applied jobs",
   },
   {
@@ -523,7 +1241,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "properties": {
         "action": {
           "default": "save",
-          "description": "save adds the job to the saved jobs; unsave removes it.",
+          "description": "save bookmarks the job for the user; unsave removes it from their saved jobs.",
           "enum": [
             "save",
             "unsave",
@@ -531,7 +1249,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "string",
         },
         "jobId": {
-          "description": "The job id, exactly as returned by another tool.",
+          "description": "The job to save or unsave: an id from search_jobs, get_relevant_jobs, get_saved_jobs or another job list.",
           "format": "uuid",
           "type": "string",
         },
@@ -542,10 +1260,29 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "favorite_job",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "jobId": {
+          "type": "string",
+        },
+        "saved": {
+          "description": "Whether the job is saved now.",
+          "type": "boolean",
+        },
+      },
+      "required": [
+        "jobId",
+        "saved",
+      ],
+      "type": "object",
+    },
     "title": "Save or unsave a job",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "My applications",
@@ -555,13 +1292,13 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "limit": {
-          "description": "How many results to return (default 10).",
+          "description": "How many to return in this call. Defaults to 10.",
           "maximum": 20,
           "minimum": 1,
           "type": "integer",
         },
         "status": {
-          "description": "Only applications with this status.",
+          "description": "Only applications with this status, e.g. rejected to see the ones that were turned down. Leave out for all of them.",
           "enum": [
             "submitted",
             "reviewed",
@@ -575,6 +1312,92 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "list_applications",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "applications": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "appliedAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "company": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "id": {
+                "type": "string",
+              },
+              "isPlatformJob": {
+                "description": "true when the user applied through GetHired.",
+                "type": "boolean",
+              },
+              "jobId": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "locations": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "status": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "updatedAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "url": {
+                "description": "A full https link into GetHired.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+            },
+            "required": [
+              "id",
+              "jobId",
+              "title",
+              "company",
+              "locations",
+              "status",
+              "appliedAt",
+              "updatedAt",
+              "isPlatformJob",
+              "url",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+      },
+      "required": [
+        "applications",
+      ],
+      "type": "object",
+    },
     "title": "My applications",
   },
   {
@@ -590,11 +1413,12 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "jobId": {
-          "description": "The job id, exactly as returned by another tool.",
+          "description": "The external job the user applied to: an id from search_jobs, get_relevant_jobs, get_saved_jobs or another job list, or a jobId from list_applications.",
           "format": "uuid",
           "type": "string",
         },
         "status": {
+          "description": "The status the user reports for their application, e.g. submitted once they applied on the company's site, or rejected after they heard back.",
           "enum": [
             "submitted",
             "reviewed",
@@ -612,10 +1436,47 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "update_application_status",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "company": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "created": {
+          "description": "true when this made a new application record.",
+          "type": "boolean",
+        },
+        "jobId": {
+          "type": "string",
+        },
+        "status": {
+          "type": "string",
+        },
+        "title": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+      },
+      "required": [
+        "jobId",
+        "title",
+        "company",
+        "status",
+        "created",
+      ],
+      "type": "object",
+    },
     "title": "Track an application",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Read an application form",
@@ -625,7 +1486,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "jobId": {
-          "description": "The job id, exactly as returned by another tool.",
+          "description": "The GetHired job (isPlatformJob true) to read the form of: an id from search_jobs, get_relevant_jobs, get_saved_jobs or another job list.",
           "format": "uuid",
           "type": "string",
         },
@@ -636,6 +1497,103 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "get_application_form",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "canApply": {
+          "type": "boolean",
+        },
+        "company": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "fields": {
+          "description": "The form's fields as JSON, delimited as data: each one's key, label, type, whether it's required, and its options or limits.",
+          "type": "string",
+        },
+        "jobId": {
+          "type": "string",
+        },
+        "notReadyReason": {
+          "description": "Why the user can't apply yet, when canApply is false.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "resume": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string",
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+              },
+              "required": [
+                "id",
+                "name",
+              ],
+              "type": "object",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "The resume that would be sent.",
+        },
+        "suggestedAnswers": {
+          "description": "Answers taken from the user's profile, in submit_application's answers format.",
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "choices": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "key": {
+                "type": "string",
+              },
+              "value": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "key",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "title": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+      },
+      "required": [
+        "jobId",
+        "title",
+        "company",
+        "canApply",
+        "notReadyReason",
+        "resume",
+        "fields",
+        "suggestedAnswers",
+      ],
+      "type": "object",
+    },
     "title": "Read an application form",
   },
   {
@@ -651,12 +1609,12 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "answers": {
-          "description": "One entry per field you answer. Leave out optional fields the user has nothing for.",
+          "description": "The user's answers to the form, one entry per field. Leave out optional fields the user has nothing for.",
           "items": {
             "additionalProperties": false,
             "properties": {
               "choices": {
-                "description": "For multi_select fields only: the chosen options.",
+                "description": "For multi_select fields, in place of value: the chosen options, each written as get_application_form lists it.",
                 "items": {
                   "maxLength": 120,
                   "type": "string",
@@ -665,13 +1623,13 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "type": "array",
               },
               "key": {
-                "description": "The field's key, exactly as getApplicationForm returned it.",
+                "description": "Which field this answers: its key from get_application_form's fields.",
                 "maxLength": 80,
                 "minLength": 1,
                 "type": "string",
               },
               "value": {
-                "description": "The answer as text: yes/no for yes_no, digits for number, YYYY-MM-DD for date, an http(s) link for url, one of the options for single_select, and amount plus 3-letter currency for salary (e.g. 1500000 INR).",
+                "description": "The answer as text: yes or no for yes_no, digits for number, YYYY-MM-DD for date, an http(s) link for url, one of the field's options for single_select, and the amount and a 3-letter currency code for salary, e.g. 1500000 INR.",
                 "maxLength": 5000,
                 "type": "string",
               },
@@ -685,16 +1643,16 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "confirmation_token": {
-          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "description": "Leave out on the first call, which returns a preview and this token. Once the user approves the preview, call again with the same input plus the token.",
           "type": "string",
         },
         "jobId": {
-          "description": "The job id, exactly as returned by another tool.",
+          "description": "The GetHired job to apply to: the same jobId you read the form of with get_application_form.",
           "format": "uuid",
           "type": "string",
         },
         "resumeId": {
-          "description": "The resume to send, from listResumes. Leave out to send the primary resume.",
+          "description": "Which of the user's resumes to send: an id from get_resumes. Leave out to send their primary resume.",
           "format": "uuid",
           "type": "string",
         },
@@ -706,10 +1664,66 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "submit_application",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "applied": {
+          "type": "boolean",
+        },
+        "company": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "confirmation_token": {
+          "description": "Send back with the same input to run it after the user approves.",
+          "type": "string",
+        },
+        "instruction": {
+          "type": "string",
+        },
+        "jobId": {
+          "type": "string",
+        },
+        "message": {
+          "description": "What happened, e.g. that the user declined and nothing was done.",
+          "type": "string",
+        },
+        "needsConfirmation": {
+          "description": "true when nothing ran yet: show preview to the user, and call again with confirmation_token once they approve.",
+          "type": "boolean",
+        },
+        "preview": {
+          "description": "What will happen, for the user to approve.",
+          "type": "string",
+        },
+        "resume": {
+          "description": "The name of the resume that was sent.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "title": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "url": {
+          "description": "A full https link into GetHired.",
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
     "title": "Apply to a job",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "My profile",
@@ -721,6 +1735,65 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "get_my_profile",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "ai_credits": {
+          "description": "The user's AI credit balance.",
+          "type": [
+            "number",
+            "null",
+          ],
+        },
+        "email": {
+          "type": "string",
+        },
+        "full_name": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "invitations_count": {
+          "type": [
+            "number",
+            "null",
+          ],
+        },
+        "metrics": {
+          "additionalProperties": {},
+          "description": "The user's activity this week.",
+          "type": "object",
+        },
+        "onboarding_complete": {
+          "type": [
+            "boolean",
+            "null",
+          ],
+        },
+        "recent_applications": {
+          "description": "The three newest applications: the job's id, title, company, platform and locations, with status and applied_at.",
+          "items": {
+            "additionalProperties": {},
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "user_id": {
+          "type": "string",
+        },
+      },
+      "required": [
+        "user_id",
+        "full_name",
+        "ai_credits",
+        "onboarding_complete",
+        "invitations_count",
+        "metrics",
+        "recent_applications",
+      ],
+      "type": "object",
+    },
     "title": "My profile",
   },
   {
@@ -736,10 +1809,11 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "confirmation_token": {
-          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "description": "Leave out on the first call, which returns a preview and this token. Once the user approves the preview, call again with the same input plus the token.",
           "type": "string",
         },
         "desiredRoles": {
+          "description": "Job titles the user is looking for, e.g. ['Frontend Engineer', 'UI Developer']. Replaces the saved list.",
           "items": {
             "maxLength": 60,
             "minLength": 1,
@@ -750,6 +1824,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "jobTypes": {
+          "description": "The kinds of employment the user wants: full-time, contract or internship. Replaces the saved list.",
           "items": {
             "enum": [
               "Fulltime",
@@ -762,14 +1837,17 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "maxSalary": {
+          "description": "The top of the user's yearly salary range, as a plain whole number in salaryCurrency.",
           "minimum": 0,
           "type": "integer",
         },
         "minSalary": {
+          "description": "The bottom of the user's yearly salary range, as a plain whole number in salaryCurrency.",
           "minimum": 0,
           "type": "integer",
         },
         "preferredLocations": {
+          "description": "Where the user wants to work, e.g. ['Remote', 'Bengaluru']. City names are saved in their standard spelling. Replaces the saved list.",
           "items": {
             "maxLength": 60,
             "minLength": 1,
@@ -780,6 +1858,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "salaryCurrency": {
+          "description": "The currency of minSalary and maxSalary: ₹ rupees, $ US dollars, € euros, £ pounds, C$ Canadian dollars, A$ Australian dollars.",
           "enum": [
             "₹",
             "$",
@@ -791,6 +1870,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "string",
         },
         "topSkills": {
+          "description": "The user's main skills, e.g. ['React', 'TypeScript', 'Figma']. Replaces the saved list.",
           "items": {
             "maxLength": 60,
             "minLength": 1,
@@ -801,10 +1881,11 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "visaSponsorshipRequired": {
+          "description": "true when the user needs an employer to sponsor their visa or work permit.",
           "type": "boolean",
         },
         "workStylePreferences": {
-          "description": "e.g. Remote, Hybrid, On-site, Startup Environment, Fast-paced.",
+          "description": "How the user likes to work, e.g. Remote, Hybrid, On-site, Startup Environment, Fast-paced. Replaces the saved list.",
           "items": {
             "maxLength": 60,
             "minLength": 1,
@@ -818,6 +1899,49 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "update_my_preferences",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "confirmation_token": {
+          "description": "Send back with the same input to run it after the user approves.",
+          "type": "string",
+        },
+        "instruction": {
+          "type": "string",
+        },
+        "matches": {
+          "description": "What happens to the user's job matches now.",
+          "type": "string",
+        },
+        "message": {
+          "description": "What happened, e.g. that the user declined and nothing was done.",
+          "type": "string",
+        },
+        "needsConfirmation": {
+          "description": "true when nothing ran yet: show preview to the user, and call again with confirmation_token once they approve.",
+          "type": "boolean",
+        },
+        "preferredLocations": {
+          "description": "The locations as saved, when they were changed.",
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "preview": {
+          "description": "What will happen, for the user to approve.",
+          "type": "string",
+        },
+        "updated": {
+          "description": "The preferences that were changed.",
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+      },
+      "type": "object",
+    },
     "title": "Update job preferences",
   },
   {
@@ -833,14 +1957,17 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "careerGoalsLongTerm": {
+          "description": "Where the user wants their career to go in the longer term, in their own words.",
           "maxLength": 500,
           "type": "string",
         },
         "careerGoalsShortTerm": {
+          "description": "What the user wants from their next role, in their own words.",
           "maxLength": 500,
           "type": "string",
         },
         "companySizePreference": {
+          "description": "The size of company the user prefers to work at. Any when they have no preference.",
           "enum": [
             "Small (1-50)",
             "Medium (51-500)",
@@ -850,10 +1977,11 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "string",
         },
         "confirmation_token": {
-          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "description": "Leave out on the first call, which returns a preview and this token. Once the user approves the preview, call again with the same input plus the token.",
           "type": "string",
         },
         "desiredRoles": {
+          "description": "Job titles the user is looking for, e.g. ['Frontend Engineer', 'UI Developer'].",
           "items": {
             "maxLength": 60,
             "minLength": 1,
@@ -864,21 +1992,24 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "experienceYears": {
-          "description": "Whole years of experience, rounded to the nearest year: 6 months is 1, 2 months is 0.",
+          "description": "The user's total work experience in whole years, rounded to the nearest year: 6 months counts as 1, 2 months as 0.",
           "maximum": 60,
           "minimum": 0,
           "type": "integer",
         },
         "fullName": {
+          "description": "The user's full name, as it should appear on their profile.",
           "maxLength": 100,
           "minLength": 1,
           "type": "string",
         },
         "githubUrl": {
+          "description": "The full link to the user's GitHub profile.",
           "format": "uri",
           "type": "string",
         },
         "industryPreferences": {
+          "description": "Industries the user wants to work in, e.g. ['Fintech', 'Healthcare'].",
           "items": {
             "maxLength": 60,
             "minLength": 1,
@@ -889,6 +2020,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "jobTypes": {
+          "description": "The kinds of employment the user wants: full-time, contract or internship.",
           "items": {
             "enum": [
               "Fulltime",
@@ -901,19 +2033,22 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "linkedinUrl": {
+          "description": "The full link to the user's LinkedIn profile.",
           "format": "uri",
           "type": "string",
         },
         "maxSalary": {
+          "description": "The top of the user's yearly salary range, as a plain whole number in salaryCurrency.",
           "minimum": 0,
           "type": "integer",
         },
         "minSalary": {
-          "description": "Minimum yearly salary as a plain integer.",
+          "description": "The bottom of the user's yearly salary range, as a plain whole number in salaryCurrency.",
           "minimum": 0,
           "type": "integer",
         },
         "preferredLocations": {
+          "description": "Where the user wants to work, e.g. ['Remote', 'Bengaluru']. City names are saved in their standard spelling.",
           "items": {
             "maxLength": 60,
             "minLength": 1,
@@ -924,11 +2059,12 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "resumeId": {
-          "description": "From requestResumeUpload or listResumes; omit to use the primary resume.",
+          "description": "The resume to onboard with: an id from get_resumes. Leave out to use the primary resume. The user uploads resumes on GetHired's /resume page.",
           "format": "uuid",
           "type": "string",
         },
         "salaryCurrency": {
+          "description": "The currency of minSalary and maxSalary: ₹ rupees, $ US dollars, € euros, £ pounds, C$ Canadian dollars, A$ Australian dollars.",
           "enum": [
             "₹",
             "$",
@@ -940,6 +2076,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "string",
         },
         "topSkills": {
+          "description": "The user's main skills, e.g. ['React', 'TypeScript', 'Figma'].",
           "items": {
             "maxLength": 60,
             "minLength": 1,
@@ -950,10 +2087,11 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "visaSponsorshipRequired": {
+          "description": "true when the user needs an employer to sponsor their visa or work permit.",
           "type": "boolean",
         },
         "workStylePreferences": {
-          "description": "e.g. Remote, Hybrid, On-site, Startup Environment.",
+          "description": "How the user likes to work, e.g. Remote, Hybrid, On-site, Startup Environment, Fast-paced.",
           "items": {
             "maxLength": 60,
             "minLength": 1,
@@ -979,10 +2117,65 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "complete_onboarding",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "confirmation_token": {
+          "description": "Send back with the same input to run it after the user approves.",
+          "type": "string",
+        },
+        "instruction": {
+          "type": "string",
+        },
+        "message": {
+          "description": "What happened, e.g. that the user declined and nothing was done.",
+          "type": "string",
+        },
+        "needsConfirmation": {
+          "description": "true when nothing ran yet: show preview to the user, and call again with confirmation_token once they approve.",
+          "type": "boolean",
+        },
+        "onboarded": {
+          "type": "boolean",
+        },
+        "preferredLocations": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "preview": {
+          "description": "What will happen, for the user to approve.",
+          "type": "string",
+        },
+        "resume": {
+          "additionalProperties": true,
+          "properties": {
+            "id": {
+              "type": "string",
+            },
+            "name": {
+              "type": [
+                "string",
+                "null",
+              ],
+            },
+          },
+          "required": [
+            "id",
+            "name",
+          ],
+          "type": "object",
+        },
+      },
+      "type": "object",
+    },
     "title": "Finish onboarding",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "My resumes",
@@ -994,10 +2187,66 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "get_resumes",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "resumes": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "createdAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "id": {
+                "type": "string",
+              },
+              "isPrimary": {
+                "type": [
+                  "boolean",
+                  "null",
+                ],
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "status": {
+                "enum": [
+                  "ready",
+                  "processing",
+                  "failed",
+                ],
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "name",
+              "isPrimary",
+              "status",
+              "createdAt",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+      },
+      "required": [
+        "resumes",
+      ],
+      "type": "object",
+    },
     "title": "My resumes",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Resume details",
@@ -1007,7 +2256,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "resumeId": {
-          "description": "The resume id, exactly as returned by another tool.",
+          "description": "The resume to read: an id from get_resumes.",
           "format": "uuid",
           "type": "string",
         },
@@ -1018,6 +2267,76 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "get_resume_details",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "resume": {
+          "additionalProperties": true,
+          "properties": {
+            "contact": {
+              "description": "The contact details: name, headline, email, phone, location and links.",
+            },
+            "content": {
+              "description": "The sections, each with its items and bullets, every one with its id.",
+            },
+            "created_at": {
+              "type": [
+                "string",
+                "null",
+              ],
+            },
+            "id": {
+              "type": "string",
+            },
+            "is_primary": {
+              "type": [
+                "boolean",
+                "null",
+              ],
+            },
+            "name": {
+              "type": [
+                "string",
+                "null",
+              ],
+            },
+            "revision": {
+              "description": "Pass to update_resume as expectedRevision.",
+              "type": [
+                "number",
+                "null",
+              ],
+            },
+            "template": {
+              "type": [
+                "string",
+                "null",
+              ],
+            },
+            "updated_at": {
+              "type": [
+                "string",
+                "null",
+              ],
+            },
+          },
+          "required": [
+            "id",
+            "name",
+            "template",
+            "revision",
+            "is_primary",
+            "created_at",
+            "updated_at",
+          ],
+          "type": "object",
+        },
+      },
+      "required": [
+        "resume",
+      ],
+      "type": "object",
+    },
     "title": "Resume details",
   },
   {
@@ -1033,7 +2352,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "resumeId": {
-          "description": "The resume id, exactly as returned by another tool.",
+          "description": "The resume to make primary: an id from get_resumes.",
           "format": "uuid",
           "type": "string",
         },
@@ -1044,6 +2363,27 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "set_primary_resume",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "isPrimary": {
+          "type": "boolean",
+        },
+        "matches": {
+          "description": "What happens to the user's job matches now.",
+          "type": "string",
+        },
+        "resumeId": {
+          "type": "string",
+        },
+      },
+      "required": [
+        "resumeId",
+        "isPrimary",
+        "matches",
+      ],
+      "type": "object",
+    },
     "title": "Set primary resume",
   },
   {
@@ -1059,24 +2399,27 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "confirmation_token": {
-          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "description": "Leave out on the first call, which returns a preview and this token. Once the user approves the preview, call again with the same input plus the token.",
           "type": "string",
         },
         "name": {
+          "description": "A name for the user to tell their resumes apart by, e.g. 'Frontend Engineer 2026'.",
           "maxLength": 300,
           "minLength": 1,
           "type": "string",
         },
         "sections": {
-          "description": "Only what the user gave you. Leave out for a blank resume.",
+          "description": "The resume's sections, in order, with only what the user told you. Leave out for a blank resume.",
           "items": {
             "additionalProperties": false,
             "properties": {
               "items": {
+                "description": "The section's entries, such as each role, degree or project.",
                 "items": {
                   "additionalProperties": false,
                   "properties": {
                     "bullets": {
+                      "description": "The entry's bullet points, in order. An empty list when it has none.",
                       "items": {
                         "type": "string",
                       },
@@ -1091,6 +2434,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                       "type": "string",
                     },
                     "location": {
+                      "description": "Where it was, e.g. 'Bengaluru, India' or 'Remote'.",
                       "type": "string",
                     },
                     "startDate": {
@@ -1102,6 +2446,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                       "type": "string",
                     },
                     "url": {
+                      "description": "A link for the entry, such as a project's site or repository.",
                       "type": "string",
                     },
                   },
@@ -1117,6 +2462,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "type": "string",
               },
               "type": {
+                "description": "What the section holds. Use other, with a title, for a section that fits none of the rest.",
                 "enum": [
                   "summary",
                   "experience",
@@ -1146,6 +2492,38 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "create_resume",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "confirmation_token": {
+          "description": "Send back with the same input to run it after the user approves.",
+          "type": "string",
+        },
+        "instruction": {
+          "type": "string",
+        },
+        "message": {
+          "description": "What happened, e.g. that the user declined and nothing was done.",
+          "type": "string",
+        },
+        "needsConfirmation": {
+          "description": "true when nothing ran yet: show preview to the user, and call again with confirmation_token once they approve.",
+          "type": "boolean",
+        },
+        "preview": {
+          "description": "What will happen, for the user to approve.",
+          "type": "string",
+        },
+        "resumeId": {
+          "type": "string",
+        },
+        "url": {
+          "description": "Where the user edits the new resume.",
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
     "title": "Create a resume",
   },
   {
@@ -1161,28 +2539,32 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "confirmation_token": {
-          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "description": "Leave out on the first call, which returns a preview and this token. Once the user approves the preview, call again with the same input plus the token.",
           "type": "string",
         },
         "expectedRevision": {
-          "description": "The revision from getResumeContent.",
+          "description": "The revision get_resume_details returned for this resume, or the one your last update_resume call returned. If the resume changed since, the call is refused: read it again and redo the change.",
           "exclusiveMinimum": 0,
           "type": "integer",
         },
         "operations": {
+          "description": "The edits, applied in order. Each one's op says what it does and which ids it needs.",
           "items": {
             "anyOf": [
               {
                 "additionalProperties": false,
                 "properties": {
                   "bulletId": {
+                    "description": "The bullet's id, from get_resume_details.",
                     "type": "string",
                   },
                   "op": {
                     "const": "setBulletText",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                   "text": {
+                    "description": "The bullet's full text.",
                     "type": "string",
                   },
                 },
@@ -1197,17 +2579,21 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "additionalProperties": false,
                 "properties": {
                   "index": {
+                    "description": "The position within its parent, 0 for first. Past the end means last; when adding, leaving it out also means last.",
                     "minimum": 0,
                     "type": "integer",
                   },
                   "itemId": {
+                    "description": "The entry's id (a role, degree, project and so on), from get_resume_details.",
                     "type": "string",
                   },
                   "op": {
                     "const": "addBullet",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                   "text": {
+                    "description": "The bullet's full text.",
                     "type": "string",
                   },
                 },
@@ -1222,10 +2608,12 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "additionalProperties": false,
                 "properties": {
                   "bulletId": {
+                    "description": "The bullet's id, from get_resume_details.",
                     "type": "string",
                   },
                   "op": {
                     "const": "removeBullet",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                 },
@@ -1240,33 +2628,42 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "properties": {
                   "fields": {
                     "additionalProperties": false,
+                    "description": "The fields to set. Fields you leave out keep their value.",
                     "properties": {
                       "endDate": {
+                        "description": "When it ended, written as the user writes it, e.g. 'Present'.",
                         "type": "string",
                       },
                       "heading": {
+                        "description": "The item's main line: a role, degree, project or skill group.",
                         "type": "string",
                       },
                       "location": {
+                        "description": "Where the entry was, or for setContact where the user lives, e.g. 'Bengaluru, India'.",
                         "type": "string",
                       },
                       "startDate": {
+                        "description": "When it started, written as the user writes it, e.g. 'Jan 2022'.",
                         "type": "string",
                       },
                       "subheading": {
+                        "description": "The item's second line: a company or school.",
                         "type": "string",
                       },
                       "url": {
+                        "description": "A link for the item, such as a project's site or repository.",
                         "type": "string",
                       },
                     },
                     "type": "object",
                   },
                   "itemId": {
+                    "description": "The entry's id (a role, degree, project and so on), from get_resume_details.",
                     "type": "string",
                   },
                   "op": {
                     "const": "setItemFields",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                 },
@@ -1281,6 +2678,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "additionalProperties": false,
                 "properties": {
                   "bullets": {
+                    "description": "The new entry's bullet points, in order.",
                     "items": {
                       "type": "string",
                     },
@@ -1288,37 +2686,47 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                   },
                   "fields": {
                     "additionalProperties": false,
+                    "description": "The fields to set. Fields you leave out keep their value.",
                     "properties": {
                       "endDate": {
+                        "description": "When it ended, written as the user writes it, e.g. 'Present'.",
                         "type": "string",
                       },
                       "heading": {
+                        "description": "The item's main line: a role, degree, project or skill group.",
                         "type": "string",
                       },
                       "location": {
+                        "description": "Where the entry was, or for setContact where the user lives, e.g. 'Bengaluru, India'.",
                         "type": "string",
                       },
                       "startDate": {
+                        "description": "When it started, written as the user writes it, e.g. 'Jan 2022'.",
                         "type": "string",
                       },
                       "subheading": {
+                        "description": "The item's second line: a company or school.",
                         "type": "string",
                       },
                       "url": {
+                        "description": "A link for the item, such as a project's site or repository.",
                         "type": "string",
                       },
                     },
                     "type": "object",
                   },
                   "index": {
+                    "description": "The position within its parent, 0 for first. Past the end means last; when adding, leaving it out also means last.",
                     "minimum": 0,
                     "type": "integer",
                   },
                   "op": {
                     "const": "addItem",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                   "sectionId": {
+                    "description": "The section's id, from get_resume_details.",
                     "type": "string",
                   },
                 },
@@ -1332,10 +2740,12 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "additionalProperties": false,
                 "properties": {
                   "itemId": {
+                    "description": "The entry's id (a role, degree, project and so on), from get_resume_details.",
                     "type": "string",
                   },
                   "op": {
                     "const": "removeItem",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                 },
@@ -1349,14 +2759,17 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "additionalProperties": false,
                 "properties": {
                   "index": {
+                    "description": "The position within its parent, 0 for first. Past the end means last; when adding, leaving it out also means last.",
                     "minimum": 0,
                     "type": "integer",
                   },
                   "op": {
                     "const": "addSection",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                   "sectionType": {
+                    "description": "What the new section holds. Use other, with a title, for anything else.",
                     "enum": [
                       "summary",
                       "experience",
@@ -1374,6 +2787,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                     "type": "string",
                   },
                   "title": {
+                    "description": "The section's heading as it should appear on the resume.",
                     "type": "string",
                   },
                 },
@@ -1388,12 +2802,15 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "properties": {
                   "op": {
                     "const": "setSectionTitle",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                   "sectionId": {
+                    "description": "The section's id, from get_resume_details.",
                     "type": "string",
                   },
                   "title": {
+                    "description": "The section's heading as it should appear on the resume.",
                     "type": "string",
                   },
                 },
@@ -1409,9 +2826,11 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "properties": {
                   "op": {
                     "const": "removeSection",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                   "sectionId": {
+                    "description": "The section's id, from get_resume_details.",
                     "type": "string",
                   },
                 },
@@ -1429,12 +2848,13 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                     "type": "string",
                   },
                   "index": {
-                    "description": "Its new position. Past the end means last.",
+                    "description": "The position within its parent, 0 for first. Past the end means last; when adding, leaving it out also means last.",
                     "minimum": 0,
                     "type": "integer",
                   },
                   "op": {
                     "const": "move",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                 },
@@ -1450,24 +2870,31 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "properties": {
                   "fields": {
                     "additionalProperties": false,
+                    "description": "The fields to set. Fields you leave out keep their value.",
                     "properties": {
                       "email": {
+                        "description": "The email address shown on the resume.",
                         "type": "string",
                       },
                       "fullName": {
+                        "description": "The user's name as it heads the resume.",
                         "type": "string",
                       },
                       "headline": {
+                        "description": "The line under the name, e.g. 'Senior Frontend Engineer'.",
                         "type": "string",
                       },
                       "links": {
+                        "description": "The links shown on the resume. Replaces the whole list.",
                         "items": {
                           "additionalProperties": false,
                           "properties": {
                             "label": {
+                              "description": "The link's text, e.g. 'GitHub' or 'Portfolio'.",
                               "type": "string",
                             },
                             "url": {
+                              "description": "Where the link goes.",
                               "type": "string",
                             },
                           },
@@ -1480,9 +2907,11 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                         "type": "array",
                       },
                       "location": {
+                        "description": "Where the entry was, or for setContact where the user lives, e.g. 'Bengaluru, India'.",
                         "type": "string",
                       },
                       "phone": {
+                        "description": "The phone number shown on the resume.",
                         "type": "string",
                       },
                     },
@@ -1490,6 +2919,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                   },
                   "op": {
                     "const": "setContact",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                 },
@@ -1503,10 +2933,12 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "additionalProperties": false,
                 "properties": {
                   "name": {
+                    "description": "The resume's new name.",
                     "type": "string",
                   },
                   "op": {
                     "const": "rename",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                 },
@@ -1521,9 +2953,11 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
                 "properties": {
                   "op": {
                     "const": "setTemplate",
+                    "description": "What this edit does: setBulletText, addBullet or removeBullet change bullets; setItemFields, addItem or removeItem change a section's entries; addSection, setSectionTitle or removeSection change sections; move reorders; setContact changes the contact details; rename renames the resume; setTemplate changes its layout.",
                     "type": "string",
                   },
                   "template": {
+                    "description": "The layout the resume is shown and downloaded in.",
                     "enum": [
                       "classic",
                       "compact",
@@ -1544,7 +2978,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "resumeId": {
-          "description": "The resume id, exactly as returned by another tool.",
+          "description": "The resume to edit: an id from get_resumes.",
           "format": "uuid",
           "type": "string",
         },
@@ -1557,6 +2991,42 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "update_resume",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "confirmation_token": {
+          "description": "Send back with the same input to run it after the user approves.",
+          "type": "string",
+        },
+        "instruction": {
+          "type": "string",
+        },
+        "message": {
+          "description": "What happened, e.g. that the user declined and nothing was done.",
+          "type": "string",
+        },
+        "needsConfirmation": {
+          "description": "true when nothing ran yet: show preview to the user, and call again with confirmation_token once they approve.",
+          "type": "boolean",
+        },
+        "preview": {
+          "description": "What will happen, for the user to approve.",
+          "type": "string",
+        },
+        "resumeId": {
+          "type": "string",
+        },
+        "revision": {
+          "description": "The new revision, for the next update_resume call.",
+          "type": "number",
+        },
+        "url": {
+          "description": "A full https link into GetHired.",
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
     "title": "Edit a resume",
   },
   {
@@ -1572,12 +3042,13 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "name": {
+          "description": "A name for the copy. Leave out to let GetHired name it.",
           "maxLength": 300,
           "minLength": 1,
           "type": "string",
         },
         "resumeId": {
-          "description": "The resume id, exactly as returned by another tool.",
+          "description": "The resume to copy: an id from get_resumes.",
           "format": "uuid",
           "type": "string",
         },
@@ -1588,6 +3059,28 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "duplicate_resume",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "message": {
+          "type": "string",
+        },
+        "resumeId": {
+          "description": "The copy's id.",
+          "type": "string",
+        },
+        "url": {
+          "description": "A full https link into GetHired.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "resumeId",
+        "url",
+        "message",
+      ],
+      "type": "object",
+    },
     "title": "Copy a resume",
   },
   {
@@ -1603,11 +3096,11 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "confirmation_token": {
-          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "description": "Leave out on the first call, which returns a preview and this token. Once the user approves the preview, call again with the same input plus the token.",
           "type": "string",
         },
         "resumeId": {
-          "description": "The resume id, exactly as returned by another tool.",
+          "description": "The resume to delete: an id from get_resumes.",
           "format": "uuid",
           "type": "string",
         },
@@ -1618,6 +3111,41 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "delete_resume",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "confirmation_token": {
+          "description": "Send back with the same input to run it after the user approves.",
+          "type": "string",
+        },
+        "deleted": {
+          "type": "boolean",
+        },
+        "instruction": {
+          "type": "string",
+        },
+        "message": {
+          "description": "What happened, e.g. that the user declined and nothing was done.",
+          "type": "string",
+        },
+        "needsConfirmation": {
+          "description": "true when nothing ran yet: show preview to the user, and call again with confirmation_token once they approve.",
+          "type": "boolean",
+        },
+        "preview": {
+          "description": "What will happen, for the user to approve.",
+          "type": "string",
+        },
+        "resumeId": {
+          "type": "string",
+        },
+        "reviewsDeleted": {
+          "description": "How many of its reviews were deleted with it.",
+          "type": "integer",
+        },
+      },
+      "type": "object",
+    },
     "title": "Delete a resume",
   },
   {
@@ -1633,15 +3161,16 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "confirmation_token": {
-          "description": "Only when confirming: the confirmation_token from this tool's earlier preview, sent with the same input once the user has said yes.",
+          "description": "Leave out on the first call, which returns a preview and this token. Once the user approves the preview, call again with the same input plus the token.",
           "type": "string",
         },
         "items": {
+          "description": "The changes the user chose.",
           "items": {
             "additionalProperties": false,
             "properties": {
               "id": {
-                "description": "The suggestion's id, from getResumeReview.",
+                "description": "The change's id, from improve_resume's changes or get_resume_review_details' suggestions.",
                 "type": "string",
               },
               "text": {
@@ -1658,11 +3187,12 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "reviewId": {
-          "description": "The resume review id, exactly as returned by another tool.",
+          "description": "The review the changes come from: the reviewId from improve_resume, or an id from get_resume_reviews.",
           "format": "uuid",
           "type": "string",
         },
         "target": {
+          "description": "Where the changes go: copy (when left out) puts them on a copy of the reviewed resume, which later calls for this review reuse; original changes the reviewed resume itself, only when the user asks for that.",
           "enum": [
             "copy",
             "original",
@@ -1677,10 +3207,81 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "apply_review_suggestions",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "confirmation_token": {
+          "description": "Send back with the same input to run it after the user approves.",
+          "type": "string",
+        },
+        "instruction": {
+          "type": "string",
+        },
+        "items": {
+          "description": "Each change's result. changed means the resume moved on since the review, so it wasn't applied.",
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string",
+              },
+              "status": {
+                "enum": [
+                  "applied",
+                  "already_applied",
+                  "changed",
+                  "not_found",
+                ],
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "status",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "message": {
+          "description": "What happened, e.g. that the user declined and nothing was done.",
+          "type": "string",
+        },
+        "needsConfirmation": {
+          "description": "true when nothing ran yet: show preview to the user, and call again with confirmation_token once they approve.",
+          "type": "boolean",
+        },
+        "preview": {
+          "description": "What will happen, for the user to approve.",
+          "type": "string",
+        },
+        "resumeId": {
+          "description": "The resume the changes went to.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "target": {
+          "enum": [
+            "copy",
+            "original",
+          ],
+          "type": "string",
+        },
+        "url": {
+          "description": "A full https link into GetHired.",
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
     "title": "Apply review suggestions",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Download a resume",
@@ -1690,7 +3291,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "format": {
-          "description": "Defaults to pdf.",
+          "description": "The file type: pdf, or docx for Word. Leave out for pdf.",
           "enum": [
             "pdf",
             "docx",
@@ -1698,7 +3299,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "string",
         },
         "resumeId": {
-          "description": "The resume id, exactly as returned by another tool.",
+          "description": "The resume to download: an id from get_resumes.",
           "format": "uuid",
           "type": "string",
         },
@@ -1709,10 +3310,44 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "export_resume",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "format": {
+          "enum": [
+            "pdf",
+            "docx",
+          ],
+          "type": "string",
+        },
+        "name": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "resumeId": {
+          "type": "string",
+        },
+        "url": {
+          "description": "Downloads the file in a browser where the user is signed in to GetHired.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "resumeId",
+        "name",
+        "format",
+        "url",
+      ],
+      "type": "object",
+    },
     "title": "Download a resume",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "My resume reviews",
@@ -1722,7 +3357,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "limit": {
-          "description": "How many reviews to return (default 10).",
+          "description": "How many reviews to return in this call. Defaults to 10.",
           "maximum": 50,
           "minimum": 1,
           "type": "integer",
@@ -1731,10 +3366,91 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "get_resume_reviews",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "reviews": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "created_at": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "id": {
+                "type": "string",
+              },
+              "job_id": {
+                "description": "The job it was tailored to, if any.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "resume_id": {
+                "description": "The reviewed resume.",
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "score": {
+                "description": "The resume's score from the review, when it has one.",
+                "type": [
+                  "number",
+                  "null",
+                ],
+              },
+              "status": {
+                "enum": [
+                  "draft",
+                  "processing",
+                  "completed",
+                  "failed",
+                ],
+                "type": "string",
+              },
+              "updated_at": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+            },
+            "required": [
+              "id",
+              "name",
+              "status",
+              "score",
+              "resume_id",
+              "job_id",
+              "created_at",
+              "updated_at",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+      },
+      "required": [
+        "reviews",
+      ],
+      "type": "object",
+    },
     "title": "My resume reviews",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Resume review details",
@@ -1744,7 +3460,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "reviewId": {
-          "description": "The resume review id, exactly as returned by another tool.",
+          "description": "The review to read: an id from get_resume_reviews, or the reviewId from improve_resume.",
           "format": "uuid",
           "type": "string",
         },
@@ -1755,33 +3471,168 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "get_resume_review_details",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "copyResumeId": {
+          "description": "The copy the changes go to by default, once one exists.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "createdAt": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "id": {
+          "type": "string",
+        },
+        "name": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "overallFeedback": {
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "pendingOnCopy": {
+          "type": "integer",
+        },
+        "pendingOnOriginal": {
+          "type": "integer",
+        },
+        "score": {
+          "type": [
+            "number",
+            "null",
+          ],
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "processing",
+            "completed",
+            "failed",
+          ],
+          "type": "string",
+        },
+        "suggestions": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "description": "Pass to apply_review_suggestions.",
+                "type": "string",
+              },
+              "kind": {
+                "enum": [
+                  "rewrite",
+                  "add",
+                  "remove",
+                  "move",
+                ],
+                "type": "string",
+              },
+              "onCopy": {
+                "description": "pending, applied, changed, or unknown when that resume is gone.",
+                "type": "string",
+              },
+              "onOriginal": {
+                "description": "pending, applied, changed, or unknown when that resume is gone.",
+                "type": "string",
+              },
+              "original": {
+                "description": "The bullet's current text, for rewrites and removals.",
+                "type": "string",
+              },
+              "placeholders": {
+                "description": "[placeholders] in suggested that the user must fill in before it can be applied.",
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "priority": {
+                "type": "string",
+              },
+              "reason": {
+                "type": "string",
+              },
+              "section": {
+                "type": "string",
+              },
+              "suggested": {
+                "description": "The new text, for rewrites and additions.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "kind",
+              "reason",
+              "priority",
+              "onCopy",
+              "onOriginal",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "totalSuggestions": {
+          "type": "integer",
+        },
+      },
+      "required": [
+        "id",
+        "name",
+        "status",
+        "score",
+        "overallFeedback",
+        "totalSuggestions",
+        "pendingOnCopy",
+        "pendingOnOriginal",
+        "copyResumeId",
+        "createdAt",
+        "suggestions",
+      ],
+      "type": "object",
+    },
     "title": "Resume review details",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Pick a resume for a job",
     },
-    "description": "Compare the user's resumes against a job (jobId) or a pasted job description and pick the one that fits best, with the job requirements each covers and misses. Pass resumeIds to compare specific resumes; otherwise all ready resumes are compared. With more than 5, the closest 5 are shortlisted first and only those are compared in detail. Costs 1 AI credit when two or more resumes are compared; free with one.",
+    "description": "Compare the user's resumes against a job (jobId) or a pasted job description and pick the one that fits best. Returns the best resume with its score (the share of the job's requirements it shows, 0-100), up to 3 requirements it matches with a quote from the resume and up to 3 it misses, then the other resumes compared, best first, each with its score and what it misses. Pass resumeIds to compare specific resumes; otherwise all ready resumes are compared, and with more than 5 only the closest 5 are compared in detail. Costs 1 AI credit when two or more resumes are compared; free with one.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
         "jobDescription": {
-          "description": "A job description the user pasted, when there is no jobId.",
+          "description": "The text of a job description the user pasted, for a job that isn't on GetHired. Send this or jobId, not both.",
           "maxLength": 4000,
           "minLength": 50,
           "type": "string",
         },
         "jobId": {
-          "description": "The job id, exactly as returned by another tool.",
+          "description": "The job to compare the resumes against: an id from search_jobs, get_relevant_jobs, get_saved_jobs or another job list. Send this or jobDescription, not both.",
           "format": "uuid",
           "type": "string",
         },
         "resumeIds": {
-          "description": "Only when the user names which resumes to compare (2 to 50, from listResumes). Leave out to compare all of them.",
+          "description": "Only when the user names which resumes to compare: their ids from get_resumes. Leave out to compare all of the user's ready resumes.",
           "items": {
-            "description": "The resume id, exactly as returned by another tool.",
+            "description": "A resume id from get_resumes.",
             "format": "uuid",
             "type": "string",
           },
@@ -1793,6 +3644,241 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "pick_resume_for_job",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "best": {
+          "additionalProperties": true,
+          "description": "The best fit, with the requirements it matches and misses.",
+          "properties": {
+            "id": {
+              "type": "string",
+            },
+            "matched": {
+              "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "quote": {
+                    "type": "string",
+                  },
+                  "requirement": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "requirement",
+                  "quote",
+                ],
+                "type": "object",
+              },
+              "type": "array",
+            },
+            "missing": {
+              "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "importance": {
+                    "enum": [
+                      "must",
+                      "nice",
+                    ],
+                    "type": "string",
+                  },
+                  "text": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "text",
+                  "importance",
+                ],
+                "type": "object",
+              },
+              "type": "array",
+            },
+            "name": {
+              "type": [
+                "string",
+                "null",
+              ],
+            },
+            "score": {
+              "description": "The share of the job's requirements the resume shows, 0-100, must-haves counting double.",
+              "type": "number",
+            },
+          },
+          "required": [
+            "id",
+            "name",
+          ],
+          "type": "object",
+        },
+        "job": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "properties": {
+                "company": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+                "experience": {
+                  "description": "The experience the posting asks for, as it gives it.",
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+                "id": {
+                  "description": "The job id, for get_job_details, favorite_job and the other job tools.",
+                  "type": "string",
+                },
+                "jobType": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+                "locations": {
+                  "items": {
+                    "type": "string",
+                  },
+                  "type": "array",
+                },
+                "postedAt": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+                "salary": {
+                  "description": "The salary range as the posting gives it.",
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+                "title": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+                "url": {
+                  "description": "The job's page on GetHired.",
+                  "type": "string",
+                },
+              },
+              "required": [
+                "id",
+                "title",
+                "company",
+                "locations",
+                "salary",
+                "jobType",
+                "experience",
+                "postedAt",
+                "url",
+              ],
+              "type": "object",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "The job compared against, or null for a pasted description.",
+        },
+        "message": {
+          "type": "string",
+        },
+        "note": {
+          "type": "string",
+        },
+        "others": {
+          "description": "The other resumes compared, best first, with what each misses.",
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string",
+              },
+              "matched": {
+                "items": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                    },
+                    "requirement": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "requirement",
+                    "quote",
+                  ],
+                  "type": "object",
+                },
+                "type": "array",
+              },
+              "missing": {
+                "items": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "importance": {
+                      "enum": [
+                        "must",
+                        "nice",
+                      ],
+                      "type": "string",
+                    },
+                    "text": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "text",
+                    "importance",
+                  ],
+                  "type": "object",
+                },
+                "type": "array",
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "score": {
+                "description": "The share of the job's requirements the resume shows, 0-100, must-haves counting double.",
+                "type": "number",
+              },
+            },
+            "required": [
+              "id",
+              "name",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "requirementCount": {
+          "type": "integer",
+        },
+        "shortlisted": {
+          "type": "string",
+        },
+      },
+      "required": [
+        "best",
+        "others",
+        "message",
+      ],
+      "type": "object",
+    },
     "title": "Pick a resume for a job",
   },
   {
@@ -1813,18 +3899,18 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "string",
         },
         "jobDescription": {
-          "description": "A job description the user pasted, when there is no jobId.",
+          "description": "The text of a job description the user pasted, to tailor the resume to a job that isn't on GetHired. Don't send it with jobId.",
           "maxLength": 4000,
           "minLength": 50,
           "type": "string",
         },
         "jobId": {
-          "description": "The job id, exactly as returned by another tool.",
+          "description": "A job to tailor the resume to: an id from search_jobs, get_relevant_jobs, get_saved_jobs or another job list. Leave out, with jobDescription, for a general review.",
           "format": "uuid",
           "type": "string",
         },
         "resumeId": {
-          "description": "The resume id, exactly as returned by another tool.",
+          "description": "The resume to improve: an id from get_resumes.",
           "format": "uuid",
           "type": "string",
         },
@@ -1835,10 +3921,78 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "improve_resume",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "changes": {
+          "description": "The suggested changes as JSON, delimited as data: each one's id, kind, reason, priority and text.",
+          "type": "string",
+        },
+        "counts": {
+          "additionalProperties": true,
+          "properties": {
+            "additions": {
+              "type": "integer",
+            },
+            "gaps": {
+              "type": "integer",
+            },
+            "moves": {
+              "type": "integer",
+            },
+            "removals": {
+              "type": "integer",
+            },
+            "rewrites": {
+              "type": "integer",
+            },
+          },
+          "required": [
+            "rewrites",
+            "additions",
+            "removals",
+            "moves",
+            "gaps",
+          ],
+          "type": "object",
+        },
+        "gaps": {
+          "description": "Questions for the user about what the resume is missing, as JSON, delimited as data.",
+          "type": "string",
+        },
+        "message": {
+          "type": "string",
+        },
+        "reviewId": {
+          "description": "Pass to apply_review_suggestions.",
+          "type": "string",
+        },
+        "summary": {
+          "description": "The review's summary, delimited as data.",
+          "type": "string",
+        },
+        "tailoredFor": {
+          "description": "What the review was tailored to, delimited as data.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "reviewId",
+        "tailoredFor",
+        "summary",
+        "counts",
+        "gaps",
+        "changes",
+        "message",
+      ],
+      "type": "object",
+    },
     "title": "Improve a resume",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "My mock interviews",
@@ -1848,7 +4002,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "limit": {
-          "description": "How many results to return (default 10).",
+          "description": "How many to return in this call. Defaults to 10.",
           "maximum": 20,
           "minimum": 1,
           "type": "integer",
@@ -1857,10 +4011,152 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "list_interviews",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "interviews": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "createdAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "id": {
+                "type": "string",
+              },
+              "job": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "properties": {
+                      "company": {
+                        "type": [
+                          "string",
+                          "null",
+                        ],
+                      },
+                      "id": {
+                        "type": "string",
+                      },
+                      "title": {
+                        "type": [
+                          "string",
+                          "null",
+                        ],
+                      },
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "company",
+                    ],
+                    "type": "object",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+              "name": {
+                "type": "string",
+              },
+              "resume": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                      },
+                      "name": {
+                        "type": [
+                          "string",
+                          "null",
+                        ],
+                      },
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                    ],
+                    "type": "object",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+              "sessions": {
+                "items": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "analysis": {
+                      "description": "The analysis status: completed, processing, failed, or null when none.",
+                      "type": [
+                        "string",
+                        "null",
+                      ],
+                    },
+                    "id": {
+                      "description": "Pass to get_interview_analysis as sessionId.",
+                      "type": "string",
+                    },
+                    "startedAt": {
+                      "type": [
+                        "string",
+                        "null",
+                      ],
+                    },
+                    "status": {
+                      "type": [
+                        "string",
+                        "null",
+                      ],
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "startedAt",
+                    "status",
+                    "analysis",
+                  ],
+                  "type": "object",
+                },
+                "type": "array",
+              },
+              "url": {
+                "description": "A full https link into GetHired.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "name",
+              "createdAt",
+              "job",
+              "resume",
+              "sessions",
+              "url",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+      },
+      "required": [
+        "interviews",
+      ],
+      "type": "object",
+    },
     "title": "My mock interviews",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "Interview feedback",
@@ -1870,12 +4166,12 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "interviewId": {
-          "description": "The interview id, exactly as returned by another tool.",
+          "description": "The mock interview: an id from list_interviews.",
           "format": "uuid",
           "type": "string",
         },
         "sessionId": {
-          "description": "A session id from listInterviews; omit for the latest session.",
+          "description": "One of that interview's sessions, from list_interviews' sessions. Leave out for the latest session.",
           "format": "uuid",
           "type": "string",
         },
@@ -1886,6 +4182,119 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "get_interview_analysis",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "communication": {
+          "additionalProperties": true,
+          "description": "Scored 1-5.",
+          "properties": {
+            "feedback": {
+              "type": "string",
+            },
+            "score": {
+              "type": "number",
+            },
+          },
+          "required": [
+            "score",
+            "feedback",
+          ],
+          "type": "object",
+        },
+        "improvementAreas": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "suggestion": {
+                "type": "string",
+              },
+              "title": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "title",
+              "suggestion",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "interviewId": {
+          "type": "string",
+        },
+        "message": {
+          "type": "string",
+        },
+        "name": {
+          "type": "string",
+        },
+        "overallFeedback": {
+          "type": "string",
+        },
+        "practiceTips": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "roleFit": {
+          "additionalProperties": true,
+          "description": "Scored 1-5.",
+          "properties": {
+            "feedback": {
+              "type": "string",
+            },
+            "score": {
+              "type": "number",
+            },
+          },
+          "required": [
+            "score",
+            "feedback",
+          ],
+          "type": "object",
+        },
+        "sessionId": {
+          "type": "string",
+        },
+        "status": {
+          "description": "completed when the feedback below is there; otherwise not_started, pending, processing or failed, with a message.",
+          "type": "string",
+        },
+        "strengths": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "evidence": {
+                "type": "string",
+              },
+              "title": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "title",
+              "evidence",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "url": {
+          "description": "A full https link into GetHired.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "interviewId",
+        "name",
+        "status",
+        "url",
+      ],
+      "type": "object",
+    },
     "title": "Interview feedback",
   },
   {
@@ -1896,23 +4305,23 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": false,
       "title": "Set up a mock interview",
     },
-    "description": "Set up an AI mock interview for a job, using a resume (the primary one by default). Free to create; the user starts it from the returned link, and each session uses 10 AI credits when it starts.",
+    "description": "Set up an AI mock interview for a job, using a resume (the primary one by default). Returns the new interview's id and the link where the user starts it. Free to create; each session uses 10 AI credits when it starts.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
         "jobId": {
-          "description": "The job id, exactly as returned by another tool.",
+          "description": "The job to practise for: an id from search_jobs, get_relevant_jobs, get_saved_jobs or another job list.",
           "format": "uuid",
           "type": "string",
         },
         "name": {
-          "description": "Optional name for the interview.",
+          "description": "A name to find the interview by in the user's list, e.g. 'Stripe frontend practice'. Leave out for 'AI Interview'.",
           "maxLength": 80,
           "minLength": 1,
           "type": "string",
         },
         "resumeId": {
-          "description": "Omit to use the primary resume.",
+          "description": "The resume the interviewer works from: an id from get_resumes. Leave out to use the primary resume.",
           "format": "uuid",
           "type": "string",
         },
@@ -1923,10 +4332,33 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "create_interview",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "interviewId": {
+          "type": "string",
+        },
+        "message": {
+          "type": "string",
+        },
+        "url": {
+          "description": "Where the user starts the interview.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "interviewId",
+        "url",
+        "message",
+      ],
+      "type": "object",
+    },
     "title": "Set up a mock interview",
   },
   {
     "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
       "title": "My screening interviews",
@@ -1936,7 +4368,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "additionalProperties": false,
       "properties": {
         "limit": {
-          "description": "How many results to return (default 10).",
+          "description": "How many to return in this call. Defaults to 10.",
           "maximum": 20,
           "minimum": 1,
           "type": "integer",
@@ -1945,6 +4377,108 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "name": "list_screening_interviews",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "interviews": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "applicationId": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "attemptsLeft": {
+                "type": "number",
+              },
+              "completedAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "deadlineAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "durationMinutes": {
+                "type": [
+                  "number",
+                  "null",
+                ],
+              },
+              "id": {
+                "type": "string",
+              },
+              "invitedAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "job": {
+                "additionalProperties": true,
+                "properties": {
+                  "company": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "id": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "title": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "company",
+                ],
+                "type": "object",
+              },
+              "status": {
+                "type": "string",
+              },
+              "url": {
+                "description": "Where the user takes the interview.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "applicationId",
+              "job",
+              "status",
+              "invitedAt",
+              "deadlineAt",
+              "completedAt",
+              "durationMinutes",
+              "attemptsLeft",
+              "url",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+      },
+      "required": [
+        "interviews",
+      ],
+      "type": "object",
+    },
     "title": "My screening interviews",
   },
 ]

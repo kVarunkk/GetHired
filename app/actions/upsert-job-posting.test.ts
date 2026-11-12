@@ -363,20 +363,21 @@ describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)
     });
 
     expect(result).toMatchObject({ success: true, isUpdate: true });
-    const [screenings] = writesTo("application_screenings");
+    // One stale pass per edit: completed → stale and the re-queue, for each table.
+    const [screenings, requeued] = writesTo("application_screenings");
+    expect(writesTo("application_screenings")).toHaveLength(2);
     expect(argsOf(screenings, "update")?.[0]).toEqual(
       expect.objectContaining({ status: "stale", attempts: 0 }),
     );
-    expect(eqs(screenings)).toEqual([
-      ["job_post_id", OWN.id],
-      ["status", "completed"],
-    ]);
-    const [explanations] = writesTo("job_relevant_profiles");
+    expect(eqs(screenings)).toEqual([["job_post_id", OWN.id]]);
+    expect(argsOf(screenings, "in")).toEqual(["status", ["completed"]]);
+    expect(argsOf(requeued, "in")).toEqual(["status", ["insufficient_info", "processing"]]);
+    const [explanations, running] = writesTo("job_relevant_profiles");
+    expect(writesTo("job_relevant_profiles")).toHaveLength(2);
     expect(argsOf(explanations, "update")?.[0]).toEqual({ explanation_status: "stale" });
-    expect(eqs(explanations)).toEqual([
-      ["job_posting_id", OWN.id],
-      ["explanation_status", "completed"],
-    ]);
+    expect(eqs(explanations)).toEqual([["job_posting_id", OWN.id]]);
+    expect(argsOf(explanations, "in")).toEqual(["explanation_status", ["completed"]]);
+    expect(argsOf(running, "in")).toEqual(["explanation_status", ["processing"]]);
     expect(sentIds()).toEqual([STALE_APP]);
   });
 
@@ -394,7 +395,8 @@ describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)
     });
 
     expect(queueJobPostingRelevance).toHaveBeenCalledWith(expect.objectContaining({ company: expect.objectContaining({ id: COMPANY_A.id }) }), OWN.id);
-    expect(staleWritesWhenTriggered).toBe(1);
+    expect(staleWritesWhenTriggered).toBe(2);
+    expect(writesTo("job_relevant_profiles")).toHaveLength(2);
   });
 
   it("does nothing for a salary-only edit", async () => {

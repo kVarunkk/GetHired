@@ -140,6 +140,17 @@ describe("buildRecruiterSystemPrompt (RA-TEST-004)", () => {
     expect(capabilities).toMatch(/reply rate/i);
   });
 
+  it("tells the agent to offer questions, fields and knockouts before creating a job post", () => {
+    const rules = after(build(), "# Rules");
+    const jobPosts = rules.slice(rules.indexOf("- Job posts:")).split("\n")[0];
+    expect(jobPosts).toMatch(/before calling createJobPost/);
+    expect(jobPosts).toMatch(/askUser card with multiSelect/);
+    expect(jobPosts).toMatch(/screening questions/);
+    expect(jobPosts).toMatch(/knockout rules/);
+    expect(jobPosts).toMatch(/applicationForm/);
+    expect(jobPosts).toMatch(/Ask once/);
+  });
+
   it("says there are no memories when there are none", () => {
     expect(build({ memories: [] })).toContain("No saved memories.");
   });

@@ -741,6 +741,27 @@ describe("refusals that match the run", () => {
     expect(preview).toEqual({ ok: false, error: "Only your own notes can be changed." });
   });
 
+  it("a live matching run is refused, and a dead one previews as restartable (SM-TEST-005)", async () => {
+    const ctx = ctxFor(OWNER_A);
+    const now = new Date().toISOString();
+    const longAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    db.queue("job_postings", {
+      data: { ...JOB_ROW, matching_status: "progress", matching_started_at: now, updated_at: now },
+      error: null,
+    });
+    expect(await RECRUITER_MCP_PREVIEWS.run_matching_for_job(ctx, { jobPostId: JOB_A1 })).toEqual({
+      ok: false,
+      error: "Matching is already in progress for this job.",
+    });
+
+    // An edit since doesn't make a dead run look alive: the start counts.
+    db.queue("job_postings", {
+      data: { ...JOB_ROW, matching_status: "progress", matching_started_at: longAgo, updated_at: now },
+      error: null,
+    });
+    expect(await RECRUITER_MCP_PREVIEWS.run_matching_for_job(ctx, { jobPostId: JOB_A1 })).toMatchObject({ ok: true });
+  });
+
   it("a status that's already set isn't asked about", async () => {
     const ctx = ctxFor(OWNER_A);
     db.queue("job_postings", { data: { ...JOB_ROW, status: "active" }, error: null });

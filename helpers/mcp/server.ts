@@ -14,13 +14,13 @@ import { createRecruiterTools } from "@/helpers/agent/roles/recruiter/tools";
 import type { AgentToolContext } from "@/helpers/agent/tools/shared";
 import { deploymentUrl } from "@/utils/formatters";
 import { resolveMcpCompany } from "./company";
-import { MCP_SERVER_VERSION, MCP_TOOLS_LIST_TTL_MS } from "./config";
+import { MCP_SERVER_VERSION, MCP_TOOLS_LIST_TTL_MS, mcpServerInfo } from "./config";
 import { runConfirmed } from "./confirm";
 import { mcpCompanyRefusalCopy, mcpNoAccountTypeCopy } from "./copy";
 import { runMcpCall } from "./limits";
 import { RECRUITER_MCP_NAMES, RECRUITER_MCP_TOOLS } from "./recruiter-tools";
 import { textResult, toCallToolResult } from "./results";
-import { toMcpSchema } from "./schema";
+import { toMcpOutputSchema, toMcpSchema } from "./schema";
 import { MCP_TOOLS, bindMcpTool, mcpToolFlags, type McpToolDef } from "./tools";
 import { ALL_MCP_TOOLSETS, toolsetsLabel, type McpToolset } from "./toolsets";
 
@@ -52,7 +52,7 @@ const companyInstructions = (toolsets: ReadonlySet<McpToolset>, readonly: boolea
 
 function newServer(instructions: string) {
   return new McpServer(
-    { name: "gethired", title: "GetHired", version: MCP_SERVER_VERSION },
+    { ...mcpServerInfo(), version: MCP_SERVER_VERSION },
     {
       capabilities: { tools: {} },
       instructions,
@@ -108,7 +108,11 @@ function registerCatalog<TCtx extends AgentToolContext>(
       {
         title: def.title,
         description: bound.description,
-        inputSchema: toMcpSchema(bound.inputSchema, { confirmationToken: confirm }),
+        inputSchema: toMcpSchema(bound.inputSchema, {
+          confirmationToken: confirm,
+          descriptions: def.inputDescriptions,
+        }),
+        ...(def.outputSchema ? { outputSchema: toMcpOutputSchema(def.outputSchema) } : {}),
         annotations: { title: def.title, ...def.annotations },
       },
       (args: unknown, request: ServerContext) =>

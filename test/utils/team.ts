@@ -290,6 +290,7 @@ export function inviteOf(overrides: Partial<CompanyInviteRow> & { token?: string
     accepted_by: null,
     revoked_at: null,
     created_at: CREATED_AT,
+    company_invite_state: "pending",
     ...rest,
   };
   return { token, row };

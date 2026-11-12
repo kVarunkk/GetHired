@@ -20,6 +20,8 @@ export type CareersPage = {
   description: string | null;
   logoUrl: string | null;
   website: string | null;
+  /** The Website link is followed (not `nofollow`): the site is on the owner's email domain, or an admin approved it. */
+  websiteVerified: boolean;
   headquarters: string | null;
   companySize: string | null;
   industry: string | null;
@@ -47,6 +49,7 @@ export function toCareersPage(raw: unknown): CareersPage | null {
     description: text(r.description),
     logoUrl: text(r.logo_url),
     website: text(r.website),
+    websiteVerified: r.website_verified === true,
     headquarters: text(r.headquarters),
     companySize: text(r.company_size),
     industry: text(r.industry),

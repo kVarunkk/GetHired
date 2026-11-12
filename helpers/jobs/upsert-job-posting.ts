@@ -175,9 +175,9 @@ export async function upsertJobPosting(
     }
 
     // MT-REQ-008: an edit to what screening reads makes old results stale.
-    // Done inline, before the relevance re-run below starts: the digest writes
-    // each row's explanation_status back, so marking stale in the background
-    // could race it and leave an explanation of the old job "completed".
+    // Done inline, before the relevance re-run below starts: the digest
+    // re-queues the explanations it reads as stale, so marking them after its
+    // read would leave them stale until the next run.
     if (existing && jobSnapshotHash(existing) !== jobSnapshotHash(posting)) {
       try {
         await markJobResultsStale(service, posting.id);

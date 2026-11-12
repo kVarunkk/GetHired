@@ -289,3 +289,49 @@ describe("POST /api/company/matches/explain (MT-TEST-005)", () => {
     expect(explainMatch).not.toHaveBeenCalled();
   });
 });
+
+describe("POST /api/company/matches/explain: guarded writes (SMT-021, SM-TEST-010)", () => {
+  const writeTo = (status: string) =>
+    admin
+      .callsFor("job_relevant_profiles")
+      .find((c) =>
+        c.chain.some((m) => m.method === "update" && (m.args[0] as { explanation_status?: string }).explanation_status === status),
+      );
+  const fromOf = (status: string) =>
+    writeTo(status)!.chain.find((m) => m.method === "in" && m.args[0] === "explanation_status")!.args[1] as string[];
+
+  it("writes failed only over a state that isn't completed or running", async () => {
+    await signInCompany();
+    ownsJob();
+    vi.mocked(explainMatch).mockResolvedValue({ ok: false, errorCode: "model_error" });
+
+    await post();
+
+    expect(writeTo("failed")!.chain).toContainEqual({ method: "eq", args: ["id", ROW_ID] });
+    expect([...fromOf("failed")].sort()).toEqual(["failed", "none", "queued", "skipped_quota", "stale"]);
+  });
+
+  it("saves completed over anything but a completed explanation", async () => {
+    await signInCompany();
+    ownsJob();
+
+    await post();
+
+    const from = fromOf("completed");
+    expect(from).not.toContain("completed");
+    // A running worker's row: the on-demand result wins, and the worker's
+    // own save is then refused by its claim.
+    expect(from).toContain("processing");
+  });
+
+  it("still returns the explanation when a worker saved one first", async () => {
+    await signInCompany();
+    ownsJob();
+    admin.queue("job_relevant_profiles", { data: [], error: null }); // the guarded save matches nothing
+
+    const res = await post();
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ explanation: explanationOf() });
+  });
+});

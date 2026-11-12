@@ -144,14 +144,23 @@ describe("searchCandidates tool", () => {
 });
 
 describe("findMatchesForJob tool", () => {
-  const job = (matching_status: string) => ({ id: JOB_POST.id, title: JOB_POST.title, matching_status });
+  const longAgo = () => new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  const job = (matching_status: string, matching_started_at: string | null = new Date().toISOString()) => ({
+    id: JOB_POST.id,
+    title: JOB_POST.title,
+    matching_status,
+    matching_started_at,
+    updated_at: new Date().toISOString(),
+  });
 
   it.each([
-    ["pending", "not_run"],
-    ["progress", "processing"],
-    ["failed", "failed"],
-  ])("returns %s matching as %s", async (matchingStatus, status) => {
-    supabase.queue("job_postings", { data: job(matchingStatus), error: null });
+    ["pending", "not_run", undefined],
+    ["progress", "processing", undefined],
+    // SM-REQ-005: a run past its timeout is dead, so runMatchingForJob restarts it.
+    ["progress", "failed", "dead"],
+    ["failed", "failed", undefined],
+  ])("returns %s matching as %s", async (matchingStatus, status, dead) => {
+    supabase.queue("job_postings", { data: job(matchingStatus, dead ? longAgo() : undefined), error: null });
 
     expect(await execTool(tools.findMatchesForJob, { jobPostId: JOB_POST.id })).toEqual({
       status,
@@ -259,6 +268,7 @@ describe("getCandidateProfile tool", () => {
           status: "reviewed",
           created_at: "2026-10-01T00:00:00.000Z",
           job_postings: { id: JOB_POST.id, title: JOB_POST.title, company_id: COMPANY_A.id },
+          pipeline_stages: { id: "5a000000-0000-4000-8000-000000000003", name: "Tech interview", kind: "interview" },
         },
       ],
       error: null,
@@ -287,6 +297,8 @@ describe("getCandidateProfile tool", () => {
           applicationId: "e0000000-0000-4000-8000-000000000001",
           jobTitle: JOB_POST.title,
           status: "reviewed",
+          // SM-REQ-009: status is the applicant's coarse projection; the stage is the real position.
+          stage: { id: "5a000000-0000-4000-8000-000000000003", name: "Tech interview", kind: "interview" },
           url: "/company/applications/e0000000-0000-4000-8000-000000000001",
         },
       ],
@@ -386,7 +398,8 @@ describe("compareCandidates tool", () => {
         {
           id: "e0000000-0000-4000-8000-000000000001",
           applicant_user_id: CANDIDATE_ID,
-          status: "submitted",
+          status: "reviewed",
+          pipeline_stages: { id: "5a000000-0000-4000-8000-000000000004", name: "Offer", kind: "offer" },
           application_screenings: { status: "completed", fit_score: 81, recommendation: "yes" },
         },
       ],
@@ -404,7 +417,8 @@ describe("compareCandidates tool", () => {
       matchScore: 88,
       application: {
         id: "e0000000-0000-4000-8000-000000000001",
-        status: "submitted",
+        status: "reviewed",
+        stage: { id: "5a000000-0000-4000-8000-000000000004", name: "Offer", kind: "offer" },
         fitScore: 81,
         recommendation: "yes",
         url: "/company/applications/e0000000-0000-4000-8000-000000000001",

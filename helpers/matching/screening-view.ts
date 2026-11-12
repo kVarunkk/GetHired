@@ -63,7 +63,8 @@ export const isScreeningInProgress = (status: ScreeningStatus | undefined) =>
 export const NOT_SCORED_LABEL = "Not scored: no resume";
 
 /** Statuses that "Screen unscreened" and a job edit pick up again. */
-const RESCREENABLE = new Set(["stale", "failed", "skipped_quota", "insufficient_info"]);
+export const RESCREENABLE_STATES = ["stale", "failed", "skipped_quota", "insufficient_info"] as const;
+const RESCREENABLE = new Set<string>(RESCREENABLE_STATES);
 
 /** No screening yet, or one that "Screen unscreened" queues again. */
 export const needsScreening = (status: string | undefined) => status === undefined || RESCREENABLE.has(status);

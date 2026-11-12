@@ -1,3 +1,4 @@
+import { shareImages } from "@/helpers/seo/share-image";
 import FootComponent from "@/components/FootComponent";
 import HeroAiResumeChecker from "@/components/HeroAiResumeChecker";
 import FAQSection from "@/components/landing-page/FAQSection";
@@ -23,8 +24,9 @@ export const metadata: Metadata = {
     description:
       "Deep semantic analysis to optimize your resume for all roles.",
     url: "https://gethired.devhub.co.in/ai-resume-checker",
-    siteName: "GetHired AI",
+    siteName: "GetHired",
     type: "website",
+    ...shareImages,
   },
   keywords: [
     "AI Resume Checker",

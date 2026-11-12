@@ -5,6 +5,12 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendEmailForStatusUpdate } from "@/utils/email";
 import { processJobPostingRelevance } from "@/helpers/profiles/relevant-profiles-utils";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
+import { transition } from "@/helpers/db/transition";
+import {
+  RELEVANCE_PROFILES_MAX_RETRIES as MAX_RETRIES,
+  RELEVANCE_PROFILES_QUEUE,
+  RELEVANCE_PROFILES_VISIBILITY_TIMEOUT_S as VISIBILITY_TIMEOUT,
+} from "@/helpers/profiles/relevance-queue";
 
 type RelevanceJobMessage = {
   msg_id: number;
@@ -17,11 +23,6 @@ type RelevanceJobMessage = {
 };
 
 const BATCH_SIZE = 5;
-// Seconds before an unfinished message is read again. Longer than one run
-// (the digest's rerank can take minutes), so the per-minute schedule doesn't
-// start a second, paid run of the same job while the first is still going.
-const VISIBILITY_TIMEOUT = 300;
-const MAX_RETRIES = 3;
 
 export async function GET() {
   const headersList = await headers();
@@ -40,7 +41,7 @@ export async function GET() {
     const { data: messages, error } = (await supabase
       .schema("pgmq_public")
       .rpc("read", {
-        queue_name: "relevance_profiles",
+        queue_name: RELEVANCE_PROFILES_QUEUE,
         sleep_seconds: VISIBILITY_TIMEOUT,
         n: BATCH_SIZE,
       })) as { data: RelevanceJobMessage[] | null; error: Error | null };
@@ -67,7 +68,7 @@ export async function GET() {
 
         if (result.success) {
           await supabase.schema("pgmq_public").rpc("delete", {
-            queue_name: "relevance_profiles",
+            queue_name: RELEVANCE_PROFILES_QUEUE,
             message_id: msg.msg_id,
           });
         } else {
@@ -75,22 +76,32 @@ export async function GET() {
             `[WORKER] Message ${msg.msg_id} failed. Attempt count: ${msg.read_ct}`,
           );
 
+          // A failed attempt with retries left keeps the job in progress
+          // (SM-REQ-013); only giving up writes `failed` and emails.
           if (msg.read_ct >= MAX_RETRIES) {
-            await supabase
-              .from("job_postings")
-              .update({
-                matching_status: "failed",
-                matching_error: `Failed after retrying for ${MAX_RETRIES} time.`,
-                matched_at: new Date().toISOString(),
-              })
-              .eq("id", msg.message.jobId);
+            // A database error here still drops the message below: another
+            // read would run (and pay for) the digest again. The job then
+            // reads as a dead run once its timeout passes.
+            await transition(
+              supabase,
+              "job_postings",
+              { id: jobId, column: "matching_status" },
+              {
+                from: ["progress"],
+                to: "failed",
+                patch: {
+                  matching_error: `Failed after ${msg.read_ct} attempts: ${result.error}`,
+                  matched_at: new Date().toISOString(),
+                },
+              },
+            ).catch((err) => reportError("[relevant profiles worker] couldn't mark the job failed", err));
 
             reportError(
               `[WORKER] Message ${msg.msg_id} exceeded max retries (${MAX_RETRIES}). Evicting...`,
             );
 
             await supabase.schema("pgmq_public").rpc("delete", {
-              queue_name: "relevance_profiles",
+              queue_name: RELEVANCE_PROFILES_QUEUE,
               message_id: msg.msg_id,
             });
 

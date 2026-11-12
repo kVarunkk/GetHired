@@ -31,6 +31,7 @@ import {
 import useSWR, { mutate } from "swr";
 import toast from "react-hot-toast";
 import { triggerRelevanceUpdate } from "@/app/actions/relevant-jobs-update";
+import { jobsFeedView, profilesFeedView } from "@/components/feed-status";
 import ModifiedLink from "./ModifiedLink";
 import FootComponent from "./FootComponent";
 import HiddenCandidatesNotice from "./billing/HiddenCandidatesNotice";
@@ -147,15 +148,14 @@ export default function JobsComponent({
   // for companyUsers
   const isLimitOnProfiles = profilesPerSearch !== null;
 
-  const isGenerated = isRelevantProfileSearch
-    ? data?.data?.matching_status === "completed"
-    : currentUserData?.profile?.relevant_jobs_update_status === "completed";
-  const isFailed = isRelevantProfileSearch
-    ? data?.data?.matching_status === "failed"
-    : currentUserData?.profile?.relevant_jobs_update_status === "failed";
-  const isPending = isRelevantProfileSearch
-    ? data?.data?.matching_status === "pending"
-    : currentUserData?.profile?.relevant_jobs_update_status === "pending";
+  // One reading of the run (SM-REQ-005): a dead `progress` shows the
+  // regenerate path, not the spinner.
+  const feedView = isRelevantProfileSearch
+    ? profilesFeedView(data?.data)
+    : jobsFeedView(currentUserData?.profile);
+  const isGenerated = feedView === "generated";
+  const isFailed = feedView === "failed";
+  const isPending = feedView === "pending";
 
   const {
     items: jobs,

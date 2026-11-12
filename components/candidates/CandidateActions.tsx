@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BriefcaseBusiness, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { deleteCandidatesAction } from "@/app/actions/candidates/delete-candidates";
-import AddCandidatesToJobDialog from "@/components/candidates/AddCandidatesToJobDialog";
+import AddToJobButton from "@/components/candidates/AddToJobButton";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 
@@ -16,18 +16,22 @@ import { Button } from "@/components/ui/button";
 export default function CandidateActions({
   candidate,
   jobs,
+  canAddToJob,
+  importJobCount,
   canDelete,
   listHref,
 }: {
   candidate: { id: string; name: string; email: string | null };
-  /** Jobs they can still be added to. Empty hides the button. */
+  /** Jobs they can still be added to. */
   jobs: { id: string; title: string }[];
+  /** `applicants.import` somewhere; false hides "Add to a job". */
+  canAddToJob: boolean;
+  importJobCount: number;
   canDelete: boolean;
   /** Where to go after a delete. */
   listHref: string;
 }) {
   const router = useRouter();
-  const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const confirmDelete = async () => {
@@ -42,15 +46,7 @@ export default function CandidateActions({
 
   return (
     <>
-      {jobs.length > 0 && (
-        // A disabled button gets no hover, so the reason sits on its wrapper.
-        <span title={candidate.email ? undefined : "Add an email first"}>
-          <Button variant="outline" disabled={!candidate.email} onClick={() => setAdding(true)}>
-            <BriefcaseBusiness className="mr-2 h-4 w-4" />
-            Add to a job
-          </Button>
-        </span>
-      )}
+      {canAddToJob && <AddToJobButton candidate={candidate} jobs={jobs} importJobCount={importJobCount} />}
       {canDelete && (
         <Button variant="outline" onClick={() => setDeleting(true)}>
           <Trash2 className="mr-2 h-4 w-4" />
@@ -58,7 +54,6 @@ export default function CandidateActions({
         </Button>
       )}
 
-      <AddCandidatesToJobDialog open={adding} onOpenChange={setAdding} candidateIds={[candidate.id]} jobs={jobs} />
       <ConfirmDialog
         open={deleting}
         onOpenChange={setDeleting}

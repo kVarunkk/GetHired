@@ -16,7 +16,9 @@ import type { McpToolAnnotations, McpToolDef } from "./tools";
 export type RecruiterMcpToolDef = McpToolDef<RecruiterToolName, RecruiterToolContext, RecruiterTools> &
   Required<Pick<McpToolDef, "toolset">>;
 
-const READ = { readOnlyHint: true, openWorldHint: false } as const;
+const READ = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
+/** A read that spends AI credits, so a repeat isn't free. */
+const PAID_READ = { ...READ, idempotentHint: false } as const;
 const hints = ({
   destructive,
   idempotent,
@@ -78,7 +80,7 @@ export const RECRUITER_MCP_TOOLS: readonly RecruiterMcpToolDef[] = [
   row("find_matches_for_job", "Matches for a job", "talent", READ, "findMatchesForJob"),
   row("get_candidate_profile", "Candidate profile", "talent", READ, "getCandidateProfile"),
   row("compare_candidates", "Compare candidates", "talent", READ, "compareCandidates"),
-  row("explain_match", "Explain a match", "talent", READ, "explainMatch"),
+  row("explain_match", "Explain a match", "talent", PAID_READ, "explainMatch"),
   confirmRow("run_matching_for_job", "Run matching for a job", "talent", ND_NI, "runMatchingForJob", {
     description:
       "Start matching talent-pool candidates to one of the company's jobs (AI processing, so it counts toward the hourly limit on calls that use credits or allowances). It runs in the background for a few minutes; the company gets an email when it's done, and find_matches_for_job lists the results.",

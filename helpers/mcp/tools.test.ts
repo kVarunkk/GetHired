@@ -180,18 +180,74 @@ describe("MCP_TOOLS", () => {
     }
   });
 
+  describe("MCP docs (tool-docs.ts)", () => {
+    const all = () => MCP_TOOLS.map((tool) => [tool.name, tool] as [string, McpToolDef]);
+    const inputJson = (tool: McpToolDef) => {
+      const { confirm } = mcpToolFlags(tool, APPLICANT_APPROVAL_POLICY);
+      return toMcpSchema(bind(tool.name).inputSchema, {
+        confirmationToken: confirm,
+        descriptions: tool.inputDescriptions,
+      })["~standard"].jsonSchema.input({ target: "draft-2020-12" }) as Record<string, unknown>;
+    };
+
+    /** Every input that's a value the caller supplies, by path. */
+    const leaves = (node: Record<string, unknown>, path: string[] = []): [string, Record<string, unknown>][] => {
+      const branches = (node.anyOf as Record<string, unknown>[] | undefined) ?? [node];
+      return branches.flatMap((branch) => {
+        const properties = branch.properties as Record<string, Record<string, unknown>> | undefined;
+        const items = branch.items as Record<string, unknown> | undefined;
+        const own: [string, Record<string, unknown>][] = path.length ? [[path.join("."), branch]] : [];
+        if (properties) {
+          return [...own, ...Object.entries(properties).flatMap(([key, child]) => leaves(child, [...path, key]))];
+        }
+        if (items && (items.properties || items.anyOf)) return [...own, ...leaves(items, [...path, "*"])];
+        return own;
+      });
+    };
+
+    it.each(all())("%s describes every input and declares an output schema", (_name, tool) => {
+      for (const [path, node] of leaves(inputJson(tool))) {
+        // An op is its own description; an array's item objects are described by the array.
+        if (path.endsWith(".op") || (path.endsWith("*") && (node.properties || node.anyOf))) continue;
+        expect(typeof node.description, `${tool.name} ${path}`).toBe("string");
+      }
+      expect(tool.outputSchema, tool.name).toBeDefined();
+    });
+
+    it("never names an agent tool in an input description", () => {
+      const agentNames = Object.keys(tools);
+      for (const tool of MCP_TOOLS) {
+        const json = JSON.stringify(inputJson(tool));
+        for (const name of agentNames) {
+          expect(json, `${tool.name} mentions ${name}`).not.toMatch(new RegExp(`\b${name}\b`));
+        }
+      }
+    });
+
+    it("leaves the agent's own schemas alone", async () => {
+      const agentJson = JSON.stringify(await asSchema(tools.searchJobs.inputSchema as never).jsonSchema);
+      inputJson(def("search_jobs"));
+      expect(JSON.stringify(await asSchema(tools.searchJobs.inputSchema as never).jsonSchema)).toBe(agentJson);
+      expect(agentJson).toContain("nextCursor from a previous searchJobs call.");
+    });
+  });
+
   describe("annotations", () => {
     const all = () => MCP_TOOLS.map((tool) => [tool.name, tool] as [string, McpToolDef]);
 
-    it.each(all())("%s declares readOnlyHint and openWorldHint", (_name, tool) => {
-      expect(typeof tool.annotations.readOnlyHint).toBe("boolean");
-      expect(typeof tool.annotations.openWorldHint).toBe("boolean");
-      if (tool.annotations.readOnlyHint) {
-        expect(tool.annotations.destructiveHint).toBeUndefined();
-        expect(tool.annotations.idempotentHint).toBeUndefined();
-      } else {
-        expect(typeof tool.annotations.destructiveHint).toBe("boolean");
-        expect(typeof tool.annotations.idempotentHint).toBe("boolean");
+    it.each(all())("%s declares all four hints as booleans", (_name, tool) => {
+      const { readOnlyHint, destructiveHint, idempotentHint, openWorldHint } = tool.annotations;
+      for (const hint of [readOnlyHint, destructiveHint, idempotentHint, openWorldHint]) {
+        expect(typeof hint).toBe("boolean");
+      }
+      if (readOnlyHint) expect(destructiveHint).toBe(false);
+    });
+
+    it("marks a read idempotent unless it can spend credits", () => {
+      for (const tool of MCP_TOOLS.filter((t) => t.annotations.readOnlyHint)) {
+        const { credit } = mcpToolFlags(tool, APPLICANT_APPROVAL_POLICY);
+        const mayCharge = credit || tool.name === "get_similar_jobs";
+        expect(tool.annotations.idempotentHint, tool.name).toBe(!mayCharge);
       }
     });
 

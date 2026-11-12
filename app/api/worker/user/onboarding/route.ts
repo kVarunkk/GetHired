@@ -9,6 +9,12 @@ import { processUserRelevance } from "@/helpers/jobs/relevant-jobs-utils";
 import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
 import { INTERNAL_API_SECRET } from "@/utils/formatters";
 import { finishProfileRefresh } from "@/helpers/user/queue-profile-refresh";
+import { transitionMany } from "@/helpers/db/transition";
+import {
+  ONBOARDING_MAX_RETRIES as MAX_RETRIES,
+  ONBOARDING_QUEUE,
+  ONBOARDING_VISIBILITY_TIMEOUT_S as VISIBILITY_TIMEOUT,
+} from "@/helpers/jobs/relevance-jobs-queue";
 
 export type OnboardingMessage = {
   msg_id: number;
@@ -22,24 +28,22 @@ export type OnboardingMessage = {
 };
 
 const BATCH_SIZE = 2;
-// pgmq's read hides a message for this long. The pipeline (parse, embed,
-// rerank) is slow, so it must outlast a run, or the next scheduled call reads
-// the same message again and processes the user twice.
-const VISIBILITY_TIMEOUT = 300;
-// Attempts per message: read_ct is 1 on the first read.
-const MAX_RETRIES = 3;
 
+/** Gives up on the user's run: `failed` from `progress` only (SM-REQ-013). */
 async function markFailed(
   supabase: ReturnType<typeof createServiceRoleClient>,
   userId: string,
 ) {
-  await supabase
-    .from("user_info")
-    .update({
-      relevant_jobs_update_status: "failed",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("user_id", userId);
+  await transitionMany(
+    supabase,
+    "user_info",
+    { key: "user_id", ids: [userId], column: "relevant_jobs_update_status" },
+    {
+      from: ["progress"],
+      to: "failed",
+      patch: { updated_at: new Date().toISOString() },
+    },
+  ).catch((err) => reportError("[onboarding worker] couldn't mark the user failed", err));
 }
 
 async function dropMessage(
@@ -48,7 +52,7 @@ async function dropMessage(
 ) {
   await markFailed(supabase, msg.message.userId);
   await supabase.schema("pgmq_public").rpc("delete", {
-    queue_name: "onboarding_pipeline",
+    queue_name: ONBOARDING_QUEUE,
     message_id: msg.msg_id,
   });
   await sendEmailForStatusUpdate(
@@ -73,7 +77,7 @@ export async function GET() {
     const { data: messages, error } = (await supabase
       .schema("pgmq_public")
       .rpc("read", {
-        queue_name: "onboarding_pipeline",
+        queue_name: ONBOARDING_QUEUE,
         sleep_seconds: VISIBILITY_TIMEOUT,
         n: BATCH_SIZE,
       })) as { data: OnboardingMessage[] | null; error: Error | null };
@@ -131,30 +135,36 @@ export async function GET() {
           const embedRes = await updateUserEmbedding(userId);
           if (embedRes.error) throw new Error("Background Embedding Failed");
 
-          // 3. UPDATE USER INFO
-          const { error: updateError } = await supabase
-            .from("user_info")
-            .update({
-              relevant_jobs_update_status: "progress",
-              updated_at: new Date().toISOString(),
-            })
-            .eq("user_id", userId);
-
-          if (updateError)
+          // 3. MARK THE RUN. The RPC that queued this message
+          // (complete_applicant_onboarding, queue_profile_refresh) already
+          // started it, so a `progress` row is this run's and keeps its start
+          // time. Only a finished state (e.g. a cron run completed meanwhile)
+          // moves back, and the database stamps a new start (SM-REQ-004/005).
+          try {
+            await transitionMany(
+              supabase,
+              "user_info",
+              { key: "user_id", ids: [userId], column: "relevant_jobs_update_status" },
+              {
+                from: ["pending", "failed", "completed"],
+                to: "progress",
+                patch: { updated_at: new Date().toISOString() },
+              },
+            );
+          } catch {
             throw new Error("Background User Info Update Failed");
+          }
 
           // 4. PROCESS USER RELEVANCE
           // The status stays "progress" while retries remain, so the jobs page
           // and the agent keep saying the matches are on their way.
-          const relevanceRes = await processUserRelevance(userId, true, {
-            markFailed: false,
-          });
+          const relevanceRes = await processUserRelevance(userId, true);
           if (relevanceRes.error)
             throw new Error("Background User Relevance Failed");
 
           // Delete message from queue on success
           await supabase.schema("pgmq_public").rpc("delete", {
-            queue_name: "onboarding_pipeline",
+            queue_name: ONBOARDING_QUEUE,
             message_id: msg.msg_id,
           });
 

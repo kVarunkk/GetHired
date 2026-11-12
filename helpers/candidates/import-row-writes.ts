@@ -82,6 +82,29 @@ export async function removeImportRow(auth: ImportSession, rowId: string): Promi
   return { ok: true };
 }
 
+export type DiscardResumeImportResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Throws away a resume import that isn't confirmed (`discard_resume_import`),
+ * so the page can start a new one: every row is removed, the batch expires,
+ * holds left on unread rows are released and the files are deleted.
+ */
+export async function discardResumeImport(auth: ImportSession, batchId: string): Promise<DiscardResumeImportResult> {
+  const { data, error } = await auth.supabase.rpc("discard_resume_import", { p_batch_id: batchId });
+  if (error) throw new Error(`Failed to discard the import: ${error.message}`);
+  const result = data as {
+    ok: boolean;
+    reason?: string;
+    rows?: { id: string; file_path: string | null }[];
+  };
+  if (!result.ok) return { ok: false, error: importMessage(result.reason) };
+
+  const rows = result.rows ?? [];
+  await releaseRowHolds(auth.company.id, rows.map((r) => r.id));
+  await deleteCandidateFiles(rows.flatMap((r) => (r.file_path ? [r.file_path] : [])));
+  return { ok: true };
+}
+
 /**
  * BI-REQ-023: queues a failed resume again. A retry is a new hold of one
  * resume_imports unit, taken by the session user before `retry_import_row`

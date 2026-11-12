@@ -1,0 +1,192 @@
+---
+title: 'Structured Interviews for Tech Hiring: How to Build Scorecards and Rubrics'
+publishedAt: 2026-11-11
+type: companies
+---
+**Quick answer:** A structured interview asks every candidate for a role the same core questions, in the same order, and scores their answers against a written rubric. To build one, list the four to six competencies the role needs, write one or two questions per competency, define what a strong, acceptable and weak answer looks like, and have each interviewer score independently on a scorecard before the debrief. Structured interviews are more predictive and fairer than unstructured conversations, and they make hiring decisions faster to agree on.
+
+Many startups run interviews as friendly conversations: each interviewer asks whatever comes to mind, then the team debates "gut feel" afterwards. That approach feels natural but it's inconsistent. Two candidates for the same role can face completely different questions, and the decision often goes to whoever made the best first impression.
+
+## What is a structured interview?
+
+A structured interview has three features:
+
+1. **Same questions** for every candidate in a role.
+2. **A rubric** describing what good looks like for each question.
+3. **Independent scoring** before interviewers discuss.
+
+It doesn't mean reading from a script robotically. Interviewers still ask follow-up questions. The core questions and the scoring are fixed.
+
+## Why use structured interviews?
+
+- **Better predictions.** Decades of hiring research find that structured interviews predict job performance better than unstructured ones.
+- **Fairer outcomes.** Everyone is judged on the same criteria, which reduces the effect of bias and first impressions.
+- **Faster debriefs.** You compare scores against the rubric instead of arguing about impressions.
+- **Easier to train new interviewers.** The rubric tells them what to listen for.
+- **Better candidate experience.** Candidates notice when an interview is organised.
+
+## Step 1: Define the competencies
+
+Start with what the person must do well in this specific role. For a senior backend engineer, you might choose:
+
+{% table %}
+- Competency
+- What it means for this role
+---
+- System design
+- Designs services that scale and fail gracefully
+---
+- Code quality
+- Writes readable, tested, maintainable code
+---
+- Debugging and operations
+- Finds and fixes production problems calmly
+---
+- Ownership
+- Takes responsibility from design through to on-call
+---
+- Communication
+- Explains trade-offs clearly in writing and speech
+---
+- Collaboration
+- Works well with product, design and other engineers
+{% /table %}
+
+Keep it to four to six. More than that and interviewers can't assess them properly.
+
+## Step 2: Assign competencies to interview stages
+
+Each stage should cover specific competencies, so you don't test the same thing four times and miss others.
+
+{% table %}
+- Stage
+- Competencies covered
+---
+- Screening call or AI screening interview
+- Communication, motivation, experience
+---
+- Technical exercise
+- Code quality, problem solving
+---
+- System design
+- System design, communication
+---
+- Behavioral interview
+- Ownership, collaboration, debugging and operations
+---
+- Founder or manager chat
+- Motivation, values, team fit
+{% /table %}
+
+## Step 3: Write the questions
+
+Use two types:
+
+- **Behavioral**: "Tell me about a time you…". Past behaviour is a good predictor.
+- **Situational**: "What would you do if…". Useful when candidates lack direct experience.
+
+**Examples:**
+
+- *Debugging and operations:* "Tell me about the hardest production incident you've worked on. What did you do, step by step?"
+- *Ownership:* "Describe a project where something outside your area was blocking you. How did you handle it?"
+- *Collaboration:* "Tell me about a time you disagreed with a product decision. What happened?"
+- *Communication:* "Explain a technical decision you made recently to me as if I were a non-technical founder."
+
+Prepare two or three follow-up prompts per question, like "What would you do differently?" or "What was your specific part?"
+
+## Step 4: Build a rubric for each question
+
+A rubric describes what answers at each level look like. Use a simple 1–4 scale; it stops people from defaulting to the middle.
+
+**Example rubric: "Tell me about a production incident you worked on."**
+
+{% table %}
+- Score
+- Description
+---
+- **4: Strong**
+- Clear ownership. Methodical diagnosis. Communicated with stakeholders during the incident. Fixed the root cause and added prevention, like alerts or tests. Reflects on lessons.
+---
+- **3: Good**
+- Took a clear role and resolved it methodically. Some follow-up actions. Minor gaps in communication or prevention.
+---
+- **2: Mixed**
+- Involved, but their own role is vague. Fixed the symptom but not the cause. Little reflection.
+---
+- **1: Weak**
+- No clear example, or blames others. No structured approach.
+{% /table %}
+
+Write rubrics before you interview anyone. Writing them afterwards tends to describe the candidate you already liked.
+
+## Step 5: Use a scorecard
+
+A scorecard collects each interviewer's scores and evidence. Keep it short:
+
+```
+Candidate: ________   Role: Senior Backend Engineer   Stage: Behavioral
+Interviewer: ________
+
+Competency          Score (1–4)   Evidence (what they said or did)
+Ownership           ___           ______________________________
+Collaboration       ___           ______________________________
+Debugging and ops   ___           ______________________________
+
+Overall: Strong no / No / Yes / Strong yes
+Questions for the next interviewer: ______________________________
+```
+
+**Evidence matters more than the score.** "Said they rolled back and paused the reporting job, then moved it to a read replica" is useful. "Seemed smart" is not.
+
+On GetHired, each interviewer can leave a note on the application with a rating (strong no, no, yes or strong yes). The application page shows every rating and the average, so the debrief starts from the evidence. Notes are internal and never shown to candidates.
+
+## Step 6: Score independently, then debrief
+
+The order matters:
+
+1. Each interviewer submits their scorecard **before** talking to the others.
+2. In the debrief, go competency by competency, not person by person.
+3. Discuss differences: "You gave a 4 for ownership and I gave a 2. What did you hear?"
+4. The hiring manager decides, using the scores as the main input.
+
+This avoids the loudest or most senior voice setting the outcome.
+
+## Where AI screening interviews fit
+
+A structured first-round screen is easiest to run consistently with AI. On GetHired, an [AI screening interview](https://gethired.devhub.co.in/blog/ai-screening-interviews-replace-30-phone-screens-with-one-page-reports) asks every candidate the same must-ask questions for the job, then produces a report with competency scores and verbatim quotes as evidence. The quotes are checked against the transcript, so the report only cites what the candidate actually said. People on your team still make every decision.
+
+## Common mistakes
+
+- **Rubrics that are too vague.** "Good communication" means different things to different people. Describe behaviours.
+- **Too many questions.** Fewer, deeper questions give better evidence.
+- **Changing questions mid-process.** If you must, apply the change to everyone still in process.
+- **Skipping independent scoring.** It's the step that gives structure its value.
+- **Scoring "culture fit".** Score specific values or behaviours instead, or it becomes a cover for bias.
+
+## Frequently asked questions
+
+### Do structured interviews feel robotic to candidates?
+
+Not if interviewers are warm and ask natural follow-ups. Candidates usually appreciate a clear, organised process.
+
+### How many interviewers should a tech hire have?
+
+Usually three to five across the whole process. Each should cover different competencies.
+
+### Can startups use structured interviews?
+
+Yes, and they benefit most, because each hire has a big impact. A one-page rubric per stage is enough to start.
+
+### What rating scale should I use?
+
+A four-point scale works well because it has no neutral middle. Some teams use five points; consistency matters more than the exact scale.
+
+### Should we share the rubric with candidates?
+
+You can share the competencies you're assessing. Many teams do, and it helps candidates show their best work without giving away the answers.
+
+## Next steps
+
+1. Write the competencies and one rubric for your next open role.
+2. [Post the role on GetHired](https://gethired.devhub.co.in/auth/sign-up?company=true) and use notes with ratings for every interview.
+3. Add an AI screening interview to standardise the first round.

@@ -1,5 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { STALE_PROGRESS_MS } from "@/helpers/profiles/relevance-queue";
+import { RELEVANCE_TIMEOUT_MS } from "@/helpers/jobs/relevance-jobs-queue";
 import { reportError } from "@/helpers/posthog/report-error";
 import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
 
@@ -22,7 +22,7 @@ const REASONS = ["not_onboarded", "profile_not_found"] as const;
 export async function queueProfileRefresh(userId: string): Promise<ProfileRefreshResult> {
   const { data, error } = await createServiceRoleClient().rpc("queue_profile_refresh", {
     p_user_id: userId,
-    p_stale_seconds: STALE_PROGRESS_MS / 1000,
+    p_stale_seconds: RELEVANCE_TIMEOUT_MS / 1000,
   });
   if (error) throw error;
 

@@ -18,6 +18,7 @@ const job = (n: number, overrides: Record<string, unknown> = {}) => ({
   id: `b0000000-0000-4000-8000-00000000000${n}`,
   matched_at: ago(7 * 24 * 60),
   matching_status: "completed",
+  matching_started_at: ago(7 * 24 * 60),
   updated_at: ago(7 * 24 * 60),
   company_info: { user_id: OWNER },
   ...overrides,
@@ -40,6 +41,12 @@ function queueLatestProfileChange(updatedAt: string | null, embeddedAt: string |
 const sends = () =>
   supabase.calls.filter((c) => c.kind === "rpc" && c.schema === "pgmq_public" && c.target === "send_batch");
 
+/** The start_matching calls, by job id. */
+const starts = () =>
+  supabase.calls
+    .filter((c) => c.kind === "rpc" && c.target === "start_matching")
+    .map((c) => c.chain[0].args[1] as { p_job_id: string; p_timeout_seconds: number });
+
 const statusUpdates = (status: string) =>
   supabase
     .callsFor("job_postings")
@@ -49,7 +56,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(NOW);
-  supabase = createSupabaseMock();
+  // start_matching answers ok unless a test queues otherwise.
+  supabase = createSupabaseMock({
+    fallback: (call) => (call.kind === "rpc" && call.target === "start_matching" ? { data: { ok: true }, error: null } : { data: null, error: null }),
+  });
   vi.mocked(createServiceRoleClient).mockReturnValue(supabase.client);
   withSecret("test-secret");
   return () => vi.useRealTimers();
@@ -75,15 +85,15 @@ describe("GET /api/updates/company/relevant-profiles/enqueue", () => {
     }
   });
 
-  it("queues the active jobs matched before the latest profile change, or never matched, and marks them in progress", async () => {
+  it("starts the active jobs matched before the latest profile change, or never matched, and queues them", async () => {
     queueLatestProfileChange(ago(60), ago(30));
     supabase.queue("job_postings", {
       data: [
         job(1), // matched a week ago: stale
         job(2, { matched_at: ago(10) }), // matched after the latest change: fresh
         job(3, { matched_at: null }), // never matched
-        job(4, { matching_status: "progress", updated_at: ago(5) }), // running now
-        job(5, { matching_status: "progress", updated_at: ago(60), matched_at: ago(120) }), // stuck: retried
+        job(4, { matching_status: "progress", matching_started_at: ago(5) }), // running now
+        job(5, { matching_status: "progress", matching_started_at: ago(60), matched_at: ago(120) }), // dead: restarted
       ],
       error: null,
     });
@@ -102,9 +112,32 @@ describe("GET /api/updates/company/relevant-profiles/enqueue", () => {
       messages: ids.map((jobId) => ({ userId: OWNER, jobId })),
       sleep_seconds: 0,
     });
-    const [progress] = statusUpdates("progress");
-    expect(progress.chain).toContainEqual({ method: "in", args: ["id", ids] });
+    // Through start_matching (SM-REQ-004), not a direct write.
+    expect(starts()).toEqual(ids.map((p_job_id) => ({ p_job_id, p_timeout_seconds: 1200 })));
+    expect(statusUpdates("progress")).toHaveLength(0);
     expect(sendEmailForStatusUpdate).toHaveBeenCalledWith(expect.stringContaining("3"));
+  });
+
+  it("sends no message for a job whose start was refused because a run is going (SM-TEST-005)", async () => {
+    queueLatestProfileChange(ago(60));
+    supabase.queue("job_postings", { data: [job(1), job(3, { matched_at: null })], error: null });
+    supabase.queueRpc("start_matching", { data: { ok: false, reason: "in_progress" }, error: null });
+
+    const res = await GET();
+
+    expect(await res.json()).toMatchObject({ success: true, queued: 1 });
+    expect(sends()[0].chain[0].args[1]).toMatchObject({
+      messages: [{ userId: OWNER, jobId: "b0000000-0000-4000-8000-000000000003" }],
+    });
+  });
+
+  it("sends nothing when every start is refused", async () => {
+    queueLatestProfileChange(ago(60));
+    supabase.queue("job_postings", { data: [job(1)], error: null });
+    supabase.queueRpc("start_matching", { data: { ok: false, reason: "in_progress" }, error: null });
+
+    expect(await (await GET()).json()).toMatchObject({ success: true, queued: 0 });
+    expect(sends()).toHaveLength(0);
   });
 
   it("uses the newer of updated_at and embedding_updated_at as the latest change", async () => {
@@ -145,7 +178,10 @@ describe("GET /api/updates/company/relevant-profiles/enqueue", () => {
     const res = await GET();
 
     expect(res.status).toBe(500);
+    const [failed] = statusUpdates("failed");
     expect(statusUpdates("failed")).toHaveLength(1);
+    expect(failed.chain).toContainEqual({ method: "in", args: ["id", ["b0000000-0000-4000-8000-000000000001"]] });
+    expect(failed.chain).toContainEqual({ method: "in", args: ["matching_status", ["progress"]] });
     expect(sendEmailForStatusUpdate).toHaveBeenCalledWith(expect.stringContaining("queue down"));
   });
 });

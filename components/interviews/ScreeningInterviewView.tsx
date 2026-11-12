@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Clock, Loader2, Mic } from "lucide-react";
 import toast from "react-hot-toast";
@@ -27,6 +27,12 @@ import { getMyScreeningInterviewAction } from "@/app/actions/interviews/get-my-s
 import { SCREENING_CONSENT_VERSION, screeningConsentText } from "@/helpers/interview/screening/schemas";
 import type { MyScreeningInterview } from "@/helpers/interview/screening/my-interviews";
 import type { TInterviewServer } from "@/utils/types/interview.types";
+import {
+  hasConsented,
+  initialScreeningFlow,
+  micStatus,
+  screeningFlowReducer,
+} from "./screening-interview-machine";
 
 type SessionSummary = { id: string; started_at: string; status: string; analysisStatus: string | null };
 
@@ -67,15 +73,21 @@ export default function ScreeningInterviewView({
 }) {
   const router = useRouter();
   const [live, setLive] = useState(invite);
-  const [consented, setConsented] = useState(
-    !!invite.consented_at && invite.consent_version === SCREENING_CONSENT_VERSION,
+  // SM-REQ-011: the way in (consent → mic check → Continue), the dialogs and
+  // the post-attempt polling live in one reducer (screening-interview-machine.ts).
+  const [flow, dispatch] = useReducer(
+    screeningFlowReducer,
+    {
+      consented: !!invite.consented_at && invite.consent_version === SCREENING_CONSENT_VERSION,
+      inProgress: invite.status === "in_progress",
+    },
+    initialScreeningFlow,
   );
-  const [consentBusy, setConsentBusy] = useState(false);
-  const [mic, setMic] = useState<"unchecked" | "checking" | "ok" | "failed">("unchecked");
-  const [entered, setEntered] = useState(false);
-  const [checking, setChecking] = useState(invite.status === "in_progress");
-  const [declineOpen, setDeclineOpen] = useState(false);
-  const [accommodationOpen, setAccommodationOpen] = useState(false);
+  const consented = hasConsented(flow);
+  const consentBusy = flow.step === "consent" && flow.saving;
+  const mic = micStatus(flow);
+  const entered = flow.step === "entered";
+  const { checking } = flow;
 
   useEffect(() => setLive(invite), [invite]);
 
@@ -92,7 +104,7 @@ export default function ScreeningInterviewView({
       tries += 1;
       const done = result?.ok && result.interview.status !== "in_progress";
       if (result?.ok) setLive(result.interview);
-      if (done || tries >= POLL_TRIES) setChecking(false);
+      if (done || tries >= POLL_TRIES) dispatch({ type: "checkDone" });
       else timer = setTimeout(tick, POLL_MS);
     };
     timer = setTimeout(tick, POLL_MS / 2);
@@ -102,7 +114,7 @@ export default function ScreeningInterviewView({
     };
   }, [checking, invite.id]);
 
-  const onEnded = useCallback(() => setChecking(true), []);
+  const onEnded = useCallback(() => dispatch({ type: "attemptEnded" }), []);
 
   const company = live.company_name;
   const closed = CLOSED_COPY[live.status];
@@ -152,21 +164,24 @@ export default function ScreeningInterviewView({
 
   async function consent(checked: boolean) {
     if (!checked || consented) return;
-    setConsentBusy(true);
+    dispatch({ type: "consentStart" });
     const result = await recordScreeningConsentAction({ id: live.id });
-    setConsentBusy(false);
-    if (result.ok) setConsented(true);
-    else toast.error(result.error);
+    if (result.ok) {
+      dispatch({ type: "consentSaved" });
+    } else {
+      dispatch({ type: "consentFailed" });
+      toast.error(result.error);
+    }
   }
 
   async function checkMic() {
-    setMic("checking");
+    dispatch({ type: "micCheckStart" });
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
-      setMic("ok");
+      dispatch({ type: "micOk" });
     } catch {
-      setMic("failed");
+      dispatch({ type: "micFailed" });
     }
   }
 
@@ -265,10 +280,10 @@ export default function ScreeningInterviewView({
 
       <div className="flex max-w-3xl flex-col-reverse sm:flex-row sm:items-center gap-3 sm:justify-between">
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="ghost" onClick={() => setAccommodationOpen(true)}>
+          <Button type="button" variant="ghost" onClick={() => dispatch({ type: "openDialog", dialog: "accommodation" })}>
             Request an alternative format
           </Button>
-          <Button type="button" variant="destructive-ghost" onClick={() => setDeclineOpen(true)}>
+          <Button type="button" variant="destructive-ghost" onClick={() => dispatch({ type: "openDialog", dialog: "decline" })}>
             Decline
           </Button>
         </div>
@@ -276,23 +291,25 @@ export default function ScreeningInterviewView({
           type="button"
           variant="brand"
           disabled={!consented || mic !== "ok" || !interview}
-          onClick={() => setEntered(true)}
+          onClick={() => dispatch({ type: "enter" })}
         >
           Continue to interview
         </Button>
       </div>
 
       <ConfirmDialog
-        open={declineOpen}
-        onOpenChange={setDeclineOpen}
+        open={flow.dialog === "decline"}
+        onOpenChange={(open) => dispatch(open ? { type: "openDialog", dialog: "decline" } : { type: "closeDialog" })}
         title="Decline the interview?"
         description={`${company} will be told. Your application stays with them, but you can't take this interview later.`}
         confirmLabel="Decline"
         onConfirm={decline}
       />
       <AccommodationDialog
-        open={accommodationOpen}
-        onOpenChange={setAccommodationOpen}
+        open={flow.dialog === "accommodation"}
+        onOpenChange={(open) =>
+          dispatch(open ? { type: "openDialog", dialog: "accommodation" } : { type: "closeDialog" })
+        }
         company={company}
         onSent={() => {
           setLive({ ...live, status: "paused" });
