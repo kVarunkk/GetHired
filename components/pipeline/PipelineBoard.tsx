@@ -127,7 +127,7 @@ export default function PipelineBoard({
         } else if (result.skipped.some((s) => s.reason === "no_email")) {
           toast.success(`Moved ${app.name}. Email not sent: no email.`);
         } else if (result.emailed > 0) {
-          toast.success(`Moved ${app.name}. Their email is on its way.`);
+          toast.success(`Moved ${app.name}. Email sends in 2 minutes. Move back to cancel it.`);
         }
         void refetch();
       }

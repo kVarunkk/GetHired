@@ -6,6 +6,7 @@ import { sendEmailForStatusUpdate } from "@/utils/email";
 import { buildRequest } from "@/test/utils/request";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A, COMPANY_B } from "@/test/utils/recruiter";
+import { reportError } from "@/helpers/posthog/report-error";
 import { GET } from "./route";
 
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
@@ -13,6 +14,7 @@ vi.mock("@/helpers/email/send-company-message", () => ({ sendCompanyMessage: vi.
 vi.mock("@/utils/email", () => ({ sendEmailForStatusUpdate: vi.fn() }));
 vi.mock("@/utils/formatters", () => ({ INTERNAL_API_SECRET: "test-secret" }));
 vi.mock("server-only", () => ({}));
+vi.mock("@/helpers/posthog/report-error", () => ({ reportError: vi.fn() }));
 vi.mock("@/helpers/candidates/unsubscribe-token", () => ({
   unsubscribeUrl: (id: string) => `https://gethired.test/unsubscribe/candidate/${id}.sig`,
 }));
@@ -183,5 +185,73 @@ describe("GET /api/worker/pipeline-emails", () => {
 
     expect((await run()).status).toBe(500);
     expect(sendCompanyMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/worker/pipeline-emails: stale moves (QF-REQ-011/013/014)", () => {
+  const STAGE_B = "5b000000-0000-4000-8000-00000000000b";
+  const STAGE_A = "5a000000-0000-4000-8000-00000000000a";
+  const ENTERED = "2026-11-13T10:00:00.123456+00:00";
+
+  const moveMessage = (msg_id: number, n: number, toStageId: string, stageEnteredAt: string) => ({
+    msg_id,
+    read_ct: 1,
+    message: { ...payload(n), toStageId, stageEnteredAt },
+  });
+  const rowAt = (n: number, stage_id: string, stage_entered_at: string) => ({ ...appRow(n), stage_id, stage_entered_at });
+
+  it("loads each application's stage with it", async () => {
+    db.queueRpc("read", { data: [moveMessage(1, 1, STAGE_B, ENTERED)], error: null }, "pgmq_public");
+    db.queue("applications", { data: [rowAt(1, STAGE_B, ENTERED)], error: null });
+
+    await run();
+
+    const select = String(db.callsFor("applications")[0].chain.find((m) => m.method === "select")?.args[0]);
+    expect(select).toContain("stage_id");
+    expect(select).toContain("stage_entered_at");
+  });
+
+  it("sends when the application is still in the stage the move put it in", async () => {
+    db.queueRpc("read", { data: [moveMessage(1, 1, STAGE_B, ENTERED)], error: null }, "pgmq_public");
+    // The same instant, formatted differently.
+    db.queue("applications", { data: [rowAt(1, STAGE_B, "2026-11-13T10:00:00.123Z")], error: null });
+
+    expect(await (await run()).json()).toEqual({ sent: 1, dropped: 0, failed: 0 });
+    expect(sendCompanyMessage).toHaveBeenCalledTimes(1);
+    expect(archived()).toEqual([1]);
+  });
+
+  it("drops the email when the application has moved to another stage since", async () => {
+    db.queueRpc("read", { data: [moveMessage(1, 1, STAGE_B, ENTERED)], error: null }, "pgmq_public");
+    db.queue("applications", { data: [rowAt(1, STAGE_A, "2026-11-13T10:01:00+00:00")], error: null });
+
+    expect(await (await run()).json()).toEqual({ sent: 0, dropped: 1, failed: 0 });
+    expect(sendCompanyMessage).not.toHaveBeenCalled();
+    expect(db.callsFor("application_events")).toHaveLength(0);
+    expect(archived()).toEqual([1]);
+    expect(sendEmailForStatusUpdate).not.toHaveBeenCalled();
+    expect(reportError).not.toHaveBeenCalled();
+  });
+
+  it("drops the first email of A → B → A and sends the second once", async () => {
+    const reentered = "2026-11-13T10:01:30.5+00:00";
+    db.queueRpc(
+      "read",
+      { data: [moveMessage(1, 1, STAGE_A, ENTERED), moveMessage(2, 1, STAGE_A, reentered)], error: null },
+      "pgmq_public",
+    );
+    db.queue("applications", { data: [rowAt(1, STAGE_A, reentered)], error: null });
+
+    expect(await (await run()).json()).toEqual({ sent: 1, dropped: 1, failed: 0 });
+    expect(sendCompanyMessage).toHaveBeenCalledTimes(1);
+    expect(insertedEvents()).toHaveLength(1);
+    expect(archived().sort()).toEqual([1, 2]);
+  });
+
+  it("sends a message queued before the check shipped, with no check (QF-REQ-013)", async () => {
+    db.queueRpc("read", { data: [message(1, 1)], error: null }, "pgmq_public");
+    db.queue("applications", { data: [rowAt(1, STAGE_A, ENTERED)], error: null });
+
+    expect(await (await run()).json()).toEqual({ sent: 1, dropped: 0, failed: 0 });
   });
 });

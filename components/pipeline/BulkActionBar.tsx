@@ -99,7 +99,7 @@ export default function BulkActionBar({
       const noEmail = result.skipped.filter((s) => s.reason === "no_email").length;
       toast.success(
         `Moved ${plural(result.moved)} to ${stage.name}.` +
-          (result.emailed > 0 ? ` Emailing ${result.emailed}.` : "") +
+          (result.emailed > 0 ? ` Emailing ${result.emailed} in 2 minutes. Move back to cancel.` : "") +
           (failed > 0 ? ` ${failed} email${failed === 1 ? "" : "s"} couldn't be sent.` : "") +
           (unsubscribed > 0 ? ` ${unsubscribed} not emailed: unsubscribed.` : "") +
           (noEmail > 0 ? ` ${noEmail} not emailed: no email.` : "") +

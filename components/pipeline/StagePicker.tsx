@@ -88,7 +88,7 @@ export default function StagePicker({
       } else {
         toast.success(
           result.emailed > 0
-            ? `Moved to ${target.name}. The email is on its way.`
+            ? `Moved to ${target.name}. Email sends in 2 minutes. Move back to cancel it.`
             : `Moved to ${target.name}.`,
         );
         router.refresh();
