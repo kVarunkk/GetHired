@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
       : null;
 
   try {
-    const { data, error, nextCursor, count, matchedProfileIds } =
+    const { data, error, nextCursor, count } =
       await buildProfileQuery({
         searchQuery,
         jobRoles,
@@ -162,14 +162,10 @@ export async function GET(request: NextRequest) {
       await rerankProfilesIfApplicable({
         initialProfiles: data,
         initialCount: count,
-        userId: user.id,
         jobId: jobId,
-        aiCredits: companyData.ai_credits,
-        matchedProfileIds,
         relevanceSearchType,
         cursor,
         companyId: companyData.id,
-        isInternalCall,
       });
 
     // OR-REQ-007: the company's latest outreach per candidate, for card badges.

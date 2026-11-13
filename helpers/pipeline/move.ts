@@ -225,11 +225,14 @@ async function planEmails(
 async function queueEmails(
   plan: EmailPlan,
   apps: LoadedApplication[],
+  moved: Map<string, MovedRow>,
   actor: { companyId: string; actorUserId: string; actorName: string | null },
 ): Promise<Set<string>> {
-  const recipients = apps.filter((app) => plan.messages.has(app.id) && app.email);
+  // An application the update didn't return (RLS, a race) has no stage to check against: no email.
+  const recipients = apps.filter((app) => plan.messages.has(app.id) && app.email && moved.has(app.id));
   const messages: PipelineEmailMessage[] = recipients.map((app) => {
     const message = plan.messages.get(app.id)!;
+    const row = moved.get(app.id)!;
     return {
       ...actor,
       applicationId: app.id,
@@ -240,6 +243,8 @@ async function queueEmails(
       companyName: plan.companyName,
       companyEmail: plan.companyEmail,
       logoUrl: plan.logoUrl,
+      toStageId: row.stageId,
+      stageEnteredAt: row.stageEnteredAt,
     };
   });
   try {
@@ -250,6 +255,9 @@ async function queueEmails(
   }
   return new Set(recipients.map((app) => app.id));
 }
+
+/** The stage and `stage_entered_at` the move's update wrote, as the DB returned them. */
+type MovedRow = { stageId: string; stageEnteredAt: string };
 
 type MoveInput = {
   applicationIds: string[];
@@ -375,8 +383,10 @@ async function prepareMove(
  * With `email`, the candidates whose status changes (everyone moved, for a
  * `custom` template) get the company's message, to the address loaded from
  * the DB. Every message is rendered and the daily cap checked before
- * anything moves. After the move the messages are queued, not sent: the
- * worker sends them and logs their `email_sent` events. `emailed` counts the
+ * anything moves. After the move the messages are queued, not sent, with the
+ * stage and `stage_entered_at` the update returned and a 2-minute delay: the
+ * worker sends them only if the application is still there, and logs their
+ * `email_sent` events. `emailed` counts the
  * queued ones; one that couldn't be queued (or has no address) is reported
  * as `email_failed`, and the move stands. One insert logs the
  * `stage_changed` events.
@@ -394,15 +404,22 @@ export async function moveApplications(ctx: Ctx, input: MoveInput): Promise<Move
   if (toMove.length === 0) return { ...result, moved: 0, emailed: 0, movedIds: [] };
 
   const movedIds = toMove.map((a) => a.id);
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("applications")
     .update({ stage_id: stage.id, updated_at: new Date().toISOString() })
-    .in("id", movedIds);
+    .in("id", movedIds)
+    .select("id, stage_id, stage_entered_at");
   if (updateError) return { ok: false, error: "Failed to move the applications." };
+
+  // QF-REQ-010: the DB's values, so the worker can tell whether the move still stands.
+  const moved = new Map<string, MovedRow>();
+  for (const row of updated ?? []) {
+    if (row.stage_id) moved.set(row.id, { stageId: row.stage_id, stageEnteredAt: row.stage_entered_at });
+  }
 
   const name = actorName(user, company);
   const queued = plan
-    ? await queueEmails(plan, toMove, { companyId: company.id, actorUserId: user.id, actorName: name })
+    ? await queueEmails(plan, toMove, moved, { companyId: company.id, actorUserId: user.id, actorName: name })
     : new Set<string>();
   if (plan) {
     for (const app of toMove) {

@@ -400,6 +400,26 @@ describe("PipelineBoard below md (PLT-045)", () => {
     expect(screen.queryByText("Priya Sharma")).not.toBeInTheDocument();
   });
 
+  it("says a queued email sends in 2 minutes and can be cancelled by moving back (QF-REQ-012)", async () => {
+    vi.mocked(moveApplicationsAction).mockResolvedValue({ ok: true, moved: 1, emailed: 1, skipped: [] });
+    render(
+      <PipelineBoard
+        jobPostId={PIPELINE_JOB.id}
+        initial={boardOf([cardOf(1, { name: "Priya Sharma", stageId: stageOf("screening").id })])}
+      />,
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "Stage" }), {
+      target: { value: stageOf("screening").id },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Move Priya Sharma to…" }), {
+      target: { value: stageOf("offer").id },
+    });
+
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Moved Priya Sharma. Email sends in 2 minutes. Move back to cancel it."),
+    );
+  });
+
   it("moves a card from its Move to… menu", async () => {
     render(
       <PipelineBoard
