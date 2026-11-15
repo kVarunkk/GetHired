@@ -151,3 +151,35 @@ describe("saveCompanyProfileAction (TM-SEC-007)", () => {
     expect(db.callsFor("company_info")).toHaveLength(0);
   });
 });
+
+describe("saveCompanyProfileAction: the company's time zone (IVT-024)", () => {
+  it("sets the zone from the creator's browser while none is set", async () => {
+    db.queue("company_info", { data: [{ id: COMPANY_A.id }], error: null });
+    db.queueRpc("update_company_settings", { data: { ok: true }, error: null });
+
+    expect((await saveCompanyProfileAction(form(VALUES, { timeZone: "Asia/Kolkata" }))).ok).toBe(true);
+
+    expect(db.callsFor("update_company_settings")[0].chain[0].args[1]).toEqual({
+      p_settings: { time_zone: "Asia/Kolkata" },
+    });
+  });
+
+  it("keeps a zone that's already set", async () => {
+    db = createSupabaseMock({ user: OWNER_A.user });
+    db.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
+    await setRequestUser(OWNER_A.user, db.client);
+    db.queue("company_info", { data: { logo_url: null, time_zone: "Europe/London" }, error: null });
+    db.queue("company_info", { data: [{ id: COMPANY_A.id }], error: null });
+
+    await saveCompanyProfileAction(form(VALUES, { timeZone: "Asia/Kolkata" }));
+
+    expect(db.callsFor("update_company_settings")).toHaveLength(0);
+  });
+
+  it("ignores an invalid zone and still completes onboarding", async () => {
+    db.queue("company_info", { data: [{ id: COMPANY_A.id }], error: null });
+    expect((await saveCompanyProfileAction(form(VALUES, { timeZone: "Mars/Olympus" }))).ok).toBe(true);
+    expect(db.callsFor("update_company_settings")).toHaveLength(0);
+    expect(markMyOnboardingComplete).toHaveBeenCalled();
+  });
+});

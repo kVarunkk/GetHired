@@ -32,6 +32,7 @@ import Link from "next/link";
 import { careersPath } from "@/helpers/careers/slug";
 import { commonIndustries } from "@/utils/utils";
 import { saveCompanyProfileAction } from "@/app/actions/company/save-company-profile";
+import { browserTimeZone } from "@/helpers/companies/time-zone";
 import {
   companyProfileSchema,
   LOGO_MAX_BYTES,
@@ -155,6 +156,9 @@ export default function CompanyOnboardingForm({
       formData.append("values", JSON.stringify(dbValues));
       if (logoFile) formData.append("logo", logoFile);
       if (deletePending) formData.append("removeLogo", "true");
+      // IVT-024: the company's zone starts as the creator's.
+      const zone = browserTimeZone();
+      if (zone) formData.append("timeZone", zone);
 
       const result = await saveCompanyProfileAction(formData);
       if (!result.ok) throw new Error(result.error);

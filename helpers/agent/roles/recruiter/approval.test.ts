@@ -55,6 +55,13 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
         "revokeInvite",
         // Removing a member cuts their access at once.
         "removeTeamMember",
+        // Interviews with people (IVT-082): the plan, and anything that emails or moves calendars.
+        "saveInterviewPlan",
+        "scheduleInterview",
+        "sendSchedulingLink",
+        "rescheduleInterview",
+        "cancelInterview",
+        "remindInterviewers",
         // Question sets and the public careers page.
         "applyQuestionSet",
         "saveQuestionSet",

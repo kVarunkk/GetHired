@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { UserPlus } from "lucide-react";
+import { ChevronsUpDown, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import RoleBadge from "@/components/roles/RoleBadge";
 import MemberAvatar from "@/components/team/MemberAvatar";
 import { assignJobAction } from "@/app/actions/jobs/assign-job";
@@ -34,10 +37,16 @@ export default function HiringTeamPanel({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [open, setOpen] = useState(false);
 
   const assigned = members.filter((m) => m.assigned);
   const candidates = members.filter((m) => !m.assigned && m.assignable);
+  const chosen = candidates.filter((m) => selected.includes(m.userId));
+
+  function toggle(userId: string) {
+    setSelected((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]));
+  }
 
   async function run(key: string, action: () => Promise<{ ok: true } | { ok: false; error: string }>, success: string) {
     setBusy(key);
@@ -45,11 +54,36 @@ export default function HiringTeamPanel({
       const result = await action();
       if (!result.ok) return void toast.error(result.error);
       toast.success(success);
-      setSelected("");
       router.refresh();
     } finally {
       setBusy(null);
     }
+  }
+
+  /** Adds each chosen member in turn; the RPC checks every one on its own. */
+  async function addChosen() {
+    if (chosen.length === 0) return;
+    setBusy("add");
+    const added: HiringTeamMember[] = [];
+    const failed: string[] = [];
+    try {
+      for (const member of chosen) {
+        const result = await assignJobAction({ jobPostId, userId: member.userId });
+        if (result.ok) added.push(member);
+        else failed.push(`${displayName(member)}: ${result.error}`);
+      }
+    } finally {
+      setBusy(null);
+    }
+    if (added.length > 0) {
+      toast.success(
+        added.length === 1 ? `Added ${displayName(added[0])}.` : `Added ${added.length} members to the hiring team.`,
+      );
+    }
+    for (const message of failed) toast.error(message);
+    // Keep the ones that failed selected, so they can be retried.
+    setSelected((prev) => prev.filter((id) => !added.some((m) => m.userId === id)));
+    if (added.length > 0) router.refresh();
   }
 
   return (
@@ -94,34 +128,58 @@ export default function HiringTeamPanel({
 
         {candidates.length > 0 ? (
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Select value={selected} onValueChange={setSelected} disabled={busy !== null}>
-              <SelectTrigger aria-label="Team member to add" className="sm:max-w-xs">
-                <SelectValue placeholder="Choose a team member" />
-              </SelectTrigger>
-              <SelectContent>
-                {candidates.map((m) => (
-                  <SelectItem key={m.userId} value={m.userId}>
-                    {displayName(m)}
-                    {m.role ? ` · ${m.role.name}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              disabled={!selected || busy !== null}
-              onClick={() => {
-                const member = candidates.find((m) => m.userId === selected);
-                if (!member) return;
-                void run(
-                  "add",
-                  () => assignJobAction({ jobPostId, userId: member.userId }),
-                  `Added ${displayName(member)}.`,
-                );
-              }}
-            >
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={open}
+                  aria-label="Team members to add"
+                  disabled={busy !== null}
+                  className="w-full justify-between font-normal sm:max-w-xs"
+                >
+                  <span className={chosen.length === 0 ? "truncate text-muted-foreground" : "truncate"}>
+                    {chosen.length === 0
+                      ? "Choose team members"
+                      : chosen.length === 1
+                        ? displayName(chosen[0])
+                        : `${chosen.length} members selected`}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] min-w-64 p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search team members..." />
+                  <CommandList>
+                    <CommandEmpty>No team members found.</CommandEmpty>
+                    <CommandGroup>
+                      {candidates.map((m) => {
+                        const checked = selected.includes(m.userId);
+                        return (
+                          <CommandItem
+                            key={m.userId}
+                            value={`${displayName(m)} ${m.email ?? ""} ${m.userId}`}
+                            onSelect={() => toggle(m.userId)}
+                            aria-selected={checked}
+                            className="cursor-pointer"
+                          >
+                            <Checkbox checked={checked} tabIndex={-1} aria-hidden className="pointer-events-none" />
+                            <span className="truncate">
+                              {displayName(m)}
+                              {m.role ? ` · ${m.role.name}` : ""}
+                            </span>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <Button variant="outline" disabled={chosen.length === 0 || busy !== null} onClick={() => void addChosen()}>
               <UserPlus className="h-4 w-4" />
-              Add to hiring team
+              {chosen.length > 1 ? `Add ${chosen.length} to hiring team` : "Add to hiring team"}
             </Button>
           </div>
         ) : (

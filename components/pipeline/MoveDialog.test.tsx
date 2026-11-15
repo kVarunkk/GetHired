@@ -3,9 +3,11 @@ import { Children, isValidElement, type ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { previewEmailAction } from "@/app/actions/pipeline/preview-email";
 import { stageOf, templateOf } from "@/test/utils/pipeline";
+import { countUpcomingInterviewsAction } from "@/app/actions/pipeline/count-upcoming-interviews";
 import MoveDialog, { type TemplateOption } from "./MoveDialog";
 
 vi.mock("@/app/actions/pipeline/preview-email", () => ({ previewEmailAction: vi.fn() }));
+vi.mock("@/app/actions/pipeline/count-upcoming-interviews", () => ({ countUpcomingInterviewsAction: vi.fn() }));
 
 // Radix Select doesn't run in jsdom; a native <select> named by the trigger's
 // aria-label keeps the same contract.
@@ -234,6 +236,15 @@ describe("MoveDialog (PLT-063, PL-TEST-006)", () => {
     expect(screen.getByText(/2 open AI interview invites will be cancelled/)).toBeInTheDocument();
   });
 
+  // IVT-000: pinned before the human interviews' "Cancel N upcoming interviews" (IVT-071).
+  it("says the same for a move to Hired, and words a single invite", () => {
+    renderDialog({ stage: { id: stageOf("hired").id, name: "Hired", kind: "hired" }, count: 1, openInterviews: 1 });
+
+    expect(
+      screen.getByText("Their open AI interview invite will be cancelled, and the held interview minutes released."),
+    ).toBeInTheDocument();
+  });
+
   it("says nothing about interviews for a move to a stage that keeps them", () => {
     renderDialog({
       stage: { id: stageOf("interview").id, name: "Interview", kind: "interview" },
@@ -247,5 +258,42 @@ describe("MoveDialog (PLT-063, PL-TEST-006)", () => {
     renderDialog();
 
     expect(screen.getByText(/The candidate will see/)).toHaveTextContent("rejected");
+  });
+});
+
+describe("MoveDialog: upcoming interviews (IVT-071, D14)", () => {
+  const IDS = [APP_ID, "ab000000-0000-4000-8000-000000000002"];
+  const box = () => screen.findByRole("checkbox", { name: /Cancel 2 upcoming interviews/ });
+
+  beforeEach(() => vi.mocked(countUpcomingInterviewsAction).mockReset());
+
+  it("offers to cancel the upcoming interviews of a close, checked, and says so on confirm", async () => {
+    vi.mocked(countUpcomingInterviewsAction).mockResolvedValue({ ok: true, count: 2 });
+    const { onConfirm } = renderDialog({ changesStatus: false, applicationIds: IDS });
+    expect(await box()).toBeChecked();
+    expect(countUpcomingInterviewsAction).toHaveBeenCalledWith({ applicationIds: IDS });
+    fireEvent.click(screen.getByRole("button", { name: "Move" }));
+    expect(onConfirm).toHaveBeenCalledWith(undefined, { cancelInterviews: true });
+  });
+
+  it("keeps them when unchecked", async () => {
+    vi.mocked(countUpcomingInterviewsAction).mockResolvedValue({ ok: true, count: 2 });
+    const { onConfirm } = renderDialog({ changesStatus: false, applicationIds: IDS, stage: { id: stageOf("hired").id, name: "Hired", kind: "hired" } });
+    fireEvent.click(await box());
+    fireEvent.click(screen.getByRole("button", { name: "Move" }));
+    expect(onConfirm).toHaveBeenCalledWith(undefined, { cancelInterviews: false });
+  });
+
+  it("shows nothing with no upcoming interviews, and doesn't ask for other stages", async () => {
+    vi.mocked(countUpcomingInterviewsAction).mockResolvedValue({ ok: true, count: 0 });
+    const { onConfirm } = renderDialog({ changesStatus: false, applicationIds: IDS });
+    await waitFor(() => expect(countUpcomingInterviewsAction).toHaveBeenCalled());
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Move" }));
+    expect(onConfirm).toHaveBeenCalledWith(undefined);
+
+    vi.mocked(countUpcomingInterviewsAction).mockClear();
+    renderDialog({ applicationIds: IDS, stage: { id: stageOf("interview").id, name: "Interview", kind: "interview" } });
+    expect(countUpcomingInterviewsAction).not.toHaveBeenCalled();
   });
 });

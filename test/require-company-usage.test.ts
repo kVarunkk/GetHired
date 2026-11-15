@@ -12,6 +12,13 @@ const MEMBERSHIP_ONLY: Record<string, string> = {
   "app/api/company/billing/checkout/route.ts": "checks canManageBilling (owners) right after, with the billing message",
   "app/actions/team/remove-member.ts": "leaving needs only membership; removing someone else checks team.remove",
   "app/actions/team/update-display-name.ts": "a member's own display name",
+  "app/api/interviews/[interview_id]/resume/route.ts": "panel access, checked by can_open_interview_kit",
+  "app/actions/interviews/save-scorecard-draft.ts": "panel access, checked by save_scorecard_draft (own row only)",
+  "app/actions/interviews/submit-scorecard.ts": "panel access, checked by submit_scorecard (own row only)",
+  "app/api/calendar/google/connect/route.ts": "own settings: a member connects their own calendar",
+  "app/api/calendar/google/callback/route.ts": "own settings: saves the session member's own calendar connection",
+  "app/actions/calendar/save-availability.ts": "own settings: a member saves their own working hours",
+  "app/actions/calendar/disconnect.ts": "own settings: a member disconnects their own calendar",
 };
 
 function bareCalls(): Record<string, number> {

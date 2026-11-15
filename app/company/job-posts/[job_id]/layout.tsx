@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { format } from "date-fns";
-import { FileText, FileUp, Mic, Pencil, UserCog, UserSearch, Users } from "lucide-react";
+import { ClipboardList, FileText, FileUp, Mic, Pencil, UserCog, UserSearch, Users } from "lucide-react";
 import Error from "@/components/Error";
 import EntityLayout from "@/components/EntityLayout";
 import type { EntityNavItem } from "@/components/EntityNav";
@@ -40,7 +40,7 @@ export async function generateMetadata({
 
 /**
  * A job post's frame: the sections sidebar (overview, edit, applications,
- * from your candidates, import, AI interview, hiring team) and the header with the job's controls. Each
+ * from your candidates, import, AI interview, interview plan, hiring team) and the header with the job's controls. Each
  * section page checks its own permission too.
  */
 export default async function JobPostLayout({
@@ -97,6 +97,11 @@ export default async function JobPostLayout({
     // SIT-060/061: the AI interview page, for interviews.view on this job.
     if (can(company, "interviews.view", job.id)) {
       items.push({ href: `${base}/interview`, label: "AI interview", icon: <Mic /> });
+    }
+    // IVT-013: the interview plan, read with scheduling.view, edited with
+    // interview_plans.manage (which can see it without scheduling.view).
+    if (can(company, "scheduling.view", job.id) || can(company, "interview_plans.manage", job.id)) {
+      items.push({ href: `${base}/interview-plan`, label: "Interview plan", icon: <ClipboardList /> });
     }
     // RP-REQ-011: the Hiring team page, for jobs.assign on this job only.
     if (can(company, "jobs.assign", job.id)) {

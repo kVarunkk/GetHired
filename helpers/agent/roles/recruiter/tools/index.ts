@@ -20,6 +20,7 @@ import {
   type ToolPermission,
 } from "./permissions";
 import { createRoleTools } from "./roles";
+import { createSchedulingTools } from "./scheduling";
 import { createTemplateTools } from "./templates";
 import { withToolErrors, type RecruiterToolContext } from "./shared";
 
@@ -41,6 +42,7 @@ export function createAllRecruiterTools(ctx: RecruiterToolContext) {
     ...createRoleTools(ctx),
     ...createCareersTools(ctx),
     ...createInterviewTools(ctx),
+    ...createSchedulingTools(ctx),
     ...createRecruiterMemoryTools(ctx),
     ...createAskUserTool(),
   };

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { FileText, FileUser, History, Mic, Sparkles, StickyNote, User } from "lucide-react";
+import { CalendarClock, FileText, FileUser, History, Mic, Sparkles, StickyNote, User } from "lucide-react";
 import Error from "@/components/Error";
 import ImportedBadge from "@/components/candidates/ImportedBadge";
 import MergedNotice from "@/components/candidates/MergedNotice";
@@ -18,7 +18,7 @@ import {
   loadApplicationInterview,
 } from "@/helpers/applications/application-page";
 import { isOpenInterview } from "@/helpers/interview/screening/summary-view";
-import { DEFAULT_DURATION_MINUTES } from "@/helpers/interview/screening/schemas";
+import { loadSchedulingPlan } from "@/helpers/interviews/plan";
 
 /**
  * The candidate's name names the answers tab, and the sections' titles get it
@@ -39,7 +39,7 @@ export async function generateMetadata({
 
 /**
  * An application's frame: the sections sidebar (answers, candidate, resume,
- * fit screening, AI interview, notes, activity) and the header with the stage
+ * fit screening, interviews, AI interview, notes, activity) and the header with the stage
  * picker and the AI interview's actions.
  */
 export default async function ApplicationLayout({
@@ -57,7 +57,7 @@ export default async function ApplicationLayout({
 
     // RLS: only the company's members can read its stages and templates.
     const companyId = application.job_postings?.company_id;
-    const [[{ data: allStages }, { data: templates }], interview] = await Promise.all([
+    const [[{ data: allStages }, { data: templates }], interview, schedulingPlan] = await Promise.all([
       companyId
         ? Promise.all([
             supabase
@@ -74,6 +74,8 @@ export default async function ApplicationLayout({
           ])
         : [{ data: null }, { data: null }],
       loadApplicationInterview(application.id),
+      // D8 (IVT-072): the stage picker's "Schedule …" prompt, for scheduling.manage.
+      jobId && can(company, "scheduling.manage", jobId) ? loadSchedulingPlan(supabase, jobId) : undefined,
     ]);
     const stages = allStages?.filter((s) => !s.archived) ?? null;
     const stageKind = allStages?.find((s) => s.id === application.stage_id)?.kind ?? null;
@@ -87,7 +89,14 @@ export default async function ApplicationLayout({
       { href: `${base}/resume`, label: "Resume", icon: <FileUser /> },
     ];
     if (jobId) items.push({ href: `${base}/screening`, label: "Fit screening", icon: <Sparkles /> });
-    if (screeningInterview) items.push({ href: `${base}/interview`, label: "AI interview", icon: <Mic /> });
+    // IVT-020: interviews with people, for scheduling.view on the job. The AI
+    // interview keeps its own section and label.
+    if (jobId && can(company, "scheduling.view", jobId)) {
+      items.push({ href: `${base}/interviews`, label: "Interviews", icon: <CalendarClock /> });
+    }
+    // Shown even when the job's AI interview is off: the section links to the
+    // job's AI interview page to turn it on.
+    if (jobId && interview.canView) items.push({ href: `${base}/ai-interview`, label: "AI interview", icon: <Mic /> });
     items.push(
       { href: `${base}/notes`, label: "Notes", icon: <StickyNote /> },
       { href: `${base}/activity`, label: "Activity", icon: <History /> },
@@ -135,13 +144,11 @@ export default async function ApplicationLayout({
                     templates={templates ?? []}
                     hasOpenInterview={isOpenInterview(screeningInterview?.status)}
                     canMove={can(company, "pipeline.move", jobId)}
+                    schedulingPlan={schedulingPlan}
                   />
                 )}
                 {!mergedInto && interview.canManage && jobId && (
                   <ScreeningInterviewActions
-                    applicationId={application.id}
-                    jobPostId={jobId}
-                    candidateName={candidateName}
                     interview={
                       screeningInterview && {
                         id: screeningInterview.id,
@@ -153,10 +160,6 @@ export default async function ApplicationLayout({
                         hasReport: screeningInterview.report !== null,
                       }
                     }
-                    invite={{
-                      durationMinutes: interview.config?.duration_minutes ?? DEFAULT_DURATION_MINUTES,
-                      enabled: !!interview.config?.enabled,
-                    }}
                     stageClosed={stageKind === "rejected" || stageKind === "hired"}
                   />
                 )}

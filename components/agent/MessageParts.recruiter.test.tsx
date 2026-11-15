@@ -8,6 +8,7 @@ import { previewAgentOutreachAction } from "@/app/actions/outreach/preview-agent
 import { previewAgentJobDeleteAction } from "@/app/actions/jobs/preview-agent-job-delete";
 import { previewAgentInterviewInviteAction } from "@/app/actions/interviews/preview-agent-interview-invite";
 import { previewAgentAddToJobAction } from "@/app/actions/candidates/preview-agent-add-to-job";
+import { previewAgentSchedulingAction } from "@/app/actions/interviews/preview-agent-scheduling";
 
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
 vi.mock("@/app/actions/pipeline/preview-agent-move", () => ({ previewAgentMoveAction: vi.fn() }));
@@ -17,6 +18,7 @@ vi.mock("@/app/actions/interviews/preview-agent-interview-invite", () => ({
   previewAgentInterviewInviteAction: vi.fn(),
 }));
 vi.mock("@/app/actions/candidates/preview-agent-add-to-job", () => ({ previewAgentAddToJobAction: vi.fn() }));
+vi.mock("@/app/actions/interviews/preview-agent-scheduling", () => ({ previewAgentSchedulingAction: vi.fn() }));
 
 const assistant = (parts: unknown[]): UIMessage =>
   ({ id: "a1", role: "assistant", parts }) as UIMessage;
@@ -292,6 +294,21 @@ describe("MessageParts: recruiter approvals (RA-REQ-005)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));
     expect(onApprove).toHaveBeenCalledWith({ id: "ap1", approved: true });
+  });
+
+  it("says whether a close cancels or keeps upcoming interviews (IVT-071)", async () => {
+    vi.mocked(previewAgentMoveAction).mockResolvedValue({
+      ok: true,
+      stage: { id: "s-rej", name: "Rejected", kind: "rejected" },
+      applications: [moving(1)],
+      notFound: 0,
+      email: null,
+      interviews: { upcoming: 2, cancel: true },
+    });
+    renderParts(assistant([approval("moveApplications", MOVE_INPUT)]));
+    expect(
+      await screen.findByText("Cancels 2 upcoming interviews: links stop working, and Google Calendar tells the attendees."),
+    ).toBeInTheDocument();
   });
 
   it("warns when the move would be refused", async () => {
@@ -605,5 +622,53 @@ describe("MessageParts: adding your candidates to a job (CPT-058)", () => {
     renderParts(assistant([approval("addCandidatesToJob", { jobPostId: "b1", candidateIds: ["c1"] })]));
     expect(screen.getByText("Add 1 of your candidates to this job? No one is emailed.")).toBeInTheDocument();
     expect(await screen.findByText(/Your role can't import applicants here./)).toBeInTheDocument();
+  });
+});
+
+describe("MessageParts: interview scheduling approvals (IVT-082)", () => {
+  const approval = (tool: string, input: unknown) => ({
+    type: `tool-${tool}`,
+    toolCallId: "c1",
+    state: "approval-requested",
+    input,
+    approval: { id: "ap1" },
+  });
+
+  it("shows the server preview: who, when (in the viewer's zone) and who's emailed", async () => {
+    vi.mocked(previewAgentSchedulingAction).mockResolvedValue({
+      ok: true,
+      rows: [
+        { label: "Candidate", value: "Ada Lovelace" },
+        { label: "Interviewers", value: "Ben, Cy" },
+        { label: "When", value: "2026-11-20T10:00:00.000Z", time: true },
+      ],
+      notices: ["Books it on your Google Calendar with a Meet link. Google emails the interviewers."],
+      warning: undefined,
+    });
+    const input = { applicationId: "e1", planItemId: "p1", interviewerIds: ["u1"], startsAt: "2026-11-20T10:00:00Z" };
+    renderParts(assistant([approval("scheduleInterview", input)]));
+
+    expect(screen.getByText("Book this interview?")).toBeInTheDocument();
+    expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument();
+    expect(screen.getByText("Ben, Cy")).toBeInTheDocument();
+    expect(screen.getByText(/Google emails the interviewers/)).toBeInTheDocument();
+    // Formatted for the viewer, not the raw ISO string.
+    expect(screen.queryByText("2026-11-20T10:00:00.000Z")).not.toBeInTheDocument();
+    expect(previewAgentSchedulingAction).toHaveBeenCalledWith("scheduleInterview", input);
+    // The generic input list isn't shown: no ids on the card.
+    expect(screen.queryByText("u1")).not.toBeInTheDocument();
+  });
+
+  it("titles each tool, and shows a refusal from the preview", async () => {
+    vi.mocked(previewAgentSchedulingAction).mockResolvedValue({ ok: false, error: "Interview not found." });
+    renderParts(assistant([approval("cancelInterview", { interviewId: "i1" })]));
+    expect(screen.getByText("Cancel this interview?")).toBeInTheDocument();
+    expect(await screen.findByText(/Interview not found./)).toBeInTheDocument();
+  });
+
+  it("titles a recorded interview differently from a booking", () => {
+    vi.mocked(previewAgentSchedulingAction).mockReturnValue(new Promise(() => {}));
+    renderParts(assistant([approval("scheduleInterview", { method: "record" })]));
+    expect(screen.getByText("Record this interview?")).toBeInTheDocument();
   });
 });

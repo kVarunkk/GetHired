@@ -45,7 +45,8 @@ describe("inviteRoleOptions", () => {
     expect(kinds(inviteRoleOptions(MEMBER_A.myCompany, []), "template")).toEqual([]);
 
     const narrow = memberWith(["team.invite", "roles.manage", "billing.view"]).myCompany;
-    expect(kinds(inviteRoleOptions(narrow, []), "template")).toEqual(["Finance"]);
+    // Interviewer grants nothing (IVT-010: they see only the interviews they're on), so it fits any ceiling.
+    expect(kinds(inviteRoleOptions(narrow, []), "template")).toEqual(["Interviewer", "Finance"]);
     expect(kinds(inviteRoleOptions(ADMIN_A.myCompany, []), "template").length).toBeGreaterThan(0);
   });
 });

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { previewAgentMoveAction } from "@/app/actions/pipeline/preview-agent-move";
 import type { PreviewAgentMoveResult } from "@/helpers/pipeline/preview-agent-move";
+import { upcomingInterviewsText } from "@/helpers/pipeline/move-interviews";
 import { statusForKind } from "@/helpers/pipeline/status-map";
 import { statusLabel } from "./RecruiterResults";
 
@@ -93,6 +94,12 @@ export function MoveApprovalDetails({ input }: { input: unknown }) {
             ? `${preview.email.recipients} ${preview.email.recipients === 1 ? "candidate" : "candidates"}`
             : "None"}
         </dd>
+        {preview.interviews && (
+          <>
+            <dt className="text-muted-foreground">Interviews</dt>
+            <dd className="text-foreground">{upcomingInterviewsText(preview.interviews)}</dd>
+          </>
+        )}
       </dl>
       {preview.email && (
         <div className="flex flex-col gap-1 rounded-lg border bg-background p-3">

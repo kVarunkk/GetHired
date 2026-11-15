@@ -25,13 +25,21 @@ export type ApplicationEventType =
   | "outreach_replied"
   | "imported"
   | "claimed"
-  | "merged";
+  | "merged"
+  | "meeting_scheduled"
+  | "meeting_rescheduled"
+  | "meeting_panel_changed"
+  | "meeting_cancelled"
+  | "meeting_completed"
+  | "meeting_no_show"
+  | "scorecard_submitted";
 
 export type PipelineStageRow = Tables["pipeline_stages"]["Row"];
 
 export type CompanyEmailTemplateRow = Tables["company_email_templates"]["Row"];
 
-export type CandidateNoteRow = Tables["candidate_notes"]["Row"];
+/** A note as `list_candidate_notes` returns it (IV-REQ-032a). */
+export type CandidateNoteRow = Tables["candidate_notes"]["Row"] & { rating_hidden: boolean };
 
 export type ApplicationEventRow = Tables["application_events"]["Row"] & {
   type: ApplicationEventType;
@@ -197,6 +205,7 @@ export function noteOf(overrides: Partial<CandidateNoteRow> = {}): CandidateNote
     author_name: COMPANY_A.info.name,
     body: "Strong systems design answers.",
     rating: null,
+    rating_hidden: false,
     created_at: CREATED_AT,
     updated_at: CREATED_AT,
     ...overrides,

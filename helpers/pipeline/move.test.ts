@@ -690,6 +690,56 @@ describe("moveApplications for imported applications (BIT-019, BI-REQ-032)", () 
   });
 });
 
+describe("closing cancels upcoming interviews (IVT-071, D14, D22)", () => {
+  const REJECTED = stageOf("rejected");
+  const headers = () => updates()[0].chain.filter((m) => m.method === "setHeader");
+
+  it("leaves it to the close trigger by default", async () => {
+    const app = loaded();
+    supabase.queue("pipeline_stages", { data: REJECTED, error: null });
+    supabase.queue("applications", { data: [app], error: null });
+    await moveApplications(ctx(), { applicationIds: [app.id], stageId: REJECTED.id });
+    expect(updates()).toHaveLength(1);
+    expect(headers()).toEqual([]);
+  });
+
+  it("keeps them with cancelInterviews: false, through a header on the move's own update", async () => {
+    const app = loaded();
+    supabase.queue("pipeline_stages", { data: REJECTED, error: null });
+    supabase.queue("applications", { data: [app], error: null });
+    const result = await moveApplications(ctx(), {
+      applicationIds: [app.id],
+      stageId: REJECTED.id,
+      cancelInterviews: false,
+    });
+    expect(result).toMatchObject({ ok: true, moved: 1 });
+    expect(headers()).toEqual([{ method: "setHeader", args: ["x-keep-interviews", "1"] }]);
+  });
+
+  it("previews how many a close would cancel or keep, and nothing for other stages", async () => {
+    const app = loaded();
+    supabase.queue("pipeline_stages", { data: REJECTED, error: null });
+    supabase.queue("applications", { data: [app], error: null });
+    supabase.queueRpc("upcoming_interview_count", { data: 2, error: null });
+    const preview = await previewMove(ctx(), { applicationIds: [app.id], stageId: REJECTED.id });
+    expect(preview).toMatchObject({ ok: true, interviews: { upcoming: 2, cancel: true } });
+    expect(supabase.callsFor("upcoming_interview_count")[0].chain[0].args[1]).toEqual({ p_application_ids: [app.id] });
+
+    supabase.queue("pipeline_stages", { data: REJECTED, error: null });
+    supabase.queue("applications", { data: [app], error: null });
+    supabase.queueRpc("upcoming_interview_count", { data: 1, error: null });
+    expect(
+      await previewMove(ctx(), { applicationIds: [app.id], stageId: REJECTED.id, cancelInterviews: false }),
+    ).toMatchObject({ interviews: { upcoming: 1, cancel: false } });
+
+    supabase.queue("pipeline_stages", { data: INTERVIEW, error: null });
+    supabase.queue("applications", { data: [app], error: null });
+    const other = await previewMove(ctx(), { applicationIds: [app.id], stageId: INTERVIEW.id });
+    expect(other).not.toHaveProperty("interviews");
+    expect(supabase.callsFor("upcoming_interview_count")).toHaveLength(2);
+  });
+});
+
 describe("actorName (TMT-060, teams difference 8)", () => {
   it("uses the member's display name first", () => {
     expect(actorName(MEMBER_A.user, MEMBER_A.myCompany)).toBe("Max Member");

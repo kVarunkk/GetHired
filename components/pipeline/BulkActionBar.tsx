@@ -16,7 +16,7 @@ import RoleLocked from "@/components/team/RoleLocked";
 import { forbiddenMessage } from "@/helpers/companies/permissions";
 import type { MoveEmail } from "@/helpers/pipeline/move";
 import { changesCandidateStatus } from "@/helpers/pipeline/status-map";
-import MoveDialog, { type TemplateOption } from "./MoveDialog";
+import MoveDialog, { type MoveOptions, type TemplateOption } from "./MoveDialog";
 import InviteToInterviewDialog from "@/components/interviews/InviteToInterviewDialog";
 import { isOpenInterview } from "@/helpers/interview/screening/summary-view";
 import type { StageOption } from "./StagePicker";
@@ -80,13 +80,14 @@ export default function BulkActionBar({
   const changesStatus = (stage: StageOption) =>
     selectedIds.some((id) => changesCandidateStatus(kindOf(stageIdOf(id)), stage.kind));
 
-  const move = async (stage: StageOption, email?: MoveEmail) => {
+  const move = async (stage: StageOption, email?: MoveEmail, options?: MoveOptions) => {
     setIsMoving(true);
     try {
       const result = await moveApplicationsAction({
         applicationIds: selectedIds,
         stageId: stage.id,
         ...(email ? { email } : {}),
+        ...(options ? { cancelInterviews: options.cancelInterviews } : {}),
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -177,7 +178,8 @@ export default function BulkActionBar({
         fromKinds={selectedIds.map((id) => kindOf(stageIdOf(id)))}
         openInterviews={selectedIds.filter((id) => isOpenInterview(interviewStatusOf(id))).length}
         isMoving={isMoving}
-        onConfirm={(email) => target && void move(target, email)}
+        applicationIds={selectedIds}
+        onConfirm={(email, options) => target && void move(target, email, options)}
         onCancel={() => setTarget(null)}
       />
     </div>

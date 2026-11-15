@@ -3,17 +3,19 @@ import Error from "@/components/Error";
 import SectionHeader from "@/components/SectionHeader";
 import SchedulingLinkForm from "@/components/pipeline/SchedulingLinkForm";
 import SettingsCard from "@/components/pipeline/SettingsCard";
+import TimeZoneForm from "@/components/pipeline/TimeZoneForm";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Scheduling Link",
+  title: "Scheduling",
 };
 
 /**
- * Settings → Scheduling link (PL-TASK-040). Read-only without
- * settings.scheduling (RP-REQ-016); the action checks again.
+ * Settings → Scheduling: the scheduling link (PL-TASK-040) and the company's
+ * time zone (IVT-024). Read-only without settings.scheduling (RP-REQ-016);
+ * the actions check again.
  */
 export default async function SchedulingSettingsPage() {
   try {
@@ -25,7 +27,7 @@ export default async function SchedulingSettingsPage() {
     const company = await getMyCompany(supabase, user);
     if (!company) notFound();
 
-    const { data, error } = await supabase.from("company_info").select("scheduling_url").eq("id", company.id).single();
+    const { data, error } = await supabase.from("company_info").select("scheduling_url, time_zone").eq("id", company.id).single();
     if (error) throw error;
 
     return (
@@ -36,6 +38,13 @@ export default async function SchedulingSettingsPage() {
         />
         <SettingsCard company={company} permission="settings.scheduling">
           <SchedulingLinkForm initial={data.scheduling_url} />
+        </SettingsCard>
+        <SectionHeader
+          title="Time zone"
+          description="Your company's time zone, used as the default when scheduling interviews."
+        />
+        <SettingsCard company={company} permission="settings.scheduling">
+          <TimeZoneForm initial={data.time_zone} />
         </SettingsCard>
       </div>
     );

@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase/server";
 import { jobImportPath } from "@/helpers/candidates/paths";
 import { FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { loadSchedulingPlan } from "@/helpers/interviews/plan";
 import type { PipelineBoardData } from "@/utils/types/pipeline.types";
 import { cn } from "@/utils/utils";
 import type { Metadata } from "next";
@@ -77,7 +78,7 @@ export default async function JobApplicationsPage({
 
     const canViewInterviews = can(company, "interviews.view", job.id);
     const canMove = can(company, "pipeline.move", job.id);
-    const [{ data: stages, error: stagesError }, { data: templates }, funnel, screeningCap, interviewData] = await Promise.all([
+    const [{ data: stages, error: stagesError }, { data: templates }, funnel, screeningCap, interviewData, schedulingPlan] = await Promise.all([
       supabase
         .from("pipeline_stages")
         .select("id, name, kind")
@@ -103,6 +104,8 @@ export default async function JobApplicationsPage({
             return null;
           })
         : null,
+      // D8 (IVT-072): the board's "Schedule …" prompt, for scheduling.manage.
+      view === "board" && can(company, "scheduling.manage", job.id) ? loadSchedulingPlan(supabase, job.id) : undefined,
     ]);
     if (stagesError) throw stagesError;
 
@@ -169,6 +172,7 @@ export default async function JobApplicationsPage({
             initial={board}
             templates={templates ?? []}
             canMove={canMove}
+            schedulingPlan={schedulingPlan}
           />
         ) : (
           <PipelineList

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import { getCompanyFunnel, getJobFunnel, NEEDS_ATTENTION_DAYS } from "@/helpers/pipeline/funnel";
 import { moveApplications, type MoveEmail } from "@/helpers/pipeline/move";
-import { addNote, deleteNote, listNotes, ratingSummary, updateNote } from "@/helpers/pipeline/notes";
+import { addNote, deleteNote, listNotes, ratingSummary, ratingsHidden, updateNote } from "@/helpers/pipeline/notes";
 import { mentionsToText } from "@/helpers/team/mentions";
 import {
   archiveStage,
@@ -64,6 +64,12 @@ export const moveApplicationsInput = z.object({
       body: z.string().trim().min(1).max(MAX_TEMPLATE_BODY).optional(),
     })
     .optional(),
+  cancelInterviews: z
+    .boolean()
+    .optional()
+    .describe(
+      "For a move to Rejected or Hired: false keeps the candidates' upcoming interviews with the team. Leave it out (cancel them) unless the user asked to keep them.",
+    ),
 });
 
 /** The tool's email input as `moveApplications` takes it. */
@@ -168,14 +174,15 @@ export function createPipelineTools(ctx: RecruiterToolContext) {
     }),
 
     moveApplications: tool({
-      description: `Move up to ${RA_MAX_BULK_APPLICATIONS} applications to the company's jobs into a pipeline stage (ids from listStages). With email, the candidates whose visible status changes get the template's email; subject and body replace the template's text and may use its {{variables}}. Pick the template by where the candidates come from as well as where they go: rejection for a Rejected stage, on_hold for On hold, reopen when they come back from Rejected or Hired, resume from On hold into Applied or Screening, or move to an earlier stage; otherwise the target's (interview_invite, offer, advance). Moving a candidate to Rejected or Hired cancels their open AI interview invite. Emails are queued and go out after 2 minutes; moving the application again before then cancels its email. emailed counts the queued ones.`,
+      description: `Move up to ${RA_MAX_BULK_APPLICATIONS} applications to the company's jobs into a pipeline stage (ids from listStages). With email, the candidates whose visible status changes get the template's email; subject and body replace the template's text and may use its {{variables}}. Pick the template by where the candidates come from as well as where they go: rejection for a Rejected stage, on_hold for On hold, reopen when they come back from Rejected or Hired, resume from On hold into Applied or Screening, or move to an earlier stage; otherwise the target's (interview_invite, offer, advance). Moving a candidate to Rejected or Hired cancels their open AI interview invite and, unless cancelInterviews is false, their upcoming interviews with the team (scheduling links stop working; Google Calendar tells the attendees). Emails are queued and go out after 2 minutes; moving the application again before then cancels its email. emailed counts the queued ones.`,
       inputSchema: moveApplicationsInput,
-      execute: ({ applicationIds, stageId, email }) =>
+      execute: ({ applicationIds, stageId, email, cancelInterviews }) =>
         withToolErrors(ctx, "moveApplications", async () => {
           const result = await moveApplications(ctx, {
             applicationIds,
             stageId,
             email: toMoveEmail(email),
+            cancelInterviews,
           });
           if (!result.ok) {
             return {
@@ -230,9 +237,14 @@ export function createPipelineTools(ctx: RecruiterToolContext) {
             ctx,
             applicationId ? { applicationId } : { candidateUserId: candidateId! },
           );
+          // IV-REQ-032a: while the user is blind, teammates' ratings and the
+          // summary are withheld, not just averaged without them.
+          const hidden = ratingsHidden(notes);
           return {
             total: notes.length,
-            ratings: ratingSummary(notes),
+            ...(hidden
+              ? { ratings: null, ratingsHidden: "Teammates' ratings are hidden until you submit your interview scorecard." }
+              : { ratings: ratingSummary(notes) }),
             notes: notes.slice(0, RA_NOTES_LISTED).map((note) => ({
               id: note.id,
               author: note.author_name,

@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { setRequestUser } from "@/test/utils/auth";
 import { jobImportPath } from "@/helpers/candidates/paths";
 import { createSupabaseMock } from "@/test/utils/supabase-mock";
-import { HIRING_MANAGER_A, JOB_A1, OWNER_A, type MemberFixture } from "@/test/utils/team";
+import { HIRING_MANAGER_A, JOB_A1, OWNER_A, memberWith, type MemberFixture } from "@/test/utils/team";
 import JobPostLayout from "./layout";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
@@ -60,5 +60,23 @@ describe("the job's Import candidates nav item (CPT-019, CP-REQ-020)", () => {
   it("is hidden without applicants.import for the job", async () => {
     const nav = await renderAs(HIRING_MANAGER_A);
     expect(within(nav).queryByRole("link", { name: /Import candidates/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("the job's Interview plan nav item (IVT-013)", () => {
+  it.each([
+    ["scheduling.view", ["jobs.view", "scheduling.view"]],
+    ["interview_plans.manage", ["jobs.view", "interview_plans.manage"]],
+  ] as const)("shows with %s", async (_label, grants) => {
+    const nav = await renderAs(memberWith([...grants]));
+    expect(within(nav).getByRole("link", { name: /Interview plan/ })).toHaveAttribute(
+      "href",
+      `/company/job-posts/${JOB_A1}/interview-plan`,
+    );
+  });
+
+  it("is hidden with neither", async () => {
+    const nav = await renderAs(memberWith(["jobs.view"]));
+    expect(within(nav).queryByRole("link", { name: /Interview plan/ })).not.toBeInTheDocument();
   });
 });

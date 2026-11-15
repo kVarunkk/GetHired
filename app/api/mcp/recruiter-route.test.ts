@@ -397,6 +397,23 @@ describe("toolsets on the URL (RMT-051, RMCP spec §4.5)", () => {
     expect(await namesAt("?toolsets=jobs,pipeline")).toEqual(rowsIn("core", "jobs", "pipeline"));
   });
 
+  it("scheduling narrows to the interview tools, and readonly to their reads (IVT-085)", async () => {
+    signInAs(OWNER_A);
+
+    expect(await namesAt("?toolsets=scheduling")).toEqual(rowsIn("core", "scheduling"));
+    expect(rowsIn("scheduling")).toHaveLength(11);
+    expect(await namesAt("?toolsets=scheduling&readonly=true")).toEqual(
+      [
+        "draft_interview_plan",
+        "find_interview_slots",
+        "get_interview_plan",
+        "get_my_company",
+        "list_scheduled_interviews",
+        "summarize_feedback",
+      ].sort(),
+    );
+  });
+
   it("readonly=true lists only read-only tools, credit-spending reads included", async () => {
     signInAs(OWNER_A);
 
@@ -744,15 +761,17 @@ describe("confirm tools (RMT-046, RMCP-REQ-005)", () => {
     signInAs(OWNER_A, 2);
     const note = {
       id: NOTE_ID,
+      company_id: COMPANY_A.id,
       body: "Strong on systems.",
       rating: null,
+      rating_hidden: false,
       author_user_id: OWNER_A.user.id,
       application_id: null,
       candidate_user_id: CANDIDATE,
     };
     const args = { noteId: NOTE_ID, body: "Strong on systems and APIs." };
     supabase.queue("candidate_notes", { data: { application_id: null }, error: null });
-    supabase.queue("candidate_notes", { data: note, error: null });
+    supabase.queueRpc("list_candidate_notes", { data: [note], error: null });
     supabase.queue("candidate_directory", { data: [{ user_id: CANDIDATE, full_name: "Meera" }], error: null });
 
     const first = await callWith("update_note", args);

@@ -17,6 +17,7 @@ export const MCP_TOOLSETS = [
   "candidates",
   "outreach",
   "interviews",
+  "scheduling",
   "team",
   "careers",
 ] as const;
@@ -71,6 +72,7 @@ export const MCP_TOOLSET_LABELS: Record<McpToolset, string> = {
   candidates: "Your own candidates and imports",
   outreach: "Messages and email templates",
   interviews: "AI screening interviews",
+  scheduling: "Interview plans, scheduling and feedback",
   team: "Members, roles and invites",
   careers: "The careers page",
 };

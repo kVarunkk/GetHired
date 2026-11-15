@@ -222,6 +222,16 @@ describe("NavbarComponent: company links (BI-REQ-003)", () => {
     await waitFor(() => expect(screen.queryByRole("link", { name: /Candidates/ })).not.toBeInTheDocument());
     expect(screen.getAllByRole("link", { name: /Discover/ }).length).toBeGreaterThan(0);
   });
+
+  it("shows My interviews to a member whose role grants nothing (IVT-021)", async () => {
+    withAccess({ billingView: false, talentView: false });
+    vi.mocked(usePathname).mockReturnValue("/company");
+
+    renderCompanyNavbar();
+
+    await waitFor(() => expect(screen.queryByRole("link", { name: /Candidates/ })).not.toBeInTheDocument());
+    expect(screen.getAllByRole("link", { name: /My interviews/ })[0]).toHaveAttribute("href", "/company/my-interviews");
+  });
 });
 
 describe("NavbarComponent: MCP setup link", () => {

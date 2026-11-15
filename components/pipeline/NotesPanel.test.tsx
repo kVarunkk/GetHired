@@ -151,6 +151,27 @@ describe("NotesPanel (PLT-054)", () => {
     expect(within(theirs).getByText("Ravi")).toBeInTheDocument();
   });
 
+  it("hides the summary and teammates' ratings while blind (IVT-015)", () => {
+    render(
+      <NotesPanel
+        applicationId={APP.id}
+        notes={[
+          noteOf({ body: "Mine", author_user_id: ME, rating: "yes" }),
+          noteOf({ body: "Theirs", author_user_id: OTHER, rating: null, rating_hidden: true }),
+        ]}
+        currentUserId={ME}
+      />,
+    );
+
+    const summary = screen.getByRole("region", { name: "Ratings" });
+    expect(within(summary).getByText(/hidden until you submit your interview scorecard/)).toBeInTheDocument();
+    expect(within(summary).queryByText(/from 1 rating/)).not.toBeInTheDocument();
+    const theirs = screen.getByText("Theirs").closest("li") as HTMLElement;
+    expect(within(theirs).getByText("Rating hidden")).toBeInTheDocument();
+    const mine = screen.getByText("Mine").closest("li") as HTMLElement;
+    expect(within(mine).getByText("Yes")).toBeInTheDocument();
+  });
+
   it("shows no composer, edit or delete when read-only (BIT-065, a merged import)", () => {
     render(
       <NotesPanel

@@ -271,6 +271,15 @@ export const PERMISSION_MATRIX: MatrixEntry[] = [
       } as never),
   },
   {
+    name: "action:countUpcomingInterviews",
+    kind: "action",
+    permission: "pipeline.move",
+    run: async () =>
+      (await import("@/app/actions/pipeline/count-upcoming-interviews")).countUpcomingInterviewsAction({
+        applicationIds: [APP],
+      }),
+  },
+  {
     name: "action:previewAgentMove",
     kind: "action",
     permission: "pipeline.move",
@@ -676,6 +685,190 @@ export const PERMISSION_MATRIX: MatrixEntry[] = [
     run: async () =>
       (await import("@/app/actions/pipeline/delete-template")).deleteTemplateAction({ templateId: ID }),
   },
+  // Human interviews (IVT-012): interview_plans.manage, Admin only.
+  {
+    name: "action:saveInterviewPlan",
+    kind: "action",
+    permission: "interview_plans.manage",
+    run: async () =>
+      (await import("@/app/actions/interviews/save-interview-plan")).saveInterviewPlanAction({
+        jobPostId: JOB,
+        items: [],
+      }),
+  },
+  {
+    name: "action:copyInterviewPlan",
+    kind: "action",
+    permission: "interview_plans.manage",
+    run: async () =>
+      (await import("@/app/actions/interviews/copy-interview-plan")).copyInterviewPlanAction({
+        fromJobId: ID,
+        toJobId: JOB,
+      }),
+  },
+  {
+    name: "action:draftInterviewPlan",
+    kind: "action",
+    permission: "interview_plans.manage",
+    run: async () =>
+      (await import("@/app/actions/interviews/draft-interview-plan")).draftInterviewPlanAction({ jobPostId: JOB }),
+  },
+  {
+    name: "action:summarizeFeedback",
+    kind: "action",
+    permission: "scorecards.view_all",
+    run: async () =>
+      (await import("@/app/actions/interviews/summarize-feedback")).summarizeFeedbackAction({ applicationId: APP }),
+  },
+  // Human interviews (IVT-018): scheduling.manage for the lifecycle; the
+  // scorecard actions are panel access, checked by the RPCs.
+  {
+    name: "action:recordInterview",
+    kind: "action",
+    permission: "scheduling.manage",
+    run: async () =>
+      (await import("@/app/actions/interviews/record-interview")).recordInterviewAction({
+        applicationId: APP,
+        name: "Chat",
+        durationMinutes: 30,
+        panel: [OTHER_USER],
+        startsAt: "2026-12-01T10:00:00.000Z",
+      }),
+  },
+  // Google Calendar (IVT-042/043). The flag is on for the run, or the
+  // actions stop before the permission check.
+  {
+    name: "action:findInterviewSlots",
+    kind: "action",
+    permission: "scheduling.manage",
+    run: async () => {
+      process.env.CALENDAR_ENABLED = "true";
+      try {
+        return await (await import("@/app/actions/interviews/find-slots")).findInterviewSlotsAction({
+          jobPostId: JOB,
+          panel: [OTHER_USER],
+          durationMinutes: 30,
+        });
+      } finally {
+        delete process.env.CALENDAR_ENABLED;
+      }
+    },
+  },
+  {
+    name: "action:bookInterview",
+    kind: "action",
+    permission: "scheduling.manage",
+    run: async () => {
+      process.env.CALENDAR_ENABLED = "true";
+      try {
+        return await (await import("@/app/actions/interviews/book-interview")).bookInterviewAction({
+          applicationId: APP,
+          name: "Chat",
+          durationMinutes: 30,
+          panel: [OTHER_USER],
+          startsAt: "2026-12-01T10:00:00.000Z",
+        });
+      } finally {
+        delete process.env.CALENDAR_ENABLED;
+      }
+    },
+  },
+  {
+    name: "action:sendSchedulingLink",
+    kind: "action",
+    permission: "scheduling.manage",
+    run: async () => {
+      process.env.CALENDAR_ENABLED = "true";
+      try {
+        return await (await import("@/app/actions/interviews/send-scheduling-link")).sendSchedulingLinkAction({
+          applicationId: APP,
+          name: "Chat",
+          durationMinutes: 30,
+          panel: [OTHER_USER],
+          templateId: ID,
+        });
+      } finally {
+        delete process.env.CALENDAR_ENABLED;
+      }
+    },
+  },
+  {
+    name: "action:renewSchedulingLink",
+    kind: "action",
+    permission: "scheduling.manage",
+    run: async () => {
+      process.env.CALENDAR_ENABLED = "true";
+      try {
+        return await (await import("@/app/actions/interviews/send-scheduling-link")).renewSchedulingLinkAction({
+          interviewId: ID,
+        });
+      } finally {
+        delete process.env.CALENDAR_ENABLED;
+      }
+    },
+  },
+  {
+    name: "action:updateInterview",
+    kind: "action",
+    permission: "scheduling.manage",
+    run: async () =>
+      (await import("@/app/actions/interviews/update-interview")).updateInterviewAction({
+        interviewId: ID,
+        startsAt: "2026-12-01T10:00:00.000Z",
+      }),
+  },
+  {
+    name: "action:cancelInterview",
+    kind: "action",
+    permission: "scheduling.manage",
+    run: async () =>
+      (await import("@/app/actions/interviews/cancel-interview")).cancelInterviewAction({ interviewId: ID }),
+  },
+  {
+    name: "action:previewAgentScheduling",
+    kind: "action",
+    permission: "scheduling.manage",
+    run: async () =>
+      (await import("@/app/actions/interviews/preview-agent-scheduling")).previewAgentSchedulingAction(
+        "cancelInterview",
+        { interviewId: ID },
+      ),
+  },
+  {
+    name: "action:remindInterviewers",
+    kind: "action",
+    permission: "scheduling.manage",
+    run: async () =>
+      (await import("@/app/actions/interviews/remind-interviewers")).remindInterviewersAction({ interviewId: ID }),
+  },
+  {
+    name: "action:markInterview",
+    kind: "action",
+    permission: "scheduling.manage",
+    run: async () =>
+      (await import("@/app/actions/interviews/mark-interview")).markInterviewAction({
+        interviewId: ID,
+        status: "no_show",
+      }),
+  },
+  {
+    name: "action:saveScorecardDraft",
+    kind: "action",
+    permission: null,
+    run: async () =>
+      (await import("@/app/actions/interviews/save-scorecard-draft")).saveScorecardDraftAction({
+        interviewId: ID,
+        ratings: {},
+        overall: null,
+      }),
+  },
+  {
+    name: "action:submitScorecard",
+    kind: "action",
+    permission: null,
+    run: async () =>
+      (await import("@/app/actions/interviews/submit-scorecard")).submitScorecardAction({ interviewId: ID }),
+  },
   {
     name: "action:saveSchedulingLink",
     kind: "action",
@@ -683,6 +876,15 @@ export const PERMISSION_MATRIX: MatrixEntry[] = [
     run: async () =>
       (await import("@/app/actions/pipeline/save-scheduling-link")).saveSchedulingLinkAction({
         schedulingUrl: "https://cal.com/acme",
+      }),
+  },
+  {
+    name: "action:saveCompanyTimeZone",
+    kind: "action",
+    permission: "settings.scheduling",
+    run: async () =>
+      (await import("@/app/actions/company/save-company-time-zone")).saveCompanyTimeZoneAction({
+        timeZone: "Asia/Kolkata",
       }),
   },
   {

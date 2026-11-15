@@ -10,6 +10,8 @@ import {
 } from "@/helpers/companies/company-profile-schema";
 import { embedCompanyProfile } from "@/helpers/companies/embed-company-profile";
 import { requireCompanyForAction } from "@/helpers/companies/require-company";
+import { can } from "@/helpers/companies/permissions";
+import { isValidTimeZone } from "@/helpers/companies/time-zone";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 const BUCKET_NAME = "images";
@@ -20,7 +22,9 @@ export type SaveCompanyProfileResult = { ok: true; logoUrl: string | null } | { 
  * SERVER ACTION: saves the session company's profile (`company.profile`),
  * its logo and its embedding, and marks the user's onboarding complete.
  * FormData: `values` (JSON of `companyProfileSchema`), optional `logo` file,
- * `removeLogo` = "true" to drop the current logo.
+ * `removeLogo` = "true" to drop the current logo, optional `timeZone` (the
+ * browser's, IVT-024): it sets the company's zone only while none is set, so
+ * Settings → Scheduling keeps the last word.
  */
 export async function saveCompanyProfileAction(formData: FormData): Promise<SaveCompanyProfileResult> {
   const auth = await requireCompanyForAction({ permission: "company.profile" });
@@ -47,7 +51,7 @@ export async function saveCompanyProfileAction(formData: FormData): Promise<Save
 
   const { data: current, error: loadError } = await supabase
     .from("company_info")
-    .select("logo_url")
+    .select("logo_url, time_zone")
     .eq("id", company.id)
     .maybeSingle();
   if (loadError || !current) return { ok: false, error: "Company profile not found." };
@@ -99,6 +103,17 @@ export async function saveCompanyProfileAction(formData: FormData): Promise<Save
     .update({ embedding_new: embedding as unknown as string, updated_at: new Date().toISOString() })
     .eq("id", company.id);
   if (embedError) reportError("[company-profile] embedding save failed", embedError.message);
+
+  const timeZone = formData.get("timeZone");
+  if (!current.time_zone && isValidTimeZone(timeZone) && can(company, "settings.scheduling")) {
+    const { data: zoneSaved, error: zoneError } = await supabase.rpc("update_company_settings", {
+      p_settings: { time_zone: timeZone },
+    });
+    // Not worth failing onboarding over: Settings → Scheduling can set it.
+    if (zoneError || !(zoneSaved as { ok?: boolean } | null)?.ok) {
+      reportError("[company-profile] time zone not saved", zoneError?.message ?? zoneSaved);
+    }
+  }
 
   const { error: metadataError } = await markMyOnboardingComplete("company");
   if (metadataError) return { ok: false, error: metadataError };

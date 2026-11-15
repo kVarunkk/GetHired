@@ -79,6 +79,7 @@ const note = (overrides: Partial<CandidateNote>): CandidateNote => ({
   author_name: "Asha",
   body: "Strong system design.",
   rating: "yes",
+  rating_hidden: false,
   created_at: "2026-10-14T10:00:00.000Z",
   updated_at: "2026-10-14T10:00:00.000Z",
   ...overrides,
@@ -303,6 +304,23 @@ describe("moveApplications tool", () => {
       emailed: 1,
       skipped: [{ id: APP_2, reason: "not_found" }],
     });
+  });
+
+  it("keeps upcoming interviews only when told to (IVT-071, D14: cancelling is the default)", async () => {
+    vi.mocked(moveApplications).mockResolvedValue({
+      ok: true,
+      moved: 1,
+      emailed: 0,
+      skipped: [],
+      stage: { id: STAGE, name: "Rejected", kind: "rejected" },
+      applications: [],
+      movedIds: [APP_1],
+    });
+    await execTool(tools.moveApplications, { applicationIds: [APP_1], stageId: STAGE, cancelInterviews: false });
+    expect(vi.mocked(moveApplications).mock.calls[0][1]).toMatchObject({ cancelInterviews: false });
+    await execTool(tools.moveApplications, { applicationIds: [APP_1], stageId: STAGE });
+    expect(vi.mocked(moveApplications).mock.calls[1][1].cancelInterviews).toBeUndefined();
+    expect(tools.moveApplications.description).toMatch(/upcoming interviews/);
   });
 
   it("passes the model's own subject or body as overrides, keeping the template's other half", () => {

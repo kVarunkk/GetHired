@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Children, isValidElement, type ReactNode } from "react";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import toast from "react-hot-toast";
 import posthog from "@/lib/posthog/client";
 import { moveApplicationsAction } from "@/app/actions/pipeline/move-applications";
@@ -489,5 +489,64 @@ describe("PipelineBoard without pipeline.move", () => {
     );
 
     expect(screen.getByRole("combobox", { name: "Move Priya Sharma to…" })).toBeDisabled();
+  });
+});
+
+describe("PipelineBoard: schedule prompt (IVT-072, D8)", () => {
+  it("offers the new stage's plan interviews for the moved card", async () => {
+    const plan = { [stageOf("interview").id]: [{ id: "p1", name: "Tech screen" }] };
+    render(
+      <PipelineBoard
+        jobPostId={PIPELINE_JOB.id}
+        initial={boardOf([cardOf(1, { name: "Priya Sharma", stageId: stageOf("screening").id })])}
+        schedulingPlan={plan}
+      />,
+    );
+    await keyboardMoveRight("Priya Sharma");
+    const link = await screen.findByRole("link", { name: "Schedule Tech screen" });
+    expect(link).toHaveAttribute("href", `/company/applications/${appId(1)}/interviews/schedule?item=p1`);
+    expect(screen.getByRole("group", { name: "Schedule interviews for Priya Sharma" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByRole("link", { name: /^Schedule / })).not.toBeInTheDocument();
+  });
+
+  it("offers nothing when the new stage has no plan interviews, or without a plan (no scheduling.manage)", async () => {
+    const plan = { [stageOf("offer").id]: [{ id: "p1", name: "Tech screen" }] };
+    for (const schedulingPlan of [plan, undefined]) {
+      vi.mocked(moveApplicationsAction).mockClear();
+      render(
+        <PipelineBoard
+          jobPostId={PIPELINE_JOB.id}
+          initial={boardOf([cardOf(1, { name: "Priya Sharma", stageId: stageOf("screening").id })])}
+          schedulingPlan={schedulingPlan}
+        />,
+      );
+      await keyboardMoveRight("Priya Sharma");
+      await waitFor(() => expect(moveApplicationsAction).toHaveBeenCalled());
+      expect(screen.queryByRole("link", { name: /^Schedule / })).not.toBeInTheDocument();
+      cleanup();
+    }
+  });
+});
+
+describe("PipelineBoard: interview badges (IVT-073)", () => {
+  it("shows a card's next interview, or the feedback still owed", () => {
+    render(
+      <PipelineBoard
+        jobPostId={PIPELINE_JOB.id}
+        initial={boardOf([
+          cardOf(1, { name: "Priya Sharma", meeting: { nextAt: "2026-10-20T14:00:00.000Z", feedback: null } }),
+          cardOf(2, { name: "Arjun Rao", meeting: { nextAt: null, feedback: { submitted: 1, total: 3 } } }),
+          cardOf(3, { name: "Mei Lin" }),
+        ])}
+      />,
+    );
+    const card = (name: string) => screen.getByRole("link", { name }).closest("[data-card]") as HTMLElement;
+
+    expect(within(card("Priya Sharma")).getByText(/^Interview \w{3} \d{2}:\d{2}$/)).toBeInTheDocument();
+    expect(within(card("Priya Sharma")).queryByText(/^Feedback/)).not.toBeInTheDocument();
+    expect(within(card("Arjun Rao")).getByText("Feedback 1/3")).toBeInTheDocument();
+    expect(within(card("Arjun Rao")).queryByText(/^Interview /)).not.toBeInTheDocument();
+    expect(within(card("Mei Lin")).queryByText(/^(Interview |Feedback)/)).not.toBeInTheDocument();
   });
 });

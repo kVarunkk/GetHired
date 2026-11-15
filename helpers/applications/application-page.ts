@@ -64,9 +64,9 @@ export const loadApplicationFrame = cache(async (applicationId: string) => {
 });
 
 /**
- * SIT-063/064: the application's AI interview (interviews.view) and, for
- * interviews.manage, the job's interview config. Extra: a failure hides
- * them, not the page.
+ * SIT-063/064: the application's AI interview and the job's interview config
+ * (both interviews.view; RLS allows reading the config with it). Extra: a
+ * failure hides them, not the page.
  */
 export const loadApplicationInterview = cache(async (applicationId: string) => {
   const frame = await loadApplicationFrame(applicationId);
@@ -79,7 +79,7 @@ export const loadApplicationInterview = cache(async (applicationId: string) => {
   try {
     const [interview, config] = await Promise.all([
       getApplicationInterview(supabase, applicationId),
-      canManage ? getInterviewConfig(supabase, jobId) : null,
+      getInterviewConfig(supabase, jobId),
     ]);
     return { canView, canManage, interview, config };
   } catch (err) {

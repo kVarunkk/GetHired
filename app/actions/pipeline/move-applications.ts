@@ -38,6 +38,8 @@ const inputSchema = z
       })
       .strict()
       .optional(),
+    /** IVT-071: false keeps the upcoming interviews of a move to Rejected or Hired. */
+    cancelInterviews: z.boolean().optional(),
   })
   .strict();
 

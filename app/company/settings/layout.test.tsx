@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { createClient } from "@/lib/supabase/server";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createSupabaseMock } from "@/test/utils/supabase-mock";
-import { MEMBER_A, OWNER_A, type MemberFixture } from "@/test/utils/team";
+import { MEMBER_A, OWNER_A, memberWith, type MemberFixture } from "@/test/utils/team";
 import CompanySettingsLayout from "./layout";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -56,5 +56,25 @@ describe("/company/settings layout (RP-REQ-016)", () => {
     expect(within(nav).queryByRole("link", { name: "Audit log" })).not.toBeInTheDocument();
     // CP-REQ-012: everyone can open the careers page editor (read-only without careers.edit).
     expect(within(nav).getByRole("link", { name: "Careers page" })).toHaveAttribute("href", "/company/settings/careers");
+  });
+});
+
+describe("/company/settings layout: My calendar (IVT-037)", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("shows My calendar to every member, even one with no permissions, while Google Calendar is on", async () => {
+    vi.stubEnv("CALENDAR_ENABLED", "true");
+    signInAs(memberWith([]));
+    const nav = await renderNav();
+    expect(within(nav).getByRole("link", { name: "My calendar" })).toHaveAttribute(
+      "href",
+      "/company/settings/my-calendar",
+    );
+  });
+
+  it("hides it while CALENDAR_ENABLED is off", async () => {
+    vi.stubEnv("CALENDAR_ENABLED", "false");
+    signInAs(OWNER_A);
+    expect(within(await renderNav()).queryByRole("link", { name: "My calendar" })).not.toBeInTheDocument();
   });
 });

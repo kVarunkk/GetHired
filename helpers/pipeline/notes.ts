@@ -11,9 +11,18 @@ import type { Database, Tables } from "@/utils/types/database.types";
 import { actorName } from "./move";
 import type { CandidateRating } from "./ratings";
 
-export { RATING_SCORE, ratingSummary, type CandidateRating, type RatingSummary } from "./ratings";
+export { RATING_SCORE, ratingSummary, ratingsHidden, type CandidateRating, type RatingSummary } from "./ratings";
 
-export type CandidateNote = Tables<"candidate_notes">;
+/**
+ * A note as the session user may read it (IV-REQ-032a): `rating` is null and
+ * `rating_hidden` true for a teammate's rating while the reader is blind on
+ * the application. Ratings are only read through `list_candidate_notes`.
+ */
+export type CandidateNote = Tables<"candidate_notes"> & { rating_hidden: boolean };
+
+/** Every column but `rating`, which authenticated can't select (IV-REQ-032a). */
+const NOTE_COLUMNS =
+  "id, company_id, candidate_user_id, application_id, author_user_id, author_name, body, created_at, updated_at";
 
 type Ctx = { supabase: SupabaseClient<Database>; company: MyCompany; user: User };
 type Result = { ok: true } | { ok: false; error: string };
@@ -87,7 +96,7 @@ export async function addNote(
 
   const author = actorName(user, company);
   const rating = input.rating ?? null;
-  const { data: note, error } = await supabase
+  const { data: inserted, error } = await supabase
     .from("candidate_notes")
     .insert({
       company_id: company.id,
@@ -98,9 +107,11 @@ export async function addNote(
       body: checked.body,
       rating,
     })
-    .select("*")
+    .select(NOTE_COLUMNS)
     .single();
-  if (error || !note) return { ok: false, error: "Couldn't save the note. Please try again." };
+  if (error || !inserted) return { ok: false, error: "Couldn't save the note. Please try again." };
+  // The author always reads their own rating.
+  const note: CandidateNote = { ...inserted, rating, rating_hidden: false };
 
   const { error: eventError } = await supabase.from("application_events").insert({
     company_id: company.id,
@@ -182,22 +193,30 @@ export async function deleteNote({ supabase, company, user }: Ctx, noteId: strin
   return data && data.length > 0 ? { ok: true } : NOT_FOUND;
 }
 
-/** The company's notes on an application or a candidate, newest first. Throws on a database error. */
+/**
+ * The session company's notes on an application or a candidate, newest first,
+ * with ratings masked while the reader is blind (IV-REQ-032a). The RPC scopes
+ * to the session's company and `notes.view`. Throws on a database error.
+ */
 export async function listNotes(
-  { supabase, company }: Pick<Ctx, "supabase" | "company">,
+  { supabase }: Pick<Ctx, "supabase" | "company">,
   by: { applicationId: string } | { candidateUserId: string },
 ): Promise<CandidateNote[]> {
-  const [column, value] =
-    "applicationId" in by
-      ? (["application_id", by.applicationId] as const)
-      : (["candidate_user_id", by.candidateUserId] as const);
-
-  const { data, error } = await supabase
-    .from("candidate_notes")
-    .select("*")
-    .eq("company_id", company.id)
-    .eq(column, value)
-    .order("created_at", { ascending: false });
+  const { data, error } = await supabase.rpc(
+    "list_candidate_notes",
+    "applicationId" in by ? { p_application_id: by.applicationId } : { p_candidate_user_id: by.candidateUserId },
+  );
   if (error) throw new Error(`Failed to load the notes: ${error.message}`);
   return data ?? [];
+}
+
+/** One note by id as the session user may read it, or null. Throws on a database error. */
+export async function getNote(
+  { supabase }: Pick<Ctx, "supabase">,
+  noteId: string,
+): Promise<CandidateNote | null> {
+  if (!isUuid(noteId)) return null;
+  const { data, error } = await supabase.rpc("list_candidate_notes", { p_note_id: noteId });
+  if (error) throw new Error(`Failed to load the note: ${error.message}`);
+  return data?.[0] ?? null;
 }

@@ -10,6 +10,7 @@ import { ratingSummary, type CandidateRating } from "./ratings";
 import { listStages } from "./stages";
 import { can } from "@/helpers/companies/permissions";
 import { getInterviewSummaries } from "@/helpers/interview/screening/summaries";
+import { meetingBadgeOf, type MeetingBadge } from "@/helpers/interviews/board-badge";
 
 /** PL-ASSUMPTION-001: above this many applications, columns are cut... */
 export const BOARD_TRUNCATE_ABOVE = 500;
@@ -60,13 +61,12 @@ export async function loadBoard(
     .limit(BOARD_MAX_ROWS);
   if (error) throw new Error(`Failed to load the applications: ${error.message}`);
 
-  // Counts and ratings only, never the bodies. Joined by job, not by an
-  // `in (ids)` list that could outgrow the URL.
-  const { data: notes, error: notesError } = await supabase
-    .from("candidate_notes")
-    .select("application_id, rating, applications!inner(job_post_id)")
-    .eq("company_id", company.id)
-    .eq("applications.job_post_id", jobPostId);
+  // Counts and ratings only, never the bodies, in one call for the job. The
+  // RPC masks ratings the reader is blind to (IV-REQ-032a); a card with any
+  // masked rating shows no average.
+  const { data: notes, error: notesError } = await supabase.rpc("list_job_note_ratings", {
+    p_job_post_id: jobPostId,
+  });
   if (notesError) throw new Error(`Failed to load the notes: ${notesError.message}`);
 
   // SIT-062: the interview badge. Extra: a failure only hides it.
@@ -77,12 +77,21 @@ export async function loadBoard(
       })
     : {};
 
-  const noteStats = new Map<string, { count: number; rated: { rating: CandidateRating }[] }>();
+  // IVT-073: interviews with people, in one call for the job. Extra: a failure only hides them.
+  const meetings = can(company, "scheduling.view", jobPostId)
+    ? await loadMeetingBadges(supabase, jobPostId).catch((err) => {
+        reportError("Failed to load the board's interview badges:", err);
+        return new Map<string, MeetingBadge>();
+      })
+    : new Map<string, MeetingBadge>();
+
+  const noteStats = new Map<string, { count: number; rated: { rating: CandidateRating }[]; hidden: boolean }>();
   for (const note of notes ?? []) {
     if (!note.application_id) continue;
-    const stats = noteStats.get(note.application_id) ?? { count: 0, rated: [] };
+    const stats = noteStats.get(note.application_id) ?? { count: 0, rated: [], hidden: false };
     stats.count += 1;
     if (note.rating) stats.rated.push({ rating: note.rating });
+    if (note.rating_hidden) stats.hidden = true;
     noteStats.set(note.application_id, stats);
   }
 
@@ -100,9 +109,10 @@ export async function loadBoard(
         Math.floor((now.getTime() - new Date(row.stage_entered_at).getTime()) / DAY_MS),
       ),
       noteCount: stats?.count ?? 0,
-      ratingAvg: stats ? ratingSummary(stats.rated).average : null,
+      ratingAvg: stats && !stats.hidden ? ratingSummary(stats.rated).average : null,
       knockoutReasons: row.application_knockouts?.failed ? knockoutReasons(row.application_knockouts) : null,
       ...(interviews[row.id] ? { interview: interviews[row.id] } : {}),
+      ...(meetings.has(row.id) ? { meeting: meetings.get(row.id) } : {}),
       notScored: screening?.status === "insufficient_info",
       imported: person?.imported ?? false,
       hasResume: person?.hasResume ?? true,
@@ -132,4 +142,15 @@ export async function loadBoard(
   }
   if (Object.keys(truncated).length > 0) data.truncated = truncated;
   return { ok: true, data };
+}
+
+async function loadMeetingBadges(supabase: SupabaseClient<Database>, jobPostId: string) {
+  const { data, error } = await supabase.rpc("job_interview_badges", { p_job_post_id: jobPostId });
+  if (error) throw new Error(error.message);
+  const badges = new Map<string, MeetingBadge>();
+  for (const row of data ?? []) {
+    const badge = meetingBadgeOf(row);
+    if (badge) badges.set(row.application_id, badge);
+  }
+  return badges;
 }

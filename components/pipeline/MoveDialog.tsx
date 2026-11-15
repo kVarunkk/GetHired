@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Loader2 } from "lucide-react";
 import { previewEmailAction, type PreviewEmailResult } from "@/app/actions/pipeline/preview-email";
+import { countUpcomingInterviewsAction } from "@/app/actions/pipeline/count-upcoming-interviews";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
   ResponsiveDialog,
@@ -64,10 +66,18 @@ type Props = {
   fromKinds?: (PipelineStageKind | null)[];
   /** How many of them have an open AI interview invite, which a move to Rejected or Hired cancels. */
   openInterviews?: number;
+  /**
+   * The applications being moved: a move to Rejected or Hired looks up their
+   * upcoming interviews with people and offers to cancel them (IVT-071).
+   */
+  applicationIds?: string[];
   isMoving?: boolean;
-  onConfirm: (email?: MoveEmail) => void;
+  /** `options` only when there are upcoming interviews to cancel or keep. */
+  onConfirm: (email?: MoveEmail, options?: MoveOptions) => void;
   onCancel: () => void;
 };
+
+export type MoveOptions = { cancelInterviews: boolean };
 
 /**
  * Confirms a move (PL-REQ-004, PL-TASK-031): the stage, the status the
@@ -96,6 +106,7 @@ function MoveDialogBody({
   previewApplicationId,
   fromKinds = [],
   openInterviews = 0,
+  applicationIds,
   isMoving = false,
   onConfirm,
   onCancel,
@@ -105,7 +116,22 @@ function MoveDialogBody({
   const purposes = new Set(fromKinds.map((from) => purposeForMove(from, stage.kind)));
   const mixed = purposes.size > 1;
   const purpose = purposes.size === 1 ? [...purposes][0] : purposeForKind(stage.kind);
-  const cancelsInterviews = (stage.kind === "rejected" || stage.kind === "hired") && openInterviews > 0;
+  const closing = stage.kind === "rejected" || stage.kind === "hired";
+  const cancelsInterviews = closing && openInterviews > 0;
+  // D14: "Cancel N upcoming interviews", checked by default. Unknown while loading or after a failed read.
+  const [upcoming, setUpcoming] = useState(0);
+  const [cancelUpcoming, setCancelUpcoming] = useState(true);
+  const idsKey = closing ? (applicationIds ?? []).join(",") : "";
+  useEffect(() => {
+    if (!idsKey) return;
+    let stale = false;
+    countUpcomingInterviewsAction({ applicationIds: idsKey.split(",") })
+      .then((result) => !stale && result.ok && setUpcoming(result.count))
+      .catch(() => undefined);
+    return () => {
+      stale = true;
+    };
+  }, [idsKey]);
   const choices = useMemo(
     () => [
       ...templates.filter((t) => t.purpose === purpose),
@@ -154,10 +180,12 @@ function MoveDialogBody({
     template !== null && local.ok && unknown.length === 0 && missing.length === 0 && !isMoving;
 
   const confirm = () => {
-    if (!emailOn) return onConfirm(undefined);
+    const send = (email?: MoveEmail) =>
+      upcoming > 0 ? onConfirm(email, { cancelInterviews: cancelUpcoming }) : onConfirm(email);
+    if (!emailOn) return send(undefined);
     if (!template) return;
     const edited = subject !== template.subject || body !== template.body_md;
-    onConfirm(edited ? { templateId: template.id, overrides: { subject, body } } : { templateId: template.id });
+    send(edited ? { templateId: template.id, overrides: { subject, body } } : { templateId: template.id });
   };
 
   return (
@@ -179,6 +207,24 @@ function MoveDialogBody({
               ? "Their open AI interview invite will be cancelled, and the held interview minutes released."
               : `${openInterviews} open AI interview invite${openInterviews === 1 ? "" : "s"} will be cancelled, and the held interview minutes released.`}
           </p>
+        )}
+
+        {upcoming > 0 && (
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="move-cancel-interviews"
+              checked={cancelUpcoming}
+              onCheckedChange={(checked) => setCancelUpcoming(checked === true)}
+            />
+            <div className="flex flex-col gap-0.5">
+              <Label htmlFor="move-cancel-interviews">
+                Cancel {upcoming} upcoming interview{upcoming === 1 ? "" : "s"}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Scheduling links stop working, and Google Calendar tells the attendees of booked ones.
+              </p>
+            </div>
+          </div>
         )}
 
         <div className="flex items-center gap-3">

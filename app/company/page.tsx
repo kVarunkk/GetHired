@@ -24,6 +24,8 @@ import {
   getCompanyFunnel,
   type CompanyFunnel,
 } from "@/helpers/pipeline/funnel";
+import InterviewFollowUps from "@/components/interviews/InterviewFollowUps";
+import { loadInterviewFollowUps, type InterviewFollowUp } from "@/helpers/interviews/follow-ups";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -143,6 +145,12 @@ export default async function CompanyPage() {
       reportError("Failed to load the company funnel:", err);
     }
 
+    // IVT-074: overdue scorecards and unbooked links. Extra, like the funnel.
+    const followUps: InterviewFollowUp[] = await loadInterviewFollowUps(supabase).catch((err) => {
+      reportError("Failed to load the interview follow-ups:", err);
+      return [];
+    });
+
     return (
       <div className="flex flex-col w-full gap-5 p-4 mb-20">
         <PageHeader
@@ -243,6 +251,12 @@ export default async function CompanyPage() {
                 </ul>
               </section>
             )}
+          </div>
+        )}
+
+        {followUps.length > 0 && (
+          <div className="mt-8">
+            <InterviewFollowUps items={followUps} />
           </div>
         )}
 

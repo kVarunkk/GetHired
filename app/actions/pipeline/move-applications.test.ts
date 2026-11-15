@@ -107,6 +107,18 @@ describe("moveApplicationsAction (PLT-031)", () => {
     });
   });
 
+  it("passes cancelInterviews through, and leaves it out by default (IVT-071)", async () => {
+    await moveApplicationsAction({ applicationIds: [APP.id], stageId: INTERVIEW.id, cancelInterviews: false });
+    expect(vi.mocked(moveApplications).mock.calls[0][1]).toEqual({
+      applicationIds: [APP.id],
+      stageId: INTERVIEW.id,
+      cancelInterviews: false,
+    });
+    await signIn();
+    await moveApplicationsAction({ applicationIds: [APP.id], stageId: INTERVIEW.id });
+    expect(vi.mocked(moveApplications).mock.calls[1][1]).not.toHaveProperty("cancelInterviews");
+  });
+
   it.each([
     ["a non-UUID template", { templateId: "x" }],
     ["an extra email field", { templateId: "7e700000-0000-4000-8000-000000000001", to: "x@y.z" }],

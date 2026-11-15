@@ -50,14 +50,17 @@ const rowOf = (n: number, overrides: Partial<Row> = {}): Row => ({
   ...overrides,
 });
 
-type NoteRow = { application_id: string; rating: string | null };
+type NoteRow = { application_id: string; rating: string | null; rating_hidden?: boolean };
 
 /** The company owns the job, which has these applications and notes. */
 function ownsJob(rows: Row[], notes: NoteRow[] = []) {
   rls.queue("job_postings", { data: { id: PIPELINE_JOB.id }, error: null });
   rls.queue("pipeline_stages", { data: DEFAULT_STAGES, error: null });
   rls.queue("applications", { data: rows, error: null });
-  rls.queue("candidate_notes", { data: notes, error: null });
+  rls.queueRpc("list_job_note_ratings", {
+    data: notes.map((n) => ({ rating_hidden: false, ...n })),
+    error: null,
+  });
 }
 
 const get = async (jobId = PIPELINE_JOB.id) => {
@@ -202,6 +205,58 @@ describe("GET /api/company/job-posts/[job_id]/pipeline (PLT-041)", () => {
     expect(rls.callsFor("application_interviews")).toHaveLength(0);
   });
 
+  it("badges cards with their next interview or outstanding feedback, in one call (IVT-073)", async () => {
+    await signInCompany();
+    ownsJob([rowOf(1), rowOf(2), rowOf(3), rowOf(4)]);
+    rls.queueRpc("job_interview_badges", {
+      data: [
+        { application_id: appId(1), next_starts_at: "2026-10-20T14:00:00+00:00", feedback_submitted: 0, feedback_total: 0 },
+        { application_id: appId(2), next_starts_at: null, feedback_submitted: 1, feedback_total: 3 },
+        { application_id: appId(3), next_starts_at: "2026-10-21T09:30:00+00:00", feedback_submitted: 2, feedback_total: 2 },
+      ],
+      error: null,
+    });
+
+    const { body } = await get();
+
+    expect(body.applications[0].meeting).toEqual({ nextAt: "2026-10-20T14:00:00+00:00", feedback: null });
+    expect(body.applications[1].meeting).toEqual({ nextAt: null, feedback: { submitted: 1, total: 3 } });
+    // All feedback in: only the time.
+    expect(body.applications[2].meeting).toEqual({ nextAt: "2026-10-21T09:30:00+00:00", feedback: null });
+    expect(body.applications[3]).not.toHaveProperty("meeting");
+    expect(rls.callsFor("job_interview_badges")).toHaveLength(1);
+    expect(rls.callsFor("job_interview_badges")[0].chain[0].args).toEqual([
+      "job_interview_badges",
+      { p_job_post_id: PIPELINE_JOB.id },
+    ]);
+    expect(rls.callsFor("scheduled_interviews")).toEqual([]);
+    expect(rls.callsFor("interview_scorecards")).toEqual([]);
+  });
+
+  it("reads no interview badges without scheduling.view", async () => {
+    rls = createSupabaseMock({ user: COMPANY_A.user });
+    rls.queueRpc("my_company_access", { data: memberWith(["applicants.view"]).membership, error: null });
+    await setRequestUser(COMPANY_A.user, rls.client);
+    ownsJob([rowOf(1)]);
+
+    const { status, body } = await get();
+
+    expect(status).toBe(200);
+    expect(rls.callsFor("job_interview_badges")).toHaveLength(0);
+    expect(body.applications[0]).not.toHaveProperty("meeting");
+  });
+
+  it("still returns the board when the badges fail", async () => {
+    await signInCompany();
+    ownsJob([rowOf(1)]);
+    rls.queueRpc("job_interview_badges", { data: null, error: { message: "boom" } });
+
+    const { status, body } = await get();
+
+    expect(status).toBe(200);
+    expect(body.applications[0]).not.toHaveProperty("meeting");
+  });
+
   it("counts each card's notes and averages its ratings (PLT-053)", async () => {
     await signInCompany();
     ownsJob(
@@ -217,14 +272,27 @@ describe("GET /api/company/job-posts/[job_id]/pipeline (PLT-041)", () => {
 
     expect(body.applications[0]).toMatchObject({ noteCount: 3, ratingAvg: 3 });
     expect(body.applications[1]).toMatchObject({ noteCount: 0, ratingAvg: null });
-    const [noteQuery] = rls.callsFor("candidate_notes");
-    expect(noteQuery.chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
-    expect(noteQuery.chain).toContainEqual({
-      method: "eq",
-      args: ["applications.job_post_id", PIPELINE_JOB.id],
-    });
-    // Never the note bodies.
-    expect(String(noteQuery.chain.find((m) => m.method === "select")!.args[0])).not.toContain("body");
+    // One RPC for the job's ratings (IV-REQ-041/032a), never the table or the bodies.
+    expect(rls.callsFor("candidate_notes")).toEqual([]);
+    expect(rls.callsFor("list_job_note_ratings")[0].chain[0].args).toEqual([
+      "list_job_note_ratings",
+      { p_job_post_id: PIPELINE_JOB.id },
+    ]);
+  });
+
+  it("shows no average on a card whose ratings the reader is blind to (IVT-015)", async () => {
+    await signInCompany();
+    ownsJob(
+      [rowOf(1)],
+      [
+        { application_id: appId(1), rating: "strong_yes" },
+        { application_id: appId(1), rating: null, rating_hidden: true },
+      ],
+    );
+
+    const { body } = await get();
+
+    expect(body.applications[0]).toMatchObject({ noteCount: 2, ratingAvg: null });
   });
 
   it("never selects or returns contact details", async () => {

@@ -7,8 +7,10 @@ import {
   NOTE_FAIRNESS_ERROR,
   addNote,
   deleteNote,
+  getNote,
   listNotes,
   ratingSummary,
+  ratingsHidden,
   updateNote,
 } from "./notes";
 import { OWNER_A } from "@/test/utils/team";
@@ -82,6 +84,17 @@ describe("addNote (PLT-052)", () => {
     ]);
     // The event never carries the body.
     expect(JSON.stringify(inserted("application_events"))).not.toContain("Strong systems");
+  });
+
+  it("reads the new note back without the rating column, and returns the author's rating (IV-REQ-032a)", async () => {
+    onOwnApplication();
+
+    const result = await addNote(ctx(), { applicationId: APP.id, body: "Rated", rating: "strong_yes" });
+
+    const select = methodArgs(db.callsFor("candidate_notes")[0], "select")?.[0] as string;
+    expect(select.split(",").map((c) => c.trim())).not.toContain("rating");
+    expect(select).not.toBe("*");
+    expect(result).toMatchObject({ ok: true, note: { rating: "strong_yes", rating_hidden: false } });
   });
 
   it("only accepts an application on the company's own jobs", async () => {
@@ -290,25 +303,53 @@ describe("updateNote and deleteNote", () => {
   });
 });
 
-describe("listNotes", () => {
+describe("listNotes (IVT-015, IV-REQ-032a)", () => {
   it.each([
-    [{ applicationId: APP.id }, "application_id", APP.id],
-    [{ candidateUserId: PUBLIC_APPLICANT.id }, "candidate_user_id", PUBLIC_APPLICANT.id],
-  ] as const)("lists by %o, newest first", async (by, column, value) => {
+    [{ applicationId: APP.id }, { p_application_id: APP.id }],
+    [{ candidateUserId: PUBLIC_APPLICANT.id }, { p_candidate_user_id: PUBLIC_APPLICANT.id }],
+  ] as const)("reads %o through list_candidate_notes, never the table", async (by, params) => {
     const notes = [noteOf(), noteOf()];
-    db.queue("candidate_notes", { data: notes, error: null });
+    db.queueRpc("list_candidate_notes", { data: notes, error: null });
 
     expect(await listNotes(ctx(), by)).toEqual(notes);
-    const [call] = db.callsFor("candidate_notes");
-    expect(call.chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
-    expect(call.chain).toContainEqual({ method: "eq", args: [column, value] });
-    expect(call.chain).toContainEqual({ method: "order", args: ["created_at", { ascending: false }] });
+    expect(db.callsFor("list_candidate_notes")[0].chain[0]).toEqual({
+      method: "rpc",
+      args: ["list_candidate_notes", params],
+    });
+    expect(db.callsFor("candidate_notes")).toEqual([]);
+  });
+
+  it("passes on a masked rating and says so", async () => {
+    const masked = noteOf({ rating: null, rating_hidden: true, author_user_id: "someone-else" });
+    db.queueRpc("list_candidate_notes", { data: [masked, noteOf({ rating: "yes" })], error: null });
+
+    const notes = await listNotes(ctx(), { applicationId: APP.id });
+    expect(notes[0]).toMatchObject({ rating: null, rating_hidden: true });
+    expect(ratingsHidden(notes)).toBe(true);
+    expect(ratingsHidden([noteOf()])).toBe(false);
   });
 
   it("throws on a database error", async () => {
-    db.queue("candidate_notes", { data: null, error: { message: "boom" } });
+    db.queueRpc("list_candidate_notes", { data: null, error: { message: "boom" } });
 
     await expect(listNotes(ctx(), { applicationId: APP.id })).rejects.toThrow(/boom/);
+  });
+});
+
+describe("getNote", () => {
+  it("reads one note by id through the RPC", async () => {
+    const note = noteOf({ id: NOTE_ID });
+    db.queueRpc("list_candidate_notes", { data: [note], error: null });
+
+    expect(await getNote(ctx(), NOTE_ID)).toEqual(note);
+    expect(db.callsFor("list_candidate_notes")[0].chain[0].args).toEqual(["list_candidate_notes", { p_note_id: NOTE_ID }]);
+  });
+
+  it("returns null for a malformed id without a query, and for a missing note", async () => {
+    expect(await getNote(ctx(), "nope")).toBeNull();
+    expect(db.calls).toEqual([]);
+    db.queueRpc("list_candidate_notes", { data: [], error: null });
+    expect(await getNote(ctx(), NOTE_ID)).toBeNull();
   });
 });
 
