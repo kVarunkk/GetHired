@@ -43,6 +43,7 @@ import {
 import ResumeImportWidget, { type ResumeImportOutput } from "./recruiter/ResumeImportWidget";
 import SpreadsheetImportWidget, { type SpreadsheetImportOutput } from "./recruiter/SpreadsheetImportWidget";
 import { isRoleApprovalTool, RoleApprovalDetails } from "./recruiter/RoleApprovalCard";
+import { isPipelineApprovalTool, PipelineApprovalDetails } from "./recruiter/PipelineApprovalDetails";
 
 export { isInAppHref };
 
@@ -129,6 +130,10 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   listApplicants: { running: "Loading applicants…", done: "Loaded applicants", action: "load applicants" },
   getApplication: { running: "Reading the application…", done: "Read the application", action: "read the application" },
   screenApplicants: { running: "Queueing screenings…", done: "Queued screenings", action: "screen applicants" },
+  listPipelines: { running: "Loading your pipelines…", done: "Loaded your pipelines", action: "load your pipelines" },
+  createPipeline: { running: "Creating the pipeline…", done: "Created the pipeline", action: "create a pipeline" },
+  setJobPipeline: { running: "Switching the job's pipeline…", done: "Switched the job's pipeline", action: "switch the job's pipeline" },
+  customizeJobPipeline: { running: "Giving the job its own pipeline…", done: "Gave the job its own pipeline", action: "give the job its own pipeline" },
   listStages: { running: "Loading your pipeline…", done: "Loaded your pipeline", action: "load your pipeline" },
   createStage: { running: "Adding the stage…", done: "Added the stage", action: "add a pipeline stage" },
   renameStage: { running: "Renaming the stage…", done: "Renamed the stage", action: "rename the stage" },
@@ -577,6 +582,10 @@ function approvalTitle(name: string, input: unknown) {
       return "Send this message on GetHired?";
     case "archiveStage":
       return "Archive this stage? It leaves your pipeline and can't be brought back.";
+    case "setJobPipeline":
+      return "Move this job onto another pipeline?";
+    case "customizeJobPipeline":
+      return "Give this job its own pipeline?";
     case "deleteEmailTemplate":
       return "Delete this email template? This can't be undone.";
     case "deleteNote":
@@ -636,6 +645,8 @@ function approvalDetails(name: string, input: unknown) {
   if (isRoleApprovalTool(name)) return [];
   // Interview plans and scheduling show a server preview (SchedulingApprovalDetails).
   if (isSchedulingPreviewTool(name)) return [];
+  // Pipeline switches name the pipelines and where each stage goes (PipelineApprovalDetails).
+  if (isPipelineApprovalTool(name)) return [];
   return describeInput(input);
 }
 
@@ -670,6 +681,7 @@ function ApprovalCard({
       {isResumeEditTool(name) && <ResumeEditApprovalDetails tool={name} input={part.input} />}
       {isRoleApprovalTool(name) && <RoleApprovalDetails tool={name} input={part.input} />}
       {isSchedulingPreviewTool(name) && <SchedulingApprovalDetails tool={name} input={part.input} />}
+      {isPipelineApprovalTool(name) && <PipelineApprovalDetails tool={name} input={part.input} />}
       {(details.length > 0 || isOnboarding) && (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
           {details.map(([key, value]) => (

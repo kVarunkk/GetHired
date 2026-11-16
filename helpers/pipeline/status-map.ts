@@ -4,6 +4,21 @@ export type PipelineStageKind = Enums<"pipeline_stage_kind">;
 export type ApplicationStatus = Enums<"application_status">;
 
 /**
+ * Each kind's display name, in pipeline order. Client-safe. Where stages of
+ * several pipelines meet (the dashboard's totals, JP-REQ-010), rows are kinds
+ * named by this, since stage names differ between pipelines.
+ */
+export const STAGE_KIND_LABELS: Record<PipelineStageKind, string> = {
+  applied: "Applied",
+  screening: "Screening",
+  interview: "Interview",
+  offer: "Offer",
+  hired: "Hired",
+  rejected: "Rejected",
+  on_hold: "On hold",
+};
+
+/**
  * §3.2 of the pipeline spec: the candidate-facing status for each stage kind.
  * The only TS copy of the map; the DB's `application_status_for_kind` mirrors
  * it, and the `applications_sync_status` trigger applies it on every move.

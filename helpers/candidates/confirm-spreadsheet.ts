@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { companyAllows } from "@/helpers/companies/require-company";
 import { canonicalizeLocations } from "@/helpers/locations/aliases";
+import { listStages } from "@/helpers/pipeline/stages";
 import { createTalentList, deleteTalentList } from "@/helpers/pipeline/talent-lists";
 import { parseCandidateFields, type CandidateFieldErrors } from "./candidate-schema";
 import { IMPORT_MESSAGES, importCountsOf, importMessage, type ImportCounts } from "./copy";
@@ -95,13 +96,9 @@ export async function confirmSpreadsheetRows(
   }
 
   if (jobPostId && (stageId || stageMap)) {
-    const { data: stages, error } = await auth.supabase
-      .from("pipeline_stages")
-      .select("id")
-      .eq("company_id", auth.company.id)
-      .eq("archived", false);
-    if (error) throw new Error(`Failed to load the stages: ${error.message}`);
-    const ids = new Set((stages ?? []).map((s) => s.id));
+    // The job's own pipeline (JP-REQ-004): a stage of another pipeline is refused.
+    const stages = await listStages(auth, { jobPostId });
+    const ids = new Set(stages.map((s) => s.id));
     const wanted = [...(stageId ? [stageId] : []), ...Object.values(stageMap ?? {})];
     if (wanted.some((id) => !ids.has(id))) return { ok: false, error: IMPORT_MESSAGES.invalid_stage };
   }

@@ -98,6 +98,14 @@ function company(n: number, name: string): CompanyFixture {
   };
 }
 
+/**
+ * The id of a fixture company's Default pipeline (job pipelines, JPT-001):
+ * `seed_default_pipeline` creates one per company, and every job starts on it.
+ */
+export function defaultPipelineIdOf(companyId: string): string {
+  return `9e000000-0000-4000-8000-${companyId.slice(-12)}`;
+}
+
 export const COMPANY_A = company(1, "Acme");
 export const COMPANY_B = company(2, "Globex");
 
@@ -202,6 +210,7 @@ export function jobPostingOf(
     matching_error: null,
     matched_at: null,
     last_applicant_notified_at: null,
+    pipeline_id: defaultPipelineIdOf(owner.id),
     embedding: null,
     embedding_new: null,
     embedding_updated_at: null,

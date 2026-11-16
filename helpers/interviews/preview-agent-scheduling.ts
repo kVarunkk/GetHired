@@ -3,6 +3,7 @@ import type { z } from "zod";
 import type { CompanySessionContext } from "@/helpers/companies/company-session";
 import { companyAllows } from "@/helpers/companies/require-company";
 import { LINK_VALID_DAYS } from "@/helpers/calendar/config";
+import { listPipelineStages } from "@/helpers/pipeline/stages";
 import {
   interviewIdToolSchema,
   rescheduleToolSchema,
@@ -236,21 +237,24 @@ async function previewRemind(session: Session, input: z.infer<typeof interviewId
 async function previewSavePlan(session: Session, input: z.infer<typeof savePlanToolSchema>): Promise<SchedulingPreview> {
   const denied = companyAllows(session.company, { permission: "interview_plans.manage", jobId: input.jobPostId });
   if (denied) return fail(denied);
-  const [{ data: job }, { data: stages }, { count }] = await Promise.all([
+  const [{ data: job }, { count }] = await Promise.all([
     session.supabase
       .from("job_postings")
-      .select("title")
+      .select("title, pipeline_id")
       .eq("id", input.jobPostId)
       .eq("company_id", session.company.id)
       .maybeSingle(),
-    session.supabase.from("pipeline_stages").select("id, name").eq("company_id", session.company.id),
     session.supabase
       .from("job_interview_plan_items")
       .select("id", { count: "exact", head: true })
       .eq("job_post_id", input.jobPostId),
   ]);
   if (!job) return fail("Job posting not found.");
-  const stageName = new Map((stages ?? []).map((s) => [s.id, s.name]));
+  // The job's own pipeline (JP-REQ-004): a stage from another one shows as unknown, and the save refuses it.
+  const stages = job.pipeline_id
+    ? await listPipelineStages(session, job.pipeline_id, { includeArchived: true })
+    : [];
+  const stageName = new Map(stages.map((s) => [s.id, s.name]));
   const rows: SchedulingPreviewRow[] = [{ label: "Job", value: job.title }];
   for (const item of input.interviews) {
     const n = item.competencies.length;

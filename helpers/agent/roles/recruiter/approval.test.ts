@@ -38,6 +38,8 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
         "sendOutreach",
         "withdrawOutreach",
         "archiveStage",
+        "setJobPipeline",
+        "customizeJobPipeline",
         "deleteEmailTemplate",
         "deleteNote",
         "deleteTalentList",

@@ -27,6 +27,10 @@ export const RECRUITER_APPROVAL_POLICY: ToolApprovalPolicy = {
     "withdrawOutreach",
     // Archived stages leave the board and the app has no way to bring them back.
     "archiveStage",
+    // JPT-041: moves every application to the job onto another pipeline's stages;
+    // the card shows where each stage goes.
+    "setJobPipeline",
+    "customizeJobPipeline",
     // A template can't be brought back.
     "deleteEmailTemplate",
     // A note can't be brought back.

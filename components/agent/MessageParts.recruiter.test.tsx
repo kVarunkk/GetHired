@@ -9,6 +9,8 @@ import { previewAgentJobDeleteAction } from "@/app/actions/jobs/preview-agent-jo
 import { previewAgentInterviewInviteAction } from "@/app/actions/interviews/preview-agent-interview-invite";
 import { previewAgentAddToJobAction } from "@/app/actions/candidates/preview-agent-add-to-job";
 import { previewAgentSchedulingAction } from "@/app/actions/interviews/preview-agent-scheduling";
+import { previewAgentJobPipelineSwitchAction } from "@/app/actions/pipeline/preview-agent-job-pipeline-switch";
+import { previewAgentCustomizeJobPipelineAction } from "@/app/actions/pipeline/preview-agent-customize-job-pipeline";
 
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
 vi.mock("@/app/actions/pipeline/preview-agent-move", () => ({ previewAgentMoveAction: vi.fn() }));
@@ -19,6 +21,12 @@ vi.mock("@/app/actions/interviews/preview-agent-interview-invite", () => ({
 }));
 vi.mock("@/app/actions/candidates/preview-agent-add-to-job", () => ({ previewAgentAddToJobAction: vi.fn() }));
 vi.mock("@/app/actions/interviews/preview-agent-scheduling", () => ({ previewAgentSchedulingAction: vi.fn() }));
+vi.mock("@/app/actions/pipeline/preview-agent-job-pipeline-switch", () => ({
+  previewAgentJobPipelineSwitchAction: vi.fn(),
+}));
+vi.mock("@/app/actions/pipeline/preview-agent-customize-job-pipeline", () => ({
+  previewAgentCustomizeJobPipelineAction: vi.fn(),
+}));
 
 const assistant = (parts: unknown[]): UIMessage =>
   ({ id: "a1", role: "assistant", parts }) as UIMessage;
@@ -622,6 +630,65 @@ describe("MessageParts: adding your candidates to a job (CPT-058)", () => {
     renderParts(assistant([approval("addCandidatesToJob", { jobPostId: "b1", candidateIds: ["c1"] })]));
     expect(screen.getByText("Add 1 of your candidates to this job? No one is emailed.")).toBeInTheDocument();
     expect(await screen.findByText(/Your role can't import applicants here./)).toBeInTheDocument();
+  });
+});
+
+describe("MessageParts: job pipeline approvals (JPT-041)", () => {
+  const approval = (tool: string, input: unknown) => ({
+    type: `tool-${tool}`,
+    toolCallId: "c1",
+    state: "approval-requested",
+    input,
+    approval: { id: "ap1" },
+  });
+
+  it("shows where each stage of the job goes, by name", async () => {
+    vi.mocked(previewAgentJobPipelineSwitchAction).mockResolvedValue({
+      ok: true,
+      jobTitle: "Backend Engineer",
+      from: "Default",
+      to: "Engineering",
+      applications: 3,
+      moves: [
+        { stage: "Applied", to: "Applied", applications: 2, planItems: 0 },
+        { stage: "Interview", to: "Tech interview", applications: 1, planItems: 2 },
+      ],
+    });
+    const input = { jobPostId: "b1", pipelineId: "p2" };
+    renderParts(assistant([approval("setJobPipeline", input)]));
+
+    expect(screen.getByText("Move this job onto another pipeline?")).toBeInTheDocument();
+    expect(await screen.findByText(/Interview → Tech interview/)).toBeInTheDocument();
+    expect(screen.getByText(/1 application, 2 planned interviews/)).toBeInTheDocument();
+    expect(screen.getByText(/won't be emailed/)).toBeInTheDocument();
+    expect(vi.mocked(previewAgentJobPipelineSwitchAction)).toHaveBeenCalledWith(input);
+    expect(screen.queryByText("p2")).not.toBeInTheDocument();
+  });
+
+  it("says when the switch won't go through (JP-TEST-006)", async () => {
+    vi.mocked(previewAgentJobPipelineSwitchAction).mockResolvedValue({
+      ok: false,
+      error: 'The new pipeline has no stage that shows candidates "On hold", which "On hold" needs. Add one to it first.',
+    });
+    renderParts(assistant([approval("setJobPipeline", { jobPostId: "b1", pipelineId: "p2" })]));
+
+    expect(await screen.findByText(/no stage that shows candidates "On hold"/)).toBeInTheDocument();
+  });
+
+  it("names the copy and the jobs that keep the old pipeline", async () => {
+    vi.mocked(previewAgentCustomizeJobPipelineAction).mockResolvedValue({
+      ok: true,
+      jobTitle: "Backend Engineer",
+      from: "Default",
+      name: "Backend Engineer",
+      stages: 7,
+      otherJobs: 2,
+    });
+    renderParts(assistant([approval("customizeJobPipeline", { jobPostId: "b1" })]));
+
+    expect(screen.getByText("Give this job its own pipeline?")).toBeInTheDocument();
+    expect(await screen.findByText(/Copies Default \(7 stages\)/)).toBeInTheDocument();
+    expect(screen.getByText(/2 other jobs keep Default/)).toBeInTheDocument();
   });
 });
 

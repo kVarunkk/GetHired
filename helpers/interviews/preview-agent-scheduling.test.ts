@@ -12,6 +12,7 @@ const APP = "e0000000-0000-4000-8000-000000000001";
 const INTERVIEW = "1e000000-0000-4000-8000-000000000001";
 const PLAN_ITEM = "1a000000-0000-4000-8000-000000000001";
 const STAGE = "90000000-0000-4000-8000-000000000002";
+const PIPELINE = "9e000000-0000-4000-8000-000000000001";
 const ADA = "c1000000-0000-4000-8000-000000000002";
 const BEN = "c1000000-0000-4000-8000-000000000003";
 const TEAM = [
@@ -212,7 +213,7 @@ describe("previewAgentScheduling (IVT-082)", () => {
   });
 
   it("shows the plan by stage and how many interviews it replaces", async () => {
-    db.queue("job_postings", { data: { title: "Backend Engineer" }, error: null });
+    db.queue("job_postings", { data: { title: "Backend Engineer", pipeline_id: PIPELINE }, error: null });
     db.queue("pipeline_stages", { data: [{ id: STAGE, name: "Onsite" }], error: null });
     db.queue("job_interview_plan_items", { data: null, count: 2, error: null } as never);
     const result = await previewAgentScheduling(session, "saveInterviewPlan", {
@@ -234,6 +235,8 @@ describe("previewAgentScheduling (IVT-082)", () => {
       ],
       notices: ["Replaces the job's current plan (2 interviews). Interviews already scheduled keep their own copy."],
     });
+    // The stage names come from the job's own pipeline (JPT-025).
+    expect(db.callsFor("pipeline_stages")[0].chain).toContainEqual({ method: "eq", args: ["pipeline_id", PIPELINE] });
     expectNoWrites();
   });
 

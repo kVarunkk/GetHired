@@ -7,6 +7,7 @@ import { isUuid } from "@/helpers/agent/auth";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { loadJobForm } from "@/helpers/jobs/load-job-form";
+import { listPipelines } from "@/helpers/pipeline/pipelines";
 import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 
@@ -41,8 +42,13 @@ export default async function EditJobPostPage({ params }: { params: Promise<{ jo
       .maybeSingle();
     if (error) throw error;
     if (!job) notFound();
-    const loaded = await loadJobForm(supabase, company.id, job.id);
+    const [loaded, pipelines, applications] = await Promise.all([
+      loadJobForm(supabase, company.id, job.id),
+      listPipelines({ supabase, company }),
+      supabase.from("applications").select("id", { count: "exact", head: true }).eq("job_post_id", job.id),
+    ]);
     if (!loaded) notFound();
+    if (applications.error) throw applications.error;
 
     return (
       <div className="flex w-full flex-col gap-6">
@@ -66,10 +72,13 @@ export default async function EditJobPostPage({ params }: { params: Promise<{ jo
             questions: job.questions ?? [],
             department: job.department ?? "",
             workplace_type: job.workplace_type ?? null,
+            pipeline_id: job.pipeline_id ?? undefined,
           }}
           initialForm={loaded.form}
           answeredQuestionIds={loaded.answeredQuestionIds}
           cancelHref={`/company/job-posts/${job.id}`}
+          pipelines={pipelines.map((p) => ({ id: p.id, name: p.name, isDefault: p.is_default }))}
+          hasApplications={(applications.count ?? 0) > 0}
         />
       </div>
     );

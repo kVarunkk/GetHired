@@ -19,6 +19,7 @@ import {
 } from "@/helpers/applications/application-page";
 import { isOpenInterview } from "@/helpers/interview/screening/summary-view";
 import { loadSchedulingPlan } from "@/helpers/interviews/plan";
+import { stagesForJob } from "@/helpers/pipeline/stages";
 
 /**
  * The candidate's name names the answers tab, and the sections' titles get it
@@ -57,14 +58,11 @@ export default async function ApplicationLayout({
 
     // RLS: only the company's members can read its stages and templates.
     const companyId = application.job_postings?.company_id;
-    const [[{ data: allStages }, { data: templates }], interview, schedulingPlan] = await Promise.all([
-      companyId
+    const [[allStages, { data: templates }], interview, schedulingPlan] = await Promise.all([
+      companyId && jobId
         ? Promise.all([
-            supabase
-              .from("pipeline_stages")
-              .select("id, name, kind, archived")
-              .eq("company_id", companyId)
-              .order("position", { ascending: true }),
+            // The job's own pipeline (JP-REQ-004); archived ones too, for the current stage's kind.
+            stagesForJob(companyId, jobId, true),
             // For the stage picker's move dialog, which can email the candidate.
             supabase
               .from("company_email_templates")
@@ -72,7 +70,7 @@ export default async function ApplicationLayout({
               .eq("company_id", companyId)
               .order("name", { ascending: true }),
           ])
-        : [{ data: null }, { data: null }],
+        : [null, { data: null }],
       loadApplicationInterview(application.id),
       // D8 (IVT-072): the stage picker's "Schedule …" prompt, for scheduling.manage.
       jobId && can(company, "scheduling.manage", jobId) ? loadSchedulingPlan(supabase, jobId) : undefined,

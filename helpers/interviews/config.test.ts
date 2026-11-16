@@ -48,7 +48,11 @@ describe("interview config (IVT-002)", () => {
   });
 
   it("needs as many scorecards for a summary as save_feedback_summary does (IV-REQ-051)", () => {
-    const sql = readFileSync(path.join(MIGRATIONS, "20261114160000_recruiter_interviews_ai.sql"), "utf8");
+    // A Windows checkout (core.autocrlf) gives the file CRLF line endings.
+    const sql = readFileSync(path.join(MIGRATIONS, "20261114160000_recruiter_interviews_ai.sql"), "utf8").replace(
+      /\r\n/g,
+      "\n",
+    );
     expect(sql).toContain(`function public.feedback_summary_min()
 returns integer language sql immutable as $$ select ${FEEDBACK_SUMMARY_MIN} $$;`);
   });

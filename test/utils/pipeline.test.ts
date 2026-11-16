@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { COMPANY_A } from "./recruiter";
+import { COMPANY_A, COMPANY_B, defaultPipelineIdOf, jobPostingOf } from "./recruiter";
 import {
+  DEFAULT_PIPELINE_ID,
   DEFAULT_STAGES,
+  PIPELINE_JOB,
   PIPELINE_STAGE_KINDS,
+  pipelineOf,
   eventOf,
   noteOf,
   pipelineAppOf,
@@ -64,6 +67,30 @@ describe("pipeline fixtures", () => {
     expect(app.job_postings.company_id).toBe(COMPANY_A.id);
     expect(app.job_postings.company_info.name).toBe(COMPANY_A.info.name);
     expect(pipelineAppOf().id).not.toBe(app.id);
+  });
+
+  it("puts every default stage and the pipeline job on COMPANY_A's Default pipeline (JPT-001)", () => {
+    expect(DEFAULT_STAGES.every((s) => s.pipeline_id === DEFAULT_PIPELINE_ID)).toBe(true);
+    expect(PIPELINE_JOB.pipeline_id).toBe(DEFAULT_PIPELINE_ID);
+    expect(jobPostingOf(COMPANY_B).pipeline_id).toBe(defaultPipelineIdOf(COMPANY_B.id));
+    expect(defaultPipelineIdOf(COMPANY_B.id)).not.toBe(DEFAULT_PIPELINE_ID);
+  });
+
+  it("pipelineOf defaults to COMPANY_A's Default pipeline", () => {
+    expect(pipelineOf()).toMatchObject({
+      id: DEFAULT_PIPELINE_ID,
+      company_id: COMPANY_A.id,
+      name: "Default",
+      is_default: true,
+      archived: false,
+    });
+  });
+
+  it("pipelineOf builds another pipeline with overrides", () => {
+    const eng = pipelineOf({ id: "9e000000-0000-4000-8000-0000000000e1", name: "Engineering" });
+    expect(eng).toMatchObject({ name: "Engineering", is_default: false, company_id: COMPANY_A.id });
+    expect(pipelineOf({ companyId: COMPANY_B.id, id: defaultPipelineIdOf(COMPANY_B.id) }).is_default).toBe(true);
+    expect(pipelineOf({ archived: true, isDefault: false })).toMatchObject({ archived: true, is_default: false });
   });
 
   it("templateOf, noteOf and eventOf belong to COMPANY_A", () => {

@@ -20,6 +20,7 @@ const MATCH = {
   score: 57,
 };
 const STAGES = [{ id: "5a000000-0000-4000-8000-000000000001", name: "Applied" }];
+const PIPELINE = "9e000000-0000-4000-8000-000000000001";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -29,6 +30,7 @@ beforeEach(() => {
 describe("loadPoolMatchesCard (CPT-053, CP-REQ-060)", () => {
   it("loads the matches and the stages to add them to", async () => {
     const db = createSupabaseMock();
+    db.queue("job_postings", { data: { pipeline_id: PIPELINE }, error: null });
     db.queue("pipeline_stages", { data: STAGES, error: null });
 
     expect(await loadPoolMatchesCard(db.client, OWNER_A.myCompany, JOB_A1)).toEqual({
@@ -37,8 +39,11 @@ describe("loadPoolMatchesCard (CPT-053, CP-REQ-060)", () => {
       stages: STAGES,
     });
     expect(listPoolMatches).toHaveBeenCalledWith(db.client, JOB_A1);
+    expect(db.callsFor("job_postings")[0].chain).toContainEqual({ method: "eq", args: ["id", JOB_A1] });
+    // The job's own pipeline (JPT-024).
     const { chain } = db.callsFor("pipeline_stages")[0];
     expect(chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
+    expect(chain).toContainEqual({ method: "eq", args: ["pipeline_id", PIPELINE] });
     expect(chain).toContainEqual({ method: "eq", args: ["archived", false] });
   });
 

@@ -6,11 +6,19 @@ import { addNote, deleteNote, listNotes, updateNote, type CandidateNote } from "
 import {
   archiveStage,
   createStage,
-  listStages,
+  listPipelineStages,
   renameStage,
   reorderStages,
+  resolvePipelineId,
   type PipelineStage,
 } from "@/helpers/pipeline/stages";
+import {
+  createPipeline,
+  forkJobPipeline,
+  listPipelines,
+  setJobPipeline,
+  type PipelineSummary,
+} from "@/helpers/pipeline/pipelines";
 import {
   addToTalentList,
   createTalentList,
@@ -31,11 +39,18 @@ vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
 vi.mock("@/helpers/pipeline/stages", () => ({
   MAX_ACTIVE_STAGES: 12,
   MAX_STAGE_NAME: 40,
-  listStages: vi.fn(),
+  listPipelineStages: vi.fn(),
   createStage: vi.fn(),
   renameStage: vi.fn(),
   reorderStages: vi.fn(),
   archiveStage: vi.fn(),
+  resolvePipelineId: vi.fn(),
+}));
+vi.mock("@/helpers/pipeline/pipelines", () => ({
+  listPipelines: vi.fn(),
+  createPipeline: vi.fn(),
+  setJobPipeline: vi.fn(),
+  forkJobPipeline: vi.fn(),
 }));
 vi.mock("@/helpers/pipeline/move", () => ({ moveApplications: vi.fn() }));
 vi.mock("@/helpers/pipeline/notes", async () => ({
@@ -63,6 +78,9 @@ const APP_1 = "e0000000-0000-4000-8000-000000000001";
 const APP_2 = "e0000000-0000-4000-8000-000000000002";
 const CANDIDATE = "a0000000-0000-4000-8000-000000000001";
 const JOB = "b0000000-0000-4000-8000-000000000001";
+const DEFAULT_PIPELINE = "9e000000-0000-4000-8000-000000000001";
+const ENG_PIPELINE = "9e000000-0000-4000-8000-000000000002";
+const STAGE_2 = "90000000-0000-4000-8000-000000000003";
 const STAGE = "90000000-0000-4000-8000-000000000002";
 const TEMPLATE = "d0000000-0000-4000-8000-000000000001";
 const LIST = "f0000000-0000-4000-8000-000000000001";
@@ -85,11 +103,43 @@ const note = (overrides: Partial<CandidateNote>): CandidateNote => ({
   ...overrides,
 });
 
+const summary = (overrides: Partial<PipelineSummary>): PipelineSummary => ({
+  id: DEFAULT_PIPELINE,
+  name: "Default",
+  is_default: true,
+  archived: false,
+  jobs: 3,
+  openJobs: 2,
+  closedJobs: 1,
+  activeStages: 7,
+  ...overrides,
+});
+const DEFAULT_SUMMARY = summary({});
+const ENG_SUMMARY = summary({
+  id: ENG_PIPELINE,
+  name: "Engineering",
+  is_default: false,
+  jobs: 1,
+  openJobs: 1,
+  closedJobs: 0,
+  activeStages: 5,
+});
+/** How a tool result names the default pipeline. */
+const DEFAULT_VIEW = {
+  id: DEFAULT_PIPELINE,
+  name: "Default",
+  isDefault: true,
+  sharedByJobs: 3,
+  url: `/company/settings/pipelines/${DEFAULT_PIPELINE}`,
+};
+
 let supabase: SupabaseMock;
 let tools: ReturnType<typeof createPipelineTools>;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(resolvePipelineId).mockResolvedValue(DEFAULT_PIPELINE);
+  vi.mocked(listPipelines).mockResolvedValue([DEFAULT_SUMMARY, ENG_SUMMARY]);
   supabase = createSupabaseMock();
   tools = createPipelineTools(recruiterToolContext(supabase.client));
 });
@@ -135,8 +185,8 @@ describe("pipeline tool schemas", () => {
 });
 
 describe("listStages tool", () => {
-  it("lists the stages with what candidates see, and the company's templates", async () => {
-    vi.mocked(listStages).mockResolvedValue([
+  it("lists the default pipeline's stages with what candidates see, the pipeline and the company's templates", async () => {
+    vi.mocked(listPipelineStages).mockResolvedValue([
       stage("s0", "Applied", "applied", 0),
       stage(STAGE, "Interview", "interview", 1),
       stage("s6", "On hold", "on_hold", 2),
@@ -148,12 +198,16 @@ describe("listStages tool", () => {
 
     const result = await execTool(tools.listStages, {});
 
-    expectSessionCtx(vi.mocked(listStages).mock.calls[0][0]);
+    // Without a job or a pipeline: the default (JPT-028).
+    expectSessionCtx(vi.mocked(resolvePipelineId).mock.calls[0][0]);
+    expect(vi.mocked(resolvePipelineId).mock.calls[0][1]).toEqual({ pipelineId: undefined });
+    expect(vi.mocked(listPipelineStages).mock.calls[0][1]).toBe(DEFAULT_PIPELINE);
     expect(supabase.callsFor("company_email_templates")[0].chain).toContainEqual({
       method: "eq",
       args: ["company_id", COMPANY_A.id],
     });
     expect(result).toEqual({
+      pipeline: DEFAULT_VIEW,
       stages: [
         { id: "s0", name: "Applied", kind: "applied", candidateSees: "submitted" },
         { id: STAGE, name: "Interview", kind: "interview", candidateSees: "reviewed" },
@@ -161,6 +215,74 @@ describe("listStages tool", () => {
       ],
       emailTemplates: [{ id: TEMPLATE, name: "Rejection", purpose: "rejection", isDefault: true }],
     });
+  });
+
+  it("reads the stages of the job's pipeline (JPT-028)", async () => {
+    vi.mocked(resolvePipelineId).mockResolvedValue(ENG_PIPELINE);
+    vi.mocked(listPipelineStages).mockResolvedValue([stage("s0", "Applied", "applied", 0)]);
+    supabase.queue("company_email_templates", { data: [], error: null });
+
+    const result = await execTool(tools.listStages, { jobPostId: JOB });
+
+    expect(vi.mocked(resolvePipelineId).mock.calls[0][1]).toEqual({ jobPostId: JOB });
+    expect(vi.mocked(listPipelineStages).mock.calls[0][1]).toBe(ENG_PIPELINE);
+    expect(result).toMatchObject({ pipeline: { id: ENG_PIPELINE, name: "Engineering", sharedByJobs: 1 } });
+  });
+
+  it("reads a named pipeline's stages and says how many jobs share it (JPT-040)", async () => {
+    vi.mocked(listPipelineStages).mockResolvedValue([]);
+    supabase.queue("company_email_templates", { data: [], error: null });
+
+    const result = await execTool(tools.listStages, { pipelineId: DEFAULT_PIPELINE });
+
+    expect(vi.mocked(resolvePipelineId).mock.calls[0][1]).toEqual({ pipelineId: DEFAULT_PIPELINE });
+    expect(result).toMatchObject({ pipeline: { sharedByJobs: 3, isDefault: true } });
+  });
+
+  it("refuses a job or pipeline that isn't the company's", async () => {
+    vi.mocked(resolvePipelineId).mockResolvedValue(null);
+
+    expect(await execTool(tools.listStages, { jobPostId: JOB })).toEqual({ error: "Job post not found." });
+    expect(await execTool(tools.listStages, { pipelineId: ENG_PIPELINE })).toEqual({ error: "Pipeline not found." });
+    expect(listPipelineStages).not.toHaveBeenCalled();
+  });
+
+  it("takes a job or a pipeline, not both", async () => {
+    expect((await validateInput(tools.listStages, { jobPostId: JOB, pipelineId: ENG_PIPELINE })).success).toBe(false);
+  });
+});
+
+describe("stage write tools take a pipeline (JPT-040)", () => {
+  it("refuses when the company has no such pipeline", async () => {
+    vi.mocked(resolvePipelineId).mockResolvedValue(null);
+
+    expect(await execTool(tools.renameStage, { stageId: STAGE, name: "Onsite" })).toEqual({
+      error: "Pipeline not found.",
+    });
+    expect(renameStage).not.toHaveBeenCalled();
+  });
+
+  it("edits the named pipeline and names it in the result", async () => {
+    vi.mocked(resolvePipelineId).mockResolvedValue(ENG_PIPELINE);
+    vi.mocked(createStage).mockResolvedValue({ ok: true, stage: stage(STAGE, "Take-home", "interview", 5) });
+
+    const result = await execTool(tools.createStage, { name: "Take-home", kind: "interview", pipelineId: ENG_PIPELINE });
+
+    expect(vi.mocked(resolvePipelineId).mock.calls[0][1]).toEqual({ pipelineId: ENG_PIPELINE });
+    expect(vi.mocked(createStage).mock.calls[0][1]).toMatchObject({ pipelineId: ENG_PIPELINE });
+    expect(result).toMatchObject({
+      pipeline: { id: ENG_PIPELINE, name: "Engineering", isDefault: false, sharedByJobs: 1 },
+    });
+  });
+
+  it("treats an archived pipeline (not listed) as not found", async () => {
+    vi.mocked(resolvePipelineId).mockResolvedValue(ENG_PIPELINE);
+    vi.mocked(listPipelines).mockResolvedValue([DEFAULT_SUMMARY]);
+
+    expect(await execTool(tools.archiveStage, { stageId: STAGE, pipelineId: ENG_PIPELINE })).toEqual({
+      error: "Pipeline not found.",
+    });
+    expect(archiveStage).not.toHaveBeenCalled();
   });
 });
 
@@ -172,8 +294,9 @@ describe("createStage tool", () => {
 
     const [ctx, input] = vi.mocked(createStage).mock.calls[0];
     expectSessionCtx(ctx);
-    expect(input).toEqual({ name: "Take-home", kind: "interview" });
+    expect(input).toEqual({ name: "Take-home", kind: "interview", pipelineId: DEFAULT_PIPELINE });
     expect(result).toEqual({
+      pipeline: DEFAULT_VIEW,
       stage: { id: STAGE, name: "Take-home", kind: "interview", candidateSees: "reviewed" },
     });
   });
@@ -200,8 +323,8 @@ describe("renameStage tool", () => {
 
     const [ctx, input] = vi.mocked(renameStage).mock.calls[0];
     expectSessionCtx(ctx);
-    expect(input).toEqual({ stageId: STAGE, name: "Onsite" });
-    expect(result).toEqual({ stage: { id: STAGE, name: "Onsite" }, renamed: true });
+    expect(input).toEqual({ stageId: STAGE, name: "Onsite", pipelineId: DEFAULT_PIPELINE });
+    expect(result).toEqual({ pipeline: DEFAULT_VIEW, stage: { id: STAGE, name: "Onsite" }, renamed: true });
   });
 
   it("returns the helper's refusal", async () => {
@@ -220,10 +343,11 @@ describe("reorderStages tool", () => {
 
     const result = await execTool(tools.reorderStages, { stageIds: ids });
 
-    const [ctx, passed] = vi.mocked(reorderStages).mock.calls[0];
+    const [ctx, passed, options] = vi.mocked(reorderStages).mock.calls[0];
     expectSessionCtx(ctx);
     expect(passed).toEqual(ids);
-    expect(result).toEqual({ stageIds: ids, reordered: true });
+    expect(options).toEqual({ pipelineId: DEFAULT_PIPELINE });
+    expect(result).toEqual({ pipeline: DEFAULT_VIEW, stageIds: ids, reordered: true });
   });
 
   it("returns the helper's refusal when a stage is missing", async () => {
@@ -248,8 +372,8 @@ describe("archiveStage tool", () => {
 
     const [ctx, input] = vi.mocked(archiveStage).mock.calls[0];
     expectSessionCtx(ctx);
-    expect(input).toEqual({ stageId: STAGE });
-    expect(result).toEqual({ stageId: STAGE, archived: true });
+    expect(input).toEqual({ stageId: STAGE, pipelineId: DEFAULT_PIPELINE });
+    expect(result).toEqual({ pipeline: DEFAULT_VIEW, stageId: STAGE, archived: true });
   });
 
   it("says how many applications are still in the stage", async () => {
@@ -274,6 +398,147 @@ describe("archiveStage tool", () => {
     expect(await execTool(tools.archiveStage, { stageId: STAGE })).toEqual({
       error: "The Applied, Hired and Rejected stages can't be archived.",
     });
+  });
+});
+
+describe("listPipelines tool (JPT-041)", () => {
+  it("lists the company's pipelines with their jobs and stages", async () => {
+    const result = await execTool(tools.listPipelines, {});
+
+    expectSessionCtx(vi.mocked(listPipelines).mock.calls[0][0]);
+    expect(result).toEqual({
+      pipelines: [
+        { ...DEFAULT_VIEW, openJobs: 2, closedJobs: 1, activeStages: 7 },
+        {
+          id: ENG_PIPELINE,
+          name: "Engineering",
+          isDefault: false,
+          sharedByJobs: 1,
+          url: `/company/settings/pipelines/${ENG_PIPELINE}`,
+          openJobs: 1,
+          closedJobs: 0,
+          activeStages: 5,
+        },
+      ],
+    });
+  });
+});
+
+describe("createPipeline tool (JPT-041)", () => {
+  it("copies a pipeline through the shared helper", async () => {
+    vi.mocked(createPipeline).mockResolvedValue({ ok: true, pipelineId: ENG_PIPELINE });
+
+    const result = await execTool(tools.createPipeline, { name: " Engineering ", fromPipelineId: DEFAULT_PIPELINE });
+
+    const [ctx, input] = vi.mocked(createPipeline).mock.calls[0];
+    expectSessionCtx(ctx);
+    expect(input).toEqual({ name: "Engineering", fromPipelineId: DEFAULT_PIPELINE });
+    expect(result).toEqual({
+      pipeline: { id: ENG_PIPELINE, name: "Engineering", url: `/company/settings/pipelines/${ENG_PIPELINE}` },
+      created: true,
+    });
+  });
+
+  it("returns the helper's refusal (the limit)", async () => {
+    vi.mocked(createPipeline).mockResolvedValue({
+      ok: false,
+      reason: "limit_reached",
+      error: "A company can have at most 10 pipelines. Archive one first.",
+    });
+
+    expect(await execTool(tools.createPipeline, { name: "Sales" })).toEqual({
+      error: "A company can have at most 10 pipelines. Archive one first.",
+    });
+  });
+
+  it("limits names to 40 characters", async () => {
+    expect((await validateInput(tools.createPipeline, { name: "x".repeat(41) })).success).toBe(false);
+  });
+});
+
+describe("setJobPipeline tool (JPT-041)", () => {
+  it("switches through the shared helper, turning the pairs into the mapping", async () => {
+    vi.mocked(setJobPipeline).mockResolvedValue({
+      ok: true,
+      changed: true,
+      moved: 4,
+      planItems: 2,
+      mapping: { [STAGE]: STAGE_2 },
+    });
+
+    const result = await execTool(tools.setJobPipeline, {
+      jobPostId: JOB,
+      pipelineId: ENG_PIPELINE,
+      mapping: [{ fromStageId: STAGE, toStageId: STAGE_2 }],
+    });
+
+    const [ctx, input] = vi.mocked(setJobPipeline).mock.calls[0];
+    expectSessionCtx(ctx);
+    expect(input).toEqual({ jobPostId: JOB, pipelineId: ENG_PIPELINE, mapping: { [STAGE]: STAGE_2 } });
+    expect(result).toEqual({
+      jobPostId: JOB,
+      pipelineId: ENG_PIPELINE,
+      changed: true,
+      moved: 4,
+      planItems: 2,
+      url: `/company/job-posts/${JOB}/pipeline`,
+    });
+  });
+
+  it("leaves the mapping to the default when none is given", async () => {
+    vi.mocked(setJobPipeline).mockResolvedValue({ ok: true, changed: true, moved: 0, planItems: 0, mapping: {} });
+
+    await execTool(tools.setJobPipeline, { jobPostId: JOB, pipelineId: ENG_PIPELINE });
+
+    expect(vi.mocked(setJobPipeline).mock.calls[0][1].mapping).toBeUndefined();
+  });
+
+  it("names the stage a missing status refuses (JP-TEST-006)", async () => {
+    const error = 'The new pipeline has no stage that shows candidates "On hold", which "On hold" needs. Add one to it first.';
+    vi.mocked(setJobPipeline).mockResolvedValue({
+      ok: false,
+      reason: "missing_status",
+      error,
+      stage: { id: STAGE, name: "On hold", kind: "on_hold" },
+      status: "stand_by",
+    });
+
+    expect(await execTool(tools.setJobPipeline, { jobPostId: JOB, pipelineId: ENG_PIPELINE })).toEqual({
+      error,
+      stage: "On hold",
+    });
+  });
+});
+
+describe("customizeJobPipeline tool (JPT-041)", () => {
+  it("forks the job's pipeline through the shared helper", async () => {
+    vi.mocked(forkJobPipeline).mockResolvedValue({
+      ok: true,
+      changed: true,
+      moved: 3,
+      planItems: 1,
+      mapping: {},
+      pipelineId: ENG_PIPELINE,
+      name: "Backend Engineer",
+    });
+
+    const result = await execTool(tools.customizeJobPipeline, { jobPostId: JOB });
+
+    const [ctx, input] = vi.mocked(forkJobPipeline).mock.calls[0];
+    expectSessionCtx(ctx);
+    expect(input).toEqual({ jobPostId: JOB });
+    expect(result).toEqual({
+      jobPostId: JOB,
+      pipeline: { id: ENG_PIPELINE, name: "Backend Engineer", url: `/company/settings/pipelines/${ENG_PIPELINE}` },
+      moved: 3,
+      planItems: 1,
+    });
+  });
+
+  it("returns the helper's refusal", async () => {
+    vi.mocked(forkJobPipeline).mockResolvedValue({ ok: false, reason: "not_found", error: "Job not found." });
+
+    expect(await execTool(tools.customizeJobPipeline, { jobPostId: JOB })).toEqual({ error: "Job not found." });
   });
 });
 

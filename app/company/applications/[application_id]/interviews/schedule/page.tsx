@@ -7,9 +7,11 @@ import { RecordInterviewForm } from "@/components/interviews/section/RecordInter
 import { applicationPath, loadApplicationFrame } from "@/helpers/applications/application-page";
 import { calendarEnabled } from "@/helpers/calendar/connect";
 import { can } from "@/helpers/companies/permissions";
+import { openPlanItemIds } from "@/helpers/interviews/interviews";
 import { loadInterviewPlan } from "@/helpers/interviews/plan";
 import { SCHEDULE_PARAM, schedulePath, withItemFirst } from "@/helpers/interviews/schedule-prompt";
 import { loadInterviewsCalendar, loadLinkTemplates } from "@/helpers/interviews/scheduler-calendar";
+import { stagesForJob } from "@/helpers/pipeline/stages";
 
 export const metadata: Metadata = {
   title: "Schedule interview",
@@ -39,20 +41,14 @@ export default async function ScheduleInterviewPage({
     if (!can(company, "scheduling.manage", jobId)) notFound();
 
     const backHref = `${applicationPath(application_id)}/interviews`;
-    const [plan, membersRes, stagesRes, openRes] = await Promise.all([
+    const [plan, membersRes, jobStages, openItems] = await Promise.all([
       loadInterviewPlan(supabase, jobId),
       supabase.rpc("list_interviewer_options"),
-      supabase.from("pipeline_stages").select("id, name, kind").eq("company_id", company.id),
-      // The plan interviews this application already has open: create_scheduled_interview refuses them.
-      supabase
-        .from("scheduled_interviews")
-        .select("plan_item_id")
-        .eq("application_id", application_id)
-        .in("status", ["awaiting_candidate", "scheduled"])
-        .not("plan_item_id", "is", null),
+      // The job's own pipeline (JP-REQ-004), archived stages too.
+      stagesForJob(company.id, jobId, true),
+      openPlanItemIds(supabase, application_id),
     ]);
-    const openItems = new Set((openRes.data ?? []).map((i) => i.plan_item_id));
-    const stages = new Map((stagesRes.data ?? []).map((s) => [s.id, s]));
+    const stages = new Map(jobStages.map((s) => [s.id, s]));
     const stageKind = application.stage_id ? stages.get(application.stage_id)?.kind : undefined;
     if (mergedInto || stageKind === "rejected" || stageKind === "hired") redirect(backHref);
 

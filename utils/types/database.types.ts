@@ -1846,6 +1846,44 @@ export type Database = {
           },
         ]
       }
+      company_pipelines: {
+        Row: {
+          archived: boolean
+          company_id: string
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          company_id: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_pipelines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_email_templates: {
         Row: {
           body_md: string
@@ -3353,6 +3391,7 @@ export type Database = {
           min_equity: number | null
           min_experience: number | null
           min_salary: number | null
+          pipeline_id: string | null
           questions: string[]
           salary_currency: string | null
           salary_range: string | null
@@ -3389,6 +3428,7 @@ export type Database = {
           min_equity?: number | null
           min_experience?: number | null
           min_salary?: number | null
+          pipeline_id?: string | null
           questions?: string[]
           salary_currency?: string | null
           salary_range?: string | null
@@ -3425,6 +3465,7 @@ export type Database = {
           min_equity?: number | null
           min_experience?: number | null
           min_salary?: number | null
+          pipeline_id?: string | null
           questions?: string[]
           salary_currency?: string | null
           salary_range?: string | null
@@ -3448,6 +3489,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "all_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_postings_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "company_pipelines"
             referencedColumns: ["id"]
           },
         ]
@@ -3794,6 +3842,7 @@ export type Database = {
           id: string
           kind: Database["public"]["Enums"]["pipeline_stage_kind"]
           name: string
+          pipeline_id: string
           position: number
         }
         Insert: {
@@ -3803,6 +3852,7 @@ export type Database = {
           id?: string
           kind: Database["public"]["Enums"]["pipeline_stage_kind"]
           name: string
+          pipeline_id: string
           position: number
         }
         Update: {
@@ -3812,6 +3862,7 @@ export type Database = {
           id?: string
           kind?: Database["public"]["Enums"]["pipeline_stage_kind"]
           name?: string
+          pipeline_id?: string
           position?: number
         }
         Relationships: [
@@ -3820,6 +3871,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_stages_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "company_pipelines"
             referencedColumns: ["id"]
           },
         ]
@@ -5226,6 +5284,12 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_job_pipeline: {
+        Args: { p_job_post_id: string; p_mapping: Json; p_pipeline_id: string }
+        Returns: Json
+      }
+      archive_pipeline: { Args: { p_pipeline_id: string }; Returns: Json }
+      backfill_job_pipelines: { Args: never; Returns: undefined }
       copy_interview_plan: {
         Args: { p_from_job: string; p_to_job: string }
         Returns: Json
@@ -5244,6 +5308,10 @@ export type Database = {
           p_name: string
           p_template_key?: string
         }
+        Returns: Json
+      }
+      create_pipeline: {
+        Args: { p_from_pipeline?: string; p_name: string }
         Returns: Json
       }
       create_imported_application: {
@@ -5378,6 +5446,13 @@ export type Database = {
         }
         Returns: Json
       }
+      first_job_stage: {
+        Args: {
+          p_job_post_id: string
+          p_kind: Database["public"]["Enums"]["pipeline_stage_kind"]
+        }
+        Returns: string
+      }
       first_pipeline_stage: {
         Args: {
           p_company_id: string
@@ -5385,6 +5460,7 @@ export type Database = {
         }
         Returns: string
       }
+      fork_job_pipeline: { Args: { p_job_post_id: string }; Returns: Json }
       fulfil_payment: {
         Args: {
           p_dodo_payment_id: string
@@ -5547,6 +5623,10 @@ export type Database = {
           row_id: string
           status: string
         }[]
+      }
+      import_job_stage: {
+        Args: { p_job_post_id: string; p_stage_id: string }
+        Returns: string
       }
       import_stage: {
         Args: { p_company: string; p_stage_id: string }
@@ -6047,6 +6127,7 @@ export type Database = {
         Args: { p_status: Database["public"]["Enums"]["application_status"] }
         Returns: Database["public"]["Enums"]["pipeline_stage_kind"]
       }
+      pipeline_switch_in_progress: { Args: never; Returns: boolean }
       plan_item_snapshot: { Args: { p_plan_item_id: string }; Returns: Json }
       queue_interview_calendar_op: {
         Args: { p_event_id?: string; p_interview_id: string; p_op: string }
@@ -6117,6 +6198,10 @@ export type Database = {
       remove_import_row: { Args: { p_row_id: string }; Returns: Json }
       renew_scheduling_link: {
         Args: { p_id: string; p_token_hash: string }
+        Returns: Json
+      }
+      rename_pipeline: {
+        Args: { p_name: string; p_pipeline_id: string }
         Returns: Json
       }
       reorder_pipeline_stages: { Args: { p_ids: string[] }; Returns: undefined }
@@ -6345,6 +6430,10 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: undefined
       }
+      seed_pipeline_stages: {
+        Args: { p_pipeline_id: string }
+        Returns: undefined
+      }
       seed_default_templates: {
         Args: { p_company_id: string }
         Returns: undefined
@@ -6426,6 +6515,11 @@ export type Database = {
       }
       set_default_company_role: {
         Args: { p_actor_kind?: string; p_role_id: string }
+        Returns: Json
+      }
+      set_default_pipeline: { Args: { p_pipeline_id: string }; Returns: Json }
+      set_job_pipeline: {
+        Args: { p_job_post_id: string; p_mapping?: Json; p_pipeline_id: string }
         Returns: Json
       }
       set_job_post_status: {

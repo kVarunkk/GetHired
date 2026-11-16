@@ -8,7 +8,8 @@ import CompanySettingsLayout from "./layout";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("next/navigation", async (orig) => ({ ...(await orig()), usePathname: () => "/company/settings" }));
+let pathname = "/company/settings";
+vi.mock("next/navigation", async (orig) => ({ ...(await orig()), usePathname: () => pathname }));
 
 function signInAs(member: MemberFixture) {
   const db = createSupabaseMock({ user: member.user });
@@ -24,6 +25,7 @@ async function renderNav() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  pathname = "/company/settings";
 });
 
 describe("/company/settings layout (RP-REQ-016)", () => {
@@ -43,8 +45,17 @@ describe("/company/settings layout (RP-REQ-016)", () => {
       "/company/settings/roles",
       "/company/settings/audit",
     ]);
-    expect(within(nav).getByRole("link", { name: "Pipeline stages" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: "Pipelines" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByText("Section")).toBeInTheDocument();
+  });
+
+  it("keeps Pipelines current on a pipeline's stage editor (JPT-032)", async () => {
+    pathname = "/company/settings/pipelines/7d1a3c2e-4b5f-8a6d-9e9f-0a1b2c3d4e5f";
+    signInAs(OWNER_A);
+    const nav = await renderNav();
+
+    expect(within(nav).getByRole("link", { name: "Pipelines" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: "Email templates" })).not.toHaveAttribute("aria-current");
   });
 
   it("shows only the sections the role can open", async () => {

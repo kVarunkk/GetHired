@@ -15,6 +15,7 @@ vi.mock("@/components/LocationSearchSelect", () => ({ default: () => <div data-t
 vi.mock("@/app/actions/question-sets/list-question-sets", () => ({ listQuestionSetsAction: vi.fn() }));
 vi.mock("@/app/actions/question-sets/save-question-set", () => ({ saveQuestionSetAction: vi.fn() }));
 vi.mock("swr", () => ({ mutate: vi.fn() }));
+vi.mock("@/components/ui/select", () => import("@/test/utils/select-mock"));
 
 // Radix's checkbox and select measure themselves; jsdom has no ResizeObserver.
 vi.stubGlobal(
@@ -126,5 +127,77 @@ describe("JobPostingForm application form (CPT-020)", () => {
 
     expect(push).toHaveBeenCalledWith("/company/job-posts");
     expect(screen.getByRole("button", { name: "Post Job" })).toBeEnabled();
+  });
+});
+
+describe("JobPostingForm pipeline (JPT-034, JP-REQ-003)", () => {
+  const DEFAULT_ID = "e0000000-0000-4000-8000-000000000001";
+  const ENGINEERING_ID = "e0000000-0000-4000-8000-000000000002";
+  const PIPELINES = [
+    { id: DEFAULT_ID, name: "Default", isDefault: true },
+    { id: ENGINEERING_ID, name: "Engineering", isDefault: false },
+  ];
+
+  function renderEditWithPipeline(hasApplications: boolean) {
+    render(
+      <JobPostingForm
+        companyId={COMPANY_ID}
+        existingValues={{ ...EXISTING, pipeline_id: DEFAULT_ID }}
+        initialForm={LOADED}
+        answeredQuestionIds={[qid(1)]}
+        cancelHref={`/company/job-posts/${EXISTING.id}`}
+        pipelines={PIPELINES}
+        hasApplications={hasApplications}
+      />,
+    );
+  }
+
+  const submittedValues = async () => {
+    fireEvent.click(screen.getByRole("button", { name: "Update Job" }));
+    await waitFor(() => expect(upsertJobPostingAction).toHaveBeenCalled());
+    return vi.mocked(upsertJobPostingAction).mock.calls[0][0].values;
+  };
+
+  it("starts a new job on the company's default pipeline", () => {
+    render(
+      <JobPostingForm
+        companyId={COMPANY_ID}
+        initialForm={formFromLegacyQuestions([])}
+        cancelHref="/company/job-posts"
+        pipelines={[PIPELINES[1], PIPELINES[0]]}
+      />,
+    );
+    const select = screen.getByLabelText("Pipeline");
+    expect(select).toHaveValue(DEFAULT_ID);
+    expect(within(select).getByRole("option", { name: "Default (default)" })).toBeInTheDocument();
+  });
+
+  it("sends the picked pipeline for a job with no applications", async () => {
+    renderEditWithPipeline(false);
+    fireEvent.change(screen.getByLabelText("Pipeline"), { target: { value: ENGINEERING_ID } });
+
+    expect(await submittedValues()).toMatchObject({ pipeline_id: ENGINEERING_ID });
+  }, 15_000);
+
+  it("doesn't send an unchanged pipeline", async () => {
+    renderEditWithPipeline(false);
+    expect(await submittedValues()).not.toHaveProperty("pipeline_id");
+  }, 15_000);
+
+  it("on a job with applications, points to the switch page instead of sending the pipeline", async () => {
+    renderEditWithPipeline(true);
+    fireEvent.change(screen.getByLabelText("Pipeline"), { target: { value: ENGINEERING_ID } });
+
+    const link = screen.getByRole("link", { name: "Switch the pipeline" });
+    expect(link).toHaveAttribute(
+      "href",
+      `/company/job-posts/${EXISTING.id}/pipeline/switch?to=${ENGINEERING_ID}`,
+    );
+    expect(await submittedValues()).not.toHaveProperty("pipeline_id");
+  }, 15_000);
+
+  it("shows no pipeline field without pipelines", () => {
+    renderEdit();
+    expect(screen.queryByLabelText("Pipeline")).not.toBeInTheDocument();
   });
 });

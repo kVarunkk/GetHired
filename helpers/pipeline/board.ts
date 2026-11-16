@@ -7,7 +7,7 @@ import type { MyCompany } from "@/helpers/companies/get-my-company";
 import type { Database } from "@/utils/types/database.types";
 import type { BoardApplication, PipelineBoardData } from "@/utils/types/pipeline.types";
 import { ratingSummary, type CandidateRating } from "./ratings";
-import { listStages } from "./stages";
+import { listPipelineStages } from "./stages";
 import { can } from "@/helpers/companies/permissions";
 import { getInterviewSummaries } from "@/helpers/interview/screening/summaries";
 import { meetingBadgeOf, type MeetingBadge } from "@/helpers/interviews/board-badge";
@@ -42,14 +42,15 @@ export async function loadBoard(
 ): Promise<BoardResult> {
   const { data: job, error: jobError } = await supabase
     .from("job_postings")
-    .select("id")
+    .select("id, pipeline_id")
     .eq("id", jobPostId)
     .eq("company_id", company.id)
     .maybeSingle();
   if (jobError) throw new Error(`Failed to load the job: ${jobError.message}`);
   if (!job) return { ok: false, reason: "not_found" };
 
-  const stages = await listStages({ supabase, company });
+  // The job's own pipeline (JP-REQ-003).
+  const stages = job.pipeline_id ? await listPipelineStages({ supabase, company }, job.pipeline_id) : [];
 
   const { data: rows, error } = await supabase
     .from("applications")

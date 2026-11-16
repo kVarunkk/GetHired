@@ -52,6 +52,7 @@ const APP = "e0000000-0000-4000-8000-000000000001";
 const INTERVIEW = "1e000000-0000-4000-8000-000000000001";
 const PLAN_ITEM = "1a000000-0000-4000-8000-000000000001";
 const STAGE = "90000000-0000-4000-8000-000000000002";
+const PIPELINE = "9e000000-0000-4000-8000-000000000001";
 const COMP = "1c000000-0000-4000-8000-000000000001";
 const ADA = "c1000000-0000-4000-8000-000000000002";
 const BEN = "c1000000-0000-4000-8000-000000000003";
@@ -135,7 +136,7 @@ describe("the scheduling tool set (IVT-082)", () => {
 
 describe("getInterviewPlan", () => {
   it("returns the plan with stage and interviewer names, the open stages and the team", async () => {
-    db.queue("job_postings", { data: { id: JOB, title: "Backend Engineer" }, error: null });
+    db.queue("job_postings", { data: { id: JOB, title: "Backend Engineer", pipeline_id: PIPELINE }, error: null });
     db.queue("pipeline_stages", {
       data: [
         { id: STAGE, name: "Onsite", kind: "interview", archived: false },
@@ -181,6 +182,8 @@ describe("getInterviewPlan", () => {
       ],
       url: `/company/job-posts/${JOB}/interview-plan`,
     });
+    // The job's own pipeline (JPT-028).
+    expect(db.callsFor("pipeline_stages")[0].chain).toContainEqual({ method: "eq", args: ["pipeline_id", PIPELINE] });
   });
 
   it("refuses another company's job", async () => {

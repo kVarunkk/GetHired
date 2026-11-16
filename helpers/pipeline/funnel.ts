@@ -7,7 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
 import { Constants, type Database } from "@/utils/types/database.types";
-import type { PipelineStageKind } from "./status-map";
+import { STAGE_KIND_LABELS, type PipelineStageKind } from "./status-map";
 
 /** PL-REQ-011: an application waiting in Applied this long, untouched, needs attention. */
 export const NEEDS_ATTENTION_DAYS = 3;
@@ -110,7 +110,11 @@ export type NeedsAttention = {
 };
 
 export type CompanyFunnel = {
-  /** Stage counts summed across the active jobs, in stage order. */
+  /**
+   * Counts summed across the active jobs by stage kind (JP-REQ-010: jobs on
+   * other pipelines share no stage ids), named by the kind, in kind order.
+   * `stageId` is the kind: these rows have no single stage.
+   */
   stages: {
     stageId: string;
     name: string;
@@ -162,19 +166,23 @@ export async function getCompanyFunnel(
       stages: funnel.stages,
     });
     for (const s of funnel.stages) {
-      const entry = totals.get(s.stageId) ?? {
-        stageId: s.stageId,
-        name: s.name,
+      const entry = totals.get(s.kind) ?? {
+        stageId: s.kind,
+        name: STAGE_KIND_LABELS[s.kind],
         kind: s.kind,
         count: 0,
       };
       entry.count += s.count;
-      totals.set(s.stageId, entry);
+      totals.set(s.kind, entry);
     }
   });
 
+  const kindOrder = Constants.public.Enums.pipeline_stage_kind;
   return {
-    stages: [...totals.values()],
+    stages: kindOrder.flatMap((kind) => {
+      const entry = totals.get(kind);
+      return entry ? [entry] : [];
+    }),
     jobs: perJob,
     needsAttention: await loadNeedsAttention(supabase, company, now),
   };

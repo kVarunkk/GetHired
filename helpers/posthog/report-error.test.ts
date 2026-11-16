@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { reportError, toException } from "./report-error";
+import { isNextControlFlowError, reportError, toException } from "./report-error";
 
 describe("toException", () => {
   it("uses the first Error and keeps the log line", () => {
@@ -27,5 +27,24 @@ describe("reportError", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     reportError("[x] failed", 42);
     expect(spy).toHaveBeenCalledWith("[x] failed", 42);
+  });
+
+  it("ignores Next's control-flow errors", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    spy.mockClear();
+    const dynamic = Object.assign(new Error("Dynamic server usage"), { digest: "DYNAMIC_SERVER_USAGE" });
+    reportError("[company] dashboard failed", dynamic);
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe("isNextControlFlowError", () => {
+  it("knows Next's digests and nothing else", () => {
+    expect(isNextControlFlowError({ digest: "DYNAMIC_SERVER_USAGE" })).toBe(true);
+    expect(isNextControlFlowError({ digest: "NEXT_REDIRECT;replace;/x;307;" })).toBe(true);
+    expect(isNextControlFlowError({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" })).toBe(true);
+    expect(isNextControlFlowError({ digest: "3708951133" })).toBe(false);
+    expect(isNextControlFlowError(new Error("boom"))).toBe(false);
+    expect(isNextControlFlowError("DYNAMIC_SERVER_USAGE")).toBe(false);
   });
 });

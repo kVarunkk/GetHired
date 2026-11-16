@@ -654,6 +654,82 @@ export const PERMISSION_MATRIX: MatrixEntry[] = [
     run: async () =>
       (await import("@/app/actions/pipeline/save-stages")).saveStagesAction({ op: "archive", stageId: ID }),
   },
+  // Job pipelines (JPT-031).
+  {
+    name: "action:createPipeline",
+    kind: "action",
+    permission: "settings.stages",
+    run: async () =>
+      (await import("@/app/actions/pipeline/create-pipeline")).createPipelineAction({ name: "Engineering" }),
+  },
+  {
+    name: "action:renamePipeline",
+    kind: "action",
+    permission: "settings.stages",
+    run: async () =>
+      (await import("@/app/actions/pipeline/rename-pipeline")).renamePipelineAction({ pipelineId: ID, name: "Eng" }),
+  },
+  {
+    name: "action:setDefaultPipeline",
+    kind: "action",
+    permission: "settings.stages",
+    run: async () =>
+      (await import("@/app/actions/pipeline/set-default-pipeline")).setDefaultPipelineAction({ pipelineId: ID }),
+  },
+  {
+    name: "action:archivePipeline",
+    kind: "action",
+    permission: "settings.stages",
+    run: async () =>
+      (await import("@/app/actions/pipeline/archive-pipeline")).archivePipelineAction({ pipelineId: ID }),
+  },
+  {
+    name: "action:forkJobPipeline",
+    kind: "action",
+    permission: "settings.stages",
+    run: async () =>
+      (await import("@/app/actions/pipeline/fork-job-pipeline")).forkJobPipelineAction({ jobPostId: JOB }),
+  },
+  {
+    name: "action:setJobPipeline",
+    kind: "action",
+    permission: "jobs.edit",
+    run: async () =>
+      (await import("@/app/actions/pipeline/set-job-pipeline")).setJobPipelineAction({
+        jobPostId: JOB,
+        pipelineId: ID,
+      }),
+  },
+  {
+    name: "action:previewJobPipelineSwitch",
+    kind: "action",
+    permission: "jobs.edit",
+    run: async () =>
+      (await import("@/app/actions/pipeline/preview-job-pipeline-switch")).previewJobPipelineSwitchAction({
+        jobPostId: JOB,
+        pipelineId: ID,
+      }),
+  },
+  // The agent's approval cards for the pipeline tools (JPT-041).
+  {
+    name: "action:previewAgentJobPipelineSwitch",
+    kind: "action",
+    permission: "jobs.edit",
+    run: async () =>
+      (await import("@/app/actions/pipeline/preview-agent-job-pipeline-switch")).previewAgentJobPipelineSwitchAction({
+        jobPostId: JOB,
+        pipelineId: ID,
+      }),
+  },
+  {
+    name: "action:previewAgentCustomizeJobPipeline",
+    kind: "action",
+    permission: "settings.stages",
+    run: async () =>
+      (
+        await import("@/app/actions/pipeline/preview-agent-customize-job-pipeline")
+      ).previewAgentCustomizeJobPipelineAction({ jobPostId: JOB }),
+  },
   {
     name: "action:createTemplate",
     kind: "action",

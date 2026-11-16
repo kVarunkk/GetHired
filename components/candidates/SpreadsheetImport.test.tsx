@@ -48,10 +48,16 @@ const PAGE: ImportPage = {
     { id: JOB_WITH_INTERVIEW, title: "Backend Engineer", interview: { fitThreshold: 70, durationMinutes: 15 } },
     { id: JOB_MANUAL, title: "Designer", interview: null },
   ],
-  stages: [
-    { id: APPLIED, name: "Applied" },
-    { id: ONSITE, name: "Onsite" },
-  ],
+  stagesByJob: {
+    [JOB_WITH_INTERVIEW]: [
+      { id: APPLIED, name: "Applied" },
+      { id: ONSITE, name: "Onsite" },
+    ],
+    [JOB_MANUAL]: [
+      { id: APPLIED, name: "Applied" },
+      { id: ONSITE, name: "Onsite" },
+    ],
+  },
   lists: [{ id: "71000000-0000-4000-8000-000000000001", name: "Old ATS", slug: "old-ats" }],
   allowNoJob: true,
   screeningsRemaining: 1,

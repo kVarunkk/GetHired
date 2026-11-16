@@ -3,6 +3,7 @@ import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import ImportDestination, {
   destinationReady,
+  destinationStages,
   destinationValue,
   initialDestination,
   type Destination,
@@ -23,6 +24,7 @@ vi.stubGlobal(
 const JOB = "b0000000-0000-4000-8000-0000000000a1";
 const JOB_2 = "b0000000-0000-4000-8000-0000000000a2";
 const STAGE = "50000000-0000-4000-8000-000000000002";
+const OTHER_APPLIED = "50000000-0000-4000-8000-0000000000b1";
 const LIST = "71000000-0000-4000-8000-000000000001";
 const INTERVIEW = { fitThreshold: 70, durationMinutes: 15 };
 
@@ -31,10 +33,13 @@ const PAGE: DestinationPage = {
     { id: JOB, title: "Backend Engineer", interview: INTERVIEW },
     { id: JOB_2, title: "Designer", interview: null },
   ],
-  stages: [
-    { id: "50000000-0000-4000-8000-000000000001", name: "Applied" },
-    { id: STAGE, name: "Onsite" },
-  ],
+  stagesByJob: {
+    [JOB]: [
+      { id: "50000000-0000-4000-8000-000000000001", name: "Applied" },
+      { id: STAGE, name: "Onsite" },
+    ],
+    [JOB_2]: [{ id: OTHER_APPLIED, name: "Applied" }],
+  },
   lists: [{ id: LIST, name: "Old ATS", slug: "old-ats" }],
   allowNoJob: true,
   screeningsRemaining: null,
@@ -114,6 +119,19 @@ describe("ImportDestination (CPT-013, CP-REQ-001/003/010)", () => {
     fireEvent.click(screen.getByRole("switch", { name: "Auto-invite to AI interview" }));
     choose("Add them to", "pool");
     expect(latest).toMatchObject({ kind: "pool", jobId: null, stageId: null, autoInvite: false, list: null });
+  });
+
+  it("shows the picked job's pipeline stages and clears the stage on a job change (JPT-024)", () => {
+    render(<Harness />);
+    choose("Add them to", "job");
+    expect(options("Stage")).toEqual(["First stage (Applied)", "Onsite"]);
+    choose("Stage", STAGE);
+
+    choose("Job", JOB_2);
+    // JOB_2's pipeline has no Onsite: the old stage can't follow.
+    expect(options("Stage")).toEqual(["First stage (Applied)"]);
+    expect(latest).toMatchObject({ jobId: JOB_2, stageId: null });
+    expect(destinationStages(PAGE, latest)).toEqual([{ id: OTHER_APPLIED, name: "Applied" }]);
   });
 
   it("offers neither your candidates nor a list to a member scoped to some jobs", () => {

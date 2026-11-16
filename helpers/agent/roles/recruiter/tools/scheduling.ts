@@ -29,6 +29,7 @@ import {
 } from "@/helpers/interviews/scheduling";
 import { sendSchedulingLink } from "@/helpers/interviews/scheduling-links";
 import { actorName } from "@/helpers/pipeline/move";
+import { listPipelineStages } from "@/helpers/pipeline/stages";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
   applicationUrl,
@@ -62,7 +63,7 @@ const planUrl = (jobPostId: string) => `${jobPostUrl(jobPostId)}/interview-plan`
 async function companyJob(ctx: RecruiterToolContext, jobPostId: string) {
   const { data, error } = await ctx.supabase
     .from("job_postings")
-    .select("id, title")
+    .select("id, title, pipeline_id")
     .eq("id", jobPostId)
     .eq("company_id", ctx.company.id)
     .maybeSingle();
@@ -77,15 +78,11 @@ async function interviewers(ctx: RecruiterToolContext) {
   return (data ?? []).map((m) => ({ id: m.user_id, name: m.name }));
 }
 
-/** Stages a plan interview can belong to (IV-REQ-002). */
-async function openStages(ctx: RecruiterToolContext) {
-  const { data, error } = await ctx.supabase
-    .from("pipeline_stages")
-    .select("id, name, kind, archived")
-    .eq("company_id", ctx.company.id)
-    .order("position", { ascending: true });
-  if (error) throw new Error(`Failed to load the stages: ${error.message}`);
-  return (data ?? []).filter((s) => !s.archived && s.kind !== "rejected" && s.kind !== "hired");
+/** Stages of the job's pipeline a plan interview can belong to (IV-REQ-002, JP-REQ-004). */
+async function openStages(ctx: RecruiterToolContext, pipelineId: string | null) {
+  if (!pipelineId) return [];
+  const stages = await listPipelineStages(ctx, pipelineId);
+  return stages.filter((s) => !s.archived && s.kind !== "rejected" && s.kind !== "hired");
 }
 
 /** The session's deps for the Google Calendar helpers. */
@@ -126,7 +123,7 @@ export function createSchedulingTools(ctx: RecruiterToolContext) {
           if (!job) return JOB_NOT_FOUND;
           const [plan, stages, team] = await Promise.all([
             loadInterviewPlan(ctx.supabase, jobPostId),
-            openStages(ctx),
+            openStages(ctx, job.pipeline_id),
             interviewers(ctx),
           ]);
           const stageName = new Map(stages.map((s) => [s.id, s.name]));

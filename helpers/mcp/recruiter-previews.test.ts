@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { JOB_A1, OWNER_A, memberWith, type MemberFixture } from "@/test/utils/team";
 import { INJECTION_LINE } from "@/test/utils/matching";
+import { DEFAULT_PIPELINE_ID } from "@/test/utils/pipeline";
 import type { RecruiterToolContext } from "@/helpers/agent/roles/recruiter/tools";
 import { RECRUITER_TOOL_PERMISSIONS, type RecruiterToolName } from "@/helpers/agent/roles/recruiter/tools/permissions";
 import { RECRUITER_APPROVAL_POLICY } from "@/helpers/agent/roles/recruiter/approval";
@@ -31,6 +32,10 @@ import {
 } from "@/helpers/candidates/preview-agent-import";
 import { previewAgentRole } from "@/helpers/companies/preview-agent-role";
 import { previewAgentScheduling } from "@/helpers/interviews/preview-agent-scheduling";
+import {
+  previewAgentCustomizeJobPipeline,
+  previewAgentJobPipelineSwitch,
+} from "@/helpers/pipeline/preview-agent-pipeline";
 import { previewText, type McpPreview } from "./previews";
 import { RECRUITER_MCP_PREVIEWS } from "./recruiter-previews";
 import { RECRUITER_MCP_TOOLS } from "./recruiter-tools";
@@ -59,6 +64,10 @@ vi.mock("@/helpers/candidates/preview-agent-import", () => ({
 }));
 vi.mock("@/helpers/companies/preview-agent-role", () => ({ previewAgentRole: vi.fn() }));
 vi.mock("@/helpers/interviews/preview-agent-scheduling", () => ({ previewAgentScheduling: vi.fn() }));
+vi.mock("@/helpers/pipeline/preview-agent-pipeline", () => ({
+  previewAgentJobPipelineSwitch: vi.fn(),
+  previewAgentCustomizeJobPipeline: vi.fn(),
+}));
 
 const APP = "e0000000-0000-4000-8000-000000000001";
 const APP_2 = "e0000000-0000-4000-8000-000000000002";
@@ -77,6 +86,7 @@ const ROLE = "70000000-0000-4000-8000-000000000001";
 const MEMBER = "71000000-0000-4000-8000-000000000001";
 const INTERVIEW = "1e000000-0000-4000-8000-000000000001";
 const PANELIST = "c1000000-0000-4000-8000-000000000002";
+const ENG_PIPELINE = "9e000000-0000-4000-8000-000000000002";
 
 // Candidate data planted in the fixtures: the name carries an injection, and
 // the contact details must never reach a preview.
@@ -226,6 +236,46 @@ const CASES: Case[] = [
     seed: () =>
       vi.mocked(previewAgentJobDelete).mockResolvedValue(ok({ title: "Frontend Engineer", status: "active", applications: 2 })),
     facts: [/The 2 applications and their notes are deleted too/, /Job: Frontend Engineer/, /Status: Published/],
+  },
+  // --- job pipelines (JPT-042) ---
+  {
+    tool: "set_job_pipeline",
+    input: { jobPostId: JOB_A1, pipelineId: ENG_PIPELINE },
+    seed: () =>
+      vi.mocked(previewAgentJobPipelineSwitch).mockResolvedValue(
+        ok({
+          jobTitle: "Frontend Engineer",
+          from: "Default",
+          to: "Engineering",
+          applications: 3,
+          moves: [
+            { stage: "Applied", to: "Applied", applications: 2, planItems: 0 },
+            { stage: "Interview", to: "Tech interview", applications: 1, planItems: 2 },
+          ],
+        }),
+      ),
+    facts: [
+      /Move Frontend Engineer onto the Engineering pipeline\?/,
+      /From: Default/,
+      /To: Engineering/,
+      /Applied → Applied \(2 applications\)/,
+      /Interview → Tech interview \(1 application, 2 planned interviews\)/,
+      /won't be emailed/,
+    ],
+  },
+  {
+    tool: "customize_job_pipeline",
+    input: { jobPostId: JOB_A1 },
+    seed: () =>
+      vi.mocked(previewAgentCustomizeJobPipeline).mockResolvedValue(
+        ok({ jobTitle: "Frontend Engineer", from: "Default", name: "Frontend Engineer", stages: 7, otherJobs: 2 }),
+      ),
+    facts: [
+      /Give Frontend Engineer its own pipeline\?/,
+      /Copies: Default \(7 stages\)/,
+      /New pipeline: Frontend Engineer/,
+      /Other jobs: 2 jobs keep Default/,
+    ],
   },
   {
     tool: "add_candidates_to_job",
@@ -518,6 +568,7 @@ const CASES: Case[] = [
     tool: "archive_stage",
     input: { stageId: STAGE },
     seed: () => {
+      db.queue("company_pipelines", { data: { id: DEFAULT_PIPELINE_ID }, error: null });
       db.queue("pipeline_stages", { data: { id: STAGE, name: "Take-home", kind: "interview", archived: false }, error: null });
       db.queue("applications", { data: null, error: null, count: 0 });
     },
@@ -878,8 +929,37 @@ describe("refusals that match the run", () => {
     expect(preview).toEqual({ ok: false, error: '"Frontend Engineer" is already published.' });
   });
 
+  it("archives in the pipeline the call names (JPT-040)", async () => {
+    const ctx = ctxFor(OWNER_A);
+    db.queue("company_pipelines", { data: { id: ENG_PIPELINE }, error: null });
+    db.queue("pipeline_stages", { data: { id: STAGE, name: "Take-home", kind: "interview", archived: false }, error: null });
+    db.queue("applications", { data: null, error: null, count: 0 });
+
+    const preview = await RECRUITER_MCP_PREVIEWS.archive_stage(ctx, { stageId: STAGE, pipelineId: ENG_PIPELINE });
+
+    expect(preview).toMatchObject({ ok: true });
+    expect(db.callsFor("company_pipelines")[0].chain).toContainEqual({ method: "eq", args: ["id", ENG_PIPELINE] });
+    expect(db.callsFor("pipeline_stages")[0].chain).toContainEqual({ method: "eq", args: ["pipeline_id", ENG_PIPELINE] });
+  });
+
+  it("a pipeline switch the RPC would refuse is refused here (JP-TEST-006)", async () => {
+    const ctx = ctxFor(OWNER_A);
+    vi.mocked(previewAgentJobPipelineSwitch).mockResolvedValue({
+      ok: false,
+      error: 'The new pipeline has no stage that shows candidates "On hold", which "On hold" needs. Add one to it first.',
+    });
+
+    const preview = await RECRUITER_MCP_PREVIEWS.set_job_pipeline(ctx, { jobPostId: JOB_A1, pipelineId: ENG_PIPELINE });
+
+    expect(preview).toEqual({
+      ok: false,
+      error: `This switch won't go through: The new pipeline has no stage that shows candidates "On hold", which "On hold" needs. Add one to it first.`,
+    });
+  });
+
   it("a stage with applications in it can't be archived", async () => {
     const ctx = ctxFor(OWNER_A);
+    db.queue("company_pipelines", { data: { id: DEFAULT_PIPELINE_ID }, error: null });
     db.queue("pipeline_stages", { data: { id: STAGE, name: "Take-home", kind: "interview", archived: false }, error: null });
     db.queue("applications", { data: null, error: null, count: 2 });
 

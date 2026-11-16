@@ -23,6 +23,7 @@ async function signIn(member: MemberFixture) {
 }
 
 const job = { title: "Backend Engineer", description: "APIs", skills: ["Go"] };
+const PIPELINE = "9e000000-0000-4000-8000-000000000001";
 const STAGES = [
   { id: "s-applied", name: "Applied", kind: "applied", archived: false },
   { id: "s-screen", name: "Screen", kind: "screen", archived: false },
@@ -66,7 +67,7 @@ beforeEach(async () => {
 });
 
 const queueJob = () => {
-  rls.queue("job_postings", { data: job, error: null });
+  rls.queue("job_postings", { data: { ...job, pipeline_id: PIPELINE }, error: null });
   rls.queue("pipeline_stages", { data: STAGES, error: null });
 };
 
@@ -96,6 +97,8 @@ describe("draftInterviewPlanAction (IV-REQ-050)", () => {
 
     expect(await draftInterviewPlanAction({ jobPostId: JOB_A1 })).toEqual(draft);
     expect(rls.callsFor("job_postings")[0].chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
+    // The job's own pipeline (JPT-025).
+    expect(rls.callsFor("pipeline_stages")[0].chain).toContainEqual({ method: "eq", args: ["pipeline_id", PIPELINE] });
     expect(draftInterviewPlan).toHaveBeenCalledWith({
       job,
       stages: [STAGES[0], STAGES[1]],

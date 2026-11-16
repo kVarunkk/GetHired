@@ -54,7 +54,7 @@ type NoteRow = { application_id: string; rating: string | null; rating_hidden?: 
 
 /** The company owns the job, which has these applications and notes. */
 function ownsJob(rows: Row[], notes: NoteRow[] = []) {
-  rls.queue("job_postings", { data: { id: PIPELINE_JOB.id }, error: null });
+  rls.queue("job_postings", { data: { id: PIPELINE_JOB.id, pipeline_id: PIPELINE_JOB.pipeline_id }, error: null });
   rls.queue("pipeline_stages", { data: DEFAULT_STAGES, error: null });
   rls.queue("applications", { data: rows, error: null });
   rls.queueRpc("list_job_note_ratings", {
@@ -124,6 +124,11 @@ describe("GET /api/company/job-posts/[job_id]/pipeline (PLT-041)", () => {
 
     expect(status).toBe(200);
     expect(body.stages).toEqual(DEFAULT_STAGES.map(({ id, name, kind }) => ({ id, name, kind })));
+    // JPT-022: the job's own pipeline, not the company's stages.
+    expect(rls.callsFor("pipeline_stages")[0].chain).toContainEqual({
+      method: "eq",
+      args: ["pipeline_id", PIPELINE_JOB.pipeline_id],
+    });
     expect(body.applications).toEqual([
       {
         id: appId(1),
@@ -334,7 +339,7 @@ describe("GET /api/company/job-posts/[job_id]/pipeline (PLT-041)", () => {
 
   it("500s when a query fails", async () => {
     await signInCompany();
-    rls.queue("job_postings", { data: { id: PIPELINE_JOB.id }, error: null });
+    rls.queue("job_postings", { data: { id: PIPELINE_JOB.id, pipeline_id: PIPELINE_JOB.pipeline_id }, error: null });
     rls.queue("pipeline_stages", { data: DEFAULT_STAGES, error: null });
     rls.queue("applications", { data: null, error: { message: "boom" } });
 

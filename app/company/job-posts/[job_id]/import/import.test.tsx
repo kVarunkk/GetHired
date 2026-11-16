@@ -42,7 +42,7 @@ vi.mock("@/components/candidates/CandidateForm", () => ({ default: vi.fn(() => <
 const FIXED = { id: JOB_A1, title: "Backend Engineer", interview: null };
 const PAGE: ImportPage = {
   jobs: [],
-  stages: [],
+  stagesByJob: {},
   lists: null,
   allowNoJob: true,
   screeningsRemaining: null,

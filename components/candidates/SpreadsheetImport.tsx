@@ -11,8 +11,10 @@ import { startImportAction } from "@/app/actions/candidates/start-import";
 import ColumnMapper from "@/components/candidates/ColumnMapper";
 import ImportDestination, {
   destinationReady,
+  destinationStages,
   destinationValue,
   initialDestination,
+  type Destination,
 } from "@/components/candidates/ImportDestination";
 import ImportPreviewGrid, { type GridField } from "@/components/candidates/ImportPreviewGrid";
 import LawfulBasisCheck from "@/components/candidates/LawfulBasisCheck";
@@ -134,7 +136,7 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
         type: "previewed",
         rows: mapped,
         matches: { existing: checked.existing, known: checked.known },
-        stageChoices: matchStages(stageValues(mapped), page.stages, savedStageMap),
+        stageChoices: matchStages(stageValues(mapped), destinationStages(page, destination), savedStageMap),
       });
     } catch {
       fail("Couldn't check the emails. Try again.");
@@ -352,7 +354,17 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
     );
   }
 
-  const { stageChoices, overrides, settings: decided } = state;
+  const { stageChoices, overrides, settings: decided, savedStageMap } = state;
+  // Another job can be on another pipeline (JP-REQ-004): match the Stage column again, keeping the picks that still exist.
+  const changeDestination = (next: Destination) => {
+    dispatch({ type: "setDestination", destination: next });
+    if (next.jobId === destination.jobId) return;
+    const saved = { ...savedStageMap, ...stageMapOf(stageChoices) };
+    dispatch({
+      type: "setStageChoices",
+      stageChoices: matchStages(stageValues(rows), destinationStages(page, next), saved),
+    });
+  };
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-4" aria-label="Destination">
@@ -360,7 +372,7 @@ export default function SpreadsheetImport({ page }: { page: ImportPage }) {
         <ImportDestination
           page={page}
           value={destination}
-          onChange={(next) => dispatch({ type: "setDestination", destination: next })}
+          onChange={changeDestination}
           stageValues={values}
           stageChoices={stageChoices}
           onStageChoicesChange={(next) => dispatch({ type: "setStageChoices", stageChoices: next })}

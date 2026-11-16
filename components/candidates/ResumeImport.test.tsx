@@ -68,7 +68,7 @@ const STAGES = [
 /** A job page's import (CP-REQ-010). */
 const jobPage = (job: ImportJob = JOB): DestinationPage => ({
   jobs: [],
-  stages: STAGES,
+  stagesByJob: { [JOB_ID]: STAGES },
   lists: null,
   allowNoJob: true,
   screeningsRemaining: null,
@@ -444,7 +444,7 @@ describe("ResumeImport on the Candidates page (CPT-015, CP-REQ-002/010/011/023)"
   const LIST = "71000000-0000-4000-8000-000000000001";
   const POOL_PAGE: DestinationPage = {
     jobs: [JOB],
-    stages: STAGES,
+    stagesByJob: { [JOB_ID]: STAGES },
     lists: [{ id: LIST, name: "Old ATS", slug: "old-ats" }],
     allowNoJob: true,
     screeningsRemaining: null,

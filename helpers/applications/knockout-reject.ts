@@ -12,19 +12,26 @@ export const KNOCKOUT_EMAIL_DELAY_MS = 24 * 60 * 60 * 1000;
 export const KNOCKOUT_ACTOR_NAME = "Application requirements";
 
 /**
- * Moves one new application to the company's first active `rejected` stage
- * with the service role (the pipeline trigger lets it through). Returns false
- * when the company has no such stage or the write fails; the caller then
- * only flags the application.
+ * Moves one new application to the first active `rejected` stage of its
+ * job's pipeline (JP-REQ-004) with the service role (the pipeline trigger lets
+ * it through). Returns false when the pipeline has no such stage or the write
+ * fails; the caller then only flags the application.
  */
 export async function rejectForKnockout(
   service: SupabaseClient<Database>,
-  { applicationId, companyId, candidateUserId }: { applicationId: string; companyId: string; candidateUserId: string },
+  {
+    applicationId,
+    companyId,
+    pipelineId,
+    candidateUserId,
+  }: { applicationId: string; companyId: string; pipelineId: string | null; candidateUserId: string },
 ): Promise<boolean> {
+  if (!pipelineId) return false;
   const { data: stage } = await service
     .from("pipeline_stages")
     .select("id, kind")
     .eq("company_id", companyId)
+    .eq("pipeline_id", pipelineId)
     .eq("kind", "rejected")
     .eq("archived", false)
     .order("position", { ascending: true })

@@ -9,7 +9,9 @@ let client: PostHog | null = null;
 
 function posthog(): PostHog | null {
   const token = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
-  if (!token) return null;
+  // `next dev` shares the production project's token, and its errors (mostly
+  // half-written code) filled production error tracking. Dev still logs them.
+  if (!token || process.env.NODE_ENV !== "production") return null;
   client ??= new PostHog(token, {
     host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
     flushAt: 1,
@@ -56,6 +58,29 @@ export function toException(args: unknown[]): {
   return { error: new Error(message), properties };
 }
 
+// Digests of the errors Next throws to steer rendering: cookies() during a
+// static render attempt (`next build` probes every route), redirect(),
+// notFound() and friends. A page's catch block can see them before it
+// rethrows; they aren't failures.
+const NEXT_CONTROL_FLOW_DIGESTS = [
+  "DYNAMIC_SERVER_USAGE",
+  "NEXT_REDIRECT",
+  "NEXT_NOT_FOUND",
+  "NEXT_HTTP_ERROR_FALLBACK",
+  "BAILOUT_TO_CLIENT_SIDE_RENDERING",
+  "NEXT_PRERENDER_INTERRUPTED",
+  "HANGING_PROMISE_REJECTION",
+];
+
+export function isNextControlFlowError(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  const digest = (value as { digest?: unknown }).digest;
+  return (
+    typeof digest === "string" &&
+    NEXT_CONTROL_FLOW_DIGESTS.some((prefix) => digest.startsWith(prefix))
+  );
+}
+
 /**
  * Sends an error to PostHog. Inside a request the send is awaited after the
  * response; elsewhere the returned promise can be awaited.
@@ -65,6 +90,7 @@ export async function captureServerException(
   properties: Record<string, unknown> = {},
   distinctId?: string,
 ): Promise<void> {
+  if (isNextControlFlowError(error)) return;
   const ph = posthog();
   if (!ph) return;
   try {
@@ -80,6 +106,7 @@ export async function captureServerException(
  * PostHog error tracking.
  */
 export function reportError(...args: unknown[]): void {
+  if (args.some(isNextControlFlowError)) return;
   console.error(...args);
   const { error, properties } = toException(args);
   const sent = captureServerException(error, properties);

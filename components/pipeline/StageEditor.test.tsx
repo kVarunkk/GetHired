@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Children, isValidElement, type ReactNode } from "react";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { saveStagesAction } from "@/app/actions/pipeline/save-stages";
-import { DEFAULT_STAGES, stageOf } from "@/test/utils/pipeline";
+import { DEFAULT_PIPELINE_ID, DEFAULT_STAGES, stageOf } from "@/test/utils/pipeline";
 import StageEditor from "./StageEditor";
 
 vi.mock("@/app/actions/pipeline/save-stages", () => ({ saveStagesAction: vi.fn() }));
@@ -44,6 +44,7 @@ vi.mock("@/components/ui/select", () => {
   };
 });
 
+const PIPELINE = DEFAULT_PIPELINE_ID;
 const STAGES = DEFAULT_STAGES.map(({ id, name, kind }) => ({ id, name, kind }));
 const rows = () => screen.getAllByRole("listitem");
 const rowOf = (name: string) =>
@@ -56,7 +57,7 @@ beforeEach(() => {
 
 describe("StageEditor (PLT-064)", () => {
   it("lists the stages in order, with archive only on the stages that allow it", () => {
-    render(<StageEditor stages={STAGES} />);
+    render(<StageEditor pipelineId={PIPELINE} stages={STAGES} />);
 
     expect(rows().map((li) => (within(li).getByRole("textbox") as HTMLInputElement).value)).toEqual(
       STAGES.map((s) => s.name),
@@ -68,7 +69,7 @@ describe("StageEditor (PLT-064)", () => {
   });
 
   it("renames a stage when its name field loses focus", async () => {
-    render(<StageEditor stages={STAGES} />);
+    render(<StageEditor pipelineId={PIPELINE} stages={STAGES} />);
 
     const input = screen.getByRole("textbox", { name: "Name of Interview" });
     fireEvent.change(input, { target: { value: "Onsite" } });
@@ -79,19 +80,20 @@ describe("StageEditor (PLT-064)", () => {
         op: "rename",
         stageId: stageOf("interview").id,
         name: "Onsite",
+        pipelineId: PIPELINE,
       }),
     );
   });
 
   it("reorders with the up and down buttons", async () => {
-    render(<StageEditor stages={STAGES} />);
+    render(<StageEditor pipelineId={PIPELINE} stages={STAGES} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Move Interview up" }));
 
     const order = [...STAGES];
     [order[1], order[2]] = [order[2], order[1]];
     await waitFor(() =>
-      expect(saveStagesAction).toHaveBeenCalledWith({ op: "reorder", ids: order.map((s) => s.id) }),
+      expect(saveStagesAction).toHaveBeenCalledWith({ op: "reorder", ids: order.map((s) => s.id), pipelineId: PIPELINE }),
     );
     expect(rows().map((li) => (within(li).getByRole("textbox") as HTMLInputElement).value)[1]).toBe("Interview");
     expect(screen.getByRole("button", { name: "Move Applied up" })).toBeDisabled();
@@ -99,7 +101,7 @@ describe("StageEditor (PLT-064)", () => {
 
   it("puts the order back when the reorder fails", async () => {
     vi.mocked(saveStagesAction).mockResolvedValue({ ok: false, error: "Failed to reorder the stages." });
-    render(<StageEditor stages={STAGES} />);
+    render(<StageEditor pipelineId={PIPELINE} stages={STAGES} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Move Interview up" }));
 
@@ -116,7 +118,7 @@ describe("StageEditor (PLT-064)", () => {
       error: "Move the 3 applications out of this stage first.",
       count: 3,
     });
-    render(<StageEditor stages={STAGES} />);
+    render(<StageEditor pipelineId={PIPELINE} stages={STAGES} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Archive Interview" }));
     fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Archive" }));
@@ -129,27 +131,27 @@ describe("StageEditor (PLT-064)", () => {
   });
 
   it("removes an archived stage", async () => {
-    render(<StageEditor stages={STAGES} />);
+    render(<StageEditor pipelineId={PIPELINE} stages={STAGES} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Archive Interview" }));
     expect(saveStagesAction).not.toHaveBeenCalled();
     fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Archive" }));
 
     await waitFor(() => expect(screen.queryByDisplayValue("Interview")).not.toBeInTheDocument());
-    expect(saveStagesAction).toHaveBeenCalledWith({ op: "archive", stageId: stageOf("interview").id });
+    expect(saveStagesAction).toHaveBeenCalledWith({ op: "archive", stageId: stageOf("interview").id, pipelineId: PIPELINE });
   });
 
   it("adds a stage with a kind", async () => {
     const added = { ...stageOf("interview"), id: "5a000000-0000-4000-8000-0000000000ff", name: "Take-home", position: 7 };
     vi.mocked(saveStagesAction).mockResolvedValue({ ok: true, stage: added });
-    render(<StageEditor stages={STAGES} />);
+    render(<StageEditor pipelineId={PIPELINE} stages={STAGES} />);
 
     fireEvent.change(screen.getByRole("textbox", { name: "New stage name" }), { target: { value: "Take-home" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Kind" }), { target: { value: "interview" } });
     fireEvent.click(screen.getByRole("button", { name: "Add stage" }));
 
     await waitFor(() => expect(screen.getByDisplayValue("Take-home")).toBeInTheDocument());
-    expect(saveStagesAction).toHaveBeenCalledWith({ op: "create", name: "Take-home", kind: "interview" });
+    expect(saveStagesAction).toHaveBeenCalledWith({ op: "create", name: "Take-home", kind: "interview", pipelineId: PIPELINE });
     expect(screen.getByRole("textbox", { name: "New stage name" })).toHaveValue("");
   });
 
@@ -159,9 +161,23 @@ describe("StageEditor (PLT-064)", () => {
       name: `Stage ${i}`,
       kind: "screening" as const,
     }));
-    render(<StageEditor stages={twelve} />);
+    render(<StageEditor pipelineId={PIPELINE} stages={twelve} />);
 
     expect(screen.getByRole("button", { name: "Add stage" })).toBeDisabled();
     expect(screen.getByText("A pipeline can have at most 12 stages.")).toBeInTheDocument();
+  });
+});
+
+describe("StageEditor, shared pipelines (JPT-033, JP-REQ-008)", () => {
+  const WARNING = /Changes apply to all of them/;
+
+  it("warns when more than one job uses the pipeline", () => {
+    render(<StageEditor pipelineId={PIPELINE} stages={STAGES} sharedByJobs={3} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Used by 3 jobs. Changes apply to all of them.");
+  });
+
+  it.each([0, 1])("doesn't warn when %i job uses it", (jobs) => {
+    render(<StageEditor pipelineId={PIPELINE} stages={STAGES} sharedByJobs={jobs} />);
+    expect(screen.queryByText(WARNING)).not.toBeInTheDocument();
   });
 });

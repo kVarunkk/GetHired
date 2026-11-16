@@ -17,6 +17,7 @@ import { DEFAULT_DURATION_MINUTES } from "@/helpers/interview/screening/schemas"
 import { getInterviewSummaries } from "@/helpers/interview/screening/summaries";
 import { loadBoard } from "@/helpers/pipeline/board";
 import { getJobFunnel } from "@/helpers/pipeline/funnel";
+import { stagesForJob } from "@/helpers/pipeline/stages";
 import { COMPANY_CANDIDATE_PERSON_COLUMNS } from "@/helpers/applications/application-person";
 import { RECRUITER_CANDIDATE_COLUMNS } from "@/helpers/profiles/candidate-columns";
 import { createClient } from "@/lib/supabase/server";
@@ -78,13 +79,9 @@ export default async function JobApplicationsPage({
 
     const canViewInterviews = can(company, "interviews.view", job.id);
     const canMove = can(company, "pipeline.move", job.id);
-    const [{ data: stages, error: stagesError }, { data: templates }, funnel, screeningCap, interviewData, schedulingPlan] = await Promise.all([
-      supabase
-        .from("pipeline_stages")
-        .select("id, name, kind")
-        .eq("company_id", company.id)
-        .eq("archived", false)
-        .order("position", { ascending: true }),
+    const [stages, { data: templates }, funnel, screeningCap, interviewData, schedulingPlan] = await Promise.all([
+      // The job's own pipeline (JP-REQ-004).
+      stagesForJob(company.id, job.id),
       supabase
         .from("company_email_templates")
         .select("id, purpose, name, subject, body_md, is_default")
@@ -107,7 +104,6 @@ export default async function JobApplicationsPage({
       // D8 (IVT-072): the board's "Schedule …" prompt, for scheduling.manage.
       view === "board" && can(company, "scheduling.manage", job.id) ? loadSchedulingPlan(supabase, job.id) : undefined,
     ]);
-    if (stagesError) throw stagesError;
 
     let board: PipelineBoardData | null = null;
     if (view === "board") {
@@ -178,7 +174,7 @@ export default async function JobApplicationsPage({
           <PipelineList
             data={applications}
             jobPostId={job.id}
-            stages={stages ?? []}
+            stages={stages.map((s) => ({ id: s.id, name: s.name, kind: s.kind }))}
             templates={templates ?? []}
             screeningCap={screeningCap && { limit: screeningCap.limit, remaining: screeningCap.remaining }}
             answerQuestions={answerFilterQuestions(readApplicationForm(job.application_form, job.questions))}

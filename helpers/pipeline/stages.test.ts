@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { COMPANY_A } from "@/test/utils/recruiter";
-import { DEFAULT_STAGES, stageOf } from "@/test/utils/pipeline";
+import { DEFAULT_PIPELINE_ID, DEFAULT_STAGES, PIPELINE_JOB, stageOf } from "@/test/utils/pipeline";
 import {
   MAX_ACTIVE_STAGES,
   archiveStage,
@@ -9,6 +9,7 @@ import {
   listStages,
   renameStage,
   reorderStages,
+  resolvePipelineId,
 } from "./stages";
 import { OWNER_A } from "@/test/utils/team";
 
@@ -25,8 +26,53 @@ const scopedToCompany = (target: string, i = 0) =>
 
 const UNKNOWN_ID = "5a000000-0000-4000-8000-00000000ffff";
 
+const ENGINEERING = "9e000000-0000-4000-8000-0000000000e1";
+const scopedToPipeline = (target: string, id: string, i = 0) =>
+  chainOf(target, i).some((c) => c.method === "eq" && c.args[0] === "pipeline_id" && c.args[1] === id);
+
+// With one pipeline per company, the default one answers every lookup.
 beforeEach(() => {
-  supabase = createSupabaseMock({ user: COMPANY_A.user });
+  supabase = createSupabaseMock({
+    user: COMPANY_A.user,
+    fallback: (call) =>
+      call.target === "company_pipelines"
+        ? { data: { id: DEFAULT_PIPELINE_ID }, error: null }
+        : { data: null, error: null },
+  });
+});
+
+describe("resolvePipelineId (JPT-021)", () => {
+  it("reads the company's default pipeline when no scope is given", async () => {
+    expect(await resolvePipelineId(ctx())).toBe(DEFAULT_PIPELINE_ID);
+    expect(scopedToCompany("company_pipelines")).toBe(true);
+    expect(chainOf("company_pipelines")).toContainEqual({ method: "eq", args: ["is_default", true] });
+  });
+
+  it("checks a named pipeline belongs to the company", async () => {
+    supabase.queue("company_pipelines", { data: { id: ENGINEERING }, error: null });
+    expect(await resolvePipelineId(ctx(), { pipelineId: ENGINEERING })).toBe(ENGINEERING);
+    expect(scopedToCompany("company_pipelines")).toBe(true);
+    expect(chainOf("company_pipelines")).toContainEqual({ method: "eq", args: ["id", ENGINEERING] });
+  });
+
+  it("reports another company's pipeline as null", async () => {
+    supabase.queue("company_pipelines", { data: null, error: null });
+    expect(await resolvePipelineId(ctx(), { pipelineId: ENGINEERING })).toBeNull();
+  });
+
+  it("reads a job's pipeline through the company's job", async () => {
+    supabase.queue("job_postings", { data: { pipeline_id: ENGINEERING }, error: null });
+    expect(await resolvePipelineId(ctx(), { jobPostId: PIPELINE_JOB.id })).toBe(ENGINEERING);
+    expect(scopedToCompany("job_postings")).toBe(true);
+    expect(chainOf("job_postings")).toContainEqual({ method: "eq", args: ["id", PIPELINE_JOB.id] });
+    expect(supabase.callsFor("company_pipelines")).toHaveLength(0);
+  });
+
+  it("refuses ids that aren't uuids without a query", async () => {
+    expect(await resolvePipelineId(ctx(), { pipelineId: "nope" })).toBeNull();
+    expect(await resolvePipelineId(ctx(), { jobPostId: "nope" })).toBeNull();
+    expect(supabase.calls).toHaveLength(0);
+  });
 });
 
 describe("listStages (PL-TEST-004)", () => {
@@ -36,6 +82,7 @@ describe("listStages (PL-TEST-004)", () => {
     expect(await listStages(ctx())).toEqual(DEFAULT_STAGES);
 
     expect(scopedToCompany("pipeline_stages")).toBe(true);
+    expect(scopedToPipeline("pipeline_stages", DEFAULT_PIPELINE_ID)).toBe(true);
     expect(chainOf("pipeline_stages")).toContainEqual({ method: "eq", args: ["archived", false] });
     expect(argsOf("pipeline_stages", "order")).toEqual(["position", { ascending: true }]);
   });
@@ -53,6 +100,24 @@ describe("listStages (PL-TEST-004)", () => {
     supabase.queue("pipeline_stages", { data: null, error: { message: "boom" } });
     await expect(listStages(ctx())).rejects.toThrow();
   });
+
+  it("reads a job's pipeline (JPT-021)", async () => {
+    supabase.queue("job_postings", { data: { pipeline_id: ENGINEERING }, error: null });
+    supabase.queue("pipeline_stages", { data: [], error: null });
+
+    await listStages(ctx(), { jobPostId: PIPELINE_JOB.id });
+
+    expect(scopedToPipeline("pipeline_stages", ENGINEERING)).toBe(true);
+    expect(scopedToCompany("pipeline_stages")).toBe(true);
+  });
+
+  it("returns no stages for another company's job or pipeline, without reading stages", async () => {
+    supabase.queue("job_postings", { data: null, error: null });
+    expect(await listStages(ctx(), { jobPostId: PIPELINE_JOB.id })).toEqual([]);
+    supabase.queue("company_pipelines", { data: null, error: null });
+    expect(await listStages(ctx(), { pipelineId: ENGINEERING })).toEqual([]);
+    expect(supabase.callsFor("pipeline_stages")).toHaveLength(0);
+  });
 });
 
 describe("createStage (PL-TEST-004)", () => {
@@ -68,8 +133,10 @@ describe("createStage (PL-TEST-004)", () => {
     });
 
     expect(scopedToCompany("pipeline_stages", 0)).toBe(true);
+    expect(scopedToPipeline("pipeline_stages", DEFAULT_PIPELINE_ID, 0)).toBe(true);
     expect(argsOf("pipeline_stages", "insert", 1)?.[0]).toEqual({
       company_id: COMPANY_A.id,
+      pipeline_id: DEFAULT_PIPELINE_ID,
       name: "Take-home",
       kind: "screening",
       position: 10,
@@ -102,6 +169,28 @@ describe("createStage (PL-TEST-004)", () => {
     });
     expect(supabase.calls).toHaveLength(0);
   });
+
+  it("adds to a named pipeline of the company (JPT-021)", async () => {
+    supabase.queue("company_pipelines", { data: { id: ENGINEERING }, error: null });
+    supabase.queue("pipeline_stages", { data: [], error: null });
+    supabase.queue("pipeline_stages", { data: { ...stageOf("screening"), pipeline_id: ENGINEERING }, error: null });
+
+    expect(
+      await createStage(ctx(), { name: "Take-home", kind: "screening", pipelineId: ENGINEERING }),
+    ).toMatchObject({ ok: true });
+
+    expect(scopedToPipeline("pipeline_stages", ENGINEERING, 0)).toBe(true);
+    expect(argsOf("pipeline_stages", "insert", 1)?.[0]).toMatchObject({ pipeline_id: ENGINEERING, position: 0 });
+  });
+
+  it("refuses another company's pipeline without touching stages", async () => {
+    supabase.queue("company_pipelines", { data: null, error: null });
+
+    expect(
+      await createStage(ctx(), { name: "Take-home", kind: "screening", pipelineId: ENGINEERING }),
+    ).toEqual({ ok: false, error: "Pipeline not found." });
+    expect(supabase.callsFor("pipeline_stages")).toHaveLength(0);
+  });
 });
 
 describe("renameStage (PL-TEST-004)", () => {
@@ -126,6 +215,12 @@ describe("renameStage (PL-TEST-004)", () => {
       ok: false,
       error: "Stage not found.",
     });
+  });
+
+  it("also filters by the pipeline when given", async () => {
+    supabase.queue("pipeline_stages", { data: { id: stageOf("interview").id }, error: null });
+    await renameStage(ctx(), { stageId: stageOf("interview").id, name: "Onsite", pipelineId: ENGINEERING });
+    expect(scopedToPipeline("pipeline_stages", ENGINEERING)).toBe(true);
   });
 
   it("validates the name and the id before querying", async () => {
@@ -190,6 +285,7 @@ describe("reorderStages (PL-TEST-004)", () => {
     expect(await reorderStages(ctx(), reversed)).toEqual({ ok: true });
 
     expect(scopedToCompany("pipeline_stages")).toBe(true);
+    expect(scopedToPipeline("pipeline_stages", DEFAULT_PIPELINE_ID)).toBe(true);
     expect(supabase.callsFor("reorder_pipeline_stages")).toHaveLength(1);
     expect(argsOf("reorder_pipeline_stages", "rpc")).toEqual([
       "reorder_pipeline_stages",
@@ -205,6 +301,20 @@ describe("reorderStages (PL-TEST-004)", () => {
     supabase.queue("pipeline_stages", { data: active, error: null });
 
     expect(await reorderStages(ctx(), ids)).toMatchObject({ ok: false });
+    expect(supabase.callsFor("reorder_pipeline_stages")).toHaveLength(0);
+  });
+
+  it("checks the ids against the named pipeline's active stages (JPT-021)", async () => {
+    supabase.queue("company_pipelines", { data: { id: ENGINEERING }, error: null });
+    supabase.queue("pipeline_stages", { data: active, error: null });
+
+    expect(await reorderStages(ctx(), reversed, { pipelineId: ENGINEERING })).toEqual({ ok: true });
+    expect(scopedToPipeline("pipeline_stages", ENGINEERING)).toBe(true);
+  });
+
+  it("refuses another company's pipeline", async () => {
+    supabase.queue("company_pipelines", { data: null, error: null });
+    expect(await reorderStages(ctx(), reversed, { pipelineId: ENGINEERING })).toMatchObject({ ok: false });
     expect(supabase.callsFor("reorder_pipeline_stages")).toHaveLength(0);
   });
 

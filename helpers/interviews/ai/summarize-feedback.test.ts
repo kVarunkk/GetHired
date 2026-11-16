@@ -143,7 +143,8 @@ describe("summarizeFeedback (IV-REQ-051)", () => {
 
   it("never asks for or returns a recommendation (D16)", async () => {
     expect(SUMMARIZE_FEEDBACK_SYSTEM_PROMPT).toMatch(/never recommend/i);
-    const source = readFileSync(path.join(__dirname, "summarize-feedback.ts"), "utf8");
+    // A Windows checkout (core.autocrlf) gives the file CRLF line endings.
+    const source = readFileSync(path.join(__dirname, "summarize-feedback.ts"), "utf8").replace(/\r\n/g, "\n");
     const schema = source.slice(source.indexOf("const outputSchema"), source.indexOf("});\n", source.indexOf("const outputSchema")));
     expect(schema).not.toMatch(/recommend|decision|hire|verdict/i);
 

@@ -186,6 +186,21 @@ const emptyCounts = (): Record<CandidateRating, number> => ({ strong_no: 0, no: 
  * `list_interview_scorecards`, which hides other members' content while the
  * reader is blind. Returns `[]` without access.
  */
+/**
+ * The plan items this application already has an open interview for
+ * (awaiting the candidate or scheduled): `create_scheduled_interview` refuses
+ * a second one, so the scheduler marks them.
+ */
+export async function openPlanItemIds(supabase: Db, applicationId: string): Promise<Set<string>> {
+  const { data } = await supabase
+    .from("scheduled_interviews")
+    .select("plan_item_id")
+    .eq("application_id", applicationId)
+    .in("status", ["awaiting_candidate", "scheduled"])
+    .not("plan_item_id", "is", null);
+  return new Set((data ?? []).flatMap((i) => (i.plan_item_id ? [i.plan_item_id] : [])));
+}
+
 export async function listApplicationInterviews(supabase: Db, applicationId: string): Promise<InterviewStageGroup[]> {
   const [interviewsRes, seatsRes] = await Promise.all([
     supabase

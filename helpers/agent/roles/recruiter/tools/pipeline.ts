@@ -8,13 +8,27 @@ import { mentionsToText } from "@/helpers/team/mentions";
 import {
   archiveStage,
   createStage,
-  listStages,
+  listPipelineStages,
   MAX_ACTIVE_STAGES,
   MAX_STAGE_NAME,
   renameStage,
   reorderStages,
+  resolvePipelineId,
+  type StageScope,
 } from "@/helpers/pipeline/stages";
+import { MAX_PIPELINES_PER_COMPANY, PIPELINE_NAME_MAX, pipelineEditorPath } from "@/helpers/pipeline/config";
+import { PIPELINE_NOT_FOUND } from "@/helpers/pipeline/copy";
+import {
+  createPipeline,
+  forkJobPipeline,
+  listPipelines,
+  setJobPipeline,
+  type PipelineFailure,
+  type PipelineSummary,
+} from "@/helpers/pipeline/pipelines";
+import { mappingFromPairs } from "@/helpers/pipeline/preview-agent-pipeline";
 import { statusForKind } from "@/helpers/pipeline/status-map";
+import { jobPipelinePath } from "@/helpers/jobs/paths";
 import {
   addToTalentList,
   createTalentList,
@@ -43,6 +57,50 @@ import {
 } from "./shared";
 
 const JOB_NOT_FOUND = { error: "Job post not found." } as const;
+
+/** How a tool result names a pipeline, so the model can say which one changed and who shares it. */
+const pipelineView = (p: PipelineSummary) => ({
+  id: p.id,
+  name: p.name,
+  isDefault: p.is_default,
+  /** Jobs, open and closed, on this pipeline: a stage edit changes all of them. */
+  sharedByJobs: p.jobs,
+  url: pipelineEditorPath(p.id),
+});
+
+/**
+ * The session company's active pipeline for `scope` (a job's, a named one,
+ * or the default with neither, JPT-040), with its job count. Null when the
+ * job or pipeline isn't the company's.
+ */
+async function targetPipeline(ctx: RecruiterToolContext, scope: StageScope): Promise<PipelineSummary | null> {
+  const id = await resolvePipelineId(ctx, scope);
+  if (!id) return null;
+  return (await listPipelines(ctx)).find((p) => p.id === id) ?? null;
+}
+
+const pipelineIdInput = uuidInput("pipeline")
+  .optional()
+  .describe("A pipeline id from listPipelines. Leave it out for the company's default pipeline.");
+
+/** A pipeline helper's refusal, with the stage or status the switch needs when it names one. */
+const pipelineError = (failure: PipelineFailure) => ({
+  error: failure.error,
+  ...(failure.stage ? { stage: failure.stage.name } : {}),
+});
+
+/** setJobPipeline's input, shared with the approval card's preview (`previewAgentJobPipelineSwitchAction`). */
+export const setJobPipelineInput = z.object({
+  jobPostId: uuidInput("job post"),
+  pipelineId: uuidInput("pipeline"),
+  mapping: z
+    .array(z.object({ fromStageId: uuidInput("stage"), toStageId: uuidInput("stage") }))
+    .max(MAX_ACTIVE_STAGES * 2)
+    .optional()
+    .describe(
+      "Only the stages the user wants somewhere other than the default (the new pipeline's first stage of the same kind, else one with the same candidate status). fromStageId from listStages with the job's jobPostId, toStageId from listStages with the new pipelineId; both must show candidates the same status.",
+    ),
+});
 
 /** Exactly one of a candidate or an application. */
 const noteTarget = z.object({
@@ -84,14 +142,88 @@ export function createPipelineTools(ctx: RecruiterToolContext) {
   const { supabase, company, user } = ctx;
 
   return {
-    listStages: tool({
-      description:
-        "List the company's hiring pipeline stages in order, with the status candidates see in each, and the company's email templates (for moveApplications' email).",
+    listPipelines: tool({
+      description: `List the company's pipelines (up to ${MAX_PIPELINES_PER_COMPANY}): each job uses one, and new jobs get the default. Each pipeline has its own stages; sharedByJobs counts the jobs (open and closed) that a change to its stages affects.`,
       inputSchema: z.object({}),
       execute: () =>
+        withToolErrors(ctx, "listPipelines", async () => {
+          const pipelines = await listPipelines(ctx);
+          return {
+            pipelines: pipelines.map((p) => ({
+              ...pipelineView(p),
+              openJobs: p.openJobs,
+              closedJobs: p.closedJobs,
+              activeStages: p.activeStages,
+            })),
+          };
+        }),
+    }),
+
+    createPipeline: tool({
+      description: `Create a pipeline as a copy of an existing one's active stages (the default pipeline's unless fromPipelineId is given), for jobs that hire differently. No job moves onto it: use setJobPipeline for that. Then change its stages with createStage, renameStage, reorderStages and archiveStage, passing its pipelineId.`,
+      inputSchema: z.object({
+        name: z.string().trim().min(1).max(PIPELINE_NAME_MAX),
+        fromPipelineId: uuidInput("pipeline").optional(),
+      }),
+      execute: ({ name, fromPipelineId }) =>
+        withToolErrors(ctx, "createPipeline", async () => {
+          const result = await createPipeline(ctx, { name, fromPipelineId });
+          if (!result.ok) return pipelineError(result);
+          return { pipeline: { id: result.pipelineId, name, url: pipelineEditorPath(result.pipelineId) }, created: true };
+        }),
+    }),
+
+    setJobPipeline: tool({
+      description:
+        "Move a job onto another of the company's pipelines. Every application to the job moves to a stage of the new pipeline that shows the candidate the same status, so candidates see no change and nobody is emailed; the job's interview plan moves with it. Refused when the new pipeline has no stage with a status some candidates need (the error names the stage): add one to it first.",
+      inputSchema: setJobPipelineInput,
+      execute: ({ jobPostId, pipelineId, mapping }) =>
+        withToolErrors(ctx, "setJobPipeline", async () => {
+          const result = await setJobPipeline(ctx, { jobPostId, pipelineId, mapping: mappingFromPairs(mapping) });
+          if (!result.ok) return pipelineError(result);
+          return {
+            jobPostId,
+            pipelineId,
+            changed: result.changed,
+            moved: result.moved,
+            planItems: result.planItems,
+            url: jobPipelinePath(jobPostId),
+          };
+        }),
+    }),
+
+    customizeJobPipeline: tool({
+      description:
+        "Give one job its own pipeline: copy the job's current pipeline under the job's title and move the job onto it stage for stage (candidates see no change, nobody is emailed). Other jobs keep the old pipeline. Use it when the user wants to change one job's stages without changing every job that shares its pipeline; then edit the copy's stages with its pipelineId.",
+      inputSchema: z.object({ jobPostId: uuidInput("job post") }),
+      execute: ({ jobPostId }) =>
+        withToolErrors(ctx, "customizeJobPipeline", async () => {
+          const result = await forkJobPipeline(ctx, { jobPostId });
+          if (!result.ok) return pipelineError(result);
+          return {
+            jobPostId,
+            pipeline: { id: result.pipelineId, name: result.name, url: pipelineEditorPath(result.pipelineId) },
+            moved: result.moved,
+            planItems: result.planItems,
+          };
+        }),
+    }),
+
+    listStages: tool({
+      description:
+        "List one pipeline's stages in order, with the status candidates see in each, and the company's email templates (for moveApplications' email). With jobPostId, the stages of that job's pipeline (the ones its applications can move to); with pipelineId, that pipeline's; with neither, the default pipeline's. The result names the pipeline and sharedByJobs, the number of jobs a stage change affects.",
+      inputSchema: z
+        .object({
+          jobPostId: uuidInput("job post").optional(),
+          pipelineId: uuidInput("pipeline").optional(),
+        })
+        .refine((v) => !(v.jobPostId && v.pipelineId), { message: "Pass jobPostId or pipelineId, not both." }),
+      execute: ({ jobPostId, pipelineId }) =>
         withToolErrors(ctx, "listStages", async () => {
+          const pipeline = await targetPipeline(ctx, jobPostId ? { jobPostId } : { pipelineId });
+          if (!pipeline) return jobPostId ? JOB_NOT_FOUND : { error: PIPELINE_NOT_FOUND };
           const [stages, { data: templates, error }] = await Promise.all([
-            listStages(ctx),
+            listPipelineStages(ctx, pipeline.id),
             supabase
               .from("company_email_templates")
               .select("id, name, purpose, is_default")
@@ -100,6 +232,7 @@ export function createPipelineTools(ctx: RecruiterToolContext) {
           ]);
           if (error) throw error;
           return {
+            pipeline: pipelineView(pipeline),
             stages: stages.map((s) => ({
               id: s.id,
               name: s.name,
@@ -117,64 +250,79 @@ export function createPipelineTools(ctx: RecruiterToolContext) {
     }),
 
     createStage: tool({
-      description: `Add a pipeline stage after the existing ones (up to ${MAX_ACTIVE_STAGES} active stages). Its kind sets what candidates in it see (listStages' candidateSees); use reorderStages to move it into place.`,
+      description: `Add a stage after a pipeline's existing ones (up to ${MAX_ACTIVE_STAGES} active stages per pipeline). Its kind sets what candidates in it see (listStages' candidateSees); use reorderStages to move it into place. It changes every job on that pipeline.`,
       inputSchema: z.object({
         name: z.string().trim().min(1).max(MAX_STAGE_NAME),
         kind: z.enum(Constants.public.Enums.pipeline_stage_kind),
+        pipelineId: pipelineIdInput,
       }),
-      execute: ({ name, kind }) =>
+      execute: ({ name, kind, pipelineId }) =>
         withToolErrors(ctx, "createStage", async () => {
-          const result = await createStage(ctx, { name, kind });
+          const pipeline = await targetPipeline(ctx, { pipelineId });
+          if (!pipeline) return { error: PIPELINE_NOT_FOUND };
+          const result = await createStage(ctx, { name, kind, pipelineId: pipeline.id });
           if (!result.ok) return { error: result.error };
           const { stage } = result;
-          return { stage: { id: stage.id, name: stage.name, kind: stage.kind, candidateSees: statusForKind(stage.kind) } };
+          return {
+            pipeline: pipelineView(pipeline),
+            stage: { id: stage.id, name: stage.name, kind: stage.kind, candidateSees: statusForKind(stage.kind) },
+          };
         }),
     }),
 
     renameStage: tool({
-      description: "Rename one of the company's pipeline stages (ids from listStages). Its kind, and what candidates see, stay the same.",
+      description:
+        "Rename one of a pipeline's stages (ids from listStages with the same pipelineId). Its kind, and what candidates see, stay the same. It changes every job on that pipeline.",
       inputSchema: z.object({
         stageId: uuidInput("stage"),
         name: z.string().trim().min(1).max(MAX_STAGE_NAME),
+        pipelineId: pipelineIdInput,
       }),
-      execute: ({ stageId, name }) =>
+      execute: ({ stageId, name, pipelineId }) =>
         withToolErrors(ctx, "renameStage", async () => {
-          const result = await renameStage(ctx, { stageId, name });
+          const pipeline = await targetPipeline(ctx, { pipelineId });
+          if (!pipeline) return { error: PIPELINE_NOT_FOUND };
+          const result = await renameStage(ctx, { stageId, name, pipelineId: pipeline.id });
           if (!result.ok) return { error: result.error };
-          return { stage: { id: stageId, name }, renamed: true };
+          return { pipeline: pipelineView(pipeline), stage: { id: stageId, name }, renamed: true };
         }),
     }),
 
     reorderStages: tool({
       description:
-        "Put the company's pipeline stages in a new order. stageIds must list every active stage from listStages exactly once, in the new order.",
+        "Put one pipeline's stages in a new order. stageIds must list every active stage from listStages (with the same pipelineId) exactly once, in the new order. It changes every job on that pipeline.",
       inputSchema: z.object({
         stageIds: z.array(uuidInput("stage")).min(1).max(MAX_ACTIVE_STAGES),
+        pipelineId: pipelineIdInput,
       }),
-      execute: ({ stageIds }) =>
+      execute: ({ stageIds, pipelineId }) =>
         withToolErrors(ctx, "reorderStages", async () => {
-          const result = await reorderStages(ctx, stageIds);
+          const pipeline = await targetPipeline(ctx, { pipelineId });
+          if (!pipeline) return { error: PIPELINE_NOT_FOUND };
+          const result = await reorderStages(ctx, stageIds, { pipelineId: pipeline.id });
           if (!result.ok) return { error: result.error };
-          return { stageIds, reordered: true };
+          return { pipeline: pipelineView(pipeline), stageIds, reordered: true };
         }),
     }),
 
     archiveStage: tool({
       description:
-        "Archive an empty pipeline stage (ids from listStages), only when the user asks. Stages that still hold applications can't be archived until they're moved out, and the Applied, Hired and Rejected stages can't be archived at all.",
-      inputSchema: z.object({ stageId: uuidInput("stage") }),
-      execute: ({ stageId }) =>
+        "Archive an empty stage of a pipeline (ids from listStages with the same pipelineId), only when the user asks. Stages that still hold applications can't be archived until they're moved out, and Applied, Hired and Rejected stages can't be archived at all.",
+      inputSchema: z.object({ stageId: uuidInput("stage"), pipelineId: pipelineIdInput }),
+      execute: ({ stageId, pipelineId }) =>
         withToolErrors(ctx, "archiveStage", async () => {
-          const result = await archiveStage(ctx, { stageId });
+          const pipeline = await targetPipeline(ctx, { pipelineId });
+          if (!pipeline) return { error: PIPELINE_NOT_FOUND };
+          const result = await archiveStage(ctx, { stageId, pipelineId: pipeline.id });
           if (!result.ok) {
             return { error: result.error, ...("count" in result ? { applications: result.count } : {}) };
           }
-          return { stageId, archived: true };
+          return { pipeline: pipelineView(pipeline), stageId, archived: true };
         }),
     }),
 
     moveApplications: tool({
-      description: `Move up to ${RA_MAX_BULK_APPLICATIONS} applications to the company's jobs into a pipeline stage (ids from listStages). With email, the candidates whose visible status changes get the template's email; subject and body replace the template's text and may use its {{variables}}. Pick the template by where the candidates come from as well as where they go: rejection for a Rejected stage, on_hold for On hold, reopen when they come back from Rejected or Hired, resume from On hold into Applied or Screening, or move to an earlier stage; otherwise the target's (interview_invite, offer, advance). Moving a candidate to Rejected or Hired cancels their open AI interview invite and, unless cancelInterviews is false, their upcoming interviews with the team (scheduling links stop working; Google Calendar tells the attendees). Emails are queued and go out after 2 minutes; moving the application again before then cancels its email. emailed counts the queued ones.`,
+      description: `Move up to ${RA_MAX_BULK_APPLICATIONS} applications to the company's jobs into a pipeline stage (ids from listStages with the job's jobPostId; an application whose job is on another pipeline is skipped). With email, the candidates whose visible status changes get the template's email; subject and body replace the template's text and may use its {{variables}}. Pick the template by where the candidates come from as well as where they go: rejection for a Rejected stage, on_hold for On hold, reopen when they come back from Rejected or Hired, resume from On hold into Applied or Screening, or move to an earlier stage; otherwise the target's (interview_invite, offer, advance). Moving a candidate to Rejected or Hired cancels their open AI interview invite and, unless cancelInterviews is false, their upcoming interviews with the team (scheduling links stop working; Google Calendar tells the attendees). Emails are queued and go out after 2 minutes; moving the application again before then cancels its email. emailed counts the queued ones.`,
       inputSchema: moveApplicationsInput,
       execute: ({ applicationIds, stageId, email, cancelInterviews }) =>
         withToolErrors(ctx, "moveApplications", async () => {

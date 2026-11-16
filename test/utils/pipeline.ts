@@ -4,6 +4,7 @@ import {
   COMPANY_A,
   PUBLIC_APPLICANT,
   applicationOf,
+  defaultPipelineIdOf,
   jobPostingOf,
 } from "./recruiter";
 
@@ -35,6 +36,7 @@ export type ApplicationEventType =
   | "scorecard_submitted";
 
 export type PipelineStageRow = Tables["pipeline_stages"]["Row"];
+export type CompanyPipelineRow = Tables["company_pipelines"]["Row"];
 
 export type CompanyEmailTemplateRow = Tables["company_email_templates"]["Row"];
 
@@ -53,6 +55,8 @@ export type PipelineApplication = ApplicationRow & {
     id: string;
     company_id: string;
     title: string;
+    /** The job's pipeline (JP-REQ-003); `moveApplications` checks the stage is in it. */
+    pipeline_id?: string | null;
     company_info: { name: string | null; email: string | null };
   };
 };
@@ -72,11 +76,43 @@ const STAGE_NAMES: Record<PipelineStageKind, string> = {
   on_hold: "On hold",
 };
 
+/** COMPANY_A's Default pipeline, which every `jobPostingOf(COMPANY_A)` job uses. */
+export const DEFAULT_PIPELINE_ID = defaultPipelineIdOf(COMPANY_A.id);
+
+/**
+ * A `company_pipelines` row. By default COMPANY_A's Default pipeline; pass an
+ * `id` (and `isDefault: false`) for another one.
+ */
+export function pipelineOf({
+  id = DEFAULT_PIPELINE_ID,
+  companyId = COMPANY_A.id,
+  name = "Default",
+  isDefault = id === defaultPipelineIdOf(companyId),
+  archived = false,
+}: {
+  id?: string;
+  companyId?: string;
+  name?: string;
+  isDefault?: boolean;
+  archived?: boolean;
+} = {}): CompanyPipelineRow {
+  return {
+    id,
+    company_id: companyId,
+    name,
+    is_default: isDefault,
+    archived,
+    created_at: CREATED_AT,
+    updated_at: CREATED_AT,
+  };
+}
+
 /** PL-REQ-001's defaults for COMPANY_A, as `seed_default_pipeline` creates them. */
 export const DEFAULT_STAGES: readonly PipelineStageRow[] = PIPELINE_STAGE_KINDS.map(
   (kind, position) => ({
     id: seqId("5a000000", position + 1),
     company_id: COMPANY_A.id,
+    pipeline_id: DEFAULT_PIPELINE_ID,
     name: STAGE_NAMES[kind],
     kind,
     position,
@@ -127,6 +163,7 @@ export function pipelineAppOf(
       id: PIPELINE_JOB.id,
       company_id: COMPANY_A.id,
       title: PIPELINE_JOB.title,
+      pipeline_id: DEFAULT_PIPELINE_ID,
       company_info: { name: COMPANY_A.info.name, email: COMPANY_A.info.email },
     },
     ...overrides,

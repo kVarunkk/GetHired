@@ -7,7 +7,8 @@ vi.mock("server-only", () => ({}));
 
 const APP_ID = "e0000000-0000-4000-8000-0000000000aa";
 const STAGE_ID = "5a000000-0000-4000-8000-000000000006";
-const input = { applicationId: APP_ID, companyId: COMPANY_A.id, candidateUserId: PUBLIC_APPLICANT.id };
+const PIPELINE_ID = "9e000000-0000-4000-8000-0000000000e1";
+const input = { applicationId: APP_ID, companyId: COMPANY_A.id, pipelineId: PIPELINE_ID, candidateUserId: PUBLIC_APPLICANT.id };
 
 let service: SupabaseMock;
 const writeOf = (table: string, method: string) =>
@@ -19,7 +20,7 @@ beforeEach(() => {
 });
 
 describe("rejectForKnockout (AF-REQ-003, CPT-032)", () => {
-  it("moves the application to the company's first Rejected stage and logs it without a person", async () => {
+  it("moves the application to its job pipeline's first Rejected stage and logs it without a person", async () => {
     service.queue("pipeline_stages", { data: { id: STAGE_ID, kind: "rejected" }, error: null });
     service.queue("applications", { data: { stage_id: "s-applied", pipeline_stages: { kind: "applied" } }, error: null });
     service.queue("applications", { data: null, error: null });
@@ -29,6 +30,7 @@ describe("rejectForKnockout (AF-REQ-003, CPT-032)", () => {
 
     const stageQuery = service.callsFor("pipeline_stages")[0].chain;
     expect(stageQuery).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
+    expect(stageQuery).toContainEqual({ method: "eq", args: ["pipeline_id", PIPELINE_ID] });
     expect(stageQuery).toContainEqual({ method: "eq", args: ["kind", "rejected"] });
     expect(stageQuery).toContainEqual({ method: "eq", args: ["archived", false] });
     expect(writeOf("applications", "update")).toMatchObject({ stage_id: STAGE_ID });
@@ -39,6 +41,11 @@ describe("rejectForKnockout (AF-REQ-003, CPT-032)", () => {
       type: "stage_changed",
       payload: { from_stage_id: "s-applied", to_stage_id: STAGE_ID, to_kind: "rejected", reason: "knockout" },
     });
+  });
+
+  it("does nothing for a job without a pipeline (JPT-023)", async () => {
+    expect(await rejectForKnockout(service.client, { ...input, pipelineId: null })).toBe(false);
+    expect(service.calls).toHaveLength(0);
   });
 
   it("does nothing without a Rejected stage", async () => {

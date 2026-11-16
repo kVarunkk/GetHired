@@ -102,6 +102,13 @@ export const RECRUITER_TOOL_PERMISSIONS = {
   renameStage: p(["settings.stages"]),
   reorderStages: p(["settings.stages"]),
   archiveStage: p(["settings.stages"]),
+  // Job pipelines (JPT-041): the same keys as the pipeline actions.
+  listPipelines: p(["applicants.view"]),
+  createPipeline: p(["settings.stages"]),
+  // set_job_pipeline checks jobs.edit for this job (job-scoped grants work).
+  setJobPipeline: p(["jobs.edit"], "jobPostId"),
+  // fork_job_pipeline checks settings.stages, like forkJobPipelineAction.
+  customizeJobPipeline: p(["settings.stages"]),
   // The same key as the template editor's actions.
   listEmailTemplates: p(["settings.templates"]),
   createEmailTemplate: p(["settings.templates"]),

@@ -22,12 +22,13 @@ import { calendarEnabled } from "@/helpers/calendar/connect";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can, canAny } from "@/helpers/companies/permissions";
 import { QUESTION_SETS_PATH } from "@/helpers/jobs/question-sets";
+import { PIPELINE_EDITOR_BASE } from "@/helpers/pipeline/config";
 import { createClient } from "@/lib/supabase/server";
 
 const SETTINGS_PATH = "/company/settings";
 
 /**
- * Settings' frame: the sections sidebar (pipeline stages, email templates,
+ * Settings' frame: the sections sidebar (pipelines, email templates,
  * scheduling link, my calendar, notifications, careers page, question sets,
  * team, hiring teams, roles, audit log) and the Settings header. A main page, so the
  * sidebar has no back link or title. Each section shows only with the
@@ -44,7 +45,14 @@ export default async function CompanySettingsLayout({ children }: { children: Re
 
     // Everyone sees these, read-only without their permissions (RP-REQ-016).
     const items: EntityNavItem[] = [
-      { href: SETTINGS_PATH, label: "Pipeline stages", icon: <Workflow />, exact: true },
+      // The index lists the pipelines; each one's stage editor is under /pipelines (JPT-032/033).
+      {
+        href: SETTINGS_PATH,
+        label: "Pipelines",
+        icon: <Workflow />,
+        exact: true,
+        alsoActiveUnder: PIPELINE_EDITOR_BASE,
+      },
       { href: `${SETTINGS_PATH}/email-templates`, label: "Email templates", icon: <Mail /> },
       { href: `${SETTINGS_PATH}/scheduling`, label: "Scheduling", icon: <CalendarClock /> },
       // Every member's own calendar (IVT-037), once Google Calendar is on.

@@ -75,6 +75,10 @@ const SPEC: Record<string, [string, "R" | "D I" | "D ¬I" | "¬D I" | "¬D ¬I" 
   get_application: ["applicants", "R"],
   get_hiring_funnel: ["applicants", "R"],
   screen_applicants: ["applicants", "¬D ¬I"],
+  list_pipelines: ["pipeline", "R"],
+  create_pipeline: ["pipeline", "¬D ¬I"],
+  set_job_pipeline: ["pipeline", "D I"],
+  customize_job_pipeline: ["pipeline", "¬D ¬I"],
   list_stages: ["pipeline", "R"],
   list_notes: ["pipeline", "R"],
   create_stage: ["pipeline", "¬D ¬I"],
@@ -178,7 +182,7 @@ describe("RECRUITER_MCP_TOOLS", () => {
       "saveMemory",
     ]);
     for (const reason of Object.values(RECRUITER_MCP_EXCLUDED_TOOLS)) expect(reason!.length).toBeGreaterThan(10);
-    expect(RECRUITER_MCP_TOOLS).toHaveLength(99);
+    expect(RECRUITER_MCP_TOOLS).toHaveLength(103);
   });
 
   it("names each tool after its agent tool, in snake_case, without colliding with the applicant catalog", () => {
@@ -214,7 +218,7 @@ describe("RECRUITER_MCP_TOOLS", () => {
 
   it("takes the confirm and credit flags from RECRUITER_APPROVAL_POLICY (RMCP-REQ-005)", () => {
     const confirm = named((name) => flags(name).confirm);
-    expect(confirm).toHaveLength(47);
+    expect(confirm).toHaveLength(49);
     expect(confirm).toEqual(
       expect.arrayContaining(["add_note", "update_note", "update_import_rows", "update_my_candidate"]),
     );

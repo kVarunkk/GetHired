@@ -95,7 +95,11 @@ export const RECRUITER_MCP_TOOLS: readonly RecruiterMcpToolDef[] = [
   confirmRow("screen_applicants", "Screen applicants", "applicants", ND_NI, "screenApplicants"),
 
   // --- pipeline ---
+  row("list_pipelines", "Pipelines", "pipeline", READ, "listPipelines"),
   row("list_stages", "Pipeline stages", "pipeline", READ, "listStages"),
+  row("create_pipeline", "Create a pipeline", "pipeline", ND_NI, "createPipeline"),
+  confirmRow("set_job_pipeline", "Move a job onto another pipeline", "pipeline", D_I, "setJobPipeline"),
+  confirmRow("customize_job_pipeline", "Give a job its own pipeline", "pipeline", ND_NI, "customizeJobPipeline"),
   row("list_notes", "Notes", "pipeline", READ, "listNotes"),
   row("create_stage", "Add a pipeline stage", "pipeline", ND_NI, "createStage"),
   row("rename_stage", "Rename a pipeline stage", "pipeline", ND_I, "renameStage"),

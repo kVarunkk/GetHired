@@ -10,7 +10,7 @@ const BATCH = "cb000000-0000-4000-8000-000000000001";
 const ROW = "f1000000-0000-4000-8000-000000000001";
 const PAGE: ImportPage = {
   jobs: [],
-  stages: [],
+  stagesByJob: {},
   lists: null,
   allowNoJob: true,
   screeningsRemaining: null,

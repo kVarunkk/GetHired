@@ -39,6 +39,7 @@ import { forbiddenMessage } from "@/helpers/companies/permissions";
 import { mcpCompanyRefusalCopy, mcpNoAccountTypeCopy } from "@/helpers/mcp/copy";
 import { RECRUITER_MCP_TOOLS } from "@/helpers/mcp/recruiter-tools";
 import { MCP_TOOLS } from "@/helpers/mcp/tools";
+import { DEFAULT_PIPELINE_ID } from "@/test/utils/pipeline";
 import { POST } from "./route";
 
 vi.mock("@/helpers/mcp/auth", async (importOriginal) => ({
@@ -326,14 +327,23 @@ describe("tools/call round trips", () => {
       ok: true,
       stage: { id: "90000000-0000-4000-8000-000000000009", name: "Take-home", kind: "interview" },
     } as never);
+    // The tool adds to the default pipeline (JPT-028), and names it with its job count (JPT-040).
+    supabase.queue("company_pipelines", { data: { id: DEFAULT_PIPELINE_ID }, error: null });
+    supabase.queue("company_pipelines", {
+      data: [{ id: DEFAULT_PIPELINE_ID, name: "Default", is_default: true, archived: false }],
+      error: null,
+    });
+    supabase.queue("job_postings", { data: [{ pipeline_id: DEFAULT_PIPELINE_ID, status: "active" }], error: null });
+    supabase.queue("pipeline_stages", { data: [], error: null });
 
     const body = await call("create_stage", { name: "Take-home", kind: "interview" });
 
     expect(createStage).toHaveBeenCalledWith(
       expect.objectContaining({ company: expect.objectContaining({ id: COMPANY_A.id }), surface: "mcp" }),
-      { name: "Take-home", kind: "interview" },
+      { name: "Take-home", kind: "interview", pipelineId: DEFAULT_PIPELINE_ID },
     );
     expect(body.result.structuredContent.stage).toMatchObject({ name: "Take-home" });
+    expect(body.result.structuredContent.pipeline).toMatchObject({ name: "Default", sharedByJobs: 1 });
   });
 
   it("save_candidate saves for the session company", async () => {
@@ -412,6 +422,16 @@ describe("toolsets on the URL (RMT-051, RMCP spec §4.5)", () => {
         "summarize_feedback",
       ].sort(),
     );
+  });
+
+  it("pipeline readonly keeps listPipelines and none of the pipeline writes (JPT-042)", async () => {
+    signInAs(OWNER_A);
+
+    const names = await namesAt("?toolsets=pipeline&readonly=true");
+    expect(names).toContain("list_pipelines");
+    for (const write of ["create_pipeline", "set_job_pipeline", "customize_job_pipeline"]) {
+      expect(names).not.toContain(write);
+    }
   });
 
   it("readonly=true lists only read-only tools, credit-spending reads included", async () => {

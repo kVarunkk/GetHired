@@ -46,3 +46,6 @@ export const SelectItem = ({ value, disabled, children }: { value: string; disab
     {children}
   </option>
 );
+
+// Separators have no native counterpart; nothing renders.
+export const SelectSeparator = () => null;

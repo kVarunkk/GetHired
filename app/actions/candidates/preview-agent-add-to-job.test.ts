@@ -11,6 +11,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 
 const c = (n: number) => `cc000000-0000-4000-8000-00000000000${n}`;
 const STAGE = "5a000000-0000-4000-8000-000000000002";
+const PIPELINE = "9e000000-0000-4000-8000-000000000001";
 let rls: SupabaseMock;
 
 async function signIn(member: MemberFixture) {
@@ -26,8 +27,8 @@ beforeEach(async () => {
 
 describe("previewAgentAddToJobAction (CPT-058)", () => {
   it("names the job, the stage and the people, with who has no email", async () => {
-    rls.queue("job_postings", { data: { id: JOB_A1, title: "Backend Engineer" }, error: null });
-    rls.queue("pipeline_stages", { data: { name: "Phone screen" }, error: null });
+    rls.queue("job_postings", { data: { id: JOB_A1, title: "Backend Engineer", pipeline_id: PIPELINE }, error: null });
+    rls.queue("pipeline_stages", { data: { name: "Phone screen", pipeline_id: PIPELINE }, error: null });
     rls.queue("company_candidates", {
       data: [
         { id: c(2), full_name: "Ravi", email: null },
@@ -51,6 +52,19 @@ describe("previewAgentAddToJobAction (CPT-058)", () => {
     expect(JSON.stringify(result)).not.toContain("meera@mail.test");
     expect(rls.callsFor("company_candidates")[0].chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
     expect(rls.callsFor("job_postings")[0].chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
+  });
+
+  it("refuses a stage from another pipeline than the job's (JPT-024)", async () => {
+    rls.queue("job_postings", { data: { id: JOB_A1, title: "Backend Engineer", pipeline_id: PIPELINE }, error: null });
+    rls.queue("pipeline_stages", {
+      data: { name: "Take-home", pipeline_id: "9e000000-0000-4000-8000-000000000002" },
+      error: null,
+    });
+    rls.queue("company_candidates", { data: [{ id: c(1), full_name: "Meera", email: "m@x.test" }], error: null });
+    expect(await previewAgentAddToJobAction({ jobPostId: JOB_A1, candidateIds: [c(1)], stageId: STAGE })).toEqual({
+      ok: false,
+      error: "Pick one of your pipeline stages.",
+    });
   });
 
   it("uses the job's first stage without one", async () => {

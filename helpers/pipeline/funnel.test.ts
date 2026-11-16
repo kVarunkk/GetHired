@@ -205,6 +205,77 @@ describe("getCompanyFunnel (PLT-081, PL-REQ-011)", () => {
     ]);
   });
 
+  it("totals jobs on two pipelines with differently named stages by kind (JPT-027)", async () => {
+    db.queue("job_postings", {
+      data: [
+        { id: PIPELINE_JOB.id, title: PIPELINE_JOB.title },
+        { id: JOB_2.id, title: JOB_2.title },
+      ],
+      error: null,
+    });
+    const named = (id: string, name: string, kind: Parameters<typeof stageOf>[0], count: number) => ({
+      stage_id: id,
+      name,
+      kind,
+      count,
+      reached: count,
+      median_days: null,
+    });
+    db.queueRpc("get_job_funnel", {
+      data: {
+        ...FUNNEL,
+        stages: [
+          named("5a000000-0000-4000-8000-0000000000e1", "New", "applied", 2),
+          named("5a000000-0000-4000-8000-0000000000e2", "Phone screen", "screening", 1),
+          named("5a000000-0000-4000-8000-0000000000e3", "Hired!", "hired", 1),
+        ],
+        total: 4,
+      },
+      error: null,
+    });
+    db.queueRpc("get_job_funnel", {
+      data: {
+        ...FUNNEL,
+        stages: [
+          named("5a000000-0000-4000-8000-0000000000f1", "Inbox", "applied", 3),
+          named("5a000000-0000-4000-8000-0000000000f2", "Take-home", "interview", 2),
+          named("5a000000-0000-4000-8000-0000000000f3", "Portfolio review", "screening", 1),
+        ],
+        total: 6,
+      },
+      error: null,
+    });
+    db.queue("applications", { data: [], error: null });
+
+    const result = await getCompanyFunnel({ supabase: db.client, company });
+
+    expect(result.stages).toEqual([
+      { stageId: "applied", name: "Applied", kind: "applied", count: 5 },
+      { stageId: "screening", name: "Screening", kind: "screening", count: 2 },
+      { stageId: "interview", name: "Interview", kind: "interview", count: 2 },
+      { stageId: "hired", name: "Hired", kind: "hired", count: 1 },
+    ]);
+    // Each job's own funnel keeps its stage names.
+    expect(result.jobs[1].stages.map((s) => s.name)).toEqual(["Inbox", "Take-home", "Portfolio review"]);
+  });
+
+  it("gives one pipeline's default stages the same rows as before (JPT-027)", async () => {
+    twoJobs();
+    db.queue("applications", { data: [], error: null });
+
+    const result = await getCompanyFunnel({ supabase: db.client, company });
+
+    expect(result.stages.map((s) => [s.name, s.count])).toEqual([
+      ["Applied", 5],
+      ["Screening", 2],
+      ["Interview", 0],
+      ["Offer", 0],
+      ["Hired", 1],
+      ["Rejected", 0],
+      ["On hold", 0],
+    ]);
+  });
+
   it(`lists applications in Applied for more than ${NEEDS_ATTENTION_DAYS} days with no event since`, async () => {
     twoJobs();
     const waiting = {

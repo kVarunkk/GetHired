@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { myInterviewTab, type MyInterview } from "@/helpers/interviews/my-interviews-view";
 import MyInterviewsTable from "./MyInterviewsTable";
@@ -44,6 +44,15 @@ describe("myInterviewTab (IVT-021)", () => {
 });
 
 describe("MyInterviewsTable (IVT-021)", () => {
+  // The table reads Date.now(); pin it to the fixtures' clock so they don't age.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("lists upcoming interviews with a link to the kit", () => {
     const upcoming = mine({ name: "System design" });
     render(<MyInterviewsTable interviews={[upcoming]} />);

@@ -20,7 +20,17 @@ export const PL_DAILY_EMAIL_CAP = 300;
  * `unsubscribed` / `no_email`: moved, but an imported candidate who opted out
  * or whose email was cleared isn't emailed (BI-REQ-032/034).
  */
-export type MoveSkipReason = "not_found" | "already_in_stage" | "email_failed" | "unsubscribed" | "no_email";
+/**
+ * Why an application wasn't moved. `other_pipeline`: the stage isn't in the
+ * application's job's pipeline (JP-REQ-004; copy in `./copy`).
+ */
+export type MoveSkipReason =
+  | "not_found"
+  | "already_in_stage"
+  | "other_pipeline"
+  | "email_failed"
+  | "unsubscribed"
+  | "no_email";
 
 /** An application the move found, with what callers need to tell the candidate. */
 export type LoadedApplication = {
@@ -67,7 +77,7 @@ export type MoveResult =
 type Ctx = { supabase: SupabaseClient<Database>; company: MyCompany; user: User };
 
 const LOAD_COLUMNS =
-  "id, applicant_user_id, stage_id, pipeline_stages(kind), user_info(email, full_name), company_candidates(full_name, email, email_opted_out_at), job_postings!inner(id, company_id, title, company_info(name))";
+  "id, applicant_user_id, stage_id, pipeline_stages(kind), user_info(email, full_name), company_candidates(full_name, email, email_opted_out_at), job_postings!inner(id, company_id, title, pipeline_id, company_info(name))";
 
 /**
  * The member's name, stored with events, notes and emails so it survives them
@@ -323,7 +333,7 @@ async function prepareMove(
 
   const { data: stage, error: stageError } = await supabase
     .from("pipeline_stages")
-    .select("id, name, kind, archived")
+    .select("id, name, kind, archived, pipeline_id")
     .eq("id", stageId)
     .eq("company_id", company.id)
     .maybeSingle();
@@ -352,6 +362,11 @@ async function prepareMove(
     const row = byId.get(id);
     if (!row) {
       skipped.push({ id, reason: "not_found" });
+      continue;
+    }
+    // JP-REQ-004: each job has its own pipeline; the DB refuses the rest too.
+    if (row.job_postings.pipeline_id !== stage.pipeline_id) {
+      skipped.push({ id, reason: "other_pipeline" });
       continue;
     }
     const app: LoadedApplication = {

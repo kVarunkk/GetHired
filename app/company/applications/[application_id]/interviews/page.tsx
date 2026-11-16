@@ -14,6 +14,7 @@ import { loadFeedbackSummary } from "@/helpers/interviews/feedback-summary";
 import { listApplicationInterviews } from "@/helpers/interviews/interviews";
 import { schedulePath } from "@/helpers/interviews/schedule-prompt";
 import { loadInterviewsCalendar, loadLinkTemplates } from "@/helpers/interviews/scheduler-calendar";
+import { stagesForJob } from "@/helpers/pipeline/stages";
 
 export const metadata: Metadata = {
   title: "Interviews",
@@ -43,16 +44,17 @@ export default async function ApplicationInterviewsPage({
     const { supabase, user, company, application, person, jobId, mergedInto } = frame;
     if (!can(company, "scheduling.view", jobId)) notFound();
 
-    const [groups, membersRes, stagesRes, feedbackSummary] = await Promise.all([
+    const [groups, membersRes, jobStages, feedbackSummary] = await Promise.all([
       listApplicationInterviews(supabase, application_id),
       supabase.rpc("list_interviewer_options"),
-      supabase.from("pipeline_stages").select("id, kind").eq("company_id", company.id),
+      // The job's own pipeline (JP-REQ-004), archived stages too.
+      stagesForJob(company.id, jobId, true),
       // Extra: a failed read leaves the summary out rather than the section.
       can(company, "scorecards.view_all", jobId)
         ? loadFeedbackSummary(supabase, application_id).catch(() => null)
         : Promise.resolve(null),
     ]);
-    const stages = new Map((stagesRes.data ?? []).map((s) => [s.id, s]));
+    const stages = new Map(jobStages.map((s) => [s.id, s]));
     const stageKind = application.stage_id ? stages.get(application.stage_id)?.kind : undefined;
     const closed = stageKind === "rejected" || stageKind === "hired";
     const canManage = can(company, "scheduling.manage", jobId) && !mergedInto && !closed;

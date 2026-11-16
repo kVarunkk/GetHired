@@ -36,7 +36,7 @@ const CANDIDATE_ID = "cc000000-0000-4000-8000-000000000001";
 
 const PAGE: DestinationPage = {
   jobs: [JOB],
-  stages: STAGES,
+  stagesByJob: { [JOB.id]: STAGES },
   lists: null,
   allowNoJob: true,
   screeningsRemaining: null,

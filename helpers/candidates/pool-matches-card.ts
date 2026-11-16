@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
+import { listStages } from "@/helpers/pipeline/stages";
 import { listPoolMatches, type PoolMatch, type PoolMatches } from "./pool-matches";
 
 export type PoolMatchesCardData = {
@@ -26,20 +27,14 @@ export async function loadPoolMatchesCard(
   const canAdd = can(company, "applicants.import", jobId);
   const [result, stages] = await Promise.all([
     listPoolMatches(supabase, jobId),
-    canAdd
-      ? supabase
-          .from("pipeline_stages")
-          .select("id, name")
-          .eq("company_id", company.id)
-          .eq("archived", false)
-          .order("position", { ascending: true })
-      : null,
+    // The job's own pipeline (JP-REQ-004). An extra: an error gives none.
+    canAdd ? listStages({ supabase, company }, { jobPostId: jobId }).catch(() => []) : null,
   ]);
   if (!result.ok || result.status === "no_pool") return null;
   return {
     status: result.status,
     matches: result.matches,
-    stages: canAdd ? (stages?.data ?? []) : null,
+    stages: stages && stages.map((s) => ({ id: s.id, name: s.name })),
   };
 }
 

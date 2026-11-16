@@ -43,15 +43,28 @@ export async function previewAgentAddToJob(
   const ids = [...new Set(parsed.data.candidateIds)];
 
   const [{ data: job }, { data: stage }, { data: rows, error }] = await Promise.all([
-    supabase.from("job_postings").select("id, title").eq("id", jobPostId).eq("company_id", company.id).maybeSingle(),
+    supabase
+      .from("job_postings")
+      .select("id, title, pipeline_id")
+      .eq("id", jobPostId)
+      .eq("company_id", company.id)
+      .maybeSingle(),
     stageId
-      ? supabase.from("pipeline_stages").select("name").eq("id", stageId).eq("company_id", company.id).maybeSingle()
+      ? supabase
+          .from("pipeline_stages")
+          .select("name, pipeline_id")
+          .eq("id", stageId)
+          .eq("company_id", company.id)
+          .maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.from("company_candidates").select("id, full_name, email").eq("company_id", company.id).in("id", ids),
   ]);
   if (error) return { ok: false, error: "Couldn't load the candidates." };
   if (!job) return { ok: false, error: "Job post not found." };
-  if (stageId && !stage) return { ok: false, error: "Pick one of your pipeline stages." };
+  // The stage must be in the job's pipeline (JP-REQ-004), as the add checks.
+  if (stageId && (!stage || stage.pipeline_id !== job.pipeline_id)) {
+    return { ok: false, error: "Pick one of your pipeline stages." };
+  }
 
   const rowOf = new Map((rows ?? []).map((r) => [r.id, r]));
   const candidates = ids.flatMap((id) => {

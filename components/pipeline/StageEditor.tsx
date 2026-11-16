@@ -14,29 +14,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { PipelineStageKind } from "@/helpers/pipeline/status-map";
+import { STAGE_KIND_LABELS, type PipelineStageKind } from "@/helpers/pipeline/status-map";
 import { candidateStatusLabel, type StageOption } from "./StagePicker";
 
 const MAX_STAGES = 12;
 const PROTECTED = new Set<PipelineStageKind>(["applied", "hired", "rejected"]);
-const KIND_LABELS: Record<PipelineStageKind, string> = {
-  applied: "Applied",
-  screening: "Screening",
-  interview: "Interview",
-  offer: "Offer",
-  hired: "Hired",
-  rejected: "Rejected",
-  on_hold: "On hold",
-};
+const KIND_LABELS = STAGE_KIND_LABELS;
 const KINDS = Object.keys(KIND_LABELS) as PipelineStageKind[];
 
 /**
- * Company settings: the pipeline's stages (PL-TASK-032, PL-REQ-001). Rename,
- * reorder with the arrow buttons (keyboard friendly), archive, and add up to
- * 12. Applied, Hired and Rejected can't be archived; a stage with
- * applications in it is refused inline.
+ * Company settings: one pipeline's stages (PL-TASK-032, PL-REQ-001, JPT-033).
+ * Rename, reorder with the arrow buttons (keyboard friendly), archive, and add
+ * up to 12. Applied, Hired and Rejected can't be archived; a stage with
+ * applications in it is refused inline. A pipeline more than one job uses
+ * warns that changes apply to all of them (JP-REQ-008).
  */
-export default function StageEditor({ stages: initial }: { stages: StageOption[] }) {
+export default function StageEditor({
+  pipelineId,
+  stages: initial,
+  sharedByJobs = 0,
+}: {
+  pipelineId: string;
+  stages: StageOption[];
+  /** Jobs on this pipeline, open and closed. */
+  sharedByJobs?: number;
+}) {
   const [stages, setStages] = useState(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [newName, setNewName] = useState("");
@@ -55,7 +57,7 @@ export default function StageEditor({ stages: initial }: { stages: StageOption[]
   const rename = async (stage: StageOption, name: string) => {
     const trimmed = name.trim();
     if (trimmed === stage.name) return;
-    const result = await saveStagesAction({ op: "rename", stageId: stage.id, name: trimmed });
+    const result = await saveStagesAction({ op: "rename", stageId: stage.id, name: trimmed, pipelineId });
     if (!result.ok) {
       setError(stage.id, result.error);
       return;
@@ -69,7 +71,7 @@ export default function StageEditor({ stages: initial }: { stages: StageOption[]
     const next = [...stages];
     [next[index], next[index + by]] = [next[index + by], next[index]];
     setStages(next);
-    const result = await saveStagesAction({ op: "reorder", ids: next.map((s) => s.id) });
+    const result = await saveStagesAction({ op: "reorder", ids: next.map((s) => s.id), pipelineId });
     if (!result.ok) {
       setStages(previous);
       toast.error(result.error);
@@ -77,7 +79,7 @@ export default function StageEditor({ stages: initial }: { stages: StageOption[]
   };
 
   const archive = async (stage: StageOption) => {
-    const result = await saveStagesAction({ op: "archive", stageId: stage.id });
+    const result = await saveStagesAction({ op: "archive", stageId: stage.id, pipelineId });
     if (!result.ok) {
       setError(stage.id, result.error);
       return;
@@ -88,7 +90,7 @@ export default function StageEditor({ stages: initial }: { stages: StageOption[]
   const add = async () => {
     setIsAdding(true);
     try {
-      const result = await saveStagesAction({ op: "create", name: newName.trim(), kind: newKind });
+      const result = await saveStagesAction({ op: "create", name: newName.trim(), kind: newKind, pipelineId });
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -107,6 +109,11 @@ export default function StageEditor({ stages: initial }: { stages: StageOption[]
 
   return (
     <div className="flex flex-col gap-4">
+      {sharedByJobs > 1 && (
+        <p role="status" className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+          Used by {sharedByJobs} jobs. Changes apply to all of them.
+        </p>
+      )}
       <ol className="flex flex-col gap-2">
         {stages.map((stage, index) => (
           <li key={stage.id} className="flex flex-col gap-1 rounded-lg border px-3 py-2">

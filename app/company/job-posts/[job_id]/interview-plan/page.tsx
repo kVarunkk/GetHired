@@ -8,6 +8,7 @@ import { isUuid } from "@/helpers/agent/auth";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { loadInterviewPlan } from "@/helpers/interviews/plan";
+import { stagesForJob } from "@/helpers/pipeline/stages";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -42,23 +43,19 @@ export default async function JobInterviewPlanPage({ params }: { params: Promise
     if (error) throw error;
     if (!job) notFound();
 
-    const [plan, stagesRes, membersRes, sourcesRes] = await Promise.all([
+    const [plan, jobStages, membersRes, sourcesRes] = await Promise.all([
       loadInterviewPlan(supabase, job.id),
-      supabase
-        .from("pipeline_stages")
-        .select("id, name, kind, archived")
-        .eq("company_id", company.id)
-        .order("position", { ascending: true }),
+      // The job's own pipeline (JP-REQ-004).
+      stagesForJob(company.id, job.id),
       supabase.rpc("list_interviewer_options"),
       // Other jobs whose plan the caller can see (RLS), for "Copy from another job".
       canEdit
         ? supabase.from("job_interview_plan_items").select("job_post_id, job_postings(title)").neq("job_post_id", job.id)
         : Promise.resolve({ data: [], error: null }),
     ]);
-    if (stagesRes.error) throw stagesRes.error;
 
     // Rejected and Hired can't have interviews (IV-REQ-001).
-    const stages = (stagesRes.data ?? [])
+    const stages = jobStages
       .filter((s) => !s.archived && s.kind !== "rejected" && s.kind !== "hired")
       .map((s) => ({ id: s.id, name: s.name }));
     const members = (membersRes.data ?? []).map((m) => ({ userId: m.user_id, name: m.name ?? "Teammate" }));

@@ -19,7 +19,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { upsertJobPostingAction } from "@/app/actions/upsert-job-posting";
 import { useEntitlementError } from "@/hooks/useEntitlementError";
-import { jobPostPath } from "@/helpers/jobs/paths";
+import Link from "next/link";
+import { Label } from "@/components/ui/label";
+import { jobPipelineSwitchPath, jobPostPath } from "@/helpers/jobs/paths";
 import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 import { jobPostHandoffPrompt } from "@/helpers/agent/handoff-prompts";
 import { applyQuestionSet } from "@/helpers/jobs/question-sets";
@@ -113,11 +115,13 @@ const workplaceOptions = [
   { value: "remote", label: "Remote" },
 ] as const;
 
+export type JobFormPipeline = { id: string; name: string; isDefault: boolean };
+
 /**
  * The job post form, on its own page (/company/job-posts/new and a job's Edit
- * section): the details, then the typed application form (AF-REQ-001). An
- * edit gets the full form, with its knockout rules, and the questions that
- * already have answers, loaded on the server (AF-REQ-005).
+ * section): the details, the pipeline, then the typed application form
+ * (AF-REQ-001). An edit gets the full form, with its knockout rules, and the
+ * questions that already have answers, loaded on the server (AF-REQ-005).
  */
 export default function JobPostingForm({
   companyId,
@@ -125,6 +129,8 @@ export default function JobPostingForm({
   initialForm,
   answeredQuestionIds = [],
   cancelHref,
+  pipelines = [],
+  hasApplications = false,
 }: {
   companyId: string;
   existingValues?: ICreateJobPostingFormData;
@@ -132,8 +138,17 @@ export default function JobPostingForm({
   answeredQuestionIds?: string[];
   /** Where Cancel goes: the job list for a new post, the job for an edit. */
   cancelHref: string;
+  /** The company's active pipelines (JP-REQ-003); none hides the field. */
+  pipelines?: JobFormPipeline[];
+  /** An edited job with applications changes pipeline on the switch page, not here. */
+  hasApplications?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
+  const savedPipelineId = existingValues?.pipeline_id ?? pipelines.find((p) => p.isDefault)?.id ?? pipelines[0]?.id;
+  const [pipelineId, setPipelineId] = useState(savedPipelineId);
+  const pipelineChanged = pipelineId !== undefined && pipelineId !== savedPipelineId;
+  // A new job always sends its pick; an edit only a change it can make here.
+  const sendPipeline = existingValues ? pipelineChanged && !hasApplications : pipelineId !== undefined;
   const router = useRouter();
   const { handle: handleEntitlement, dialog: upgradeDialog } = useEntitlementError();
   const form = useForm({
@@ -170,8 +185,13 @@ export default function JobPostingForm({
       const fields = { ...values };
       delete fields.id;
       delete fields.questions;
+      delete fields.pipeline_id;
       const result = await upsertJobPostingAction({
-        values: { ...fields, application_form: checkedForm.data },
+        values: {
+          ...fields,
+          application_form: checkedForm.data,
+          ...(sendPipeline && pipelineId ? { pipeline_id: pipelineId } : {}),
+        },
         existingPostingId: existingValues?.id,
       });
 
@@ -553,6 +573,44 @@ export default function JobPostingForm({
             </div>
           </CardContent>
         </Card>
+
+        {pipelines.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Pipeline</CardTitle>
+              <CardDescription>The stages candidates move through for this job.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="job-pipeline">Pipeline</Label>
+                <Select value={pipelineId} onValueChange={setPipelineId} disabled={loading}>
+                  <SelectTrigger id="job-pipeline" aria-label="Pipeline" className="md:w-1/2">
+                    <SelectValue placeholder="Pick a pipeline" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pipelines.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.isDefault ? `${p.name} (default)` : p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {existingValues?.id && hasApplications && pipelineChanged && pipelineId && (
+                <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">
+                  This job has applications, so saving here won&apos;t change its pipeline. Their stages need
+                  mapping first.{" "}
+                  <Link
+                    href={jobPipelineSwitchPath(existingValues.id, { to: pipelineId })}
+                    className="font-medium text-foreground underline underline-offset-4"
+                  >
+                    Switch the pipeline
+                  </Link>
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

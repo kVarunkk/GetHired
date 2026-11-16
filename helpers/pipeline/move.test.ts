@@ -84,6 +84,33 @@ describe("moveApplications (PL-TEST-002)", () => {
     supabase.queue("pipeline_stages", { data: INTERVIEW, error: null });
   });
 
+  it("skips applications whose job is on another pipeline (JPT-022)", async () => {
+    const mine = loaded();
+    const engineering = loaded(
+      pipelineAppOf({
+        job_postings: { ...pipelineAppOf().job_postings, id: "b0000000-0000-4000-8000-0000000000e1", pipeline_id: "9e000000-0000-4000-8000-0000000000e1" },
+      }),
+    );
+    supabase.queue("applications", { data: [mine, engineering], error: null });
+
+    const result = await moveApplications(ctx(), {
+      applicationIds: [mine.id, engineering.id],
+      stageId: INTERVIEW.id,
+    });
+
+    expect(result).toMatchObject({ ok: true, moved: 1 });
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.skipped).toEqual([{ id: engineering.id, reason: "other_pipeline" }]);
+    expect(supabase.callsFor("pipeline_stages")[0].chain[0]).toEqual({
+      method: "select",
+      args: ["id, name, kind, archived, pipeline_id"],
+    });
+    const [update] = updates();
+    expect(argsOf(update.chain, "in")).toEqual(["id", [mine.id]]);
+    const [events] = eventInserts();
+    expect((argsOf(events.chain, "insert")?.[0] as unknown[]).length).toBe(1);
+  });
+
   it("skips another company's, missing and off-platform applications as not_found", async () => {
     const mine = loaded();
     const theirs = pipelineAppOf({

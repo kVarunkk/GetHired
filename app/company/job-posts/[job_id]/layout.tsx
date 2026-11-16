@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { format } from "date-fns";
-import { ClipboardList, FileText, FileUp, Mic, Pencil, UserCog, UserSearch, Users } from "lucide-react";
+import { ClipboardList, FileText, FileUp, Mic, Pencil, UserCog, UserSearch, Users, Workflow } from "lucide-react";
 import Error from "@/components/Error";
 import EntityLayout from "@/components/EntityLayout";
 import type { EntityNavItem } from "@/components/EntityNav";
@@ -17,7 +17,7 @@ import { getMyCareersLink } from "@/helpers/careers/my-careers-link";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { jobControls } from "@/helpers/companies/job-scope";
 import { can } from "@/helpers/companies/permissions";
-import { jobPoolMatchesPath } from "@/helpers/jobs/paths";
+import { jobPipelinePath, jobPoolMatchesPath } from "@/helpers/jobs/paths";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -40,7 +40,7 @@ export async function generateMetadata({
 
 /**
  * A job post's frame: the sections sidebar (overview, edit, applications,
- * from your candidates, import, AI interview, interview plan, hiring team) and the header with the job's controls. Each
+ * from your candidates, import, AI interview, interview plan, pipeline, hiring team) and the header with the job's controls. Each
  * section page checks its own permission too.
  */
 export default async function JobPostLayout({
@@ -103,6 +103,9 @@ export default async function JobPostLayout({
     if (can(company, "scheduling.view", job.id) || can(company, "interview_plans.manage", job.id)) {
       items.push({ href: `${base}/interview-plan`, label: "Interview plan", icon: <ClipboardList /> });
     }
+    // JPT-035: the job's pipeline, for everyone who sees the job (jobs.view,
+    // checked above). Active on the switch page too.
+    items.push({ href: jobPipelinePath(job.id), label: "Pipeline", icon: <Workflow /> });
     // RP-REQ-011: the Hiring team page, for jobs.assign on this job only.
     if (can(company, "jobs.assign", job.id)) {
       items.push({ href: `${base}/hiring-team`, label: "Hiring team", icon: <UserCog /> });

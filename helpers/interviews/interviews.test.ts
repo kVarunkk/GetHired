@@ -7,6 +7,7 @@ import {
   cancelInterview,
   listApplicationInterviews,
   markInterview,
+  openPlanItemIds,
   recordInterview,
   updateInterview,
 } from "./interviews";
@@ -243,5 +244,27 @@ describe("listApplicationInterviews (IVT-018)", () => {
     db.queueRpc("list_interview_scorecards", { data: [], error: null });
     expect(await listApplicationInterviews(db.client, APPLICATION_ID)).toEqual([]);
     expect(db.callsFor("pipeline_stages")).toHaveLength(0);
+  });
+});
+
+describe("openPlanItemIds", () => {
+  it("returns the plan items with an open interview for the application", async () => {
+    db.queue("scheduled_interviews", {
+      data: [{ plan_item_id: "p1" }, { plan_item_id: "p2" }, { plan_item_id: "p1" }],
+      error: null,
+    });
+
+    const ids = await openPlanItemIds(db.client, APPLICATION_ID);
+
+    expect(ids).toEqual(new Set(["p1", "p2"]));
+    const chain = db.callsFor("scheduled_interviews")[0].chain;
+    expect(chain).toContainEqual({ method: "eq", args: ["application_id", APPLICATION_ID] });
+    expect(chain).toContainEqual({ method: "in", args: ["status", ["awaiting_candidate", "scheduled"]] });
+    expect(chain).toContainEqual({ method: "not", args: ["plan_item_id", "is", null] });
+  });
+
+  it("is empty when the read fails", async () => {
+    db.queue("scheduled_interviews", { data: null, error: { message: "boom" } });
+    expect(await openPlanItemIds(db.client, APPLICATION_ID)).toEqual(new Set());
   });
 });

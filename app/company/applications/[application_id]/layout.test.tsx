@@ -25,9 +25,11 @@ vi.mock("@/components/interviews/ScreeningInterviewActions", () => ({ default: (
 vi.mock("@/components/candidates/MergedNotice", () => ({ default: () => null }));
 vi.mock("@/components/candidates/ImportedBadge", () => ({ default: () => null }));
 vi.mock("@/helpers/interviews/plan", () => ({ loadSchedulingPlan: vi.fn(async () => ({})) }));
+vi.mock("@/helpers/pipeline/stages", () => ({ stagesForJob: vi.fn(async () => []) }));
 
 import { loadApplicationFrame, loadApplicationInterview } from "@/helpers/applications/application-page";
 import { loadSchedulingPlan } from "@/helpers/interviews/plan";
+import { stagesForJob } from "@/helpers/pipeline/stages";
 import ApplicationLayout from "./layout";
 
 const APP = "ab000000-0000-4000-8000-000000000001";
@@ -101,6 +103,13 @@ describe("the application's interview nav items (IVT-020)", () => {
   it("shows Interviews with scheduling.view", async () => {
     const nav = await renderAs(memberWith(["scheduling.view"]));
     expect(within(nav).getByRole("link", { name: /^Interviews$/ })).toBeInTheDocument();
+  });
+});
+
+describe("the stage picker's stages (JPT-026)", () => {
+  it("loads the application's job's pipeline", async () => {
+    await renderAs(OWNER_A);
+    expect(stagesForJob).toHaveBeenCalledWith(OWNER_A.company.id, JOB_A1, true);
   });
 });
 

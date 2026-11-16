@@ -5,7 +5,7 @@ import type { MyCompany } from "@/helpers/companies/get-my-company";
 import { isUuid } from "@/helpers/agent/auth";
 import { sendApplicationStatusEmail } from "@/helpers/email/send-application-status-email";
 import { moveApplications } from "@/helpers/pipeline/move";
-import { listStages, type PipelineStage } from "@/helpers/pipeline/stages";
+import { listPipelineStages, type PipelineStage } from "@/helpers/pipeline/stages";
 import { inverseKind, statusForKind } from "@/helpers/pipeline/status-map";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { TApplicationStatus } from "@/utils/types";
@@ -21,8 +21,8 @@ const STATUSES = new Set<string>(Object.values(TApplicationStatus));
 
 /**
  * The stage a status-only caller lands in: the first active stage of the
- * inverse kind (`reviewed` → Screening), or, if the company archived that
- * one, the first active stage that shows the same status.
+ * inverse kind (`reviewed` → Screening) in the job's pipeline, or, if that
+ * one is archived, the first active stage that shows the same status.
  */
 function stageForStatus(stages: PipelineStage[], status: ApplicationStatus) {
   return (
@@ -58,9 +58,18 @@ export async function updateApplicationStatus(
   }
   if (!STATUSES.has(status)) return { ok: false, error: "Invalid status." };
 
+  // JP-REQ-004: the stages of the application's job's pipeline.
   let stages: PipelineStage[];
   try {
-    stages = await listStages(ctx);
+    const { data: job, error } = await ctx.supabase
+      .from("job_postings")
+      .select("id, pipeline_id, applications!inner(id)")
+      .eq("applications.id", applicationId)
+      .eq("company_id", ctx.company.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!job) return { ok: false, error: "Application not found." };
+    stages = job.pipeline_id ? await listPipelineStages(ctx, job.pipeline_id) : [];
   } catch (error) {
     reportError("[application status] couldn't load the pipeline stages", error);
     return { ok: false, error: "Failed to load the pipeline stages." };

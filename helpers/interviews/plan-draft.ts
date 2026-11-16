@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { assertAllowance, consumeEntitlement } from "@/helpers/billing/entitlements";
 import { EntitlementError } from "@/helpers/billing/errors";
+import { listPipelineStages } from "@/helpers/pipeline/stages";
 import type { CompanySessionContext } from "@/helpers/companies/company-session";
 import { draftInterviewPlan, type DraftPlanResult, type DraftStage } from "./ai/draft-plan";
 import { PLAN_DRAFT_COST } from "./config";
@@ -22,20 +23,17 @@ export async function draftPlanForJob(
 ): Promise<DraftForJobResult & { stages?: DraftStage[] }> {
   const { data: job } = await supabase
     .from("job_postings")
-    .select("title, description, skills")
+    .select("title, description, skills, pipeline_id")
     .eq("id", jobPostId)
     .eq("company_id", company.id)
     .maybeSingle();
   if (!job) return { ok: false, error: "Job posting not found." };
 
-  const { data: stageRows, error: stagesError } = await supabase
-    .from("pipeline_stages")
-    .select("id, name, kind, archived")
-    .eq("company_id", company.id)
-    .order("position", { ascending: true });
-  if (stagesError) throw new Error(`Couldn't load the pipeline stages: ${stagesError.message}`);
-  // Rejected and Hired can't have interviews (IV-REQ-001).
-  const stages = (stageRows ?? []).filter((s) => !s.archived && s.kind !== "rejected" && s.kind !== "hired");
+  // The job's own pipeline (JP-REQ-004). Rejected and Hired can't have interviews (IV-REQ-001).
+  const stageRows = job.pipeline_id ? await listPipelineStages({ supabase, company }, job.pipeline_id) : [];
+  const stages = stageRows
+    .filter((s) => !s.archived && s.kind !== "rejected" && s.kind !== "hired")
+    .map((s) => ({ id: s.id, name: s.name, kind: s.kind, archived: s.archived }));
 
   try {
     // A preflight, so a company that's out doesn't pay for a model call it can't use.
@@ -45,7 +43,7 @@ export async function draftPlanForJob(
     throw err;
   }
 
-  const draft = await draftInterviewPlan({ job, stages });
+  const draft = await draftInterviewPlan({ job: { title: job.title, description: job.description, skills: job.skills }, stages });
   if (!draft.ok) return draft;
 
   try {

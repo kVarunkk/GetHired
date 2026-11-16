@@ -17,10 +17,14 @@ export type EntityNavItem = {
   exact?: boolean;
   /** The path the item is active on and under, when it differs from `href`. */
   activePath?: string;
+  /** Another path the item is also active on and under (an `exact` index with sub-pages elsewhere). */
+  alsoActiveUnder?: string;
 };
 
 function isActive(pathname: string, item: EntityNavItem) {
   const path = item.activePath ?? item.href;
+  const under = item.alsoActiveUnder;
+  if (under && (pathname === under || pathname.startsWith(`${under}/`))) return true;
   if (item.exact) return pathname === path;
   return pathname === path || pathname.startsWith(`${path}/`);
 }

@@ -48,7 +48,11 @@ import { previewAgentOutreach } from "@/helpers/outreach/preview-agent-outreach"
 import { getNote } from "@/helpers/pipeline/notes";
 import { previewAgentMove } from "@/helpers/pipeline/preview-agent-move";
 import { upcomingInterviewsText } from "@/helpers/pipeline/move-interviews";
-import { PROTECTED_KINDS } from "@/helpers/pipeline/stages";
+import {
+  previewAgentCustomizeJobPipeline,
+  previewAgentJobPipelineSwitch,
+} from "@/helpers/pipeline/preview-agent-pipeline";
+import { PROTECTED_KINDS, resolvePipelineId } from "@/helpers/pipeline/stages";
 import { statusForKind } from "@/helpers/pipeline/status-map";
 import { loadVisibleCandidates } from "@/helpers/profiles/visible-candidates";
 import { formatDate } from "@/utils/date";
@@ -638,11 +642,15 @@ const previewWithdrawOutreach = gated("withdrawOutreach", async (ctx, input) => 
 
 const previewArchiveStage = gated("archiveStage", async (ctx, input) => {
   const stageId = str(input.stageId) ?? "";
+  // The pipeline the tool archives in: the named one, else the default (JPT-040).
+  const pipelineId = await resolvePipelineId(ctx, { pipelineId: str(input.pipelineId) });
+  if (!pipelineId) return refuse("Stage not found.");
   const { data: stage, error } = await ctx.supabase
     .from("pipeline_stages")
     .select("id, name, kind, archived")
     .eq("id", stageId)
     .eq("company_id", ctx.company.id)
+    .eq("pipeline_id", pipelineId)
     .maybeSingle();
   if (error) throw error;
   if (!stage) return refuse("Stage not found.");
@@ -656,6 +664,46 @@ const previewArchiveStage = gated("archiveStage", async (ctx, input) => {
   if (count) return refuse(`Move the ${plural(count, "application", "applications")} out of "${stage.name}" first.`);
   return preview("Archive this stage? It leaves your pipeline and can't be brought back.", [
     { label: "Stage", value: stage.name },
+  ]);
+});
+
+const NO_CHANGE = "Candidates won't see a change and won't be emailed.";
+
+const previewSetJobPipeline = gated("setJobPipeline", async (ctx, input) => {
+  const result = await previewAgentJobPipelineSwitch(ctx, input);
+  if (!result.ok) return refuse(`This switch won't go through: ${result.error}`);
+  return preview(`Move ${result.jobTitle} onto the ${result.to} pipeline?`, [
+    { label: "Job", value: result.jobTitle },
+    { label: "From", value: result.from },
+    { label: "To", value: result.to },
+    {
+      label: "Stages",
+      value:
+        result.moves.length > 0
+          ? result.moves
+              .map((m) => {
+                const items = m.planItems > 0 ? `, ${plural(m.planItems, "planned interview", "planned interviews")}` : "";
+                return `${m.stage} → ${m.to} (${plural(m.applications, "application", "applications")}${items})`;
+              })
+              .join("\n")
+          : "No applications to move",
+    },
+    { label: "Candidates", value: NO_CHANGE },
+  ]);
+});
+
+const previewCustomizeJobPipeline = gated("customizeJobPipeline", async (ctx, input) => {
+  const result = await previewAgentCustomizeJobPipeline(ctx, input);
+  if (!result.ok) return refuse(`This won't go through: ${result.error}`);
+  return preview(`Give ${result.jobTitle} its own pipeline?`, [
+    { label: "Job", value: result.jobTitle },
+    { label: "Copies", value: `${result.from} (${plural(result.stages, "stage", "stages")})` },
+    { label: "New pipeline", value: result.name },
+    {
+      label: "Other jobs",
+      value: result.otherJobs > 0 ? `${plural(result.otherJobs, "job keeps", "jobs keep")} ${result.from}` : "None",
+    },
+    { label: "Candidates", value: NO_CHANGE },
   ]);
 });
 
@@ -964,6 +1012,8 @@ export const RECRUITER_MCP_PREVIEWS: Readonly<Record<string, Builder>> = {
   screen_applicants: previewScreenApplicants,
   // pipeline
   archive_stage: previewArchiveStage,
+  set_job_pipeline: previewSetJobPipeline,
+  customize_job_pipeline: previewCustomizeJobPipeline,
   move_applications: gated("moveApplications", previewMove),
   add_note: previewAddNote,
   update_note: previewUpdateNote,
