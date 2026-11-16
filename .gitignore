@@ -48,7 +48,7 @@ cloudbuild.yaml
 cloudbuild1.yaml
 docker-compose.yml
 
-plan
+/plan
 
 
 # agent instructions (local only)
