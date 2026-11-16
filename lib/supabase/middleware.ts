@@ -127,6 +127,11 @@ export async function updateSession(request: NextRequest) {
     "/api/internal/interview-transcript",
     "/api/updates/screening-interviews",
     "/api/updates/screening-interviews/retention",
+    // Interviews with people (IVT-046/047): the Google Calendar sync cron and
+    // the calendar ops worker (X-Internal-Secret).
+    "/api/updates/interviews/sync",
+    "/api/updates/interviews/feedback",
+    "/api/worker/interview-calendar-ops",
     // Bulk import: the resume parsing worker and the abandoned-batch cron
     // (X-Internal-Secret).
     "/api/worker/candidate-import",
@@ -217,6 +222,11 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/unsubscribe/candidate/") && pathname.length > "/unsubscribe/candidate/".length;
   // BI-REQ-041: a claim link shows its sign-up and log-in choices to anyone.
   const isClaimPath = pathname.startsWith("/claim/") && pathname.length > "/claim/".length;
+  // IV-SEC-007: a self-scheduling link's page and its booking API (the token
+  // is checked in SQL, the API is rate-limited).
+  const isSchedulingLinkPath =
+    (pathname.startsWith("/schedule/") && pathname.length > "/schedule/".length) ||
+    (pathname.startsWith("/api/schedule/") && pathname.length > "/api/schedule/".length);
   // Exempt from the company-only and company-onboarding redirects below, so an
   // applicant sees why they can't join and an invitee who hasn't accepted yet
   // can (teams difference 4).
@@ -233,7 +243,8 @@ export async function updateSession(request: NextRequest) {
     isProtectedResourceMetadata ||
     isCareersPath ||
     isCandidateUnsubscribePath ||
-    isClaimPath;
+    isClaimPath ||
+    isSchedulingLinkPath;
 
   const isProtectedPath = !isAuthPath && !isPublicPath;
   const isProtectedRelevanceSearch =

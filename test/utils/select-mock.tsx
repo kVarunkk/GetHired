@@ -41,6 +41,11 @@ export const SelectValue = () => null;
 
 export const SelectContent = ({ children }: { children: ReactNode }) => <>{children}</>;
 
-export const SelectItem = ({ value, children }: { value: string; children: ReactNode }) => (
-  <option value={value}>{children}</option>
+export const SelectItem = ({ value, disabled, children }: { value: string; disabled?: boolean; children: ReactNode }) => (
+  <option value={value} disabled={disabled}>
+    {children}
+  </option>
 );
+
+// Separators have no native counterpart; nothing renders.
+export const SelectSeparator = () => null;

@@ -119,3 +119,41 @@ describe("ActivityTimeline for imports (BI-REQ-030)", () => {
     expect(screen.getByText("Merged with their own application")).toBeInTheDocument();
   });
 });
+
+describe("ActivityTimeline: interviews with people (IVT-022, IV-REQ-042)", () => {
+  const SCORECARD = "5c000000-0000-4000-8000-000000000001";
+  const at = (n: number) => ({ created_at: minutesAgo(n), actor_name: "Rita" });
+  const meeting = (name = "System design") => ({ scheduled_interview_id: "i1", name });
+
+  const events = [
+    eventOf("meeting_scheduled", { ...at(70), payload: { ...meeting(), status: "scheduled" } }),
+    eventOf("meeting_scheduled", { ...at(60), payload: { ...meeting("Coffee chat"), status: "completed" } }),
+    eventOf("meeting_rescheduled", { ...at(50), payload: meeting() }),
+    eventOf("meeting_panel_changed", { ...at(40), payload: meeting() }),
+    eventOf("meeting_completed", { ...at(30), actor_name: null, actor_user_id: null, payload: { ...meeting(), automatic: true } }),
+    eventOf("meeting_no_show", { ...at(25), payload: meeting("Coffee chat") }),
+    eventOf("meeting_cancelled", { ...at(20), payload: meeting("Phone screen") }),
+    eventOf("scorecard_submitted", { ...at(10), actor_name: "Ian", payload: { ...meeting(), scorecard_id: SCORECARD } }),
+  ];
+
+  it("describes each kind", () => {
+    render(<ActivityTimeline stages={STAGES} events={events} scorecardOveralls={{ [SCORECARD]: "strong_yes" }} />);
+    const items = screen.getAllByRole("listitem").map((li) => li.textContent);
+    expect(items[0]).toContain("Scorecard submitted for System design by Ian: Strong yes");
+    expect(items[1]).toContain("Phone screen cancelled by Rita");
+    expect(items[2]).toContain("Coffee chat: candidate didn't show by Rita");
+    expect(items[3]).toContain("System design completed");
+    expect(items[3]).not.toContain(" by ");
+    expect(items[4]).toContain("System design: interviewers changed by Rita");
+    expect(items[5]).toContain("System design rescheduled by Rita");
+    expect(items[6]).toContain("Coffee chat recorded by Rita");
+    expect(items[7]).toContain("System design scheduled by Rita");
+  });
+
+  it("a blind reader sees that a scorecard was submitted, never the recommendation", () => {
+    render(<ActivityTimeline stages={STAGES} events={events} />);
+    const line = screen.getAllByRole("listitem")[0].textContent;
+    expect(line).toContain("Scorecard submitted for System design by Ian");
+    expect(line).not.toMatch(/yes|no/i);
+  });
+});

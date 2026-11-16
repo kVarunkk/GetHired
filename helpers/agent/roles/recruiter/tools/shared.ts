@@ -130,17 +130,30 @@ const SCORE_WORDS = /\b(interview|screening|score)\b/i;
 const SIMILARITY = /\b(similarity|match score)\b[^.\n]{0,20}?\d/i;
 const BAR_WORDS = /\b(at least|minimum|bar|threshold|cut-?off|or (?:higher|above|more))\b/i;
 
-/** A `PER_CANDIDATE_SCORE` error when a memory records a candidate's interview score, or null. */
+// IVT-083 (IV-REQ-052): nor an interviewer's rating or recommendation of
+// one candidate. A rule about ratings ("any strong no means…") is the
+// hiring process, which memories may hold.
+const RATING_WORD = /\b(strong[\s_-]?(?:yes|no)|strong hire|no[\s_-]hire|thumbs[\s-]?(?:up|down))\b/i;
+const RATED_AS = /\b(rated|voted|marked|gave)\b[^.\n]{0,30}\b(?:a |an )?(?:yes|no)\b/i;
+const SCORECARD_SAYS = /\b(scorecard|recommendation|feedback)\b[^.\n]{0,20}\b(?:yes|no|hire)\b/i;
+const PROCESS_WORDS =
+  /\b(at least|minimum|bar|threshold|cut-?off|or (?:higher|above|more)|any|every|if|when(?:ever)?|needs?|requires?|must|always|never)\b/i;
+
+const isRating = (content: string) =>
+  (RATING_WORD.test(content) || RATED_AS.test(content) || SCORECARD_SAYS.test(content)) && !PROCESS_WORDS.test(content);
+
+/** A `PER_CANDIDATE_SCORE` error when a memory records a candidate's interview score or rating, or null. */
 export function perCandidateScoreError(content: string) {
   const isScore =
     SCORED_VERB.test(content) ||
     (SCORE_WORDS.test(content) && SCORE_NUMBER.test(content) && !BAR_WORDS.test(content)) ||
-    (SIMILARITY.test(content) && !BAR_WORDS.test(content));
+    (SIMILARITY.test(content) && !BAR_WORDS.test(content)) ||
+    isRating(content);
   return isScore
     ? ({
         error: "PER_CANDIDATE_SCORE",
         message:
-          "Memories can't hold a candidate's interview scores or match similarity. Save the hiring bar or a decision's job-related reason instead.",
+          "Memories can't hold a candidate's interview scores, interviewers' ratings or recommendations, or match similarity. Save the hiring bar or a decision's job-related reason instead.",
       } as const)
     : null;
 }

@@ -26,6 +26,8 @@ import { markJobResultsStale } from "@/helpers/matching/mark-stale";
 import { embedJobs } from "@/helpers/jobs/job-embedding";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
 import { buildEquityRange, buildExperience } from "@/utils/formatters";
+import { setJobPipeline } from "@/helpers/pipeline/pipelines";
+import { PIPELINE_NOT_FOUND } from "@/helpers/pipeline/copy";
 
 export type UpsertJobPostingResult =
   | { success: true; isUpdate: boolean; postingId: string }
@@ -69,6 +71,7 @@ export async function upsertJobPosting(
     let existing: {
       id: string;
       job_id: string | null;
+      pipeline_id: string | null;
       title: string;
       description: string | null;
       skills: string[] | null;
@@ -81,7 +84,7 @@ export async function upsertJobPosting(
       }
       const { data, error } = await supabase
         .from("job_postings")
-        .select(`id, job_id, ${JOB_SNAPSHOT_COLUMNS}`)
+        .select(`id, job_id, pipeline_id, ${JOB_SNAPSHOT_COLUMNS}`)
         .eq("id", existingPostingId)
         .eq("company_id", company.id)
         .maybeSingle();
@@ -89,6 +92,10 @@ export async function upsertJobPosting(
       if (!data) return { success: false, error: "Job posting not found." };
       existing = data;
     }
+
+    // JP-REQ-003: checked before anything is written.
+    const pipeline = await checkPipeline(supabase, company.id, values.pipeline_id, existing);
+    if (!pipeline.ok) return { success: false, error: pipeline.error };
 
     // BL-DEC-007: the limit counts active posts. Edits never need a slot.
     if (!existing) {
@@ -139,6 +146,17 @@ export async function upsertJobPosting(
       updated_at: new Date().toISOString(),
     };
 
+    // A job with no applications moves through set_job_pipeline (the job
+    // trigger refuses a direct pipeline_id update), as the session user, so the
+    // RPC checks jobs.edit itself. Before the save, so a refusal saves nothing.
+    if (existing && pipeline.switchTo) {
+      const switched = await setJobPipeline(
+        { supabase, company },
+        { jobPostId: existing.id, pipelineId: pipeline.switchTo },
+      );
+      if (!switched.ok) return { success: false, error: switched.error };
+    }
+
     // Ownership is settled above; the service role is only used from here on.
     const service = createServiceRoleClient();
 
@@ -148,7 +166,9 @@ export async function upsertJobPosting(
           .update(payload)
           .eq("id", existing.id)
           .eq("company_id", company.id)
-      : service.from("job_postings").insert(payload);
+      : service
+          .from("job_postings")
+          .insert({ ...payload, ...(pipeline.switchTo ? { pipeline_id: pipeline.switchTo } : {}) });
     const { data: posting, error: postingError } = await write
       .select("*, company_info(website, name, id)")
       .single();
@@ -279,6 +299,44 @@ export async function upsertJobPosting(
           : "Unknown error occurred while processing job post.",
     };
   }
+}
+
+/** JPT-034: an edit can't move a job's candidates; the switch page maps their stages. */
+export const PIPELINE_HAS_APPLICATIONS =
+  "This job has applications. Change its pipeline from the job's Pipeline section, which moves them.";
+
+/**
+ * Checks a requested pipeline: one of the company's active pipelines, and on
+ * an edit, only for a job with no applications (merged ones count: a switch
+ * moves them too). `switchTo` is the pipeline to write, or null for none.
+ */
+async function checkPipeline(
+  supabase: SupabaseClient<Database>,
+  companyId: string,
+  pipelineId: string | undefined,
+  existing: { id: string; pipeline_id: string | null } | null,
+): Promise<{ ok: true; switchTo: string | null } | { ok: false; error: string }> {
+  if (!pipelineId || pipelineId === existing?.pipeline_id) return { ok: true, switchTo: null };
+
+  const { data, error } = await supabase
+    .from("company_pipelines")
+    .select("id")
+    .eq("id", pipelineId)
+    .eq("company_id", companyId)
+    .eq("archived", false)
+    .maybeSingle();
+  if (error) throw new Error("Failed to load the pipeline.");
+  if (!data) return { ok: false, error: PIPELINE_NOT_FOUND };
+
+  if (existing) {
+    const { count, error: countError } = await supabase
+      .from("applications")
+      .select("id", { count: "exact", head: true })
+      .eq("job_post_id", existing.id);
+    if (countError) throw new Error("Failed to count the job's applications.");
+    if ((count ?? 0) > 0) return { ok: false, error: PIPELINE_HAS_APPLICATIONS };
+  }
+  return { ok: true, switchTo: data.id };
 }
 
 /** The pgmq queue `/api/update-embedding/gemini/job` drains every 5 minutes. */

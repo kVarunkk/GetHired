@@ -26,6 +26,11 @@ import { JobDeleteApprovalDetails } from "./recruiter/JobDeleteApprovalCard";
 import { MoveApprovalDetails } from "./recruiter/MoveApprovalCard";
 import { OutreachApprovalDetails } from "./recruiter/OutreachApprovalCard";
 import { InterviewConfigApprovalDetails, InterviewInviteApprovalDetails } from "./recruiter/InterviewApprovalCard";
+import {
+  isSchedulingPreviewTool,
+  SchedulingApprovalDetails,
+  schedulingApprovalTitle,
+} from "./recruiter/SchedulingApprovalCard";
 import { AddToJobApprovalDetails } from "./recruiter/AddToJobApprovalDetails";
 import { ApplicationFormApprovalDetails, FORM_APPROVAL_TOOLS } from "./recruiter/ApplicationFormApprovalDetails";
 import CandidateResumeWidget, { type CandidateResumeOutput } from "./recruiter/CandidateResumeWidget";
@@ -38,6 +43,7 @@ import {
 import ResumeImportWidget, { type ResumeImportOutput } from "./recruiter/ResumeImportWidget";
 import SpreadsheetImportWidget, { type SpreadsheetImportOutput } from "./recruiter/SpreadsheetImportWidget";
 import { isRoleApprovalTool, RoleApprovalDetails } from "./recruiter/RoleApprovalCard";
+import { isPipelineApprovalTool, PipelineApprovalDetails } from "./recruiter/PipelineApprovalDetails";
 
 export { isInAppHref };
 
@@ -124,6 +130,10 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   listApplicants: { running: "Loading applicants…", done: "Loaded applicants", action: "load applicants" },
   getApplication: { running: "Reading the application…", done: "Read the application", action: "read the application" },
   screenApplicants: { running: "Queueing screenings…", done: "Queued screenings", action: "screen applicants" },
+  listPipelines: { running: "Loading your pipelines…", done: "Loaded your pipelines", action: "load your pipelines" },
+  createPipeline: { running: "Creating the pipeline…", done: "Created the pipeline", action: "create a pipeline" },
+  setJobPipeline: { running: "Switching the job's pipeline…", done: "Switched the job's pipeline", action: "switch the job's pipeline" },
+  customizeJobPipeline: { running: "Giving the job its own pipeline…", done: "Gave the job its own pipeline", action: "give the job its own pipeline" },
   listStages: { running: "Loading your pipeline…", done: "Loaded your pipeline", action: "load your pipeline" },
   createStage: { running: "Adding the stage…", done: "Added the stage", action: "add a pipeline stage" },
   renameStage: { running: "Renaming the stage…", done: "Renamed the stage", action: "rename the stage" },
@@ -177,6 +187,18 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   findPoolCandidates: { running: "Looking through your candidates…", done: "Looked through your candidates", action: "look through your candidates" },
   addCandidatesToJob: { running: "Adding candidates to the job…", done: "Added candidates to the job", action: "add your candidates to the job" },
   getInterviewReport: { running: "Reading the interview report…", done: "Read the interview report", action: "read the interview report" },
+  // Interviews with people (IVT-082).
+  getInterviewPlan: { running: "Reading the interview plan…", done: "Read the interview plan", action: "read the interview plan" },
+  draftInterviewPlan: { running: "Drafting an interview plan…", done: "Drafted an interview plan", action: "draft an interview plan" },
+  saveInterviewPlan: { running: "Saving the interview plan…", done: "Saved the interview plan", action: "save the interview plan" },
+  listScheduledInterviews: { running: "Loading interviews…", done: "Loaded interviews", action: "load the interviews" },
+  findInterviewSlots: { running: "Checking calendars…", done: "Checked calendars", action: "check the interviewers' calendars" },
+  scheduleInterview: { running: "Scheduling the interview…", done: "Scheduled the interview", action: "schedule the interview" },
+  sendSchedulingLink: { running: "Sending the scheduling link…", done: "Sent the scheduling link", action: "email the candidate a scheduling link" },
+  rescheduleInterview: { running: "Changing the interview…", done: "Changed the interview", action: "change the interview" },
+  cancelInterview: { running: "Cancelling the interview…", done: "Cancelled the interview", action: "cancel the interview" },
+  remindInterviewers: { running: "Reminding interviewers…", done: "Reminded interviewers", action: "remind the interviewers" },
+  summarizeFeedback: { running: "Summarizing the feedback…", done: "Summarized the feedback", action: "summarize the interview feedback" },
   // Imports and the company's own candidates (BI-REQ-060).
   requestResumeImport: { running: "Waiting for your resumes…", done: "Resumes uploaded", action: "import resumes" },
   requestSpreadsheetImport: { running: "Waiting for your spreadsheet…", done: "Spreadsheet sent for review", action: "import a spreadsheet" },
@@ -560,6 +582,10 @@ function approvalTitle(name: string, input: unknown) {
       return "Send this message on GetHired?";
     case "archiveStage":
       return "Archive this stage? It leaves your pipeline and can't be brought back.";
+    case "setJobPipeline":
+      return "Move this job onto another pipeline?";
+    case "customizeJobPipeline":
+      return "Give this job its own pipeline?";
     case "deleteEmailTemplate":
       return "Delete this email template? This can't be undone.";
     case "deleteNote":
@@ -590,6 +616,13 @@ function approvalTitle(name: string, input: unknown) {
       return "Resend this invite? The old link stops working.";
     case "revokeInvite":
       return "Revoke this invite? Its link stops working.";
+    case "saveInterviewPlan":
+    case "scheduleInterview":
+    case "sendSchedulingLink":
+    case "rescheduleInterview":
+    case "cancelInterview":
+    case "remindInterviewers":
+      return schedulingApprovalTitle(name, input);
     default:
       return `Allow the assistant to ${labelsFor(name).action}?`;
   }
@@ -610,6 +643,10 @@ function approvalDetails(name: string, input: unknown) {
   if (isResumeEditTool(name)) return [];
   // Role changes show a server preview with the exact diff (RoleApprovalDetails).
   if (isRoleApprovalTool(name)) return [];
+  // Interview plans and scheduling show a server preview (SchedulingApprovalDetails).
+  if (isSchedulingPreviewTool(name)) return [];
+  // Pipeline switches name the pipelines and where each stage goes (PipelineApprovalDetails).
+  if (isPipelineApprovalTool(name)) return [];
   return describeInput(input);
 }
 
@@ -643,6 +680,8 @@ function ApprovalCard({
       {name === "submitApplication" && <ApplicationApprovalDetails input={part.input} />}
       {isResumeEditTool(name) && <ResumeEditApprovalDetails tool={name} input={part.input} />}
       {isRoleApprovalTool(name) && <RoleApprovalDetails tool={name} input={part.input} />}
+      {isSchedulingPreviewTool(name) && <SchedulingApprovalDetails tool={name} input={part.input} />}
+      {isPipelineApprovalTool(name) && <PipelineApprovalDetails tool={name} input={part.input} />}
       {(details.length > 0 || isOnboarding) && (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
           {details.map(([key, value]) => (

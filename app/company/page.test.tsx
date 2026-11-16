@@ -167,3 +167,80 @@ describe("company dashboard careers link (CP-REQ-014, CPT-053)", () => {
     expect(screen.getByRole("link", { name: "gethired.devhub.co.in/careers/acme" })).toHaveAttribute("href", "/careers/acme");
   });
 });
+
+describe("company dashboard interview follow-ups (IVT-074)", () => {
+  const ago = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
+  const row = (overrides: Record<string, unknown>) => ({
+    interview_id: "iv-1",
+    application_id: "app-1",
+    job_post_id: "job-1",
+    job_title: "Backend Engineer",
+    candidate_name: "Priya Sharma",
+    interview_name: "Tech screen",
+    since: ago(48),
+    owed: 1,
+    mine: false,
+    kind: "feedback_overdue",
+    ...overrides,
+  });
+
+  it("lists overdue feedback (the member's own first, to the kit) and links nobody booked", async () => {
+    dashboard([{ total_jobs: 1, total_applicants: 3, new_applicants_today: 0 }]);
+    db.queueRpc("interviews_needing_attention", {
+      data: [
+        row({ interview_id: "iv-mine", mine: true, interview_name: "System design" }),
+        row({ interview_id: "iv-team", application_id: "app-2", candidate_name: "Arjun Rao", owed: 2 }),
+        row({
+          kind: "awaiting_candidate",
+          interview_id: "iv-link",
+          application_id: "app-3",
+          candidate_name: null,
+          owed: 0,
+          since: ago(4 * 24),
+        }),
+      ],
+      error: null,
+    });
+
+    render(await CompanyPage());
+
+    const region = screen.getByRole("region", { name: "Interviews needing attention" });
+    const items = within(region).getAllByRole("listitem");
+    expect(items).toHaveLength(3);
+    expect(within(items[0]).getByRole("link", { name: "Your scorecard for System design" })).toHaveAttribute(
+      "href",
+      "/company/interviews/iv-mine",
+    );
+    expect(items[0]).toHaveTextContent("with Priya Sharma for Backend Engineer");
+    expect(items[0]).toHaveTextContent("Ended 2 days ago");
+    expect(within(items[1]).getByRole("link", { name: "Arjun Rao" })).toHaveAttribute(
+      "href",
+      "/company/applications/app-2/interviews",
+    );
+    expect(items[1]).toHaveTextContent("Tech screen for Backend Engineer");
+    expect(items[1]).toHaveTextContent("2 scorecards overdue");
+    expect(within(items[2]).getByRole("link", { name: "The candidate" })).toHaveAttribute(
+      "href",
+      "/company/applications/app-3/interviews",
+    );
+    expect(items[2]).toHaveTextContent("Link sent 4 days ago, not booked");
+    expect(db.callsFor("interviews_needing_attention")[0].chain[0].args).toEqual([
+      "interviews_needing_attention",
+      { p_limit: 10 },
+    ]);
+  });
+
+  it("shows nothing with nothing to follow up, and still renders when the call fails", async () => {
+    dashboard([{ total_jobs: 1, total_applicants: 0, new_applicants_today: 0 }]);
+    db.queueRpc("interviews_needing_attention", { data: [], error: null });
+    render(await CompanyPage());
+    expect(screen.queryByRole("region", { name: "Interviews needing attention" })).not.toBeInTheDocument();
+
+    dashboard([{ total_jobs: 1, total_applicants: 0, new_applicants_today: 0 }]);
+    db.queueRpc("interviews_needing_attention", { data: null, error: { message: "boom" } });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    render(await CompanyPage());
+    expect(screen.getAllByText("Job Posts").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("region", { name: "Interviews needing attention" })).not.toBeInTheDocument();
+  });
+});

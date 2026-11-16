@@ -27,6 +27,10 @@ export const RECRUITER_APPROVAL_POLICY: ToolApprovalPolicy = {
     "withdrawOutreach",
     // Archived stages leave the board and the app has no way to bring them back.
     "archiveStage",
+    // JPT-041: moves every application to the job onto another pipeline's stages;
+    // the card shows where each stage goes.
+    "setJobPipeline",
+    "customizeJobPipeline",
     // A template can't be brought back.
     "deleteEmailTemplate",
     // A note can't be brought back.
@@ -64,6 +68,14 @@ export const RECRUITER_APPROVAL_POLICY: ToolApprovalPolicy = {
     "deleteMyCandidates",
     // A removed resume's file is deleted.
     "removeImportRows",
+    // IVT-082: the plan guides every interviewer; the others email or move
+    // people's calendars (Google emails the attendees). The card shows a preview.
+    "saveInterviewPlan",
+    "scheduleInterview",
+    "sendSchedulingLink",
+    "rescheduleInterview",
+    "cancelInterview",
+    "remindInterviewers",
   ],
   untrustedContentTools: [
     "getCandidateProfile",
@@ -89,17 +101,38 @@ export const RECRUITER_APPROVAL_POLICY: ToolApprovalPolicy = {
     "listImports",
     "listMyCandidates",
     "getMyCandidate",
+    // Scorecards and their summary are colleagues' notes, which can quote the candidate.
+    "listScheduledInterviews",
+    "summarizeFeedback",
   ],
   // An import row or candidate edit after reading their text could be the text's idea (RA-SEC-003).
   gatedWriteTools: ["saveMemory", "deleteMemory", "addNote", "updateNote", "updateImportRows", "updateMyCandidate"],
   untrustedReason:
     "The assistant read candidate profiles, applications or imports in this reply, so memory, note and candidate changes need your OK.",
-  creditTools: ["screenApplicants", "runMatchingForJob", "explainMatch", "inviteToInterview", "retryImportRows"],
+  creditTools: [
+    "screenApplicants",
+    "runMatchingForJob",
+    "explainMatch",
+    "inviteToInterview",
+    "retryImportRows",
+    // One agent message each (D12).
+    "draftInterviewPlan",
+    "summarizeFeedback",
+  ],
   perTurnCaps: [
     {
-      tools: ["moveApplications", "sendOutreach"],
+      // Interview changes email the attendees (Google) or the panel (IVT-082).
+      tools: [
+        "moveApplications",
+        "sendOutreach",
+        "scheduleInterview",
+        "sendSchedulingLink",
+        "rescheduleInterview",
+        "cancelInterview",
+        "remindInterviewers",
+      ],
       max: RA_MAX_EMAIL_ACTIONS_PER_TURN,
-      reason: `Only ${RA_MAX_EMAIL_ACTIONS_PER_TURN} actions that move applications or email candidates can run per message. Ask the user before trying again.`,
+      reason: `Only ${RA_MAX_EMAIL_ACTIONS_PER_TURN} actions that move applications, email people or change interviews can run per message. Ask the user before trying again.`,
     },
   ],
 };

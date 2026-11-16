@@ -23,6 +23,7 @@ const CANDIDATE = "cc000000-0000-4000-8000-000000000001";
 const LIST = "71000000-0000-4000-8000-000000000001";
 const STAGE = "90000000-0000-4000-8000-000000000001";
 const ONSITE = "90000000-0000-4000-8000-000000000002";
+const PIPELINE = "9e000000-0000-4000-8000-000000000001";
 const OTHER_STAGE = "90000000-0000-4000-8000-0000000000ff";
 const KNOWN_USER = "a0000000-0000-4000-8000-000000000001";
 const HASH = "a".repeat(64);
@@ -165,8 +166,11 @@ describe("confirmSpreadsheetImportAction (BI-REQ-015/016/017)", () => {
   };
   const confirms = (counts: Record<string, number> = { created: 1, updated: 1 }) =>
     rls.queueRpc("confirm_candidate_import", { data: { ok: true, batch_id: BATCH, counts }, error: null });
-  const stages = (ids = [STAGE, ONSITE]) =>
+  // The job's pipeline, then its open stages (JPT-024).
+  const stages = (ids = [STAGE, ONSITE]) => {
+    rls.queue("job_postings", { data: { pipeline_id: PIPELINE }, error: null });
     rls.queue("pipeline_stages", { data: ids.map((id) => ({ id })), error: null });
+  };
 
   it("confirms into the pool with the rows validated again, and nobody emailed", async () => {
     confirms();
@@ -236,6 +240,9 @@ describe("confirmSpreadsheetImportAction (BI-REQ-015/016/017)", () => {
     expect(admin.callsFor("candidate_import_mappings")[0].chain[0].args[0]).toMatchObject({
       mapping: { columns: ["full_name", "email", "stage"], stageMap: { Onsite: ONSITE } },
     });
+    // The stages checked are the job's pipeline's (JPT-024).
+    expect(rls.callsFor("job_postings")[0].chain).toContainEqual({ method: "eq", args: ["id", JOB_A1] });
+    expect(rls.callsFor("pipeline_stages")[0].chain).toContainEqual({ method: "eq", args: ["pipeline_id", PIPELINE] });
     expect(revalidatePath).toHaveBeenCalledWith(`/company/job-posts/${JOB_A1}/applications`);
     noEmailQueued();
   });

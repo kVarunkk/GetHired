@@ -60,17 +60,30 @@ async function destinationOf(
   const { supabase, company } = auth;
   const [job, stage, list] = await Promise.all([
     input.jobPostId
-      ? supabase.from("job_postings").select("title").eq("id", input.jobPostId).eq("company_id", company.id).maybeSingle()
+      ? supabase
+          .from("job_postings")
+          .select("title, pipeline_id")
+          .eq("id", input.jobPostId)
+          .eq("company_id", company.id)
+          .maybeSingle()
       : Promise.resolve({ data: null }),
     input.jobPostId && input.stageId
-      ? supabase.from("pipeline_stages").select("name").eq("id", input.stageId).eq("company_id", company.id).maybeSingle()
+      ? supabase
+          .from("pipeline_stages")
+          .select("name, pipeline_id")
+          .eq("id", input.stageId)
+          .eq("company_id", company.id)
+          .maybeSingle()
       : Promise.resolve({ data: null }),
     input.talentListId
       ? supabase.from("talent_lists").select("name").eq("id", input.talentListId).eq("company_id", company.id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
   if (input.jobPostId && !job.data) return { error: "Job post not found." };
-  if (input.jobPostId && input.stageId && !stage.data) return { error: "Pick one of your pipeline stages." };
+  // The stage must be in the job's pipeline (JP-REQ-004), as the import checks.
+  if (input.jobPostId && input.stageId && (!stage.data || stage.data.pipeline_id !== job.data?.pipeline_id)) {
+    return { error: "Pick one of your pipeline stages." };
+  }
   if (input.talentListId && !list.data) return { error: "Talent list not found." };
   return {
     jobTitle: job.data?.title ?? null,

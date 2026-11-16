@@ -1,4 +1,5 @@
 import { canAny, forbiddenMessage, permissionEntry, type PermissionKey } from "@/helpers/companies/permissions";
+import { interviewJobId } from "@/helpers/interviews/interview-job";
 import { requireToolPermission, type RecruiterToolContext } from "./shared";
 
 /**
@@ -9,9 +10,20 @@ import { requireToolPermission, type RecruiterToolContext } from "./shared";
  *   (outreach without a job, RP-REQ-002);
  * - `applicationId` / `applicationIds`: the job of each application;
  * - `noteId`: the job of the note's application (a note on a talent-pool
- *   candidate has none: scope all, as when adding it).
+ *   candidate has none: scope all, as when adding it);
+ * - `applicationOrJob`: the application's job when `applicationId` is given,
+ *   else the input's `jobPostId`;
+ * - `interviewId`: the job of a scheduled interview (IVT-082).
  */
-export type JobSource = "any" | "jobPostId" | "jobPostIdOrNone" | "applicationId" | "applicationIds" | "noteId";
+export type JobSource =
+  | "any"
+  | "jobPostId"
+  | "jobPostIdOrNone"
+  | "applicationId"
+  | "applicationIds"
+  | "noteId"
+  | "applicationOrJob"
+  | "interviewId";
 
 export type ToolPermission = {
   /** Any one of these (at any scope) puts the tool in the user's tool set. */
@@ -90,6 +102,13 @@ export const RECRUITER_TOOL_PERMISSIONS = {
   renameStage: p(["settings.stages"]),
   reorderStages: p(["settings.stages"]),
   archiveStage: p(["settings.stages"]),
+  // Job pipelines (JPT-041): the same keys as the pipeline actions.
+  listPipelines: p(["applicants.view"]),
+  createPipeline: p(["settings.stages"]),
+  // set_job_pipeline checks jobs.edit for this job (job-scoped grants work).
+  setJobPipeline: p(["jobs.edit"], "jobPostId"),
+  // fork_job_pipeline checks settings.stages, like forkJobPipelineAction.
+  customizeJobPipeline: p(["settings.stages"]),
   // The same key as the template editor's actions.
   listEmailTemplates: p(["settings.templates"]),
   createEmailTemplate: p(["settings.templates"]),
@@ -148,6 +167,18 @@ export const RECRUITER_TOOL_PERMISSIONS = {
   inviteToInterview: p(["interviews.manage"], "applicationIds"),
   getInterviewReport: p(["interviews.view"], "applicationId"),
   compareInterviewReports: p(["interviews.view"], "applicationIds"),
+  // Human interviews (IVT-082). The RPCs check the same keys for the job.
+  getInterviewPlan: p(["scheduling.view", "interview_plans.manage"], "jobPostId"),
+  draftInterviewPlan: p(["interview_plans.manage"], "jobPostId"),
+  saveInterviewPlan: p(["interview_plans.manage"], "jobPostId"),
+  listScheduledInterviews: p(["scheduling.view"], "applicationOrJob"),
+  findInterviewSlots: p(["scheduling.manage"], "applicationId"),
+  scheduleInterview: p(["scheduling.manage"], "applicationId"),
+  sendSchedulingLink: p(["scheduling.manage"], "applicationId"),
+  rescheduleInterview: p(["scheduling.manage"], "interviewId"),
+  cancelInterview: p(["scheduling.manage"], "interviewId"),
+  remindInterviewers: p(["scheduling.manage"], "interviewId"),
+  summarizeFeedback: p(["scorecards.view_all"], "applicationId"),
 } as const satisfies Record<string, ToolPermission>;
 
 export type RecruiterToolName = keyof typeof RECRUITER_TOOL_PERMISSIONS;
@@ -199,6 +230,15 @@ async function jobsOf(
       return { jobs: typeof input.jobPostId === "string" ? [input.jobPostId] : undefined };
     case "jobPostIdOrNone":
       return { jobs: [typeof input.jobPostId === "string" ? input.jobPostId : null] };
+    case "applicationOrJob":
+      return typeof input.applicationId === "string"
+        ? jobsOfApplications(ctx, [input.applicationId])
+        : jobsOf(ctx, "jobPostId", input);
+    case "interviewId": {
+      if (typeof input.interviewId !== "string") return { jobs: undefined };
+      const job = await interviewJobId(ctx.supabase, ctx.company.id, input.interviewId);
+      return job ? { jobs: [job] } : { error: "Interview not found." };
+    }
     case "applicationId":
     case "applicationIds": {
       const ids =

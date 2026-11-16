@@ -15,7 +15,7 @@ export default function PrivacyPolicy() {
             Privacy Policy
           </CardTitle>
           <CardDescription className="text-center">
-            Last updated: July 30, 2025
+            Last updated: November 14, 2026
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 text-[15px] leading-7">
@@ -117,6 +117,78 @@ export default function PrivacyPolicy() {
               <li>To request feedback.</li>
               <li>To improve our Services.</li>
             </ul>
+          </section>
+
+          <section aria-labelledby="google-calendar">
+            <h2 id="google-calendar" className="text-lg font-semibold tracking-tight mb-3">
+              4. Google Calendar
+            </h2>
+            <p>
+              Company members can connect a Google Calendar to schedule interviews from GetHired. Connecting is
+              optional, and this section describes what happens when a member does.
+            </p>
+            <h3 className="text-base font-medium mb-2 mt-4">What we access</h3>
+            <ul className="list-disc list-inside ml-4 space-y-1">
+              <li>The email address of the connected Google account.</li>
+              <li>
+                Free/busy times: only when you are busy, as blocks of time. We never read the titles, descriptions,
+                attendees or other details of your events.
+              </li>
+              <li>
+                The interview events GetHired creates on your calendar: their time, title, attendees and Google Meet
+                link.
+              </li>
+            </ul>
+            <h3 className="text-base font-medium mb-2 mt-4">How we use it</h3>
+            <p>
+              Only to show when you are available and to create, move and cancel the interviews that you, your
+              teammates or a candidate book in GetHired. We check those events for changes made in Google Calendar,
+              such as a new time, a cancellation or an interviewer&apos;s reply.
+            </p>
+            <h3 className="text-base font-medium mb-2 mt-4">Sharing</h3>
+            <p>
+              An interview event is shared with its attendees through Google: the interviewers and, where they can be
+              invited, the candidate. The candidate can see the organizer&apos;s email address. We do not sell
+              information from Google, use it for advertising, or use it to train AI models.
+            </p>
+            <h3 className="text-base font-medium mb-2 mt-4">Candidates</h3>
+            <p>
+              When an interview is booked, the candidate&apos;s name and email address are added as an attendee of the
+              interview event, so Google sends them the invitation. A candidate a company added without an email
+              address, or who unsubscribed from that company&apos;s emails, is not added.
+            </p>
+            <h3 className="text-base font-medium mb-2 mt-4">Storage</h3>
+            <p>
+              The access tokens Google gives us are encrypted at rest (AES-256-GCM, with the key kept outside the
+              database) and are used only by GetHired&apos;s servers.
+            </p>
+            <h3 className="text-base font-medium mb-2 mt-4">Retention and deletion</h3>
+            <p>
+              Disconnecting your calendar, leaving your company on GetHired or deleting your account revokes our
+              access at Google and deletes the tokens. You can also remove GetHired&apos;s access at any time from the{" "}
+              <a
+                href="https://myaccount.google.com/connections"
+                className="underline underline-offset-4"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                third-party access page
+              </a>{" "}
+              of your Google Account.
+            </p>
+            <p className="mt-4">
+              GetHired&apos;s use and transfer to any other app of information received from Google APIs will adhere
+              to the{" "}
+              <a
+                href="https://developers.google.com/terms/api-services-user-data-policy"
+                className="underline underline-offset-4"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Google API Services User Data Policy
+              </a>
+              , including the Limited Use requirements.
+            </p>
           </section>
         </CardContent>
       </Card>

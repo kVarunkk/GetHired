@@ -5,6 +5,7 @@ import {
   Headset,
   Settings,
   UserIcon,
+  CalendarClock,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -273,6 +274,14 @@ export const companyNavbarItems: INavItem[] = [
     href: "/company/applications",
     type: "startswith",
     icon: <FileUser className="h-4 w-4" />,
+  },
+  {
+    // IVT-021: every member, including one whose role grants nothing.
+    id: "my_interviews",
+    label: "My interviews",
+    href: "/company/my-interviews",
+    type: "startswith",
+    icon: <CalendarClock className="h-4 w-4" />,
   },
   {
     id: "profiles",

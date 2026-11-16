@@ -51,6 +51,8 @@ export const MEMBER_KEYS: PermissionKey[] = [
   "pipeline.move",
   "applicants.screen",
   "interviews.view",
+  "scheduling.view",
+  "scheduling.manage",
   "notes.view",
   "notes.write",
   "talent.view",
@@ -129,9 +131,12 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
   {
     key: "interviewer",
     name: "Interviewer",
-    description: "Reads applicants and writes notes on the jobs they're assigned to.",
+    // IVT-010: no permissions. Panel membership grants the kit and their own
+    // scorecard (IV-REQ-034). Roles made from the old template keep their
+    // grants: templates are copied, never linked (RP-REQ-005).
+    description: "Sees only the interviews they're on.",
     color: "sky",
-    grants: scoped(["jobs.view", "applicants.view", "notes.view", "notes.write"], "assigned"),
+    grants: [],
   },
   {
     key: "coordinator",
@@ -142,6 +147,8 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
       "jobs.view",
       "applicants.view",
       "pipeline.move",
+      "scheduling.view",
+      "scheduling.manage",
       "notes.view",
       "settings.templates",
       "settings.scheduling",

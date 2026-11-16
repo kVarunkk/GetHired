@@ -44,5 +44,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ data: data[0] });
+  // JP-SEC-003: any signed-in user can call this, so the job's pipeline (an
+  // internal company setting) stays out of the response.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { pipeline_id, ...job } = data[0];
+  return NextResponse.json({ data: job });
 }

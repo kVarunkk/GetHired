@@ -8,6 +8,9 @@ import { previewAgentOutreachAction } from "@/app/actions/outreach/preview-agent
 import { previewAgentJobDeleteAction } from "@/app/actions/jobs/preview-agent-job-delete";
 import { previewAgentInterviewInviteAction } from "@/app/actions/interviews/preview-agent-interview-invite";
 import { previewAgentAddToJobAction } from "@/app/actions/candidates/preview-agent-add-to-job";
+import { previewAgentSchedulingAction } from "@/app/actions/interviews/preview-agent-scheduling";
+import { previewAgentJobPipelineSwitchAction } from "@/app/actions/pipeline/preview-agent-job-pipeline-switch";
+import { previewAgentCustomizeJobPipelineAction } from "@/app/actions/pipeline/preview-agent-customize-job-pipeline";
 
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
 vi.mock("@/app/actions/pipeline/preview-agent-move", () => ({ previewAgentMoveAction: vi.fn() }));
@@ -17,6 +20,13 @@ vi.mock("@/app/actions/interviews/preview-agent-interview-invite", () => ({
   previewAgentInterviewInviteAction: vi.fn(),
 }));
 vi.mock("@/app/actions/candidates/preview-agent-add-to-job", () => ({ previewAgentAddToJobAction: vi.fn() }));
+vi.mock("@/app/actions/interviews/preview-agent-scheduling", () => ({ previewAgentSchedulingAction: vi.fn() }));
+vi.mock("@/app/actions/pipeline/preview-agent-job-pipeline-switch", () => ({
+  previewAgentJobPipelineSwitchAction: vi.fn(),
+}));
+vi.mock("@/app/actions/pipeline/preview-agent-customize-job-pipeline", () => ({
+  previewAgentCustomizeJobPipelineAction: vi.fn(),
+}));
 
 const assistant = (parts: unknown[]): UIMessage =>
   ({ id: "a1", role: "assistant", parts }) as UIMessage;
@@ -292,6 +302,21 @@ describe("MessageParts: recruiter approvals (RA-REQ-005)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));
     expect(onApprove).toHaveBeenCalledWith({ id: "ap1", approved: true });
+  });
+
+  it("says whether a close cancels or keeps upcoming interviews (IVT-071)", async () => {
+    vi.mocked(previewAgentMoveAction).mockResolvedValue({
+      ok: true,
+      stage: { id: "s-rej", name: "Rejected", kind: "rejected" },
+      applications: [moving(1)],
+      notFound: 0,
+      email: null,
+      interviews: { upcoming: 2, cancel: true },
+    });
+    renderParts(assistant([approval("moveApplications", MOVE_INPUT)]));
+    expect(
+      await screen.findByText("Cancels 2 upcoming interviews: links stop working, and Google Calendar tells the attendees."),
+    ).toBeInTheDocument();
   });
 
   it("warns when the move would be refused", async () => {
@@ -605,5 +630,112 @@ describe("MessageParts: adding your candidates to a job (CPT-058)", () => {
     renderParts(assistant([approval("addCandidatesToJob", { jobPostId: "b1", candidateIds: ["c1"] })]));
     expect(screen.getByText("Add 1 of your candidates to this job? No one is emailed.")).toBeInTheDocument();
     expect(await screen.findByText(/Your role can't import applicants here./)).toBeInTheDocument();
+  });
+});
+
+describe("MessageParts: job pipeline approvals (JPT-041)", () => {
+  const approval = (tool: string, input: unknown) => ({
+    type: `tool-${tool}`,
+    toolCallId: "c1",
+    state: "approval-requested",
+    input,
+    approval: { id: "ap1" },
+  });
+
+  it("shows where each stage of the job goes, by name", async () => {
+    vi.mocked(previewAgentJobPipelineSwitchAction).mockResolvedValue({
+      ok: true,
+      jobTitle: "Backend Engineer",
+      from: "Default",
+      to: "Engineering",
+      applications: 3,
+      moves: [
+        { stage: "Applied", to: "Applied", applications: 2, planItems: 0 },
+        { stage: "Interview", to: "Tech interview", applications: 1, planItems: 2 },
+      ],
+    });
+    const input = { jobPostId: "b1", pipelineId: "p2" };
+    renderParts(assistant([approval("setJobPipeline", input)]));
+
+    expect(screen.getByText("Move this job onto another pipeline?")).toBeInTheDocument();
+    expect(await screen.findByText(/Interview → Tech interview/)).toBeInTheDocument();
+    expect(screen.getByText(/1 application, 2 planned interviews/)).toBeInTheDocument();
+    expect(screen.getByText(/won't be emailed/)).toBeInTheDocument();
+    expect(vi.mocked(previewAgentJobPipelineSwitchAction)).toHaveBeenCalledWith(input);
+    expect(screen.queryByText("p2")).not.toBeInTheDocument();
+  });
+
+  it("says when the switch won't go through (JP-TEST-006)", async () => {
+    vi.mocked(previewAgentJobPipelineSwitchAction).mockResolvedValue({
+      ok: false,
+      error: 'The new pipeline has no stage that shows candidates "On hold", which "On hold" needs. Add one to it first.',
+    });
+    renderParts(assistant([approval("setJobPipeline", { jobPostId: "b1", pipelineId: "p2" })]));
+
+    expect(await screen.findByText(/no stage that shows candidates "On hold"/)).toBeInTheDocument();
+  });
+
+  it("names the copy and the jobs that keep the old pipeline", async () => {
+    vi.mocked(previewAgentCustomizeJobPipelineAction).mockResolvedValue({
+      ok: true,
+      jobTitle: "Backend Engineer",
+      from: "Default",
+      name: "Backend Engineer",
+      stages: 7,
+      otherJobs: 2,
+    });
+    renderParts(assistant([approval("customizeJobPipeline", { jobPostId: "b1" })]));
+
+    expect(screen.getByText("Give this job its own pipeline?")).toBeInTheDocument();
+    expect(await screen.findByText(/Copies Default \(7 stages\)/)).toBeInTheDocument();
+    expect(screen.getByText(/2 other jobs keep Default/)).toBeInTheDocument();
+  });
+});
+
+describe("MessageParts: interview scheduling approvals (IVT-082)", () => {
+  const approval = (tool: string, input: unknown) => ({
+    type: `tool-${tool}`,
+    toolCallId: "c1",
+    state: "approval-requested",
+    input,
+    approval: { id: "ap1" },
+  });
+
+  it("shows the server preview: who, when (in the viewer's zone) and who's emailed", async () => {
+    vi.mocked(previewAgentSchedulingAction).mockResolvedValue({
+      ok: true,
+      rows: [
+        { label: "Candidate", value: "Ada Lovelace" },
+        { label: "Interviewers", value: "Ben, Cy" },
+        { label: "When", value: "2026-11-20T10:00:00.000Z", time: true },
+      ],
+      notices: ["Books it on your Google Calendar with a Meet link. Google emails the interviewers."],
+      warning: undefined,
+    });
+    const input = { applicationId: "e1", planItemId: "p1", interviewerIds: ["u1"], startsAt: "2026-11-20T10:00:00Z" };
+    renderParts(assistant([approval("scheduleInterview", input)]));
+
+    expect(screen.getByText("Book this interview?")).toBeInTheDocument();
+    expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument();
+    expect(screen.getByText("Ben, Cy")).toBeInTheDocument();
+    expect(screen.getByText(/Google emails the interviewers/)).toBeInTheDocument();
+    // Formatted for the viewer, not the raw ISO string.
+    expect(screen.queryByText("2026-11-20T10:00:00.000Z")).not.toBeInTheDocument();
+    expect(previewAgentSchedulingAction).toHaveBeenCalledWith("scheduleInterview", input);
+    // The generic input list isn't shown: no ids on the card.
+    expect(screen.queryByText("u1")).not.toBeInTheDocument();
+  });
+
+  it("titles each tool, and shows a refusal from the preview", async () => {
+    vi.mocked(previewAgentSchedulingAction).mockResolvedValue({ ok: false, error: "Interview not found." });
+    renderParts(assistant([approval("cancelInterview", { interviewId: "i1" })]));
+    expect(screen.getByText("Cancel this interview?")).toBeInTheDocument();
+    expect(await screen.findByText(/Interview not found./)).toBeInTheDocument();
+  });
+
+  it("titles a recorded interview differently from a booking", () => {
+    vi.mocked(previewAgentSchedulingAction).mockReturnValue(new Promise(() => {}));
+    renderParts(assistant([approval("scheduleInterview", { method: "record" })]));
+    expect(screen.getByText("Record this interview?")).toBeInTheDocument();
   });
 });

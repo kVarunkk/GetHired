@@ -22,6 +22,7 @@ vi.mock("./MoveDialog", () => ({
     previewApplicationId,
     fromKinds = [],
     openInterviews = 0,
+    applicationIds = [],
     onConfirm,
     onCancel,
   }: {
@@ -31,7 +32,8 @@ vi.mock("./MoveDialog", () => ({
     previewApplicationId: string | null;
     fromKinds?: (string | null)[];
     openInterviews?: number;
-    onConfirm: (email?: { templateId: string }) => void;
+    applicationIds?: string[];
+    onConfirm: (email?: { templateId: string }, options?: { cancelInterviews: boolean }) => void;
     onCancel: () => void;
   }) =>
     open ? (
@@ -42,7 +44,9 @@ vi.mock("./MoveDialog", () => ({
         data-preview={previewApplicationId ?? ""}
         data-from-kinds={fromKinds.join(",")}
         data-open-interviews={String(openInterviews)}
+        data-application-ids={applicationIds.join(",")}
       >
+        <button onClick={() => onConfirm(undefined, { cancelInterviews: false })}>Move and keep interviews</button>
         <button onClick={() => onConfirm()}>Move</button>
         <button onClick={() => onConfirm({ templateId: "7e700000-0000-4000-8000-000000000001" })}>
           Move and email
@@ -189,6 +193,21 @@ describe("BulkActionBar (PL-TEST-006)", () => {
     );
     expect(toast.success).toHaveBeenCalledWith(
       "Moved 2 applications to Rejected. Emailing 1 in 2 minutes. Move back to cancel. 1 email couldn't be sent.",
+    );
+  });
+
+  it("gives the dialog the selection and passes 'keep interviews' to the move (IVT-071)", async () => {
+    vi.mocked(moveApplicationsAction).mockResolvedValue({ ok: true, moved: 2, emailed: 0, skipped: [] });
+    render(<BulkActionBar selectedIds={ids(2)} stages={STAGES} onDone={vi.fn()} />);
+    fireEvent.click(reject());
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-application-ids", ids(2).join(","));
+    fireEvent.click(screen.getByRole("button", { name: "Move and keep interviews" }));
+    await waitFor(() =>
+      expect(moveApplicationsAction).toHaveBeenCalledWith({
+        applicationIds: ids(2),
+        stageId: stageOf("rejected").id,
+        cancelInterviews: false,
+      }),
     );
   });
 

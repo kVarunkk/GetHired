@@ -21,7 +21,9 @@ import {
 } from "@/helpers/pipeline/status-map";
 import type { MoveEmail } from "@/helpers/pipeline/move";
 import { cn } from "@/utils/utils";
-import MoveDialog, { type TemplateOption } from "./MoveDialog";
+import SchedulePrompt from "@/components/interviews/SchedulePrompt";
+import type { PromptItem, StagePlanItems } from "@/helpers/interviews/schedule-prompt";
+import MoveDialog, { type MoveOptions, type TemplateOption } from "./MoveDialog";
 
 export type StageOption = { id: string; name: string; kind: PipelineStageKind };
 
@@ -41,6 +43,7 @@ export default function StagePicker({
   templates = [],
   hasOpenInterview = false,
   canMove = true,
+  schedulingPlan,
 }: {
   applicationId: string;
   /** Active stages, in position order. */
@@ -52,24 +55,29 @@ export default function StagePicker({
   hasOpenInterview?: boolean;
   /** Without pipeline.move on the job the stage shows, locked. */
   canMove?: boolean;
+  /** The job's plan interviews by stage, with scheduling.manage only (IVT-072, D8). */
+  schedulingPlan?: StagePlanItems;
 }) {
   const router = useRouter();
   const [current, setCurrent] = useState(currentStageId ?? "");
   const [pending, setPending] = useState<StageOption | null>(null);
   const [isMoving, setIsMoving] = useState(false);
+  const [prompt, setPrompt] = useState<PromptItem[] | null>(null);
 
   const kindOf = (id: string) => stages.find((s) => s.id === id)?.kind ?? null;
 
-  const move = async (target: StageOption, email?: MoveEmail) => {
+  const move = async (target: StageOption, email?: MoveEmail, options?: MoveOptions) => {
     const previous = current;
     setPending(null);
     setCurrent(target.id);
     setIsMoving(true);
+    setPrompt(null);
     try {
       const result = await moveApplicationsAction({
         applicationIds: [applicationId],
         stageId: target.id,
         ...(email ? { email } : {}),
+        ...(options ? { cancelInterviews: options.cancelInterviews } : {}),
       });
       if (!result.ok) {
         setCurrent(previous);
@@ -93,6 +101,10 @@ export default function StagePicker({
         );
         router.refresh();
       }
+      // D8: offer to schedule the new stage's plan interviews.
+      const moved = result.ok && !(result.moved === 0 && result.skipped.some((s) => s.reason === "not_found"));
+      const items = schedulingPlan?.[target.id];
+      if (moved && items?.length) setPrompt(items);
     } catch {
       setCurrent(previous);
       toast.error("Couldn't move the application. Please try again.");
@@ -124,12 +136,14 @@ export default function StagePicker({
   );
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <span className="text-sm font-medium">Stage</span>
       {canMove ? select : <RoleLocked reason={forbiddenMessage("pipeline.move")}>{select}</RoleLocked>}
       {isMoving && (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Moving" />
       )}
+
+      {prompt && <SchedulePrompt applicationId={applicationId} items={prompt} onDismiss={() => setPrompt(null)} />}
 
       <MoveDialog
         open={pending !== null}
@@ -140,7 +154,8 @@ export default function StagePicker({
         previewApplicationId={applicationId}
         fromKinds={[kindOf(current)]}
         openInterviews={hasOpenInterview ? 1 : 0}
-        onConfirm={(email) => pending && void move(pending, email)}
+        applicationIds={[applicationId]}
+        onConfirm={(email, options) => pending && void move(pending, email, options)}
         onCancel={() => setPending(null)}
       />
     </div>

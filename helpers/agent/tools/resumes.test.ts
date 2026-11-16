@@ -684,7 +684,8 @@ describe("pickResumeForJob tool", () => {
     it("validates the list", async () => {
       const valid = async (resumeIds: string[]) =>
         (await validateInput(tools.pickResumeForJob, { jobDescription: JD, resumeIds })).success;
-      expect(await valid([A])).toBe(false);
+      expect(await valid([])).toBe(false);
+      expect(await valid([A])).toBe(true);
       expect(await valid([A, A])).toBe(false);
       const many = Array.from({ length: 51 }, (_, i) => `${String(i).padStart(8, "0")}-0000-4000-8000-000000000000`);
       expect(await valid(many)).toBe(false);

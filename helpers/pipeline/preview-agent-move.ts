@@ -18,7 +18,7 @@ export async function previewAgentMove(session: CompanySessionContext, input: un
 
   const parsed = moveApplicationsInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Couldn't read this move." };
-  const { applicationIds, stageId, email } = parsed.data;
+  const { applicationIds, stageId, email, cancelInterviews } = parsed.data;
 
-  return previewMove(session, { applicationIds, stageId, email: toMoveEmail(email) });
+  return previewMove(session, { applicationIds, stageId, email: toMoveEmail(email), cancelInterviews });
 }

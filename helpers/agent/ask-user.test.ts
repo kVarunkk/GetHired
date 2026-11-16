@@ -152,3 +152,27 @@ describe("location questions", () => {
     expect(text).toContain('picked these locations from the location search: "Bengaluru"; "Remote"');
   });
 });
+
+describe("askUserInputSchema: bare strings", () => {
+  it("reads a bare-string question and bare-string options as their objects", () => {
+    const parsed = askUserInputSchema.parse({
+      questions: [
+        "How many years of experience do you have?",
+        { question: "Minimum salary?", options: ["$50,000", "$60,000"], multiSelect: false },
+      ],
+    });
+    expect(parsed.questions).toEqual([
+      { question: "How many years of experience do you have?" },
+      { question: "Minimum salary?", options: [{ label: "$50,000" }, { label: "$60,000" }], multiSelect: false },
+    ]);
+  });
+
+  it("still tells the model to send objects", async () => {
+    const { zodSchema } = await import("ai");
+    const schema = zodSchema(askUserInputSchema).jsonSchema as {
+      properties: { questions: { items: { type: string; properties: { options: { items: { type: string } } } } } };
+    };
+    expect(schema.properties.questions.items.type).toBe("object");
+    expect(schema.properties.questions.items.properties.options.items.type).toBe("object");
+  });
+});

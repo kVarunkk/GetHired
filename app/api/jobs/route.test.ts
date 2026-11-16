@@ -413,6 +413,9 @@ describe("GET /api/jobs: errors", () => {
         request_path: "/api/jobs",
         sort_by: "created_at",
         created_after_days: "3",
+        filters: [],
+        tab: null,
+        has_cursor: false,
         internal_call: false,
       },
     });

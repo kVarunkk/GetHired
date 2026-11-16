@@ -21,6 +21,7 @@ import {
 import {
   RATING_LABELS,
   ratingSummary,
+  ratingsHidden,
   type CandidateRating,
 } from "@/helpers/pipeline/ratings";
 import type { Tables } from "@/utils/types/database.types";
@@ -34,7 +35,8 @@ import {
   type MentionableMember,
 } from "@/helpers/team/mentions";
 
-type Note = Tables<"candidate_notes">;
+/** `rating_hidden`: a teammate's rating masked while the reader is blind (IV-REQ-032a). */
+type Note = Tables<"candidate_notes"> & { rating_hidden?: boolean };
 
 const MAX_LENGTH = 5000;
 const NO_RATING = "none";
@@ -242,6 +244,7 @@ export default function NotesPanel({
   const [isSaving, setIsSaving] = useState(false);
 
   const summary = ratingSummary(notes);
+  const hidden = ratingsHidden(notes);
 
   const add = async () => {
     setIsSaving(true);
@@ -265,7 +268,11 @@ export default function NotesPanel({
   return (
     <div className="flex flex-col gap-4">
       <section aria-label="Ratings" className="rounded-lg border px-4 py-3 text-sm">
-        {summary.average === null ? (
+        {hidden ? (
+          <p className="text-muted-foreground">
+            Teammates&apos; ratings are hidden until you submit your interview scorecard.
+          </p>
+        ) : summary.average === null ? (
           <p className="text-muted-foreground">No ratings yet</p>
         ) : (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -385,10 +392,16 @@ function NoteItem({
         <MemberAvatar name={note.author_name} className="h-6 w-6 text-[10px]" />
         <span className="font-medium text-foreground">{note.author_name ?? "A teammate"}</span>
         <span suppressHydrationWarning>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
-        {note.rating && (
+        {note.rating ? (
           <Badge variant="outline" className="font-normal">
             {RATING_LABELS[note.rating]}
           </Badge>
+        ) : (
+          note.rating_hidden && (
+            <Badge variant="outline" className="font-normal text-muted-foreground">
+              Rating hidden
+            </Badge>
+          )
         )}
         {isMine && mode === "view" && (
           <span className="ml-auto flex gap-1">

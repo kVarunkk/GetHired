@@ -417,9 +417,83 @@ describe("role templates (RP-REQ-005)", () => {
     expect(hm.has("billing.view")).toBe(false);
   });
 
-  it("gives the Interviewer only notes on top of reading applicants", () => {
-    const i = templateGrants(roleTemplate("interviewer")!);
-    expect([...i.keys()].sort()).toEqual(["applicants.view", "jobs.view", "notes.view", "notes.write"]);
+  it("gives the Interviewer nothing: panel membership is its access (IVT-010)", () => {
+    const i = roleTemplate("interviewer")!;
+    expect(templateGrants(i).size).toBe(0);
+    expect(i.description).toBe("Sees only the interviews they're on.");
+  });
+});
+
+describe("human interview keys (IVT-010)", () => {
+  const KEYS = ["scheduling.view", "scheduling.manage", "interview_plans.manage", "scorecards.view_all"] as const;
+
+  it("adds four scopable keys with the spec's dependencies", () => {
+    for (const key of KEYS) {
+      expect(isPermissionKey(key), key).toBe(true);
+      expect(permissionEntry(key).scopable, key).toBe(true);
+    }
+    expect(permissionEntry("scheduling.view").requires).toEqual(["applicants.view"]);
+    expect(permissionEntry("scheduling.manage").requires).toEqual(["scheduling.view"]);
+    expect(permissionEntry("interview_plans.manage").requires).toEqual(["jobs.view"]);
+    expect(permissionEntry("scorecards.view_all").requires).toEqual(["scheduling.view"]);
+  });
+
+  it("expands scheduling.manage and scorecards.view_all down to jobs.view at the same scope", () => {
+    for (const key of ["scheduling.manage", "scorecards.view_all"] as const) {
+      const grants = expandDependencies([{ key, scope: "assigned" }]);
+      expect(grants.get("scheduling.view"), key).toBe("assigned");
+      expect(grants.get("applicants.view"), key).toBe("assigned");
+      expect(grants.get("jobs.view"), key).toBe("assigned");
+    }
+  });
+
+  it("never labels them a bare 'interviews', and keeps the AI interview's labels", () => {
+    for (const key of KEYS) {
+      expect(permissionEntry(key).label, key).not.toMatch(/^(View|Manage) interviews$/);
+    }
+    expect(permissionEntry("interviews.view").label).toBe("View AI interviews");
+    expect(permissionEntry("interviews.manage").label).toBe("Manage AI interviews");
+  });
+
+  it("names the missing permission in the 403 copy", () => {
+    expect(forbiddenMessage("scheduling.manage", { forJob: true })).toBe(
+      "Your role can't schedule interviews for this job.",
+    );
+    expect(forbiddenMessage("interview_plans.manage")).toBe("Your role can't edit interview plans.");
+    expect(forbiddenMessage("scorecards.view_all")).toBe("Your role can't see all interview feedback.");
+  });
+
+  it("gives Admin all four, Member the two scheduling keys, Hiring manager all four for assigned jobs", () => {
+    const admin = templateGrants(roleTemplate("admin")!);
+    const member = templateGrants(roleTemplate("member")!);
+    const hm = templateGrants(roleTemplate("hiring_manager")!);
+    for (const key of KEYS) {
+      expect(admin.get(key), key).toBe("all");
+      expect(hm.get(key), key).toBe("assigned");
+    }
+    expect(member.get("scheduling.view")).toBe("all");
+    expect(member.get("scheduling.manage")).toBe("all");
+    expect(member.has("interview_plans.manage")).toBe(false);
+    expect(member.has("scorecards.view_all")).toBe(false);
+  });
+
+  it("gives the Coordinator scheduling, but not plans or all feedback", () => {
+    const c = templateGrants(roleTemplate("coordinator")!);
+    expect(c.get("scheduling.view")).toBe("all");
+    expect(c.get("scheduling.manage")).toBe("all");
+    expect(c.has("interview_plans.manage")).toBe(false);
+    expect(c.has("scorecards.view_all")).toBe(false);
+  });
+
+  it("leaves the grants of roles already made from the Interviewer template alone", () => {
+    // Templates are copied into company_role_permissions, never linked: the
+    // interviews migration must not touch an existing interviewer role.
+    const sql = readdirSync(MIGRATIONS_DIR)
+      .filter((f) => f.endsWith("_recruiter_interviews_core.sql"))
+      .map((f) => readFileSync(path.join(MIGRATIONS_DIR, f), "utf8"))
+      .join("\n");
+    expect(sql).not.toBe("");
+    expect(sql).not.toMatch(/template_key\s*=\s*'interviewer'/);
   });
 });
 

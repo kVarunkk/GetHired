@@ -95,7 +95,11 @@ export const RECRUITER_MCP_TOOLS: readonly RecruiterMcpToolDef[] = [
   confirmRow("screen_applicants", "Screen applicants", "applicants", ND_NI, "screenApplicants"),
 
   // --- pipeline ---
+  row("list_pipelines", "Pipelines", "pipeline", READ, "listPipelines"),
   row("list_stages", "Pipeline stages", "pipeline", READ, "listStages"),
+  row("create_pipeline", "Create a pipeline", "pipeline", ND_NI, "createPipeline"),
+  confirmRow("set_job_pipeline", "Move a job onto another pipeline", "pipeline", D_I, "setJobPipeline"),
+  confirmRow("customize_job_pipeline", "Give a job its own pipeline", "pipeline", ND_NI, "customizeJobPipeline"),
   row("list_notes", "Notes", "pipeline", READ, "listNotes"),
   row("create_stage", "Add a pipeline stage", "pipeline", ND_NI, "createStage"),
   row("rename_stage", "Rename a pipeline stage", "pipeline", ND_I, "renameStage"),
@@ -166,6 +170,25 @@ export const RECRUITER_MCP_TOOLS: readonly RecruiterMcpToolDef[] = [
   confirmRow("invite_to_interview", "Invite to the AI interview", "interviews", D_NI_O, "inviteToInterview", {
     email: true,
   }),
+
+  // --- scheduling (IVT-085) ---
+  row("get_interview_plan", "Interview plan", "scheduling", READ, "getInterviewPlan"),
+  row("draft_interview_plan", "Draft an interview plan", "scheduling", PAID_READ, "draftInterviewPlan"),
+  confirmRow("save_interview_plan", "Save an interview plan", "scheduling", D_I, "saveInterviewPlan"),
+  row("list_scheduled_interviews", "Interviews", "scheduling", READ, "listScheduledInterviews"),
+  row("find_interview_slots", "Free times for an interview", "scheduling", READ, "findInterviewSlots"),
+  confirmRow("schedule_interview", "Schedule an interview", "scheduling", ND_NI_O, "scheduleInterview", { email: true }),
+  confirmRow("send_scheduling_link", "Send a scheduling link", "scheduling", ND_NI_O, "sendSchedulingLink", {
+    email: true,
+  }),
+  confirmRow("reschedule_interview", "Change an interview", "scheduling", D_I_O, "rescheduleInterview", {
+    email: true,
+  }),
+  confirmRow("cancel_interview", "Cancel an interview", "scheduling", D_I_O, "cancelInterview", { email: true }),
+  confirmRow("remind_interviewers", "Remind interviewers", "scheduling", ND_NI_O, "remindInterviewers", {
+    email: true,
+  }),
+  row("summarize_feedback", "Summarize interview feedback", "scheduling", PAID_READ, "summarizeFeedback"),
 
   // --- team ---
   row("list_team", "Team", "team", READ, "listTeam"),

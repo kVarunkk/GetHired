@@ -28,6 +28,7 @@ vi.mock("@/helpers/pipeline/stages", async (importOriginal) => ({
 vi.mock("server-only", () => ({}));
 
 const INTERVIEW = stageOf("interview");
+const PIPELINE_B_ID = "7d1a3c2e-4b5f-8a6d-9e9f-0a1b2c3d4e5f";
 const REJECTION = templateOf("rejection");
 let supabase: SupabaseMock;
 
@@ -67,7 +68,29 @@ describe("saveStagesAction (PLT-064)", () => {
     expect(vi.mocked(renameStage).mock.calls[0][1]).toEqual({ stageId: INTERVIEW.id, name: "Onsite" });
     expect(vi.mocked(archiveStage).mock.calls[0][1]).toEqual({ stageId: INTERVIEW.id });
     expect(vi.mocked(reorderStages).mock.calls[0][1]).toEqual([INTERVIEW.id]);
-    expect(revalidatePath).toHaveBeenCalledWith("/company/settings");
+    expect(revalidatePath).toHaveBeenCalledWith("/company/settings", "layout");
+  });
+
+  it("passes the edited pipeline to every helper (JPT-033)", async () => {
+    for (let i = 0; i < 3; i++) supabase.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
+    const pipelineId = PIPELINE_B_ID;
+
+    await saveStagesAction({ op: "create", name: "Take-home", kind: "interview", pipelineId });
+    await saveStagesAction({ op: "rename", stageId: INTERVIEW.id, name: "Onsite", pipelineId });
+    await saveStagesAction({ op: "archive", stageId: INTERVIEW.id, pipelineId });
+    await saveStagesAction({ op: "reorder", ids: [INTERVIEW.id], pipelineId });
+
+    expect(vi.mocked(createStage).mock.calls[0][1]).toEqual({ name: "Take-home", kind: "interview", pipelineId });
+    expect(vi.mocked(renameStage).mock.calls[0][1]).toEqual({ stageId: INTERVIEW.id, name: "Onsite", pipelineId });
+    expect(vi.mocked(archiveStage).mock.calls[0][1]).toEqual({ stageId: INTERVIEW.id, pipelineId });
+    expect(vi.mocked(reorderStages).mock.calls[0][2]).toEqual({ pipelineId });
+  });
+
+  it("rejects a pipeline id that isn't a uuid", async () => {
+    expect(
+      await saveStagesAction({ op: "archive", stageId: INTERVIEW.id, pipelineId: "default" }),
+    ).toMatchObject({ ok: false });
+    expect(archiveStage).not.toHaveBeenCalled();
   });
 
   it("passes a refusal through, with the application count", async () => {

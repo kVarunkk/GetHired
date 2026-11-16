@@ -217,7 +217,17 @@ describe("processJobPostingRelevance scores (MT-REQ-001)", () => {
     const deletes = relevanceCalls(admin).filter((c) => has(c, "delete"));
     expect(deletes).toHaveLength(1);
     expect(deletes[0].chain).toContainEqual({ method: "eq", args: ["job_posting_id", JOB_ID] });
-    expect(deletes[0].chain).toContainEqual({ method: "not", args: ["user_id", "in", "(u1,u2)"] });
+    expect(deletes[0].chain).toContainEqual({ method: "in", args: ["user_id", ["gone"]] });
+  });
+
+  it("deletes nothing when every existing row still matches", async () => {
+    seed(admin);
+    existingRows([{ user_id: "u1", match_score: 75, explanation_status: "none" }]);
+    digestResponds(["u1"], { u1: scoreOf(3) });
+
+    await processJobPostingRelevance(COMPANY_A.user.id, JOB_ID, true);
+
+    expect(relevanceCalls(admin).some((c) => has(c, "delete"))).toBe(false);
   });
 
   it("deletes every row for the job when nothing matches", async () => {

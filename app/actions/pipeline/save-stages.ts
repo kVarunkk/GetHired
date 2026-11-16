@@ -14,13 +14,17 @@ import {
 import { Constants } from "@/utils/types/database.types";
 
 const name = z.string().max(200);
+/** The pipeline being edited (the default when omitted, as the agent's tools still do). */
+const pipelineId = z.string().uuid().optional();
 const inputSchema = z.discriminatedUnion("op", [
   z
-    .object({ op: z.literal("create"), name, kind: z.enum(Constants.public.Enums.pipeline_stage_kind) })
+    .object({ op: z.literal("create"), name, kind: z.enum(Constants.public.Enums.pipeline_stage_kind), pipelineId })
     .strict(),
-  z.object({ op: z.literal("rename"), stageId: z.string().uuid(), name }).strict(),
-  z.object({ op: z.literal("archive"), stageId: z.string().uuid() }).strict(),
-  z.object({ op: z.literal("reorder"), ids: z.array(z.string().uuid()).min(1).max(MAX_ACTIVE_STAGES) }).strict(),
+  z.object({ op: z.literal("rename"), stageId: z.string().uuid(), name, pipelineId }).strict(),
+  z.object({ op: z.literal("archive"), stageId: z.string().uuid(), pipelineId }).strict(),
+  z
+    .object({ op: z.literal("reorder"), ids: z.array(z.string().uuid()).min(1).max(MAX_ACTIVE_STAGES), pipelineId })
+    .strict(),
 ]);
 
 export type SaveStagesActionResult =
@@ -28,8 +32,9 @@ export type SaveStagesActionResult =
   | { ok: false; error: string; count?: number };
 
 /**
- * SERVER ACTION (PL-TASK-032): one change to the session company's stages
- * (add, rename, archive or reorder). The rules are in `helpers/pipeline/stages.ts`.
+ * SERVER ACTION (PL-TASK-032): one change to one of the session company's
+ * pipelines (add, rename, archive or reorder a stage). The helpers check the
+ * pipeline is the company's (JPT-033). The rules are in `helpers/pipeline/stages.ts`.
  */
 export async function saveStagesAction(input: z.input<typeof inputSchema>): Promise<SaveStagesActionResult> {
   const auth = await requireCompanyForAction({ permission: "settings.stages" });
@@ -41,13 +46,14 @@ export async function saveStagesAction(input: z.input<typeof inputSchema>): Prom
 
   const result =
     change.op === "create"
-      ? await createStage(auth, { name: change.name, kind: change.kind })
+      ? await createStage(auth, { name: change.name, kind: change.kind, pipelineId: change.pipelineId })
       : change.op === "rename"
-        ? await renameStage(auth, { stageId: change.stageId, name: change.name })
+        ? await renameStage(auth, { stageId: change.stageId, name: change.name, pipelineId: change.pipelineId })
         : change.op === "archive"
-          ? await archiveStage(auth, { stageId: change.stageId })
-          : await reorderStages(auth, change.ids);
+          ? await archiveStage(auth, { stageId: change.stageId, pipelineId: change.pipelineId })
+          : await reorderStages(auth, change.ids, { pipelineId: change.pipelineId });
 
-  if (result.ok) revalidatePath("/company/settings");
+  // The list's stage counts and the editor pages.
+  if (result.ok) revalidatePath("/company/settings", "layout");
   return result;
 }

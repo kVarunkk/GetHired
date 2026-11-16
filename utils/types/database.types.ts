@@ -367,6 +367,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "application_attachments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "company_application_list"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "application_attachments_interview_session_id_fkey"
             columns: ["interview_session_id"]
             isOneToOne: false
@@ -422,6 +429,13 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: false
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_events_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "company_application_list"
             referencedColumns: ["id"]
           },
           {
@@ -527,6 +541,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "application_interviews_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "company_application_list"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "application_interviews_company_candidate_id_fkey"
             columns: ["company_candidate_id"]
             isOneToOne: false
@@ -602,6 +623,13 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: true
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_knockouts_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "company_application_list"
             referencedColumns: ["id"]
           },
           {
@@ -693,6 +721,13 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: true
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_screenings_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "company_application_list"
             referencedColumns: ["id"]
           },
           {
@@ -835,6 +870,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "applications_merged_into_application_id_fkey"
+            columns: ["merged_into_application_id"]
+            isOneToOne: false
+            referencedRelation: "company_application_list"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "applications_resume_id_fkey"
             columns: ["resume_id"]
             isOneToOne: false
@@ -919,6 +961,121 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      calendar_connections: {
+        Row: {
+          account_email: string
+          company_id: string
+          connected_at: string
+          id: string
+          last_error: string | null
+          provider: string
+          reconnect_emailed_at: string | null
+          scopes: string[]
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_email: string
+          company_id: string
+          connected_at?: string
+          id?: string
+          last_error?: string | null
+          provider?: string
+          reconnect_emailed_at?: string | null
+          scopes?: string[]
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_email?: string
+          company_id?: string
+          connected_at?: string
+          id?: string
+          last_error?: string | null
+          provider?: string
+          reconnect_emailed_at?: string | null
+          scopes?: string[]
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_connections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_pending_revocations: {
+        Row: {
+          attempts: number
+          connection_id: string
+          created_at: string
+          key_version: number
+          provider: string
+          refresh_token_enc: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          connection_id: string
+          created_at?: string
+          key_version: number
+          provider: string
+          refresh_token_enc: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          connection_id?: string
+          created_at?: string
+          key_version?: number
+          provider?: string
+          refresh_token_enc?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      calendar_tokens: {
+        Row: {
+          access_token_enc: string | null
+          access_token_expires_at: string | null
+          connection_id: string
+          key_version: number
+          refresh_token_enc: string
+          refreshed_at: string
+        }
+        Insert: {
+          access_token_enc?: string | null
+          access_token_expires_at?: string | null
+          connection_id: string
+          key_version: number
+          refresh_token_enc: string
+          refreshed_at?: string
+        }
+        Update: {
+          access_token_enc?: string | null
+          access_token_expires_at?: string | null
+          connection_id?: string
+          key_version?: number
+          refresh_token_enc?: string
+          refreshed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_tokens_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: true
+            referencedRelation: "calendar_connections"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1233,6 +1390,13 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: false
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_notes_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "company_application_list"
             referencedColumns: ["id"]
           },
           {
@@ -1682,6 +1846,44 @@ export type Database = {
           },
         ]
       }
+      company_pipelines: {
+        Row: {
+          archived: boolean
+          company_id: string
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          company_id: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_pipelines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_email_templates: {
         Row: {
           body_md: string
@@ -1844,6 +2046,7 @@ export type Database = {
           scheduling_url: string | null
           tag_line: string | null
           tier_id: string
+          time_zone: string | null
           updated_at: string
           user_id: string
           website: string | null
@@ -1878,6 +2081,7 @@ export type Database = {
           scheduling_url?: string | null
           tag_line?: string | null
           tier_id?: string
+          time_zone?: string | null
           updated_at?: string
           user_id: string
           website?: string | null
@@ -1912,6 +2116,7 @@ export type Database = {
           scheduling_url?: string | null
           tag_line?: string | null
           tier_id?: string
+          time_zone?: string | null
           updated_at?: string
           user_id?: string
           website?: string | null
@@ -2560,6 +2765,173 @@ export type Database = {
           },
         ]
       }
+      interview_feedback_summaries: {
+        Row: {
+          application_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          scorecard_ids: string[]
+          scorecards_updated_at: string | null
+          summary: Json
+        }
+        Insert: {
+          application_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          scorecard_ids?: string[]
+          scorecards_updated_at?: string | null
+          summary?: Json
+        }
+        Update: {
+          application_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          scorecard_ids?: string[]
+          scorecards_updated_at?: string | null
+          summary?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_feedback_summaries_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_feedback_summaries_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "company_application_list"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_feedback_summaries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interview_scorecard_edits: {
+        Row: {
+          edited_at: string
+          field: string
+          id: string
+          new_text: string
+          old_text: string
+          scorecard_id: string
+        }
+        Insert: {
+          edited_at?: string
+          field: string
+          id?: string
+          new_text: string
+          old_text: string
+          scorecard_id: string
+        }
+        Update: {
+          edited_at?: string
+          field?: string
+          id?: string
+          new_text?: string
+          old_text?: string
+          scorecard_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_scorecard_edits_scorecard_id_fkey"
+            columns: ["scorecard_id"]
+            isOneToOne: false
+            referencedRelation: "interview_scorecards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interview_scorecards: {
+        Row: {
+          application_id: string
+          author_user_id: string
+          company_id: string
+          created_at: string
+          id: string
+          interview_id: string
+          locked_at: string | null
+          overall: Database["public"]["Enums"]["candidate_rating"] | null
+          overall_note: string
+          ratings: Json
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          author_user_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          interview_id: string
+          locked_at?: string | null
+          overall?: Database["public"]["Enums"]["candidate_rating"] | null
+          overall_note?: string
+          ratings?: Json
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          author_user_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          interview_id?: string
+          locked_at?: string | null
+          overall?: Database["public"]["Enums"]["candidate_rating"] | null
+          overall_note?: string
+          ratings?: Json
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_scorecards_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_scorecards_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "company_application_list"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_scorecards_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_scorecards_interview_id_fkey"
+            columns: ["interview_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_interviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interview_sessions: {
         Row: {
           created_at: string
@@ -2791,6 +3163,44 @@ export type Database = {
           },
         ]
       }
+      job_interview_competencies: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          name: string
+          plan_item_id: string
+          position: number
+          questions: string[]
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+          plan_item_id: string
+          position: number
+          questions?: string[]
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          plan_item_id?: string
+          position?: number
+          questions?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_interview_competencies_plan_item_id_fkey"
+            columns: ["plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "job_interview_plan_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_interview_configs: {
         Row: {
           company_id: string
@@ -2850,6 +3260,70 @@ export type Database = {
             columns: ["job_post_id"]
             isOneToOne: true
             referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_interview_plan_items: {
+        Row: {
+          company_id: string
+          created_at: string
+          default_interviewer_ids: string[]
+          duration_minutes: number
+          id: string
+          instructions: string
+          job_post_id: string
+          name: string
+          position: number
+          stage_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          default_interviewer_ids?: string[]
+          duration_minutes?: number
+          id?: string
+          instructions?: string
+          job_post_id: string
+          name: string
+          position: number
+          stage_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          default_interviewer_ids?: string[]
+          duration_minutes?: number
+          id?: string
+          instructions?: string
+          job_post_id?: string
+          name?: string
+          position?: number
+          stage_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_interview_plan_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_interview_plan_items_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_interview_plan_items_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
             referencedColumns: ["id"]
           },
         ]
@@ -2917,6 +3391,7 @@ export type Database = {
           min_equity: number | null
           min_experience: number | null
           min_salary: number | null
+          pipeline_id: string | null
           questions: string[]
           salary_currency: string | null
           salary_range: string | null
@@ -2953,6 +3428,7 @@ export type Database = {
           min_equity?: number | null
           min_experience?: number | null
           min_salary?: number | null
+          pipeline_id?: string | null
           questions?: string[]
           salary_currency?: string | null
           salary_range?: string | null
@@ -2989,6 +3465,7 @@ export type Database = {
           min_equity?: number | null
           min_experience?: number | null
           min_salary?: number | null
+          pipeline_id?: string | null
           questions?: string[]
           salary_currency?: string | null
           salary_range?: string | null
@@ -3012,6 +3489,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "all_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_postings_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "company_pipelines"
             referencedColumns: ["id"]
           },
         ]
@@ -3184,6 +3668,38 @@ export type Database = {
           },
         ]
       }
+      member_availability: {
+        Row: {
+          company_id: string
+          time_zone: string
+          updated_at: string
+          user_id: string
+          working_hours: Json
+        }
+        Insert: {
+          company_id: string
+          time_zone: string
+          updated_at?: string
+          user_id: string
+          working_hours: Json
+        }
+        Update: {
+          company_id?: string
+          time_zone?: string
+          updated_at?: string
+          user_id?: string
+          working_hours?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_availability_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       outreach_draft_usage: {
         Row: {
           company_id: string
@@ -3326,6 +3842,7 @@ export type Database = {
           id: string
           kind: Database["public"]["Enums"]["pipeline_stage_kind"]
           name: string
+          pipeline_id: string
           position: number
         }
         Insert: {
@@ -3335,6 +3852,7 @@ export type Database = {
           id?: string
           kind: Database["public"]["Enums"]["pipeline_stage_kind"]
           name: string
+          pipeline_id: string
           position: number
         }
         Update: {
@@ -3344,6 +3862,7 @@ export type Database = {
           id?: string
           kind?: Database["public"]["Enums"]["pipeline_stage_kind"]
           name?: string
+          pipeline_id?: string
           position?: number
         }
         Relationships: [
@@ -3352,6 +3871,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_stages_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "company_pipelines"
             referencedColumns: ["id"]
           },
         ]
@@ -3680,6 +4206,199 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      scheduled_interview_panel: {
+        Row: {
+          company_id: string
+          created_at: string
+          feedback_reminded_at: string | null
+          feedback_requested_at: string | null
+          interview_id: string
+          reminded_at: string | null
+          response: Database["public"]["Enums"]["interview_panel_response"]
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          feedback_reminded_at?: string | null
+          feedback_requested_at?: string | null
+          interview_id: string
+          reminded_at?: string | null
+          response?: Database["public"]["Enums"]["interview_panel_response"]
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          feedback_reminded_at?: string | null
+          feedback_requested_at?: string | null
+          interview_id?: string
+          reminded_at?: string | null
+          response?: Database["public"]["Enums"]["interview_panel_response"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_interview_panel_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_interview_panel_interview_id_fkey"
+            columns: ["interview_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_interviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_interviews: {
+        Row: {
+          application_id: string
+          booking_link_sent_at: string | null
+          booking_token_expires_at: string | null
+          booking_token_hash: string | null
+          candidate_is_attendee: boolean
+          company_id: string
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          ends_at: string | null
+          id: string
+          job_post_id: string
+          meeting_url: string | null
+          name: string
+          organizer_user_id: string | null
+          plan_item_id: string | null
+          plan_snapshot: Json
+          provider_event_id: string | null
+          slots_cache: Json | null
+          slots_cached_at: string | null
+          source: Database["public"]["Enums"]["scheduled_interview_source"]
+          stage_id: string | null
+          starts_at: string | null
+          status: Database["public"]["Enums"]["scheduled_interview_status"]
+          time_zone: string | null
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          booking_link_sent_at?: string | null
+          booking_token_expires_at?: string | null
+          booking_token_hash?: string | null
+          candidate_is_attendee?: boolean
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          duration_minutes: number
+          ends_at?: string | null
+          id?: string
+          job_post_id: string
+          meeting_url?: string | null
+          name: string
+          organizer_user_id?: string | null
+          plan_item_id?: string | null
+          plan_snapshot?: Json
+          provider_event_id?: string | null
+          slots_cache?: Json | null
+          slots_cached_at?: string | null
+          source: Database["public"]["Enums"]["scheduled_interview_source"]
+          stage_id?: string | null
+          starts_at?: string | null
+          status: Database["public"]["Enums"]["scheduled_interview_status"]
+          time_zone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          booking_link_sent_at?: string | null
+          booking_token_expires_at?: string | null
+          booking_token_hash?: string | null
+          candidate_is_attendee?: boolean
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          duration_minutes?: number
+          ends_at?: string | null
+          id?: string
+          job_post_id?: string
+          meeting_url?: string | null
+          name?: string
+          organizer_user_id?: string | null
+          plan_item_id?: string | null
+          plan_snapshot?: Json
+          provider_event_id?: string | null
+          slots_cache?: Json | null
+          slots_cached_at?: string | null
+          source?: Database["public"]["Enums"]["scheduled_interview_source"]
+          stage_id?: string | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["scheduled_interview_status"]
+          time_zone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_interviews_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_interviews_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "company_application_list"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_interviews_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_interviews_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_interviews_plan_item_id_fkey"
+            columns: ["plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "job_interview_plan_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_interviews_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduling_link_hits: {
+        Row: {
+          at: string
+          key: string
+        }
+        Insert: {
+          at?: string
+          key: string
+        }
+        Update: {
+          at?: string
+          key?: string
+        }
+        Relationships: []
       }
       talent_list_members: {
         Row: {
@@ -4351,6 +5070,7 @@ export type Database = {
         Returns: undefined
       }
       audit_actor_kind: { Args: { p_kind: string }; Returns: string }
+      awaiting_candidate_alert_after: { Args: never; Returns: string }
       backfill_company_roles: { Args: never; Returns: number }
       backfill_recruiter_pipeline: { Args: never; Returns: undefined }
       billing_allowance_used: {
@@ -4411,7 +5131,44 @@ export type Database = {
           used: number
         }[]
       }
+      book_by_token: {
+        Args: { p_starts_at: string; p_time_zone?: string; p_token: string }
+        Returns: Json
+      }
+      book_interview: {
+        Args: {
+          p_application_id: string
+          p_duration_minutes?: number
+          p_name?: string
+          p_panel: string[]
+          p_plan_item_id?: string
+          p_starts_at: string
+          p_time_zone?: string
+        }
+        Returns: Json
+      }
       caller_is_owner: { Args: { p_company_id: string }; Returns: boolean }
+      can_open_interview_kit: {
+        Args: { p_interview_id: string }
+        Returns: boolean
+      }
+      can_read_note: {
+        Args: { p_note: Database["public"]["Tables"]["candidate_notes"]["Row"] }
+        Returns: boolean
+      }
+      can_read_scorecards: {
+        Args: { p_application_id: string; p_company_id: string }
+        Returns: boolean
+      }
+      cancel_by_token: { Args: { p_token: string }; Returns: Json }
+      cancel_interview: {
+        Args: { p_id: string; p_reason?: string }
+        Returns: Json
+      }
+      cancel_interview_as_system: {
+        Args: { p_id: string; p_reason: string }
+        Returns: Json
+      }
       careers_page_json: {
         Args: { c: Database["public"]["Tables"]["company_info"]["Row"] }
         Returns: Json
@@ -4440,6 +5197,10 @@ export type Database = {
       }
       claim_careers_slug: { Args: { p_slug: string }; Returns: Json }
       claim_company_candidate: { Args: { p_token: string }; Returns: Json }
+      claim_interview_feedback_email: {
+        Args: { p_interview_id: string; p_kind: string; p_user_id: string }
+        Returns: string
+      }
       claim_mcp_confirmation: {
         Args: { p_code: string; p_digest: string }
         Returns: string
@@ -4499,6 +5260,7 @@ export type Database = {
         }
         Returns: Json
       }
+      complete_due_interviews: { Args: { p_limit?: number }; Returns: string[] }
       confirm_candidate_import: {
         Args: { p_batch_id: string; p_options?: Json; p_rows: Json }
         Returns: Json
@@ -4522,6 +5284,16 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_job_pipeline: {
+        Args: { p_job_post_id: string; p_mapping: Json; p_pipeline_id: string }
+        Returns: Json
+      }
+      archive_pipeline: { Args: { p_pipeline_id: string }; Returns: Json }
+      backfill_job_pipelines: { Args: never; Returns: undefined }
+      copy_interview_plan: {
+        Args: { p_from_job: string; p_to_job: string }
+        Returns: Json
+      }
       create_company_invite: {
         Args: { p_actor_kind?: string; p_email: string; p_role_id?: string }
         Returns: Json
@@ -4538,6 +5310,10 @@ export type Database = {
         }
         Returns: Json
       }
+      create_pipeline: {
+        Args: { p_from_pipeline?: string; p_name: string }
+        Returns: Json
+      }
       create_imported_application: {
         Args: {
           p_batch_id: string
@@ -4546,6 +5322,34 @@ export type Database = {
           p_stage_id: string
         }
         Returns: string
+      }
+      create_scheduled_interview: {
+        Args: {
+          p_application_id: string
+          p_duration_minutes: number
+          p_meeting_url: string
+          p_name: string
+          p_panel: string[]
+          p_plan_item_id: string
+          p_require_connection: boolean
+          p_require_future: boolean
+          p_source: Database["public"]["Enums"]["scheduled_interview_source"]
+          p_starts_at: string
+          p_time_zone: string
+        }
+        Returns: Json
+      }
+      create_scheduling_link: {
+        Args: {
+          p_application_id: string
+          p_duration_minutes?: number
+          p_name?: string
+          p_panel: string[]
+          p_plan_item_id?: string
+          p_time_zone?: string
+          p_token_hash: string
+        }
+        Returns: Json
       }
       create_screening_invite: {
         Args: { p_application_id: string; p_invited_by?: string; p_via: string }
@@ -4581,13 +5385,13 @@ export type Database = {
         }
         Returns: Json
       }
-      discard_resume_import: { Args: { p_batch_id: string }; Returns: Json }
       desired_roles_search: {
         Args: { "": Database["public"]["Tables"]["user_info"]["Row"] }
         Returns: {
           error: true
         } & "the function public.desired_roles_search with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
+      discard_resume_import: { Args: { p_batch_id: string }; Returns: Json }
       enqueue_company_interview_analysis: {
         Args: { p_session: string }
         Returns: Json
@@ -4604,8 +5408,27 @@ export type Database = {
         }[]
       }
       expanded_grants_json: { Args: { p_grants: Json }; Returns: Json }
+      expire_interview_links: { Args: { p_limit?: number }; Returns: string[] }
       expire_outreach: { Args: never; Returns: number }
       expire_screening_interviews: { Args: never; Returns: string[] }
+      feedback_overdue_after: { Args: never; Returns: string }
+      feedback_summary_access: {
+        Args: { p_application_id: string }
+        Returns: string
+      }
+      feedback_summary_current: {
+        Args: { p_application_id: string }
+        Returns: {
+          scorecard_ids: string[]
+          submitted: number
+          version: string
+        }[]
+      }
+      feedback_summary_min: { Args: never; Returns: number }
+      feedback_summary_source: {
+        Args: { p_application_id: string }
+        Returns: Json
+      }
       finalize_interview_analysis_session: {
         Args: { p_session_id: string }
         Returns: Json
@@ -4623,6 +5446,13 @@ export type Database = {
         }
         Returns: Json
       }
+      first_job_stage: {
+        Args: {
+          p_job_post_id: string
+          p_kind: Database["public"]["Enums"]["pipeline_stage_kind"]
+        }
+        Returns: string
+      }
       first_pipeline_stage: {
         Args: {
           p_company_id: string
@@ -4630,6 +5460,7 @@ export type Database = {
         }
         Returns: string
       }
+      fork_job_pipeline: { Args: { p_job_post_id: string }; Returns: Json }
       fulfil_payment: {
         Args: {
           p_dodo_payment_id: string
@@ -4666,6 +5497,11 @@ export type Database = {
           total_jobs: number
         }[]
       }
+      get_feedback_summary: {
+        Args: { p_application_id: string }
+        Returns: Json
+      }
+      get_interview_kit: { Args: { p_interview_id: string }; Returns: Json }
       get_job_funnel: { Args: { p_job_post_id: string }; Returns: Json }
       get_masked_job_urls: {
         Args: { p_job_ids: string[]; p_user_id: string }
@@ -4788,6 +5624,10 @@ export type Database = {
           status: string
         }[]
       }
+      import_job_stage: {
+        Args: { p_job_post_id: string; p_stage_id: string }
+        Returns: string
+      }
       import_stage: {
         Args: { p_company: string; p_stage_id: string }
         Returns: string
@@ -4804,9 +5644,120 @@ export type Database = {
           error: true
         } & "the function public.industry_preferences_search with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
+      interview_candidate_contact: {
+        Args: { p_application_id: string }
+        Returns: {
+          attendee: boolean
+          email: string
+          full_name: string
+        }[]
+      }
+      interview_candidate_invitable: {
+        Args: { p_application_id: string }
+        Returns: boolean
+      }
+      interview_event_details: {
+        Args: { p_interview_id: string }
+        Returns: Json
+      }
+      interview_feedback_due: {
+        Args: { p_limit?: number }
+        Returns: {
+          candidate_name: string
+          interview_id: string
+          interview_name: string
+          job_title: string
+          kind: string
+          user_id: string
+        }[]
+      }
+      interview_feedback_owed: {
+        Args: { p_interview_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      interview_feedback_reminder_after: { Args: never; Returns: string }
+      interview_feedback_window: { Args: never; Returns: string }
+      interview_kit_grace: { Args: never; Returns: string }
+      interview_no_show_window: { Args: never; Returns: string }
+      interview_reason: { Args: { p_message: string }; Returns: Json }
+      interview_resume_source: {
+        Args: { p_interview_id: string }
+        Returns: Json
+      }
+      interviewer_reminder_gap: { Args: never; Returns: string }
+      interviewer_reminders: {
+        Args: { p_claim?: boolean; p_interview_id: string }
+        Returns: Json
+      }
+      interviews_needing_attention: {
+        Args: { p_limit?: number }
+        Returns: {
+          application_id: string
+          candidate_name: string
+          interview_id: string
+          interview_name: string
+          job_post_id: string
+          job_title: string
+          kind: string
+          mine: boolean
+          owed: number
+          since: string
+        }[]
+      }
       is_company_member: { Args: { p_company_id: string }; Returns: boolean }
+      is_scorecard_blind: {
+        Args: { p_application_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_valid_time_zone: { Args: { p_zone: string }; Returns: boolean }
+      is_valid_working_hours: { Args: { p_hours: Json }; Returns: boolean }
+      job_interview_badges: {
+        Args: { p_job_post_id: string }
+        Returns: {
+          application_id: string
+          feedback_submitted: number
+          feedback_total: number
+          next_starts_at: string
+        }[]
+      }
       job_title_search_text: { Args: { title: string }; Returns: string }
       legacy_question_id: { Args: { p_index: number }; Returns: string }
+      list_application_notes: {
+        Args: { p_application_id: string }
+        Returns: {
+          application_id: string
+          author_name: string
+          author_user_id: string
+          body: string
+          candidate_user_id: string
+          company_id: string
+          created_at: string
+          id: string
+          rating: Database["public"]["Enums"]["candidate_rating"]
+          rating_hidden: boolean
+          updated_at: string
+        }[]
+      }
+      list_candidate_notes: {
+        Args: {
+          p_application_id?: string
+          p_candidate_user_id?: string
+          p_note_id?: string
+        }
+        Returns: {
+          application_id: string
+          author_name: string
+          author_user_id: string
+          body: string
+          candidate_user_id: string
+          company_id: string
+          created_at: string
+          id: string
+          rating: Database["public"]["Enums"]["candidate_rating"]
+          rating_hidden: boolean
+          updated_at: string
+        }[]
+      }
       list_company_audit: {
         Args: {
           p_action?: string
@@ -4821,12 +5772,61 @@ export type Database = {
       list_company_hiring_teams: { Args: never; Returns: Json }
       list_company_roles: { Args: never; Returns: Json }
       list_company_team: { Args: never; Returns: Json }
+      list_interview_scorecards: {
+        Args: { p_application_id: string }
+        Returns: {
+          author_name: string
+          author_user_id: string
+          content_visible: boolean
+          interview_id: string
+          locked_at: string
+          overall: Database["public"]["Enums"]["candidate_rating"]
+          overall_note: string
+          ratings: Json
+          response: Database["public"]["Enums"]["interview_panel_response"]
+          scorecard_id: string
+          status: string
+          submitted_at: string
+        }[]
+      }
+      list_interviewer_options: {
+        Args: never
+        Returns: {
+          name: string
+          user_id: string
+        }[]
+      }
       list_job_hiring_team: { Args: { p_job_post_id: string }; Returns: Json }
+      list_job_note_ratings: {
+        Args: { p_job_post_id: string }
+        Returns: {
+          application_id: string
+          rating: Database["public"]["Enums"]["candidate_rating"]
+          rating_hidden: boolean
+        }[]
+      }
       list_mentionable_members: {
         Args: never
         Returns: {
           name: string
           user_id: string
+        }[]
+      }
+      list_my_interviews: {
+        Args: never
+        Returns: {
+          application_id: string
+          candidate_name: string
+          ends_at: string
+          interview_id: string
+          job_post_id: string
+          job_title: string
+          kit_open: boolean
+          meeting_url: string
+          name: string
+          scorecard_status: string
+          starts_at: string
+          status: Database["public"]["Enums"]["scheduled_interview_status"]
         }[]
       }
       lock_my_screening_interview: {
@@ -4866,6 +5866,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      log_meeting_event: {
+        Args: {
+          p_actor: string
+          p_interview: Database["public"]["Tables"]["scheduled_interviews"]["Row"]
+          p_payload?: Json
+          p_type: string
+        }
+        Returns: undefined
+      }
       log_screening_event: {
         Args: {
           p_actor: string
@@ -4881,6 +5890,47 @@ export type Database = {
       }
       manage_screening_interview: {
         Args: { p_action: string; p_days?: number; p_id: string }
+        Returns: Json
+      }
+      managed_interview: {
+        Args: { p_id: string }
+        Returns: {
+          application_id: string
+          booking_link_sent_at: string | null
+          booking_token_expires_at: string | null
+          booking_token_hash: string | null
+          candidate_is_attendee: boolean
+          company_id: string
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          ends_at: string | null
+          id: string
+          job_post_id: string
+          meeting_url: string | null
+          name: string
+          organizer_user_id: string | null
+          plan_item_id: string | null
+          plan_snapshot: Json
+          provider_event_id: string | null
+          slots_cache: Json | null
+          slots_cached_at: string | null
+          source: Database["public"]["Enums"]["scheduled_interview_source"]
+          stage_id: string | null
+          starts_at: string | null
+          status: Database["public"]["Enums"]["scheduled_interview_status"]
+          time_zone: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "scheduled_interviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mark_interview: {
+        Args: { p_id: string; p_status: string }
         Returns: Json
       }
       mark_usage_notified: {
@@ -4972,9 +6022,30 @@ export type Database = {
         Args: { p_direct: string; p_imported: string }
         Returns: string
       }
+      move_interview_from_calendar: {
+        Args: { p_ends_at: string; p_id: string; p_starts_at: string }
+        Returns: Json
+      }
+      move_keeps_interviews: { Args: never; Returns: boolean }
       my_company_access: { Args: never; Returns: Json }
       my_company_id: { Args: never; Returns: string }
       my_job_ids_with: { Args: { p_key: string }; Returns: string[] }
+      my_scheduled_interviews: {
+        Args: never
+        Returns: {
+          application_id: string
+          can_reschedule: boolean
+          company_name: string
+          duration_minutes: number
+          ends_at: string
+          id: string
+          interview_name: string
+          job_title: string
+          meeting_url: string
+          starts_at: string
+          status: Database["public"]["Enums"]["scheduled_interview_status"]
+        }[]
+      }
       my_screening_interviews: {
         Args: never
         Returns: {
@@ -5000,6 +6071,54 @@ export type Database = {
         Args: { target_ids?: string[] }
         Returns: undefined
       }
+      normalize_scorecard_ratings: {
+        Args: { p_ratings: Json; p_snapshot: Json }
+        Returns: Json
+      }
+      panel_calendar_status: {
+        Args: { p_job_post_id: string; p_user_ids: string[] }
+        Returns: {
+          status: string
+          user_id: string
+        }[]
+      }
+      panel_interview: {
+        Args: { p_interview_id: string }
+        Returns: {
+          application_id: string
+          booking_link_sent_at: string | null
+          booking_token_expires_at: string | null
+          booking_token_hash: string | null
+          candidate_is_attendee: boolean
+          company_id: string
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          ends_at: string | null
+          id: string
+          job_post_id: string
+          meeting_url: string | null
+          name: string
+          organizer_user_id: string | null
+          plan_item_id: string | null
+          plan_snapshot: Json
+          provider_event_id: string | null
+          slots_cache: Json | null
+          slots_cached_at: string | null
+          source: Database["public"]["Enums"]["scheduled_interview_source"]
+          stage_id: string | null
+          starts_at: string | null
+          status: Database["public"]["Enums"]["scheduled_interview_status"]
+          time_zone: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "scheduled_interviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       pipeline_emails_pending: {
         Args: { p_company_id: string }
         Returns: number
@@ -5008,8 +6127,26 @@ export type Database = {
         Args: { p_status: Database["public"]["Enums"]["application_status"] }
         Returns: Database["public"]["Enums"]["pipeline_stage_kind"]
       }
+      pipeline_switch_in_progress: { Args: never; Returns: boolean }
+      plan_item_snapshot: { Args: { p_plan_item_id: string }; Returns: Json }
+      queue_interview_calendar_op: {
+        Args: { p_event_id?: string; p_interview_id: string; p_op: string }
+        Returns: undefined
+      }
       queue_profile_refresh: {
         Args: { p_stale_seconds?: number; p_user_id: string }
+        Returns: Json
+      }
+      record_interview: {
+        Args: {
+          p_application_id: string
+          p_duration_minutes?: number
+          p_meeting_url?: string
+          p_name?: string
+          p_panel: string[]
+          p_plan_item_id?: string
+          p_starts_at: string
+        }
         Returns: Json
       }
       record_profile_view: { Args: { p_candidate: string }; Returns: undefined }
@@ -5027,8 +6164,25 @@ export type Database = {
         }
         Returns: boolean
       }
+      release_interview_feedback_email: {
+        Args: {
+          p_claimed_at: string
+          p_interview_id: string
+          p_kind: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       release_interview_session: {
         Args: { p_interview_id: string; p_session_id: string }
+        Returns: boolean
+      }
+      release_interviewer_reminder: {
+        Args: {
+          p_claimed_at: string
+          p_interview_id: string
+          p_user_id: string
+        }
         Returns: boolean
       }
       release_screening_hold: {
@@ -5042,9 +6196,21 @@ export type Database = {
         Returns: Json
       }
       remove_import_row: { Args: { p_row_id: string }; Returns: Json }
+      renew_scheduling_link: {
+        Args: { p_id: string; p_token_hash: string }
+        Returns: Json
+      }
+      rename_pipeline: {
+        Args: { p_name: string; p_pipeline_id: string }
+        Returns: Json
+      }
       reorder_pipeline_stages: { Args: { p_ids: string[] }; Returns: undefined }
       request_screening_accommodation: {
         Args: { p_id: string; p_text: string }
+        Returns: Json
+      }
+      reschedule_by_token: {
+        Args: { p_starts_at: string; p_token: string }
         Returns: Json
       }
       reserve_interview_session: {
@@ -5055,6 +6221,7 @@ export type Database = {
         Args: { p_id: string; p_reservation_id: string }
         Returns: Json
       }
+      resolve_scheduling_token: { Args: { p_token: string }; Returns: Json }
       respond_to_outreach: {
         Args: {
           p_block?: boolean
@@ -5134,6 +6301,10 @@ export type Database = {
       resume_batch_settle: { Args: { p_batch_id: string }; Returns: string }
       resume_sections_public: { Args: { p_content: Json }; Returns: Json }
       retry_import_row: { Args: { p_row_id: string }; Returns: Json }
+      return_interview_to_link: {
+        Args: { p_id: string; p_reason: string }
+        Returns: Json
+      }
       revoke_company_invite: {
         Args: { p_actor_kind?: string; p_invite_id: string }
         Returns: Json
@@ -5146,6 +6317,10 @@ export type Database = {
         Returns: boolean
       }
       rollover_free_periods: { Args: never; Returns: Json }
+      rotate_my_scheduling_link: {
+        Args: { p_interview_id: string; p_token_hash: string }
+        Returns: Json
+      }
       run_in_progress: {
         Args: {
           p_started_at: string
@@ -5164,10 +6339,82 @@ export type Database = {
         }
         Returns: Json
       }
+      save_feedback_summary: {
+        Args: {
+          p_application_id: string
+          p_scorecard_ids: string[]
+          p_summary: Json
+          p_version: string
+        }
+        Returns: Json
+      }
+      save_interview_plan: {
+        Args: { p_items: Json; p_job_post_id: string }
+        Returns: Json
+      }
+      save_scheduling_slots: {
+        Args: { p_id: string; p_slots: Json }
+        Returns: undefined
+      }
+      save_scorecard_draft: {
+        Args: {
+          p_interview_id: string
+          p_overall?: Database["public"]["Enums"]["candidate_rating"]
+          p_overall_note?: string
+          p_ratings: Json
+        }
+        Returns: Json
+      }
       schedule_company_plan_change: {
         Args: { p_company_id: string; p_tier_slug: string }
         Returns: undefined
       }
+      scheduling_link_context: { Args: { p_token: string }; Returns: Json }
+      scheduling_link_cutoff: { Args: never; Returns: string }
+      scheduling_link_row: {
+        Args: { p_lock?: boolean; p_token: string }
+        Returns: {
+          application_id: string
+          booking_link_sent_at: string | null
+          booking_token_expires_at: string | null
+          booking_token_hash: string | null
+          candidate_is_attendee: boolean
+          company_id: string
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          ends_at: string | null
+          id: string
+          job_post_id: string
+          meeting_url: string | null
+          name: string
+          organizer_user_id: string | null
+          plan_item_id: string | null
+          plan_snapshot: Json
+          provider_event_id: string | null
+          slots_cache: Json | null
+          slots_cached_at: string | null
+          source: Database["public"]["Enums"]["scheduled_interview_source"]
+          stage_id: string | null
+          starts_at: string | null
+          status: Database["public"]["Enums"]["scheduled_interview_status"]
+          time_zone: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "scheduled_interviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      scheduling_link_ttl: { Args: never; Returns: string }
+      scheduling_rebook_grace: { Args: never; Returns: string }
+      scheduling_slots_ttl: { Args: never; Returns: string }
+      scheduling_time_ok: { Args: { p_starts_at: string }; Returns: boolean }
+      scheduling_token_hash: { Args: { p_token: string }; Returns: string }
+      scorecard_blind_window: { Args: never; Returns: string }
+      scorecard_note_edit_window: { Args: never; Returns: string }
       screening_start_refusal: {
         Args: {
           p_row: Database["public"]["Tables"]["application_interviews"]["Row"]
@@ -5181,6 +6428,10 @@ export type Database = {
       seed_company_roles: { Args: { p_company_id: string }; Returns: undefined }
       seed_default_pipeline: {
         Args: { p_company_id: string }
+        Returns: undefined
+      }
+      seed_pipeline_stages: {
+        Args: { p_pipeline_id: string }
         Returns: undefined
       }
       seed_default_templates: {
@@ -5266,6 +6517,11 @@ export type Database = {
         Args: { p_actor_kind?: string; p_role_id: string }
         Returns: Json
       }
+      set_default_pipeline: { Args: { p_pipeline_id: string }; Returns: Json }
+      set_job_pipeline: {
+        Args: { p_job_post_id: string; p_mapping?: Json; p_pipeline_id: string }
+        Returns: Json
+      }
       set_job_post_status: {
         Args: {
           p_job_post_id: string
@@ -5315,6 +6571,11 @@ export type Database = {
         Args: { p_batch_id: string; p_options?: Json; p_row_ids: string[] }
         Returns: Json
       }
+      submit_scorecard: { Args: { p_interview_id: string }; Returns: Json }
+      take_scheduling_link_hit: {
+        Args: { p_key: string; p_limit: number; p_window_seconds: number }
+        Returns: boolean
+      }
       talent_list_company: { Args: { p_list_id: string }; Returns: string }
       team_invite_hash: { Args: { p_token: string }; Returns: string }
       top_skills_search: {
@@ -5338,6 +6599,10 @@ export type Database = {
         Args: { p_base: string; p_company: string }
         Returns: string
       }
+      upcoming_interview_count: {
+        Args: { p_application_ids: string[] }
+        Returns: number
+      }
       update_company_candidate: {
         Args: { p_candidate_id: string; p_fields: Json }
         Returns: Json
@@ -5359,9 +6624,23 @@ export type Database = {
         Args: { p_duplicate_action?: string; p_edited: Json; p_row_id: string }
         Returns: Json
       }
+      update_interview: {
+        Args: {
+          p_clear_meeting_url?: boolean
+          p_id: string
+          p_meeting_url?: string
+          p_panel?: string[]
+          p_starts_at?: string
+        }
+        Returns: Json
+      }
       url_decode: { Args: { data: string }; Returns: string }
       url_encode: { Args: { data: string }; Returns: string }
       url_host: { Args: { p_url: string }; Returns: string }
+      valid_interview_panel: {
+        Args: { p_company: string; p_panel: string[] }
+        Returns: string[]
+      }
       valid_role_limits: { Args: { p_limits: Json }; Returns: boolean }
       verify: {
         Args: { algorithm?: string; secret: string; token: string }
@@ -5408,6 +6687,11 @@ export type Database = {
         | "stand_by"
         | "rejected"
       candidate_rating: "strong_no" | "no" | "yes" | "strong_yes"
+      interview_panel_response:
+        | "needs_action"
+        | "accepted"
+        | "declined"
+        | "tentative"
       job_feedback_vote: "upvote" | "downvote"
       job_posting_matching_status:
         | "pending"
@@ -5426,6 +6710,13 @@ export type Database = {
         | "hired"
         | "rejected"
         | "on_hold"
+      scheduled_interview_source: "booked" | "link" | "manual"
+      scheduled_interview_status:
+        | "awaiting_candidate"
+        | "scheduled"
+        | "completed"
+        | "cancelled"
+        | "no_show"
       screening_recommendation: "strong_yes" | "yes" | "maybe" | "no"
       visa_job_postings: "Will Sponsor" | "Not Required" | "Required"
       workplace_type: "onsite" | "hybrid" | "remote"
@@ -5567,6 +6858,12 @@ export const Constants = {
         "rejected",
       ],
       candidate_rating: ["strong_no", "no", "yes", "strong_yes"],
+      interview_panel_response: [
+        "needs_action",
+        "accepted",
+        "declined",
+        "tentative",
+      ],
       job_feedback_vote: ["upvote", "downvote"],
       job_posting_matching_status: [
         "pending",
@@ -5586,6 +6883,14 @@ export const Constants = {
         "hired",
         "rejected",
         "on_hold",
+      ],
+      scheduled_interview_source: ["booked", "link", "manual"],
+      scheduled_interview_status: [
+        "awaiting_candidate",
+        "scheduled",
+        "completed",
+        "cancelled",
+        "no_show",
       ],
       screening_recommendation: ["strong_yes", "yes", "maybe", "no"],
       visa_job_postings: ["Will Sponsor", "Not Required", "Required"],

@@ -15,7 +15,7 @@ export default function TermsOfService() {
             Terms of Service
           </CardTitle>
           <CardDescription className="text-center">
-            Last updated: July 30, 2025
+            Last updated: November 14, 2026
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 text-[15px] leading-7">
@@ -130,6 +130,33 @@ export default function TermsOfService() {
               TRANSMISSIONS OR DATA; (IV) STATEMENTS OR CONDUCT OF ANY THIRD
               PARTY ON THE SERVICE; OR (V) ANY OTHER MATTER RELATING TO THE
               SERVICE.
+            </p>
+          </section>
+
+          <section aria-labelledby="calendar-integration">
+            <h2 id="calendar-integration" className="text-lg font-semibold tracking-tight mb-3">
+              7. Google Calendar Integration
+            </h2>
+            <ul className="list-disc list-inside ml-4 space-y-1">
+              <li>
+                Connecting a Google Calendar is optional. By connecting one, you authorize GetHired to read your
+                free/busy times and to create, change and delete interview events on your calendar.
+              </li>
+              <li>
+                Your company and its members are responsible for the interviews they schedule and the attendees they
+                invite.
+              </li>
+              <li>
+                Google&apos;s own terms apply to Google Calendar and Google Meet. GetHired is not liable for Google
+                outages or for changes Google makes to its services or APIs.
+              </li>
+            </ul>
+            <p className="mt-2">
+              How we handle the information we receive from Google is described in our{" "}
+              <a href="/privacy-policy" className="underline underline-offset-4">
+                Privacy Policy
+              </a>
+              .
             </p>
           </section>
         </CardContent>

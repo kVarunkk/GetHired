@@ -39,6 +39,7 @@ import { forbiddenMessage } from "@/helpers/companies/permissions";
 import { mcpCompanyRefusalCopy, mcpNoAccountTypeCopy } from "@/helpers/mcp/copy";
 import { RECRUITER_MCP_TOOLS } from "@/helpers/mcp/recruiter-tools";
 import { MCP_TOOLS } from "@/helpers/mcp/tools";
+import { DEFAULT_PIPELINE_ID } from "@/test/utils/pipeline";
 import { POST } from "./route";
 
 vi.mock("@/helpers/mcp/auth", async (importOriginal) => ({
@@ -326,14 +327,23 @@ describe("tools/call round trips", () => {
       ok: true,
       stage: { id: "90000000-0000-4000-8000-000000000009", name: "Take-home", kind: "interview" },
     } as never);
+    // The tool adds to the default pipeline (JPT-028), and names it with its job count (JPT-040).
+    supabase.queue("company_pipelines", { data: { id: DEFAULT_PIPELINE_ID }, error: null });
+    supabase.queue("company_pipelines", {
+      data: [{ id: DEFAULT_PIPELINE_ID, name: "Default", is_default: true, archived: false }],
+      error: null,
+    });
+    supabase.queue("job_postings", { data: [{ pipeline_id: DEFAULT_PIPELINE_ID, status: "active" }], error: null });
+    supabase.queue("pipeline_stages", { data: [], error: null });
 
     const body = await call("create_stage", { name: "Take-home", kind: "interview" });
 
     expect(createStage).toHaveBeenCalledWith(
       expect.objectContaining({ company: expect.objectContaining({ id: COMPANY_A.id }), surface: "mcp" }),
-      { name: "Take-home", kind: "interview" },
+      { name: "Take-home", kind: "interview", pipelineId: DEFAULT_PIPELINE_ID },
     );
     expect(body.result.structuredContent.stage).toMatchObject({ name: "Take-home" });
+    expect(body.result.structuredContent.pipeline).toMatchObject({ name: "Default", sharedByJobs: 1 });
   });
 
   it("save_candidate saves for the session company", async () => {
@@ -395,6 +405,33 @@ describe("toolsets on the URL (RMT-051, RMCP spec §4.5)", () => {
     signInAs(OWNER_A);
 
     expect(await namesAt("?toolsets=jobs,pipeline")).toEqual(rowsIn("core", "jobs", "pipeline"));
+  });
+
+  it("scheduling narrows to the interview tools, and readonly to their reads (IVT-085)", async () => {
+    signInAs(OWNER_A);
+
+    expect(await namesAt("?toolsets=scheduling")).toEqual(rowsIn("core", "scheduling"));
+    expect(rowsIn("scheduling")).toHaveLength(11);
+    expect(await namesAt("?toolsets=scheduling&readonly=true")).toEqual(
+      [
+        "draft_interview_plan",
+        "find_interview_slots",
+        "get_interview_plan",
+        "get_my_company",
+        "list_scheduled_interviews",
+        "summarize_feedback",
+      ].sort(),
+    );
+  });
+
+  it("pipeline readonly keeps listPipelines and none of the pipeline writes (JPT-042)", async () => {
+    signInAs(OWNER_A);
+
+    const names = await namesAt("?toolsets=pipeline&readonly=true");
+    expect(names).toContain("list_pipelines");
+    for (const write of ["create_pipeline", "set_job_pipeline", "customize_job_pipeline"]) {
+      expect(names).not.toContain(write);
+    }
   });
 
   it("readonly=true lists only read-only tools, credit-spending reads included", async () => {
@@ -744,15 +781,17 @@ describe("confirm tools (RMT-046, RMCP-REQ-005)", () => {
     signInAs(OWNER_A, 2);
     const note = {
       id: NOTE_ID,
+      company_id: COMPANY_A.id,
       body: "Strong on systems.",
       rating: null,
+      rating_hidden: false,
       author_user_id: OWNER_A.user.id,
       application_id: null,
       candidate_user_id: CANDIDATE,
     };
     const args = { noteId: NOTE_ID, body: "Strong on systems and APIs." };
     supabase.queue("candidate_notes", { data: { application_id: null }, error: null });
-    supabase.queue("candidate_notes", { data: note, error: null });
+    supabase.queueRpc("list_candidate_notes", { data: [note], error: null });
     supabase.queue("candidate_directory", { data: [{ user_id: CANDIDATE, full_name: "Meera" }], error: null });
 
     const first = await callWith("update_note", args);

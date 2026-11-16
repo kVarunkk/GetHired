@@ -9,6 +9,7 @@ import { queueJobPostingRelevance } from "@/helpers/profiles/queue-job-relevance
 import { assertLimit } from "@/helpers/billing/entitlements";
 import { EntitlementError, type EntitlementPayload } from "@/helpers/billing/errors";
 import { embedJobs } from "@/helpers/jobs/job-embedding";
+import { pipelineReasonCopy } from "@/helpers/pipeline/copy";
 import { upsertJobPostingAction } from "./upsert-job-posting";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
@@ -514,5 +515,121 @@ describe("upsertJobPostingAction: application forms (CPT-017, AF-CON-001)", () =
   it("writes department and workplace type (CP-REQ-020)", async () => {
     await upsertJobPostingAction({ values: { ...VALUES, department: " Engineering ", workplace_type: "hybrid" } });
     expect(postingPayload()).toMatchObject({ department: "Engineering", workplace_type: "hybrid" });
+  });
+});
+
+describe("upsertJobPostingAction: the job's pipeline (JPT-034, JP-REQ-003)", () => {
+  const OTHER_PIPELINE = "e0000000-0000-4000-8000-0000000000e1";
+  const ARCHIVED_PIPELINE = "e0000000-0000-4000-8000-0000000000e2";
+  const B_PIPELINE = OTHERS.pipeline_id!;
+  const PIPELINES = [
+    { id: OWN.pipeline_id!, company_id: COMPANY_A.id, archived: false },
+    { id: OTHER_PIPELINE, company_id: COMPANY_A.id, archived: false },
+    { id: ARCHIVED_PIPELINE, company_id: COMPANY_A.id, archived: true },
+    { id: B_PIPELINE, company_id: COMPANY_B.id, archived: false },
+  ];
+  let applicationCount: number;
+  let switchAnswer: unknown;
+
+  const postingPayload = () => {
+    const write = writes("job_postings").find((c) => has(c, "insert") || (has(c, "update") && has(c, "select")));
+    return (argsOf(write!, "insert") ?? argsOf(write!, "update"))?.[0] as Record<string, unknown>;
+  };
+  const switches = () => rls.callsFor("set_job_pipeline").map((c) => c.chain[0].args[1]);
+
+  beforeEach(() => {
+    applicationCount = 0;
+    switchAnswer = { ok: true, changed: true, moved: 0, plan_items: 0, mapping: {} };
+    for (let i = 0; i < 5; i++) {
+      rls.queue("company_pipelines", (call) => {
+        const row = PIPELINES.find((p) =>
+          eqs(call).every(([col, value]) => (p as Record<string, unknown>)[col as string] === value),
+        );
+        return { data: row ? { id: row.id } : null, error: null };
+      });
+      rls.queue("applications", () => ({ data: null, count: applicationCount, error: null }));
+      rls.queueRpc("set_job_pipeline", () => ({ data: switchAnswer, error: null }));
+    }
+  });
+
+  it("creates a job on the picked pipeline", async () => {
+    const result = await upsertJobPostingAction({ values: { ...VALUES, pipeline_id: OTHER_PIPELINE } });
+
+    expect(result).toMatchObject({ success: true, isUpdate: false });
+    expect(postingPayload()).toMatchObject({ pipeline_id: OTHER_PIPELINE });
+    const lookup = rls.callsFor("company_pipelines")[0];
+    expect(eqs(lookup)).toEqual(expect.arrayContaining([["company_id", COMPANY_A.id], ["archived", false]]));
+  });
+
+  it("leaves pipeline_id out of a new job without one (the trigger picks the default)", async () => {
+    await upsertJobPostingAction({ values: VALUES });
+    expect(postingPayload()).not.toHaveProperty("pipeline_id");
+    expect(rls.callsFor("company_pipelines")).toHaveLength(0);
+  });
+
+  it.each([
+    ["another company's", B_PIPELINE],
+    ["an archived", ARCHIVED_PIPELINE],
+  ])("refuses %s pipeline and writes nothing", async (_, pipelineId) => {
+    const result = await upsertJobPostingAction({ values: { ...VALUES, pipeline_id: pipelineId } });
+    expect(result).toEqual({ success: false, error: "Pipeline not found." });
+    expect(writes("job_postings")).toHaveLength(0);
+  });
+
+  it("rejects a pipeline id that isn't a uuid", async () => {
+    const result = await upsertJobPostingAction({ values: { ...VALUES, pipeline_id: "default" } });
+    expect(result).toMatchObject({ success: false });
+    expect(writes("job_postings")).toHaveLength(0);
+  });
+
+  it("switches a job with no applications through set_job_pipeline, never in the update", async () => {
+    const result = await upsertJobPostingAction({
+      values: { ...VALUES, pipeline_id: OTHER_PIPELINE },
+      existingPostingId: OWN.id,
+    });
+
+    expect(result).toMatchObject({ success: true, isUpdate: true });
+    expect(switches()).toEqual([{ p_job_post_id: OWN.id, p_pipeline_id: OTHER_PIPELINE }]);
+    expect(postingPayload()).not.toHaveProperty("pipeline_id");
+    const count = rls.callsFor("applications")[0];
+    expect(eqs(count)).toEqual([["job_post_id", OWN.id]]);
+  });
+
+  it("refuses to change the pipeline of a job with applications, pointing to the switch, and saves nothing", async () => {
+    applicationCount = 2;
+    const result = await upsertJobPostingAction({
+      values: { ...VALUES, pipeline_id: OTHER_PIPELINE },
+      existingPostingId: OWN.id,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "This job has applications. Change its pipeline from the job's Pipeline section, which moves them.",
+    });
+    expect(switches()).toEqual([]);
+    expect(writes("job_postings")).toHaveLength(0);
+  });
+
+  it("does nothing to the pipeline when the edit keeps it", async () => {
+    applicationCount = 2;
+    const result = await upsertJobPostingAction({
+      values: { ...VALUES, pipeline_id: OWN.pipeline_id! },
+      existingPostingId: OWN.id,
+    });
+
+    expect(result).toMatchObject({ success: true, isUpdate: true });
+    expect(switches()).toEqual([]);
+    expect(rls.callsFor("applications")).toHaveLength(0);
+  });
+
+  it("returns the switch's refusal and saves nothing", async () => {
+    switchAnswer = { ok: false, reason: "forbidden" };
+    const result = await upsertJobPostingAction({
+      values: { ...VALUES, pipeline_id: OTHER_PIPELINE },
+      existingPostingId: OWN.id,
+    });
+
+    expect(result).toEqual({ success: false, error: pipelineReasonCopy("forbidden", { permission: "jobs.edit" }) });
+    expect(writes("job_postings")).toHaveLength(0);
   });
 });

@@ -12,7 +12,14 @@ export const ASK_USER_OTHER_MAX_CHARS = 500;
 export const ASK_USER_MAX_LOCATIONS = 20;
 export const ASK_USER_LOCATION_MAX_CHARS = 100;
 
-const option = z.object({
+// The model sometimes sends a choice or a whole question as a bare string
+// (PostHog: "Invalid input for tool askUser ... Expected object, received
+// string"). Both read as the object they stand for; the JSON schema the model
+// sees is still the object's.
+const fromString = <T extends z.ZodTypeAny>(key: string, schema: T) =>
+  z.preprocess((value) => (typeof value === "string" ? { [key]: value } : value), schema);
+
+const optionObject = z.object({
   label: z.string().trim().min(1).max(80).describe("The choice, in a few words."),
   description: z
     .string()
@@ -21,8 +28,9 @@ const option = z.object({
     .optional()
     .describe("Optional line under the choice explaining what it means."),
 });
+const option = fromString("label", optionObject);
 
-const question = z.object({
+const questionObject = z.object({
   question: z.string().trim().min(3).max(300).describe("The question, ending with a question mark."),
   options: z
     .array(option)
@@ -45,6 +53,8 @@ const question = z.object({
       'Set to "locations" for any question whose answer is a place (preferred locations, where to search, where a job is based). The card then shows the app\'s location search, so the user picks one or more real city and country names. Leave out options.',
     ),
 });
+
+const question = fromString("question", questionObject);
 
 export const askUserInputSchema = z.object({
   questions: z

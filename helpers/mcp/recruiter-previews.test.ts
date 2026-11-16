@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { JOB_A1, OWNER_A, memberWith, type MemberFixture } from "@/test/utils/team";
 import { INJECTION_LINE } from "@/test/utils/matching";
+import { DEFAULT_PIPELINE_ID } from "@/test/utils/pipeline";
 import type { RecruiterToolContext } from "@/helpers/agent/roles/recruiter/tools";
 import { RECRUITER_TOOL_PERMISSIONS, type RecruiterToolName } from "@/helpers/agent/roles/recruiter/tools/permissions";
 import { RECRUITER_APPROVAL_POLICY } from "@/helpers/agent/roles/recruiter/approval";
@@ -30,6 +31,11 @@ import {
   previewAgentImport,
 } from "@/helpers/candidates/preview-agent-import";
 import { previewAgentRole } from "@/helpers/companies/preview-agent-role";
+import { previewAgentScheduling } from "@/helpers/interviews/preview-agent-scheduling";
+import {
+  previewAgentCustomizeJobPipeline,
+  previewAgentJobPipelineSwitch,
+} from "@/helpers/pipeline/preview-agent-pipeline";
 import { previewText, type McpPreview } from "./previews";
 import { RECRUITER_MCP_PREVIEWS } from "./recruiter-previews";
 import { RECRUITER_MCP_TOOLS } from "./recruiter-tools";
@@ -57,6 +63,11 @@ vi.mock("@/helpers/candidates/preview-agent-import", () => ({
   previewAgentDeleteCandidates: vi.fn(),
 }));
 vi.mock("@/helpers/companies/preview-agent-role", () => ({ previewAgentRole: vi.fn() }));
+vi.mock("@/helpers/interviews/preview-agent-scheduling", () => ({ previewAgentScheduling: vi.fn() }));
+vi.mock("@/helpers/pipeline/preview-agent-pipeline", () => ({
+  previewAgentJobPipelineSwitch: vi.fn(),
+  previewAgentCustomizeJobPipeline: vi.fn(),
+}));
 
 const APP = "e0000000-0000-4000-8000-000000000001";
 const APP_2 = "e0000000-0000-4000-8000-000000000002";
@@ -73,6 +84,9 @@ const CANDIDATE_2 = "cc000000-0000-4000-8000-000000000002";
 const USER_CANDIDATE = "f0000000-0000-4000-8000-000000000001";
 const ROLE = "70000000-0000-4000-8000-000000000001";
 const MEMBER = "71000000-0000-4000-8000-000000000001";
+const INTERVIEW = "1e000000-0000-4000-8000-000000000001";
+const PANELIST = "c1000000-0000-4000-8000-000000000002";
+const ENG_PIPELINE = "9e000000-0000-4000-8000-000000000002";
 
 // Candidate data planted in the fixtures: the name carries an injection, and
 // the contact details must never reach a preview.
@@ -109,6 +123,8 @@ const IMPORT_ROW = {
 };
 const MY_NOTE = {
   id: NOTE,
+  company_id: OWNER_A.myCompany.id,
+  rating_hidden: false,
   body: `Strong systems answers. ${INJECTION_LINE}`,
   rating: "yes",
   author_user_id: OWNER_A.user.id,
@@ -124,8 +140,14 @@ const APPLICATION_PERSON = {
   job_postings: { title: "Frontend Engineer" },
 };
 
+/** The scheduling preview helper's answer (mocked; pinned in its own test). */
+const scheduling = (rows: { label: string; value: string; time?: boolean }[], notices: string[] = []) =>
+  vi.mocked(previewAgentScheduling).mockResolvedValue({ ok: true, rows, notices });
+/** Each interview's job, for checkToolPermission's interviewId source. */
+const interviewJob = () => db.queue("scheduled_interviews", { data: { job_post_id: JOB_A1 }, error: null });
+
 /** Read-only RPCs a preview may call. */
-const READ_RPCS = ["application_job_id", "get_my_careers_page"];
+const READ_RPCS = ["application_job_id", "get_my_careers_page", "list_candidate_notes"];
 
 let db: SupabaseMock;
 const ctxFor = (member: MemberFixture): RecruiterToolContext => {
@@ -168,6 +190,7 @@ const CASES: Case[] = [
           applications: [{ id: APP, name: NAME, jobTitle: "Frontend Engineer", moves: true, emailed: true }],
           notFound: 1,
           email: { subject: "Next steps", body: `Hi ${NAME}, let's talk.`, recipients: 1 },
+          interviews: { upcoming: 1, cancel: false },
         }),
       );
     },
@@ -179,6 +202,7 @@ const CASES: Case[] = [
       /Skipped: 1 not found/,
       /Email: 1 candidate/,
       /Next steps/,
+      /Interviews: Keeps 1 upcoming interview\./,
     ],
     sandboxed: NAME,
   },
@@ -212,6 +236,46 @@ const CASES: Case[] = [
     seed: () =>
       vi.mocked(previewAgentJobDelete).mockResolvedValue(ok({ title: "Frontend Engineer", status: "active", applications: 2 })),
     facts: [/The 2 applications and their notes are deleted too/, /Job: Frontend Engineer/, /Status: Published/],
+  },
+  // --- job pipelines (JPT-042) ---
+  {
+    tool: "set_job_pipeline",
+    input: { jobPostId: JOB_A1, pipelineId: ENG_PIPELINE },
+    seed: () =>
+      vi.mocked(previewAgentJobPipelineSwitch).mockResolvedValue(
+        ok({
+          jobTitle: "Frontend Engineer",
+          from: "Default",
+          to: "Engineering",
+          applications: 3,
+          moves: [
+            { stage: "Applied", to: "Applied", applications: 2, planItems: 0 },
+            { stage: "Interview", to: "Tech interview", applications: 1, planItems: 2 },
+          ],
+        }),
+      ),
+    facts: [
+      /Move Frontend Engineer onto the Engineering pipeline\?/,
+      /From: Default/,
+      /To: Engineering/,
+      /Applied → Applied \(2 applications\)/,
+      /Interview → Tech interview \(1 application, 2 planned interviews\)/,
+      /won't be emailed/,
+    ],
+  },
+  {
+    tool: "customize_job_pipeline",
+    input: { jobPostId: JOB_A1 },
+    seed: () =>
+      vi.mocked(previewAgentCustomizeJobPipeline).mockResolvedValue(
+        ok({ jobTitle: "Frontend Engineer", from: "Default", name: "Frontend Engineer", stages: 7, otherJobs: 2 }),
+      ),
+    facts: [
+      /Give Frontend Engineer its own pipeline\?/,
+      /Copies: Default \(7 stages\)/,
+      /New pipeline: Frontend Engineer/,
+      /Other jobs: 2 jobs keep Default/,
+    ],
   },
   {
     tool: "add_candidates_to_job",
@@ -504,6 +568,7 @@ const CASES: Case[] = [
     tool: "archive_stage",
     input: { stageId: STAGE },
     seed: () => {
+      db.queue("company_pipelines", { data: { id: DEFAULT_PIPELINE_ID }, error: null });
       db.queue("pipeline_stages", { data: { id: STAGE, name: "Take-home", kind: "interview", archived: false }, error: null });
       db.queue("applications", { data: null, error: null, count: 0 });
     },
@@ -524,7 +589,7 @@ const CASES: Case[] = [
     seed: () => {
       db.queue("candidate_notes", { data: { application_id: APP }, error: null });
       appJobs();
-      db.queue("candidate_notes", { data: MY_NOTE, error: null });
+      db.queueRpc("list_candidate_notes", { data: [MY_NOTE], error: null });
       db.queue("applications", { data: APPLICATION_PERSON, error: null });
     },
     facts: [/Delete this note\?/, /About: <candidate_name>/, /Frontend Engineer/, /Note: <note>\nStrong systems answers/],
@@ -562,6 +627,99 @@ const CASES: Case[] = [
     foreign: /doesn't have a careers page address yet/,
   },
 
+  // --- scheduling (IVT-085) ---
+  {
+    tool: "save_interview_plan",
+    input: {
+      jobPostId: JOB_A1,
+      interviews: [{ stageId: STAGE, name: "System design", durationMinutes: 60, competencies: [{ name: "Design" }] }],
+    },
+    seed: () =>
+      scheduling(
+        [
+          { label: "Job", value: "Frontend Engineer" },
+          { label: "Onsite", value: "System design · 60 min · 1 competency" },
+        ],
+        ["Replaces the job's current plan (2 interviews)."],
+      ),
+    facts: [/Save this interview plan\?/, /Onsite: System design · 60 min/, /Note: Replaces the job's current plan/],
+  },
+  {
+    tool: "schedule_interview",
+    input: {
+      applicationId: APP,
+      name: "Chat",
+      durationMinutes: 30,
+      interviewerIds: [PANELIST],
+      startsAt: "2026-11-20T10:00:00Z",
+    },
+    seed: () => {
+      appJobs();
+      scheduling(
+        [
+          { label: "Candidate", value: NAME },
+          { label: "Interview", value: "Chat · 30 min" },
+          { label: "Interviewers", value: "Ada" },
+          { label: "When", value: "2026-11-20T10:00:00Z", time: true },
+        ],
+        ["Books it on your Google Calendar with a Meet link. Google emails the interviewers."],
+      );
+    },
+    facts: [/Book this interview\?/, /When: Fri, 20 Nov 2026, 10:00 UTC/, /Interviewers: Ada/, /Google emails/],
+    sandboxed: NAME,
+  },
+  {
+    tool: "send_scheduling_link",
+    input: { applicationId: APP, name: "Chat", durationMinutes: 30, interviewerIds: [PANELIST] },
+    seed: () => {
+      appJobs();
+      scheduling([
+        { label: "Candidate", value: NAME },
+        { label: "Email", value: "Interview invite" },
+      ]);
+    },
+    facts: [/Email the candidate a link to pick a time\?/, /Email: Interview invite/],
+    sandboxed: NAME,
+  },
+  {
+    tool: "reschedule_interview",
+    input: { interviewId: INTERVIEW, startsAt: "2026-11-21T10:00:00Z" },
+    seed: () => {
+      interviewJob();
+      scheduling([
+        { label: "Candidate", value: NAME },
+        { label: "Was", value: "2026-11-20T10:00:00.000Z", time: true },
+        { label: "Moves to", value: "2026-11-21T10:00:00Z", time: true },
+      ]);
+    },
+    facts: [/Change this interview\?/, /Was: Fri, 20 Nov 2026, 10:00 UTC/, /Moves to: Sat, 21 Nov 2026, 10:00 UTC/],
+    sandboxed: NAME,
+    foreign: /Interview not found/,
+  },
+  {
+    tool: "cancel_interview",
+    input: { interviewId: INTERVIEW },
+    seed: () => {
+      interviewJob();
+      scheduling([{ label: "Interview", value: "System design" }], ["The interviewers lose the interview kit."]);
+    },
+    facts: [/Cancel this interview\?/, /Interview: System design/, /lose the interview kit/],
+    foreign: /Interview not found/,
+  },
+  {
+    tool: "remind_interviewers",
+    input: { interviewId: INTERVIEW },
+    seed: () => {
+      interviewJob();
+      scheduling([
+        { label: "Emails", value: "Ada" },
+        { label: "Not emailed", value: "Ben (submitted)" },
+      ]);
+    },
+    facts: [/Remind the interviewers\?/, /Emails: Ada/, /Not emailed: Ben \(submitted\)/],
+    foreign: /Interview not found/,
+  },
+
   // --- gated writes and import rows (RMT-045) ---
   {
     tool: "add_note",
@@ -579,7 +737,7 @@ const CASES: Case[] = [
     seed: () => {
       db.queue("candidate_notes", { data: { application_id: APP }, error: null });
       appJobs();
-      db.queue("candidate_notes", { data: MY_NOTE, error: null });
+      db.queueRpc("list_candidate_notes", { data: [MY_NOTE], error: null });
       db.queue("applications", { data: APPLICATION_PERSON, error: null });
     },
     facts: [/Edit this note\?/, /Note before: <note>\nStrong systems answers/, /Note after: <note>\nClear on trade-offs\./, /Rating: Yes → No rating/],
@@ -734,7 +892,7 @@ describe("refusals that match the run", () => {
     const ctx = ctxFor(OWNER_A);
     db.queue("candidate_notes", { data: { application_id: APP }, error: null });
     appJobs();
-    db.queue("candidate_notes", { data: { ...MY_NOTE, author_user_id: "someone-else" }, error: null });
+    db.queueRpc("list_candidate_notes", { data: [{ ...MY_NOTE, author_user_id: "someone-else" }], error: null });
 
     const preview = await RECRUITER_MCP_PREVIEWS.update_note(ctx, { noteId: NOTE, body: "x" });
 
@@ -771,8 +929,37 @@ describe("refusals that match the run", () => {
     expect(preview).toEqual({ ok: false, error: '"Frontend Engineer" is already published.' });
   });
 
+  it("archives in the pipeline the call names (JPT-040)", async () => {
+    const ctx = ctxFor(OWNER_A);
+    db.queue("company_pipelines", { data: { id: ENG_PIPELINE }, error: null });
+    db.queue("pipeline_stages", { data: { id: STAGE, name: "Take-home", kind: "interview", archived: false }, error: null });
+    db.queue("applications", { data: null, error: null, count: 0 });
+
+    const preview = await RECRUITER_MCP_PREVIEWS.archive_stage(ctx, { stageId: STAGE, pipelineId: ENG_PIPELINE });
+
+    expect(preview).toMatchObject({ ok: true });
+    expect(db.callsFor("company_pipelines")[0].chain).toContainEqual({ method: "eq", args: ["id", ENG_PIPELINE] });
+    expect(db.callsFor("pipeline_stages")[0].chain).toContainEqual({ method: "eq", args: ["pipeline_id", ENG_PIPELINE] });
+  });
+
+  it("a pipeline switch the RPC would refuse is refused here (JP-TEST-006)", async () => {
+    const ctx = ctxFor(OWNER_A);
+    vi.mocked(previewAgentJobPipelineSwitch).mockResolvedValue({
+      ok: false,
+      error: 'The new pipeline has no stage that shows candidates "On hold", which "On hold" needs. Add one to it first.',
+    });
+
+    const preview = await RECRUITER_MCP_PREVIEWS.set_job_pipeline(ctx, { jobPostId: JOB_A1, pipelineId: ENG_PIPELINE });
+
+    expect(preview).toEqual({
+      ok: false,
+      error: `This switch won't go through: The new pipeline has no stage that shows candidates "On hold", which "On hold" needs. Add one to it first.`,
+    });
+  });
+
   it("a stage with applications in it can't be archived", async () => {
     const ctx = ctxFor(OWNER_A);
+    db.queue("company_pipelines", { data: { id: DEFAULT_PIPELINE_ID }, error: null });
     db.queue("pipeline_stages", { data: { id: STAGE, name: "Take-home", kind: "interview", archived: false }, error: null });
     db.queue("applications", { data: null, error: null, count: 2 });
 
@@ -804,6 +991,21 @@ describe("refusals that match the run", () => {
     const preview = await RECRUITER_MCP_PREVIEWS.confirm_import(ctx, { batchId: BATCH, jobPostId: JOB_A1 });
 
     expect(preview).toMatchObject({ ok: false, error: expect.stringMatching(/2 resumes have no email/) });
+  });
+
+  it("a scheduling call that would do nothing is refused with the card's warning (IVT-085)", async () => {
+    const ctx = ctxFor(OWNER_A);
+    interviewJob();
+    vi.mocked(previewAgentScheduling).mockResolvedValue({
+      ok: true,
+      rows: [{ label: "Emails", value: "Nobody" }],
+      notices: [],
+      warning: "Nobody would be emailed.",
+    });
+    expect(await RECRUITER_MCP_PREVIEWS.remind_interviewers(ctx, { interviewId: INTERVIEW })).toEqual({
+      ok: false,
+      error: "Nobody would be emailed.",
+    });
   });
 
   it("passes a helper's refusal through", async () => {

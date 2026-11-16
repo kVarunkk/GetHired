@@ -18,6 +18,7 @@ import {
   previewAgentImport,
 } from "@/helpers/candidates/preview-agent-import";
 import { previewAgentRole } from "@/helpers/companies/preview-agent-role";
+import { previewAgentScheduling } from "@/helpers/interviews/preview-agent-scheduling";
 
 // RMT-023/024: the approval previews' cores, which MCP calls with the session
 // it resolved itself. Each one re-checks its permission (MCP has no action
@@ -35,6 +36,8 @@ const STAGE = "90000000-0000-4000-8000-000000000002";
 const BATCH = "cb000000-0000-4000-8000-000000000001";
 const CANDIDATE = "cc000000-0000-4000-8000-000000000001";
 const ROLE = "70000000-0000-4000-8000-000000000001";
+const INTERVIEW = "1e000000-0000-4000-8000-000000000001";
+const PLAN_STAGE = "90000000-0000-4000-8000-000000000003";
 
 const HELPERS = {
   "pipeline/preview-agent-move": previewAgentMove,
@@ -44,6 +47,7 @@ const HELPERS = {
   "interview/screening/preview-agent-interview-invite": previewAgentInterviewInvite,
   "candidates/preview-agent-import": previewAgentImport,
   "companies/preview-agent-role": previewAgentRole,
+  "interviews/preview-agent-scheduling": previewAgentScheduling,
 };
 
 let rls: SupabaseMock;
@@ -122,6 +126,36 @@ const CASES: Case[] = [
     run: (s) => previewAgentRole(s, { tool: "updateRole", input: { roleId: ROLE, name: "Lead" } }),
     permission: "roles.view",
     without: NOBODY,
+  },
+  {
+    name: "previewAgentScheduling (booking)",
+    run: (s) =>
+      previewAgentScheduling(s, "scheduleInterview", {
+        applicationId: APP,
+        name: "Chat",
+        durationMinutes: 30,
+        interviewerIds: [ROLE],
+        startsAt: "2026-12-01T10:00:00Z",
+      }),
+    permission: "scheduling.manage",
+    without: NOBODY,
+  },
+  {
+    name: "previewAgentScheduling (reminders)",
+    run: (s) => previewAgentScheduling(s, "remindInterviewers", { interviewId: INTERVIEW }),
+    permission: "scheduling.manage",
+    without: memberWith(["scheduling.view"]),
+  },
+  {
+    name: "previewAgentScheduling (a plan for a job outside the member's scope)",
+    run: (s) =>
+      previewAgentScheduling(s, "saveInterviewPlan", {
+        jobPostId: JOB_A2,
+        interviews: [{ stageId: PLAN_STAGE, name: "Screen", durationMinutes: 30, competencies: [{ name: "Craft" }] }],
+      }),
+    permission: "interview_plans.manage",
+    without: memberWith([{ key: "interview_plans.manage", scope: "assigned" }], { assignedJobIds: [JOB_A1] }),
+    forJob: true,
   },
   {
     name: "previewAgentRole (invites)",

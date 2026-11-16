@@ -35,9 +35,19 @@ const NO_JOB_PERMS = member(5, { name: "Finn Finance", assignable: false });
 const renderPanel = (members = [OWNER, ASSIGNED, LOCKED, ELIGIBLE, NO_JOB_PERMS]) =>
   render(<HiringTeamPanel jobPostId={JOB_A1} members={members} />);
 
+// Radix's popover and checkbox, and cmdk, measure themselves; jsdom has no ResizeObserver.
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  },
+);
+
 beforeEach(() => {
   vi.clearAllMocks();
-  // Radix Select needs these, and jsdom doesn't have them.
+  // Radix and cmdk need these, and jsdom doesn't have them.
   Element.prototype.scrollIntoView ??= vi.fn();
   Element.prototype.hasPointerCapture ??= vi.fn(() => false);
 });
@@ -73,14 +83,44 @@ describe("HiringTeamPanel (RPT-052)", () => {
     const add = screen.getByRole("button", { name: /Add to hiring team/ });
     expect((add as HTMLButtonElement).disabled).toBe(true);
 
-    fireEvent.click(screen.getByRole("combobox", { name: "Team member to add" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Team members to add" }));
     const options = (await screen.findAllByRole("option")).map((o) => o.textContent);
     expect(options).toEqual(["Ivy Interviewer · Hiring manager"]);
 
-    fireEvent.click(screen.getByRole("option", { name: "Ivy Interviewer · Hiring manager" }));
+    fireEvent.click(screen.getByRole("option", { name: /Ivy Interviewer/ }));
     fireEvent.click(add);
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
     expect(assignJobAction).toHaveBeenCalledWith({ jobPostId: JOB_A1, userId: ELIGIBLE.userId });
+    expect(toast.success).toHaveBeenCalledWith("Added Ivy Interviewer.");
+  });
+
+  it("adds several members at once, and keeps the ones that failed selected", async () => {
+    const SECOND = member(6, { name: "Rae Recruiter" });
+    const THIRD = member(7, { name: "Sam Sourcer" });
+    vi.mocked(assignJobAction).mockImplementation(async ({ userId }) =>
+      userId === THIRD.userId ? { ok: false, error: "Their role has permissions you don't." } : { ok: true },
+    );
+    renderPanel([ASSIGNED, ELIGIBLE, SECOND, THIRD]);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Team members to add" }));
+    fireEvent.click(await screen.findByRole("option", { name: /Ivy Interviewer/ }));
+    fireEvent.click(screen.getByRole("option", { name: /Rae Recruiter/ }));
+    fireEvent.click(screen.getByRole("option", { name: /Sam Sourcer/ }));
+    // Toggling one twice unselects it.
+    fireEvent.click(screen.getByRole("option", { name: /Rae Recruiter/ }));
+    fireEvent.click(screen.getByRole("option", { name: /Rae Recruiter/ }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Add 3 to hiring team" }));
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+
+    expect(vi.mocked(assignJobAction).mock.calls.map(([input]) => input.userId)).toEqual([
+      ELIGIBLE.userId,
+      SECOND.userId,
+      THIRD.userId,
+    ]);
+    expect(toast.success).toHaveBeenCalledWith("Added 2 members to the hiring team.");
+    expect(toast.error).toHaveBeenCalledWith("Sam Sourcer: Their role has permissions you don't.");
+    expect(screen.getByRole("combobox", { name: "Team members to add" }).textContent).toContain("Sam Sourcer");
   });
 
   it("shows the action's error and doesn't refresh", async () => {

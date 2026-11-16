@@ -3637,7 +3637,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
             "type": "string",
           },
           "maxItems": 50,
-          "minItems": 2,
+          "minItems": 1,
           "type": "array",
         },
       },

@@ -258,7 +258,10 @@ export function createResumeTools(ctx: AgentToolContext) {
             .describe("A job description the user pasted, when there is no jobId."),
           resumeIds: z
             .array(uuidInput("resume"))
-            .min(2)
+            // One resume is allowed: the model sometimes names just the one
+            // the user mentioned, and execute answers that there's nothing to
+            // compare, without a charge.
+            .min(1)
             .max(RESUME_SHORTLIST_MAX)
             .optional()
             .describe(

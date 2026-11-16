@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import toast from "react-hot-toast";
 import { moveApplicationsAction } from "@/app/actions/pipeline/move-applications";
 import { DEFAULT_STAGES, stageOf } from "@/test/utils/pipeline";
@@ -26,13 +26,14 @@ vi.mock("./MoveDialog", () => ({
     open: boolean;
     stage: { name: string } | null;
     previewApplicationId: string | null;
-    onConfirm: (email?: typeof EMAIL) => void;
+    onConfirm: (email?: typeof EMAIL, options?: { cancelInterviews: boolean }) => void;
     onCancel: () => void;
   }) =>
     open ? (
       <div role="dialog" aria-label={`Move to ${stage?.name}`} data-preview={previewApplicationId}>
         <button onClick={() => onConfirm()}>Move</button>
         <button onClick={() => onConfirm(EMAIL)}>Move and email</button>
+        <button onClick={() => onConfirm(undefined, { cancelInterviews: false })}>Move and keep interviews</button>
         <button onClick={onCancel}>Cancel</button>
       </div>
     ) : null,
@@ -118,6 +119,20 @@ describe("StagePicker (PLT-032)", () => {
       expect(moveApplicationsAction).toHaveBeenCalledWith({
         applicationIds: [APPLICATION_ID],
         stageId: stageOf("rejected").id,
+      }),
+    );
+  });
+
+  it("passes 'keep interviews' from MoveDialog to the move (IVT-071)", async () => {
+    vi.mocked(moveApplicationsAction).mockResolvedValue({ ok: true, moved: 1, emailed: 0, skipped: [] });
+    renderPicker();
+    fireEvent.change(select(), { target: { value: stageOf("rejected").id } });
+    fireEvent.click(screen.getByRole("button", { name: "Move and keep interviews" }));
+    await waitFor(() =>
+      expect(moveApplicationsAction).toHaveBeenCalledWith({
+        applicationIds: [APPLICATION_ID],
+        stageId: stageOf("rejected").id,
+        cancelInterviews: false,
       }),
     );
   });
@@ -232,5 +247,50 @@ describe("StagePicker without pipeline.move", () => {
 
     expect(select()).toBeDisabled();
     expect(select()).toHaveValue(stageOf("screening").id);
+  });
+});
+
+describe("StagePicker: schedule prompt (IVT-072, D8)", () => {
+  const INTERVIEW = stageOf("interview");
+  const PLAN = { [INTERVIEW.id]: [{ id: "p1", name: "Tech screen" }, { id: "p2", name: "System design" }] };
+  const renderWithPlan = (plan?: typeof PLAN) =>
+    render(
+      <StagePicker
+        applicationId={APPLICATION_ID}
+        stages={STAGES}
+        currentStageId={stageOf("screening").id}
+        schedulingPlan={plan}
+      />,
+    );
+
+  it("offers the stage's plan interviews after a move, linked to the scheduler, and can be dismissed", async () => {
+    renderWithPlan(PLAN);
+    fireEvent.change(select(), { target: { value: INTERVIEW.id } });
+    const link = await screen.findByRole("link", { name: "Schedule Tech screen" });
+    expect(link).toHaveAttribute("href", `/company/applications/${APPLICATION_ID}/interviews/schedule?item=p1`);
+    expect(screen.getByRole("link", { name: "Schedule System design" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByRole("link", { name: /Schedule/ })).not.toBeInTheDocument();
+  });
+
+  it("offers nothing for a stage without plan interviews, without scheduling.manage, or when the move fails", async () => {
+    // The plan has interviews in another stage only.
+    renderWithPlan({ [stageOf("offer").id]: PLAN[INTERVIEW.id] });
+    fireEvent.change(select(), { target: { value: INTERVIEW.id } });
+    await waitFor(() => expect(moveApplicationsAction).toHaveBeenCalled());
+    expect(screen.queryByRole("link", { name: /Schedule/ })).not.toBeInTheDocument();
+    cleanup();
+
+    renderWithPlan(undefined);
+    fireEvent.change(select(), { target: { value: INTERVIEW.id } });
+    await waitFor(() => expect(moveApplicationsAction).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole("link", { name: /Schedule/ })).not.toBeInTheDocument();
+    cleanup();
+
+    vi.mocked(moveApplicationsAction).mockResolvedValue({ ok: false, error: "No." });
+    renderWithPlan(PLAN);
+    fireEvent.change(select(), { target: { value: INTERVIEW.id } });
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("No."));
+    expect(screen.queryByRole("link", { name: /Schedule/ })).not.toBeInTheDocument();
   });
 });

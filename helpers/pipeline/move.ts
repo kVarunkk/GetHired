@@ -20,7 +20,17 @@ export const PL_DAILY_EMAIL_CAP = 300;
  * `unsubscribed` / `no_email`: moved, but an imported candidate who opted out
  * or whose email was cleared isn't emailed (BI-REQ-032/034).
  */
-export type MoveSkipReason = "not_found" | "already_in_stage" | "email_failed" | "unsubscribed" | "no_email";
+/**
+ * Why an application wasn't moved. `other_pipeline`: the stage isn't in the
+ * application's job's pipeline (JP-REQ-004; copy in `./copy`).
+ */
+export type MoveSkipReason =
+  | "not_found"
+  | "already_in_stage"
+  | "other_pipeline"
+  | "email_failed"
+  | "unsubscribed"
+  | "no_email";
 
 /** An application the move found, with what callers need to tell the candidate. */
 export type LoadedApplication = {
@@ -67,7 +77,7 @@ export type MoveResult =
 type Ctx = { supabase: SupabaseClient<Database>; company: MyCompany; user: User };
 
 const LOAD_COLUMNS =
-  "id, applicant_user_id, stage_id, pipeline_stages(kind), user_info(email, full_name), company_candidates(full_name, email, email_opted_out_at), job_postings!inner(id, company_id, title, company_info(name))";
+  "id, applicant_user_id, stage_id, pipeline_stages(kind), user_info(email, full_name), company_candidates(full_name, email, email_opted_out_at), job_postings!inner(id, company_id, title, pipeline_id, company_info(name))";
 
 /**
  * The member's name, stored with events, notes and emails so it survives them
@@ -81,6 +91,24 @@ export function actorName(user: User, company: MyCompany): string | null {
     if (typeof name === "string" && name.trim()) return name.trim();
   }
   return user.email?.split("@")[0] || null;
+}
+
+/**
+ * PL-SEC-005: how many more company emails can go out today, counting the
+ * sent ones and those still queued. Null when the count can't be read.
+ */
+export async function emailsLeftToday(supabase: SupabaseClient<Database>, companyId: string): Promise<number | null> {
+  const [{ count, error: countError }, { data: pending, error: pendingError }] = await Promise.all([
+    supabase
+      .from("application_events")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .eq("type", "email_sent")
+      .gte("created_at", startOfDayIst()),
+    supabase.rpc("pipeline_emails_pending", { p_company_id: companyId }),
+  ]);
+  if (countError || pendingError) return null;
+  return Math.max(0, PL_DAILY_EMAIL_CAP - (count ?? 0) - (pending ?? 0));
 }
 
 const IST_OFFSET_MS = 330 * 60_000;
@@ -185,17 +213,8 @@ async function planEmails(
   }
 
   if (recipients.length > 0) {
-    const [{ count, error: countError }, { data: pending, error: pendingError }] = await Promise.all([
-      supabase
-        .from("application_events")
-        .select("id", { count: "exact", head: true })
-        .eq("company_id", company.id)
-        .eq("type", "email_sent")
-        .gte("created_at", startOfDayIst()),
-      supabase.rpc("pipeline_emails_pending", { p_company_id: company.id }),
-    ]);
-    if (countError || pendingError) return { ok: false, error: "Failed to check today's emails." };
-    const left = Math.max(0, PL_DAILY_EMAIL_CAP - (count ?? 0) - (pending ?? 0));
+    const left = await emailsLeftToday(supabase, company.id);
+    if (left === null) return { ok: false, error: "Failed to check today's emails." };
     if (recipients.length > left) {
       return {
         ok: false,
@@ -264,7 +283,18 @@ type MoveInput = {
   stageId: string;
   email?: MoveEmail;
   sameStatusIsNoop?: boolean;
+  /**
+   * IVT-071 (D14, D22): a move to Rejected or Hired cancels the applications'
+   * upcoming interviews, in the move's transaction (the trigger
+   * `applications_close_human_interviews`). `false` keeps them.
+   */
+  cancelInterviews?: boolean;
 };
+
+/** The request header the close trigger reads to keep interviews (`move_keeps_interviews`). */
+export const KEEP_INTERVIEWS_HEADER = "x-keep-interviews";
+
+const closes = (kind: PipelineStageKind) => kind === "rejected" || kind === "hired";
 
 type PreparedMove = {
   ok: true;
@@ -303,7 +333,7 @@ async function prepareMove(
 
   const { data: stage, error: stageError } = await supabase
     .from("pipeline_stages")
-    .select("id, name, kind, archived")
+    .select("id, name, kind, archived, pipeline_id")
     .eq("id", stageId)
     .eq("company_id", company.id)
     .maybeSingle();
@@ -332,6 +362,11 @@ async function prepareMove(
     const row = byId.get(id);
     if (!row) {
       skipped.push({ id, reason: "not_found" });
+      continue;
+    }
+    // JP-REQ-004: each job has its own pipeline; the DB refuses the rest too.
+    if (row.job_postings.pipeline_id !== stage.pipeline_id) {
+      skipped.push({ id, reason: "other_pipeline" });
       continue;
     }
     const app: LoadedApplication = {
@@ -404,11 +439,13 @@ export async function moveApplications(ctx: Ctx, input: MoveInput): Promise<Move
   if (toMove.length === 0) return { ...result, moved: 0, emailed: 0, movedIds: [] };
 
   const movedIds = toMove.map((a) => a.id);
-  const { data: updated, error: updateError } = await supabase
+  const update = supabase
     .from("applications")
     .update({ stage_id: stage.id, updated_at: new Date().toISOString() })
-    .in("id", movedIds)
-    .select("id, stage_id, stage_entered_at");
+    .in("id", movedIds);
+  // The header rides on this update's own request, so the trigger sees it in the same transaction.
+  if (input.cancelInterviews === false) update.setHeader(KEEP_INTERVIEWS_HEADER, "1");
+  const { data: updated, error: updateError } = await update.select("id, stage_id, stage_entered_at");
   if (updateError) return { ok: false, error: "Failed to move the applications." };
 
   // QF-REQ-010: the DB's values, so the worker can tell whether the move still stands.
@@ -457,6 +494,8 @@ export type MovePreview = {
   notFound: number;
   /** The first recipient's rendered message, and how many will get one. */
   email: { subject: string; body: string; recipients: number } | null;
+  /** A close with upcoming interviews (IVT-071): how many, and whether they're cancelled. */
+  interviews?: { upcoming: number; cancel: boolean };
 };
 
 /**
@@ -474,6 +513,15 @@ export async function previewMove(ctx: Ctx, input: MoveInput): Promise<MovePrevi
   const recipients = toMove.filter(willEmail);
   const first = recipients[0] ? plan!.messages.get(recipients[0].id)! : null;
 
+  let interviews: MovePreview["interviews"];
+  if (closes(stage.kind) && toMove.length > 0) {
+    const { data: upcoming, error } = await ctx.supabase.rpc("upcoming_interview_count", {
+      p_application_ids: toMove.map((a) => a.id),
+    });
+    if (error) return { ok: false, error: "Couldn't check their interviews. Please try again." };
+    if (upcoming) interviews = { upcoming, cancel: input.cancelInterviews !== false };
+  }
+
   return {
     ok: true,
     stage,
@@ -486,5 +534,6 @@ export async function previewMove(ctx: Ctx, input: MoveInput): Promise<MovePrevi
     })),
     notFound: skipped.filter((s) => s.reason === "not_found").length,
     email: first ? { ...first, recipients: recipients.length } : null,
+    ...(interviews ? { interviews } : {}),
   };
 }

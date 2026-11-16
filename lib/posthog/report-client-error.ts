@@ -39,11 +39,16 @@ export function listenForUncaughtErrors() {
   window.addEventListener("error", (event) => {
     const message = event.error instanceof Error ? event.error.message : event.message;
     if (!message || IGNORED.some((pattern) => pattern.test(message))) return;
+    // React reports a Suspense boundary the server couldn't render (#419) with
+    // the server error's digest, which matches the `digest` on the server's
+    // onRequestError report.
+    const digest = (event.error as { digest?: unknown } | null)?.digest;
     posthog.captureException(event.error ?? new Error(message), {
       source: "window.onerror",
       filename: event.filename,
       lineno: event.lineno,
       colno: event.colno,
+      ...(typeof digest === "string" ? { digest } : {}),
     });
   });
   window.addEventListener("unhandledrejection", (event) => {

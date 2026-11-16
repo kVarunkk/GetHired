@@ -134,6 +134,7 @@ describe("submitApplicationAction (AF-REQ-007, CPT-015)", () => {
       expect(rejectForKnockout).toHaveBeenCalledWith(service.client, {
         applicationId: APPLICATION_ID,
         companyId: COMPANY_A.id,
+        pipelineId: JOB.pipeline_id,
         candidateUserId: PUBLIC_APPLICANT.id,
       });
       const row = insertOf(service, "application_knockouts") as { action_taken: string; reject_email_due_at: string };

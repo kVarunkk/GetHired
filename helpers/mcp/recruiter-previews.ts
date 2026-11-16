@@ -34,13 +34,25 @@ import { DUPLICATE_ACTION_LABELS, type DuplicateAction } from "@/helpers/candida
 import { previewAgentRole } from "@/helpers/companies/preview-agent-role";
 import { describeGrantChange, describeLimitChange } from "@/helpers/companies/role-diff";
 import { previewAgentInterviewInvite } from "@/helpers/interview/screening/preview-agent-interview-invite";
+import {
+  schedulingApprovalTitle,
+  type SchedulingPreviewRow,
+  type SchedulingPreviewTool,
+} from "@/helpers/interviews/agent-scheduling-schema";
+import { previewAgentScheduling } from "@/helpers/interviews/preview-agent-scheduling";
 import { readApplicationForm } from "@/helpers/jobs/application-form-schema";
 import { loadQuestionSets } from "@/helpers/jobs/load-question-sets";
 import { previewAgentJobDelete } from "@/helpers/jobs/preview-agent-job-delete";
 import { countUnscreenedApplications } from "@/helpers/matching/queue-screenings";
 import { previewAgentOutreach } from "@/helpers/outreach/preview-agent-outreach";
+import { getNote } from "@/helpers/pipeline/notes";
 import { previewAgentMove } from "@/helpers/pipeline/preview-agent-move";
-import { PROTECTED_KINDS } from "@/helpers/pipeline/stages";
+import { upcomingInterviewsText } from "@/helpers/pipeline/move-interviews";
+import {
+  previewAgentCustomizeJobPipeline,
+  previewAgentJobPipelineSwitch,
+} from "@/helpers/pipeline/preview-agent-pipeline";
+import { PROTECTED_KINDS, resolvePipelineId } from "@/helpers/pipeline/stages";
 import { statusForKind } from "@/helpers/pipeline/status-map";
 import { loadVisibleCandidates } from "@/helpers/profiles/visible-candidates";
 import { formatDate } from "@/utils/date";
@@ -125,6 +137,7 @@ const previewMove: Builder = async (ctx, input) => {
         .join(", "),
     },
     { label: "Email", value: result.email ? plural(result.email.recipients, "candidate", "candidates") : "None" },
+    result.interviews && { label: "Interviews", value: upcomingInterviewsText(result.interviews) },
     // The rendered email holds the first candidate's name.
     result.email && {
       label: result.email.recipients > 1 ? "Email (shown for the first candidate)" : "Email text",
@@ -259,6 +272,49 @@ const previewInterviewInvite: Builder = async (ctx, input) => {
     },
   ]);
 };
+
+/**
+ * An ISO time as one zone-stated line. MCP has no viewer zone, so it's UTC;
+ * the client converts it for the user.
+ */
+const utcTime = (iso: string) => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return `${date.toLocaleString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  })} UTC`;
+};
+
+const schedulingDetail = (row: SchedulingPreviewRow): Detail => ({
+  label: row.label,
+  value: row.time
+    ? utcTime(row.value)
+    : row.label === "Candidate"
+      ? sandboxed("candidate_name", row.value)
+      : row.value,
+});
+
+/**
+ * The scheduling tools (IVT-085): the agent card's server preview as text.
+ * A warning means the call would do nothing (the candidate can't be emailed,
+ * nobody is due a reminder), so it's refused instead of asked about.
+ */
+const previewScheduling = (tool: SchedulingPreviewTool): Builder =>
+  gated(tool, async (ctx, input) => {
+    const result = await previewAgentScheduling(ctx, tool, input);
+    if (!result.ok) return refuse(result.error);
+    if (result.warning) return refuse(result.warning);
+    return preview(schedulingApprovalTitle(tool, input), [
+      ...result.rows.map(schedulingDetail),
+      result.notices.length > 0 && { label: "Note", value: result.notices.join(" ") },
+    ]);
+  });
 
 /** The agent card's question for each role and team tool. */
 const ROLE_SUMMARIES: Record<string, string> = {
@@ -586,11 +642,15 @@ const previewWithdrawOutreach = gated("withdrawOutreach", async (ctx, input) => 
 
 const previewArchiveStage = gated("archiveStage", async (ctx, input) => {
   const stageId = str(input.stageId) ?? "";
+  // The pipeline the tool archives in: the named one, else the default (JPT-040).
+  const pipelineId = await resolvePipelineId(ctx, { pipelineId: str(input.pipelineId) });
+  if (!pipelineId) return refuse("Stage not found.");
   const { data: stage, error } = await ctx.supabase
     .from("pipeline_stages")
     .select("id, name, kind, archived")
     .eq("id", stageId)
     .eq("company_id", ctx.company.id)
+    .eq("pipeline_id", pipelineId)
     .maybeSingle();
   if (error) throw error;
   if (!stage) return refuse("Stage not found.");
@@ -604,6 +664,46 @@ const previewArchiveStage = gated("archiveStage", async (ctx, input) => {
   if (count) return refuse(`Move the ${plural(count, "application", "applications")} out of "${stage.name}" first.`);
   return preview("Archive this stage? It leaves your pipeline and can't be brought back.", [
     { label: "Stage", value: stage.name },
+  ]);
+});
+
+const NO_CHANGE = "Candidates won't see a change and won't be emailed.";
+
+const previewSetJobPipeline = gated("setJobPipeline", async (ctx, input) => {
+  const result = await previewAgentJobPipelineSwitch(ctx, input);
+  if (!result.ok) return refuse(`This switch won't go through: ${result.error}`);
+  return preview(`Move ${result.jobTitle} onto the ${result.to} pipeline?`, [
+    { label: "Job", value: result.jobTitle },
+    { label: "From", value: result.from },
+    { label: "To", value: result.to },
+    {
+      label: "Stages",
+      value:
+        result.moves.length > 0
+          ? result.moves
+              .map((m) => {
+                const items = m.planItems > 0 ? `, ${plural(m.planItems, "planned interview", "planned interviews")}` : "";
+                return `${m.stage} → ${m.to} (${plural(m.applications, "application", "applications")}${items})`;
+              })
+              .join("\n")
+          : "No applications to move",
+    },
+    { label: "Candidates", value: NO_CHANGE },
+  ]);
+});
+
+const previewCustomizeJobPipeline = gated("customizeJobPipeline", async (ctx, input) => {
+  const result = await previewAgentCustomizeJobPipeline(ctx, input);
+  if (!result.ok) return refuse(`This won't go through: ${result.error}`);
+  return preview(`Give ${result.jobTitle} its own pipeline?`, [
+    { label: "Job", value: result.jobTitle },
+    { label: "Copies", value: `${result.from} (${plural(result.stages, "stage", "stages")})` },
+    { label: "New pipeline", value: result.name },
+    {
+      label: "Other jobs",
+      value: result.otherJobs > 0 ? `${plural(result.otherJobs, "job keeps", "jobs keep")} ${result.from}` : "None",
+    },
+    { label: "Candidates", value: NO_CHANGE },
   ]);
 });
 
@@ -623,16 +723,13 @@ const previewDeleteTemplate = gated("deleteEmailTemplate", async (ctx, input) =>
   ]);
 });
 
-/** One of the user's own notes, with who it's about. */
+/**
+ * One of the user's own notes, with who it's about. Read through the masked
+ * RPC (IV-REQ-032a); the author always sees their own rating.
+ */
 async function ownNote(ctx: RecruiterToolContext, noteId: unknown) {
-  const { data: note, error } = await ctx.supabase
-    .from("candidate_notes")
-    .select("id, body, rating, author_user_id, application_id, candidate_user_id")
-    .eq("id", str(noteId) ?? "")
-    .eq("company_id", ctx.company.id)
-    .maybeSingle();
-  if (error) throw error;
-  if (!note) return { ok: false as const, error: "Note not found." };
+  const note = await getNote(ctx, str(noteId) ?? "");
+  if (!note || note.company_id !== ctx.company.id) return { ok: false as const, error: "Note not found." };
   if (note.author_user_id !== ctx.user.id) return { ok: false as const, error: "Only your own notes can be changed." };
   return { ok: true as const, note, about: await noteSubject(ctx, note) };
 }
@@ -915,6 +1012,8 @@ export const RECRUITER_MCP_PREVIEWS: Readonly<Record<string, Builder>> = {
   screen_applicants: previewScreenApplicants,
   // pipeline
   archive_stage: previewArchiveStage,
+  set_job_pipeline: previewSetJobPipeline,
+  customize_job_pipeline: previewCustomizeJobPipeline,
   move_applications: gated("moveApplications", previewMove),
   add_note: previewAddNote,
   update_note: previewUpdateNote,
@@ -936,6 +1035,13 @@ export const RECRUITER_MCP_PREVIEWS: Readonly<Record<string, Builder>> = {
   // interviews
   configure_screening_interview: previewConfigureInterview,
   invite_to_interview: gated("inviteToInterview", previewInterviewInvite),
+  // scheduling
+  save_interview_plan: previewScheduling("saveInterviewPlan"),
+  schedule_interview: previewScheduling("scheduleInterview"),
+  send_scheduling_link: previewScheduling("sendSchedulingLink"),
+  reschedule_interview: previewScheduling("rescheduleInterview"),
+  cancel_interview: previewScheduling("cancelInterview"),
+  remind_interviewers: previewScheduling("remindInterviewers"),
   // team
   create_role: gated("createRole", previewRole("createRole")),
   update_role: gated("updateRole", previewRole("updateRole")),

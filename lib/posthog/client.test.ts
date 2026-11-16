@@ -31,4 +31,18 @@ describe("posthog client", () => {
     await loadPostHog();
     expect(real.init).toHaveBeenCalledTimes(1);
   });
+
+  it("reports exceptions only from production builds", async () => {
+    await loadPostHog();
+    const error = new Error("boom");
+
+    vi.stubEnv("NODE_ENV", "development");
+    posthog.captureException(error);
+    expect(real.captureException).not.toHaveBeenCalled();
+
+    vi.stubEnv("NODE_ENV", "production");
+    posthog.captureException(error);
+    expect(real.captureException).toHaveBeenCalledWith(error);
+    vi.unstubAllEnvs();
+  });
 });

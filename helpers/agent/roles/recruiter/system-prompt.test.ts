@@ -151,6 +151,22 @@ describe("buildRecruiterSystemPrompt (RA-TEST-004)", () => {
     expect(jobPosts).toMatch(/Ask once/);
   });
 
+  it("tells the agent to warn before editing a shared pipeline (JPT-040)", () => {
+    const rules = after(build(), "# Rules");
+    const pipeline = rules.slice(rules.indexOf("- Pipeline:")).split("\n")[0];
+    expect(pipeline).toMatch(/sharedByJobs is more than 1, tell the user how many jobs the change affects/);
+    expect(pipeline).toMatch(/pass the pipelineId listStages returned/);
+    expect(pipeline).toMatch(/offer customizeJobPipeline/);
+    expect(pipeline).toMatch(/setJobPipeline; candidates keep their status and nobody is emailed/);
+
+    const capabilities = after(
+      build({ toolNames: [...TOOLS, "listPipelines", "setJobPipeline", "customizeJobPipeline"] }),
+      "# Capabilities",
+    ).split("# Rules")[0];
+    expect(capabilities).toMatch(/move a job onto another pipeline/);
+    expect(capabilities).toMatch(/give one job its own copy of its pipeline/);
+  });
+
   it("says there are no memories when there are none", () => {
     expect(build({ memories: [] })).toContain("No saved memories.");
   });

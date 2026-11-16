@@ -84,6 +84,33 @@ describe("moveApplications (PL-TEST-002)", () => {
     supabase.queue("pipeline_stages", { data: INTERVIEW, error: null });
   });
 
+  it("skips applications whose job is on another pipeline (JPT-022)", async () => {
+    const mine = loaded();
+    const engineering = loaded(
+      pipelineAppOf({
+        job_postings: { ...pipelineAppOf().job_postings, id: "b0000000-0000-4000-8000-0000000000e1", pipeline_id: "9e000000-0000-4000-8000-0000000000e1" },
+      }),
+    );
+    supabase.queue("applications", { data: [mine, engineering], error: null });
+
+    const result = await moveApplications(ctx(), {
+      applicationIds: [mine.id, engineering.id],
+      stageId: INTERVIEW.id,
+    });
+
+    expect(result).toMatchObject({ ok: true, moved: 1 });
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.skipped).toEqual([{ id: engineering.id, reason: "other_pipeline" }]);
+    expect(supabase.callsFor("pipeline_stages")[0].chain[0]).toEqual({
+      method: "select",
+      args: ["id, name, kind, archived, pipeline_id"],
+    });
+    const [update] = updates();
+    expect(argsOf(update.chain, "in")).toEqual(["id", [mine.id]]);
+    const [events] = eventInserts();
+    expect((argsOf(events.chain, "insert")?.[0] as unknown[]).length).toBe(1);
+  });
+
   it("skips another company's, missing and off-platform applications as not_found", async () => {
     const mine = loaded();
     const theirs = pipelineAppOf({
@@ -687,6 +714,56 @@ describe("moveApplications for imported applications (BIT-019, BI-REQ-032)", () 
 
     expect(result).toMatchObject({ ok: true, moved: 1, emailed: 0, skipped: [{ id: app.id, reason: "no_email" }] });
     expect(vi.mocked(enqueuePipelineEmails).mock.calls.flat(2)).toEqual([]);
+  });
+});
+
+describe("closing cancels upcoming interviews (IVT-071, D14, D22)", () => {
+  const REJECTED = stageOf("rejected");
+  const headers = () => updates()[0].chain.filter((m) => m.method === "setHeader");
+
+  it("leaves it to the close trigger by default", async () => {
+    const app = loaded();
+    supabase.queue("pipeline_stages", { data: REJECTED, error: null });
+    supabase.queue("applications", { data: [app], error: null });
+    await moveApplications(ctx(), { applicationIds: [app.id], stageId: REJECTED.id });
+    expect(updates()).toHaveLength(1);
+    expect(headers()).toEqual([]);
+  });
+
+  it("keeps them with cancelInterviews: false, through a header on the move's own update", async () => {
+    const app = loaded();
+    supabase.queue("pipeline_stages", { data: REJECTED, error: null });
+    supabase.queue("applications", { data: [app], error: null });
+    const result = await moveApplications(ctx(), {
+      applicationIds: [app.id],
+      stageId: REJECTED.id,
+      cancelInterviews: false,
+    });
+    expect(result).toMatchObject({ ok: true, moved: 1 });
+    expect(headers()).toEqual([{ method: "setHeader", args: ["x-keep-interviews", "1"] }]);
+  });
+
+  it("previews how many a close would cancel or keep, and nothing for other stages", async () => {
+    const app = loaded();
+    supabase.queue("pipeline_stages", { data: REJECTED, error: null });
+    supabase.queue("applications", { data: [app], error: null });
+    supabase.queueRpc("upcoming_interview_count", { data: 2, error: null });
+    const preview = await previewMove(ctx(), { applicationIds: [app.id], stageId: REJECTED.id });
+    expect(preview).toMatchObject({ ok: true, interviews: { upcoming: 2, cancel: true } });
+    expect(supabase.callsFor("upcoming_interview_count")[0].chain[0].args[1]).toEqual({ p_application_ids: [app.id] });
+
+    supabase.queue("pipeline_stages", { data: REJECTED, error: null });
+    supabase.queue("applications", { data: [app], error: null });
+    supabase.queueRpc("upcoming_interview_count", { data: 1, error: null });
+    expect(
+      await previewMove(ctx(), { applicationIds: [app.id], stageId: REJECTED.id, cancelInterviews: false }),
+    ).toMatchObject({ interviews: { upcoming: 1, cancel: false } });
+
+    supabase.queue("pipeline_stages", { data: INTERVIEW, error: null });
+    supabase.queue("applications", { data: [app], error: null });
+    const other = await previewMove(ctx(), { applicationIds: [app.id], stageId: INTERVIEW.id });
+    expect(other).not.toHaveProperty("interviews");
+    expect(supabase.callsFor("upcoming_interview_count")).toHaveLength(2);
   });
 });
 

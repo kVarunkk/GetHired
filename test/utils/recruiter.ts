@@ -74,6 +74,7 @@ function company(n: number, name: string): CompanyFixture {
     tag_line: null,
     website: `https://${name.toLowerCase()}.dev`,
     scheduling_url: null,
+    time_zone: null,
     default_role_id: `f3000000-0000-4000-8000-00000000000${n}`,
     notify_new_applicants: "daily",
     notify_weekly_matches: true,
@@ -95,6 +96,14 @@ function company(n: number, name: string): CompanyFixture {
     tier: FREE_TIER,
     infoWithTier: { ...info, company_tiers: FREE_TIER },
   };
+}
+
+/**
+ * The id of a fixture company's Default pipeline (job pipelines, JPT-001):
+ * `seed_default_pipeline` creates one per company, and every job starts on it.
+ */
+export function defaultPipelineIdOf(companyId: string): string {
+  return `9e000000-0000-4000-8000-${companyId.slice(-12)}`;
 }
 
 export const COMPANY_A = company(1, "Acme");
@@ -201,6 +210,7 @@ export function jobPostingOf(
     matching_error: null,
     matched_at: null,
     last_applicant_notified_at: null,
+    pipeline_id: defaultPipelineIdOf(owner.id),
     embedding: null,
     embedding_new: null,
     embedding_updated_at: null,

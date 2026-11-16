@@ -75,6 +75,10 @@ const SPEC: Record<string, [string, "R" | "D I" | "D ¬I" | "¬D I" | "¬D ¬I" 
   get_application: ["applicants", "R"],
   get_hiring_funnel: ["applicants", "R"],
   screen_applicants: ["applicants", "¬D ¬I"],
+  list_pipelines: ["pipeline", "R"],
+  create_pipeline: ["pipeline", "¬D ¬I"],
+  set_job_pipeline: ["pipeline", "D I"],
+  customize_job_pipeline: ["pipeline", "¬D ¬I"],
   list_stages: ["pipeline", "R"],
   list_notes: ["pipeline", "R"],
   create_stage: ["pipeline", "¬D ¬I"],
@@ -119,6 +123,17 @@ const SPEC: Record<string, [string, "R" | "D I" | "D ¬I" | "¬D I" | "¬D ¬I" 
   compare_interview_reports: ["interviews", "R"],
   configure_screening_interview: ["interviews", "D I"],
   invite_to_interview: ["interviews", "D ¬I O"],
+  get_interview_plan: ["scheduling", "R"],
+  draft_interview_plan: ["scheduling", "R"],
+  save_interview_plan: ["scheduling", "D I"],
+  list_scheduled_interviews: ["scheduling", "R"],
+  find_interview_slots: ["scheduling", "R"],
+  schedule_interview: ["scheduling", "¬D ¬I O"],
+  send_scheduling_link: ["scheduling", "¬D ¬I O"],
+  reschedule_interview: ["scheduling", "D I O"],
+  cancel_interview: ["scheduling", "D I O"],
+  remind_interviewers: ["scheduling", "¬D ¬I O"],
+  summarize_feedback: ["scheduling", "R"],
   list_team: ["team", "R"],
   list_hiring_teams: ["team", "R"],
   get_audit_log: ["team", "R"],
@@ -167,7 +182,7 @@ describe("RECRUITER_MCP_TOOLS", () => {
       "saveMemory",
     ]);
     for (const reason of Object.values(RECRUITER_MCP_EXCLUDED_TOOLS)) expect(reason!.length).toBeGreaterThan(10);
-    expect(RECRUITER_MCP_TOOLS).toHaveLength(88);
+    expect(RECRUITER_MCP_TOOLS).toHaveLength(103);
   });
 
   it("names each tool after its agent tool, in snake_case, without colliding with the applicant catalog", () => {
@@ -203,12 +218,20 @@ describe("RECRUITER_MCP_TOOLS", () => {
 
   it("takes the confirm and credit flags from RECRUITER_APPROVAL_POLICY (RMCP-REQ-005)", () => {
     const confirm = named((name) => flags(name).confirm);
-    expect(confirm).toHaveLength(41);
+    expect(confirm).toHaveLength(49);
     expect(confirm).toEqual(
       expect.arrayContaining(["add_note", "update_note", "update_import_rows", "update_my_candidate"]),
     );
     expect(named((name) => flags(name).credit)).toEqual(
-      ["explain_match", "invite_to_interview", "retry_import_rows", "run_matching_for_job", "screen_applicants"].sort(),
+      [
+        "draft_interview_plan",
+        "explain_match",
+        "invite_to_interview",
+        "retry_import_rows",
+        "run_matching_for_job",
+        "screen_applicants",
+        "summarize_feedback",
+      ].sort(),
     );
   });
 
@@ -229,9 +252,18 @@ describe("RECRUITER_MCP_TOOLS", () => {
     }
   });
 
-  it("sets the email flag on exactly the three email-limited rows (spec §4.7)", () => {
+  it("sets the email flag on exactly the email-limited rows (spec §4.7, IVT-085)", () => {
     expect(named((name) => Boolean(def(name).email))).toEqual(
-      ["invite_to_interview", "move_applications", "send_outreach"].sort(),
+      [
+        "cancel_interview",
+        "invite_to_interview",
+        "move_applications",
+        "remind_interviewers",
+        "reschedule_interview",
+        "schedule_interview",
+        "send_outreach",
+        "send_scheduling_link",
+      ].sort(),
     );
   });
 

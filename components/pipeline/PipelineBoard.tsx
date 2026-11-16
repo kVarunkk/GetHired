@@ -46,7 +46,10 @@ import { PostHogEvent } from "@/utils/types";
 import type { BoardApplication, BoardStage, PipelineBoardData } from "@/utils/types/pipeline.types";
 import { cn } from "@/utils/utils";
 import type { MoveEmail } from "@/helpers/pipeline/move";
-import MoveDialog, { type TemplateOption } from "./MoveDialog";
+import SchedulePrompt from "@/components/interviews/SchedulePrompt";
+import MeetingBadges from "@/components/interviews/MeetingBadges";
+import type { PromptItem, StagePlanItems } from "@/helpers/interviews/schedule-prompt";
+import MoveDialog, { type MoveOptions, type TemplateOption } from "./MoveDialog";
 
 type PendingMove = { app: BoardApplication; stage: BoardStage };
 
@@ -65,6 +68,7 @@ export default function PipelineBoard({
   initial,
   templates = [],
   canMove = true,
+  schedulingPlan,
 }: {
   jobPostId: string;
   initial: PipelineBoardData;
@@ -72,9 +76,12 @@ export default function PipelineBoard({
   templates?: TemplateOption[];
   /** Without pipeline.move on the job the cards can't be moved. */
   canMove?: boolean;
+  /** The job's plan interviews by stage, with scheduling.manage only (IVT-072, D8). */
+  schedulingPlan?: StagePlanItems;
 }) {
   const [board, setBoard] = useState(initial);
   const [pending, setPending] = useState<PendingMove | null>(null);
+  const [prompt, setPrompt] = useState<{ app: BoardApplication; items: PromptItem[] } | null>(null);
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const initialCount = useRef(initial.applications.length);
@@ -104,7 +111,7 @@ export default function PipelineBoard({
     }
   };
 
-  const commit = async ({ app, stage }: PendingMove, email?: MoveEmail) => {
+  const commit = async ({ app, stage }: PendingMove, email?: MoveEmail, options?: MoveOptions) => {
     setPending(null);
     replaceApp({ ...app, stageId: stage.id, daysInStage: 0 });
     try {
@@ -112,6 +119,7 @@ export default function PipelineBoard({
         applicationIds: [app.id],
         stageId: stage.id,
         ...(email ? { email } : {}),
+        ...(options ? { cancelInterviews: options.cancelInterviews } : {}),
       });
       if (!result.ok) {
         replaceApp(app);
@@ -129,6 +137,9 @@ export default function PipelineBoard({
         } else if (result.emailed > 0) {
           toast.success(`Moved ${app.name}. Email sends in 2 minutes. Move back to cancel it.`);
         }
+        // D8: offer to schedule the new stage's plan interviews.
+        const items = schedulingPlan?.[stage.id];
+        setPrompt(items?.length ? { app, items } : null);
         void refetch();
       }
     } catch {
@@ -156,14 +167,25 @@ export default function PipelineBoard({
       previewApplicationId={pending?.app.id ?? null}
       fromKinds={pending ? [(pending.app.stageId && stageById.get(pending.app.stageId)?.kind) || null] : []}
       openInterviews={isOpenInterview(pending?.app.interview?.status) ? 1 : 0}
-      onConfirm={(email) => pending && void commit(pending, email)}
+      applicationIds={pending ? [pending.app.id] : []}
+      onConfirm={(email, options) => pending && void commit(pending, email, options)}
       onCancel={() => setPending(null)}
+    />
+  );
+
+  const promptBar = prompt && (
+    <SchedulePrompt
+      applicationId={prompt.app.id}
+      candidateName={prompt.app.name}
+      items={prompt.items}
+      onDismiss={() => setPrompt(null)}
     />
   );
 
   if (!isDesktop) {
     return (
       <>
+        {promptBar}
         <MobileBoard board={board} cardsIn={cardsIn} onMove={requestMove} canMove={canMove} />
         {dialog}
       </>
@@ -172,6 +194,7 @@ export default function PipelineBoard({
 
   return (
     <>
+      {promptBar}
       <DesktopBoard
         board={board}
         cardsIn={cardsIn}
@@ -325,6 +348,7 @@ function CardDetails({ card }: { card: BoardApplication }) {
         <KnockoutBadge knockout={{ failed: true, reasons: card.knockoutReasons.map((label) => ({ label })) }} />
       )}
       {card.interview && <InterviewStatusBadge summary={card.interview} className="px-1.5 py-0" />}
+      {card.meeting && <MeetingBadges meeting={card.meeting} className="px-1.5 py-0" />}
       <ImportedBadge
         person={{ imported: card.imported ?? false, hasResume: card.hasResume ?? true, connectedUserId: card.connectedUserId }}
       />

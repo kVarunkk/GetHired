@@ -40,6 +40,7 @@ const LOADED = {
     id: POSTING.id,
     company_id: COMPANY_A.id,
     title: POSTING.title,
+    pipeline_id: POSTING.pipeline_id,
     company_info: { name: COMPANY_A.info.name },
   },
 };
@@ -60,6 +61,8 @@ const stages = (call: RecordedCall) => {
 async function signIn(user = COMPANY_A.user) {
   supabase = createSupabaseMock({ user });
   supabase.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
+  // The application's job and its pipeline (JPT-023).
+  supabase.queue("job_postings", { data: { id: POSTING.id, pipeline_id: POSTING.pipeline_id }, error: null });
   supabase.queue("pipeline_stages", stages);
   supabase.queue("pipeline_stages", stages);
   await setRequestUser(user, supabase.client);
@@ -118,13 +121,25 @@ describe("updateApplicationStatusAction (RS-TEST-002)", () => {
     const [load] = supabase.callsFor("applications");
     const select = String(load.chain.find((c) => c.method === "select")?.args[0]);
     expect(select.replace(/\s+/g, "")).toContain(
-      "job_postings!inner(id,company_id,title,company_info(name))",
+      "job_postings!inner(id,company_id,title,pipeline_id,company_info(name))",
     );
     expect(load.chain).toContainEqual({ method: "in", args: ["id", [APPLICATION.id]] });
     expect(load.chain).toContainEqual({
       method: "eq",
       args: ["job_postings.company_id", COMPANY_A.id],
     });
+  });
+
+  it("picks the stage from the application's job pipeline (JPT-023)", async () => {
+    supabase.queue("applications", { data: [LOADED], error: null });
+
+    await updateApplicationStatusAction({ applicationId: APPLICATION.id, status: "reviewed" });
+
+    const [job] = supabase.callsFor("job_postings");
+    expect(job.chain).toContainEqual({ method: "eq", args: ["applications.id", APPLICATION.id] });
+    expect(job.chain).toContainEqual({ method: "eq", args: ["company_id", COMPANY_A.id] });
+    const [list] = supabase.callsFor("pipeline_stages");
+    expect(list.chain).toContainEqual({ method: "eq", args: ["pipeline_id", POSTING.pipeline_id] });
   });
 
   it("moves to the stage that shows the status and emails the address stored in the database", async () => {

@@ -18,6 +18,8 @@ import AskApplicantAgent from "@/components/agent/AskApplicantAgent";
 import PageHeader from "@/components/PageHeader";
 import MyScreeningInterviews from "@/components/interviews/MyScreeningInterviews";
 import { listMyScreeningInterviews } from "@/helpers/interview/screening/my-interviews";
+import MyScheduledInterviews from "@/components/interviews/MyScheduledInterviews";
+import { listMyScheduledInterviews } from "@/helpers/interviews/my-scheduled-interviews";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -57,7 +59,7 @@ export default async function DashboardPage() {
       .map((each) => each.invited_email)
       .filter((email): email is string => email !== null);
 
-    const [metricsRes, appliedJobsRes, viewsRes, screeningInterviews] = await Promise.all([
+    const [metricsRes, appliedJobsRes, viewsRes, screeningInterviews, scheduledInterviews] = await Promise.all([
       supabase.rpc("get_applicant_weekly_metrics", { p_user_id: user.id }),
       supabase
         .from("applications")
@@ -70,6 +72,8 @@ export default async function DashboardPage() {
       supabase.rpc("get_my_profile_view_count", { p_days: PROFILE_VIEW_WINDOW_DAYS }),
       // An extra too: a failure reads as no interviews.
       listMyScreeningInterviews(supabase),
+      // IV-REQ-043: interviews with people, through my_scheduled_interviews() only.
+      listMyScheduledInterviews(supabase),
     ]);
 
     const { data: metricsData, error: metricsError } = metricsRes;
@@ -175,6 +179,8 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        <MyScheduledInterviews interviews={scheduledInterviews} />
 
         <MyScreeningInterviews interviews={screeningInterviews} />
 

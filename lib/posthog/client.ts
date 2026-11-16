@@ -36,6 +36,8 @@ const posthog = {
   identify: (...args: Parameters<PostHog["identify"]>) => run((p) => p.identify(...args)),
   reset: (...args: Parameters<PostHog["reset"]>) => run((p) => p.reset(...args)),
   captureException: (...args: Parameters<PostHog["captureException"]>) => {
+    // `next dev` shares the production project; keep its errors in the console.
+    if (process.env.NODE_ENV !== "production") return;
     run((p) => p.captureException(...args));
     // Don't wait for an interaction to report a crash.
     void loadPostHog();

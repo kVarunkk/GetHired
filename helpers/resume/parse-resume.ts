@@ -1,6 +1,6 @@
 import { reportError } from "@/helpers/posthog/report-error";
 import { wrapInSandbox } from "../ai/security";
-import { generateText, Output, type LanguageModel } from "ai";
+import { APICallError, generateText, Output, type LanguageModel } from "ai";
 import { extractPdfLines, extractResumeText, sniffFileType } from "./extract-text";
 import {
   ResumeContactSchema,
@@ -210,7 +210,16 @@ export async function parseResumeUpload(
         : { prompt: `Reconstruct this resume:\n${wrapInSandbox("source_lines", numberLines(lines))}` }),
     }));
   } catch (error) {
-    reportError("[RESUME_PARSE_FAILED]:", error instanceof Error ? error.name : "unknown");
+    // The provider's status and message say why (quota, model, outage); the
+    // resume itself never goes in the report.
+    const status = APICallError.isInstance(error) ? error.statusCode : undefined;
+    reportError(
+      "[RESUME_PARSE_FAILED]:",
+      error instanceof Error ? error.name : "unknown",
+      status === undefined ? "" : `status=${status}`,
+      error instanceof Error ? error.message.slice(0, 300) : "",
+      fallbackUsed ? "(file fallback)" : "(text)",
+    );
     throw new ResumeParseError(undefined, { cause: error });
   }
 

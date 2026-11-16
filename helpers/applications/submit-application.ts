@@ -93,7 +93,7 @@ export async function submitApplication(
   const service = createServiceRoleClient();
   const { data: job, error: jobError } = await service
     .from("job_postings")
-    .select("id, job_id, company_id, status, questions, application_form")
+    .select("id, job_id, company_id, pipeline_id, status, questions, application_form")
     .eq("job_id", allJobsId)
     .maybeSingle();
   if (jobError) {
@@ -195,6 +195,7 @@ export async function submitApplication(
     const moved = await rejectForKnockout(service, {
       applicationId: application.id,
       companyId: job.company_id,
+      pipelineId: job.pipeline_id,
       candidateUserId: user.id,
     });
     if (!moved) actionTaken = "flagged";

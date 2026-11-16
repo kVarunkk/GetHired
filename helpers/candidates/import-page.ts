@@ -9,14 +9,20 @@ import { listImportJobs } from "./candidates-tab";
 /** A job's AI interview, when it invites by fit score (BI-REQ-015b). */
 export type ImportJobInterview = { fitThreshold: number; durationMinutes: number };
 
+/** A stage people can be imported into. */
+export type ImportStage = { id: string; name: string };
+
 /** A job people can be imported into. */
 export type ImportJob = { id: string; title: string; interview: ImportJobInterview | null };
 
 export type ImportPage = {
   /** Active jobs the member can import into, with the interview rule shown by the auto-invite switch. */
   jobs: ImportJob[];
-  /** The company's open pipeline stages, in order. */
-  stages: { id: string; name: string }[];
+  /**
+   * Each job's open stages, in order, keyed by job id: a job's own pipeline
+   * (JP-REQ-004). A job missing from the map has none to pick.
+   */
+  stagesByJob: Record<string, ImportStage[]>;
   /** The company's talent lists; null without talent_lists.manage. */
   lists: { id: string; name: string; slug: string }[] | null;
   /** The pool with no job (CP-REQ-004's `canUsePool`) needs applicants.import for every job (BI-PERM-001). */
@@ -32,7 +38,44 @@ export type ImportPage = {
   notFound: boolean;
 };
 
-const STAGE_COLUMNS = "id, name" as const;
+/**
+ * The open stages of each of `jobIds`' pipelines, keyed by job. An extra: an
+ * error gives none.
+ */
+async function loadJobStages(
+  supabase: SupabaseClient<Database>,
+  company: MyCompany,
+  jobIds: string[],
+): Promise<Record<string, ImportStage[]>> {
+  if (jobIds.length === 0) return {};
+  const { data: jobs, error } = await supabase
+    .from("job_postings")
+    .select("id, pipeline_id")
+    .eq("company_id", company.id)
+    .in("id", jobIds);
+  if (error || !jobs) return {};
+  const pipelineIds = [...new Set(jobs.flatMap((j) => (j.pipeline_id ? [j.pipeline_id] : [])))];
+  if (pipelineIds.length === 0) return {};
+
+  const { data: stages, error: stagesError } = await supabase
+    .from("pipeline_stages")
+    .select("id, name, pipeline_id")
+    .eq("company_id", company.id)
+    .in("pipeline_id", pipelineIds)
+    .eq("archived", false)
+    .order("position", { ascending: true });
+  if (stagesError || !stages) return {};
+
+  const byPipeline = new Map<string, ImportStage[]>();
+  for (const s of stages) {
+    const list = byPipeline.get(s.pipeline_id) ?? [];
+    list.push({ id: s.id, name: s.name });
+    byPipeline.set(s.pipeline_id, list);
+  }
+  return Object.fromEntries(
+    jobs.flatMap((j) => (j.pipeline_id ? [[j.id, byPipeline.get(j.pipeline_id) ?? []]] : [])),
+  );
+}
 
 /** The interview rule the auto-invite switch shows, from a job's config row. */
 function interviewOf(c: {
@@ -87,13 +130,8 @@ export async function loadImportPage(
   if (!fixed && !allowNoJob && jobs.length === 0) return null;
 
   const configJobs = [...new Set([...jobs.map((j) => j.id), ...(fixed ? [fixed.id] : [])])];
-  const [{ data: stages }, { data: configs }, lists, screeningsRemaining] = await Promise.all([
-    supabase
-      .from("pipeline_stages")
-      .select(STAGE_COLUMNS)
-      .eq("company_id", company.id)
-      .eq("archived", false)
-      .order("position", { ascending: true }),
+  const [stagesByJob, { data: configs }, lists, screeningsRemaining] = await Promise.all([
+    loadJobStages(supabase, company, configJobs).catch(() => ({})),
     configJobs.length > 0
       ? supabase
           .from("job_interview_configs")
@@ -114,7 +152,7 @@ export async function loadImportPage(
 
   return {
     jobs: jobs.map((j) => ({ ...j, interview: interviews.get(j.id) ?? null })),
-    stages: stages ?? [],
+    stagesByJob,
     lists: lists && lists.map((l) => ({ id: l.id, name: l.name, slug: l.slug })),
     allowNoJob,
     screeningsRemaining,

@@ -10,14 +10,6 @@ const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("react-hot-toast", () => ({ default: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/app/actions/interviews/manage-screening-interview", () => ({ manageScreeningInterviewAction: vi.fn() }));
-vi.mock("./InviteToInterviewDialog", () => ({
-  default: ({ open, applicationIds, enabled }: { open: boolean; applicationIds: string[]; enabled?: boolean }) =>
-    open ? (
-      <div role="dialog" aria-label="Invite dialog">
-        {applicationIds.join(",")} {enabled ? "on" : "off"}
-      </div>
-    ) : null,
-}));
 
 type Interview = Parameters<typeof ScreeningInterviewActions>[0]["interview"];
 const interview = (overrides: Partial<NonNullable<Interview>> = {}): NonNullable<Interview> => ({
@@ -34,11 +26,7 @@ const interview = (overrides: Partial<NonNullable<Interview>> = {}): NonNullable
 const renderActions = (props: Partial<Parameters<typeof ScreeningInterviewActions>[0]> = {}) =>
   render(
     <ScreeningInterviewActions
-      applicationId="app1"
-      jobPostId="j1"
-      candidateName="Ada"
       interview={interview()}
-      invite={{ durationMinutes: 15, enabled: true }}
       {...props}
     />,
   );
@@ -51,17 +39,9 @@ beforeEach(() => {
 });
 
 describe("ScreeningInterviewActions (SIT-064, SI-REQ-015/026)", () => {
-  it("offers Invite when there's no interview and the job's interview is on", async () => {
+  it("offers nothing when there's no interview (inviting is in the AI interview section)", () => {
     renderActions({ interview: null });
-    expect(buttons()).toEqual(["Invite to AI interview"]);
-    await userEvent.click(screen.getByRole("button", { name: "Invite to AI interview" }));
-    expect(screen.getByRole("dialog", { name: "Invite dialog" })).toHaveTextContent("app1 on");
-  });
-
-  it("still offers Invite when the job's interview is off, passing that to the dialog", async () => {
-    renderActions({ interview: null, invite: { durationMinutes: 15, enabled: false } });
-    await userEvent.click(screen.getByRole("button", { name: "Invite to AI interview" }));
-    expect(screen.getByRole("dialog", { name: "Invite dialog" })).toHaveTextContent("app1 off");
+    expect(buttons()).toEqual([]);
   });
 
   it.each([
@@ -85,11 +65,6 @@ describe("ScreeningInterviewActions (SIT-064, SI-REQ-015/026)", () => {
     ["completed incomplete", interview({ status: "completed", attemptsUsed: 2 })],
   ])("offers nothing for a %s interview in a Rejected or Hired stage", (_, value) => {
     renderActions({ interview: value, stageClosed: true });
-    expect(buttons()).toEqual([]);
-  });
-
-  it("offers no Invite in a Rejected or Hired stage", () => {
-    renderActions({ interview: null, stageClosed: true });
     expect(buttons()).toEqual([]);
   });
 

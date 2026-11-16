@@ -58,6 +58,9 @@ export const jobPostingInputSchema = z
       .optional()
       .transform((d) => (d ? d : null)),
     workplace_type: z.enum(["onsite", "hybrid", "remote"]).nullable().optional(),
+    // JP-REQ-003: the job's pipeline. Omitted on a new job = the company default.
+    // An edit changes it only while the job has no applications.
+    pipeline_id: z.string().uuid("Pipeline not found.").optional(),
   })
   .strict()
   .refine((v) => ordered(v.min_salary, v.max_salary), {

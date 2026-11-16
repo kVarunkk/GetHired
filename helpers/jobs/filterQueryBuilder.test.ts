@@ -128,8 +128,17 @@ describe("buildQuery: total", () => {
     const result = await buildQuery(supabase.client, null, { ...BASE_ARGS, jobType: "Fulltime" });
 
     expect(supabase.callsFor("all_jobs")).toHaveLength(1);
-    expect(selectOf().args[1]).toEqual({ count: "exact" });
+    expect(selectOf().args[1]).toEqual({ count: "estimated" });
     expect(result.count).toBe(12);
+  });
+
+  it("counts the user's own tabs exactly", async () => {
+    supabase = createSupabaseMock();
+    supabase.queue("all_jobs", { data: [], error: null, count: 3 });
+
+    await buildQuery(supabase.client, { id: "u1" }, { ...BASE_ARGS, isFavoriteTabActive: true });
+
+    expect(selectOf().args[1]).toEqual({ count: "exact" });
   });
 
   it("doesn't count again on later pages", async () => {

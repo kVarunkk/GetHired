@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createSupabaseMock } from "@/test/utils/supabase-mock";
+import { createSupabaseMock, type RecordedCall } from "@/test/utils/supabase-mock";
 import { ADMIN_A, HIRING_MANAGER_A, JOB_A1, JOB_A2, MEMBER_A } from "@/test/utils/team";
 import { getEntitlements } from "@/helpers/billing/entitlements";
 import { listTalentLists } from "@/helpers/pipeline/talent-lists";
@@ -12,6 +12,7 @@ const STAGES = [
   { id: "50000000-0000-4000-8000-000000000001", name: "Applied" },
   { id: "50000000-0000-4000-8000-000000000002", name: "Onsite" },
 ];
+const PIPELINE = "9e000000-0000-4000-8000-000000000001";
 const LIST = { id: "71000000-0000-4000-8000-000000000001", name: "Old ATS", slug: "old-ats" };
 
 function db(
@@ -19,10 +20,23 @@ function db(
   fixed: { id: string; title: string } | null = null,
 ) {
   const mock = createSupabaseMock();
-  // listImportJobs' list, then loadFixedJob's single row.
-  mock.queue("job_postings", { data: jobs, error: null });
-  mock.queue("job_postings", { data: fixed, error: null });
-  mock.queue("pipeline_stages", { data: STAGES, error: null });
+  // listImportJobs' list, loadFixedJob's single row, and the jobs' pipelines
+  // (JPT-024: all on one pipeline here).
+  const jobPostings = (call: RecordedCall) => {
+    const select = String(call.chain.find((c) => c.method === "select")?.args[0]);
+    if (select.includes("pipeline_id")) {
+      const all = [...jobs, ...(fixed ? [fixed] : [])];
+      return { data: all.map((j) => ({ id: j.id, pipeline_id: PIPELINE })), error: null };
+    }
+    return call.chain.some((c) => c.method === "maybeSingle")
+      ? { data: fixed, error: null }
+      : { data: jobs, error: null };
+  };
+  for (let i = 0; i < 3; i++) mock.queue("job_postings", jobPostings);
+  mock.queue("pipeline_stages", {
+    data: STAGES.map((s) => ({ ...s, pipeline_id: PIPELINE })),
+    error: null,
+  });
   mock.queue("job_interview_configs", {
     data: [
       { job_post_id: JOB_A1, enabled: true, invite_rule: "fit_threshold", fit_threshold: 70, duration_minutes: 15 },
@@ -46,7 +60,7 @@ describe("loadImportPage (BI-REQ-010–018)", () => {
         { id: JOB_A1, title: "Backend Engineer", interview: { fitThreshold: 70, durationMinutes: 15 } },
         { id: JOB_A2, title: "Designer", interview: null },
       ],
-      stages: STAGES,
+      stagesByJob: { [JOB_A1]: STAGES, [JOB_A2]: STAGES },
       lists: [LIST],
       allowNoJob: true,
       screeningsRemaining: 40,
@@ -106,7 +120,9 @@ describe("loadImportPage (BI-REQ-010–018)", () => {
     const mock = db([{ id: JOB_A1, title: "Backend Engineer" }]);
     expect(await loadImportPage(mock.client, member, { jobId: JOB_A2 })).toMatchObject({ notFound: true, fixedJob: null });
     // The permission check comes first: the job isn't read.
-    expect(mock.callsFor("job_postings")).toHaveLength(1);
+    expect(
+      mock.callsFor("job_postings").some((c) => c.chain.some((m) => m.method === "eq" && m.args[1] === JOB_A2)),
+    ).toBe(false);
   });
 
   it("gives a job-scoped member their job, and no pool", async () => {
@@ -115,5 +131,42 @@ describe("loadImportPage (BI-REQ-010–018)", () => {
       jobId: JOB_A1,
     });
     expect(page).toMatchObject({ allowNoJob: false, fixedJob: { id: JOB_A1 }, notFound: false });
+  });
+
+  it("gives each job its own pipeline's stages (JPT-024)", async () => {
+    const OTHER = "9e000000-0000-4000-8000-000000000002";
+    const TAKE_HOME = { id: "50000000-0000-4000-8000-000000000003", name: "Take-home" };
+    const mock = createSupabaseMock();
+    mock.queue("job_postings", {
+      data: [
+        { id: JOB_A1, title: "Backend Engineer" },
+        { id: JOB_A2, title: "Designer" },
+      ],
+      error: null,
+    });
+    mock.queue("job_postings", {
+      data: [
+        { id: JOB_A1, pipeline_id: PIPELINE },
+        { id: JOB_A2, pipeline_id: OTHER },
+      ],
+      error: null,
+    });
+    mock.queue("pipeline_stages", {
+      data: [
+        { ...STAGES[0], pipeline_id: PIPELINE },
+        { ...TAKE_HOME, pipeline_id: OTHER },
+      ],
+      error: null,
+    });
+    mock.queue("job_interview_configs", { data: [], error: null });
+
+    const page = await loadImportPage(mock.client, ADMIN_A.myCompany);
+    expect(page?.stagesByJob).toEqual({ [JOB_A1]: [STAGES[0]], [JOB_A2]: [TAKE_HOME] });
+    const [, pipelines] = mock.callsFor("job_postings");
+    expect(pipelines.chain).toContainEqual({ method: "eq", args: ["company_id", ADMIN_A.myCompany.id] });
+    expect(mock.callsFor("pipeline_stages")[0].chain).toContainEqual({
+      method: "in",
+      args: ["pipeline_id", [PIPELINE, OTHER]],
+    });
   });
 });

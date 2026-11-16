@@ -83,6 +83,23 @@ export async function GET(request: NextRequest) {
         request_path: request.nextUrl.pathname,
         sort_by: params.sortBy,
         created_after_days: params.createdAfterDays,
+        // Which filters were on (names only), to tell which query was slow.
+        filters: (
+          [
+            "jobType",
+            "location",
+            "visaRequirement",
+            "minSalary",
+            "minExperience",
+            "maxExperience",
+            "platform",
+            "companyName",
+            "jobTitleKeywords",
+            "applicationStatus",
+          ] as const
+        ).filter((key) => params[key]),
+        tab: params.tab,
+        has_cursor: Boolean(params.cursor),
         internal_call: isInternalCall,
       },
     });

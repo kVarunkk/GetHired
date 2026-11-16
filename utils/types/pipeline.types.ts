@@ -1,3 +1,4 @@
+import type { MeetingBadge } from "@/helpers/interviews/board-badge";
 import type { Enums } from "./database.types";
 import type { InterviewSummary } from "@/helpers/interview/screening/summary-view";
 
@@ -16,6 +17,8 @@ export type BoardApplication = {
   knockoutReasons?: string[] | null;
   /** SIT-062: the AI interview, for members with interviews.view on the job. */
   interview?: InterviewSummary;
+  /** IVT-073: the next interview with people, or the feedback still owed (scheduling.view). */
+  meeting?: MeetingBadge;
   /** BI-REQ-030: a company candidate's card ("Imported"), and whether they have a resume. */
   imported?: boolean;
   hasResume?: boolean;

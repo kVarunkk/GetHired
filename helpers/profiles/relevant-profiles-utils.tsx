@@ -18,6 +18,9 @@ const toMatchScore = (aggregate: number) =>
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+/** Ids per stale-row delete, so the request URL stays short. */
+const STALE_DELETE_CHUNK = 100;
+
 export const sendEmailForRelevantProfilesStatusUpdate = async (
   email: string,
   name: string,
@@ -200,21 +203,29 @@ export async function processJobPostingRelevance(
       );
     }
 
-    // Remove candidates who no longer match.
-    let staleQuery = admin
-      .from("job_relevant_profiles")
-      .delete()
-      .eq("job_posting_id", jobPostingId);
-    if (rowsToUpsert.length > 0) {
-      staleQuery = staleQuery.not(
-        "user_id",
-        "in",
-        `(${rowsToUpsert.map((row) => row.user_id).join(",")})`,
+    // Remove candidates who no longer match. By the ids that left, in chunks:
+    // a `not in` over every kept id made the URL too long for hundreds of
+    // candidates, and PostgREST answered "Bad Request".
+    if (rowsToUpsert.length === 0) {
+      const { error: deleteError } = await admin
+        .from("job_relevant_profiles")
+        .delete()
+        .eq("job_posting_id", jobPostingId);
+      if (deleteError) throw new Error(`Delete failed: ${deleteError.message}`);
+    } else {
+      const kept = new Set(rowsToUpsert.map((row) => row.user_id));
+      const gone = [...existing.keys()].filter(
+        (userId): userId is string => userId !== null && !kept.has(userId),
       );
+      for (let i = 0; i < gone.length; i += STALE_DELETE_CHUNK) {
+        const { error: deleteError } = await admin
+          .from("job_relevant_profiles")
+          .delete()
+          .eq("job_posting_id", jobPostingId)
+          .in("user_id", gone.slice(i, i + STALE_DELETE_CHUNK));
+        if (deleteError) throw new Error(`Delete failed: ${deleteError.message}`);
+      }
     }
-    const { error: deleteError } = await staleQuery;
-
-    if (deleteError) throw new Error(`Delete failed: ${deleteError.message}`);
 
     // Background "why" for the top candidates. Never fails the digest:
     // anything not queued can still be explained on demand.

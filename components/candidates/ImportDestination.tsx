@@ -38,7 +38,10 @@ export type Destination = {
   autoInvite: boolean;
 };
 
-export type DestinationPage = Pick<ImportPage, "jobs" | "stages" | "lists" | "allowNoJob" | "screeningsRemaining" | "fixedJob">;
+export type DestinationPage = Pick<
+  ImportPage,
+  "jobs" | "stagesByJob" | "lists" | "allowNoJob" | "screeningsRemaining" | "fixedJob"
+>;
 
 /** What the import actions take, from a destination (the same shape for every method). */
 export type ImportDestinationValue = {
@@ -107,6 +110,21 @@ export function destinationJob(page: DestinationPage, value: Destination) {
   return page.jobs.find((j) => j.id === value.jobId) ?? null;
 }
 
+/** The open stages of `value`'s job's pipeline (JP-REQ-004); none without a job. */
+export function destinationStages(page: DestinationPage, value: Destination) {
+  const job = destinationJob(page, value);
+  return job ? (page.stagesByJob[job.id] ?? []) : [];
+}
+
+/**
+ * `value` moved to job `jobId`: the stage, which belongs to the old job's
+ * pipeline, goes back to the first stage, and the auto-invite switch is off.
+ */
+export function withJob(value: Destination, jobId: string): Destination {
+  if (jobId === value.jobId) return value;
+  return { ...value, jobId, stageId: null, autoInvite: false };
+}
+
 /** What to send for `value`. */
 export function destinationValue(page: DestinationPage, value: Destination): ImportDestinationValue {
   const job = destinationJob(page, value);
@@ -160,7 +178,10 @@ export default function ImportDestination({
   const set = (patch: Partial<Destination>) => onChange({ ...value, ...patch });
   const kinds = destinationKinds(page);
   const job = destinationJob(page, value);
-  const stageName = page.stages.find((s) => s.id === value.stageId)?.name ?? page.stages[0]?.name ?? "the first stage";
+  const stages = destinationStages(page, value);
+  const stageName = stages.find((s) => s.id === value.stageId)?.name ?? stages[0]?.name ?? "the first stage";
+  // Another job can be on another pipeline: its stages replace the old ones (JP-REQ-004).
+  const changeJob = (jobId: string) => onChange(withJob(value, jobId));
   const warning = job && jobPreview && screeningWarning(jobPreview.scored, page.screeningsRemaining);
   const id = (name: string) => `${idPrefix}-${name}`;
   const showList = !!page.lists && (value.kind === "list" || value.kind === "job");
@@ -201,7 +222,7 @@ export default function ImportDestination({
             <Label htmlFor={id("job")}>Job</Label>
             <Select
               value={value.jobId ?? ""}
-              onValueChange={(next) => set({ jobId: next, autoInvite: false })}
+              onValueChange={changeJob}
               disabled={disabled}
             >
               <SelectTrigger id={id("job")} aria-label="Job">
@@ -218,7 +239,7 @@ export default function ImportDestination({
           </div>
         )}
 
-        {job && page.stages.length > 0 && (
+        {job && stages.length > 0 && (
           <div className="flex flex-col gap-2">
             <Label htmlFor={id("stage")}>Stage</Label>
             <Select
@@ -230,8 +251,8 @@ export default function ImportDestination({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={FIRST_STAGE}>First stage ({page.stages[0].name})</SelectItem>
-                {page.stages.slice(1).map((stage) => (
+                <SelectItem value={FIRST_STAGE}>First stage ({stages[0].name})</SelectItem>
+                {stages.slice(1).map((stage) => (
                   <SelectItem key={stage.id} value={stage.id}>
                     {stage.name}
                   </SelectItem>
@@ -304,7 +325,7 @@ export default function ImportDestination({
       {job && (
         <StageMapper
           values={stageValues}
-          stages={page.stages}
+          stages={stages}
           choices={stageChoices}
           destinationName={stageName}
           onChange={onStageChoicesChange}

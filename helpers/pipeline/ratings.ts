@@ -38,3 +38,11 @@ export function ratingSummary(notes: { rating: CandidateRating | null }[]): Rati
   }
   return { count, average: count > 0 ? total / count : null, byRating };
 }
+
+/**
+ * Whether any rating was masked (IV-REQ-032a): a reader who is blind on the
+ * application must not see a summary either, since it would leak the count.
+ */
+export function ratingsHidden(notes: readonly { rating_hidden?: boolean }[]): boolean {
+  return notes.some((n) => n.rating_hidden === true);
+}

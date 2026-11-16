@@ -406,6 +406,18 @@ describe("middleware: claim links (BIT-064, BI-REQ-041)", () => {
   });
 });
 
+describe("middleware: self-scheduling links (IVT-063, IV-SEC-007)", () => {
+  it("lets the link's page and its API through without a session", async () => {
+    expect(passesThrough(await updateSession(request("/schedule/abcdefghijklmnopqrstuvwxyz")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/api/schedule/abcdefghijklmnopqrstuvwxyz")))).toBe(true);
+  });
+
+  it("keeps the bare paths private", async () => {
+    expect(redirectTarget(await updateSession(request("/schedule/")))).toMatch(/^\/auth\/login/);
+    expect(redirectTarget(await updateSession(request("/schedule")))).toMatch(/^\/auth\/login/);
+  });
+});
+
 describe("middleware: matching workers", () => {
   it("lets the match explanations worker through without a session", async () => {
     expect(
@@ -508,5 +520,26 @@ describe("middleware: markdown versions of public pages", () => {
 
   it("leaves other .md paths to the usual rules", async () => {
     expect(redirectTarget(await updateSession(request("/dashboard.md")))).toMatch(/^\/auth\/login/);
+  });
+});
+
+describe("middleware: Google Calendar routes (IVT-035, IV-SEC-007)", () => {
+  it("keeps the connect and callback routes behind a session", async () => {
+    for (const path of ["/api/calendar/google/connect", "/api/calendar/google/callback"]) {
+      expect(passesThrough(await updateSession(request(path))), path).toBe(false);
+    }
+  });
+
+  it("lets a signed-in company member reach them", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(company);
+    expect(passesThrough(await updateSession(request("/api/calendar/google/callback?code=x&state=y")))).toBe(true);
+  });
+});
+
+describe("middleware: interview calendar crons (IVT-046, IVT-047)", () => {
+  it("lets the sync cron and the calendar ops worker through without a session (each checks its secret)", async () => {
+    for (const path of ["/api/updates/interviews/sync", "/api/updates/interviews/feedback", "/api/worker/interview-calendar-ops"]) {
+      expect(passesThrough(await updateSession(request(path))), path).toBe(true);
+    }
   });
 });

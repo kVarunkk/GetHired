@@ -20,7 +20,6 @@ import {
   manageScreeningInterviewAction,
   type ManageScreeningAction,
 } from "@/app/actions/interviews/manage-screening-interview";
-import InviteToInterviewDialog from "./InviteToInterviewDialog";
 
 /** SI-REQ-015: two extensions of 1–14 days each. */
 const MAX_EXTENSIONS = 2;
@@ -62,33 +61,19 @@ const CONFIRMS: Record<Exclude<ManageScreeningAction, "extend">, { title: string
 };
 
 /**
- * The applicant page's interview actions (SI-REQ-015/026, SIT-064): Invite,
- * Extend, Grant attempt, Cancel, and Extend / Waive / Cancel for an
+ * The applicant page's interview actions (SI-REQ-015/026, SIT-064): Extend, Grant attempt, Cancel, and Extend / Waive / Cancel for an
  * accommodation request. Rendered only with interviews.manage on the job;
  * the server checks again.
  */
 export default function ScreeningInterviewActions({
-  applicationId,
-  jobPostId,
-  candidateName,
   interview,
-  invite,
   stageClosed = false,
 }: {
-  applicationId: string;
-  jobPostId: string;
-  candidateName: string;
   interview: InterviewActionState | null;
-  /**
-   * The job's interview length and whether it's on. Invite shows while it's
-   * off too, and then points to the job's interview page.
-   */
-  invite: { durationMinutes: number; enabled: boolean };
-  /** In a Rejected or Hired stage: no invite, extension, attempt or reopen. */
+  /** In a Rejected or Hired stage: no extension, attempt or reopen. */
   stageClosed?: boolean;
 }) {
   const router = useRouter();
-  const [inviting, setInviting] = useState(false);
   const [extending, setExtending] = useState(false);
   const [days, setDays] = useState(3);
   const [busy, setBusy] = useState(false);
@@ -106,26 +91,8 @@ export default function ScreeningInterviewActions({
     return true;
   }
 
-  if (!interview) {
-    if (stageClosed) return null;
-    return (
-      <>
-        <Button variant="outline" onClick={() => setInviting(true)}>
-          <Mic className="mr-2 h-4 w-4" />
-          Invite to AI interview
-        </Button>
-        <InviteToInterviewDialog
-          open={inviting}
-          onOpenChange={setInviting}
-          jobPostId={jobPostId}
-          applicationIds={[applicationId]}
-          nameOf={() => candidateName}
-          durationMinutes={invite.durationMinutes}
-          enabled={invite.enabled}
-        />
-      </>
-    );
-  }
+  // Inviting lives in the AI interview section (InviteToInterviewButton).
+  if (!interview) return null;
 
   const open = interview.status === "invited" || interview.status === "paused";
   const canExtend = !stageClosed && open && interview.deadlineExtensions < MAX_EXTENSIONS;
