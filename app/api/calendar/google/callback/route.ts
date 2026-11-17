@@ -15,9 +15,10 @@ import { MY_CALENDAR_PATH } from "@/helpers/calendar/config";
 import { requireCompany } from "@/helpers/companies/require-company";
 import { reportError } from "@/helpers/posthog/report-error";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { deploymentUrl } from "@/utils/formatters";
 
 function back(request: NextRequest, returnTo: string, outcome: { error: CalendarConnectError } | "connected") {
-  const url = new URL(returnTo, request.nextUrl.origin);
+  const url = new URL(returnTo, deploymentUrl());
   if (outcome === "connected") url.searchParams.set("calendar", "connected");
   else url.searchParams.set("calendar_error", outcome.error);
   const res = NextResponse.redirect(url, { status: 303, headers: { "Cache-Control": "no-store" } });
