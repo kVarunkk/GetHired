@@ -121,14 +121,14 @@ describe("buildQuery: total", () => {
       .callsFor("all_jobs")[0]
       .chain.find((step) => step.method === "select")!;
 
-  it("counts the filtered query itself, not every job", async () => {
+  it("counts the filtered query itself exactly, not every job", async () => {
     supabase = createSupabaseMock();
     supabase.queue("all_jobs", { data: [], error: null, count: 12 });
 
     const result = await buildQuery(supabase.client, null, { ...BASE_ARGS, jobType: "Fulltime" });
 
     expect(supabase.callsFor("all_jobs")).toHaveLength(1);
-    expect(selectOf().args[1]).toEqual({ count: "estimated" });
+    expect(selectOf().args[1]).toEqual({ count: "exact" });
     expect(result.count).toBe(12);
   });
 

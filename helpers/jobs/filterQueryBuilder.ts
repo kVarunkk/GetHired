@@ -125,18 +125,10 @@ export const buildQuery = async (
     let query;
     let selectString;
     // The total of this query, with the tab and every filter applied, on the
-    // first page only (later pages keep the first page's total). The tabs are
-    // the user's own few rows, so they're counted exactly. The open listing
-    // spans every active job, and an exact count there scans them all and hit
-    // the statement timeout; "estimated" stays exact up to PostgREST's max
-    // rows and uses the planner's estimate above that.
-    const isOwnRowsTab =
-      isFavoriteTabActive ||
-      isAppliedJobsTabActive ||
-      relevanceSearchType === "standard";
-    const countOption = cursor
-      ? undefined
-      : { count: isOwnRowsTab ? ("exact" as const) : ("estimated" as const) };
+    // first page only (later pages keep the first page's total). It is always
+    // exact: above PostgREST's max rows an "estimated" count is the planner's
+    // guess, which for `status = 'active'` is half the table.
+    const countOption = cursor ? undefined : { count: "exact" as const };
 
     if (isFavoriteTabActive) {
       if (!user) {
