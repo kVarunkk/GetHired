@@ -8,8 +8,9 @@ import type { FeedPlatform } from "./build";
 
 /**
  * MPT-020: the jobs of one feed. Reads public columns only (never the form
- * rules, notes or contact details), for companies that opted in and were
- * approved, leaving out opted-out and ineligible jobs.
+ * rules, notes or contact details), for companies that turned the channel on,
+ * leaving out opted-out and ineligible jobs. A board that hasn't approved
+ * GetHired yet still gets the jobs, since it reviews the feed to decide.
  */
 
 export type FeedJobRow = {
@@ -39,11 +40,18 @@ const JOB_TYPES: Record<FeedJobRow["job_type"], FeedJobType> = {
 
 const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
 
+/** Location entries that describe the workplace rather than a place. */
+const NOT_A_PLACE = /^(remote|anywhere|worldwide|work from home|wfh)$/i;
+
 /** GetHired jobs are mostly India (spec 10.2); the country is fixed until jobs carry one. */
 export function toFeedJob(row: FeedJobRow, logoTypes: ReadonlyMap<string, LogoType | null> = new Map()): FeedJob | null {
   if (!row.job_id) return null;
   const remote = row.workplace_type === "remote";
-  const first = row.location.find((l) => l.trim().length > 0)?.trim();
+  // "Remote" is the workplace, not a place: boards that need a city with a
+  // state would drop the job. Prefer the first Indian city, since the
+  // country is India.
+  const places = row.location.map((l) => l.trim()).filter((l) => l.length > 0 && !NOT_A_PLACE.test(l));
+  const first = places.find((l) => indianState(l)) ?? places[0];
   const min = salaryBound(row.min_salary);
   const max = salaryBound(row.max_salary);
   const text = row.salary_range && !NO_SALARY_TEXT.test(row.salary_range) ? row.salary_range.trim() : null;
@@ -66,7 +74,7 @@ export function toFeedJob(row: FeedJobRow, logoTypes: ReadonlyMap<string, LogoTy
     descriptionHtml: textToHtml(row.description!),
     city: first ? titleCase(first) : "",
     state: indianState(first),
-    locations: [...new Set(row.location.map((l) => l.trim()).filter(Boolean).map(titleCase))],
+    locations: [...new Set(places.map(titleCase))],
     country: "India",
     countryCode: "IN",
     workplace: row.workplace_type ?? "onsite",
@@ -131,7 +139,6 @@ export async function loadFeedJobs(
       .select("company_id")
       .eq("channel_key", platform)
       .eq("enabled", true)
-      .not("approved_at", "is", null)
       .order("company_id")
       .range(from, from + PAGE_SIZE - 1);
     if (error) throw new Error(error.message);

@@ -55,7 +55,7 @@ export default async function JobDistributionPage({ params }: { params: Promise<
     const names = Object.fromEntries(channels.map((c) => [c.key, c.name]));
 
     return (
-      <div className="flex w-full flex-col gap-6">
+      <div className="mb-20 flex w-full flex-col gap-6">
         <SectionHeader
           title="Distribution"
           description="Where this job is published beyond GetHired, and why it isn't live somewhere."

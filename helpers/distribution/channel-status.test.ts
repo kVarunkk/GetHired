@@ -31,15 +31,21 @@ describe("buildChannelRows", () => {
     expect(byKey(build(), "jooble").state).toBe("off");
   });
 
-  it("shows Not approved yet when opted in but the platform hasn't approved", () => {
-    const rows = build({ settings: [{ channel_key: "jooble", enabled: true, approved_at: null, status: "pending" }] });
-    expect(byKey(rows, "jooble")).toMatchObject({ state: "pending_approval", reasons: ["Not approved yet"] });
+  it("says the job is in the feed while the board hasn't approved GetHired, with no per-company approval", () => {
+    const rows = build({ settings: [{ channel_key: "jooble", enabled: true, approved_at: null, status: "live" }] });
+    expect(byKey(rows, "jooble")).toMatchObject({
+      state: "pending_approval",
+      reasons: ["In the feed. Jooble hasn't approved GetHired yet"],
+    });
   });
 
-  it("queues an approved, opted-in feed until a posting is live", () => {
-    expect(byKey(build({ settings: approved }), "jooble").state).toBe("queued");
-    const postings = [{ channel_key: "jooble", status: "live", reason: null }];
-    expect(byKey(build({ settings: approved, postings }), "jooble").state).toBe("live");
+  it("is live for an opted-in feed once the board has approved GetHired", () => {
+    const approvedChannels = channels.map((c) => (c.key === "jooble" ? { ...c, requires_approval: false } : c));
+    expect(byKey(build({ channels: approvedChannels, settings: approved }), "jooble").state).toBe("live");
+  });
+
+  it("checks the job before the board's approval", () => {
+    expect(byKey(build({ settings: approved, jobStatus: "inactive" }), "jooble").state).toBe("not_live");
   });
 
   it("reports a per-job opt-out", () => {

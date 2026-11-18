@@ -25,9 +25,11 @@ async function loadToggleableChannel(supabase: SupabaseClient<Database>, channel
 
 /**
  * MP-REQ-011: the company opts in or out of one channel for all its jobs.
- * The caller has already checked `distribution.manage` with scope `all`. A
- * channel that needs our approval stays pending until `approved_at` is set.
- * Shared by the server action and the recruiter agent.
+ * The caller has already checked `distribution.manage` with scope `all`.
+ * Turning a channel on takes effect at the next feed build: there is no
+ * per-company approval. Whether the board has approved GetHired is the
+ * channel's own `requires_approval`. Shared by the server action and the
+ * recruiter agent.
  */
 export async function setChannelEnabled(
   supabase: SupabaseClient<Database>,
@@ -39,21 +41,12 @@ export async function setChannelEnabled(
   if (!channel) return { ok: false, error: "This channel can't be changed." };
 
   const service = createServiceRoleClient();
-  const { data: existing, error: readError } = await service
-    .from("company_channel_settings")
-    .select("approved_at")
-    .eq("company_id", companyId)
-    .eq("channel_key", channel.key)
-    .maybeSingle();
-  if (readError) return { ok: false, error: SAVE_FAILED };
-
-  const approved = !channel.requires_approval || Boolean(existing?.approved_at);
   const { error } = await service.from("company_channel_settings").upsert(
     {
       company_id: companyId,
       channel_key: channel.key,
       enabled,
-      status: !enabled ? "off" : approved ? "live" : "pending",
+      status: enabled ? "live" : "off",
       updated_at: new Date().toISOString(),
     },
     { onConflict: "company_id,channel_key" },

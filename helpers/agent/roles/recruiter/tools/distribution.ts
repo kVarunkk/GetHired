@@ -22,7 +22,7 @@ export function createDistributionTools(ctx: RecruiterToolContext) {
   return {
     getDistribution: tool({
       description:
-        "Read where jobs are published beyond GetHired. With a jobPostId: each channel's state for that job (live, queued, not live, off, not approved yet, opted out, error) and the reasons it isn't live. Without one: each channel's company-wide switch (on, off, waiting for approval). Channels with 'canToggle' can be changed with setDistribution.",
+        "Read where jobs are published beyond GetHired. With a jobPostId: each channel's state for that job (live, queued, not live, off, waiting for the board, opted out, error) and the reasons it isn't live. 'Waiting for the board' means the job is in the feed but that board hasn't approved GetHired yet. Without one: each channel's company-wide switch (on, off, waiting for approval: on, but the board hasn't approved GetHired yet). Channels with 'canToggle' can be changed with setDistribution.",
       inputSchema: z.object({ jobPostId: uuidInput("job post").optional() }).strict(),
       execute: ({ jobPostId }) =>
         withToolErrors(ctx, "getDistribution", async () => {
@@ -48,7 +48,7 @@ export function createDistributionTools(ctx: RecruiterToolContext) {
 
     setDistribution: tool({
       description:
-        "Change distribution for a feed or partner channel from getDistribution (canToggle). Pass enabled to turn the channel on or off for the whole company (needs access to all jobs; a channel that needs our approval stays 'waiting for approval' until we approve it), or jobPostId with optedOut to leave one job out of it or put it back. Pass one or the other, not both. Takes effect in the channel's next feed build.",
+        "Change distribution for a feed or partner channel from getDistribution (canToggle). Pass enabled to turn the channel on or off for the whole company (needs access to all jobs; the jobs go into the feed even while the board hasn't approved GetHired yet), or jobPostId with optedOut to leave one job out of it or put it back. Pass one or the other, not both. Takes effect in the channel's next feed build.",
       inputSchema: z
         .object({
           channelKey,

@@ -59,13 +59,12 @@ describe("setDistribution", () => {
     expect((await validateInput(tools.setDistribution, { channelKey: "jooble", jobPostId: JOB, optedOut: true })).success).toBe(true);
   });
 
-  it("turns a channel on as pending when it needs approval, and queues a rebuild", async () => {
+  it("turns a channel on as live, even before the board approves GetHired, and queues a rebuild", async () => {
     supabase.queue("distribution_channels", { data: FEED, error: null });
     service.queue("company_channel_settings", { data: null, error: null });
-    service.queue("company_channel_settings", { data: null, error: null });
     expect(await execTool(tools.setDistribution, { channelKey: "jooble", enabled: true })).toEqual({ channel: "jooble", enabled: true });
-    const upsert = service.callsFor("company_channel_settings")[1].chain.find((c) => c.method === "upsert");
-    expect(upsert?.args[0]).toMatchObject({ company_id: COMPANY_A.id, channel_key: "jooble", status: "pending" });
+    const upsert = service.callsFor("company_channel_settings")[0].chain.find((c) => c.method === "upsert");
+    expect(upsert?.args[0]).toMatchObject({ company_id: COMPANY_A.id, channel_key: "jooble", status: "live" });
     expect(enqueueFeedRebuild).toHaveBeenCalledWith({ reason: "settings_changed" });
   });
 

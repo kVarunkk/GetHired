@@ -882,7 +882,7 @@ const previewSetDistribution = gated("setDistribution", async (ctx, input) => {
         {
           label: "Then",
           value: input.enabled
-            ? "Your active, eligible jobs go into its feed at the next build, unless a job is left out. Some channels wait for our approval first."
+            ? "Your active, eligible jobs go into its feed at the next build, unless a job is left out. A board that hasn't approved GetHired yet gets the feed but may not show the jobs until it does."
             : "Your jobs leave its feed at the next build. Applications already received stay.",
         },
       ],
