@@ -143,10 +143,14 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": true,
       "title": "Search jobs",
     },
-    "description": "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page.",
+    "description": "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page. Needs keywords or companies unless anyRole is set. When nothing matches every filter, it relaxes the posting date, salary, visa and sources, job type, then experience, in that order, and never the keywords, locations or companies: the result's widened says what was relaxed, and later pages need the filters in widened.searchedWith.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
+        "anyRole": {
+          "description": "true only when the user asked for jobs of any role. Without it, a search needs keywords or companies.",
+          "type": "boolean",
+        },
         "companies": {
           "description": "Only jobs at these companies, by company name, e.g. ['Stripe', 'Razorpay'].",
           "items": {
@@ -158,7 +162,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "cursor": {
-          "description": "For the next page: the nextCursor from the previous search_jobs result, sent with the same filters. Leave out for the first page.",
+          "description": "For the next page: the nextCursor from the previous search_jobs result, sent with the same filters, or with widened.searchedWith when the result was widened. Leave out for the first page.",
           "type": "string",
         },
         "jobTypes": {
@@ -334,6 +338,10 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           },
           "type": "array",
         },
+        "message": {
+          "description": "What to tell the user about a relaxed or empty search.",
+          "type": "string",
+        },
         "nextCursor": {
           "description": "Pass to search_jobs as cursor for the next page; null on the last page.",
           "type": [
@@ -347,6 +355,29 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
             "number",
             "null",
           ],
+        },
+        "widened": {
+          "additionalProperties": true,
+          "description": "Set when no jobs matched every filter and the search was relaxed. Tell the user what was relaxed.",
+          "properties": {
+            "dropped": {
+              "description": "The filters relaxed to find these jobs, in the order they were relaxed.",
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "searchedWith": {
+              "additionalProperties": {},
+              "description": "The filters these jobs match. Send them with cursor for the next page.",
+              "type": "object",
+            },
+          },
+          "required": [
+            "dropped",
+            "searchedWith",
+          ],
+          "type": "object",
         },
       },
       "required": [
@@ -469,6 +500,10 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           },
           "type": "array",
         },
+        "message": {
+          "description": "What to tell the user about a relaxed or empty search.",
+          "type": "string",
+        },
         "nextCursor": {
           "description": "Pass to search_jobs as cursor for the next page; null on the last page.",
           "type": [
@@ -482,6 +517,29 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
             "number",
             "null",
           ],
+        },
+        "widened": {
+          "additionalProperties": true,
+          "description": "Set when no jobs matched every filter and the search was relaxed. Tell the user what was relaxed.",
+          "properties": {
+            "dropped": {
+              "description": "The filters relaxed to find these jobs, in the order they were relaxed.",
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "searchedWith": {
+              "additionalProperties": {},
+              "description": "The filters these jobs match. Send them with cursor for the next page.",
+              "type": "object",
+            },
+          },
+          "required": [
+            "dropped",
+            "searchedWith",
+          ],
+          "type": "object",
         },
       },
       "required": [
