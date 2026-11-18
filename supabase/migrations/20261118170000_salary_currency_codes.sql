@@ -90,7 +90,11 @@ create trigger job_postings_normalize_salary_currency
   before insert or update of salary_currency on public.job_postings
   for each row execute function public.normalize_salary_currency();
 
-alter table public.job_postings alter column salary_currency set default 'USD';
+-- user_info's column is NOT NULL with a '$' default; job_postings' is nullable.
+alter table public.user_info alter column salary_currency set default 'USD';
+
+-- A job with no salary has no currency.
+update public.job_postings set salary_currency = null where btrim(salary_currency) = '';
 
 update public.user_info
    set salary_currency = public.iso_currency(salary_currency)

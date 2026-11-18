@@ -129,7 +129,8 @@ export async function upsertJobPosting(
       description: values.description,
       location: values.location,
       job_type: values.job_type,
-      salary_currency: values.salary_currency,
+      // "" (no salary) is stored as no currency.
+      salary_currency: values.salary_currency || null,
       min_salary: values.min_salary,
       max_salary: values.max_salary,
       min_experience: values.min_experience,
