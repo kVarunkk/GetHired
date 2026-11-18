@@ -115,6 +115,11 @@ export async function updateSession(request: NextRequest) {
     "/api/worker/pipeline-emails",
     // Screening invite emails queued by the invite RPCs (X-Internal-Secret).
     "/api/worker/screening-invite-emails",
+    // Search-engine pings for job pages (X-Internal-Secret) and the IndexNow key file.
+    "/api/worker/index-pings",
+    // Feed rebuild worker (X-Internal-Secret); the feeds themselves are public.
+    "/api/worker/feeds",
+    "/indexnow-key",
     "/api/updates/company/applicant-digest/enqueue",
     "/api/updates/company/applicant-digest/worker",
     "/api/updates/company/weekly-matches/enqueue",
@@ -209,6 +214,11 @@ export async function updateSession(request: NextRequest) {
     pathname.length > "/remote-jobs/".length;
 
   const isSitemapPage = pathname.startsWith("/sitemap/");
+  // MP-CON-002: aggregator feeds (/feeds/jooble.xml) are polled without a session.
+  const isFeedPath = pathname.startsWith("/feeds/") && pathname.length > "/feeds/".length;
+  // MPT-030: job boards POST applications here; each route checks the board's signature.
+  const isJobBoardWebhook =
+    pathname.startsWith("/api/webhooks/jobboards/") && pathname.length > "/api/webhooks/jobboards/".length;
   // RFC 9728 metadata for /api/mcp (MCP spec §4.2).
   const isProtectedResourceMetadata =
     pathname === PROTECTED_RESOURCE_METADATA_PATH ||
@@ -240,6 +250,8 @@ export async function updateSession(request: NextRequest) {
     isCompanyPage ||
     isRemoteJobsLocationPage ||
     isSitemapPage ||
+    isFeedPath ||
+    isJobBoardWebhook ||
     isProtectedResourceMetadata ||
     isCareersPath ||
     isCandidateUnsubscribePath ||

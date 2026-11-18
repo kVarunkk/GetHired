@@ -31,7 +31,7 @@ async function queueRows(
     companyId,
     requestedBy,
     from,
-  }: { companyId: string; requestedBy: string; from: readonly [string, ...string[]] },
+  }: { companyId: string; requestedBy: string | null; from: readonly [string, ...string[]] },
 ): Promise<string[]> {
   const now = new Date().toISOString();
   const queued = {
@@ -208,7 +208,12 @@ export async function requeueScreenings(
     companyId,
     applications,
     requestedBy,
-  }: { companyId: string; applications: { id: string; job_post_id: string | null }[]; requestedBy: string },
+  }: {
+    companyId: string;
+    applications: { id: string; job_post_id: string | null }[];
+    /** null for work the system starts (a board's resume, MPT-031), as the insert trigger does. */
+    requestedBy: string | null;
+  },
 ): Promise<number> {
   const rows = applications
     .filter((a): a is { id: string; job_post_id: string } => Boolean(a.job_post_id))

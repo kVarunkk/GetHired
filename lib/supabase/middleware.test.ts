@@ -333,6 +333,26 @@ describe("middleware: screening interview routes", () => {
   });
 });
 
+describe("middleware: multiposting (MP-CON-002, MPT-030)", () => {
+  it("lets feeds, the IndexNow key, the workers and board webhooks through without a session", async () => {
+    for (const path of [
+      "/feeds/jooble.xml",
+      "/indexnow-key",
+      "/api/worker/feeds",
+      "/api/worker/index-pings",
+      "/api/webhooks/jobboards/indeed",
+    ]) {
+      expect(passesThrough(await updateSession(request(path))), path).toBe(true);
+    }
+  });
+
+  it("doesn't open the bare prefixes", async () => {
+    for (const path of ["/feeds/", "/api/webhooks/jobboards/", "/api/webhooks/other"]) {
+      expect(passesThrough(await updateSession(request(path))), path).toBe(false);
+    }
+  });
+});
+
 describe("middleware: the profiles rerank route is gone (QF-REQ-002)", () => {
   it("doesn't treat /api/ai-search/profiles as public", async () => {
     expect(passesThrough(await updateSession(request("/api/ai-search/profiles")))).toBe(false);

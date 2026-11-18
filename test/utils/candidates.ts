@@ -108,6 +108,7 @@ export function importedApplicationOf(
     answers_v2: null,
     form_snapshot: null,
     source_detail: null,
+    external_application_id: null,
     resume_id: null,
     resume_path: null,
     resume_url: null,

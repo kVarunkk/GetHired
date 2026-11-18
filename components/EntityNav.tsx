@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowLeft, ChevronRight } from "lucide-react";
@@ -57,6 +57,19 @@ export default function EntityNav({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(true);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // Keep the active section in view when the list scrolls (scrolls only the
+  // list, never the page).
+  useEffect(() => {
+    const list = listRef.current;
+    const target = list?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!list || !target) return;
+    const box = list.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
+    if (rect.top < box.top) list.scrollTop += rect.top - box.top;
+    else if (rect.bottom > box.bottom) list.scrollTop += rect.bottom - box.bottom;
+  }, [pathname]);
 
   return (
     <>
@@ -102,7 +115,7 @@ export default function EntityNav({
               </div>
             </div>
           )}
-          <ul className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden">
+          <ul ref={listRef} className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden">
             {items.map((item) => {
               const active = isActive(pathname, item);
               return (
@@ -164,7 +177,7 @@ export default function EntityNav({
             {backLabel}
           </Link>
         )}
-        <ScrollMaskX revealSelector='[aria-current="page"]'>
+        <ScrollMaskX revealSelector='[aria-current="page"]' revealKey={pathname}>
           <ul className="flex gap-1">
             {items.map((item) => {
               const active = isActive(pathname, item);

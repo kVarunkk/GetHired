@@ -627,6 +627,18 @@ const CASES: Case[] = [
     foreign: /doesn't have a careers page address yet/,
   },
 
+  // --- distribution (MPT-040) ---
+  {
+    tool: "set_distribution",
+    input: { channelKey: "jooble", jobPostId: JOB_A1, optedOut: true },
+    seed: () => {
+      db.queue("distribution_channels", { data: { name: "Jooble", kind: "feed", enabled: true }, error: null });
+      db.queue("job_postings", { data: { title: "Frontend Engineer" }, error: null });
+    },
+    facts: [/Leave this job out of Jooble\?/, /Channel: Jooble/, /<job_title>\s+Frontend Engineer/],
+    foreign: /can't be changed/,
+  },
+
   // --- scheduling (IVT-085) ---
   {
     tool: "save_interview_plan",

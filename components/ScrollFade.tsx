@@ -16,7 +16,13 @@ export default function ScrollFade({
   className,
   contentClassName,
   scrollerClassName,
+  revealSelector,
+  revealKey,
 }: {
+  /** An element inside to keep in view, e.g. the active nav item. */
+  revealSelector?: string;
+  /** Changes when the element to reveal changes (e.g. the pathname). */
+  revealKey?: string;
   children: React.ReactNode;
   /** Classes for the outer box; give it a height (e.g. `flex-1 min-h-0`). */
   className?: string;
@@ -45,6 +51,23 @@ export default function ScrollFade({
         : { top, bottom },
     );
   }, []);
+
+  // Scroll only this area (never the page) so the revealed element is fully
+  // visible, with a little room for the edge fade.
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || !revealSelector) return;
+    const target = scroller.querySelector<HTMLElement>(revealSelector);
+    if (!target) return;
+    const box = scroller.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
+    const margin = 32;
+    if (rect.top < box.top + margin) {
+      scroller.scrollTop += rect.top - box.top - margin;
+    } else if (rect.bottom > box.bottom - margin) {
+      scroller.scrollTop += rect.bottom - box.bottom + margin;
+    }
+  }, [revealSelector, revealKey]);
 
   // Re-check when the area resizes (window height) or its content changes
   // (items loading in, the sidebar expanding).

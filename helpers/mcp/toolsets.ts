@@ -20,6 +20,7 @@ export const MCP_TOOLSETS = [
   "scheduling",
   "team",
   "careers",
+  "distribution",
 ] as const;
 
 export type McpToolset = typeof MCP_CORE_TOOLSET | (typeof MCP_TOOLSETS)[number];
@@ -75,6 +76,7 @@ export const MCP_TOOLSET_LABELS: Record<McpToolset, string> = {
   scheduling: "Interview plans, scheduling and feedback",
   team: "Members, roles and invites",
   careers: "The careers page",
+  distribution: "Where jobs are published on job boards and feeds",
 };
 
 /** A server URL narrowed to some toolsets and/or read-only, as parseToolsetParams reads it. */

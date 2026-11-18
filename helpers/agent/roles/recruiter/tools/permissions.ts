@@ -161,6 +161,9 @@ export const RECRUITER_TOOL_PERMISSIONS = {
   updateCareersPage: p(["careers.edit"]),
   setCareersAddress: p(["careers.edit"]),
   setCareersPublished: p(["careers.edit"]),
+  // MPT-040: the same keys as the Distribution page. A company-wide switch needs scope all, checked in the tool.
+  getDistribution: p(["distribution.view"], "jobPostId"),
+  setDistribution: p(["distribution.manage"], "jobPostId"),
   // Screening interviews (SIT-071). Configuring also needs jobs.edit, checked in the tool.
   getInterviewSetup: p(["interviews.view"], "jobPostId"),
   configureScreeningInterview: p(["interviews.manage"], "jobPostId"),

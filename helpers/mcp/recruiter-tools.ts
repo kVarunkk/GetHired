@@ -214,6 +214,10 @@ export const RECRUITER_MCP_TOOLS: readonly RecruiterMcpToolDef[] = [
   confirmRow("update_careers_page", "Edit the careers page", "careers", D_I_O, "updateCareersPage"),
   confirmRow("set_careers_address", "Change the careers page address", "careers", D_I, "setCareersAddress"),
   confirmRow("set_careers_published", "Publish or unpublish the careers page", "careers", D_I_O, "setCareersPublished"),
+
+  // --- distribution (MPT-040) ---
+  row("get_distribution", "Job distribution", "distribution", READ, "getDistribution"),
+  confirmRow("set_distribution", "Change job distribution", "distribution", D_I_O, "setDistribution"),
 ];
 
 /** Recruiter agent tools MCP leaves out, and why (RMCP spec §4.4). */

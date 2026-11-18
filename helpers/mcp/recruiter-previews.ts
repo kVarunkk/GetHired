@@ -849,6 +849,61 @@ const previewCareersPublished = gated("setCareersPublished", async (ctx, input) 
   ]);
 });
 
+// --- Distribution (MPT-040) ---------------------------------------------------------
+
+const previewSetDistribution = gated("setDistribution", async (ctx, input) => {
+  const key = str(input.channelKey)?.trim() ?? "";
+  const { data: channel, error } = await ctx.supabase
+    .from("distribution_channels")
+    .select("name, kind, enabled")
+    .eq("key", key)
+    .maybeSingle();
+  if (error) throw new Error(`Failed to load the channel: ${error.message}`);
+  if (!channel?.enabled || !["feed", "partner_api"].includes(channel.kind)) return refuse("This channel can't be changed.");
+
+  if (typeof input.enabled === "boolean") {
+    const denied = requireToolPermission(ctx, "distribution.manage", null);
+    if (denied) return refuse(denied.error);
+    const { data: setting } = await ctx.supabase
+      .from("company_channel_settings")
+      .select("enabled")
+      .eq("company_id", ctx.company.id)
+      .eq("channel_key", key)
+      .maybeSingle();
+    if (Boolean(setting?.enabled) === input.enabled) {
+      return refuse(`${channel.name} is already ${input.enabled ? "on" : "off"} for your company.`);
+    }
+    return preview(
+      input.enabled
+        ? `Publish your active jobs on ${channel.name}?`
+        : `Stop publishing your jobs on ${channel.name}?`,
+      [
+        { label: "Channel", value: channel.name },
+        {
+          label: "Then",
+          value: input.enabled
+            ? "Your active, eligible jobs go into its feed at the next build, unless a job is left out. Some channels wait for our approval first."
+            : "Your jobs leave its feed at the next build. Applications already received stay.",
+        },
+      ],
+    );
+  }
+
+  const jobId = str(input.jobPostId) ?? "";
+  const { data: job } = await ctx.supabase
+    .from("job_postings")
+    .select("title")
+    .eq("id", jobId)
+    .eq("company_id", ctx.company.id)
+    .maybeSingle();
+  if (!job) return refuse("Job post not found.");
+  const out = input.optedOut === true;
+  return preview(out ? `Leave this job out of ${channel.name}?` : `Put this job back on ${channel.name}?`, [
+    { label: "Job", value: sandboxed("job_title", job.title) },
+    { label: "Channel", value: channel.name },
+  ]);
+});
+
 // --- Notes, import rows and the company's candidates (gated writes) ---------------
 
 const previewAddNote = gated("addNote", async (ctx, input) => {
@@ -1058,4 +1113,6 @@ export const RECRUITER_MCP_PREVIEWS: Readonly<Record<string, Builder>> = {
   update_careers_page: previewUpdateCareers,
   set_careers_address: previewCareersAddress,
   set_careers_published: previewCareersPublished,
+  // distribution
+  set_distribution: previewSetDistribution,
 };

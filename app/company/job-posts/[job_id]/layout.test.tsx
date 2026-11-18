@@ -93,3 +93,18 @@ describe("the job's Interview plan nav item (IVT-013)", () => {
     expect(within(nav).queryByRole("link", { name: /Interview plan/ })).not.toBeInTheDocument();
   });
 });
+
+describe("the job's Distribution nav item (MPT-015, MP-REQ-001)", () => {
+  it("shows with distribution.view on the job", async () => {
+    const nav = await renderAs(memberWith(["jobs.view", "distribution.view"]));
+    expect(within(nav).getByRole("link", { name: /Distribution/ })).toHaveAttribute(
+      "href",
+      `/company/job-posts/${JOB_A1}/distribution`,
+    );
+  });
+
+  it("is hidden without distribution.view", async () => {
+    const nav = await renderAs(memberWith(["jobs.view"]));
+    expect(within(nav).queryByRole("link", { name: /Distribution/ })).not.toBeInTheDocument();
+  });
+});

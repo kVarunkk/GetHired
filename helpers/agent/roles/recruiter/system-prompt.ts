@@ -133,6 +133,8 @@ const CAPABILITIES: Record<string, string> = {
   updateCareersPage: "edit the careers page's accent colour, sections and social links (with the user's approval)",
   setCareersAddress: "change the careers page address (with the user's approval)",
   setCareersPublished: "publish or unpublish the careers page (with the user's approval)",
+  getDistribution: "read where a job is published beyond GetHired (search engines, job feeds) and why it isn't live somewhere",
+  setDistribution: "turn a job feed channel on or off for the company, or leave one job out of it (with the user's approval)",
   getInterviewSetup: "read a job's AI screening interview setup and its funnel (invited, completed, average score)",
   configureScreeningInterview: "set up or change a job's AI screening interview: competencies, must-ask questions, length, deadline and who gets invited (with the user's approval)",
   inviteToInterview: "invite up to 50 applicants to their job's AI screening interview (with the user's approval; holds interview minutes, charged only when completed)",

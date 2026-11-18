@@ -1,6 +1,8 @@
 import { reportError } from "@/helpers/posthog/report-error";
 import { revalidateTag } from "next/cache";
 import { careersCompanyTag } from "@/helpers/careers/cache-tags";
+import { enqueueFeedRebuild } from "@/helpers/distribution/feed-queue";
+import { enqueueIndexPing } from "@/helpers/distribution/index-queue";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
@@ -285,6 +287,8 @@ export async function upsertJobPosting(
     revalidateTag(careersCompanyTag(company.id));
 
     if (posting.status === "active") {
+      if (existing?.job_id) await enqueueIndexPing({ jobId: existing.job_id, reason: "updated" });
+      await enqueueFeedRebuild();
       await queueJobPostingRelevance({ supabase, company, user }, posting.id);
     }
 
