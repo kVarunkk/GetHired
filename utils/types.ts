@@ -227,7 +227,8 @@ export interface FilterConfig {
     | "multi-select"
     | "multi-select-input"
     | "location-search-select"
-    | "currency-select";
+    | "currency-select"
+    | "salary";
   placeholder?: string;
   options?: { value: string; label: string }[];
   isVirtualized?: boolean;

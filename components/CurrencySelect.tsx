@@ -19,7 +19,8 @@ type Option = { code: string; name: string; symbol: string };
 /**
  * A searchable picker over every ISO 4217 currency, common ones first. The
  * value is a code; an old symbol ("₹") is read as its code. With `anyLabel`,
- * the empty value is an option too (filters).
+ * the empty value is an option too. `compact` shows only the code on the
+ * button, for sitting next to an amount.
  */
 export default function CurrencySelect({
   value,
@@ -29,6 +30,7 @@ export default function CurrencySelect({
   anyLabel,
   placeholder = "Currency",
   disabled,
+  compact,
   className,
   "aria-label": ariaLabel = "Currency",
   "aria-invalid": ariaInvalid,
@@ -41,6 +43,7 @@ export default function CurrencySelect({
   anyLabel?: string;
   placeholder?: string;
   disabled?: boolean;
+  compact?: boolean;
   className?: string;
   "aria-label"?: string;
   "aria-invalid"?: boolean;
@@ -92,7 +95,7 @@ export default function CurrencySelect({
           className={cn("w-full justify-between font-normal", className)}
         >
           <span className={cn("truncate", !code && "text-muted-foreground")}>
-            {code ? `${code} · ${currencyName(code)}` : (anyLabel ?? placeholder)}
+            {code ? (compact ? code : `${code} · ${currencyName(code)}`) : (anyLabel ?? placeholder)}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
