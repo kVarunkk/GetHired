@@ -141,21 +141,4 @@ create trigger all_jobs_set_salary_currency
   before insert or update of salary_currency, salary_range on public.all_jobs
   for each row execute function public.all_jobs_set_salary_currency();
 
--- GetHired jobs: the posting's currency.
-update public.all_jobs aj
-   set salary_currency = public.iso_currency(jp.salary_currency)
-  from public.job_postings jp
- where jp.job_id = aj.id
-   and public.iso_currency(jp.salary_currency) is not null
-   and aj.salary_currency is distinct from public.iso_currency(jp.salary_currency);
-
--- Other sources: read from the text.
-update public.all_jobs
-   set salary_currency = public.salary_text_currency(salary_range)
- where salary_currency is null
-   and salary_range is not null
-   and public.salary_text_currency(salary_range) is not null;
-
-create index if not exists idx_all_jobs_salary_currency_min
-  on public.all_jobs (salary_currency, salary_min)
-  where status = 'active';
+-- Existing all_jobs rows are filled by 20261118170100_salary_currency_backfill.sql.
