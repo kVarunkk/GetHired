@@ -278,7 +278,7 @@ describe("/api/mcp tools/call", () => {
   it("has no tools for a company account", async () => {
     signIn(mockUser({ id: applicant.id, type: "company" }));
 
-    const { body } = await rpc(await call("search_jobs", {}));
+    const { body } = await rpc(await call("search_jobs", { keywords: ["frontend"] }));
 
     expect(body.error ?? body.result?.isError).toBeTruthy();
     expect(searchJobs).not.toHaveBeenCalled();
@@ -287,7 +287,7 @@ describe("/api/mcp tools/call", () => {
   it("turns INSUFFICIENT_CREDITS into a sentence with the full credits link", async () => {
     vi.mocked(searchJobs).mockResolvedValue({ ok: false, status: 402, error: "x" } as never);
 
-    const { body } = await rpc(await call("search_jobs", {}));
+    const { body } = await rpc(await call("search_jobs", { keywords: ["frontend"] }));
 
     expect(body.result.isError).toBe(true);
     expect(body.result.content[0].text).toBe(
@@ -300,7 +300,7 @@ describe("/api/mcp limits and the call log (§4.7)", () => {
   it("logs each call with the token's user and client", async () => {
     vi.mocked(searchJobs).mockResolvedValue({ ok: true, data: [], totalCount: 0, nextCursor: null } as never);
 
-    await rpc(await call("search_jobs", {}));
+    await rpc(await call("search_jobs", { keywords: ["frontend"] }));
 
     const insert = supabase
       .callsFor("mcp_tool_calls")
@@ -334,7 +334,7 @@ describe("/api/mcp limits and the call log (§4.7)", () => {
       error: null,
     });
 
-    const { body } = await rpc(await call("search_jobs", {}));
+    const { body } = await rpc(await call("search_jobs", { keywords: ["frontend"] }));
 
     expect(body.result.isError).toBe(true);
     expect(body.result.content[0].text).toMatch(/try again in/i);

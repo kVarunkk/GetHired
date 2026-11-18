@@ -58,7 +58,7 @@ export default async function JobDistributionPage({ params }: { params: Promise<
       <div className="mb-20 flex w-full flex-col gap-6">
         <SectionHeader
           title="Distribution"
-          description="Where this job is published beyond GetHired, and why it isn't live somewhere."
+          description="Where this job is published beyond GetHired. Turn job boards on or off for all your jobs in Settings."
         />
         {can(company, "agent.use") && (
           <AskAgentAboutDistribution
@@ -70,7 +70,6 @@ export default async function JobDistributionPage({ params }: { params: Promise<
           rows={rows}
           jobId={job.id}
           canManage={can(company, "distribution.manage", job.id)}
-          canManageAll={can(company, "distribution.manage", null)}
         />
         <h2 className="text-sm font-semibold">Applications by source</h2>
         <ChannelStatsTable stats={stats} names={names} />

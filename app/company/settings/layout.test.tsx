@@ -39,6 +39,7 @@ describe("/company/settings layout (RP-REQ-016)", () => {
       "/company/settings/scheduling",
       "/company/settings/notifications",
       "/company/settings/careers",
+      "/company/settings/distribution",
       "/company/settings/question-sets",
       "/company/settings/team",
       "/company/settings/hiring-teams",

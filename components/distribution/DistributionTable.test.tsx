@@ -1,10 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { setJobChannelOptOutAction } from "@/app/actions/distribution/channel-actions";
+import type { ChannelRow } from "@/helpers/distribution/channel-status";
 import DistributionTable from "./DistributionTable";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/app/actions/distribution/channel-actions", () => ({
-  setChannelEnabledAction: vi.fn(),
   setJobChannelOptOutAction: vi.fn(),
 }));
 
@@ -33,15 +33,43 @@ describe("DistributionTable", () => {
   });
 });
 
-describe("DistributionTable controls", () => {
-  const rows = [{ key: "jooble", name: "Jooble", kind: "feed" as const, state: "off" as const, reasons: ["Not turned on for your company"] }];
-  it("hides controls without distribution.manage", () => {
-    render(<DistributionTable rows={rows} jobId="j1" />);
-    expect(screen.queryByRole("button", { name: "Turn on" })).not.toBeInTheDocument();
+describe("DistributionTable: Post this job (MP-REQ-011)", () => {
+  const feed = (state: ChannelRow["state"]): ChannelRow => ({ key: "jooble", name: "Jooble", kind: "feed", state, reasons: [] });
+
+  beforeEach(() => vi.mocked(setJobChannelOptOutAction).mockReset());
+
+  it("has no company-wide switch, and points an off channel to Settings", () => {
+    render(<DistributionTable rows={[feed("off")]} jobId="j1" canManage />);
+    expect(screen.queryByRole("button", { name: /turn (on|off)/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Off in Settings" })).toHaveAttribute("href", "/company/settings/distribution");
   });
-  it("offers Turn on to a company-wide manager", () => {
-    render(<DistributionTable rows={rows} jobId="j1" canManage canManageAll />);
-    expect(screen.getByRole("button", { name: "Turn on" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Leave this job out" })).not.toBeInTheDocument();
+
+  it("switches on an included job and off an opted-out one", () => {
+    render(<DistributionTable rows={[feed("live"), { ...feed("opted_out"), key: "adzuna", name: "Adzuna" }]} jobId="j1" canManage />);
+    expect(screen.getByRole("switch", { name: "Post this job on Jooble" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "Post this job on Adzuna" })).not.toBeChecked();
+  });
+
+  it("opts the job out when switched off", async () => {
+    vi.mocked(setJobChannelOptOutAction).mockResolvedValue({ ok: true });
+    render(<DistributionTable rows={[feed("live")]} jobId="j1" canManage />);
+    fireEvent.click(screen.getByRole("switch", { name: "Post this job on Jooble" }));
+    await waitFor(() =>
+      expect(setJobChannelOptOutAction).toHaveBeenCalledWith({ jobId: "j1", channelKey: "jooble", optedOut: true }),
+    );
+  });
+
+  it("disables the switch without distribution.manage on the job", () => {
+    render(<DistributionTable rows={[feed("live")]} jobId="j1" />);
+    expect(screen.getByRole("switch", { name: "Post this job on Jooble" })).toBeDisabled();
+  });
+
+  it("marks search engines as always on", () => {
+    render(
+      <DistributionTable rows={[{ key: "google", name: "Google for Jobs", kind: "index", state: "live", reasons: [] }]} jobId="j1" canManage />,
+    );
+    expect(screen.getByText("Always")).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 });

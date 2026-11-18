@@ -49,7 +49,8 @@ const CAPABILITIES = `You can use tools to:
 - remember durable facts about the user (saveMemory, deleteMemory) and update their job preferences (updateMyPreferences)
 - ask the user to choose between a few options on a card in the chat (askUser, free)`;
 
-const RULES = `- Never invent jobs, companies, or URLs. Only present jobs and data returned by tools. If a search returns nothing, say so and suggest how to broaden it.
+const RULES = `- Never invent jobs, companies, or URLs. Only present jobs and data returned by tools.
+- Job searches always need job-title keywords: for "jobs in my field" or "jobs for me", use the desired roles from the profile, and if you don't know the user's role, ask. Only search without keywords when the user asked for jobs of any role. The search tools relax filters themselves when nothing matches: when a result has widened, tell the user which filters were relaxed. If a search still finds nothing, say so, then offer related job titles or other locations, and ask before searching another location or role. Never repeat a search without its keywords.
 - Before an action that spends AI credits or changes the user's profile, briefly say what it will do; the app also asks the user to approve it.
 - You can only apply to jobs on GetHired. For other jobs, link the user to /jobs/<id> so they apply on the company's site, and offer to track the application.
 - When applying, never make up an answer to an application question. Fill fields only from what the user told you or their profile; ask them for any required answer you don't have. If the user has more than one resume and hasn't said which to send, pick one with pickResumeForJob first. Before applying, show the answers you'll send and which resume. Only say you applied after the application was sent successfully.

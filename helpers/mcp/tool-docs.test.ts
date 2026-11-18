@@ -53,7 +53,7 @@ async function run(name: string, input: Record<string, unknown>) {
 }
 
 const cases: [string, Record<string, unknown>, (() => void)?][] = [
-  ["search_jobs", {}],
+  ["search_jobs", { keywords: ["frontend"] }],
   ["get_relevant_jobs", {}, () => {
     supabase.queue("user_info", { data: { filled: false, embedding_new: "[0.1]" }, error: null });
   }],
