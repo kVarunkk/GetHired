@@ -56,8 +56,19 @@ export async function loadJobDistribution(
   return { job: { id: job.id, title: job.title, status: job.status }, channels: channels.data ?? [], rows };
 }
 
-/** The company-wide switch of each channel, for a question with no job. */
-export async function loadCompanyChannels(supabase: SupabaseClient<Database>, companyId: string) {
+export type CompanyChannelState = "always_on" | "off" | "waiting_for_approval" | "error" | "on";
+
+export type CompanyChannel = {
+  key: string;
+  name: string;
+  kind: string;
+  state: CompanyChannelState;
+  /** Feed and partner channels: the company turns them on or off in Settings → Distribution. */
+  canToggle: boolean;
+};
+
+/** The company-wide switch of each channel: Settings → Distribution, and the agent's question with no job. */
+export async function loadCompanyChannels(supabase: SupabaseClient<Database>, companyId: string): Promise<CompanyChannel[]> {
   const [channels, settings] = await Promise.all([
     supabase.from("distribution_channels").select("key, name, kind, enabled, requires_approval").order("name"),
     supabase.from("company_channel_settings").select("channel_key, enabled, approved_at, status").eq("company_id", companyId),
@@ -66,7 +77,7 @@ export async function loadCompanyChannels(supabase: SupabaseClient<Database>, co
   const settingOf = new Map((settings.data ?? []).map((s) => [s.channel_key, s]));
   return (channels.data ?? [])
     .filter((c) => c.enabled)
-    .map((c) => {
+    .map((c): CompanyChannel => {
       const setting = settingOf.get(c.key);
       const always = c.kind === "index";
       return {

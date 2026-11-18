@@ -41,6 +41,41 @@ export function distributionSuggestions(job: JobPost, p: { canManage: boolean })
   ];
 }
 
+/** Settings → Distribution's chips and their tools (no job: the company-wide switches). */
+export const CHANNEL_CHIP_TOOLS = {
+  "Which boards are on?": "getDistribution",
+  "Turn on a job board": "setDistribution",
+} as const;
+
+export const channelsPrompt = (question: string) => `About where my jobs are published: ${question.trim()}`;
+
+export function channelsSuggestions(p: { canManage: boolean }): AgentSuggestion[] {
+  return [
+    // getDistribution with no job (distribution.view, which the section needs)
+    {
+      label: "Which boards are on?",
+      prompt: "Which job boards are my jobs published on, and which are turned off?",
+    },
+    // setDistribution company-wide (distribution.manage with scope all; asks before changing)
+    ...when(p.canManage, {
+      label: "Turn on a job board",
+      prompt: "Which job boards are turned off for my company? Show me before turning any on.",
+    }),
+  ];
+}
+
+export function AskAgentAboutChannels({ canManage }: { canManage: boolean }) {
+  return (
+    <AskAgentBox
+      title="Ask the agent about distribution"
+      placeholder="Turn on Adzuna for all my jobs…"
+      basePath={COMPANY_AGENT_PATH}
+      suggestions={channelsSuggestions({ canManage })}
+      toPrompt={channelsPrompt}
+    />
+  );
+}
+
 export function AskAgentAboutDistribution({ job, canManage }: { job: JobPost; canManage: boolean }) {
   return (
     <AskAgentBox

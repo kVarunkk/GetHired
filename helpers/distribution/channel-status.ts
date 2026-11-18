@@ -2,6 +2,9 @@ import { checkEligibility, type EligibilityInput } from "@/helpers/distribution/
 
 /** MP-REQ-001: what the Distribution section shows for one channel of one job. Pure, client-safe. */
 
+/** Settings → Distribution: the company-wide switch of each channel. */
+export const DISTRIBUTION_SETTINGS_PATH = "/company/settings/distribution";
+
 export type ChannelKind = "index" | "feed" | "partner_api" | "byo_account";
 export type ChannelState = "live" | "queued" | "not_live" | "off" | "pending_approval" | "opted_out" | "error";
 

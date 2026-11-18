@@ -1,14 +1,22 @@
 "use client";
 
-import { useMemo, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable, { SortableHeader } from "@/components/DataTable";
-import { setChannelEnabledAction, setJobChannelOptOutAction } from "@/app/actions/distribution/channel-actions";
-import { Button } from "@/components/ui/button";
+import { setJobChannelOptOutAction } from "@/app/actions/distribution/channel-actions";
 import { Badge } from "@/components/ui/badge";
-import { KIND_LABELS, STATE_LABELS, type ChannelRow, type ChannelState } from "@/helpers/distribution/channel-status";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  DISTRIBUTION_SETTINGS_PATH,
+  KIND_LABELS,
+  STATE_LABELS,
+  type ChannelRow,
+  type ChannelState,
+} from "@/helpers/distribution/channel-status";
 
 const VARIANT: Record<ChannelState, "success" | "outline" | "secondary" | "destructive"> = {
   live: "success",
@@ -25,14 +33,11 @@ export default function DistributionTable({
   rows,
   jobId,
   canManage = false,
-  canManageAll = false,
 }: {
   rows: ChannelRow[];
   jobId?: string;
-  /** distribution.manage on this job: leave the job out of a channel. */
+  /** distribution.manage on this job: say Yes or No to each active channel. */
   canManage?: boolean;
-  /** distribution.manage for the whole company: turn a channel on or off. */
-  canManageAll?: boolean;
 }) {
   const columns: ColumnDef<ChannelRow>[] = useMemo(
     () => [
@@ -72,19 +77,18 @@ export default function DistributionTable({
             </ul>
           ),
       },
-      ...(canManage || canManageAll
+      ...(jobId
         ? [
             {
-              id: "actions",
-              header: "",
-              cell: ({ row }) => (
-                <ChannelActions row={row.original} jobId={jobId} canManage={canManage} canManageAll={canManageAll} />
-              ),
+              id: "post",
+              header: "Post this job",
+              meta: { className: "text-right", headerClassName: "text-right" },
+              cell: ({ row }) => <PostToChannel row={row.original} jobId={jobId} canManage={canManage} />,
             } satisfies ColumnDef<ChannelRow>,
           ]
         : []),
     ],
-    [jobId, canManage, canManageAll],
+    [jobId, canManage],
   );
 
   return (
@@ -100,54 +104,59 @@ export default function DistributionTable({
   );
 }
 
-/** Opt-in for the company and opt-out for the job, feed channels only (MP-REQ-011). */
-function ChannelActions({
-  row,
-  jobId,
-  canManage,
-  canManageAll,
-}: {
-  row: ChannelRow;
-  jobId?: string;
-  canManage: boolean;
-  canManageAll: boolean;
-}) {
+/** The kinds a job can opt out of; the rest are always on or set up elsewhere. */
+const OPTABLE_KINDS = new Set(["feed", "partner_api"]);
+
+/**
+ * MP-REQ-011: whether this job goes on the channel. Yes/No only: turning a
+ * channel on or off for every job lives in Settings → Distribution.
+ */
+function PostToChannel({ row, jobId, canManage }: { row: ChannelRow; jobId?: string; canManage: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  if (row.kind !== "feed") return null;
+  const [optimistic, setOptimistic] = useState<"yes" | "no" | null>(null);
 
-  const enabled = row.state !== "off";
-  const run = (action: () => Promise<{ ok: true } | { ok: false; error: string }>) =>
-    startTransition(async () => {
-      const result = await action();
-      if (!result.ok) toast.error(result.error);
-      else router.refresh();
-    });
+  if (row.kind === "index") return <span className="text-sm text-muted-foreground">Always</span>;
+  if (!OPTABLE_KINDS.has(row.kind)) return <span className="text-muted-foreground">—</span>;
+  if (row.state === "off") {
+    return (
+      <Link href={DISTRIBUTION_SETTINGS_PATH} className="text-sm text-muted-foreground underline underline-offset-4">
+        Off in Settings
+      </Link>
+    );
+  }
 
+  const value = optimistic ?? (row.state === "opted_out" ? "no" : "yes");
+  const name = `post-${row.key}`;
   return (
-    <div className="flex justify-end gap-2">
-      {enabled && canManage && jobId && (
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          onClick={() =>
-            run(() => setJobChannelOptOutAction({ jobId, channelKey: row.key, optedOut: row.state !== "opted_out" }))
-          }
-        >
-          {row.state === "opted_out" ? "Include this job" : "Leave this job out"}
-        </Button>
-      )}
-      {canManageAll && (
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          onClick={() => run(() => setChannelEnabledAction({ channelKey: row.key, enabled: !enabled }))}
-        >
-          {enabled ? "Turn off" : "Turn on"}
-        </Button>
-      )}
-    </div>
+    <RadioGroup
+      aria-label={`Post this job on ${row.name}`}
+      value={value}
+      disabled={!canManage || !jobId || pending}
+      className="flex justify-end gap-4"
+      onValueChange={(next) => {
+        if (!jobId || (next !== "yes" && next !== "no")) return;
+        setOptimistic(next);
+        startTransition(async () => {
+          const result = await setJobChannelOptOutAction({ jobId, channelKey: row.key, optedOut: next === "no" });
+          if (!result.ok) toast.error(result.error);
+          else router.refresh();
+          setOptimistic(null);
+        });
+      }}
+    >
+      <div className="flex items-center gap-1.5">
+        <RadioGroupItem value="yes" id={`${name}-yes`} />
+        <Label htmlFor={`${name}-yes`} className="font-normal">
+          Yes
+        </Label>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <RadioGroupItem value="no" id={`${name}-no`} />
+        <Label htmlFor={`${name}-no`} className="font-normal">
+          No
+        </Label>
+      </div>
+    </RadioGroup>
   );
 }

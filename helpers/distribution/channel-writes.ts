@@ -1,6 +1,7 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { DISTRIBUTION_SETTINGS_PATH } from "@/helpers/distribution/channel-status";
 import { enqueueFeedRebuild } from "@/helpers/distribution/feed-queue";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import type { Database } from "@/utils/types/database.types";
@@ -55,6 +56,7 @@ export async function setChannelEnabled(
 
   await enqueueFeedRebuild({ reason: "settings_changed" });
   revalidatePath("/company/job-posts", "layout");
+  revalidatePath(DISTRIBUTION_SETTINGS_PATH);
   return { ok: true };
 }
 
