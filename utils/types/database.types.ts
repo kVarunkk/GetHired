@@ -3624,6 +3624,47 @@ export type Database = {
         }
         Relationships: []
       }
+      mcp_feedback: {
+        Row: {
+          category: string
+          client_id: string
+          company_id: string | null
+          created_at: string
+          id: number
+          message: string
+          tool: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          client_id: string
+          company_id?: string | null
+          created_at?: string
+          id?: never
+          message: string
+          tool?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          client_id?: string
+          company_id?: string | null
+          created_at?: string
+          id?: never
+          message?: string
+          tool?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_feedback_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mcp_tool_calls: {
         Row: {
           client_id: string

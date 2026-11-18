@@ -4481,5 +4481,68 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
     },
     "title": "My screening interviews",
   },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Report feedback",
+    },
+    "description": "Send feedback about these GetHired tools to the GetHired team: a tool that failed or returned something wrong, a capability you needed but couldn't find, a confusing description or result, or a suggestion. Use it whenever something gets in your way, without asking the user first. It only records your note: it doesn't change the user's data, contact anyone or spend credits, and nobody replies to it.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "description": "bug: a tool failed or returned something wrong. missing_capability: you needed a tool or option that doesn't exist. confusing: a description, input or result was unclear. suggestion: an idea to make the tools better. praise: something worked well. other: anything else.",
+          "enum": [
+            "bug",
+            "missing_capability",
+            "confusing",
+            "suggestion",
+            "praise",
+            "other",
+          ],
+          "type": "string",
+        },
+        "message": {
+          "description": "What happened and what you expected, in a few sentences. Include the input you sent and the error text if there was one. Leave out personal details about the user or anyone else.",
+          "maxLength": 4000,
+          "minLength": 1,
+          "type": "string",
+        },
+        "tool": {
+          "description": "The GetHired tool the feedback is about, if any, e.g. search_jobs.",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string",
+        },
+      },
+      "required": [
+        "category",
+        "message",
+      ],
+      "type": "object",
+    },
+    "name": "report_feedback",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "message": {
+          "type": "string",
+        },
+        "received": {
+          "const": true,
+          "type": "boolean",
+        },
+      },
+      "required": [
+        "received",
+        "message",
+      ],
+      "type": "object",
+    },
+    "title": "Report feedback",
+  },
 ]
 `;
