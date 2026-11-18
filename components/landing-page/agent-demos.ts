@@ -104,7 +104,7 @@ export const APPLICANT_DEMO: AgentDemo = {
       ],
     },
   ],
-  suggestions: ["Review my resume", "Save the top two", "Only show jobs posted this week"],
+  suggestions: ["Review my resume", "Save the top two", "Show me more like these"],
 };
 
 // Candidate rows link to the talent pool: the sample profiles don't exist, so

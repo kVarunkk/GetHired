@@ -9,7 +9,7 @@ export default function AskApplicantAgent() {
   return (
     <AskAgentBox
       title="Ask your job search assistant"
-      placeholder="Find remote React jobs in Bangalore paying over 20 LPA…"
+      placeholder="Find React jobs that match my resume…"
       basePath={AGENT_PATH}
       suggestions={APPLICANT_STARTERS.map((prompt) => ({ label: prompt, prompt }))}
     />
