@@ -38,11 +38,11 @@ const MenuTrigger = React.forwardRef<HTMLButtonElement, MenuTriggerProps>(
           aria-label="Profile"
           {...props}
           className={cn(
-            "flex items-center rounded-lg hover:bg-secondary transition-colors",
+            "flex items-center transition-colors",
             isVertical
               ? // px-2 centres the 32px avatar in the collapsed rail.
-                "w-full px-2 py-2 gap-2 overflow-hidden"
-              : "h-9 w-9 justify-center",
+                "w-full gap-2 overflow-hidden rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+              : "h-9 w-9 justify-center rounded-lg hover:bg-secondary",
           )}
         >
           <AvatarComponent
@@ -51,17 +51,20 @@ const MenuTrigger = React.forwardRef<HTMLButtonElement, MenuTriggerProps>(
             isCompanyUser={isCompanyUser}
           />
           {isVertical && (
-            <SidebarLabel open={isMenuOpen}>
-              {roleLabel ? (
-                <span className="flex items-center gap-2">
-                  Profile
-                  <Badge variant="brand" className="px-1.5 py-0 text-[10px]">
+            <SidebarLabel
+              open={isMenuOpen}
+              trailing={
+                roleLabel ? (
+                  <Badge
+                    variant="brand"
+                    className="ml-2 px-1.5 py-0 text-[10px]"
+                  >
                     {roleLabel}
                   </Badge>
-                </span>
-              ) : (
-                "Profile"
-              )}
+                ) : undefined
+              }
+            >
+              Profile
             </SidebarLabel>
           )}
         </button>

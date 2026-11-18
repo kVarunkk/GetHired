@@ -30,6 +30,7 @@ import WaitlistCTA from "./WaitlistCTA";
 import ModifiedLink from "./ModifiedLink";
 import { COMPANY_HOME } from "@/helpers/user/home-path";
 import SidebarLabel from "./SidebarLabel";
+import { SIDEBAR_ROW, SIDEBAR_ROW_ACTIVE } from "./sidebar-row";
 import ScrollFade from "./ScrollFade";
 import ScrollMaskX from "./ScrollMaskX";
 import { useOpenOutreachCount } from "./outreach/useOpenOutreachCount";
@@ -270,20 +271,28 @@ export default function NavbarComponent({
         <div
           className={cn(
             // Brand and the bottom controls stay put; only the items scroll.
-            "h-screen flex-col gap-3 p-4 border-r overflow-hidden sticky top-0 shrink-0 transition-all duration-300 ease-in-out",
+            "h-screen flex-col gap-2 p-2 border-r overflow-hidden sticky top-0 shrink-0 transition-[width] duration-300 ease-in-out",
             "hidden md:flex",
-            isMenuOpen ? "w-52" : "w-20",
+            isMenuOpen ? "w-48" : "w-16",
           )}
         >
-          {/* Always the long logo at the collapsed rail's width (48px tall), clipped
-            by the sidebar: its left 48px is the short logo, so collapsing hides
-            the wordmark without swapping images or moving the mark. */}
+          {/* Always the long logo (32px tall, a row's height), clipped to its left
+            32px when collapsed: that square is the short logo, so collapsing
+            hides the wordmark without swapping images or moving the mark. px-2
+            centres the mark in the 64px rail, like the items' icons. */}
           <Link
             href={homeHref}
             aria-label="GetHired home"
-            className="block w-full shrink-0 overflow-hidden"
+            className="flex shrink-0 px-2 pt-2"
           >
-            <Brand type="long" className="h-12 w-[140px]" />
+            <span
+              className={cn(
+                "block overflow-hidden transition-[width] duration-300 ease-in-out",
+                isMenuOpen ? "w-[94px]" : "w-8",
+              )}
+            >
+              <Brand type="long" className="h-8 w-[94px]" />
+            </span>
           </Link>
 
           <ScrollFade
@@ -293,7 +302,7 @@ export default function NavbarComponent({
             revealKey={pathname}
           >
             {authResolved ? (
-              <div className="gap-4 text-sm flex flex-col items-start">
+              <div className="gap-0.5 text-sm flex flex-col items-start">
                 {navbarItems.map((item) => (
                   <Tooltip key={item.id} delayDuration={100}>
                     <TooltipTrigger asChild>
@@ -302,8 +311,8 @@ export default function NavbarComponent({
                         aria-current={item.active ? "page" : undefined}
                         className={cn(
                           // px-4 centres the 16px icon in the collapsed rail, so it never moves.
-                          "hover:bg-secondary transition-colors rounded-lg gap-2 items-center px-4 py-2 flex w-full overflow-hidden",
-                          item.active && "bg-secondary",
+                          SIDEBAR_ROW,
+                          item.active && SIDEBAR_ROW_ACTIVE,
                         )}
                       >
                         <span className="relative shrink-0">
@@ -315,9 +324,11 @@ export default function NavbarComponent({
                             />
                           )}
                         </span>
-                        <SidebarLabel open={isMenuOpen}>
+                        <SidebarLabel
+                          open={isMenuOpen}
+                          trailing={<NavCount count={item.count} />}
+                        >
                           {item.label}
-                          <NavCount count={item.count} />
                         </SidebarLabel>
                       </ModifiedLink>
                     </TooltipTrigger>
@@ -328,12 +339,12 @@ export default function NavbarComponent({
                 ))}
               </div>
             ) : (
-              <LoadingNav className="flex w-full flex-col gap-4">
+              <LoadingNav className="flex w-full flex-col gap-0.5">
                 {Array.from({ length: SIDEBAR_SKELETON_ROWS }, (_, index) => (
                   // Same geometry as a real item: px-4 keeps the icon centred when collapsed.
                   <div
                     key={index}
-                    className="flex items-center gap-2 px-4 py-2"
+                    className="flex items-center gap-2 px-4 py-1.5"
                   >
                     <SkeletonBar className="h-4 w-4 shrink-0" />
                     <SkeletonBar
@@ -348,14 +359,12 @@ export default function NavbarComponent({
             )}
           </ScrollFade>
 
-          <div className="shrink-0 justify-end flex flex-col gap-4">
+          <div className="shrink-0 justify-end flex flex-col gap-0.5">
             <Tooltip delayDuration={100}>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className={cn(
-                    "flex px-4 py-2 items-center w-full gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden",
-                  )}
+                  className={SIDEBAR_ROW}
                 >
                   {/* One chevron that turns, instead of swapping icons. */}
                   <ChevronRight
@@ -378,15 +387,15 @@ export default function NavbarComponent({
                 className="h-24 w-full animate-pulse rounded-lg bg-muted"
               />
             ) : user ? (
-              <div className="flex flex-col items-center gap-5">
+              <div className="flex flex-col items-center gap-0.5">
                 {/* GetHired from Claude, Cursor or VS Code: the MCP setup guide. */}
                 <Tooltip delayDuration={100}>
                   <TooltipTrigger asChild>
                     <Link
                       href={MCP_HREF}
                       className={cn(
-                        "flex px-4 py-2 items-center w-full gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden",
-                        pathname === MCP_HREF && "bg-secondary",
+                        SIDEBAR_ROW,
+                        pathname === MCP_HREF && SIDEBAR_ROW_ACTIVE,
                       )}
                     >
                       <ClaudeIcon className="h-4 w-4" />
@@ -408,10 +417,11 @@ export default function NavbarComponent({
                             : "/dashboard/buy-credits"
                         }
                         className={cn(
-                          "text-brand flex px-4 py-2 items-center w-full gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden",
+                          SIDEBAR_ROW,
+                          "text-brand hover:text-brand",
                           isCompanyUser &&
                             pathname.startsWith("/company/billing") &&
-                            "bg-secondary",
+                            SIDEBAR_ROW_ACTIVE,
                         )}
                       >
                         {isCompanyUser ? (
@@ -437,12 +447,12 @@ export default function NavbarComponent({
                 />
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-0.5">
                 <Tooltip delayDuration={100}>
                   <TooltipTrigger asChild>
                     <Link
                       className={cn(
-                        "hover:text-primary px-4 py-2 flex items-center gap-2 transition-colors rounded-lg hover:bg-secondary w-full overflow-hidden",
+                        SIDEBAR_ROW,
                       )}
                       href={"https://discord.gg/6xvKBqW5eW"}
                       target="_blank"

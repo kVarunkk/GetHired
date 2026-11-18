@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import ScrollMaskX from "@/components/ScrollMaskX";
 import SidebarLabel from "@/components/SidebarLabel";
+import { SIDEBAR_ROW, SIDEBAR_ROW_ACTIVE } from "@/components/sidebar-row";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/utils/utils";
 
@@ -126,9 +127,9 @@ export default function EntityNav({
                         href={item.href}
                         aria-current={active ? "page" : undefined}
                         className={cn(
-                          // px-4 centres the 16px icon in the collapsed rail, so it never moves.
-                          "flex items-center gap-2 overflow-hidden rounded-md px-4 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
-                          active && "bg-muted font-medium text-foreground",
+                          SIDEBAR_ROW,
+                          "[&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
+                          active && SIDEBAR_ROW_ACTIVE,
                         )}
                       >
                         {item.icon}
@@ -151,7 +152,7 @@ export default function EntityNav({
                 aria-controls="entity-nav"
                 aria-expanded={open}
                 onClick={() => setOpen((was) => !was)}
-                className="flex shrink-0 items-center gap-2 overflow-hidden rounded-md px-4 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
+                className={cn(SIDEBAR_ROW, "shrink-0")}
               >
                 {/* One chevron that turns, as in the main sidebar. */}
                 <ChevronRight
