@@ -110,7 +110,7 @@ function CompanyDetailBadges({
             variant={"outline"}
             key={detail.id}
             className={cn(
-              "text-xs sm:text-sm font-medium group-hover:border-secondary-foreground",
+              "rounded-full text-xs sm:text-sm font-medium group-hover:border-secondary-foreground",
             )}
           >
             {detail.value}
@@ -129,7 +129,7 @@ function CompanyDetailBadges({
           <Badge
             variant={"secondary"}
             className={cn(
-              "text-xs sm:text-sm font-medium hover:!text-secondary-foreground group-hover:border-secondary-foreground hover:underline",
+              "rounded-full text-xs sm:text-sm font-medium hover:!text-secondary-foreground group-hover:border-secondary-foreground hover:underline",
               "underline underline-offset-2 sm:no-underline",
             )}
           >
@@ -139,7 +139,7 @@ function CompanyDetailBadges({
       )}
 
       {isSuitable && (
-        <Badge variant="success" className="text-xs sm:text-sm font-medium">
+        <Badge variant="success" className="rounded-full text-xs sm:text-sm font-medium">
           Company Match
         </Badge>
       )}

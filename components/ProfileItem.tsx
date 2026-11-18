@@ -183,7 +183,7 @@ function ProfileDetailBadges({
             variant={"outline"}
             key={detail.id}
             className={cn(
-              "text-xs sm:text-sm font-medium group-hover:border-secondary-foreground",
+              "rounded-full text-xs sm:text-sm font-medium group-hover:border-secondary-foreground",
             )}
           >
             {detail.value}
@@ -191,7 +191,7 @@ function ProfileDetailBadges({
         ))}
 
       {isSuitable && (
-        <Badge variant="success" className="text-xs sm:text-sm font-medium">
+        <Badge variant="success" className="rounded-full text-xs sm:text-sm font-medium">
           Profile Match
         </Badge>
       )}
