@@ -9,8 +9,8 @@ type Result = { ok: true } | { ok: false; error: string };
 /**
  * SERVER ACTION (MP-REQ-011): the company opts in or out of one channel for
  * all its jobs. Needs `distribution.manage` with scope `all`. Nothing is
- * distributed until a company opts in; a channel that needs our approval
- * stays pending until `approved_at` is set.
+ * distributed until a company opts in; then its jobs go into the feed at
+ * the next build.
  */
 export async function setChannelEnabledAction({
   channelKey,

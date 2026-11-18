@@ -30,7 +30,7 @@ export const STATE_LABELS: Record<ChannelState, string> = {
   queued: "Queued",
   not_live: "Not live",
   off: "Off",
-  pending_approval: "Not approved yet",
+  pending_approval: "Waiting for the board",
   opted_out: "Opted out",
   error: "Error",
 };
@@ -69,7 +69,6 @@ export function buildChannelRows({
       if (kind !== "index") {
         const setting = settingOf.get(c.key);
         if (!setting?.enabled) return row("off", ["Not turned on for your company"]);
-        if (c.requires_approval && !setting.approved_at) return row("pending_approval", ["Not approved yet"]);
         if (setting.status === "error") return row("error", ["The channel reported a problem"]);
         if (posting?.status === "opted_out") return row("opted_out", ["Left out for this job"]);
       }
@@ -77,7 +76,16 @@ export function buildChannelRows({
       if (jobStatus !== "active") return row("not_live", ["The job isn't active"]);
       if (!eligibility.eligible) return row("not_live", eligibility.reasons.map((r) => r.message));
       if (posting?.status === "error") return row("error", [posting.reason ?? "The last push failed"]);
-      if (kind !== "index" && posting?.status !== "live") return row("queued", ["Waiting for the next feed build"]);
+      if (kind === "index") return row("live");
+      // `requires_approval` is the board's approval of GetHired, set once per
+      // channel. Feeds carry the job either way, so the board can review them.
+      if (c.requires_approval) {
+        return row("pending_approval", [
+          kind === "feed" ? `In the feed. ${c.name} hasn't approved GetHired yet` : `${c.name} hasn't approved GetHired yet`,
+        ]);
+      }
+      if (kind === "feed") return row("live");
+      if (posting?.status !== "live") return row("queued", ["Waiting for the next push"]);
       return row("live");
     });
 }

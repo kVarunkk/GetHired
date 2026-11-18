@@ -38,15 +38,16 @@ describe("setChannelEnabledAction", () => {
     expect(enqueueFeedRebuild).not.toHaveBeenCalled();
   });
 
-  it("opts in as pending when the channel needs approval, then queues a rebuild", async () => {
+  it("opts in as live even before the board approves GetHired, then queues a rebuild", async () => {
     await signInAs(OWNER_A);
     db.queue("distribution_channels", { data: FEED, error: null });
     service.queue("company_channel_settings", { data: null, error: null });
-    service.queue("company_channel_settings", { data: null, error: null });
     const result = await setChannelEnabledAction({ channelKey: "jooble", enabled: true });
     expect(result).toEqual({ ok: true });
-    const upsert = service.callsFor("company_channel_settings")[1].chain.find((c) => c.method === "upsert");
-    expect(upsert?.args[0]).toMatchObject({ channel_key: "jooble", enabled: true, status: "pending" });
+    const calls = service.callsFor("company_channel_settings");
+    expect(calls).toHaveLength(1);
+    const upsert = calls[0].chain.find((c) => c.method === "upsert");
+    expect(upsert?.args[0]).toMatchObject({ channel_key: "jooble", enabled: true, status: "live" });
     expect(enqueueFeedRebuild).toHaveBeenCalledWith({ reason: "settings_changed" });
   });
 

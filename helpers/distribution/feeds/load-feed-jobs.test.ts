@@ -78,6 +78,13 @@ describe("toFeedJob", () => {
     expect(toFeedJob(row({ location: ["bengaluru", " pune ", "", "Pune"] }))!.locations).toEqual(["Bengaluru", "Pune"]);
   });
 
+  it("skips 'Remote' and prefers an Indian city for the job's city", () => {
+    const job = toFeedJob(
+      row({ location: ["Remote", "San Francisco", "Bengaluru"], workplace_type: "remote" }),
+    );
+    expect(job).toMatchObject({ city: "Bengaluru", state: "Karnataka", locations: ["San Francisco", "Bengaluru"] });
+  });
+
   it("accepts a remote job with no location", () => {
     expect(toFeedJob(row({ location: [], workplace_type: "remote" }))?.workplace).toBe("remote");
   });

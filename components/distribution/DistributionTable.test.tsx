@@ -14,15 +14,15 @@ describe("DistributionTable", () => {
       <DistributionTable
         rows={[
           { key: "google", name: "Google for Jobs", kind: "index", state: "live", reasons: [] },
-          { key: "jooble", name: "Jooble", kind: "feed", state: "pending_approval", reasons: ["Not approved yet"] },
+          { key: "jooble", name: "Jooble", kind: "feed", state: "pending_approval", reasons: ["In the feed. Jooble hasn't approved GetHired yet"] },
           { key: "adzuna", name: "Adzuna", kind: "feed", state: "not_live", reasons: ["Missing location", "Missing apply link"] },
         ]}
       />,
     );
     expect(screen.getByText("Google for Jobs")).toBeInTheDocument();
     expect(screen.getByText("Live")).toBeInTheDocument();
-    // The badge and the detail both say it.
-    expect(screen.getAllByText("Not approved yet")).toHaveLength(2);
+    expect(screen.getByText("Waiting for the board")).toBeInTheDocument();
+    expect(screen.getByText("In the feed. Jooble hasn't approved GetHired yet")).toBeInTheDocument();
     expect(screen.getByText("Missing location")).toBeInTheDocument();
     expect(screen.getByText("Missing apply link")).toBeInTheDocument();
   });

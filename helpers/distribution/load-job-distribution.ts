@@ -77,7 +77,7 @@ export async function loadCompanyChannels(supabase: SupabaseClient<Database>, co
           ? "always_on"
           : !setting?.enabled
             ? "off"
-            : c.requires_approval && !setting.approved_at
+            : c.requires_approval
               ? "waiting_for_approval"
               : setting.status === "error"
                 ? "error"
