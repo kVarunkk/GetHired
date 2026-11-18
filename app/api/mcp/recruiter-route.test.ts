@@ -39,6 +39,7 @@ import { forbiddenMessage } from "@/helpers/companies/permissions";
 import { mcpCompanyRefusalCopy, mcpNoAccountTypeCopy } from "@/helpers/mcp/copy";
 import { RECRUITER_MCP_TOOLS } from "@/helpers/mcp/recruiter-tools";
 import { MCP_TOOLS } from "@/helpers/mcp/tools";
+import { REPORT_FEEDBACK_TOOL_NAME } from "@/helpers/mcp/feedback";
 import { DEFAULT_PIPELINE_ID } from "@/test/utils/pipeline";
 import { POST } from "./route";
 
@@ -155,14 +156,14 @@ describe("who gets which tools (RMCP-REQ-008)", () => {
   it("an applicant still gets the applicant catalog", async () => {
     signIn(mockUser({ id: "00000000-0000-4000-8000-000000000001", type: "applicant" }));
 
-    expect(await names()).toEqual(MCP_TOOLS.map((tool) => tool.name).sort());
+    expect(await names()).toEqual([...MCP_TOOLS.map((tool) => tool.name), REPORT_FEEDBACK_TOOL_NAME].sort());
     expect(supabase.callsFor("my_company_access")).toHaveLength(0);
   });
 
   it("an owner gets every recruiter tool, and none of the applicant ones", async () => {
     signInAs(OWNER_A);
 
-    expect(await names()).toEqual(RECRUITER_MCP_TOOLS.map((tool) => tool.name).sort());
+    expect(await names()).toEqual([...RECRUITER_MCP_TOOLS.map((tool) => tool.name), REPORT_FEEDBACK_TOOL_NAME].sort());
   });
 
   it("an Admin gets the recruiter catalog", async () => {
@@ -361,6 +362,24 @@ describe("tools/call round trips", () => {
     expect(insert?.args[0]).toEqual({ company_id: COMPANY_A.id, user_id: CANDIDATE });
   });
 
+  it("report_feedback records the note with the session company", async () => {
+    const body = await call("report_feedback", { category: "missing_capability", message: "No way to bulk-archive jobs." });
+
+    expect(body.result.structuredContent).toMatchObject({ received: true });
+    const insert = supabase
+      .callsFor("mcp_feedback")
+      .flatMap((c) => c.chain)
+      .find((step) => step.method === "insert");
+    expect(insert?.args[0]).toEqual({
+      user_id: OWNER_A.user.id,
+      client_id: expect.any(String),
+      category: "missing_capability",
+      message: "No way to bulk-archive jobs.",
+      tool: null,
+      company_id: COMPANY_A.id,
+    });
+  });
+
   it("answers a confirm tool with its preview and a token, and runs nothing yet", async () => {
     supabase.queue("job_postings", { data: { id: JOB_A1, title: "Frontend Engineer", status: "active" }, error: null });
 
@@ -399,7 +418,10 @@ describe("toolsets on the URL (RMT-051, RMCP spec §4.5)", () => {
   const namesAt = async (query: string) =>
     ((await listAt(query)).body.result.tools as { name: string }[]).map((tool) => tool.name).sort();
   const rowsIn = (...toolsets: string[]) =>
-    RECRUITER_MCP_TOOLS.filter((tool) => toolsets.includes(tool.toolset)).map((tool) => tool.name).sort();
+    [
+      ...RECRUITER_MCP_TOOLS.filter((tool) => toolsets.includes(tool.toolset)).map((tool) => tool.name),
+      ...(toolsets.includes("core") ? [REPORT_FEEDBACK_TOOL_NAME] : []),
+    ].sort();
 
   it("lists only the named toolsets, plus core", async () => {
     signInAs(OWNER_A);
@@ -419,6 +441,7 @@ describe("toolsets on the URL (RMT-051, RMCP spec §4.5)", () => {
         "get_interview_plan",
         "get_my_company",
         "list_scheduled_interviews",
+        "report_feedback",
         "summarize_feedback",
       ].sort(),
     );
@@ -440,7 +463,11 @@ describe("toolsets on the URL (RMT-051, RMCP spec §4.5)", () => {
     const { body } = await listAt("?readonly=true");
     const tools = body.result.tools as { name: string; annotations: { readOnlyHint: boolean } }[];
     expect(tools.length).toBeGreaterThan(0);
-    expect(tools.every((tool) => tool.annotations.readOnlyHint)).toBe(true);
+    // report_feedback only writes a note for the team, so it stays on read-only connections.
+    expect(
+      tools.filter((tool) => tool.name !== REPORT_FEEDBACK_TOOL_NAME).every((tool) => tool.annotations.readOnlyHint),
+    ).toBe(true);
+    expect(tools.map((tool) => tool.name)).toContain(REPORT_FEEDBACK_TOOL_NAME);
     expect(tools.map((tool) => tool.name)).toContain("explain_match");
     expect(tools.map((tool) => tool.name)).not.toContain("create_stage");
   });
@@ -495,7 +522,7 @@ describe("toolsets on the URL (RMT-051, RMCP spec §4.5)", () => {
 
     const { status } = await listAt("?toolsets=payments&readonly=true");
     expect(status).toBe(200);
-    expect(await namesAt("?toolsets=jobs&readonly=true")).toEqual(MCP_TOOLS.map((tool) => tool.name).sort());
+    expect(await namesAt("?toolsets=jobs&readonly=true")).toEqual([...MCP_TOOLS.map((tool) => tool.name), REPORT_FEEDBACK_TOOL_NAME].sort());
   });
 
   it("still points a 401 to the path's metadata on a URL with a query", async () => {

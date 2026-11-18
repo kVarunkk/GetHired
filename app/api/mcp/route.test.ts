@@ -12,6 +12,7 @@ import { searchJobs } from "@/helpers/jobs/search-jobs";
 import { parseJobQuery } from "@/helpers/jobs/parse-job-query";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { MCP_TOOLS } from "@/helpers/mcp/tools";
+import { REPORT_FEEDBACK_TOOL_NAME } from "@/helpers/mcp/feedback";
 import { MCP_CALLS_PER_MINUTE } from "@/helpers/mcp/config";
 import { previewAgentApplication } from "@/helpers/applications/preview-agent-application";
 import { loadApplicationTarget } from "@/helpers/applications/agent-application";
@@ -133,7 +134,9 @@ describe("/api/mcp tools/list", () => {
 
     expect(status).toBe(200);
     const tools = body.result.tools as { name: string; title: string; annotations: object; inputSchema: object }[];
-    expect(tools.map((tool) => tool.name).sort()).toEqual(MCP_TOOLS.map((tool) => tool.name).sort());
+    expect(tools.map((tool) => tool.name).sort()).toEqual(
+      [...MCP_TOOLS.map((tool) => tool.name), REPORT_FEEDBACK_TOOL_NAME].sort(),
+    );
     expect(tools.find((tool) => tool.name === "get_job_details")).toMatchObject({
       title: "Job details",
       annotations: { readOnlyHint: true, openWorldHint: false },
@@ -148,7 +151,7 @@ describe("/api/mcp tools/list", () => {
 
     const { body } = await rpc(await POST(modernRequest("tools/list", {}, { headers: HEADERS })));
 
-    expect(body.result.tools).toHaveLength(MCP_TOOLS.length);
+    expect(body.result.tools).toHaveLength(MCP_TOOLS.length + 1);
     expect(body.result.tools.map((tool: { name: string }) => tool.name)).toContain("complete_onboarding");
   });
 
@@ -219,6 +222,43 @@ describe("/api/mcp tools/call", () => {
     expect(body.result.structuredContent).toEqual({ jobId: JOB_ID, saved: true });
     const insert = supabase.callsFor("user_favorites").at(-1)!.chain.find((step) => step.method === "insert");
     expect(insert?.args[0]).toEqual({ user_id: applicant.id, job_id: JOB_ID });
+  });
+
+  it("report_feedback records the note for the token's user and OAuth client", async () => {
+    const { body } = await rpc(
+      await call("report_feedback", { category: "bug", message: "  search_jobs ignored my location.  ", tool: "search_jobs" }),
+    );
+
+    expect(body.result.isError).toBeFalsy();
+    expect(body.result.structuredContent).toMatchObject({ received: true });
+    const insert = supabase.callsFor("mcp_feedback").at(-1)!.chain.find((step) => step.method === "insert");
+    expect(insert?.args[0]).toEqual({
+      user_id: applicant.id,
+      client_id: "client-1",
+      category: "bug",
+      message: "search_jobs ignored my location.",
+      tool: "search_jobs",
+    });
+  });
+
+  it("report_feedback rejects an unknown category or an empty message", async () => {
+    for (const args of [
+      { category: "rant", message: "x" },
+      { category: "bug", message: "   " },
+    ]) {
+      const { body } = await rpc(await call("report_feedback", args));
+      expect(body.result.isError).toBe(true);
+    }
+    expect(supabase.callsFor("mcp_feedback")).toHaveLength(0);
+  });
+
+  it("report_feedback answers a failed insert with a generic tool error", async () => {
+    supabase.queue("mcp_feedback", { data: null, error: { message: "boom" } });
+
+    const { body } = await rpc(await call("report_feedback", { category: "other", message: "hi" }));
+
+    expect(body.result).toMatchObject({ isError: true });
+    expect(body.result.content[0].text).toMatch(/Something went wrong while running report_feedback/);
   });
 
   it("turns a tool's { error } into an isError result", async () => {

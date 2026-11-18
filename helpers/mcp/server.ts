@@ -16,6 +16,7 @@ import { deploymentUrl } from "@/utils/formatters";
 import { resolveMcpCompany } from "./company";
 import { MCP_SERVER_VERSION, MCP_TOOLS_LIST_TTL_MS, mcpServerInfo } from "./config";
 import { runConfirmed } from "./confirm";
+import { reportFeedbackTool } from "./feedback";
 import { mcpCompanyRefusalCopy, mcpNoAccountTypeCopy } from "./copy";
 import { runMcpCall } from "./limits";
 import { RECRUITER_MCP_NAMES, RECRUITER_MCP_TOOLS } from "./recruiter-tools";
@@ -144,7 +145,7 @@ export async function buildMcpServer({
   if (type === "applicant") {
     const server = newServer(applicantInstructions());
     registerCatalog(server, clientId, {
-      defs: MCP_TOOLS,
+      defs: [...MCP_TOOLS, reportFeedbackTool({ clientId })],
       ctx,
       tools: createAgentTools(ctx),
       policy: APPLICANT_APPROVAL_POLICY,
@@ -163,12 +164,16 @@ export async function buildMcpServer({
   const tools = createRecruiterTools(companyCtx);
   const server = newServer(companyInstructions(toolsets, readonly));
   registerCatalog(server, clientId, {
-    defs: RECRUITER_MCP_TOOLS.filter(
-      (def) =>
-        def.agentTools.every((name) => name in tools) &&
-        toolsets.has(def.toolset) &&
-        (!readonly || def.annotations.readOnlyHint),
-    ),
+    defs: [
+      ...RECRUITER_MCP_TOOLS.filter(
+        (def) =>
+          def.agentTools.every((name) => name in tools) &&
+          toolsets.has(def.toolset) &&
+          (!readonly || def.annotations.readOnlyHint),
+      ),
+      // Feedback only writes a note for the team, so it's listed even on a read-only connection.
+      reportFeedbackTool({ clientId, companyId: resolved.company.id }),
+    ],
     ctx: companyCtx,
     tools,
     policy: RECRUITER_APPROVAL_POLICY,
