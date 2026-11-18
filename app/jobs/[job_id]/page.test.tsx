@@ -6,6 +6,9 @@ import JobPage from "./page";
 
 vi.mock("@/helpers/jobs/jobId/get-job-details", () => ({ getStaticJobDetails: vi.fn() }));
 vi.mock("@/components/JobClientHydrator", () => ({ default: () => null }));
+vi.mock("@/components/jobs/JobSourceProvider", () => ({
+  default: ({ children }: { children: React.ReactNode }) => children,
+}));
 vi.mock("@/components/PageHeader", () => ({ BackLink: () => null }));
 vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => {

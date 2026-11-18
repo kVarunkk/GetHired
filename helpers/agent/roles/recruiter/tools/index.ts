@@ -4,6 +4,7 @@ import { createApplicantTools } from "./applicants";
 import { createCandidateTools } from "./candidates";
 import { createCareersTools } from "./careers";
 import { createCompanyTools } from "./company";
+import { createDistributionTools } from "./distribution";
 import { createImportTools } from "./imports";
 import { createInterviewTools } from "./interviews";
 import { createJobTools } from "./jobs";
@@ -41,6 +42,7 @@ export function createAllRecruiterTools(ctx: RecruiterToolContext) {
     ...createOutreachTools(ctx),
     ...createRoleTools(ctx),
     ...createCareersTools(ctx),
+    ...createDistributionTools(ctx),
     ...createInterviewTools(ctx),
     ...createSchedulingTools(ctx),
     ...createRecruiterMemoryTools(ctx),

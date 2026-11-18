@@ -754,6 +754,7 @@ export type Database = {
           applicant_user_id: string | null
           company_candidate_id: string | null
           created_at: string
+          external_application_id: string | null
           form_snapshot: Json | null
           id: string
           import_batch_id: string | null
@@ -778,6 +779,7 @@ export type Database = {
           applicant_user_id?: string | null
           company_candidate_id?: string | null
           created_at?: string
+          external_application_id?: string | null
           form_snapshot?: Json | null
           id?: string
           import_batch_id?: string | null
@@ -802,6 +804,7 @@ export type Database = {
           applicant_user_id?: string | null
           company_candidate_id?: string | null
           created_at?: string
+          external_application_id?: string | null
           form_snapshot?: Json | null
           id?: string
           import_batch_id?: string | null
@@ -1509,6 +1512,51 @@ export type Database = {
           },
         ]
       }
+      channel_events: {
+        Row: {
+          channel_key: string
+          created_at: string
+          id: number
+          idempotency_key: string | null
+          job_id: string | null
+          kind: string
+          payload: Json
+        }
+        Insert: {
+          channel_key: string
+          created_at?: string
+          id?: never
+          idempotency_key?: string | null
+          job_id?: string | null
+          kind: string
+          payload?: Json
+        }
+        Update: {
+          channel_key?: string
+          created_at?: string
+          id?: never
+          idempotency_key?: string | null
+          job_id?: string | null
+          kind?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_events_channel_key_fkey"
+            columns: ["channel_key"]
+            isOneToOne: false
+            referencedRelation: "distribution_channels"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "channel_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_audit_log: {
         Row: {
           action: string
@@ -1783,6 +1831,51 @@ export type Database = {
           },
         ]
       }
+      company_channel_settings: {
+        Row: {
+          approved_at: string | null
+          channel_key: string
+          company_id: string
+          config_encrypted: string | null
+          enabled: boolean
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          channel_key: string
+          company_id: string
+          config_encrypted?: string | null
+          enabled?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          channel_key?: string
+          company_id?: string
+          config_encrypted?: string | null
+          enabled?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_channel_settings_channel_key_fkey"
+            columns: ["channel_key"]
+            isOneToOne: false
+            referencedRelation: "distribution_channels"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "company_channel_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_credit_ledger: {
         Row: {
           company_id: string
@@ -1842,44 +1935,6 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "payments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      company_pipelines: {
-        Row: {
-          archived: boolean
-          company_id: string
-          created_at: string
-          id: string
-          is_default: boolean
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          archived?: boolean
-          company_id: string
-          created_at?: string
-          id?: string
-          is_default?: boolean
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          archived?: boolean
-          company_id?: string
-          created_at?: string
-          id?: string
-          is_default?: boolean
-          name?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_pipelines_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "company_info"
             referencedColumns: ["id"]
           },
         ]
@@ -2300,6 +2355,44 @@ export type Database = {
         }
         Relationships: []
       }
+      company_pipelines: {
+        Row: {
+          archived: boolean
+          company_id: string
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          company_id: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_pipelines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_question_sets: {
         Row: {
           company_id: string
@@ -2670,6 +2763,30 @@ export type Database = {
           id?: string
           iso?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      distribution_channels: {
+        Row: {
+          enabled: boolean
+          key: string
+          kind: string
+          name: string
+          requires_approval: boolean
+        }
+        Insert: {
+          enabled?: boolean
+          key: string
+          kind: string
+          name: string
+          requires_approval?: boolean
+        }
+        Update: {
+          enabled?: boolean
+          key?: string
+          kind?: string
+          name?: string
+          requires_approval?: boolean
         }
         Relationships: []
       }
@@ -3111,6 +3228,51 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "user_info"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      job_channel_postings: {
+        Row: {
+          channel_key: string
+          external_job_id: string | null
+          job_id: string
+          last_pushed_at: string | null
+          last_seen_at: string | null
+          reason: string | null
+          status: string
+        }
+        Insert: {
+          channel_key: string
+          external_job_id?: string | null
+          job_id: string
+          last_pushed_at?: string | null
+          last_seen_at?: string | null
+          reason?: string | null
+          status?: string
+        }
+        Update: {
+          channel_key?: string
+          external_job_id?: string | null
+          job_id?: string
+          last_pushed_at?: string | null
+          last_seen_at?: string | null
+          reason?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_channel_postings_channel_key_fkey"
+            columns: ["channel_key"]
+            isOneToOne: false
+            referencedRelation: "distribution_channels"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "job_channel_postings_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5053,10 +5215,15 @@ export type Database = {
         Args: { p_kind: Database["public"]["Enums"]["pipeline_stage_kind"] }
         Returns: Database["public"]["Enums"]["application_status"]
       }
+      apply_job_pipeline: {
+        Args: { p_job_post_id: string; p_mapping: Json; p_pipeline_id: string }
+        Returns: Json
+      }
       apply_subscription_event: {
         Args: { p_company_id: string; p_event: Json }
         Returns: Json
       }
+      archive_pipeline: { Args: { p_pipeline_id: string }; Returns: Json }
       assign_job: {
         Args: {
           p_actor_kind?: string
@@ -5069,9 +5236,19 @@ export type Database = {
         Args: { p_job_post_id: string; p_user_id: string }
         Returns: undefined
       }
+      attach_board_resume: {
+        Args: {
+          p_candidate_id: string
+          p_content?: Json
+          p_fields?: Json
+          p_path: string
+        }
+        Returns: Json
+      }
       audit_actor_kind: { Args: { p_kind: string }; Returns: string }
       awaiting_candidate_alert_after: { Args: never; Returns: string }
       backfill_company_roles: { Args: never; Returns: number }
+      backfill_job_pipelines: { Args: never; Returns: undefined }
       backfill_recruiter_pipeline: { Args: never; Returns: undefined }
       billing_allowance_used: {
         Args: { p_company_id: string; p_key: string }
@@ -5284,12 +5461,6 @@ export type Database = {
         }
         Returns: Json
       }
-      apply_job_pipeline: {
-        Args: { p_job_post_id: string; p_mapping: Json; p_pipeline_id: string }
-        Returns: Json
-      }
-      archive_pipeline: { Args: { p_pipeline_id: string }; Returns: Json }
-      backfill_job_pipelines: { Args: never; Returns: undefined }
       copy_interview_plan: {
         Args: { p_from_job: string; p_to_job: string }
         Returns: Json
@@ -5310,10 +5481,6 @@ export type Database = {
         }
         Returns: Json
       }
-      create_pipeline: {
-        Args: { p_from_pipeline?: string; p_name: string }
-        Returns: Json
-      }
       create_imported_application: {
         Args: {
           p_batch_id: string
@@ -5322,6 +5489,10 @@ export type Database = {
           p_stage_id: string
         }
         Returns: string
+      }
+      create_pipeline: {
+        Args: { p_from_pipeline?: string; p_name: string }
+        Returns: Json
       }
       create_scheduled_interview: {
         Args: {
@@ -5612,6 +5783,10 @@ export type Database = {
         }
         Returns: Json
       }
+      import_job_stage: {
+        Args: { p_job_post_id: string; p_stage_id: string }
+        Returns: string
+      }
       import_links: { Args: { p_row: Json }; Returns: Json }
       import_list: { Args: { p_key: string; p_row: Json }; Returns: string[] }
       import_row_for_update: {
@@ -5623,10 +5798,6 @@ export type Database = {
           row_id: string
           status: string
         }[]
-      }
-      import_job_stage: {
-        Args: { p_job_post_id: string; p_stage_id: string }
-        Returns: string
       }
       import_stage: {
         Args: { p_company: string; p_stage_id: string }
@@ -5643,6 +5814,16 @@ export type Database = {
         Returns: {
           error: true
         } & "the function public.industry_preferences_search with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
+      }
+      ingest_board_application: {
+        Args: {
+          p_applicant: Json
+          p_channel: string
+          p_external_id: string
+          p_job_ref: string
+          p_payload?: Json
+        }
+        Returns: Json
       }
       interview_candidate_contact: {
         Args: { p_application_id: string }
@@ -6196,12 +6377,12 @@ export type Database = {
         Returns: Json
       }
       remove_import_row: { Args: { p_row_id: string }; Returns: Json }
-      renew_scheduling_link: {
-        Args: { p_id: string; p_token_hash: string }
-        Returns: Json
-      }
       rename_pipeline: {
         Args: { p_name: string; p_pipeline_id: string }
+        Returns: Json
+      }
+      renew_scheduling_link: {
+        Args: { p_id: string; p_token_hash: string }
         Returns: Json
       }
       reorder_pipeline_stages: { Args: { p_ids: string[] }; Returns: undefined }
@@ -6430,12 +6611,12 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: undefined
       }
-      seed_pipeline_stages: {
-        Args: { p_pipeline_id: string }
-        Returns: undefined
-      }
       seed_default_templates: {
         Args: { p_company_id: string }
+        Returns: undefined
+      }
+      seed_pipeline_stages: {
+        Args: { p_pipeline_id: string }
         Returns: undefined
       }
       send_candidate_outreach: {

@@ -17,15 +17,22 @@ import {
   getScreeningInviteForApplication,
   type ScreeningInviteSummary,
 } from "@/helpers/interview/screening/my-interviews";
+import { KNOWN_CHANNELS } from "@/helpers/distribution/source-tag";
 import { PostHogEvent, TAICredits } from "@/utils/types";
 import type { Database, Json } from "@/utils/types/database.types";
+
+/** MP-REQ-006: a job board application keeps a known channel, anything else is `other`. */
+const boardChannel = (ref?: string) => {
+  const channel = ref?.toLowerCase() ?? "";
+  return (KNOWN_CHANNELS as readonly string[]).includes(channel) ? channel : "other";
+};
 
 const inputSchema = z
   .object({
     allJobsId: z.string().uuid(),
     resumeId: z.string().uuid().optional(),
     answers: z.record(z.unknown()),
-    source: z.enum(["applied", "careers_page"]).optional(),
+    source: z.enum(["applied", "careers_page", "job_board"]).optional(),
     ref: z
       .string()
       .trim()
@@ -177,7 +184,7 @@ export async function submitApplication(
       form_snapshot: publicApplicationForm(form) as unknown as Json,
       ...buildResumeSnapshot(sent),
       source: interested && interested.length > 0 ? "outreach" : source,
-      source_detail: ref ? ref.toLowerCase() : null,
+      source_detail: source === "job_board" ? boardChannel(ref) : ref ? ref.toLowerCase() : null,
     })
     .select("id")
     .single();

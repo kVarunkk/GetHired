@@ -31,6 +31,7 @@ import ModifiedLink from "./ModifiedLink";
 import { COMPANY_HOME } from "@/helpers/user/home-path";
 import SidebarLabel from "./SidebarLabel";
 import ScrollFade from "./ScrollFade";
+import ScrollMaskX from "./ScrollMaskX";
 import { useOpenOutreachCount } from "./outreach/useOpenOutreachCount";
 import useSWR from "swr";
 import { Button } from "./ui/button";
@@ -200,28 +201,37 @@ export default function NavbarComponent({
               ))}
             </LoadingNav>
           ) : (
-            <nav
-              aria-label="Main"
+            // Fills the space between the logo and the controls and scrolls when
+            // the links don't fit, with the active one kept in view.
+            <div
               className={cn(
-                "absolute left-1/2 -translate-x-1/2 items-center gap-4 text-sm hidden",
-                wideNav ? "xl:flex" : "lg:flex",
+                "hidden min-w-0 flex-1 px-4",
+                wideNav ? "xl:block" : "lg:block",
               )}
             >
-              {inlineItems.map((item) => (
-                <ModifiedLink
-                  key={item.id}
-                  href={item.href}
-                  className={cn(
-                    // nowrap: two-word labels ("Job Posts") stay on one line.
-                    "whitespace-nowrap hover:underline underline-offset-2",
-                    item.active && "underline underline-offset-2",
-                  )}
+              <ScrollMaskX revealSelector='[aria-current="page"]' revealKey={pathname}>
+                <nav
+                  aria-label="Main"
+                  className="mx-auto flex w-max items-center gap-4 text-sm"
                 >
-                  {item.label}
-                  <NavCount count={item.count} />
-                </ModifiedLink>
-              ))}
-            </nav>
+                  {inlineItems.map((item) => (
+                    <ModifiedLink
+                      key={item.id}
+                      href={item.href}
+                      aria-current={item.active ? "page" : undefined}
+                      className={cn(
+                        // nowrap: two-word labels ("Job Posts") stay on one line.
+                        "whitespace-nowrap hover:underline underline-offset-2",
+                        item.active && "underline underline-offset-2",
+                      )}
+                    >
+                      {item.label}
+                      <NavCount count={item.count} />
+                    </ModifiedLink>
+                  ))}
+                </nav>
+              </ScrollMaskX>
+            </div>
           )}
 
           <div className="flex shrink-0 justify-end">
@@ -276,7 +286,12 @@ export default function NavbarComponent({
             <Brand type="long" className="h-12 w-[140px]" />
           </Link>
 
-          <ScrollFade className="flex-1" contentClassName="py-1">
+          <ScrollFade
+            className="flex-1"
+            contentClassName="py-1"
+            revealSelector='[aria-current="page"]'
+            revealKey={pathname}
+          >
             {authResolved ? (
               <div className="gap-4 text-sm flex flex-col items-start">
                 {navbarItems.map((item) => (
@@ -284,6 +299,7 @@ export default function NavbarComponent({
                     <TooltipTrigger asChild>
                       <ModifiedLink
                         href={item.href}
+                        aria-current={item.active ? "page" : undefined}
                         className={cn(
                           // px-4 centres the 16px icon in the collapsed rail, so it never moves.
                           "hover:bg-secondary transition-colors rounded-lg gap-2 items-center px-4 py-2 flex w-full overflow-hidden",

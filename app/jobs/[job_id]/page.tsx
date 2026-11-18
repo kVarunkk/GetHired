@@ -2,6 +2,7 @@ import { shareImages, twitterShareImages } from "@/helpers/seo/share-image";
 import { notFound } from "next/navigation";
 import { BackLink } from "@/components/PageHeader";
 import JobClientHydrator from "@/components/JobClientHydrator";
+import JobSourceProvider from "@/components/jobs/JobSourceProvider";
 import { Metadata } from "next";
 import { buildJobPostingJsonLd } from "@/helpers/jobs/jobId/jsonld";
 import { getStaticJobDetails } from "@/helpers/jobs/jobId/get-job-details";
@@ -78,7 +79,9 @@ export default async function JobPage({
       ) : null}
       <BackLink href="/jobs" label="Back to jobs" />
 
-      <JobClientHydrator job={job} />
+      <JobSourceProvider jobId={job.id}>
+        <JobClientHydrator job={job} />
+      </JobSourceProvider>
     </div>
   );
 }

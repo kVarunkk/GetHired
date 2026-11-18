@@ -536,3 +536,38 @@ describe("grantSummary (RP-REQ-014)", () => {
     ).toBe("2 permissions · assigned jobs only for 1");
   });
 });
+
+describe("distribution keys (MPT-011)", () => {
+  it("adds view and manage as scopable keys, manage requiring view", () => {
+    for (const key of ["distribution.view", "distribution.manage"] as const) {
+      expect(isPermissionKey(key), key).toBe(true);
+      expect(permissionEntry(key).scopable, key).toBe(true);
+    }
+    expect(permissionEntry("distribution.view").requires).toEqual(["jobs.view"]);
+    expect(permissionEntry("distribution.manage").requires).toEqual(["distribution.view"]);
+  });
+
+  it("expands manage down to jobs.view at the same scope", () => {
+    const grants = expandDependencies([{ key: "distribution.manage", scope: "assigned" }]);
+    expect(grants.get("distribution.view")).toBe("assigned");
+    expect(grants.get("jobs.view")).toBe("assigned");
+  });
+
+  it("names the missing permission in the 403 copy", () => {
+    expect(forbiddenMessage("distribution.manage")).toBe("Your role can't manage job distribution.");
+    expect(forbiddenMessage("distribution.view")).toBe("Your role can't view job distribution.");
+  });
+
+  it("gives Admin and Recruiter both, Hiring manager both for assigned jobs, Member neither", () => {
+    const admin = templateGrants(roleTemplate("admin")!);
+    const recruiter = templateGrants(roleTemplate("recruiter")!);
+    const hm = templateGrants(roleTemplate("hiring_manager")!);
+    const member = templateGrants(roleTemplate("member")!);
+    for (const key of ["distribution.view", "distribution.manage"] as const) {
+      expect(admin.get(key), key).toBe("all");
+      expect(recruiter.get(key), key).toBe("all");
+      expect(hm.get(key), key).toBe("assigned");
+      expect(member.has(key), key).toBe(false);
+    }
+  });
+});

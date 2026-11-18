@@ -71,6 +71,8 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
         "updateCareersPage",
         "setCareersAddress",
         "setCareersPublished",
+        // MPT-040: job distribution.
+        "setDistribution",
         // SIT-071: screening interview setup and invites.
         "configureScreeningInterview",
         "inviteToInterview",

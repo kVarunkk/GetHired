@@ -4,7 +4,7 @@ import { createContext, useContext, type ReactNode } from "react";
 
 /** CP-REQ-013: where an application starts. The default is the job board. */
 export type ApplicationSource = {
-  source?: "applied" | "careers_page";
+  source?: "applied" | "careers_page" | "job_board";
   ref?: string | null;
   /** Where sign-up returns to, e.g. the careers job page with ?apply=true&ref=… */
   returnTo?: string;
