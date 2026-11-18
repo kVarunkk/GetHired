@@ -146,6 +146,7 @@ describe("completeOnboarding tool", () => {
     ["an unknown job type", { ...INPUT, jobTypes: ["Gig"] }],
     ["an unknown company size", { ...INPUT, companySizePreference: "Huge" }],
     ["an unknown currency", { ...INPUT, salaryCurrency: "BTC" }],
+    ["a currency symbol", { ...INPUT, salaryCurrency: "₹" }],
     ["max below min salary", { ...INPUT, maxSalary: 10 }],
     ["fractional experience years", { ...INPUT, experienceYears: 0.5 }],
     ["a user id", { ...INPUT, userId: "someone-else" }],

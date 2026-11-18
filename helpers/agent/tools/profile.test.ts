@@ -168,6 +168,7 @@ describe("updateMyPreferences tool", () => {
     ["no fields", {}],
     ["min salary above max", { minSalary: 200, maxSalary: 100 }],
     ["an unknown currency", { salaryCurrency: "BTC" }],
+    ["a currency symbol", { salaryCurrency: "₹" }],
     ["an unknown job type", { jobTypes: ["Parttime"] }],
     ["a userId", { userId: "someone-else", topSkills: ["Go"] }],
   ])("rejects %s", async (_label, input) => {

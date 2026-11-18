@@ -164,7 +164,7 @@ describe("searchJobs", () => {
     const passedCurrency = () => vi.mocked(buildQuery).mock.calls.at(-1)![2].salaryCurrency;
 
     it("passes an explicit currency as its code", async () => {
-      await searchJobs(supabase.client, mockUser({ id: "u1" }), { minSalary: "100000", salaryCurrency: "₹" });
+      await searchJobs(supabase.client, mockUser({ id: "u1" }), { minSalary: "100000", salaryCurrency: "inr" });
 
       expect(passedCurrency()).toBe("INR");
       expect(supabase.callsFor("user_info")).toHaveLength(0);

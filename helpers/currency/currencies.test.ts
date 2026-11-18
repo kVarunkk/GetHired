@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CURRENCY_CODES, POPULAR_CURRENCIES, currencyLabel, currencySymbol, isCurrencyCode, toIsoCurrency } from "./currencies";
+import { CURRENCY_CODES, POPULAR_CURRENCIES, currencyCodeSchema, currencyLabel, currencySymbol, isCurrencyCode, parseCurrencyCode, toIsoCurrency } from "./currencies";
 
 describe("toIsoCurrency", () => {
   it.each([
@@ -40,5 +40,23 @@ describe("labels", () => {
     expect(currencyLabel("INR")).toBe("INR · Indian Rupee");
     expect(currencySymbol("INR")).toBe("₹");
     expect(currencySymbol("EUR")).toBe("€");
+  });
+});
+
+describe("input takes codes only", () => {
+  it.each([
+    ["INR", "INR"],
+    [" usd ", "USD"],
+    ["₹", null],
+    ["$", null],
+    ["BTC", null],
+    [null, null],
+  ])("parseCurrencyCode(%s) is %s", (input, code) => expect(parseCurrencyCode(input)).toBe(code));
+
+  it("refuses a symbol with a message naming the format", () => {
+    expect(currencyCodeSchema.safeParse("eur").data).toBe("EUR");
+    const result = currencyCodeSchema.safeParse("€");
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].message).toMatch(/ISO 4217/);
   });
 });
