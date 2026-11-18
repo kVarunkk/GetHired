@@ -1,4 +1,4 @@
-import { toIsoCurrency } from "@/helpers/currency/currencies";
+import { parseCurrencyCode } from "@/helpers/currency/currencies";
 import { platformsArray } from "@/utils/platforms";
 import { z } from "zod";
 
@@ -64,7 +64,7 @@ export const jobFilterSchema = z.object({
   salaryCurrency: z
     .string()
     .optional()
-    .transform((value) => toIsoCurrency(value) ?? undefined)
+    .transform((value) => parseCurrencyCode(value) ?? undefined)
     .describe(
       "ISO 4217 code of minSalary's currency: INR for rupees, lakhs or LPA, USD for dollars, EUR, GBP, CAD, AUD, SGD, AED and so on. Set it whenever minSalary is set.",
     ),

@@ -1,9 +1,12 @@
 /**
  * Salary currencies, client-safe. Salaries are stored with an ISO 4217 code
  * (`user_info.salary_currency`, `job_postings.salary_currency`,
- * `all_jobs.salary_currency`); the DB's `iso_currency()` converts the old
- * symbols the same way `toIsoCurrency` does. A salary filter only compares
- * amounts in one currency.
+ * `all_jobs.salary_currency`), and CHECK constraints refuse anything else.
+ * Input (forms, tools, URLs) takes codes only: `parseCurrencyCode` /
+ * `currencyCodeSchema`. `toIsoCurrency` also reads the old symbols, for text
+ * that may still carry one (salary_range, old rows); the DB's
+ * `iso_currency()` does the same. A salary filter only compares amounts in
+ * one currency.
  */
 
 import { z } from "zod";
@@ -68,6 +71,12 @@ export function toIsoCurrency(value: string | null | undefined): string | null {
   return /^[A-Z]{3}$/.test(code) && KNOWN.has(code) ? code : null;
 }
 
+/** A code as input: "inr" or "INR", never a symbol. Null when it isn't a known code. */
+export function parseCurrencyCode(value: string | null | undefined): string | null {
+  const code = value?.trim().toUpperCase();
+  return code && KNOWN.has(code) ? code : null;
+}
+
 export function isCurrencyCode(value: unknown): value is string {
   return typeof value === "string" && KNOWN.has(value);
 }
@@ -105,11 +114,11 @@ export function currencySymbol(code: string): string {
 /** "INR · Indian Rupee", for pickers. */
 export const currencyLabel = (code: string) => `${code} · ${currencyName(code)}`;
 
-export const CURRENCY_ERROR = "Pick a currency from the list.";
+export const CURRENCY_ERROR = "Use a 3-letter ISO 4217 currency code, e.g. INR or USD.";
 
-/** A currency as sent by a form, a tool or an old client (a symbol), as a code. */
+/** A currency as sent by a form, a tool or a client: a code, upper-cased. Symbols are refused. */
 export const currencyCodeSchema = z.string().transform((value, ctx) => {
-  const code = toIsoCurrency(value);
+  const code = parseCurrencyCode(value);
   if (!code) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: CURRENCY_ERROR });
     return z.NEVER;

@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { toIsoCurrency } from "@/helpers/currency/currencies";
+import { parseCurrencyCode, toIsoCurrency } from "@/helpers/currency/currencies";
 import { buildQuery } from "@/helpers/jobs/filterQueryBuilder";
 import { rerankJobsIfApplicable } from "@/helpers/jobs/ai-rerank-jobs";
 import { getCutOffDate } from "@/utils/date";
@@ -115,7 +115,7 @@ async function resolveSalaryCurrency(
   user: { id: string } | null,
   params: SearchJobsParams,
 ): Promise<string | null> {
-  const explicit = toIsoCurrency(params.salaryCurrency);
+  const explicit = parseCurrencyCode(params.salaryCurrency);
   if (explicit || !params.minSalary) return explicit;
   const userId = params.applicantUserId ?? user?.id;
   if (!userId) return null;

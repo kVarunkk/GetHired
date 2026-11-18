@@ -1,5 +1,5 @@
 import { reportError } from "@/helpers/posthog/report-error";
-import { toIsoCurrency } from "@/helpers/currency/currencies";
+import { parseCurrencyCode } from "@/helpers/currency/currencies";
 import { rerankProfilesIfApplicable } from "@/helpers/profiles/ai-rerank-profiles";
 import {
   getEntitlements,
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
   const maxExperience = searchParams.get("maxExperience");
   const minSalary = searchParams.get("minSalary");
   const maxSalary = searchParams.get("maxSalary");
-  const salaryCurrency = toIsoCurrency(searchParams.get("salaryCurrency"));
+  const salaryCurrency = parseCurrencyCode(searchParams.get("salaryCurrency"));
   const skills = searchParams.get("skills");
   const workStyle = searchParams.get("workStylePreference");
   const companySize = searchParams.get("companySize");
