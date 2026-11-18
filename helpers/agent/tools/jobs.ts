@@ -1,3 +1,4 @@
+import { salaryCurrencyInput } from "./profile";
 import { after } from "next/server";
 import { isRelevanceInProgress } from "@/helpers/jobs/relevance-jobs-queue";
 import { tool } from "ai";
@@ -49,7 +50,12 @@ const jobFiltersInput = z.object({
     .int()
     .min(0)
     .optional()
-    .describe("Minimum salary as a plain integer."),
+    .describe("Minimum yearly salary as a plain integer, in salaryCurrency (20 LPA = 2000000)."),
+  salaryCurrency: salaryCurrencyInput
+    .optional()
+    .describe(
+      "ISO 4217 code of minSalary, e.g. INR for rupees or LPA, USD for dollars. Only jobs paid in this currency match. Defaults to the user's profile currency; ignored without minSalary.",
+    ),
   minExperience: z
     .number()
     .int()
@@ -101,6 +107,9 @@ function filtersToParams(filters: JobFilters = {}): Partial<SearchJobsParams> {
     location: join(filters.locations),
     jobType: join(filters.jobTypes),
     minSalary: filters.minSalary?.toString(),
+    // A currency only narrows a salary filter: alone it would hide every job
+    // without a salary.
+    salaryCurrency: filters.minSalary !== undefined ? filters.salaryCurrency : undefined,
     minExperience: filters.minExperience?.toString(),
     maxExperience: filters.maxExperience?.toString(),
     visaRequirement: join(filters.visaRequirements),
@@ -121,6 +130,7 @@ function parsedFiltersToParams(
     platform: join(filters.platform),
     companyName: join(filters.companyName),
     minSalary: filters.minSalary?.toString(),
+    salaryCurrency: filters.minSalary !== undefined ? filters.salaryCurrency : undefined,
     minExperience: filters.minExperience?.toString(),
     maxExperience: filters.maxExperience?.toString(),
     createdAfterDays: filters.createdAfter,

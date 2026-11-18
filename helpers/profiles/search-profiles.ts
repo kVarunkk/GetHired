@@ -12,6 +12,8 @@ export type ProfileSearchParams = {
   maxExperience?: number;
   /** Candidates whose minimum salary is at most this. */
   budget?: number;
+  /** ISO 4217 code of `budget`: only candidates whose salary is in it. */
+  budgetCurrency?: string;
   jobTypes?: string[];
   workStyle?: string[];
   limit: number;
@@ -61,6 +63,7 @@ export async function searchProfiles(
     minSalary: null,
     maxSalary: null,
     budget: params.budget ?? null,
+    salaryCurrency: params.budget !== undefined ? (params.budgetCurrency ?? null) : null,
     skills: joined(params.skills),
     workStyle: joined(params.workStyle),
     companySize: null,

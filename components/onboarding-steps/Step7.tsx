@@ -26,8 +26,7 @@ export const Step7ReviewSubmit: React.FC<StepProps> = ({ formData }) => (
           </p>
           <p>
             <span className="text-muted-foreground">Salary Range:</span>{" "}
-            {formData.min_salary || "N/A"}
-            {formData.salary_currency} - {formData.max_salary || "N/A"}
+            {formData.min_salary || "N/A"} - {formData.max_salary || "N/A"}{" "}
             {formData.salary_currency}
           </p>
         </div>

@@ -36,6 +36,12 @@ describe("prefillStandardAnswers (AF-REQ-002)", () => {
   it("skips fields that are off or missing from the profile", () => {
     expect(prefillStandardAnswers(formWith({ linkedin_url: "off", phone: "required" }), PROFILE)).toEqual({});
     expect(prefillStandardAnswers(formWith({ linkedin_url: "required" }), null)).toEqual({});
-    expect(prefillStandardAnswers(formWith({ expected_salary: "required" }), { ...PROFILE, salary_currency: "₹" })).toEqual({});
+    expect(prefillStandardAnswers(formWith({ expected_salary: "required" }), { ...PROFILE, salary_currency: "rupees" })).toEqual({});
+  });
+
+  it("reads an old symbol as its code", () => {
+    expect(prefillStandardAnswers(formWith({ expected_salary: "required" }), { ...PROFILE, salary_currency: "₹" })).toEqual({
+      [standardAnswerKey("expected_salary")]: { amount: 1500000, currency: "INR" },
+    });
   });
 });

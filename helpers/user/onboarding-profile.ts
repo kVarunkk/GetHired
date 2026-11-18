@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isValidUrl } from "@/utils/utils";
+import { currencyCodeSchema } from "@/helpers/currency/currencies";
 
 export const JOB_TYPES = ["Fulltime", "Contract", "Intern"] as const;
 export const COMPANY_SIZES = ["Small (1-50)", "Medium (51-500)", "Large (500+)", "Any"] as const;
@@ -29,7 +30,7 @@ export const onboardingProfileSchema = z
     full_name: z.string().trim().min(1),
     desired_roles: requiredList,
     job_type: z.array(z.enum(JOB_TYPES)).min(1),
-    salary_currency: z.string().trim().min(1),
+    salary_currency: currencyCodeSchema,
     min_salary: z.number().min(0),
     max_salary: z.number().min(0).nullish(),
     preferred_locations: requiredList,

@@ -22,6 +22,7 @@ import { filterConfigBuilder } from "@/helpers/filter-component/filterConfigBuil
 import { getInitialState } from "@/helpers/filter-component/getInitialState";
 import LocationSearchSelect from "./LocationSearchSelect";
 import ScrollFade from "./ScrollFade";
+import CurrencySelect from "./CurrencySelect";
 import posthog from "@/lib/posthog/client";
 
 export default function FilterComponent({
@@ -87,10 +88,12 @@ export default function FilterComponent({
 
   const [filters, setFilters] = useState<FiltersState>(currentUrlFilters);
   const [prevKey, setPrevKey] = useState(dynamicKey);
+  const [currencyError, setCurrencyError] = useState(false);
 
   if (dynamicKey !== prevKey) {
     setPrevKey(dynamicKey);
     setFilters(currentUrlFilters);
+    setCurrencyError(false);
   }
 
   const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
@@ -113,6 +116,13 @@ export default function FilterComponent({
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // Salaries are only compared within one currency, so an amount needs one.
+    const hasCurrencyFilter = FILTER_CONFIG.some((c) => c.type === "currency-select");
+    if (hasCurrencyFilter && (filters.minSalary || filters.maxSalary) && !filters.salaryCurrency) {
+      setCurrencyError(true);
+      return;
+    }
+    setCurrencyError(false);
     const params = new URLSearchParams();
 
     if (tab) {
@@ -239,6 +249,29 @@ export default function FilterComponent({
             isSingleSelect={false}
             className="mt-1 w-full"
           />
+        );
+
+      case "currency-select":
+        return (
+          <>
+            <CurrencySelect
+              id={String(config.name)}
+              value={filters[config.name] as string | undefined}
+              onChange={(code) => {
+                inputFilterOnChange(config.name, code);
+                if (code) setCurrencyError(false);
+              }}
+              anyLabel={config.placeholder}
+              aria-label={config.label}
+              aria-invalid={currencyError}
+              className="mt-1"
+            />
+            {currencyError && (
+              <span className="mt-1 block text-sm text-destructive">
+                Pick the currency of the salary.
+              </span>
+            )}
+          </>
         );
 
       case "number":

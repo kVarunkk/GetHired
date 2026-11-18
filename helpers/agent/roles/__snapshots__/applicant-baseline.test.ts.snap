@@ -576,14 +576,7 @@ No saved memories.",
             "type": "string",
           },
           "salaryCurrency": {
-            "enum": [
-              "₹",
-              "$",
-              "€",
-              "£",
-              "C$",
-              "A$",
-            ],
+            "description": "ISO 4217 currency code of the salary, e.g. INR, USD, EUR, GBP, CAD, AUD, SGD, AED.",
             "type": "string",
           },
           "topSkills": {
@@ -893,7 +886,7 @@ No saved memories.",
                 "type": "integer",
               },
               "minSalary": {
-                "description": "Minimum salary as a plain integer.",
+                "description": "Minimum yearly salary as a plain integer, in salaryCurrency (20 LPA = 2000000).",
                 "minimum": 0,
                 "type": "integer",
               },
@@ -923,6 +916,10 @@ No saved memories.",
                 "maximum": 90,
                 "minimum": 1,
                 "type": "integer",
+              },
+              "salaryCurrency": {
+                "description": "ISO 4217 code of minSalary, e.g. INR for rupees or LPA, USD for dollars. Only jobs paid in this currency match. Defaults to the user's profile currency; ignored without minSalary.",
+                "type": "string",
               },
               "visaRequirements": {
                 "items": {
@@ -1405,7 +1402,7 @@ No saved memories.",
             "type": "integer",
           },
           "minSalary": {
-            "description": "Minimum salary as a plain integer.",
+            "description": "Minimum yearly salary as a plain integer, in salaryCurrency (20 LPA = 2000000).",
             "minimum": 0,
             "type": "integer",
           },
@@ -1435,6 +1432,10 @@ No saved memories.",
             "maximum": 90,
             "minimum": 1,
             "type": "integer",
+          },
+          "salaryCurrency": {
+            "description": "ISO 4217 code of minSalary, e.g. INR for rupees or LPA, USD for dollars. Only jobs paid in this currency match. Defaults to the user's profile currency; ignored without minSalary.",
+            "type": "string",
           },
           "visaRequirements": {
             "items": {
@@ -1621,14 +1622,7 @@ No saved memories.",
             "type": "array",
           },
           "salaryCurrency": {
-            "enum": [
-              "₹",
-              "$",
-              "€",
-              "£",
-              "C$",
-              "A$",
-            ],
+            "description": "ISO 4217 currency code of the salary, e.g. INR, USD, EUR, GBP, CAD, AUD, SGD, AED.",
             "type": "string",
           },
           "topSkills": {

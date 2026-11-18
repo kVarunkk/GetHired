@@ -1,5 +1,6 @@
 "use client";
 
+import { toIsoCurrency } from "@/helpers/currency/currencies";
 import React, {
   useState,
   useEffect,
@@ -101,7 +102,7 @@ export const OnboardingForm: React.FC<{
     github_url: "",
     desired_roles: [],
     preferred_locations: [],
-    salary_currency: "$",
+    salary_currency: "USD",
     min_salary: "",
     max_salary: "",
     experience_years: "",
@@ -213,7 +214,7 @@ export const OnboardingForm: React.FC<{
             github_url: data.github_url || "",
             desired_roles: data.desired_roles || [],
             preferred_locations: data.preferred_locations || [],
-            salary_currency: data.salary_currency || "$",
+            salary_currency: toIsoCurrency(data.salary_currency) ?? "USD",
             job_type: data.job_type || [],
             min_salary: data.min_salary || "",
             max_salary: data.max_salary || "",
@@ -406,7 +407,7 @@ export const OnboardingForm: React.FC<{
         linkedin_url: formData.linkedin_url,
         github_url: formData.github_url,
         preferred_locations: formData.preferred_locations,
-        salary_currency: formData.salary_currency || "$",
+        salary_currency: toIsoCurrency(formData.salary_currency) ?? "USD",
         min_salary: formData.min_salary === "" ? null : formData.min_salary,
         max_salary: formData.max_salary === "" ? null : formData.max_salary,
         experience_years:

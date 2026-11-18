@@ -1,3 +1,4 @@
+import { toIsoCurrency } from "@/helpers/currency/currencies";
 import type { ApplicationForm } from "@/helpers/jobs/application-form-schema";
 import { standardAnswerKey, type Answers } from "./validate-answers";
 
@@ -25,8 +26,8 @@ export function prefillStandardAnswers(form: ApplicationForm, profile: PrefillPr
   if (asks("portfolio_url") && profile.github_url) out[standardAnswerKey("portfolio_url")] = profile.github_url;
   const location = profile.preferred_locations?.find((l) => l.trim() !== "");
   if (asks("current_location") && location) out[standardAnswerKey("current_location")] = location;
-  const currency = profile.salary_currency?.trim().toUpperCase();
-  if (asks("expected_salary") && typeof profile.min_salary === "number" && currency && /^[A-Z]{3}$/.test(currency)) {
+  const currency = toIsoCurrency(profile.salary_currency);
+  if (asks("expected_salary") && typeof profile.min_salary === "number" && currency) {
     out[standardAnswerKey("expected_salary")] = { amount: profile.min_salary, currency };
   }
   return out;

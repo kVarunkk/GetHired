@@ -1,9 +1,11 @@
 /**
  * Turns stored job fields into what the feed specs ask for (plan/multiposting
  * spec section 10). Pure, client-safe. Jobs store the description as plain
- * text, shown on the page with its line breaks kept, and the currency as the
- * form's symbol; the boards want HTML and ISO 4217 codes.
+ * text, shown on the page with its line breaks kept, and older rows hold the
+ * currency as a symbol; the boards want HTML and ISO 4217 codes.
  */
+
+import { toIsoCurrency } from "@/helpers/currency/currencies";
 
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -57,31 +59,8 @@ export function textToHtml(text: string): string {
   return blocks.join("\n");
 }
 
-/** The job form's symbols (JobPostingForm) and common spellings, as ISO 4217. */
-const CURRENCIES: Record<string, string> = {
-  "₹": "INR",
-  rs: "INR",
-  "rs.": "INR",
-  inr: "INR",
-  $: "USD",
-  us$: "USD",
-  usd: "USD",
-  "€": "EUR",
-  eur: "EUR",
-  "£": "GBP",
-  gbp: "GBP",
-  c$: "CAD",
-  cad: "CAD",
-  a$: "AUD",
-  aud: "AUD",
-};
-
 /** An ISO 4217 code, or null when the stored value isn't one we know. */
-export function isoCurrency(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const v = value.trim().toLowerCase();
-  return CURRENCIES[v] ?? (/^[a-z]{3}$/.test(v) ? v.toUpperCase() : null);
-}
+export const isoCurrency = toIsoCurrency;
 
 /** A salary bound; the form's default 0 means "not given". */
 export const salaryBound = (n: number | null | undefined) => (n != null && Number.isFinite(n) && n > 0 ? n : null);

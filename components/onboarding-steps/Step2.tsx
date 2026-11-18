@@ -3,13 +3,7 @@ import { StepProps } from "../OnboardingComponent";
 import { CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
+import CurrencySelect from "../CurrencySelect";
 import InfoTooltip from "../InfoTooltip";
 import LocationSearchSelect from "../LocationSearchSelect";
 
@@ -48,28 +42,26 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
     </div>
 
     <div>
+      <Label htmlFor="salary_currency" className="mt-4">
+        Salary currency*
+      </Label>
+      <CurrencySelect
+        id="salary_currency"
+        value={formData.salary_currency}
+        onChange={(code) => setFormData({ ...formData, salary_currency: code })}
+        aria-invalid={!!errors.salary_currency}
+        className="mt-2"
+      />
+      {errors.salary_currency && (
+        <p className="text-destructive text-sm mt-1">{errors.salary_currency}</p>
+      )}
+    </div>
+
+    <div>
       <Label htmlFor="min_salary" className="mt-4">
         Minimum Salary per annum*
       </Label>
       <div className="flex items-center gap-2">
-        <Select
-          value={formData.salary_currency ?? "$"}
-          onValueChange={(value) =>
-            setFormData({ ...formData, salary_currency: value })
-          }
-        >
-          <SelectTrigger className="mt-2 w-[80px]">
-            <SelectValue placeholder="Currency" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="₹">₹</SelectItem>
-            <SelectItem value="$">$</SelectItem>
-            <SelectItem value="€">€</SelectItem>
-            <SelectItem value="£">£</SelectItem>
-            <SelectItem value="C$">C$</SelectItem>
-            <SelectItem value="A$">A$</SelectItem>
-          </SelectContent>
-        </Select>
         <Input
           id="min_salary"
           type="number"
@@ -95,24 +87,6 @@ export const Step2LocationSalary: React.FC<StepProps> = ({
         Maximum Salary per annum
       </Label>
       <div className="flex items-center gap-2">
-        <Select
-          value={formData.salary_currency ?? "$"}
-          onValueChange={(value) =>
-            setFormData({ ...formData, salary_currency: value })
-          }
-        >
-          <SelectTrigger className="mt-2 w-[80px]">
-            <SelectValue placeholder="Currency" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="₹">₹</SelectItem>
-            <SelectItem value="$">$</SelectItem>
-            <SelectItem value="€">€</SelectItem>
-            <SelectItem value="£">£</SelectItem>
-            <SelectItem value="C$">C$</SelectItem>
-            <SelectItem value="A$">A$</SelectItem>
-          </SelectContent>
-        </Select>{" "}
         <Input
           id="max_salary"
           type="number"

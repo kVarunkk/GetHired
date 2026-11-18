@@ -4,7 +4,7 @@ import { canonicalizeLocations } from "@/helpers/locations/aliases";
 import { completeApplicantOnboarding } from "@/helpers/user/complete-onboarding";
 import { COMPANY_SIZES, JOB_TYPES } from "@/helpers/user/onboarding-profile";
 import { AgentToolContext, uuidInput, withToolErrors } from "./shared";
-import { SALARY_CURRENCIES } from "./profile";
+import { salaryCurrencyInput } from "./profile";
 
 const list = (max: number) =>
   z.array(z.string().trim().min(1).max(60)).min(1).max(max);
@@ -16,7 +16,7 @@ const onboardingInput = z
     fullName: z.string().trim().min(1).max(100),
     desiredRoles: list(10),
     jobTypes: z.array(z.enum(JOB_TYPES)).min(1),
-    salaryCurrency: z.enum(SALARY_CURRENCIES),
+    salaryCurrency: salaryCurrencyInput,
     minSalary: z
       .number()
       .int()

@@ -256,6 +256,34 @@ describe("buildQuery: experience filter", () => {
   });
 });
 
+describe("buildQuery: salary", () => {
+  const salaryCalls = () =>
+    supabase
+      .callsFor("all_jobs")[0]
+      ?.chain.filter((step) => String(step.args[0]).startsWith("salary_"));
+
+  it("compares amounts only within the given currency", async () => {
+    await buildQuery(supabase.client, null, { ...BASE_ARGS, minSalary: "1500000", salaryCurrency: "INR" });
+
+    expect(salaryCalls()).toEqual([
+      { method: "eq", args: ["salary_currency", "INR"] },
+      { method: "gte", args: ["salary_min", 1500000] },
+    ]);
+  });
+
+  it("filters on the currency alone", async () => {
+    await buildQuery(supabase.client, null, { ...BASE_ARGS, salaryCurrency: "EUR" });
+
+    expect(salaryCalls()).toEqual([{ method: "eq", args: ["salary_currency", "EUR"] }]);
+  });
+
+  it("adds no salary filter when none is requested", async () => {
+    await buildQuery(supabase.client, null, { ...BASE_ARGS });
+
+    expect(salaryCalls()).toEqual([]);
+  });
+});
+
 describe("titleKeywordConditions", () => {
   // The column value, as public.job_title_search_text builds it in SQL.
   const searchText = (title: string) => {

@@ -84,10 +84,16 @@ export const filterConfigBuilder = (
         },
 
         {
+          name: "salaryCurrency",
+          label: "Salary Currency",
+          type: "currency-select",
+          placeholder: "Any currency",
+        },
+        {
           name: "minSalary",
-          label: "Minimum Salary",
+          label: "Minimum Salary (per year)",
           type: "number",
-          placeholder: "e.g., 80000",
+          placeholder: "e.g., 1500000",
         },
         {
           name: "minExperience",
@@ -189,10 +195,16 @@ export const filterConfigBuilder = (
         },
 
         {
+          name: "salaryCurrency",
+          label: "Salary Currency",
+          type: "currency-select",
+          placeholder: "Any currency",
+        },
+        {
           name: "maxSalary",
-          label: "Maximum Salary",
+          label: "Maximum Salary (per year)",
           type: "number",
-          placeholder: "e.g., 80000",
+          placeholder: "e.g., 1500000",
         },
         {
           name: "minExperience",

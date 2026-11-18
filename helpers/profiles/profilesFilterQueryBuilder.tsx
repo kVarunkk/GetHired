@@ -54,6 +54,7 @@ export async function buildProfileQuery({
   maxExperience,
   minSalary,
   maxSalary,
+  salaryCurrency = null,
   skills,
   workStyle,
   companySize,
@@ -80,6 +81,8 @@ export async function buildProfileQuery({
   maxExperience: string | null;
   minSalary: string | null;
   maxSalary: string | null;
+  /** ISO 4217 code: only candidates whose salary is in it. Amounts are only compared within one currency. */
+  salaryCurrency?: string | null;
   skills: string | null;
   workStyle: string | null;
   companySize: string | null;
@@ -256,6 +259,9 @@ export async function buildProfileQuery({
     }
     if (maxExperience) {
       query = query.lte("experience_years", parseInt(maxExperience));
+    }
+    if (salaryCurrency) {
+      query = query.eq("salary_currency", salaryCurrency);
     }
     if (minSalary) {
       query = query.gte("min_salary", parseInt(minSalary));

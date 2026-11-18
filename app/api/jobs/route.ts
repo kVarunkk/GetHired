@@ -90,6 +90,7 @@ export async function GET(request: NextRequest) {
             "location",
             "visaRequirement",
             "minSalary",
+            "salaryCurrency",
             "minExperience",
             "maxExperience",
             "platform",

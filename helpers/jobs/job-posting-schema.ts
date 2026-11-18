@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { applicationFormSchema } from "./application-form-schema";
+import { currencyCodeSchema } from "@/helpers/currency/currencies";
 
 export const MAX_JOB_POSTING_QUESTIONS = 10;
 export const MAX_JOB_POSTING_QUESTION_CHARS = 300;
@@ -22,7 +23,8 @@ export const jobPostingInputSchema = z
     description: z.string().trim().min(1, "Job description is required.").max(20000),
     location: z.array(z.string().trim().min(1).max(100)).min(1).max(50),
     job_type: z.enum(["Fulltime", "Intern", "Contract"]),
-    salary_currency: z.string().trim().max(5),
+    // A code (old clients send a symbol). Empty only when no salary is given.
+    salary_currency: z.literal("").or(currencyCodeSchema),
     min_salary: amount,
     max_salary: amount,
     min_experience: amount,
@@ -63,6 +65,10 @@ export const jobPostingInputSchema = z
     pipeline_id: z.string().uuid("Pipeline not found.").optional(),
   })
   .strict()
+  .refine((v) => v.salary_currency !== "" || (!v.min_salary && !v.max_salary), {
+    message: "Pick the salary's currency.",
+    path: ["salary_currency"],
+  })
   .refine((v) => ordered(v.min_salary, v.max_salary), {
     message: "Max salary must be greater than or equal to min salary.",
     path: ["max_salary"],

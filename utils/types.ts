@@ -198,6 +198,8 @@ export type FiltersState = {
   location: string[];
   visaRequirement: string[];
   minSalary: string;
+  /** ISO 4217 code that minSalary / maxSalary are in. */
+  salaryCurrency?: string;
   minExperience: string;
   maxExperience?: string;
   platform: string[];
@@ -224,7 +226,8 @@ export interface FilterConfig {
     | "number"
     | "multi-select"
     | "multi-select-input"
-    | "location-search-select";
+    | "location-search-select"
+    | "currency-select";
   placeholder?: string;
   options?: { value: string; label: string }[];
   isVirtualized?: boolean;

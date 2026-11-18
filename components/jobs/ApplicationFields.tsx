@@ -1,9 +1,9 @@
 "use client";
 
+import CurrencySelect from "@/components/CurrencySelect";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { SalaryAnswer } from "@/helpers/applications/validate-answers";
 import { fieldViews } from "@/helpers/applications/field-views";
@@ -16,7 +16,6 @@ import { cn } from "@/utils/utils";
 
 export type FieldValues = Record<string, unknown>;
 
-export const SALARY_CURRENCIES = ["USD", "INR", "EUR", "GBP", "CAD", "AUD", "SGD"] as const;
 const PROGRESS_FROM = 6;
 
 const isAnswered = (value: unknown) =>
@@ -167,24 +166,14 @@ export default function ApplicationFields({
                     onChange(field.key, e.target.value === "" ? undefined : { amount: Number(e.target.value), currency })
                   }
                 />
-                <Select
+                <CurrencySelect
                   disabled={disabled}
                   value={currency}
-                  onValueChange={(v) =>
+                  onChange={(v) =>
                     onChange(field.key, typeof salary?.amount === "number" ? { amount: salary.amount, currency: v } : undefined)
                   }
-                >
-                  <SelectTrigger aria-label="Currency" className="w-24">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SALARY_CURRENCIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  className="w-44"
+                />
               </div>
             );
             break;

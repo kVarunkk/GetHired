@@ -82,8 +82,8 @@ function experienceOf(job: JobPosting): string {
 
 function salaryOf(job: JobPosting): string {
   if (job.min_salary || job.max_salary) {
-    const currency = job.salary_currency ?? "";
-    return `${currency}${job.min_salary ?? "?"} – ${currency}${job.max_salary ?? "?"}`;
+    const currency = job.salary_currency ? ` ${job.salary_currency}` : "";
+    return `${job.min_salary ?? "?"} – ${job.max_salary ?? "?"}${currency}`;
   }
   return job.salary_range || "Not specified";
 }

@@ -243,6 +243,10 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "minimum": 1,
           "type": "integer",
         },
+        "salaryCurrency": {
+          "description": "ISO 4217 code of minSalary, e.g. INR for rupees or LPA, USD for dollars. Only jobs paid in this currency match. Defaults to the user's profile currency; ignored without minSalary.",
+          "type": "string",
+        },
         "visaRequirements": {
           "description": "Only jobs whose posting states one of these visa terms. 'Will Sponsor' is for users who need the employer to sponsor a visa.",
           "items": {
@@ -595,6 +599,10 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
               "maximum": 90,
               "minimum": 1,
               "type": "integer",
+            },
+            "salaryCurrency": {
+              "description": "ISO 4217 code of minSalary, e.g. INR for rupees or LPA, USD for dollars. Only jobs paid in this currency match. Defaults to the user's profile currency; ignored without minSalary.",
+              "type": "string",
             },
             "visaRequirements": {
               "description": "Only jobs whose posting states one of these visa terms. 'Will Sponsor' is for users who need the employer to sponsor a visa.",
@@ -1858,15 +1866,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "salaryCurrency": {
-          "description": "The currency of minSalary and maxSalary: ₹ rupees, $ US dollars, € euros, £ pounds, C$ Canadian dollars, A$ Australian dollars.",
-          "enum": [
-            "₹",
-            "$",
-            "€",
-            "£",
-            "C$",
-            "A$",
-          ],
+          "description": "The ISO 4217 code of minSalary and maxSalary's currency, e.g. INR, USD, EUR, GBP, CAD, AUD, SGD or AED. A symbol such as ₹ or $ is read as its code.",
           "type": "string",
         },
         "topSkills": {
@@ -2064,15 +2064,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "string",
         },
         "salaryCurrency": {
-          "description": "The currency of minSalary and maxSalary: ₹ rupees, $ US dollars, € euros, £ pounds, C$ Canadian dollars, A$ Australian dollars.",
-          "enum": [
-            "₹",
-            "$",
-            "€",
-            "£",
-            "C$",
-            "A$",
-          ],
+          "description": "The ISO 4217 code of minSalary and maxSalary's currency, e.g. INR, USD, EUR, GBP, CAD, AUD, SGD or AED. A symbol such as ₹ or $ is read as its code.",
           "type": "string",
         },
         "topSkills": {

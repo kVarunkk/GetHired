@@ -40,7 +40,7 @@ const preferenceDescriptions = (replaces: string): McpInputDescriptions => ({
   desiredRoles: `Job titles the user is looking for, e.g. ['Frontend Engineer', 'UI Developer'].${replaces}`,
   preferredLocations: `Where the user wants to work, e.g. ['Remote', 'Bengaluru']. City names are saved in their standard spelling.${replaces}`,
   maxSalary: "The top of the user's yearly salary range, as a plain whole number in salaryCurrency.",
-  salaryCurrency: "The currency of minSalary and maxSalary: ₹ rupees, $ US dollars, € euros, £ pounds, C$ Canadian dollars, A$ Australian dollars.",
+  salaryCurrency: "The ISO 4217 code of minSalary and maxSalary's currency, e.g. INR, USD, EUR, GBP, CAD, AUD, SGD or AED. A symbol such as ₹ or $ is read as its code.",
   jobTypes: `The kinds of employment the user wants: full-time, contract or internship.${replaces}`,
   visaSponsorshipRequired: "true when the user needs an employer to sponsor their visa or work permit.",
   topSkills: `The user's main skills, e.g. ['React', 'TypeScript', 'Figma'].${replaces}`,

@@ -1,12 +1,16 @@
 import { canonicalizeLocations } from "@/helpers/locations/aliases";
 import { tool } from "ai";
 import { z } from "zod";
+import { currencyCodeSchema } from "@/helpers/currency/currencies";
 import { getProfile } from "@/helpers/user/get-profile";
 import { TablesUpdate } from "@/utils/types/database.types";
 import { profileRefreshMessage, refreshProfileAfterChange } from "@/helpers/user/queue-profile-refresh";
 import { AgentToolContext, withToolErrors } from "./shared";
 
-export const SALARY_CURRENCIES = ["₹", "$", "€", "£", "C$", "A$"] as const;
+/** A salary currency for the model: an ISO 4217 code, stored as the code. */
+export const salaryCurrencyInput = currencyCodeSchema.describe(
+  "ISO 4217 currency code of the salary, e.g. INR, USD, EUR, GBP, CAD, AUD, SGD, AED.",
+);
 
 const keywordList = (max: number) => z.array(z.string().min(1).max(60)).min(1).max(max);
 
@@ -16,7 +20,7 @@ const preferencesInput = z
     preferredLocations: keywordList(10).optional(),
     minSalary: z.number().int().min(0).optional(),
     maxSalary: z.number().int().min(0).optional(),
-    salaryCurrency: z.enum(SALARY_CURRENCIES).optional(),
+    salaryCurrency: salaryCurrencyInput.optional(),
     jobTypes: z.array(z.enum(["Fulltime", "Contract", "Intern"])).min(1).optional(),
     visaSponsorshipRequired: z.boolean().optional(),
     topSkills: keywordList(30).optional(),
