@@ -125,12 +125,14 @@ export default function SessionSidebar({
           </TooltipContent>
         </Tooltip>
 
-        {/* Kept mounted and at full width while collapsed, so titles don't reflow as the width animates. */}
+        {/* In the collapsible rail it stays mounted at the open width (w-64, minus the border and p-3, plus -mx-1), so titles
+            don't reflow as the width animates and the scrollbar sits on the edge. Elsewhere (the mobile sheet) it fills the width. */}
         <div
           aria-hidden={!open}
           inert={!open}
           className={cn(
-            "-mx-1 flex min-h-0 w-[15.5rem] flex-1 flex-col gap-5 overflow-y-auto px-1 pt-2 transition-opacity duration-300 ease-in-out",
+            "-mx-1 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-1 pt-2 transition-opacity duration-300 ease-in-out",
+            onToggle && "w-[calc(16rem-1px-1rem)]",
             open ? "opacity-100" : "opacity-0",
           )}
         >

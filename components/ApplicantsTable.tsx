@@ -195,6 +195,7 @@ export default function ApplicantsTable({
         ),
         cell: ({ row }) => (
           <ApplicantNameCell
+            applicationId={row.original.id}
             name={row.original.applicantName}
             person={row.original.person}
             knockout={row.original.application_knockouts}

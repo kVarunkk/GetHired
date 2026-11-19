@@ -32,7 +32,7 @@ type RoleUi = {
 };
 
 export const APPLICANT_STARTERS = [
-  "Find remote frontend jobs posted this week",
+  "Show the newest jobs in my field",
   "Show jobs that match my profile",
   "Review my resume against a job I like",
   "What's the status of my applications?",
@@ -61,7 +61,7 @@ export const AGENT_ROLE_UI: Record<AgentRoleId, RoleUi> = {
       "I can write job posts, find and compare candidates in the GetHired talent pool, and help you review your applicants.",
     starters: [
       "Find candidates for my latest job",
-      "Who are the strongest applicants this week?",
+      "Who are my strongest applicants?",
       "Write a job post for a founding engineer",
       "Where is each role stuck?",
     ],

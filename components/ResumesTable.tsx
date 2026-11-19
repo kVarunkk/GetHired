@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { TResumeReviewResume } from "@/utils/types/review.types";
 import ResumeStatusBadge from "./ResumeStatusBadge";
 import ResumeRowActions from "./resume/ResumeRowActions";
+import { resumeDeleteBlockedReason } from "@/helpers/resumes/delete-rule";
 
 export type TResumeTableRow = TResumeReviewResume & {
   schema_version: number;
@@ -67,12 +68,14 @@ export default function ResumesTable({ data }: ResumesTableProps) {
         header: "Name",
         cell: ({ row }) => (
           <div className="flex items-center gap-1">
-            <div
-              className="max-w-[16rem] truncate text-sm font-medium"
+            <ModifiedLink
+              prefetch={false}
+              href={`/resume/${row.original.id}`}
+              className="block max-w-[16rem] truncate text-sm font-medium underline underline-offset-4 hover:underline sm:no-underline"
               title={row.original.name ?? undefined}
             >
               {row.original.name}
-            </div>
+            </ModifiedLink>
             {row.original.is_primary && <Badge>PRIMARY</Badge>}
             {row.original.is_primary && (
               <InfoTooltip
@@ -121,8 +124,7 @@ export default function ResumesTable({ data }: ResumesTableProps) {
               // RE-REQ-098: nothing to edit, copy or export without content.
               isUnreadable: !row.original.has_content,
             }}
-            canDelete={items.length > 1 && !row.original.is_primary}
-            isPrimary={row.original.is_primary}
+            deleteBlocked={resumeDeleteBlockedReason({ isPrimary: row.original.is_primary === true })}
             onDeleted={(id) => {
               setItems((prev) => prev.filter((item) => item.id !== id));
               router.refresh();

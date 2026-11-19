@@ -5,6 +5,8 @@ import type { Database } from "@/utils/types/database.types";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
 import { isUuid } from "@/helpers/agent/auth";
 import { assertLimit } from "@/helpers/billing/entitlements";
+import { enqueueFeedRebuild } from "@/helpers/distribution/feed-queue";
+import { enqueueIndexPing } from "@/helpers/distribution/index-queue";
 import { forbiddenMessage } from "@/helpers/companies/permissions";
 import {
   EntitlementError,
@@ -84,6 +86,9 @@ export async function setJobPostStatus(
     revalidateTag(`job-${jobId}`);
     revalidateTag(careersCompanyTag(company.id));
     revalidatePath(`/jobs/${jobId}`);
+    // MP-REQ-002/003: tell the search engines, queued so it never slows the request.
+    await enqueueIndexPing({ jobId, reason: status === "active" ? "activated" : "closed" });
+    await enqueueFeedRebuild();
   }
 
   return { ok: true };

@@ -1,3 +1,4 @@
+import { toIsoCurrency } from "@/helpers/currency/currencies";
 import { notFound, unstable_rethrow } from "next/navigation";
 import Error from "@/components/Error";
 import SectionHeader from "@/components/SectionHeader";
@@ -61,7 +62,7 @@ export default async function EditJobPostPage({ params }: { params: Promise<{ jo
             description: job.description ?? "",
             location: job.location ?? [],
             job_type: job.job_type,
-            salary_currency: job.salary_currency ?? "$",
+            salary_currency: toIsoCurrency(job.salary_currency) ?? "USD",
             min_salary: job.min_salary ?? 0,
             max_salary: job.max_salary ?? 0,
             min_experience: job.min_experience ?? 0,

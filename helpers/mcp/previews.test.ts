@@ -91,8 +91,15 @@ describe("the resume confirmations (RE-REQ-082)", () => {
     expect(await previewUpdateResume(ctx, EDIT)).toMatchObject({ ok: false });
   });
 
-  it("is an error for the last resume", async () => {
-    supabase.queue("resumes", { data: [ROW], error: null });
+  it("previews deleting the user's only resume when it isn't the primary", async () => {
+    supabase.queue("resumes", { data: [{ ...ROW, is_primary: false }], error: null });
+
+    expect(await previewDeleteResume(ctx, { resumeId: RESUME_ID })).toMatchObject({ ok: true });
+    expect(writes()).toEqual([]);
+  });
+
+  it("is an error for the primary resume", async () => {
+    supabase.queue("resumes", { data: [{ ...ROW, is_primary: true }], error: null });
 
     expect(await previewDeleteResume(ctx, { resumeId: RESUME_ID })).toMatchObject({ ok: false });
     expect(writes()).toEqual([]);

@@ -1,3 +1,4 @@
+import { parseCurrencyCode } from "@/helpers/currency/currencies";
 import { platformsArray } from "@/utils/platforms";
 import { z } from "zod";
 
@@ -58,7 +59,15 @@ export const jobFilterSchema = z.object({
     .number()
     .min(0)
     .optional()
-    .describe("Minimum salary in simplest integer form."),
+    .describe("Minimum yearly salary in simplest integer form, in salaryCurrency (20 LPA = 2000000)."),
+
+  salaryCurrency: z
+    .string()
+    .optional()
+    .transform((value) => parseCurrencyCode(value) ?? undefined)
+    .describe(
+      "ISO 4217 code of minSalary's currency: INR for rupees, lakhs or LPA, USD for dollars, EUR, GBP, CAD, AUD, SGD, AED and so on. Set it whenever minSalary is set.",
+    ),
 
   minExperience: z.coerce
     .number()

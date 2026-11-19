@@ -40,7 +40,7 @@ const preferenceDescriptions = (replaces: string): McpInputDescriptions => ({
   desiredRoles: `Job titles the user is looking for, e.g. ['Frontend Engineer', 'UI Developer'].${replaces}`,
   preferredLocations: `Where the user wants to work, e.g. ['Remote', 'Bengaluru']. City names are saved in their standard spelling.${replaces}`,
   maxSalary: "The top of the user's yearly salary range, as a plain whole number in salaryCurrency.",
-  salaryCurrency: "The currency of minSalary and maxSalary: ₹ rupees, $ US dollars, € euros, £ pounds, C$ Canadian dollars, A$ Australian dollars.",
+  salaryCurrency: "The ISO 4217 code of minSalary and maxSalary's currency, e.g. INR, USD, EUR, GBP, CAD, AUD, SGD or AED. Symbols such as ₹ or $ aren't accepted.",
   jobTypes: `The kinds of employment the user wants: full-time, contract or internship.${replaces}`,
   visaSponsorshipRequired: "true when the user needs an employer to sponsor their visa or work permit.",
   topSkills: `The user's main skills, e.g. ['React', 'TypeScript', 'Figma'].${replaces}`,
@@ -58,8 +58,10 @@ const RESUME_ITEM_FIELDS: McpInputDescriptions = {
 export const MCP_INPUT_DESCRIPTIONS: Readonly<Record<string, McpInputDescriptions>> = {
   search_jobs: {
     ...jobFilters(""),
+    anyRole:
+      "true only when the user asked for jobs of any role. Without it, a search needs keywords or companies.",
     cursor:
-      "For the next page: the nextCursor from the previous search_jobs result, sent with the same filters. Leave out for the first page.",
+      "For the next page: the nextCursor from the previous search_jobs result, sent with the same filters, or with widened.searchedWith when the result was widened. Leave out for the first page.",
     limit: LIMIT,
   },
   natural_language_job_search: {
@@ -290,10 +292,22 @@ const resumeFit = output({
   missing: z.array(output({ text: z.string(), importance: z.enum(["must", "nice"]) })).optional(),
 });
 
+/** On a search that found nothing with every filter (helpers/agent/tools/widen-search.ts). */
+const widenedSearch = {
+  widened: output({
+    dropped: z.array(z.string()).describe("The filters relaxed to find these jobs, in the order they were relaxed."),
+    searchedWith: z.record(z.unknown()).describe("The filters these jobs match. Send them with cursor for the next page."),
+  })
+    .optional()
+    .describe("Set when no jobs matched every filter and the search was relaxed. Tell the user what was relaxed."),
+  message: z.string().optional().describe("What to tell the user about a relaxed or empty search."),
+};
+
 export const MCP_OUTPUT_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
-  search_jobs: output(jobList),
+  search_jobs: output({ ...jobList, ...widenedSearch }),
   natural_language_job_search: output({
     ...jobList,
+    ...widenedSearch,
     filters: z.record(z.unknown()).describe("The filters the AI read from the query."),
   }),
   get_relevant_jobs: output(jobList),

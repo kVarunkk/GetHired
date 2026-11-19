@@ -8,8 +8,8 @@ vi.mock("react-transition-progress/next", () => ({
 }));
 vi.mock("./ResumeSetPrimary", () => ({ default: () => null }));
 vi.mock("./resume/ResumeRowActions", () => ({
-  default: ({ resume, canDelete }: { resume: { id: string; isUnreadable: boolean }; canDelete: boolean }) => (
-    <div data-testid={`actions-${resume.id}`}>{JSON.stringify({ ...resume, canDelete })}</div>
+  default: ({ resume, deleteBlocked }: { resume: { id: string; isUnreadable: boolean }; deleteBlocked: string | null }) => (
+    <div data-testid={`actions-${resume.id}`}>{JSON.stringify({ ...resume, deleteBlocked })}</div>
   ),
 }));
 
@@ -64,12 +64,13 @@ describe("ResumesTable (RE-REQ-030)", () => {
     expect(actions("r1").isUnreadable).toBe(true);
   });
 
-  it("only allows a delete when another resume stays", () => {
+  it("allows a delete of any resume but the primary, even the only one", () => {
     const { unmount } = render(<ResumesTable data={[row({})]} />);
-    expect(actions("r1").canDelete).toBe(false);
+    expect(actions("r1").deleteBlocked).toBeNull();
     unmount();
 
-    render(<ResumesTable data={[row({}), row({ id: "r2", name: "Frontend" })]} />);
-    expect(actions("r1").canDelete).toBe(true);
+    render(<ResumesTable data={[row({ is_primary: true }), row({ id: "r2", name: "Frontend" })]} />);
+    expect(actions("r1").deleteBlocked).toMatch(/primary/);
+    expect(actions("r2").deleteBlocked).toBeNull();
   });
 });

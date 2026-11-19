@@ -87,6 +87,24 @@ export const PERMISSION_CATALOG = [
     requires: ["jobs.view", "team.view"],
     deny: "change the hiring team",
   },
+  {
+    key: "distribution.view",
+    group: "Jobs",
+    label: "View job distribution",
+    description: "See which job boards and aggregators a job is published to, and its stats per channel.",
+    scopable: true,
+    requires: ["jobs.view"],
+    deny: "view job distribution",
+  },
+  {
+    key: "distribution.manage",
+    group: "Jobs",
+    label: "Manage job distribution",
+    description: "Choose the channels a company publishes to and opt a job in or out of a channel.",
+    scopable: true,
+    requires: ["distribution.view"],
+    deny: "manage job distribution",
+  },
   // Applicants
   {
     key: "applicants.view",

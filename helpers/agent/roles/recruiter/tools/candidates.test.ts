@@ -87,6 +87,7 @@ describe("searchCandidates tool", () => {
       locations: ["Pune"],
       minExperience: 3,
       maxSalary: 4000000,
+      salaryCurrency: "INR",
     });
 
     expect(searchProfiles).toHaveBeenCalledWith(COMPANY_A.id, {
@@ -96,6 +97,7 @@ describe("searchCandidates tool", () => {
       minExperience: 3,
       maxExperience: undefined,
       budget: 4000000,
+      budgetCurrency: "INR",
       jobTypes: undefined,
       workStyle: undefined,
       limit: 10,
@@ -110,7 +112,7 @@ describe("searchCandidates tool", () => {
           experienceYears: 5,
           locations: ["pune", "remote"],
           topSkills: ["React", "TypeScript", "Jest"],
-          salary: "₹1500000–₹2500000",
+          salary: "1500000–2500000 INR",
           workStyle: ["Hybrid"],
           url: `/company/profiles/${CANDIDATE_ID}`,
         },
@@ -128,6 +130,13 @@ describe("searchCandidates tool", () => {
       planLimit: 5,
       upgradeUrl: "/company/billing",
     });
+  });
+
+  it("asks for the budget's currency instead of comparing across currencies", async () => {
+    const result = await execTool(tools.searchCandidates, { maxSalary: 3000000 });
+
+    expect(result).toEqual({ error: expect.stringMatching(/currency/) });
+    expect(searchProfiles).not.toHaveBeenCalled();
   });
 
   it.each([

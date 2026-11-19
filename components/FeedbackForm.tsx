@@ -21,6 +21,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { SIDEBAR_ROW } from "./sidebar-row";
 import SidebarLabel from "./SidebarLabel";
 
 export default function FeedbackForm({
@@ -48,7 +49,7 @@ export default function FeedbackForm({
       {isVertical ? (
         <Tooltip delayDuration={100}>
           <TooltipTrigger asChild>
-            <ResponsiveDialogTrigger className="flex items-center w-full px-4 py-2 gap-2 hover:bg-secondary transition-colors rounded-lg overflow-hidden">
+            <ResponsiveDialogTrigger className={SIDEBAR_ROW}>
               <MessageCircle className="h-4 w-4 shrink-0" />
               <SidebarLabel open={isMenuOpen}>Feedback</SidebarLabel>
             </ResponsiveDialogTrigger>

@@ -8,6 +8,7 @@ import {
   History,
   ListChecks,
   Mail,
+  Share2,
   ShieldCheck,
   Users,
   UsersRound,
@@ -17,6 +18,7 @@ import Error from "@/components/Error";
 import EntityLayout from "@/components/EntityLayout";
 import type { EntityNavItem } from "@/components/EntityNav";
 import PageHeader from "@/components/PageHeader";
+import { DISTRIBUTION_SETTINGS_PATH } from "@/helpers/distribution/channel-status";
 import { MY_CALENDAR_PATH } from "@/helpers/calendar/config";
 import { calendarEnabled } from "@/helpers/calendar/connect";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
@@ -29,7 +31,8 @@ const SETTINGS_PATH = "/company/settings";
 
 /**
  * Settings' frame: the sections sidebar (pipelines, email templates,
- * scheduling link, my calendar, notifications, careers page, question sets,
+ * scheduling link, my calendar, notifications, careers page, distribution,
+ * question sets,
  * team, hiring teams, roles, audit log) and the Settings header. A main page, so the
  * sidebar has no back link or title. Each section shows only with the
  * permission its page checks, and the page checks it again.
@@ -60,6 +63,10 @@ export default async function CompanySettingsLayout({ children }: { children: Re
       { href: `${SETTINGS_PATH}/notifications`, label: "Notifications", icon: <Bell /> },
       { href: `${SETTINGS_PATH}/careers`, label: "Careers page", icon: <Globe /> },
     ];
+    // Which job boards the company's jobs go to (MP-REQ-011); jobs can still opt out one by one.
+    if (canAny(company, "distribution.view")) {
+      items.push({ href: DISTRIBUTION_SETTINGS_PATH, label: "Distribution", icon: <Share2 /> });
+    }
     if (can(company, "jobs.view")) items.push({ href: QUESTION_SETS_PATH, label: "Question sets", icon: <ListChecks /> });
     if (can(company, "team.view")) items.push({ href: `${SETTINGS_PATH}/team`, label: "Team", icon: <Users /> });
     if (canAny(company, "jobs.assign")) {

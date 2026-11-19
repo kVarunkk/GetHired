@@ -16,6 +16,7 @@ import { searchJobs } from "@/helpers/jobs/search-jobs";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { agentTelemetry, flushAgentTraces } from "@/helpers/agent/telemetry";
+import { SKIPPED_APPROVAL_REASON } from "@/helpers/agent/skipped-approvals";
 import {
   AGENT_CONTENT_FILTER_MESSAGE,
   AGENT_CUT_OFF_MESSAGE,
@@ -462,6 +463,35 @@ describe("POST /api/agent/chat: history rules", () => {
       approval: { id: "ap1", approved: false },
     });
     expect(model.doStreamCalls).toHaveLength(1);
+  });
+
+  it("skips an approval the user moved past, and tells the model it didn't run", async () => {
+    const pending: UIMessage = {
+      id: "a1",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool-updateMyPreferences",
+          toolCallId: "c1",
+          state: "approval-requested",
+          input: { minSalary: 1000000 },
+          approval: { id: "ap1" },
+        },
+      ],
+    } as UIMessage;
+    queueSession({ history: [text("u1", "user", "set my salary"), pending] });
+
+    const res = await submit(text("u2", "user", "actually, find me jobs"));
+    await res.text();
+
+    const [skipped, sent] = upserts(supabase);
+    expect(skipped).toEqual([expect.objectContaining({ id: "a1" })]);
+    expect(skipped[0].parts[0]).toMatchObject({
+      state: "output-denied",
+      approval: { id: "ap1", approved: false, reason: SKIPPED_APPROVAL_REASON },
+    });
+    expect(sent).toEqual([expect.objectContaining({ id: "u2" })]);
+    expect(JSON.stringify(model.doStreamCalls[0].prompt)).toContain(SKIPPED_APPROVAL_REASON);
   });
 
   it("returns 400 for an assistant message that isn't the latest reply", async () => {

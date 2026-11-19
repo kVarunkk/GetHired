@@ -1,6 +1,8 @@
 import { reportError } from "@/helpers/posthog/report-error";
 import { revalidateTag } from "next/cache";
 import { careersCompanyTag } from "@/helpers/careers/cache-tags";
+import { enqueueFeedRebuild } from "@/helpers/distribution/feed-queue";
+import { enqueueIndexPing } from "@/helpers/distribution/index-queue";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
@@ -127,7 +129,8 @@ export async function upsertJobPosting(
       description: values.description,
       location: values.location,
       job_type: values.job_type,
-      salary_currency: values.salary_currency,
+      // "" (no salary) is stored as no currency.
+      salary_currency: values.salary_currency || null,
       min_salary: values.min_salary,
       max_salary: values.max_salary,
       min_experience: values.min_experience,
@@ -217,6 +220,7 @@ export async function upsertJobPosting(
           job_name: values.title,
           job_type: values.job_type,
           salary_range,
+          salary_currency: values.salary_currency || null,
           salary_min: values.min_salary,
           salary_max: values.max_salary,
           experience,
@@ -247,6 +251,7 @@ export async function upsertJobPosting(
           description: posting.description,
           visa_requirement: posting.visa_sponsorship,
           salary_range: posting.salary_range,
+          salary_currency: posting.salary_currency || null,
           salary_min: posting.min_salary,
           salary_max: posting.max_salary,
           experience_min: posting.min_experience ?? undefined,
@@ -285,6 +290,8 @@ export async function upsertJobPosting(
     revalidateTag(careersCompanyTag(company.id));
 
     if (posting.status === "active") {
+      if (existing?.job_id) await enqueueIndexPing({ jobId: existing.job_id, reason: "updated" });
+      await enqueueFeedRebuild();
       await queueJobPostingRelevance({ supabase, company, user }, posting.id);
     }
 

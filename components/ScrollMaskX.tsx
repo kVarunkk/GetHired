@@ -19,7 +19,10 @@ export default function ScrollMaskX({
   children,
   className,
   revealSelector,
+  revealKey,
 }: {
+  /** Changes when the element to reveal changes (e.g. the pathname). */
+  revealKey?: string;
   children: React.ReactNode;
   className?: string;
   /** An element inside to bring into view on mount, e.g. the active tab. */
@@ -65,7 +68,7 @@ export default function ScrollMaskX({
     observer.observe(scroller);
     for (const child of Array.from(scroller.children)) observer.observe(child);
     return () => observer.disconnect();
-  }, [update, revealSelector]);
+  }, [update, revealSelector, revealKey]);
 
   const mask = `linear-gradient(to right, ${edges.left ? "transparent" : "#000"}, #000 ${FADE_PX}px, #000 calc(100% - ${FADE_PX}px), ${edges.right ? "transparent" : "#000"})`;
 

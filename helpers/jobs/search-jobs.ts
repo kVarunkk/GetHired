@@ -1,4 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { parseCurrencyCode, toIsoCurrency } from "@/helpers/currency/currencies";
 import { buildQuery } from "@/helpers/jobs/filterQueryBuilder";
 import { rerankJobsIfApplicable } from "@/helpers/jobs/ai-rerank-jobs";
 import { getCutOffDate } from "@/utils/date";
@@ -13,6 +14,8 @@ export type SearchJobsParams = {
   location: string | null;
   visaRequirement: string | null;
   minSalary: string | null;
+  /** ISO 4217 code: only jobs paid in it. With minSalary and no currency, the user's profile currency. */
+  salaryCurrency: string | null;
   minExperience: string | null;
   maxExperience: string | null;
   platform: string | null;
@@ -54,6 +57,7 @@ const DEFAULT_PARAMS: SearchJobsParams = {
   location: null,
   visaRequirement: null,
   minSalary: null,
+  salaryCurrency: null,
   minExperience: null,
   maxExperience: null,
   platform: null,
@@ -81,6 +85,7 @@ export function parseJobSearchParams(
     location: searchParams.get("location"),
     visaRequirement: searchParams.get("visaRequirement"),
     minSalary: searchParams.get("minSalary"),
+    salaryCurrency: searchParams.get("salaryCurrency"),
     minExperience: searchParams.get("minExperience"),
     maxExperience: searchParams.get("maxExperience"),
     platform: searchParams.get("platform"),
@@ -97,6 +102,29 @@ export function parseJobSearchParams(
     limit: parseInt(searchParams.get("limit") || String(DEFAULT_PARAMS.limit)),
     digestType: searchParams.get("type"),
   };
+}
+
+/**
+ * The currency a salary filter is in. Amounts are only compared within one
+ * currency: an explicit one wins; a minimum salary without one is in the
+ * signed-in user's profile currency. Null when neither says (no currency
+ * filter, as before).
+ */
+async function resolveSalaryCurrency(
+  supabase: SupabaseClient<Database>,
+  user: { id: string } | null,
+  params: SearchJobsParams,
+): Promise<string | null> {
+  const explicit = parseCurrencyCode(params.salaryCurrency);
+  if (explicit || !params.minSalary) return explicit;
+  const userId = params.applicantUserId ?? user?.id;
+  if (!userId) return null;
+  const { data } = await supabase
+    .from("user_info")
+    .select("salary_currency")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return toIsoCurrency(data?.salary_currency);
 }
 
 /**
@@ -188,6 +216,9 @@ export async function searchJobs(
     };
   }
 
+  trace.stage = "resolve_salary_currency";
+  const salaryCurrency = await resolveSalaryCurrency(supabase, user, params);
+
   trace.stage = "build_jobs_query";
   const { data, error, nextCursor, count, matchedJobIds } = await buildQuery(
     supabase,
@@ -197,6 +228,7 @@ export async function searchJobs(
       location: params.location,
       visaRequirement: params.visaRequirement,
       minSalary: params.minSalary,
+      salaryCurrency,
       minExperience: params.minExperience,
       maxExperience: params.maxExperience,
       platform: params.platform,

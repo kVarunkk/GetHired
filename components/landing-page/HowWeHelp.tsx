@@ -27,7 +27,7 @@ import { howWeHelpCopy, type HowWeHelpAudience } from "@/helpers/marketing/conte
 // through login.
 const JOB_SEARCH_PROMPT = "Find jobs that match my profile";
 const TRACKING_PROMPT = "Show my applications, saved jobs and upcoming interviews";
-const BOARD_SEARCH_PROMPT = "Search for remote software engineer jobs posted this week";
+const BOARD_SEARCH_PROMPT = "Search for jobs in my field";
 const PREP_PROMPT = "Review my resume and set up a mock interview";
 
 const CANDIDATE_SEARCH_PROMPT = "Find candidates who match my open jobs";

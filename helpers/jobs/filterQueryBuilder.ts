@@ -10,7 +10,7 @@ import { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { Database } from "@/utils/types/database.types";
 import { getCutOffDate } from "@/utils/date";
 import { expandLocations } from "@/helpers/locations/aliases";
-export const allJobsSelectString = `id, created_at, updated_at, job_name, job_type, platform, locations, salary_range, visa_requirement, salary_min, salary_max, company_name, experience, experience_min, experience_max, equity_range, equity_min, equity_max, status, ai_summary, is_platform_job`;
+export const allJobsSelectString = `id, created_at, updated_at, job_name, job_type, platform, locations, salary_range, visa_requirement, salary_min, salary_max, salary_currency, company_name, experience, experience_min, experience_max, equity_range, equity_min, equity_max, status, ai_summary, is_platform_job`;
 
 /**
  * Splits text into lowercase words the way `public.job_title_search_text`
@@ -65,6 +65,7 @@ export const buildQuery = async (
     visaRequirement,
     location,
     minSalary,
+    salaryCurrency,
     minExperience,
     maxExperience,
     platform,
@@ -86,6 +87,8 @@ export const buildQuery = async (
     visaRequirement: string | null;
     location: string | null;
     minSalary: string | null;
+    /** ISO 4217 code; amounts are only compared within one currency. */
+    salaryCurrency?: string | null;
     minExperience: string | null;
     maxExperience: string | null;
     platform: string | null;
@@ -125,18 +128,10 @@ export const buildQuery = async (
     let query;
     let selectString;
     // The total of this query, with the tab and every filter applied, on the
-    // first page only (later pages keep the first page's total). The tabs are
-    // the user's own few rows, so they're counted exactly. The open listing
-    // spans every active job, and an exact count there scans them all and hit
-    // the statement timeout; "estimated" stays exact up to PostgREST's max
-    // rows and uses the planner's estimate above that.
-    const isOwnRowsTab =
-      isFavoriteTabActive ||
-      isAppliedJobsTabActive ||
-      relevanceSearchType === "standard";
-    const countOption = cursor
-      ? undefined
-      : { count: isOwnRowsTab ? ("exact" as const) : ("estimated" as const) };
+    // first page only (later pages keep the first page's total). It is always
+    // exact: above PostgREST's max rows an "estimated" count is the planner's
+    // guess, which for `status = 'active'` is half the table.
+    const countOption = cursor ? undefined : { count: "exact" as const };
 
     if (isFavoriteTabActive) {
       if (!user) {
@@ -306,6 +301,9 @@ export const buildQuery = async (
       query = query.in("applications.status", applicationStatusArray);
     }
 
+    if (salaryCurrency) {
+      query = query.eq("salary_currency", salaryCurrency);
+    }
     if (minSalary) {
       query = query.gte("salary_min", parseInt(minSalary));
     }

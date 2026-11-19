@@ -1,3 +1,4 @@
+import { salaryCurrencyInput } from "./profile";
 import { after } from "next/server";
 import { isRelevanceInProgress } from "@/helpers/jobs/relevance-jobs-queue";
 import { tool } from "ai";
@@ -24,6 +25,13 @@ import {
   uuidInput,
   withToolErrors,
 } from "./shared";
+import {
+  hasRoleOrCompany,
+  stillEmptyMessage,
+  widenedMessage,
+  widenedSearches,
+  type WidenStepName,
+} from "./widen-search";
 
 const PLATFORMS = platformsArray.map((platform) => platform.value) as [
   string,
@@ -49,7 +57,12 @@ const jobFiltersInput = z.object({
     .int()
     .min(0)
     .optional()
-    .describe("Minimum salary as a plain integer."),
+    .describe("Minimum yearly salary as a plain integer, in salaryCurrency (20 LPA = 2000000)."),
+  salaryCurrency: salaryCurrencyInput
+    .optional()
+    .describe(
+      "ISO 4217 code of minSalary, e.g. INR for rupees or LPA, USD for dollars. Only jobs paid in this currency match. Defaults to the user's profile currency; ignored without minSalary.",
+    ),
   minExperience: z
     .number()
     .int()
@@ -101,6 +114,9 @@ function filtersToParams(filters: JobFilters = {}): Partial<SearchJobsParams> {
     location: join(filters.locations),
     jobType: join(filters.jobTypes),
     minSalary: filters.minSalary?.toString(),
+    // A currency only narrows a salary filter: alone it would hide every job
+    // without a salary.
+    salaryCurrency: filters.minSalary !== undefined ? filters.salaryCurrency : undefined,
     minExperience: filters.minExperience?.toString(),
     maxExperience: filters.maxExperience?.toString(),
     visaRequirement: join(filters.visaRequirements),
@@ -110,20 +126,28 @@ function filtersToParams(filters: JobFilters = {}): Partial<SearchJobsParams> {
   });
 }
 
-/** Maps natural-language search filters to search params (no tab or relevance). */
-function parsedFiltersToParams(
-  filters: JobQueryFilters,
-): Partial<SearchJobsParams> {
+/** Natural-language search filters in the searchJobs tool's terms (no tab or relevance). */
+function parsedToFilters(filters: JobQueryFilters): JobFilters {
+  const postedWithinDays = filters.createdAfter ? Number(filters.createdAfter) : undefined;
+  return Object.fromEntries(
+    Object.entries({
+      keywords: filters.jobTitleKeywords,
+      locations: filters.location,
+      jobTypes: filters.jobType,
+      platforms: filters.platform,
+      companies: filters.companyName,
+      minSalary: filters.minSalary,
+      salaryCurrency: filters.salaryCurrency,
+      minExperience: filters.minExperience,
+      maxExperience: filters.maxExperience,
+      postedWithinDays: Number.isFinite(postedWithinDays) ? postedWithinDays : undefined,
+    }).filter(([, value]) => value !== undefined),
+  ) as JobFilters;
+}
+
+/** The natural-language search's sort, kept on every widened search. */
+function parsedSort(filters: JobQueryFilters): Partial<SearchJobsParams> {
   return definedOnly({
-    jobType: join(filters.jobType),
-    jobTitleKeywords: join(filters.jobTitleKeywords),
-    location: join(filters.location),
-    platform: join(filters.platform),
-    companyName: join(filters.companyName),
-    minSalary: filters.minSalary?.toString(),
-    minExperience: filters.minExperience?.toString(),
-    maxExperience: filters.maxExperience?.toString(),
-    createdAfterDays: filters.createdAfter,
     sortBy: filters.sortBy === "relevance" ? undefined : filters.sortBy,
     sortOrder: filters.sortOrder,
   });
@@ -165,6 +189,69 @@ function reportEmptyLocationSearch(
   );
 }
 
+/**
+ * Runs a search, and when a first page finds nothing, the widened searches
+ * from widen-search.ts until one finds jobs. The result says what was
+ * relaxed (`widened`) or, still empty, what the model should do instead of
+ * searching again without keywords.
+ */
+async function searchWithWidening(
+  ctx: AgentToolContext,
+  toolName: string,
+  filters: JobFilters,
+  extra: Partial<SearchJobsParams>,
+) {
+  const search = async (f: JobFilters) =>
+    toJobList(await searchJobs(ctx.supabase, ctx.user, { ...filtersToParams(f), ...extra }));
+
+  const first = await search(filters);
+  if (!("jobs" in first) || !first.jobs || first.jobs.length > 0 || extra.cursor) return first;
+
+  const searches = widenedSearches(filters);
+  let dropped: WidenStepName[] = [];
+  for (const widened of searches) {
+    const list = await search(widened.filters);
+    if (!("jobs" in list) || !list.jobs) return list;
+    dropped = widened.dropped;
+    if (list.jobs.length > 0) {
+      reportWidenedSearch(ctx, toolName, dropped, true);
+      return {
+        ...list,
+        widened: { dropped, searchedWith: widened.filters },
+        message: widenedMessage(dropped),
+      };
+    }
+  }
+  if (searches.length > 0) reportWidenedSearch(ctx, toolName, dropped, false);
+  return { ...first, message: stillEmptyMessage(dropped) };
+}
+
+/**
+ * Logs a search the tool widened, after the response: which filters it
+ * relaxed and whether that found jobs. The last name in `dropped` is the
+ * filter that emptied the search.
+ */
+function reportWidenedSearch(
+  ctx: AgentToolContext,
+  toolName: string,
+  dropped: WidenStepName[],
+  found: boolean,
+) {
+  after(() =>
+    eventCaptureServer({
+      event: PostHogEvent.AgentSearchWidened,
+      distinctId: ctx.user.id,
+      properties: { tool: toolName, surface: ctx.surface, dropped, found },
+    }),
+  );
+}
+
+const KEYWORDS_REQUIRED = {
+  error: "KEYWORDS_REQUIRED",
+  message:
+    "Add job-title keywords (or companies). For 'jobs in my field' or 'jobs for me', use the user's desired roles from their profile, with common spellings. If you don't know their role, ask. Set anyRole only when the user asked for jobs of any role.",
+} as const;
+
 /** The user's saved or applied jobs, as the /jobs tabs show them. MCP's get_applied_jobs uses it too. */
 export async function listJobsInTab(
   ctx: AgentToolContext,
@@ -182,23 +269,26 @@ export function createJobTools(ctx: AgentToolContext) {
   return {
     searchJobs: tool({
       description:
-        "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page.",
+        "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page. Needs keywords or companies unless anyRole is set. When nothing matches every filter, it relaxes the posting date, salary, visa and sources, job type, then experience, in that order, and never the keywords, locations or companies: the result's widened says what was relaxed, and later pages need the filters in widened.searchedWith.",
       inputSchema: jobFiltersInput.extend({
+        anyRole: z
+          .boolean()
+          .optional()
+          .describe("true only when the user asked for jobs of any role, so the search has no keywords."),
         cursor: z
           .string()
           .optional()
           .describe("nextCursor from a previous searchJobs call."),
         limit: limitInput,
       }),
-      execute: ({ cursor, limit, ...filters }) =>
+      execute: ({ anyRole, cursor, limit, ...filters }) =>
         withToolErrors(ctx, "searchJobs", async () => {
-          const list = toJobList(
-            await searchJobs(supabase, ctx.user, {
-              ...filtersToParams(filters),
-              ...(cursor ? { cursor } : {}),
-              limit: limitOrDefault(limit),
-            }),
-          );
+          if (!anyRole && !hasRoleOrCompany(filters)) return KEYWORDS_REQUIRED;
+
+          const list = await searchWithWidening(ctx, "searchJobs", filters, {
+            ...(cursor ? { cursor } : {}),
+            limit: limitOrDefault(limit),
+          });
           reportEmptyLocationSearch(ctx, "searchJobs", filters.locations, list);
           return list;
         }),
@@ -231,11 +321,12 @@ export function createJobTools(ctx: AgentToolContext) {
               : { error: parsed.error };
           }
 
-          const list = toJobList(
-            await searchJobs(supabase, ctx.user, {
-              ...parsedFiltersToParams(parsed.filters),
-              limit: limitOrDefault(limit),
-            }),
+          // Widening reruns only the search: the query is parsed and charged once.
+          const list = await searchWithWidening(
+            ctx,
+            "naturalLanguageJobSearch",
+            parsedToFilters(parsed.filters),
+            { ...parsedSort(parsed.filters), limit: limitOrDefault(limit) },
           );
           reportEmptyLocationSearch(
             ctx,
@@ -305,11 +396,14 @@ export function createJobTools(ctx: AgentToolContext) {
             }
           }
 
-          if (!profile?.embedding_new) {
+          // Matches come only from the feed, which onboarding builds: a user
+          // who hasn't onboarded would get an empty list with no reason, even
+          // with a resume (agent chat review 2026-11-14/15, problem 8).
+          if (!profile?.filled || !profile.embedding_new) {
             return {
               error: "PROFILE_INCOMPLETE",
               message:
-                "Personalised matches need a completed profile or a parsed primary resume. Ask the user to finish onboarding at /get-started or upload a resume.",
+                "Personalised matches need a completed profile. Offer to finish onboarding (or the form at /get-started). Meanwhile offer a regular job search: if the user has a resume, read it and search with its job titles and skills.",
             };
           }
 

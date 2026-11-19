@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound, unstable_rethrow } from "next/navigation";
 import { format } from "date-fns";
-import { ClipboardList, FileText, FileUp, Mic, Pencil, UserCog, UserSearch, Users, Workflow } from "lucide-react";
+import { ClipboardList, FileText, FileUp, Globe, Mic, Pencil, UserCog, UserSearch, Users, Workflow } from "lucide-react";
 import Error from "@/components/Error";
 import EntityLayout from "@/components/EntityLayout";
 import type { EntityNavItem } from "@/components/EntityNav";
@@ -17,7 +17,7 @@ import { getMyCareersLink } from "@/helpers/careers/my-careers-link";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { jobControls } from "@/helpers/companies/job-scope";
 import { can } from "@/helpers/companies/permissions";
-import { jobPipelinePath, jobPoolMatchesPath } from "@/helpers/jobs/paths";
+import { jobDistributionPath, jobPipelinePath, jobPoolMatchesPath } from "@/helpers/jobs/paths";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -106,6 +106,10 @@ export default async function JobPostLayout({
     // JPT-035: the job's pipeline, for everyone who sees the job (jobs.view,
     // checked above). Active on the switch page too.
     items.push({ href: jobPipelinePath(job.id), label: "Pipeline", icon: <Workflow /> });
+    // MPT-015: where the job is published, for distribution.view on this job.
+    if (can(company, "distribution.view", job.id)) {
+      items.push({ href: jobDistributionPath(job.id), label: "Distribution", icon: <Globe /> });
+    }
     // RP-REQ-011: the Hiring team page, for jobs.assign on this job only.
     if (can(company, "jobs.assign", job.id)) {
       items.push({ href: `${base}/hiring-team`, label: "Hiring team", icon: <UserCog /> });

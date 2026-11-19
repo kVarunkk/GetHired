@@ -10,7 +10,7 @@ import AskAgentBox, { type AgentSuggestion } from "./AskAgentBox";
 
 // searchJobs / naturalLanguageJobSearch, findRelevantJobs, listSavedJobs, listApplications.
 export const JOBS_SUGGESTIONS: AgentSuggestion[] = [
-  { label: "Find remote jobs posted this week", prompt: "Find remote jobs in my field posted this week." },
+  { label: "Newest jobs in my field", prompt: "Show the newest jobs in my field." },
   { label: "Jobs that match my profile", prompt: "Show jobs that match my profile, best matches first." },
   { label: "My saved jobs", prompt: "List the jobs I've saved and tell me which are still worth applying to." },
   { label: "Where are my applications?", prompt: "What's the status of my applications?" },
@@ -20,7 +20,7 @@ export function AskAgentAboutJobs() {
   return (
     <AskAgentBox
       title="Let the agent find jobs for you"
-      placeholder="Find remote React jobs in Bangalore paying over 20 LPA…"
+      placeholder="Find React jobs that match my resume…"
       basePath={AGENT_PATH}
       suggestions={JOBS_SUGGESTIONS}
     />

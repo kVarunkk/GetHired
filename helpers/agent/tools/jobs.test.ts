@@ -88,9 +88,9 @@ describe("searchJobs tool", () => {
   });
 
   it("defaults the limit to 10", async () => {
-    await execTool(tools.searchJobs, {});
+    await execTool(tools.searchJobs, { keywords: ["frontend"] });
 
-    expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, { limit: 10 });
+    expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, { jobTitleKeywords: "frontend", limit: 10 });
   });
 
   it.each([
@@ -106,21 +106,152 @@ describe("searchJobs tool", () => {
   it("returns search failures as tool errors", async () => {
     vi.mocked(searchJobs).mockResolvedValue({ ok: false, status: 404, error: "Nope" });
 
-    expect(await execTool(tools.searchJobs, {})).toEqual({ error: "Nope" });
+    expect(await execTool(tools.searchJobs, { keywords: ["frontend"] })).toEqual({ error: "Nope" });
   });
 
   it("maps 402 to INSUFFICIENT_CREDITS", async () => {
     vi.mocked(searchJobs).mockResolvedValue({ ok: false, status: 402, error: "x" });
 
-    expect(await execTool(tools.searchJobs, {})).toMatchObject({ error: "INSUFFICIENT_CREDITS" });
+    expect(await execTool(tools.searchJobs, { keywords: ["frontend"] })).toMatchObject({ error: "INSUFFICIENT_CREDITS" });
   });
 
   it("never throws", async () => {
     vi.mocked(searchJobs).mockRejectedValue(new Error("db down"));
 
-    expect(await execTool(tools.searchJobs, {})).toEqual({
+    expect(await execTool(tools.searchJobs, { keywords: ["frontend"] })).toEqual({
       error: "Something went wrong while running searchJobs. Please try again.",
     });
+  });
+
+  it("refuses a search with no keywords or company, without querying", async () => {
+    expect(await execTool(tools.searchJobs, { locations: ["Pune"] })).toMatchObject({
+      error: "KEYWORDS_REQUIRED",
+    });
+    expect(searchJobs).not.toHaveBeenCalled();
+  });
+
+  it("allows a keyword-less search when the user asked for any role", async () => {
+    await execTool(tools.searchJobs, { anyRole: true, locations: ["Pune"] });
+
+    expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, { location: "Pune", limit: 10 });
+  });
+});
+
+describe("widening an empty search", () => {
+  const empty = { ok: true, data: [], totalCount: 0, nextCursor: null } as never;
+  const found = { ok: true, data: [JOB], totalCount: 1, nextCursor: null } as never;
+
+  it("relaxes filters in order until a search finds jobs, and says what it relaxed", async () => {
+    vi.mocked(searchJobs).mockResolvedValueOnce(empty).mockResolvedValueOnce(empty).mockResolvedValueOnce(found);
+
+    const result = await execTool(tools.searchJobs, {
+      keywords: ["frontend"],
+      locations: ["Bengaluru"],
+      postedWithinDays: 7,
+      minSalary: 2000000,
+      jobTypes: ["Fulltime"],
+    });
+
+    const calls = vi.mocked(searchJobs).mock.calls.map(([, , params]) => params);
+    expect(calls).toEqual([
+      { jobTitleKeywords: "frontend", location: "Bengaluru", createdAfterDays: "7", minSalary: "2000000", jobType: "Fulltime", limit: 10 },
+      { jobTitleKeywords: "frontend", location: "Bengaluru", minSalary: "2000000", jobType: "Fulltime", limit: 10 },
+      { jobTitleKeywords: "frontend", location: "Bengaluru", jobType: "Fulltime", limit: 10 },
+    ]);
+    expect(result).toMatchObject({
+      jobs: [COMPACT_JOB],
+      widened: {
+        dropped: ["postedWithinDays", "minSalary"],
+        searchedWith: { keywords: ["frontend"], locations: ["Bengaluru"], jobTypes: ["Fulltime"] },
+      },
+      message: expect.stringContaining("the posting date, the minimum salary"),
+    });
+
+    await flushAfter();
+    expect(eventCaptureServer).toHaveBeenCalledWith({
+      event: "agent_search_widened",
+      distinctId: "u1",
+      properties: { tool: "searchJobs", surface: "agent", dropped: ["postedWithinDays", "minSalary"], found: true },
+    });
+  });
+
+  it("keeps the keywords and location when nothing is found, and tells the model what to do", async () => {
+    vi.mocked(searchJobs).mockResolvedValue(empty);
+
+    const result = await execTool(tools.searchJobs, {
+      keywords: ["frontend"],
+      locations: ["Bengaluru"],
+      postedWithinDays: 7,
+    });
+
+    expect(searchJobs).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(searchJobs).mock.calls[1][2]).toEqual({
+      jobTitleKeywords: "frontend",
+      location: "Bengaluru",
+      limit: 10,
+    });
+    expect(result).toMatchObject({
+      jobs: [],
+      message: expect.stringContaining("Don't search again without job-title keywords"),
+    });
+    expect(result).not.toHaveProperty("widened");
+
+    await flushAfter();
+    expect(eventCaptureServer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "agent_search_widened",
+        properties: expect.objectContaining({ dropped: ["postedWithinDays"], found: false }),
+      }),
+    );
+  });
+
+  it("doesn't widen a later page", async () => {
+    vi.mocked(searchJobs).mockResolvedValue(empty);
+
+    await execTool(tools.searchJobs, { keywords: ["frontend"], postedWithinDays: 7, cursor: "c1" });
+
+    expect(searchJobs).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns an error from a widened search", async () => {
+    vi.mocked(searchJobs).mockResolvedValueOnce(empty).mockResolvedValueOnce({ ok: false, status: 404, error: "Nope" });
+
+    expect(await execTool(tools.searchJobs, { keywords: ["frontend"], postedWithinDays: 7 })).toEqual({
+      error: "Nope",
+    });
+  });
+
+  it("widens a natural-language search without parsing or charging again", async () => {
+    vi.mocked(parseJobQuery).mockResolvedValue({
+      ok: true,
+      filters: { jobTitleKeywords: ["react"], location: ["Remote"], createdAfter: "7", sortBy: "created_at", sortOrder: "desc" },
+    } as never);
+    vi.mocked(searchJobs).mockResolvedValueOnce(empty).mockResolvedValueOnce(found);
+
+    const result = await execTool(tools.naturalLanguageJobSearch, { query: "remote react jobs this week" });
+
+    expect(parseJobQuery).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(searchJobs).mock.calls[1][2]).toEqual({
+      jobTitleKeywords: "react",
+      location: "Remote",
+      sortBy: "created_at",
+      sortOrder: "desc",
+      limit: 10,
+    });
+    expect(result).toMatchObject({ jobs: [COMPACT_JOB], widened: { dropped: ["postedWithinDays"] } });
+  });
+
+  it("doesn't widen a natural-language search with no role", async () => {
+    vi.mocked(parseJobQuery).mockResolvedValue({
+      ok: true,
+      filters: { location: ["Pune"], createdAfter: "7" },
+    } as never);
+    vi.mocked(searchJobs).mockResolvedValue(empty);
+
+    const result = await execTool(tools.naturalLanguageJobSearch, { query: "jobs in pune this week" });
+
+    expect(searchJobs).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ jobs: [], message: expect.stringMatching(/^No jobs found\./) });
   });
 });
 
@@ -196,7 +327,8 @@ describe("naturalLanguageJobSearch tool", () => {
 
 describe("findRelevantJobs tool", () => {
   it("runs a relevance search for a user with an embedding", async () => {
-    supabase.queue("user_info", { data: { embedding_new: "[0.1]" }, error: null });
+    supabase.queue("user_info", { data: { embedding_new: "[0.1]", filled: true }, error: null });
+    supabase.queue("user_relevant_jobs", { data: null, count: 40, error: null });
 
     const result = await execTool(tools.findRelevantJobs, {
       limit: 5,
@@ -219,16 +351,15 @@ describe("findRelevantJobs tool", () => {
   it.each([
     ["no profile", null],
     ["no embedding", { embedding_new: null, filled: false }],
+    // Embedded from a primary resume before onboarding: there's no feed yet.
+    ["an embedding but no onboarding", { embedding_new: "[0.1]", filled: false }],
   ])("returns a hint instead of searching when there is %s", async (_label, data) => {
     supabase.queue("user_info", { data, error: null });
 
     const result = await execTool(tools.findRelevantJobs, {});
 
-    expect(result).toEqual({
-      error: "PROFILE_INCOMPLETE",
-      message:
-        "Personalised matches need a completed profile or a parsed primary resume. Ask the user to finish onboarding at /get-started or upload a resume.",
-    });
+    expect(result).toMatchObject({ error: "PROFILE_INCOMPLETE" });
+    expect((result as { message: string }).message).toContain("read it and search with its job titles and skills");
     expect(searchJobs).not.toHaveBeenCalled();
   });
 });
@@ -464,7 +595,7 @@ describe("empty location searches (REQ-024)", () => {
   it("logs a searchJobs location filter that finds nothing, after responding", async () => {
     noJobs();
 
-    await execTool(tools.searchJobs, { locations: ["Bangaloor"] });
+    await execTool(tools.searchJobs, { keywords: ["frontend"], locations: ["Bangaloor"] });
 
     expect(eventCaptureServer).not.toHaveBeenCalled();
     await flushAfter();
@@ -473,7 +604,8 @@ describe("empty location searches (REQ-024)", () => {
 
   it("logs findRelevantJobs location filters too", async () => {
     noJobs();
-    supabase.queue("user_info", { data: { embedding_new: "[0.1]" }, error: null });
+    supabase.queue("user_info", { data: { embedding_new: "[0.1]", filled: true }, error: null });
+    supabase.queue("user_relevant_jobs", { data: null, count: 40, error: null });
 
     await execTool(tools.findRelevantJobs, { filters: { locations: ["Pune"] } });
     await flushAfter();

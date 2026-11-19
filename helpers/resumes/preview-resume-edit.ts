@@ -6,7 +6,7 @@ import { previewReviewSuggestions } from "@/helpers/resume-review/apply-suggesti
 import type { ReviewChange } from "@/helpers/resume-review/changes";
 import type { Database } from "@/utils/types/database.types";
 import { RESUME_DEFAULT_NAME, ResumeFromChatSchema, contactFromProfile, contentFromChat } from "./create-resume";
-import { LAST_RESUME_ERROR, PRIMARY_RESUME_ERROR } from "./delete-resume";
+import { PRIMARY_RESUME_ERROR } from "./delete-resume";
 import { describeResumeChanges, type ResumeChange } from "./resume-changes";
 import { RESUME_LIMIT_ERROR, hasRoomForResume } from "./resume-limit";
 import type { ResumeDraft } from "./resume-operations";
@@ -94,7 +94,6 @@ async function previewDelete(supabase: Client, user: User, input: unknown): Prom
 
   const target = resumes?.find((resume) => resume.id === resumeId);
   if (!target) return { ok: false, error: "Resume not found." };
-  if (resumes!.length === 1) return { ok: false, error: LAST_RESUME_ERROR };
   if (target.is_primary) return { ok: false, error: PRIMARY_RESUME_ERROR };
 
   const { count: reviews, error: countError } = await supabase

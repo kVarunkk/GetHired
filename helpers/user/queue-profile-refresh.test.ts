@@ -65,14 +65,11 @@ describe("refreshProfileAfterChange", () => {
     expect(updateUserEmbedding).toHaveBeenCalledWith("u1");
   });
 
-  it.each([
-    ["not_onboarded", "not_refreshed"],
-    ["profile_not_found", "not_refreshed"],
-  ])("re-embeds here when the refresh is refused (%s)", async (reason, outcome) => {
+  it.each(["not_onboarded", "profile_not_found"])("doesn't embed a user who hasn't onboarded (%s)", async (reason) => {
     service.queueRpc("queue_profile_refresh", { data: { ok: false, reason }, error: null });
 
-    expect(await refreshProfileAfterChange("u1")).toBe(outcome);
-    expect(updateUserEmbedding).toHaveBeenCalledWith("u1");
+    expect(await refreshProfileAfterChange("u1")).toBe("not_onboarded");
+    expect(updateUserEmbedding).not.toHaveBeenCalled();
   });
 
   it("re-embeds and never throws when queueing fails", async () => {

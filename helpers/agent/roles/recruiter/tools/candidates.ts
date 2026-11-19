@@ -1,4 +1,5 @@
 import { reportError } from "@/helpers/posthog/report-error";
+import { currencyCodeSchema } from "@/helpers/currency/currencies";
 import { isExplanationReady } from "@/helpers/matching/explanation-status";
 import { tool } from "ai";
 import { after } from "next/server";
@@ -114,7 +115,10 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
           .number()
           .min(0)
           .optional()
-          .describe("The yearly budget: keeps candidates whose minimum expected salary is at most this. Salaries are in the candidate's currency, usually ₹ (e.g. 30 LPA = 3000000)."),
+          .describe("The yearly budget, in salaryCurrency: keeps candidates whose minimum expected salary is at most this (e.g. 30 LPA = 3000000 INR)."),
+        salaryCurrency: currencyCodeSchema
+          .optional()
+          .describe("ISO 4217 code of maxSalary, e.g. INR for rupees or LPA, USD for dollars. Required with maxSalary: only candidates whose salary is in this currency match."),
         jobTypes: z.array(z.enum(["Fulltime", "Contract", "Intern"])).max(3).optional(),
         workStyle: textListInput("Work styles, e.g. \"Remote\", \"Hybrid\", \"On-site\". Partial, case-insensitive match on any of them.", 3),
         cursor: z.string().max(200).optional().describe("The nextCursor from a previous search, for the next page."),
@@ -129,6 +133,9 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
             ...(input.workStyle ?? []),
           ]);
           if (unfair) return unfair;
+          if (input.maxSalary !== undefined && !input.salaryCurrency) {
+            return { error: "Say which currency the budget is in (salaryCurrency, e.g. INR or USD)." };
+          }
 
           const { profiles, nextCursor, planLimit } = await searchProfiles(company.id, {
             roles: input.roles,
@@ -137,6 +144,7 @@ export function createCandidateTools(ctx: RecruiterToolContext) {
             minExperience: input.minExperience,
             maxExperience: input.maxExperience,
             budget: input.maxSalary,
+            budgetCurrency: input.salaryCurrency,
             jobTypes: input.jobTypes,
             workStyle: input.workStyle,
             limit: input.limit ?? AGENT_LIST_DEFAULT_LIMIT,

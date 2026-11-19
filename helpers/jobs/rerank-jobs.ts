@@ -138,7 +138,7 @@ export async function rerankJobsForUser(
         Projects Text: ${candidate.projectsText}
         Years of Experience: ${candidate.preferences.experience_years}
         Preferred Locations: ${candidate.preferences.preferred_locations?.join(", ")}
-        Salary Range: ${userPreferences.salary_currency}${candidate.preferences.min_salary} - ${userPreferences.salary_currency}${candidate.preferences.max_salary}
+        Salary Range: ${candidate.preferences.min_salary} - ${candidate.preferences.max_salary} ${userPreferences.salary_currency}
       `.trim();
 
     // 3. Make a single batch generative call for only the top 10 jobs

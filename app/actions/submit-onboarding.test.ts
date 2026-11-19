@@ -25,7 +25,7 @@ const PROFILE = {
   full_name: "Ada Lovelace",
   desired_roles: ["Frontend Engineer"],
   job_type: ["Fulltime"],
-  salary_currency: "₹",
+  salary_currency: "INR",
   min_salary: 1500000,
   preferred_locations: ["Bengaluru"],
   experience_years: 4,

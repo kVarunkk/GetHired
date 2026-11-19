@@ -198,6 +198,8 @@ export type FiltersState = {
   location: string[];
   visaRequirement: string[];
   minSalary: string;
+  /** ISO 4217 code that minSalary / maxSalary are in. */
+  salaryCurrency?: string;
   minExperience: string;
   maxExperience?: string;
   platform: string[];
@@ -224,7 +226,9 @@ export interface FilterConfig {
     | "number"
     | "multi-select"
     | "multi-select-input"
-    | "location-search-select";
+    | "location-search-select"
+    | "currency-select"
+    | "salary";
   placeholder?: string;
   options?: { value: string; label: string }[];
   isVirtualized?: boolean;
@@ -343,6 +347,7 @@ export enum PostHogEvent {
   AgentChatTurn = "agent_chat_turn",
   AgentFeedback = "agent_feedback",
   AgentLocationNoResults = "agent_location_no_results",
+  AgentSearchWidened = "agent_search_widened",
 
   McpToolCall = "mcp_tool_call",
 

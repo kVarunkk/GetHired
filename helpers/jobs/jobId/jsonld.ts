@@ -1,3 +1,4 @@
+import { toIsoCurrency } from "@/helpers/currency/currencies";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
 
 function toISODate(value: string | null | undefined): string | undefined {
@@ -213,7 +214,9 @@ export function buildJobPostingJsonLd(job: TJobIdPageData) {
     };
   }
 
-  const salaryCurrency = getSalaryCurrency(job?.salary_range);
+  const salaryCurrency =
+    toIsoCurrency(job?.salary_currency) ??
+    getSalaryCurrency(job?.salary_range);
   const salaryUnit = getSalaryUnit(job?.salary_range);
 
   if (job?.salary_min != null || job?.salary_max != null) {

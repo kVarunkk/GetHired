@@ -285,7 +285,7 @@ describe("POST /api/agent/chat for a company user: the survey card (AF-REQ-010/0
     description: "Build our backend.",
     locations: ["Remote"],
     jobType: "Fulltime",
-    salaryCurrency: "$",
+    salaryCurrency: "USD",
     minSalary: 0,
     maxSalary: 0,
     minExperience: 3,

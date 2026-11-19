@@ -22,7 +22,14 @@ import { filterConfigBuilder } from "@/helpers/filter-component/filterConfigBuil
 import { getInitialState } from "@/helpers/filter-component/getInitialState";
 import LocationSearchSelect from "./LocationSearchSelect";
 import ScrollFade from "./ScrollFade";
+import CurrencySelect from "./CurrencySelect";
 import posthog from "@/lib/posthog/client";
+import useSWR from "swr";
+import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
+import { toIsoCurrency } from "@/helpers/currency/currencies";
+
+/** The salary currency when the URL and the profile don't give one. */
+const FALLBACK_SALARY_CURRENCY = "USD";
 
 export default function FilterComponent({
   setOpenSheet,
@@ -93,6 +100,18 @@ export default function FilterComponent({
     setFilters(currentUrlFilters);
   }
 
+  // A salary amount is always in some currency: the applicant's profile
+  // currency unless they pick another.
+  const { data: currentUser } = useSWR(PROFILE_API_KEY, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 5 * 60 * 1000,
+  });
+  const salaryCurrency =
+    toIsoCurrency(filters.salaryCurrency) ??
+    toIsoCurrency(currentUser?.profile?.salary_currency) ??
+    FALLBACK_SALARY_CURRENCY;
+
   const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFilters((prevFilters) => ({
@@ -120,6 +139,8 @@ export default function FilterComponent({
     }
 
     for (const [key, value] of Object.entries(filters)) {
+      // The currency only qualifies a salary amount; it's added below.
+      if (key === "salaryCurrency") continue;
       const filterConfig = FILTER_CONFIG.find((config) => config.name === key);
 
       if (key === "applicationStatus" && value && value.length > 0)
@@ -144,6 +165,12 @@ export default function FilterComponent({
           params.set(key, value.toString());
         }
       }
+    }
+
+    // Salaries are only compared within one currency, so an amount carries one.
+    const hasSalaryFilter = FILTER_CONFIG.some((c) => c.type === "salary");
+    if (hasSalaryFilter && (params.has("minSalary") || params.has("maxSalary"))) {
+      params.set("salaryCurrency", salaryCurrency);
     }
 
     if (sortBy) {
@@ -239,6 +266,29 @@ export default function FilterComponent({
             isSingleSelect={false}
             className="mt-1 w-full"
           />
+        );
+
+      case "salary":
+        return (
+          <div className="mt-1 flex gap-2">
+            <CurrencySelect
+              value={salaryCurrency}
+              onChange={(code) => inputFilterOnChange("salaryCurrency", code)}
+              aria-label="Salary currency"
+              compact
+              className="w-24 shrink-0"
+            />
+            <InputFilter
+              key={dynamicKey}
+              name={String(config.name)}
+              type="number"
+              placeholder={config.placeholder}
+              value={filters[config.name]}
+              onChange={inputFilterOnChange}
+              className="block w-full min-w-0"
+              min={0}
+            />
+          </div>
         );
 
       case "number":

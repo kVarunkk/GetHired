@@ -121,14 +121,14 @@ describe("buildQuery: total", () => {
       .callsFor("all_jobs")[0]
       .chain.find((step) => step.method === "select")!;
 
-  it("counts the filtered query itself, not every job", async () => {
+  it("counts the filtered query itself exactly, not every job", async () => {
     supabase = createSupabaseMock();
     supabase.queue("all_jobs", { data: [], error: null, count: 12 });
 
     const result = await buildQuery(supabase.client, null, { ...BASE_ARGS, jobType: "Fulltime" });
 
     expect(supabase.callsFor("all_jobs")).toHaveLength(1);
-    expect(selectOf().args[1]).toEqual({ count: "estimated" });
+    expect(selectOf().args[1]).toEqual({ count: "exact" });
     expect(result.count).toBe(12);
   });
 
@@ -253,6 +253,34 @@ describe("buildQuery: experience filter", () => {
     await buildQuery(supabase.client, null, { ...BASE_ARGS });
 
     expect(experienceCalls()).toEqual([]);
+  });
+});
+
+describe("buildQuery: salary", () => {
+  const salaryCalls = () =>
+    supabase
+      .callsFor("all_jobs")[0]
+      ?.chain.filter((step) => String(step.args[0]).startsWith("salary_"));
+
+  it("compares amounts only within the given currency", async () => {
+    await buildQuery(supabase.client, null, { ...BASE_ARGS, minSalary: "1500000", salaryCurrency: "INR" });
+
+    expect(salaryCalls()).toEqual([
+      { method: "eq", args: ["salary_currency", "INR"] },
+      { method: "gte", args: ["salary_min", 1500000] },
+    ]);
+  });
+
+  it("filters on the currency alone", async () => {
+    await buildQuery(supabase.client, null, { ...BASE_ARGS, salaryCurrency: "EUR" });
+
+    expect(salaryCalls()).toEqual([{ method: "eq", args: ["salary_currency", "EUR"] }]);
+  });
+
+  it("adds no salary filter when none is requested", async () => {
+    await buildQuery(supabase.client, null, { ...BASE_ARGS });
+
+    expect(salaryCalls()).toEqual([]);
   });
 });
 

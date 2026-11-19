@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toIsoCurrency } from "@/helpers/currency/currencies";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
 import { companyAllows } from "@/helpers/companies/require-company";
 import type { PermissionKey } from "@/helpers/companies/permissions";
@@ -68,10 +69,10 @@ export function formatSalary(
   max: number | null | undefined,
   currency: string | null | undefined,
 ) {
-  const c = currency ?? "";
-  if (min && max) return `${c}${min}–${c}${max}`;
-  if (min) return `${c}${min}+`;
-  if (max) return `up to ${c}${max}`;
+  const c = currency ? ` ${toIsoCurrency(currency) ?? currency}` : "";
+  if (min && max) return `${min}–${max}${c}`;
+  if (min) return `${min}+${c}`;
+  if (max) return `up to ${max}${c}`;
   return null;
 }
 

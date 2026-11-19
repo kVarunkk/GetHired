@@ -37,8 +37,8 @@ const RESUME = { id: "r1", name: "Backend", isUnreadable: false };
 
 const onDeleted = vi.fn();
 
-const open = (resume: Partial<typeof RESUME> = {}, canDelete = true) =>
-  render(<ResumeRowActions resume={{ ...RESUME, ...resume }} canDelete={canDelete} onDeleted={onDeleted} />);
+const open = (resume: Partial<typeof RESUME> = {}, deleteBlocked: string | null = null) =>
+  render(<ResumeRowActions resume={{ ...RESUME, ...resume }} deleteBlocked={deleteBlocked} onDeleted={onDeleted} />);
 
 const click = (name: string) => fireEvent.click(screen.getByRole("button", { name }));
 
@@ -106,9 +106,11 @@ describe("ResumeRowActions (RE-REQ-030)", () => {
 });
 
 describe("deleting (RE-REQ-037)", () => {
-  it("can't delete the last resume", () => {
-    open({}, false);
-    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+  it("turns Delete off and says why", () => {
+    open({}, "It's your primary resume. Make another one primary first.");
+    const item = screen.getByRole("button", { name: /^Delete/ });
+    expect(item).toBeDisabled();
+    expect(item).toHaveTextContent("It's your primary resume. Make another one primary first.");
   });
 
   it("asks before deleting", async () => {
@@ -140,13 +142,13 @@ describe("deleting (RE-REQ-037)", () => {
   });
 
   it("keeps the row when the delete is refused", async () => {
-    vi.mocked(deleteResumeAction).mockResolvedValue({ ok: false, error: "You can't delete your only resume." });
+    vi.mocked(deleteResumeAction).mockResolvedValue({ ok: false, error: "You can't delete your primary resume." });
     open();
 
     click("Delete");
     fireEvent.click(await screen.findByRole("button", { name: "Delete resume" }));
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("You can't delete your only resume."));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("You can't delete your primary resume."));
     expect(onDeleted).not.toHaveBeenCalled();
   });
 });

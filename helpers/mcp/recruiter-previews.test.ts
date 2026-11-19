@@ -440,14 +440,14 @@ const CASES: Case[] = [
       description: "Build APIs.",
       locations: ["Remote"],
       jobType: "Fulltime",
-      salaryCurrency: "$",
+      salaryCurrency: "USD",
       minSalary: 100,
       maxSalary: 200,
       minExperience: 3,
       visaSponsorship: "Not Required",
     },
     seed: () => undefined,
-    facts: [/as a draft\?.*active job post limit/, /Title: Backend Engineer/, /Locations: Remote/, /Salary: \$100–\$200/, /Description: 11 characters/],
+    facts: [/as a draft\?.*active job post limit/, /Title: Backend Engineer/, /Locations: Remote/, /Salary: 100–200 USD/, /Description: 11 characters/],
   },
   {
     tool: "update_job_post",
@@ -625,6 +625,18 @@ const CASES: Case[] = [
     seed: () => db.queueRpc("get_my_careers_page", { data: CAREERS_PAGE, error: null }),
     facts: [/Publish your careers page\?/, /Address: \/careers\/acme/],
     foreign: /doesn't have a careers page address yet/,
+  },
+
+  // --- distribution (MPT-040) ---
+  {
+    tool: "set_distribution",
+    input: { channelKey: "jooble", jobPostId: JOB_A1, optedOut: true },
+    seed: () => {
+      db.queue("distribution_channels", { data: { name: "Jooble", kind: "feed", enabled: true }, error: null });
+      db.queue("job_postings", { data: { title: "Frontend Engineer" }, error: null });
+    },
+    facts: [/Leave this job out of Jooble\?/, /Channel: Jooble/, /<job_title>\s+Frontend Engineer/],
+    foreign: /can't be changed/,
   },
 
   // --- scheduling (IVT-085) ---

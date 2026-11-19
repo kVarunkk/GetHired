@@ -143,10 +143,14 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": true,
       "title": "Search jobs",
     },
-    "description": "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page.",
+    "description": "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page. Needs keywords or companies unless anyRole is set. When nothing matches every filter, it relaxes the posting date, salary, visa and sources, job type, then experience, in that order, and never the keywords, locations or companies: the result's widened says what was relaxed, and later pages need the filters in widened.searchedWith.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
+        "anyRole": {
+          "description": "true only when the user asked for jobs of any role. Without it, a search needs keywords or companies.",
+          "type": "boolean",
+        },
         "companies": {
           "description": "Only jobs at these companies, by company name, e.g. ['Stripe', 'Razorpay'].",
           "items": {
@@ -158,7 +162,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "cursor": {
-          "description": "For the next page: the nextCursor from the previous search_jobs result, sent with the same filters. Leave out for the first page.",
+          "description": "For the next page: the nextCursor from the previous search_jobs result, sent with the same filters, or with widened.searchedWith when the result was widened. Leave out for the first page.",
           "type": "string",
         },
         "jobTypes": {
@@ -242,6 +246,10 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "maximum": 90,
           "minimum": 1,
           "type": "integer",
+        },
+        "salaryCurrency": {
+          "description": "ISO 4217 code of minSalary, e.g. INR for rupees or LPA, USD for dollars. Only jobs paid in this currency match. Defaults to the user's profile currency; ignored without minSalary.",
+          "type": "string",
         },
         "visaRequirements": {
           "description": "Only jobs whose posting states one of these visa terms. 'Will Sponsor' is for users who need the employer to sponsor a visa.",
@@ -334,6 +342,10 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           },
           "type": "array",
         },
+        "message": {
+          "description": "What to tell the user about a relaxed or empty search.",
+          "type": "string",
+        },
         "nextCursor": {
           "description": "Pass to search_jobs as cursor for the next page; null on the last page.",
           "type": [
@@ -347,6 +359,29 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
             "number",
             "null",
           ],
+        },
+        "widened": {
+          "additionalProperties": true,
+          "description": "Set when no jobs matched every filter and the search was relaxed. Tell the user what was relaxed.",
+          "properties": {
+            "dropped": {
+              "description": "The filters relaxed to find these jobs, in the order they were relaxed.",
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "searchedWith": {
+              "additionalProperties": {},
+              "description": "The filters these jobs match. Send them with cursor for the next page.",
+              "type": "object",
+            },
+          },
+          "required": [
+            "dropped",
+            "searchedWith",
+          ],
+          "type": "object",
         },
       },
       "required": [
@@ -469,6 +504,10 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           },
           "type": "array",
         },
+        "message": {
+          "description": "What to tell the user about a relaxed or empty search.",
+          "type": "string",
+        },
         "nextCursor": {
           "description": "Pass to search_jobs as cursor for the next page; null on the last page.",
           "type": [
@@ -482,6 +521,29 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
             "number",
             "null",
           ],
+        },
+        "widened": {
+          "additionalProperties": true,
+          "description": "Set when no jobs matched every filter and the search was relaxed. Tell the user what was relaxed.",
+          "properties": {
+            "dropped": {
+              "description": "The filters relaxed to find these jobs, in the order they were relaxed.",
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "searchedWith": {
+              "additionalProperties": {},
+              "description": "The filters these jobs match. Send them with cursor for the next page.",
+              "type": "object",
+            },
+          },
+          "required": [
+            "dropped",
+            "searchedWith",
+          ],
+          "type": "object",
         },
       },
       "required": [
@@ -595,6 +657,10 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
               "maximum": 90,
               "minimum": 1,
               "type": "integer",
+            },
+            "salaryCurrency": {
+              "description": "ISO 4217 code of minSalary, e.g. INR for rupees or LPA, USD for dollars. Only jobs paid in this currency match. Defaults to the user's profile currency; ignored without minSalary.",
+              "type": "string",
             },
             "visaRequirements": {
               "description": "Only jobs whose posting states one of these visa terms. 'Will Sponsor' is for users who need the employer to sponsor a visa.",
@@ -1858,15 +1924,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "salaryCurrency": {
-          "description": "The currency of minSalary and maxSalary: ₹ rupees, $ US dollars, € euros, £ pounds, C$ Canadian dollars, A$ Australian dollars.",
-          "enum": [
-            "₹",
-            "$",
-            "€",
-            "£",
-            "C$",
-            "A$",
-          ],
+          "description": "The ISO 4217 code of minSalary and maxSalary's currency, e.g. INR, USD, EUR, GBP, CAD, AUD, SGD or AED. Symbols such as ₹ or $ aren't accepted.",
           "type": "string",
         },
         "topSkills": {
@@ -2064,15 +2122,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "string",
         },
         "salaryCurrency": {
-          "description": "The currency of minSalary and maxSalary: ₹ rupees, $ US dollars, € euros, £ pounds, C$ Canadian dollars, A$ Australian dollars.",
-          "enum": [
-            "₹",
-            "$",
-            "€",
-            "£",
-            "C$",
-            "A$",
-          ],
+          "description": "The ISO 4217 code of minSalary and maxSalary's currency, e.g. INR, USD, EUR, GBP, CAD, AUD, SGD or AED. Symbols such as ₹ or $ aren't accepted.",
           "type": "string",
         },
         "topSkills": {
@@ -3091,7 +3141,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": false,
       "title": "Delete a resume",
     },
-    "description": "Delete one of the user's resumes, with its reviews. It can't be undone. The last resume and the primary resume can't be deleted: to delete the primary, ask which resume should be primary instead and call set_primary_resume first. GetHired asks the user to confirm before it runs.",
+    "description": "Delete one of the user's resumes, with its reviews. It can't be undone. The primary resume can't be deleted (any other can, even the user's only one): to delete the primary, ask which resume should be primary instead and call set_primary_resume first. GetHired asks the user to confirm before it runs.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -4480,6 +4530,69 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "title": "My screening interviews",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Report feedback",
+    },
+    "description": "Send feedback about these GetHired tools to the GetHired team: a tool that failed or returned something wrong, a capability you needed but couldn't find, a confusing description or result, or a suggestion. Use it whenever something gets in your way, without asking the user first. It only records your note: it doesn't change the user's data, contact anyone or spend credits, and nobody replies to it.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "description": "bug: a tool failed or returned something wrong. missing_capability: you needed a tool or option that doesn't exist. confusing: a description, input or result was unclear. suggestion: an idea to make the tools better. praise: something worked well. other: anything else.",
+          "enum": [
+            "bug",
+            "missing_capability",
+            "confusing",
+            "suggestion",
+            "praise",
+            "other",
+          ],
+          "type": "string",
+        },
+        "message": {
+          "description": "What happened and what you expected, in a few sentences. Include the input you sent and the error text if there was one. Leave out personal details about the user or anyone else.",
+          "maxLength": 4000,
+          "minLength": 1,
+          "type": "string",
+        },
+        "tool": {
+          "description": "The GetHired tool the feedback is about, if any, e.g. search_jobs.",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string",
+        },
+      },
+      "required": [
+        "category",
+        "message",
+      ],
+      "type": "object",
+    },
+    "name": "report_feedback",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "message": {
+          "type": "string",
+        },
+        "received": {
+          "const": true,
+          "type": "boolean",
+        },
+      },
+      "required": [
+        "received",
+        "message",
+      ],
+      "type": "object",
+    },
+    "title": "Report feedback",
   },
 ]
 `;

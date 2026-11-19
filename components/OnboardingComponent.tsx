@@ -1,5 +1,7 @@
 "use client";
 
+import { toIsoCurrency } from "@/helpers/currency/currencies";
+import { type SalaryPeriod, toAnnualSalary } from "@/helpers/salary/period";
 import React, {
   useState,
   useEffect,
@@ -55,8 +57,10 @@ export type IFormData = {
   desired_roles: string[];
   preferred_locations: string[];
   salary_currency: string;
+  /** In `salary_period`; saved per year (toAnnualSalary). */
   min_salary: number | "";
   max_salary: number | "";
+  salary_period: SalaryPeriod;
   experience_years: number | "";
   industry_preferences: string[];
   visa_sponsorship_required: boolean;
@@ -101,9 +105,10 @@ export const OnboardingForm: React.FC<{
     github_url: "",
     desired_roles: [],
     preferred_locations: [],
-    salary_currency: "$",
+    salary_currency: "USD",
     min_salary: "",
     max_salary: "",
+    salary_period: "year",
     experience_years: "",
     industry_preferences: [],
     visa_sponsorship_required: false,
@@ -213,10 +218,12 @@ export const OnboardingForm: React.FC<{
             github_url: data.github_url || "",
             desired_roles: data.desired_roles || [],
             preferred_locations: data.preferred_locations || [],
-            salary_currency: data.salary_currency || "$",
+            salary_currency: toIsoCurrency(data.salary_currency) ?? "USD",
             job_type: data.job_type || [],
             min_salary: data.min_salary || "",
             max_salary: data.max_salary || "",
+            // Stored per year.
+            salary_period: "year",
             experience_years: data.experience_years || "",
             resume_id: primaryResume ? primaryResume.id : null,
             user_id: user.id,
@@ -406,9 +413,15 @@ export const OnboardingForm: React.FC<{
         linkedin_url: formData.linkedin_url,
         github_url: formData.github_url,
         preferred_locations: formData.preferred_locations,
-        salary_currency: formData.salary_currency || "$",
-        min_salary: formData.min_salary === "" ? null : formData.min_salary,
-        max_salary: formData.max_salary === "" ? null : formData.max_salary,
+        salary_currency: toIsoCurrency(formData.salary_currency) ?? "USD",
+        min_salary:
+          formData.min_salary === ""
+            ? null
+            : toAnnualSalary(formData.min_salary, formData.salary_period),
+        max_salary:
+          formData.max_salary === ""
+            ? null
+            : toAnnualSalary(formData.max_salary, formData.salary_period),
         experience_years:
           formData.experience_years === "" ? null : formData.experience_years,
         industry_preferences: formData.industry_preferences,

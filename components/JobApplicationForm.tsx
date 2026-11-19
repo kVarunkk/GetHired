@@ -56,7 +56,7 @@ interface JobApplicationFormProps {
   userId: string;
   onSuccess: () => void;
   /** CP-REQ-013: where the application started, and a `?ref=` tag (else from context). */
-  source?: "applied" | "careers_page";
+  source?: "applied" | "careers_page" | "job_board";
   sourceRef?: string;
   /** Rendered under the step indicator, e.g. the agent handoff. */
   belowSteps?: React.ReactNode;

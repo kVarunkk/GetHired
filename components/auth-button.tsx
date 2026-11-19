@@ -43,7 +43,7 @@ export function AuthButton({
     <div
       className={cn(
         "flex w-full",
-        variant === "horizontal" ? "gap-2" : "flex-col gap-4",
+        variant === "horizontal" ? "gap-2" : "flex-col gap-1",
       )}
     >
       {variant === "vertical" ? (

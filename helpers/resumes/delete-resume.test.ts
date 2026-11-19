@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { updateUserEmbedding } from "@/helpers/user/update-user-embedding";
 import { flushAfter } from "@/test/utils/after";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import { LAST_RESUME_ERROR, PRIMARY_RESUME_ERROR, deleteResume } from "./delete-resume";
+import { PRIMARY_RESUME_ERROR, deleteResume } from "./delete-resume";
 
 vi.mock("@/helpers/posthog/report-error", () => ({ reportError: vi.fn() }));
 vi.mock("@/helpers/user/update-user-embedding", () => ({ updateUserEmbedding: vi.fn() }));
@@ -42,10 +42,16 @@ describe("deleteResume (RE-REQ-037)", () => {
     expect(deleteCall.chain).toContainEqual({ method: "eq", args: ["user_id", USER.id] });
   });
 
-  it("refuses the last resume", async () => {
+  it("deletes the user's only resume when it isn't the primary", async () => {
+    seed([{ id: "r1", is_primary: false }]);
+
+    expect(await deleteResume(db.client, USER, { resumeId: "r1" })).toEqual({ ok: true, reviewsDeleted: 0 });
+  });
+
+  it("refuses the only resume when it's the primary", async () => {
     db.queue("resumes", { data: [{ id: "r1", is_primary: true }], error: null });
 
-    expect(await deleteResume(db.client, USER, { resumeId: "r1" })).toEqual({ ok: false, error: LAST_RESUME_ERROR });
+    expect(await deleteResume(db.client, USER, { resumeId: "r1" })).toEqual({ ok: false, error: PRIMARY_RESUME_ERROR });
     expect(steps().some((step) => step.method === "delete")).toBe(false);
   });
 

@@ -105,6 +105,8 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
       "jobs.create",
       "jobs.edit",
       "jobs.publish",
+      "distribution.view",
+      "distribution.manage",
       "applicants.view",
       "pipeline.move",
       "applicants.screen",

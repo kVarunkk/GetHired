@@ -91,6 +91,7 @@ export default function CompanyApplicationsTable({
           const r = row.original;
           return (
             <ApplicantNameCell
+              applicationId={r.id ?? ""}
               name={r.person_name ?? ""}
               person={
                 r.company_candidate_id

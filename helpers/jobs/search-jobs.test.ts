@@ -35,6 +35,7 @@ describe("parseJobSearchParams", () => {
       location: null,
       visaRequirement: null,
       minSalary: null,
+      salaryCurrency: null,
       minExperience: null,
       maxExperience: null,
       platform: null,
@@ -60,6 +61,7 @@ describe("parseJobSearchParams", () => {
         location: "Remote",
         visaRequirement: "Required",
         minSalary: "1",
+        salaryCurrency: "INR",
         minExperience: "2",
         maxExperience: "6",
         platform: "lever",
@@ -80,6 +82,7 @@ describe("parseJobSearchParams", () => {
 
     expect(params).toMatchObject({
       jobType: "Intern",
+      salaryCurrency: "INR",
       minExperience: "2",
       maxExperience: "6",
       tab: "applied",
@@ -155,5 +158,34 @@ describe("searchJobs", () => {
       message: "timeout",
     });
     expect(trace).toEqual({ stage: "fetch_user_embedding_and_credits", distinctId: "u1" });
+  });
+
+  describe("salary currency", () => {
+    const passedCurrency = () => vi.mocked(buildQuery).mock.calls.at(-1)![2].salaryCurrency;
+
+    it("passes an explicit currency as its code", async () => {
+      await searchJobs(supabase.client, mockUser({ id: "u1" }), { minSalary: "100000", salaryCurrency: "inr" });
+
+      expect(passedCurrency()).toBe("INR");
+      expect(supabase.callsFor("user_info")).toHaveLength(0);
+    });
+
+    it("reads a minimum salary without a currency in the user's profile currency", async () => {
+      supabase.queue("user_info", { data: { salary_currency: "EUR" }, error: null });
+
+      await searchJobs(supabase.client, mockUser({ id: "u1" }), { minSalary: "50000" });
+
+      expect(supabase.callsFor("user_info")[0].chain).toContainEqual({ method: "eq", args: ["user_id", "u1"] });
+      expect(passedCurrency()).toBe("EUR");
+    });
+
+    it("adds no currency when signed out or without a salary", async () => {
+      await searchJobs(supabase.client, null, { minSalary: "50000" });
+      expect(passedCurrency()).toBeNull();
+
+      await searchJobs(supabase.client, mockUser({ id: "u1" }), { location: "Remote" });
+      expect(passedCurrency()).toBeNull();
+      expect(supabase.callsFor("user_info")).toHaveLength(0);
+    });
   });
 });

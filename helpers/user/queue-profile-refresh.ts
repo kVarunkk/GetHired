@@ -35,21 +35,24 @@ export async function queueProfileRefresh(userId: string): Promise<ProfileRefres
 }
 
 /** What happened to the matches after a profile change. */
-export type ProfileRefreshOutcome = "queued" | "deferred" | "not_refreshed";
+export type ProfileRefreshOutcome = "queued" | "deferred" | "not_onboarded" | "not_refreshed";
 
 /**
  * Call after anything the embedding reads changes: the matching preferences or
  * the primary resume. It queues the full refresh (embedding and matches). When
- * a run is already going, that run queues a follow-up. Unless it queued, it
- * also re-embeds here, so search sees the new profile straight away. Never
- * throws.
+ * a run is already going, that run queues a follow-up, and it re-embeds here
+ * too, so search sees the new profile straight away (also when queueing
+ * failed). A user who hasn't onboarded (or has no profile) gets nothing:
+ * matches and profile search only use onboarded profiles, and onboarding
+ * embeds them (agent chat review 2026-11-14/15, problem 8). Never throws.
  */
 export async function refreshProfileAfterChange(userId: string): Promise<ProfileRefreshOutcome> {
   let outcome: ProfileRefreshOutcome = "not_refreshed";
   try {
     const refresh = await queueProfileRefresh(userId);
     if (refresh.queued) return "queued";
-    if (refresh.reason === "deferred") outcome = "deferred";
+    if (refresh.reason !== "deferred") return "not_onboarded";
+    outcome = "deferred";
   } catch (error) {
     reportError("[profile refresh] couldn't queue the refresh", error);
   }
@@ -66,6 +69,8 @@ export function profileRefreshMessage(outcome: ProfileRefreshOutcome) {
       return "Refreshing. New matches appear on the jobs page in a few minutes, and the user gets an email.";
     case "deferred":
       return "Matches are already being generated. They'll be generated again with this change once that run finishes, in a few minutes.";
+    case "not_onboarded":
+      return "No matches yet: personalised matches start once the user finishes onboarding, so offer to finish it.";
     case "not_refreshed":
       return "Matches weren't refreshed. The user can regenerate them from the jobs page.";
   }

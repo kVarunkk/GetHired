@@ -54,9 +54,13 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
           <SortableHeader column={column} label="Date Purchased" />
         ),
         cell: ({ row }) => (
-          <div className="text-sm ">
+          <ModifiedLink
+            prefetch={false}
+            href={`/dashboard/buy-credits/payments/${row.original.id}`}
+            className="text-sm font-medium underline underline-offset-4 hover:underline sm:no-underline"
+          >
             {formatDate(row.original.created_at)}
-          </div>
+          </ModifiedLink>
         ),
       },
 

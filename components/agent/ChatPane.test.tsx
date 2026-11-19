@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { DefaultChatTransport, type ChatInit, type UIMessage } from "ai";
 import { useChat } from "@ai-sdk/react";
 import ChatPane, { buildChatRequest, chatErrorMessage, SUGGESTED_PROMPTS } from "./ChatPane";
+import { SKIPPED_APPROVAL_REASON } from "@/helpers/agent/skipped-approvals";
 import {
   AGENT_CONTENT_FILTER_MESSAGE,
   AGENT_DAILY_MESSAGE_CAP,
@@ -607,6 +608,37 @@ describe("ChatPane", () => {
       tool: "requestResumeUpload",
       toolCallId: "c-up",
       output: { cancelled: true },
+    });
+  });
+
+  it("skips an unanswered approval when the user sends a new message instead", async () => {
+    mockChat({
+      messages: [
+        {
+          id: "a1",
+          role: "assistant",
+          parts: [
+            {
+              type: "tool-submitApplication",
+              toolCallId: "c1",
+              state: "approval-requested",
+              input: {},
+              approval: { id: "ap1" },
+            },
+          ],
+        } as UIMessage,
+      ],
+    });
+    renderPane();
+
+    await userEvent.type(screen.getByLabelText("Message"), "find me jobs instead{Enter}");
+
+    expect(chat.sendMessage).toHaveBeenCalledWith({ text: "find me jobs instead" });
+    const update = vi.mocked(chat.setMessages!).mock.calls[0][0] as (m: UIMessage[]) => UIMessage[];
+    const [reply] = update(chat.messages!);
+    expect(reply.parts[0]).toMatchObject({
+      state: "output-denied",
+      approval: { id: "ap1", approved: false, reason: SKIPPED_APPROVAL_REASON },
     });
   });
 });

@@ -55,6 +55,8 @@ export const RECRUITER_APPROVAL_POLICY: ToolApprovalPolicy = {
     "updateCareersPage",
     "setCareersAddress",
     "setCareersPublished",
+    // MPT-040: turns on publishing the company's jobs on outside job boards, or leaves a job out.
+    "setDistribution",
     // SIT-071: the card shows the exact setup; invites email applicants and hold minutes.
     "configureScreeningInterview",
     "inviteToInterview",

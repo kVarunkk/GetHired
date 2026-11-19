@@ -25,7 +25,8 @@ describe("MenuTrigger", () => {
   it("keeps a fading label in the vertical sidebar", () => {
     renderTrigger({ isVertical: true, isMenuOpen: false });
 
-    expect(screen.getByText("Profile")).toHaveClass("opacity-0");
+    // The text sits in a truncating span; the fading wrapper is its parent.
+    expect(screen.getByText("Profile").parentElement).toHaveClass("opacity-0");
   });
 
   it("shows a company member's role next to the label in the vertical sidebar", () => {

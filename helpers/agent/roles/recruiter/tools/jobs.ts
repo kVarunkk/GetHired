@@ -1,4 +1,5 @@
 import { tool } from "ai";
+import { currencyCodeSchema } from "@/helpers/currency/currencies";
 import { applicationFormSchema, readApplicationForm, type ApplicationForm } from "@/helpers/jobs/application-form-schema";
 import { loadAnsweredQuestionIds } from "@/helpers/jobs/load-job-form";
 import { keepAnsweredQuestions } from "@/helpers/jobs/question-sets";
@@ -49,7 +50,7 @@ const jobPostFields = {
     .max(20)
     .describe("Cities, or \"Remote\"."),
   jobType: z.enum(["Fulltime", "Intern", "Contract"]),
-  salaryCurrency: z.string().trim().max(5).describe("Currency symbol, e.g. \"₹\" or \"$\"."),
+  salaryCurrency: currencyCodeSchema.describe("ISO 4217 code of the salary's currency, e.g. INR, USD, EUR, GBP, SGD, AED."),
   minSalary: z.number().min(0).describe("Yearly minimum salary in that currency (0 if not shared)."),
   maxSalary: z.number().min(0).describe("Yearly maximum salary in that currency (0 if not shared)."),
   minExperience: z.number().min(0).max(50).describe("Minimum years of experience."),

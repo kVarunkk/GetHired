@@ -37,7 +37,7 @@ const VALUES = {
   description: "Build the product UI with React and TypeScript.",
   location: ["bengaluru"],
   job_type: "Fulltime" as const,
-  salary_currency: "₹",
+  salary_currency: "INR",
   min_salary: 1500000,
   max_salary: 2500000,
   min_experience: 2,

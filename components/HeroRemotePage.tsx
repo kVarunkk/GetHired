@@ -16,7 +16,7 @@ export default function HeroRemotePage({
     <Hero
       eyebrow={
         <HeroEyebrow
-          href={agentPromptHref(`Find remote jobs in ${decodedLocation} posted this week.`)}
+          href={agentPromptHref(`Find remote jobs in ${decodedLocation}.`)}
           icon={<Sparkles className="h-3.5 w-3.5" />}
           label="Ask the agent"
           detail={`Find remote jobs in ${decodedLocation} by chatting`}

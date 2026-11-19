@@ -4,7 +4,7 @@ import type { ResumeDocument } from "@/helpers/resume/render/document";
 import type { ResumeContent } from "@/helpers/resume/resume-schema";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { describeResumeChanges } from "./resume-changes";
-import { LAST_RESUME_ERROR } from "./delete-resume";
+import { PRIMARY_RESUME_ERROR } from "./delete-resume";
 import { previewResumeEdit } from "./preview-resume-edit";
 import { RESUME_CHANGED_ERROR } from "./save-resume";
 import { RESUME_PLACEHOLDER_ERROR } from "./update-resume";
@@ -269,10 +269,10 @@ describe("previewing deleteResume", () => {
     expect(writes()).toEqual([]);
   });
 
-  it("is an error for the last resume", async () => {
-    db.queue("resumes", { data: [ROW], error: null });
+  it("is an error for the only resume when it's the primary", async () => {
+    db.queue("resumes", { data: [{ ...ROW, is_primary: true }], error: null });
 
-    expect(await preview("deleteResume", { resumeId: RESUME_ID })).toEqual({ ok: false, error: LAST_RESUME_ERROR });
+    expect(await preview("deleteResume", { resumeId: RESUME_ID })).toEqual({ ok: false, error: PRIMARY_RESUME_ERROR });
   });
 
   it("is an error for another user's resume", async () => {

@@ -263,7 +263,7 @@ const ROWS: readonly McpToolDef[] = [
     agentTools: ["deleteResume"],
     preview: previewDeleteResume,
     description:
-      "Delete one of the user's resumes, with its reviews. It can't be undone. The last resume and the primary resume can't be deleted: to delete the primary, ask which resume should be primary instead and call set_primary_resume first.",
+      "Delete one of the user's resumes, with its reviews. It can't be undone. The primary resume can't be deleted (any other can, even the user's only one): to delete the primary, ask which resume should be primary instead and call set_primary_resume first.",
   },
   {
     name: "apply_review_suggestions",

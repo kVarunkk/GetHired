@@ -19,6 +19,11 @@ vi.mock("@/components/OriginalResumeWrapper", () => ({
 }));
 vi.mock("@/components/RetryResumeParsing", () => ({ RetryResumeParsing: () => <button>Retry</button> }));
 vi.mock("@/components/resume/ResumeHeaderActions", () => ({ default: () => <button>Edit</button> }));
+vi.mock("@/components/resume/ResumeDeleteMenu", () => ({
+  default: ({ deleteBlocked }: { deleteBlocked: string | null }) => (
+    <div data-testid="delete">{deleteBlocked ?? "allowed"}</div>
+  ),
+}));
 vi.mock("@/components/InfoTooltip", () => ({ default: () => null }));
 vi.mock("@/components/agent/AskAgentOnApplicantIdPages", () => ({
   AskAgentAboutResume: ({ resume }: { resume: { name: string } }) => <div data-testid="agent">{resume.name}</div>,
@@ -122,5 +127,21 @@ describe("/resume/[resumeId] (RE-REQ-031)", () => {
   it("only reads the user's own resume", async () => {
     await open(V2);
     expect(db.callsFor("resumes")[0].chain).toContainEqual({ method: "eq", args: ["user_id", USER.id] });
+  });
+
+  // RE-REQ-037: Delete shows on the page too, off with a reason when it's not allowed.
+  it("offers Delete for a resume that isn't the primary one", async () => {
+    await open(V2);
+    expect(screen.getByTestId("delete")).toHaveTextContent("allowed");
+  });
+
+  it("explains why the primary resume can't be deleted", async () => {
+    await open({ ...V2, is_primary: true });
+    expect(screen.getByTestId("delete")).toHaveTextContent(/primary/);
+  });
+
+  it("shows Delete even for a resume with nothing to edit", async () => {
+    await open({ ...V1, resume_path: null });
+    expect(screen.getByTestId("delete")).toBeInTheDocument();
   });
 });

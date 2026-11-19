@@ -1,5 +1,6 @@
 "use client";
 
+import CurrencySelect from "@/components/CurrencySelect";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -107,7 +108,6 @@ const jobFormSchema = z
   );
 
 const jobTypes = ["Fulltime", "Intern", "Contract"];
-const salaryCurrencies = ["₹", "$", "€", "£", "C$", "A$"];
 const visaOptions = ["Will Sponsor", "Not Required", "Required"];
 const workplaceOptions = [
   { value: "onsite", label: "On-site" },
@@ -158,7 +158,7 @@ export default function JobPostingForm({
       description: "",
       location: [],
       job_type: undefined,
-      salary_currency: "$",
+      salary_currency: "USD",
       min_salary: 0,
       max_salary: 0,
       min_experience: 0,
@@ -399,23 +399,12 @@ export default function JobPostingForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Currency</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="USD" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {salaryCurrencies.map((currency) => (
-                          <SelectItem key={currency} value={currency}>
-                            {currency}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <CurrencySelect
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

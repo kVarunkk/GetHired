@@ -14,3 +14,6 @@ export const jobPipelineSwitchPath = (jobId: string, { to }: { to?: string } = {
 
 /** A job's "From your candidates" section (CP-REQ-060). */
 export const jobPoolMatchesPath = (jobId: string) => `/company/job-posts/${jobId}/from-your-candidates`;
+
+/** A job's Distribution section (MPT-015). */
+export const jobDistributionPath = (jobId: string) => `/company/job-posts/${jobId}/distribution`;

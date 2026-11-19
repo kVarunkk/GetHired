@@ -62,7 +62,7 @@ describe("ChatPane for a company user (RAT-018, RA-REQ-001)", () => {
     expect(screen.getByRole("heading", { name: AGENT_ROLE_UI.company.heading })).toBeInTheDocument();
     expect(AGENT_ROLE_UI.company.starters).toEqual([
       "Find candidates for my latest job",
-      "Who are the strongest applicants this week?",
+      "Who are my strongest applicants?",
       "Write a job post for a founding engineer",
       "Where is each role stuck?",
     ]);

@@ -487,7 +487,7 @@ export default function JobsComponent({
               className="flex shrink-0 items-center gap-2 rounded-full text-sm whitespace-nowrap"
             >
               <Link
-                href={`/auth/sign-up?returnTo=/${
+                href={`/auth/login?returnTo=/${
                   current_page === "companies" ? "companies" : "jobs"
                 }`}
               >

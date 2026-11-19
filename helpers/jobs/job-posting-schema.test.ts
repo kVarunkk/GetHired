@@ -7,7 +7,7 @@ const VALID = {
   description: "Build the product UI with React and TypeScript.",
   location: ["bengaluru", "remote"],
   job_type: "Fulltime",
-  salary_currency: "₹",
+  salary_currency: "INR",
   min_salary: 1500000,
   max_salary: 2500000,
   min_experience: 2,
@@ -27,6 +27,17 @@ describe("jobPostingInputSchema", () => {
 
     expect(result.success).toBe(true);
     expect(result.data).toMatchObject({ title: "Frontend Engineer", questions: ["Why us?"] });
+  });
+
+  it("takes the salary's currency as an ISO code only", () => {
+    expect(parse({ salary_currency: "usd" }).data).toMatchObject({ salary_currency: "USD" });
+    expect(parse({ salary_currency: "₹" }).success).toBe(false);
+    expect(parse({ salary_currency: "BTC" }).success).toBe(false);
+  });
+
+  it("needs a currency only when there's a salary", () => {
+    expect(parse({ salary_currency: "", min_salary: 0, max_salary: 0 }).success).toBe(true);
+    expect(parse({ salary_currency: "" }).success).toBe(false);
   });
 
   it("accepts a payload without the optional fields", () => {

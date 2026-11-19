@@ -83,6 +83,19 @@ describe("submitApplication", () => {
     expect(deductUserCreditsHelper).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    ["jooble", "jooble"],
+    ["somenewboard", "other"],
+    [undefined, "other"],
+  ])("stores a job board application's channel (%s -> %s)", async (ref, detail) => {
+    db.queue("resumes", { data: RESUME, error: null });
+    seedJob();
+
+    await submitApplication(db.client, USER, { ...INPUT, source: "job_board", ref });
+
+    expect(inserted()).toMatchObject({ source: "job_board", source_detail: detail });
+  });
+
   it("refuses a resume that isn't the user's", async () => {
     db.queue("resumes", { data: null, error: null });
 
