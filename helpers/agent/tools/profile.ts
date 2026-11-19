@@ -12,14 +12,18 @@ export const salaryCurrencyInput = currencyCodeSchema.describe(
   "ISO 4217 currency code of the salary, e.g. INR, USD, EUR, GBP, CAD, AUD, SGD, AED.",
 );
 
+/** Salaries are stored per year; the system prompt says how to convert. */
+export const YEARLY_SALARY =
+  "Yearly salary as a plain integer. Convert a monthly or hourly amount to yearly first.";
+
 const keywordList = (max: number) => z.array(z.string().min(1).max(60)).min(1).max(max);
 
 const preferencesInput = z
   .object({
     desiredRoles: keywordList(10).optional(),
     preferredLocations: keywordList(10).optional(),
-    minSalary: z.number().int().min(0).optional(),
-    maxSalary: z.number().int().min(0).optional(),
+    minSalary: z.number().int().min(0).optional().describe(YEARLY_SALARY),
+    maxSalary: z.number().int().min(0).optional().describe(YEARLY_SALARY),
     salaryCurrency: salaryCurrencyInput.optional(),
     jobTypes: z.array(z.enum(["Fulltime", "Contract", "Intern"])).min(1).optional(),
     visaSponsorshipRequired: z.boolean().optional(),

@@ -1,4 +1,12 @@
-import { StepProps } from "../OnboardingComponent";
+import { StepProps, type IFormData } from "../OnboardingComponent";
+import { formatSalaryAmount, toAnnualSalary } from "@/helpers/salary/period";
+
+/** The range as it will be saved: per year. */
+function reviewSalary({ min_salary, max_salary, salary_period, salary_currency }: IFormData) {
+  const yearly = (amount: number | "") =>
+    amount === "" ? "N/A" : formatSalaryAmount(toAnnualSalary(amount, salary_period), salary_currency);
+  return `${yearly(min_salary)} - ${yearly(max_salary)} a year`;
+}
 import { CardContent } from "../ui/card";
 
 export const Step7ReviewSubmit: React.FC<StepProps> = ({ formData }) => (
@@ -26,8 +34,7 @@ export const Step7ReviewSubmit: React.FC<StepProps> = ({ formData }) => (
           </p>
           <p>
             <span className="text-muted-foreground">Salary Range:</span>{" "}
-            {formData.min_salary || "N/A"} - {formData.max_salary || "N/A"}{" "}
-            {formData.salary_currency}
+            {reviewSalary(formData)}
           </p>
         </div>
       </div>

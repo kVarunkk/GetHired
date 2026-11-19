@@ -12,6 +12,7 @@ import AskUserCard, { AskUserResult, type AskUserOutput } from "./AskUserCard";
 import { askUserInputSchema } from "@/helpers/agent/ask-user";
 import { rehypeAnimateWords } from "./animate-words";
 import { ApplicationApprovalDetails } from "./ApplicationApprovalCard";
+import { SALARY_APPROVAL_TOOLS, SalaryApprovalWarning } from "./SalaryApprovalWarning";
 import ResumeChangesCard, { ResumeChangesResult, type ResumeChangesOutput } from "./ResumeChangesCard";
 import { ResumeEditApprovalDetails, isResumeEditTool } from "./ResumeEditApprovalCard";
 import { inlineLink, isInAppHref, NEW_TAB } from "./links";
@@ -389,8 +390,8 @@ const FIELD_LABELS: Record<string, string> = {
   desiredRoles: "Roles",
   jobTypes: "Job types",
   salaryCurrency: "Currency",
-  minSalary: "Min salary",
-  maxSalary: "Max salary",
+  minSalary: "Min salary (yearly)",
+  maxSalary: "Max salary (yearly)",
   preferredLocations: "Locations",
   experienceYears: "Experience (years)",
   topSkills: "Skills",
@@ -702,6 +703,7 @@ function ApprovalCard({
           )}
         </dl>
       )}
+      {SALARY_APPROVAL_TOOLS.includes(name) && <SalaryApprovalWarning input={part.input} />}
       {FORM_APPROVAL_TOOLS.includes(name) && <ApplicationFormApprovalDetails input={part.input} />}
       {(name === "confirmImport" || name === "addCandidate") && <LawfulBasisNotice input={part.input} />}
       <div className="flex gap-2">
