@@ -65,12 +65,14 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
         accessorKey: "name",
         header: "Name",
         cell: ({ row }) => (
-          <div
-            className="max-w-[14rem] truncate text-sm font-medium"
+          <ModifiedLink
+            prefetch={false}
+            href={`/interview/${row.original.id}`}
+            className="block max-w-[14rem] truncate text-sm font-medium underline underline-offset-4 hover:underline sm:no-underline"
             title={row.original.name ?? undefined}
           >
             {row.original.name}
-          </div>
+          </ModifiedLink>
         ),
       },
 

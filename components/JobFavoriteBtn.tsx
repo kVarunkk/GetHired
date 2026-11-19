@@ -107,7 +107,7 @@ export default function JobFavoriteBtn({
         <Link
           onClick={(e) => e.stopPropagation()}
           href={
-            "/auth/sign-up?returnTo=" +
+            "/auth/login?returnTo=" +
             (isCompanyMode ? "/companies" : "/jobs/" + job_id)
           }
         >

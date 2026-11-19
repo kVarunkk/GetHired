@@ -548,7 +548,7 @@ const NavbarSheet = ({
       >
         <SheetHeader>
           <SheetTitle>
-            <Link href={isCompanyUser ? COMPANY_HOME : "/"}>
+            <Link href={isCompanyUser ? COMPANY_HOME : "/"} onClick={() => setOpen(false)}>
               <Brand type="long" />
             </Link>
           </SheetTitle>

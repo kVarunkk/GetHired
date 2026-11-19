@@ -13,21 +13,27 @@ import { isScreeningInProgress, NOT_SCORED_LABEL, type ScreeningStatus } from "@
 import { formatDate } from "@/utils/date";
 import type { TApplicationStatus } from "@/utils/types";
 
-/** The applicant's name with the Imported and knockout badges. */
+/** The applicant's name, linking to the application, with the Imported and knockout badges. */
 export function ApplicantNameCell({
+  applicationId,
   name,
   person,
   knockout,
 }: {
+  applicationId: string;
   name: string;
   person: Pick<ApplicationPerson, "imported" | "hasResume" | "connectedUserId"> | null;
   knockout: KnockoutSummary;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="max-w-[14rem] truncate font-medium" title={name || undefined}>
+      <Link
+        href={`/company/applications/${applicationId}`}
+        className="block max-w-[14rem] truncate font-medium underline underline-offset-4 hover:underline sm:no-underline"
+        title={name || undefined}
+      >
         {name || "N/A"}
-      </div>
+      </Link>
       {person && <ImportedBadge person={person} />}
       <KnockoutBadge knockout={knockout} />
     </div>

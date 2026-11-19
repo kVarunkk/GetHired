@@ -6,7 +6,7 @@ import { createContext, useContext, type ReactNode } from "react";
 export type ApplicationSource = {
   source?: "applied" | "careers_page" | "job_board";
   ref?: string | null;
-  /** Where sign-up returns to, e.g. the careers job page with ?apply=true&ref=… */
+  /** Where login (or sign-up) returns to, e.g. the careers job page with ?apply=true&ref=… */
   returnTo?: string;
 };
 
@@ -19,8 +19,8 @@ export function ApplicationSourceProvider({ value, children }: { value: Applicat
 
 export const useApplicationSource = () => useContext(ApplicationSourceContext);
 
-/** The sign-up link for a signed-out applicant: back to this page (careers) or /jobs/<id>. */
-export function useSignUpToApplyHref(allJobsId: string): string {
+/** The login link for a signed-out applicant: back to this page (careers) or /jobs/<id>. Login links to sign-up, keeping the return path. */
+export function useLoginToApplyHref(allJobsId: string): string {
   const { returnTo } = useApplicationSource();
-  return `/auth/sign-up?returnTo=${encodeURIComponent(returnTo ?? `/jobs/${allJobsId}`)}`;
+  return `/auth/login?returnTo=${encodeURIComponent(returnTo ?? `/jobs/${allJobsId}`)}`;
 }

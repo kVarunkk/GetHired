@@ -1,6 +1,6 @@
 "use client";
 
-import { useSignUpToApplyHref } from "./jobs/ApplicationSourceContext";
+import { useLoginToApplyHref } from "./jobs/ApplicationSourceContext";
 import { useState } from "react";
 import { ArrowDown, Copy, Loader2, Sparkle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,7 +50,7 @@ export default function JobDescriptionCard({
   );
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const signUpHref = useSignUpToApplyHref(job.id);
+  const loginHref = useLoginToApplyHref(job.id);
 
   const toggleDescription = () => {
     setIsExpanded(!isExpanded);
@@ -72,7 +72,7 @@ export default function JobDescriptionCard({
 
   const handleAISummary = () => {
     if (!userId) {
-      router.push(signUpHref);
+      router.push(loginHref);
       return;
     }
     if (!isAllJobsJob(job)) return;

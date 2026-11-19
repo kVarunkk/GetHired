@@ -24,8 +24,11 @@ describe("AuthButton", () => {
   it("keeps the sidebar labels on one line while the sidebar width animates", () => {
     const { rerender } = renderButtons("vertical");
 
-    expect(screen.getByText("Sign in")).toHaveClass("whitespace-nowrap", "opacity-100");
-    expect(screen.getByText("Sign up")).toHaveClass("whitespace-nowrap", "opacity-100");
+    // truncate includes whitespace-nowrap; the fade is on SidebarLabel's outer span.
+    expect(screen.getByText("Sign in")).toHaveClass("truncate");
+    expect(screen.getByText("Sign in").parentElement).toHaveClass("opacity-100");
+    expect(screen.getByText("Sign up")).toHaveClass("truncate");
+    expect(screen.getByText("Sign up").parentElement).toHaveClass("opacity-100");
 
     rerender(
       <TooltipProvider>
@@ -33,8 +36,8 @@ describe("AuthButton", () => {
       </TooltipProvider>,
     );
     expect(screen.getByRole("link", { name: "Sign in" })).toHaveClass("overflow-hidden", "justify-center");
-    expect(screen.getAllByText("Sign in")[0].parentElement).toHaveClass("max-w-0");
-    expect(screen.getAllByText("Sign in")[0]).toHaveClass("opacity-0");
+    expect(screen.getAllByText("Sign in")[0].parentElement?.parentElement).toHaveClass("max-w-0");
+    expect(screen.getAllByText("Sign in")[0].parentElement).toHaveClass("opacity-0");
   });
 
   it("puts the buttons in a row in the horizontal bar", () => {
