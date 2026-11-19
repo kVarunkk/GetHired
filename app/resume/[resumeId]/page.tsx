@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import OriginalResumeWrapper from "@/components/OriginalResumeWrapper";
 import InfoTooltip from "@/components/InfoTooltip";
-import ImproveResumeLink from "@/components/resume/ImproveResumeLink";
 import { RetryResumeParsing } from "@/components/RetryResumeParsing";
 import ResumeStatusBadge from "@/components/ResumeStatusBadge";
 import ResumeHeaderActions from "@/components/resume/ResumeHeaderActions";
+import ResumeDeleteMenu from "@/components/resume/ResumeDeleteMenu";
+import { resumeDeleteBlockedReason } from "@/helpers/resumes/delete-rule";
 import ResumePreview from "@/components/resume/ResumePreview";
 import { AskAgentAboutResume } from "@/components/agent/AskAgentOnApplicantIdPages";
 import { buildResumeDocument } from "@/helpers/resume/render/document";
@@ -48,6 +49,9 @@ export default async function ResumeIdPage({
 
     if (error) throw error;
     if (!data) notFound();
+
+    // Delete is off for the primary resume only (RE-REQ-037).
+    const deleteBlocked = resumeDeleteBlockedReason({ isPrimary: data.is_primary === true });
 
     const resume = readResume(data);
     const isParsingFailed = data.parsing_failed === true;
@@ -104,9 +108,7 @@ export default async function ResumeIdPage({
             <>
               {isParsingFailed && signedUrl && <RetryResumeParsing resumeId={resumeId} />}
               {resume.hasContent && <ResumeHeaderActions resumeId={resumeId} />}
-              {resume.hasContent && user.app_metadata.type === "applicant" && (
-                <ImproveResumeLink prompt={`Improve my resume "${data.name}" (resume ${data.id}).`} />
-              )}
+              <ResumeDeleteMenu resume={{ id: data.id, name: data.name }} deleteBlocked={deleteBlocked} />
             </>
           }
         />

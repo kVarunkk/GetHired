@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 
-export const LAST_RESUME_ERROR = "You can't delete your only resume. Add another one first.";
 export const PRIMARY_RESUME_ERROR =
   "You can't delete your primary resume. Make another resume primary first.";
 
@@ -10,7 +9,8 @@ export type DeleteResumeResult = { ok: true; reviewsDeleted: number } | { ok: fa
 /**
  * Deletes one of the user's resumes (RE-REQ-037). Its reviews cascade, and
  * applications keep their snapshots (`applications.resume_id` sets null). A
- * stored file stays: the migration owns those. The primary resume can't be
+ * stored file stays: the migration owns those. Any resume but the primary can
+ * go, even the user's only one. The primary resume can't be
  * deleted: the embedding and matches read it, so the user picks the next one
  * (setPrimaryResume, which refreshes them) instead of it being chosen for them.
  */
@@ -28,7 +28,6 @@ export async function deleteResume(
 
   const target = resumes?.find((resume) => resume.id === resumeId);
   if (!target) return { ok: false, error: "Resume not found." };
-  if (resumes!.length === 1) return { ok: false, error: LAST_RESUME_ERROR };
   if (target.is_primary) return { ok: false, error: PRIMARY_RESUME_ERROR };
 
   const { count, error: countError } = await supabase

@@ -3,17 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Copy, Download, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import toast from "react-hot-toast";
-import { deleteResumeAction } from "@/app/actions/resumes/delete-resume";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import DeleteResumeDialog from "./DeleteResumeDialog";
 import { useResumeActions } from "./use-resume-actions";
 
 /**
@@ -31,34 +21,16 @@ import { useResumeActions } from "./use-resume-actions";
  */
 export default function ResumeRowActions({
   resume,
-  canDelete,
-  isPrimary = false,
+  deleteBlocked = null,
   onDeleted,
 }: {
   resume: { id: string; name: string | null; isUnreadable: boolean };
-  /** False for the user's last resume (RE-REQ-037) and their primary one. */
-  canDelete: boolean;
-  /** Says why Delete is off: another resume has to be made primary first. */
-  isPrimary?: boolean;
+  /** Why Delete is off (`resumeDeleteBlockedReason`), shown under it; null when it's allowed. */
+  deleteBlocked?: string | null;
   onDeleted: (id: string) => void;
 }) {
   const { isBusy, copy, download } = useResumeActions(resume.id);
   const [isConfirming, setIsConfirming] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const confirmDelete = async () => {
-    setIsDeleting(true);
-    const result = await deleteResumeAction({ resumeId: resume.id }).catch(() => null);
-    setIsDeleting(false);
-
-    if (result?.ok) {
-      setIsConfirming(false);
-      toast.success("Resume deleted.");
-      onDeleted(resume.id);
-    } else {
-      toast.error(result?.error ?? "We couldn't delete this resume. Please try again.");
-    }
-  };
 
   return (
     <>
@@ -92,12 +64,12 @@ export default function ResumeRowActions({
               <DropdownMenuSeparator />
             </>
           )}
-          <DropdownMenuItem disabled={!canDelete} onSelect={() => setIsConfirming(true)}>
+          <DropdownMenuItem disabled={deleteBlocked !== null} onSelect={() => setIsConfirming(true)}>
             <Trash2 className="h-4 w-4" />
-            {isPrimary ? (
+            {deleteBlocked ? (
               <span className="flex flex-col">
                 Delete
-                <span className="text-xs text-muted-foreground">Make another resume primary first</span>
+                <span className="text-xs text-muted-foreground">{deleteBlocked}</span>
               </span>
             ) : (
               "Delete"
@@ -106,21 +78,12 @@ export default function ResumeRowActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={isConfirming} onOpenChange={setIsConfirming}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {resume.name ?? "this resume"}?</AlertDialogTitle>
-            <AlertDialogDescription>This can&apos;t be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button variant="destructive" disabled={isDeleting} onClick={confirmDelete}>
-              {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
-              Delete resume
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteResumeDialog
+        resume={resume}
+        open={isConfirming}
+        onOpenChange={setIsConfirming}
+        onDeleted={onDeleted}
+      />
     </>
   );
 }

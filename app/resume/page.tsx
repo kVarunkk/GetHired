@@ -4,7 +4,6 @@ import ResumesTable from "@/components/ResumesTable";
 import CreateResumeDialog from "@/components/CreateResumeDialog";
 import ResumeReuploadPrompt from "@/components/resume/ResumeReuploadPrompt";
 import PageHeader from "@/components/PageHeader";
-import ImproveResumeLink from "@/components/resume/ImproveResumeLink";
 import { AskAgentAboutResumes } from "@/components/agent/AskAgentOnApplicantPages";
 import type { Metadata } from "next";
 
@@ -53,14 +52,7 @@ export default async function ResumePage() {
         <PageHeader
           title="Resumes"
           description="Resumes you've built, tailored to the jobs you want."
-          actions={
-            <>
-              {user.app_metadata.type === "applicant" && rows.length > 0 && (
-                <ImproveResumeLink prompt="Improve my resume. Ask me which one first." />
-              )}
-              <CreateResumeDialog />
-            </>
-          }
+          actions={<CreateResumeDialog />}
         />
         {user.app_metadata.type === "applicant" && <AskAgentAboutResumes />}
         <ResumeReuploadPrompt
