@@ -921,7 +921,7 @@ describe("confirm tools (RMT-046, RMCP-REQ-005)", () => {
         description: "Build APIs.",
         locations: ["Remote"],
         jobType: "Fulltime",
-        salaryCurrency: "$",
+        salaryCurrency: "USD",
         minSalary: 0,
         maxSalary: 0,
         minExperience: 2,

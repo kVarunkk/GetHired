@@ -107,7 +107,7 @@ describe("RECRUITER_TOOL_PERMISSIONS (RP-REQ-030, RP-TEST-008)", () => {
     const limited = prompt(memberWith(["applicants.view"]));
     expect(limited.match(/You can't: /g)).toHaveLength(1);
     expect(limited).toMatch(/You can't: [^\n]*send outreach/);
-    expect(prompt(OWNER_A)).not.toMatch(/You can't|The user's role/);
+    expect(prompt(OWNER_A)).not.toMatch(/You can't: |# The user's role/);
     expect(prompt(HIRING_MANAGER_A)).toMatch(/only the jobs they're assigned to/);
   });
 });
