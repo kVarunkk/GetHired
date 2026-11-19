@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Badge } from "./ui/badge";
+import { chipListText, DetailChip } from "./DetailChip";
 import { cn } from "@/utils/utils";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import JobFavoriteBtn from "./JobFavoriteBtn";
@@ -132,7 +132,8 @@ function JobDetailBadges({
     },
     {
       id: "locations",
-      value: job.locations.join(", "),
+      value: chipListText(job.locations),
+      full: job.locations.join(", "),
       label: "Locations",
     },
     {
@@ -147,32 +148,25 @@ function JobDetailBadges({
       {jobDetails
         .filter((each) => each.value)
         .map((detail) => (
-          <Badge
-            title={detail.label}
+          <DetailChip
+            title={`${detail.label}: ${detail.full ?? detail.value}`}
             variant={"outline"}
             key={detail.id}
-            className={cn(
-              "rounded-full text-xs sm:text-sm font-medium group-hover:border-secondary-foreground",
-            )}
+            className="group-hover:border-secondary-foreground"
           >
             {detail.value}
-          </Badge>
+          </DetailChip>
         ))}
       {job.platform && (
-        <Badge
+        <DetailChip
           variant={"secondary"}
-          className={cn(
-            "rounded-full text-xs sm:text-sm font-medium hover:!text-secondary-foreground group-hover:border-secondary-foreground ",
-          )}
+          title={job.platform}
+          className="hover:!text-secondary-foreground group-hover:border-secondary-foreground"
         >
           {job.platform}
-        </Badge>
+        </DetailChip>
       )}
-      {isSuitable && (
-        <Badge variant="success" className="rounded-full text-xs sm:text-sm font-medium">
-          Job Match
-        </Badge>
-      )}
+      {isSuitable && <DetailChip variant="success">Job Match</DetailChip>}
     </div>
   );
 }

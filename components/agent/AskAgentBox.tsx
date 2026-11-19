@@ -157,7 +157,7 @@ export default function AskAgentBox({
             href={agentPromptHref(prompt, basePath)}
             onClick={() => savePendingPrompt(prompt)}
             style={{ animationDelay: `${index * 60}ms` }}
-            className="agent-chip-in rounded-full border bg-background px-3.5 py-1.5 text-sm transition-colors hover:border-brand/40 hover:bg-brandSoft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+            className="agent-chip-in rounded-[17px] border bg-background px-3.5 py-1.5 text-sm transition-colors hover:border-brand/40 hover:bg-brandSoft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
           >
             {label}
           </Link>

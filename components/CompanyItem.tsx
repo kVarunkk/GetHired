@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Badge } from "./ui/badge";
+import { DetailChip } from "./DetailChip";
 import { cn } from "@/utils/utils";
 import JobFavoriteBtn from "./JobFavoriteBtn";
 import { Button } from "./ui/button";
@@ -106,15 +106,14 @@ function CompanyDetailBadges({
       {companyDetails
         .filter((each) => each.value)
         .map((detail) => (
-          <Badge
+          <DetailChip
             variant={"outline"}
             key={detail.id}
-            className={cn(
-              "rounded-full text-xs sm:text-sm font-medium group-hover:border-secondary-foreground",
-            )}
+            title={`${detail.label}: ${detail.value}`}
+            className="group-hover:border-secondary-foreground"
           >
             {detail.value}
-          </Badge>
+          </DetailChip>
         ))}
 
       {company.website && (
@@ -125,23 +124,20 @@ function CompanyDetailBadges({
           // Followed links are only given on verified careers pages.
           rel="nofollow noopener noreferrer"
           prefetch={false}
+          className="flex min-w-0 max-w-full"
         >
-          <Badge
+          <DetailChip
             variant={"secondary"}
-            className={cn(
-              "rounded-full text-xs sm:text-sm font-medium hover:!text-secondary-foreground group-hover:border-secondary-foreground hover:underline",
-              "underline underline-offset-2 sm:no-underline",
-            )}
+            title={company.website}
+            className="hover:!text-secondary-foreground group-hover:border-secondary-foreground hover:underline underline underline-offset-2 sm:no-underline"
           >
             {company.website}
-          </Badge>
+          </DetailChip>
         </Link>
       )}
 
       {isSuitable && (
-        <Badge variant="success" className="rounded-full text-xs sm:text-sm font-medium">
-          Company Match
-        </Badge>
+        <DetailChip variant="success">Company Match</DetailChip>
       )}
     </div>
   );
