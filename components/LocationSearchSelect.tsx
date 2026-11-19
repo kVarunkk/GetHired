@@ -195,15 +195,15 @@ export default function LocationSearchSelect({
           {initialLocations.map((loc) => (
             <span
               key={loc}
-              className="flex items-center gap-0.5 rounded-full border py-0.5 pl-2.5 pr-1 text-sm"
+              className="flex min-w-0 max-w-full items-center gap-0.5 rounded-full border py-0.5 pl-2.5 pr-1 text-sm"
             >
-              {loc}
+              <span className="min-w-0 truncate" title={loc}>{loc}</span>
               <button
                 type="button"
                 aria-label={`Remove ${loc}`}
                 disabled={disabled}
                 onClick={() => removeLocation(loc)}
-                className="rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+                className="shrink-0 rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

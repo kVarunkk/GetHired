@@ -24,19 +24,7 @@ import { useProgress } from "react-transition-progress";
 import GoogleAuthBtn from "./GoogleAuthBtn";
 import { sendSignupEmail } from "@/app/actions/sign-up-email";
 import { safeReturnPath } from "@/helpers/user/home-path";
-
-const isGenericEmail = (email: string) => {
-  const genericDomains = [
-    "gmail.com",
-    "yahoo.com",
-    "outlook.com",
-    "hotmail.com",
-    "aol.com",
-    "icloud.com",
-  ];
-  const domain = email.split("@")[1];
-  return genericDomains.includes(domain);
-};
+import { GENERIC_EMAIL_MESSAGE, isGenericEmail } from "@/helpers/user/company-email";
 
 const signUpSchema = (isCompany: boolean) =>
   z
@@ -52,7 +40,7 @@ const signUpSchema = (isCompany: boolean) =>
             return true;
           },
           {
-            message: "Company email cannot be a generic public domain.",
+            message: GENERIC_EMAIL_MESSAGE,
           },
         ),
       password: z

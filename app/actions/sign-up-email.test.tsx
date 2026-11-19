@@ -51,6 +51,18 @@ describe("sendSignupEmail: existing sign-ups (characterisation)", () => {
     expect((await confirmLink())?.searchParams.get("next")).toBe("/get-started?company=true");
   });
 
+  it("refuses a company sign-up with a public email domain, before creating a user", async () => {
+    expect(await sendSignupEmail("Founder@Gmail.com", "password123", true)).toEqual({
+      success: false,
+      error: "Company email cannot be a generic public domain.",
+    });
+    expect(generateLink).not.toHaveBeenCalled();
+  });
+
+  it("lets applicants sign up with a public email domain", async () => {
+    expect(await sendSignupEmail("me@gmail.com", "password123", false)).toMatchObject({ success: true });
+  });
+
   it("sends a company back to the page it signed up from once it has onboarded", async () => {
     await sendSignupEmail("hr@acme.com", "password123", true, { returnTo: "/company/agent" });
 

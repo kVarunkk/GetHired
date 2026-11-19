@@ -338,7 +338,7 @@ export default function ChatPane({
                         <button
                           key={suggestion}
                           type="button"
-                          className="rounded-full border px-3.5 py-1.5 text-left text-sm transition-colors hover:border-brand/40 hover:bg-brandSoft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                          className="rounded-[17px] border px-3.5 py-1.5 text-left text-sm transition-colors hover:border-brand/40 hover:bg-brandSoft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
                           onClick={() => send(suggestion)}
                         >
                           {suggestion}

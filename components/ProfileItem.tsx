@@ -5,7 +5,7 @@ import { cn } from "@/utils/utils";
 import { Dot, ArrowRight } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
-import { Badge } from "./ui/badge";
+import { chipListText, DetailChip } from "./DetailChip";
 import ProfileFavoriteStar from "./ProfileFavoriteStar";
 import { AllProfileWithRelations } from "@/utils/types";
 import { buildSalaryRange } from "@/utils/buildSalaryRange";
@@ -158,17 +158,20 @@ function ProfileDetailBadges({
       },
       {
         id: "skills",
-        value: profile.top_skills?.join(", "),
+        value: chipListText(profile.top_skills),
+        full: profile.top_skills?.join(", "),
         label: "Skills",
       },
       {
         id: "locations",
-        value: profile.preferred_locations?.join(", "),
+        value: chipListText(profile.preferred_locations),
+        full: profile.preferred_locations?.join(", "),
         label: "Locations",
       },
       {
         id: "job_type",
-        value: profile.job_type.join(", "),
+        value: chipListText(profile.job_type),
+        full: profile.job_type.join(", "),
         label: "Job Type",
       },
     ];
@@ -179,22 +182,17 @@ function ProfileDetailBadges({
       {jobDetails
         .filter((each) => each.value)
         .map((detail) => (
-          <Badge
+          <DetailChip
             variant={"outline"}
             key={detail.id}
-            className={cn(
-              "rounded-full text-xs sm:text-sm font-medium group-hover:border-secondary-foreground",
-            )}
+            title={`${detail.label}: ${detail.full ?? detail.value}`}
+            className="group-hover:border-secondary-foreground"
           >
             {detail.value}
-          </Badge>
+          </DetailChip>
         ))}
 
-      {isSuitable && (
-        <Badge variant="success" className="rounded-full text-xs sm:text-sm font-medium">
-          Profile Match
-        </Badge>
-      )}
+      {isSuitable && <DetailChip variant="success">Profile Match</DetailChip>}
     </div>
   );
 }

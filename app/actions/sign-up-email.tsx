@@ -13,6 +13,7 @@ import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServe
 import { APPLICANT_HOME, claimReturnPath, companyOnboardingPath } from "@/helpers/user/home-path";
 import { findOpenInvite, joinPath } from "@/helpers/team/invite-token";
 import { INVALID_INVITE_MESSAGE } from "@/helpers/team/errors";
+import { GENERIC_EMAIL_MESSAGE, isGenericEmail } from "@/helpers/user/company-email";
 
 const URL = deploymentUrl();
 
@@ -48,6 +49,12 @@ export async function sendSignupEmail(
     if (!invite || invite.email.toLowerCase() !== email.trim().toLowerCase()) {
       return { success: false, error: INVALID_INVITE_MESSAGE };
     }
+  }
+
+  // A company signs up with a work email. The form checks it too, but this is
+  // the check that counts. Invitees join with whatever email they were invited.
+  if (isCompany && inviteToken === undefined && isGenericEmail(email)) {
+    return { success: false, error: GENERIC_EMAIL_MESSAGE };
   }
 
   const finalRedirectUrl = inviteToken
