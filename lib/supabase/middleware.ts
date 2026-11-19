@@ -5,10 +5,10 @@ import { UserAppMetadata } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { getUserFromRequest } from "./get-user-from-request";
 import { APPLICANT_HOME, COMPANY_HOME, companyOnboardingPath } from "@/helpers/user/home-path";
-import { COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 import { pageForMarkdownPath } from "@/helpers/marketing/content";
 import { decodeJwt } from "jose";
 import { MCP_PATH, PROTECTED_RESOURCE_METADATA_PATH } from "@/helpers/mcp/config";
+import { SWITCH_TO_APPLICANT_PATH, SWITCH_TO_COMPANY_PATH } from "@/helpers/user/account-switch";
 
 function isOAuthAppToken(token: string) {
   try {
@@ -71,6 +71,10 @@ export async function updateSession(request: NextRequest) {
     "/oauth/consent",
     "/jobs",
     "/hire",
+    // Signed out, these send visitors on to sign-up; signed in with the other
+    // kind of account, they sign the user out first.
+    SWITCH_TO_COMPANY_PATH,
+    SWITCH_TO_APPLICANT_PATH,
     "/ai-interview",
     "/mcp-server",
     "/mcp-server/companies",
@@ -309,6 +313,19 @@ export async function updateSession(request: NextRequest) {
     if (isAuthPath) {
       const url = request.nextUrl.clone();
       let pathname;
+      // An applicant opening company sign-up or login (e.g. /hire's "Start
+      // hiring free") needs to sign out first, which that page offers.
+      if (isApplicant && searchParams.get("company") === "true") {
+        url.pathname = SWITCH_TO_COMPANY_PATH;
+        deleteSearchParams(url);
+        return NextResponse.redirect(url);
+      }
+      // Likewise a company user opening candidate sign-up.
+      if (isCompany && request.nextUrl.pathname === "/auth/sign-up" && searchParams.get("company") !== "true") {
+        url.pathname = SWITCH_TO_APPLICANT_PATH;
+        deleteSearchParams(url);
+        return NextResponse.redirect(url);
+      }
       if (isApplicant) {
         pathname = APPLICANT_HOME;
         url.pathname = pathname;
@@ -356,12 +373,16 @@ export async function updateSession(request: NextRequest) {
         { status: 403 },
       );
     }
-    // Companies use the agent at /company/agent; /agent is the applicants'.
-    // The query (?prompt=, ?session=) carries over. A company that hasn't
-    // onboarded goes straight to onboarding (below) instead.
-    if (isCompanyOnboarded && isAgentPath) {
+    // /agent is the applicants' agent: every link into it (blog, landing
+    // pages, job pages) asks a job seeker's question, and company code links
+    // to /company/agent. The job board (/jobs) is for job seekers too. So a
+    // company user is offered a candidate account, onboarded or not. The
+    // applicant prompt and the board's filters don't carry over. A single
+    // job's page (/jobs/<id>) stays open, e.g. to see a posting as it's listed.
+    if (isCompany && (isAgentPath || pathname === "/jobs")) {
       const url = request.nextUrl.clone();
-      url.pathname = COMPANY_AGENT_PATH;
+      url.pathname = SWITCH_TO_APPLICANT_PATH;
+      deleteSearchParams(url);
       return NextResponse.redirect(url);
     }
 
@@ -390,8 +411,10 @@ export async function updateSession(request: NextRequest) {
       !isCompanyJoinPath
     ) {
       const url = request.nextUrl.clone();
-      // Users without a role yet can't open the agent, so they get the job board.
-      url.pathname = isApplicant ? APPLICANT_HOME : "/jobs";
+      // Applicants are offered a company account (e.g. /hire's links into
+      // /company/agent). Users without a role yet can't open the agent, so
+      // they get the job board.
+      url.pathname = isApplicant ? SWITCH_TO_COMPANY_PATH : "/jobs";
       deleteSearchParams(url);
 
       return NextResponse.redirect(url);

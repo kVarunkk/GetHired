@@ -74,19 +74,33 @@ describe("middleware: /agent", () => {
     expect(passesThrough(await updateSession(request("/api/agent/chat")))).toBe(true);
   });
 
-  it("sends company users from /agent to /company/agent, keeping the query", async () => {
+  it("offers company users who open /agent a candidate account", async () => {
     vi.mocked(getUserFromRequest).mockResolvedValue(company);
 
-    expect(redirectTarget(await updateSession(request("/agent")))).toBe("/company/agent");
-    expect(redirectTarget(await updateSession(request("/agent?prompt=Find%20Go%20devs")))).toBe(
-      "/company/agent?prompt=Find%20Go%20devs",
+    // e.g. the job seeker blog's "Find jobs that match me".
+    expect(redirectTarget(await updateSession(request("/agent")))).toBe("/switch-to-applicant");
+    expect(redirectTarget(await updateSession(request("/agent?prompt=Find%20jobs")))).toBe(
+      "/switch-to-applicant",
     );
   });
 
-  it("keeps applicants out of /company/agent", async () => {
+  it("offers company users who open the job board a candidate account, but serves a job's page", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(company);
+    expect(redirectTarget(await updateSession(request("/jobs")))).toBe("/switch-to-applicant");
+    expect(redirectTarget(await updateSession(request("/jobs?sortBy=relevance")))).toBe("/switch-to-applicant");
+    expect(passesThrough(await updateSession(request("/jobs/abc")))).toBe(true);
+
+    vi.mocked(getUserFromRequest).mockResolvedValue(mockUser({ type: "company", onboardingComplete: false }));
+    expect(redirectTarget(await updateSession(request("/jobs")))).toBe("/switch-to-applicant");
+
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+    expect(passesThrough(await updateSession(request("/jobs")))).toBe(true);
+  });
+
+  it("keeps applicants out of /company/agent, offering a company account", async () => {
     vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
 
-    expect(redirectTarget(await updateSession(request("/company/agent")))).toBe("/agent");
+    expect(redirectTarget(await updateSession(request("/company/agent")))).toBe("/switch-to-company");
   });
 
   it("sends companies that haven't onboarded from the agent to company onboarding", async () => {
@@ -98,7 +112,8 @@ describe("middleware: /agent", () => {
     expect(redirectTarget(await updateSession(request("/company/agent?prompt=Hi")))).toBe(
       "/get-started?company=true&returnTo=%2Fcompany%2Fagent",
     );
-    expect(redirectTarget(await updateSession(request("/agent")))).toBe("/get-started?company=true");
+    // /agent is the applicants' agent, so they're offered a candidate account.
+    expect(redirectTarget(await updateSession(request("/agent")))).toBe("/switch-to-applicant");
   });
 
   it("answers the agent API with 403 for companies that haven't onboarded", async () => {
@@ -148,10 +163,40 @@ describe("middleware: the agent is the applicant home", () => {
     expect(redirectTarget(await updateSession(request("/auth/login")))).toBe("/company");
   });
 
-  it("sends applicants who open a company page to the agent", async () => {
+  it("sends applicants who open a company page to the switch-to-company page", async () => {
     vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
 
-    expect(redirectTarget(await updateSession(request("/company/profiles")))).toBe("/agent");
+    expect(redirectTarget(await updateSession(request("/company/profiles")))).toBe("/switch-to-company");
+  });
+
+  it("sends applicants who open company sign-up or login to the switch-to-company page", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+
+    expect(redirectTarget(await updateSession(request("/auth/sign-up?company=true")))).toBe("/switch-to-company");
+    expect(redirectTarget(await updateSession(request("/auth/login?company=true")))).toBe("/switch-to-company");
+    expect(redirectTarget(await updateSession(request("/auth/sign-up")))).toBe("/agent");
+  });
+
+  it("sends company users who open candidate sign-up to the switch-to-applicant page", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(company);
+
+    expect(redirectTarget(await updateSession(request("/auth/sign-up")))).toBe("/switch-to-applicant");
+    expect(redirectTarget(await updateSession(request("/auth/sign-up?company=true")))).toBe("/company");
+    expect(redirectTarget(await updateSession(request("/auth/login")))).toBe("/company");
+    expect(passesThrough(await updateSession(request("/switch-to-applicant")))).toBe(true);
+  });
+
+  it("serves the switch-to-applicant page to a company that hasn't onboarded", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(mockUser({ type: "company", onboardingComplete: false }));
+
+    expect(passesThrough(await updateSession(request("/switch-to-applicant")))).toBe(true);
+  });
+
+  it("lets anyone open the switch-to-company page, and still lets applicants open an invite", async () => {
+    expect(passesThrough(await updateSession(request("/switch-to-company")))).toBe(true);
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+    expect(passesThrough(await updateSession(request("/switch-to-company")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/company/join?token=abc")))).toBe(true);
   });
 
   it("sends users without a role from company pages to the job board, since the agent needs one", async () => {
@@ -500,7 +545,7 @@ describe("middleware: /company/join (TM-TEST-004, teams difference 4)", () => {
     vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
 
     expect(passesThrough(await updateSession(request(JOIN)))).toBe(true);
-    expect(redirectTarget(await updateSession(request("/company")))).toBe("/agent");
+    expect(redirectTarget(await updateSession(request("/company")))).toBe("/switch-to-company");
   });
 
   it("serves it to a company account that hasn't accepted yet, which is still sent to onboarding from /company", async () => {
