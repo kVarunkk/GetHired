@@ -39,9 +39,10 @@ const output = (tool: string, value: unknown, input: unknown = {}) => ({
   output: value,
 });
 
-const renderParts = (message: UIMessage) => {
+// As the latest reply by default: only that one's approvals can be answered.
+const renderParts = (message: UIMessage, { latest = true } = {}) => {
   const callbacks = { onApprove: vi.fn(), onToolOutput: vi.fn() };
-  render(<MessageParts message={message} {...callbacks} />);
+  render(<MessageParts message={message} latest={latest} {...callbacks} />);
   return callbacks;
 };
 

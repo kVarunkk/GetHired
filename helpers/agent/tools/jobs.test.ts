@@ -327,7 +327,8 @@ describe("naturalLanguageJobSearch tool", () => {
 
 describe("findRelevantJobs tool", () => {
   it("runs a relevance search for a user with an embedding", async () => {
-    supabase.queue("user_info", { data: { embedding_new: "[0.1]" }, error: null });
+    supabase.queue("user_info", { data: { embedding_new: "[0.1]", filled: true }, error: null });
+    supabase.queue("user_relevant_jobs", { data: null, count: 40, error: null });
 
     const result = await execTool(tools.findRelevantJobs, {
       limit: 5,
@@ -350,16 +351,15 @@ describe("findRelevantJobs tool", () => {
   it.each([
     ["no profile", null],
     ["no embedding", { embedding_new: null, filled: false }],
+    // Embedded from a primary resume before onboarding: there's no feed yet.
+    ["an embedding but no onboarding", { embedding_new: "[0.1]", filled: false }],
   ])("returns a hint instead of searching when there is %s", async (_label, data) => {
     supabase.queue("user_info", { data, error: null });
 
     const result = await execTool(tools.findRelevantJobs, {});
 
-    expect(result).toEqual({
-      error: "PROFILE_INCOMPLETE",
-      message:
-        "Personalised matches need a completed profile or a parsed primary resume. Ask the user to finish onboarding at /get-started or upload a resume.",
-    });
+    expect(result).toMatchObject({ error: "PROFILE_INCOMPLETE" });
+    expect((result as { message: string }).message).toContain("read it and search with its job titles and skills");
     expect(searchJobs).not.toHaveBeenCalled();
   });
 });
@@ -604,7 +604,8 @@ describe("empty location searches (REQ-024)", () => {
 
   it("logs findRelevantJobs location filters too", async () => {
     noJobs();
-    supabase.queue("user_info", { data: { embedding_new: "[0.1]" }, error: null });
+    supabase.queue("user_info", { data: { embedding_new: "[0.1]", filled: true }, error: null });
+    supabase.queue("user_relevant_jobs", { data: null, count: 40, error: null });
 
     await execTool(tools.findRelevantJobs, { filters: { locations: ["Pune"] } });
     await flushAfter();

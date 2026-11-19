@@ -28,6 +28,7 @@ import {
 import { AGENT_ROLES } from "@/helpers/agent/roles";
 import { EntitlementError, toEntitlementResponse } from "@/helpers/billing/errors";
 import { dropAbandonedToolCalls, selectContextMessages } from "@/helpers/agent/context";
+import { skipPendingApprovals } from "@/helpers/agent/skipped-approvals";
 import { mergeClientUpdates } from "@/helpers/agent/client-updates";
 import { listMemories } from "@/helpers/agent/memory";
 import {
@@ -181,6 +182,15 @@ export async function POST(request: NextRequest) {
         // Edit: replace the message and everything after it.
         await truncateAfter(supabase, sessionId, message.id, { inclusive: true });
         history = history.slice(0, existing);
+      }
+      // The user moved on without answering the last reply's approvals:
+      // they're skipped, so the old card shows that and the model knows it
+      // didn't run (instead of never seeing it and asking again).
+      const last = history.at(-1);
+      const skipped = last ? skipPendingApprovals(last) : null;
+      if (skipped) {
+        await upsertMessages(supabase, sessionId, user.id, [skipped]);
+        history = [...history.slice(0, -1), skipped];
       }
       history = [...history, message];
       toSave = message;

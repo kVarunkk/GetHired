@@ -396,11 +396,14 @@ export function createJobTools(ctx: AgentToolContext) {
             }
           }
 
-          if (!profile?.embedding_new) {
+          // Matches come only from the feed, which onboarding builds: a user
+          // who hasn't onboarded would get an empty list with no reason, even
+          // with a resume (agent chat review 2026-11-14/15, problem 8).
+          if (!profile?.filled || !profile.embedding_new) {
             return {
               error: "PROFILE_INCOMPLETE",
               message:
-                "Personalised matches need a completed profile or a parsed primary resume. Ask the user to finish onboarding at /get-started or upload a resume.",
+                "Personalised matches need a completed profile. Offer to finish onboarding (or the form at /get-started). Meanwhile offer a regular job search: if the user has a resume, read it and search with its job titles and skills.",
             };
           }
 

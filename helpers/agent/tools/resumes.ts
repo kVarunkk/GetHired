@@ -230,7 +230,7 @@ export function createResumeTools(ctx: AgentToolContext) {
 
     requestResumeUpload: tool({
       description:
-        "Ask the user to upload a resume (PDF or Word). The app shows an upload widget and reads the file straight away; the result is the new resumeId, ready to use, or cancelled if the user dismissed it.",
+        "Ask the user to upload a resume (PDF or Word). The app shows an upload widget and reads the file straight away; the result is the new resumeId, ready to use, or cancelled if the user dismissed it. Call it as the last thing in your reply and don't ask for the upload in text: the widget asks, and the upload may be done before your text is read.",
       inputSchema: z.object({
         reason: z
           .string()
@@ -241,6 +241,10 @@ export function createResumeTools(ctx: AgentToolContext) {
       outputSchema: z.object({
         resumeId: z.string().optional(),
         cancelled: z.boolean().optional(),
+      }),
+      toModelOutput: ({ output }) => ({
+        type: "text",
+        value: resumeUploadResultForModel(output),
       }),
     }),
 
@@ -505,7 +509,7 @@ export function createResumeTools(ctx: AgentToolContext) {
 
     deleteResume: tool({
       description:
-        "Delete one of the user's resumes, with its reviews. It can't be undone. The last resume and the primary resume can't be deleted: to delete the primary, ask which resume should be primary instead and call setPrimaryResume first. The user must approve.",
+        "Delete one of the user's resumes, with its reviews. It can't be undone. The primary resume can't be deleted (any other can, even the user's only one): to delete the primary, ask which resume should be primary instead and call setPrimaryResume first. The user must approve.",
       inputSchema: z.object({ resumeId: uuidInput("resume") }),
       execute: ({ resumeId }) =>
         withToolErrors(ctx, "deleteResume", async () => {
@@ -634,4 +638,17 @@ export function createResumeTools(ctx: AgentToolContext) {
         }),
     }),
   };
+}
+
+/**
+ * What the model reads once the upload widget is done: a plain sentence, so it
+ * acknowledges the upload instead of asking for the resume again.
+ */
+export function resumeUploadResultForModel(
+  output: { resumeId?: string; cancelled?: boolean } | undefined,
+): string {
+  if (output?.resumeId) {
+    return `The user uploaded their resume (resumeId ${output.resumeId}). It's saved and read, ready to use. Don't ask for a resume again: tell the user it's uploaded and carry on.`;
+  }
+  return "The user closed the upload widget without uploading a resume. Carry on without it, or ask whether they'd like to upload one later.";
 }

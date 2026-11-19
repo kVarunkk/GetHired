@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { changesResultForModel, createdResumeMessage, createResumeTools } from "./resumes";
+import {
+  changesResultForModel,
+  createdResumeMessage,
+  createResumeTools,
+  resumeUploadResultForModel,
+} from "./resumes";
 import { execTool, toolContext, validateInput } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { duplicateResume } from "@/helpers/resumes/duplicate-resume";
@@ -319,6 +324,19 @@ describe("requestResumeUpload tool", () => {
     expect(
       (await validateInput(tools.requestResumeUpload, { reason: "To review it" })).success,
     ).toBe(true);
+  });
+
+  // The model wrote "please upload your resume" after the upload had finished.
+  it("tells the model the resume is uploaded, so it doesn't ask again", () => {
+    const text = resumeUploadResultForModel({ resumeId: RESUME_ID });
+    expect(text).toContain(RESUME_ID);
+    expect(text).toMatch(/uploaded/);
+    expect(text).toMatch(/Don't ask for a resume again/);
+  });
+
+  it("says when the user closed the widget, and survives a missing output", () => {
+    expect(resumeUploadResultForModel({ cancelled: true })).toMatch(/without uploading/);
+    expect(() => resumeUploadResultForModel(undefined)).not.toThrow();
   });
 });
 

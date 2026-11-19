@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { canRateReply, hasFeedbackPart, type AgentFeedbackState } from "@/helpers/agent/feedback";
 import { canRegenerate, withRegeneration } from "@/helpers/agent/regenerations";
 import { isStopped, stoppedReply } from "@/helpers/agent/stopped";
+import { skipApprovalsBeforeNewMessage } from "@/helpers/agent/skipped-approvals";
 import Composer from "./Composer";
 import FeedbackSurveyCard from "./FeedbackSurveyCard";
 import ReplyFeedback, { type ReplyVote } from "./ReplyFeedback";
@@ -197,10 +198,12 @@ export default function ChatPane({
       if (!trimmed || busy) return false;
       atBottomRef.current = true; // Sending always jumps to the new message.
       setUsage((current) => ({ ...current, sent: current.sent + 1 }));
+      // Approvals left unanswered are skipped, as the server saves them.
+      setMessages(skipApprovalsBeforeNewMessage);
       sendMessage({ text: trimmed });
       return true;
     },
-    [busy, sendMessage],
+    [busy, sendMessage, setMessages],
   );
   const handleApprove = useCallback(
     (response: { id: string; approved: boolean }) =>

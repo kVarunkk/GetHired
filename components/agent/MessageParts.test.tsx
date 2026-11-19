@@ -3,15 +3,17 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UIMessage } from "ai";
 import MessageParts, { isInAppHref } from "./MessageParts";
+import { SKIPPED_APPROVAL_REASON } from "@/helpers/agent/skipped-approvals";
 
 vi.mock("@/app/actions/upload-resume-file", () => ({ uploadResumeAction: vi.fn() }));
 
 const assistant = (parts: unknown[]): UIMessage =>
   ({ id: "a1", role: "assistant", parts }) as UIMessage;
 
-const renderParts = (message: UIMessage) => {
+// As the latest reply by default: only that one's approvals can be answered.
+const renderParts = (message: UIMessage, { latest = true } = {}) => {
   const callbacks = { onApprove: vi.fn(), onToolOutput: vi.fn() };
-  render(<MessageParts message={message} {...callbacks} />);
+  render(<MessageParts message={message} latest={latest} {...callbacks} />);
   return callbacks;
 };
 
@@ -109,6 +111,22 @@ describe("MessageParts", () => {
       expect(screen.queryByRole("link")).not.toBeInTheDocument();
       expect(screen.getByText("this page")).toBeInTheDocument();
       expect(screen.getByText("here")).toBeInTheDocument();
+    });
+
+    it("repairs job links the model wrote wrong", () => {
+      const id = "5585ee61-7a8f-4e02-939a-ac1153a3ba00";
+      renderParts(
+        assistant([
+          {
+            type: "text",
+            text: `- [Frontend Engineer](EE /jobs/${id})\n- [Backend Engineer](invocation:default_api:getJobDetails{jobId:${id}})`,
+          },
+        ]),
+      );
+
+      for (const name of ["Frontend Engineer", "Backend Engineer"]) {
+        expect(screen.getByRole("link", { name })).toHaveAttribute("href", `/jobs/${id}`);
+      }
     });
 
     it("never loads images, showing their alt text instead", () => {
@@ -267,6 +285,43 @@ describe("MessageParts", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Deny" }));
     expect(onApprove).toHaveBeenCalledWith({ id: "ap1", approved: false });
+  });
+
+  it("shows an older reply's unanswered approval as skipped, with no buttons", () => {
+    renderParts(
+      assistant([
+        {
+          type: "tool-submitApplication",
+          toolCallId: "c1",
+          state: "approval-requested",
+          input: { resumeId: "r1", jobId: "j1" },
+          approval: { id: "ap1" },
+        },
+      ]),
+      { latest: false },
+    );
+
+    expect(screen.getByText(/^Skipped:/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Deny" })).not.toBeInTheDocument();
+  });
+
+  it("shows an approval the user moved past as skipped, not declined", () => {
+    renderParts(
+      assistant([
+        {
+          type: "tool-submitApplication",
+          toolCallId: "c1",
+          state: "output-denied",
+          input: { resumeId: "r1", jobId: "j1" },
+          approval: { id: "ap1", approved: false, reason: SKIPPED_APPROVAL_REASON },
+        },
+      ]),
+    );
+
+    expect(screen.getByText(/^Skipped:/)).toBeInTheDocument();
+    expect(screen.getByText(/Not approved, so nothing changed/)).toBeInTheDocument();
+    expect(screen.queryByText(/^Declined:/)).not.toBeInTheDocument();
   });
 
   it("describes preference changes awaiting approval", () => {

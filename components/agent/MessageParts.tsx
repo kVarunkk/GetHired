@@ -13,9 +13,10 @@ import { askUserInputSchema } from "@/helpers/agent/ask-user";
 import { rehypeAnimateWords } from "./animate-words";
 import { ApplicationApprovalDetails } from "./ApplicationApprovalCard";
 import { SALARY_APPROVAL_TOOLS, SalaryApprovalWarning } from "./SalaryApprovalWarning";
+import { isSkippedApproval } from "@/helpers/agent/skipped-approvals";
 import ResumeChangesCard, { ResumeChangesResult, type ResumeChangesOutput } from "./ResumeChangesCard";
 import { ResumeEditApprovalDetails, isResumeEditTool } from "./ResumeEditApprovalCard";
-import { inlineLink, isInAppHref, NEW_TAB } from "./links";
+import { inlineLink, isInAppHref, NEW_TAB, repairJobLinks } from "./links";
 import {
   ApplicantResults,
   type ApplicantRowData,
@@ -1098,6 +1099,17 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
   return <Step tone="done" label={labelsFor(name).done} />;
 }
 
+/** An approval the user moved past by sending a new message: it never ran. */
+function SkippedApprovalStep({ action }: { action: string }) {
+  return (
+    <Step tone="declined" label={`Skipped: ${action}`}>
+      <p className="text-xs text-muted-foreground">
+        Not approved, so nothing changed. Ask again if you still want this.
+      </p>
+    </Step>
+  );
+}
+
 function ToolStep({
   part,
   onApprove,
@@ -1114,6 +1126,9 @@ function ToolStep({
 
   switch (part.state) {
     case "approval-requested":
+      // Only the latest reply's approval can be answered. An older one was
+      // skipped when the user sent a new message (saved that way since then).
+      if (!latest) return <SkippedApprovalStep action={labels.action} />;
       return (
         <Step tone="yours" label="Needs your approval">
           <ApprovalCard
@@ -1232,6 +1247,9 @@ function ToolStep({
     case "output-error":
       return <Step tone="failed" label={`Couldn't ${labels.action}.`} />;
     case "output-denied": {
+      if (isSkippedApproval(part as Parameters<typeof isSkippedApproval>[0])) {
+        return <SkippedApprovalStep action={labels.action} />;
+      }
       // Denied by the app's rules rather than by the user (SEC-013).
       const approval = (part as { approval?: { isAutomatic?: boolean; reason?: string } }).approval;
       if (approval?.isAutomatic) {
@@ -1322,7 +1340,7 @@ function MessageParts({
               components={MARKDOWN_COMPONENTS}
               rehypePlugins={streaming ? STREAMING_REHYPE_PLUGINS : undefined}
             >
-              {block.text}
+              {repairJobLinks(block.text)}
             </ReactMarkdown>
           </div>
         ) : (
