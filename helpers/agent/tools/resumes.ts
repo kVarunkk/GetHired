@@ -335,7 +335,7 @@ export function createResumeTools(ctx: AgentToolContext) {
           const ranking = await rankResumesForJob(
             rankingJob,
             shortlist,
-            { telemetry: agentTelemetry("pickResumeForJob", { sessionId: ctx.sessionId, userId: ctx.user.id }) },
+            { telemetry: agentTelemetry("pickResumeForJob", { sessionId: ctx.sessionId, userId: ctx.user.id, role: "applicant" }) },
           );
 
           const charged = await deductUserCreditsHelper(supabase, ctx.user.id, RESUME_PICK_CREDITS);
@@ -388,7 +388,7 @@ export function createResumeTools(ctx: AgentToolContext) {
         withToolErrors(ctx, "improveResume", async () => {
           const result = await improveResume(supabase, ctx.user, input, {
             abortSignal,
-            telemetry: agentTelemetry("improveResume", { sessionId: ctx.sessionId, userId: ctx.user.id }),
+            telemetry: agentTelemetry("improveResume", { sessionId: ctx.sessionId, userId: ctx.user.id, role: "applicant" }),
           });
           if (!result.ok) return result.code === "INSUFFICIENT_CREDITS" ? INSUFFICIENT_CREDITS : { error: result.error };
 

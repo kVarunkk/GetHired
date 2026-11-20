@@ -16,6 +16,7 @@ import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
 import { isTextUIPart, type TelemetryOptions, type UIMessage } from "ai";
 import { askUserResultForModel } from "./ask-user";
 import { CLIENT_TOOL_NAMES } from "./client-updates";
+import { redactContactDetails } from "./contact-details";
 import { AGENT_TRACE_CONTENT } from "./config";
 import type { AgentRoleId } from "./roles/types";
 
@@ -146,19 +147,7 @@ function toolCallsOf(message: unknown) {
 const asText = (value: unknown) => (typeof value === "string" ? value : JSON.stringify(value ?? null));
 const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}…` : text);
 
-const EMAIL_PATTERN = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
-// International (+91 …), US-style ((555) 123-4567) and bare 10-digit numbers.
-// Dates, UUIDs and salaries don't match: no "+", and no run of 10 digits.
-const PHONE_PATTERN = /\+\d[\d\s().-]{7,16}\d|\(\d{3}\)\s?\d{3}[\s.-]\d{4}|(?<![\w-])\d{10}(?![\w-])/g;
-
-/**
- * Masks emails and phone numbers. Tool results (a profile, a resume) carry
- * the user's contact details, and the trace-level summaries are read by
- * Arize's evaluators, which don't need them.
- */
-export function redactContactDetails(text: string): string {
-  return text.replace(EMAIL_PATTERN, "[email]").replace(PHONE_PATTERN, "[phone]");
-}
+export { redactContactDetails };
 
 /**
  * The conversation as `role: text` lines, with what the user did on a card
@@ -259,10 +248,136 @@ const TOOL_RESULTS_ATTRIBUTE = "gethired.tool_results";
 
 /**
  * Keeps a trace-level eval inside a reasonable prompt size. At 600, a
- * resume list or profile was cut off before the facts the reply used.
+ * resume list or profile was cut off before the facts the reply used; at
+ * 2500, a list of ten jobs was, and the judge failed replies over jobs it
+ * couldn't see. Results are compacted first (`compactForJudge`), so this
+ * now cuts long lists rather than the fields of each item.
  */
-const TOOL_RESULT_MAX_CHARS = 2500;
+const TOOL_RESULT_MAX_CHARS = 6000;
 const TOOL_ARGS_MAX_CHARS = 1000;
+
+/** Longest string field kept whole in a tool result shown to a judge. */
+const JUDGE_FIELD_MAX_CHARS = 300;
+
+/**
+ * A tool result as a judge needs it: the same JSON with long text fields
+ * (descriptions, summaries, resume sections) clipped and empty fields
+ * dropped, so a whole job list's titles, companies, locations and salaries
+ * fit. A result that isn't JSON is returned as is.
+ */
+function compactForJudge(result: string): string {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(result);
+  } catch {
+    return result;
+  }
+  const compact = (value: unknown): unknown => {
+    if (typeof value === "string") return clip(value, JUDGE_FIELD_MAX_CHARS);
+    if (Array.isArray(value)) return value.map(compact);
+    if (typeof value === "object" && value !== null) {
+      return Object.fromEntries(
+        Object.entries(value)
+          .filter(([, field]) => field !== null && field !== undefined && field !== "")
+          .map(([key, field]) => [key, compact(field)]),
+      );
+    }
+    return value;
+  };
+  return typeof parsed === "object" && parsed !== null ? JSON.stringify(compact(parsed)) : result;
+}
+
+/** Root-span attribute: the tool errors of the turn, as `tool: code` lines. */
+const TOOL_ERRORS_ATTRIBUTE = "gethired.tool_errors";
+
+/**
+ * Tool-span attribute: the error a tool returned. Tools return `{ error }`
+ * instead of throwing (`withToolErrors`), so every span is OK and Arize had no
+ * way to count failing calls (findRelevantJobs failed 40% of the time unseen).
+ */
+const TOOL_ERROR_ATTRIBUTE = "gethired.tool_error";
+
+/** The `error` a tool result carries, or null. */
+function toolErrorOf(result: unknown): string | null {
+  let value = result;
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  const error = (value as { error?: unknown } | null)?.error;
+  return typeof error === "string" && error.trim() ? clip(error.trim(), 80) : null;
+}
+
+/**
+ * Root and tool span attribute: what the agent knew about the user without a
+ * tool call, read from the system prompt's sandboxed blocks: the profile (an
+ * applicant), the company (a recruiter) and memories.
+ *
+ * Judges had only the conversation, so a search that used the profile's
+ * locations was scored as adding constraints the user never asked for, and a
+ * reply naming the recruiter's own company was scored as inventing it.
+ */
+const AGENT_CONTEXT_ATTRIBUTE = "gethired.agent_context";
+const AGENT_CONTEXT_TAGS = ["user_profile", "company_context", "user_memories"] as const;
+const AGENT_CONTEXT_MAX_CHARS = 2500;
+
+/** Heads the context block in a root span's `input.value`; the eval templates name it. */
+export const AGENT_CONTEXT_HEADING =
+  "[what the assistant knew about the user before this turn, not part of the chat]";
+
+/** The system prompt's text, from a model or root span. */
+function systemPromptOf(attributes: ReadableSpan["attributes"]): string | null {
+  const raw = attributes["gen_ai.system_instructions"];
+  if (typeof raw !== "string") return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === "string") return parsed;
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((part) => {
+          const { content, text } = (part ?? {}) as { content?: unknown; text?: unknown };
+          return typeof content === "string" ? content : typeof text === "string" ? text : "";
+        })
+        .join("\n");
+    }
+  } catch {
+    // Plain text.
+  }
+  return raw;
+}
+
+/** The sandboxed context blocks of the system prompt, masked and clipped, or null. */
+function agentContextOf(attributes: ReadableSpan["attributes"]): string | null {
+  const prompt = systemPromptOf(attributes);
+  if (!prompt) return null;
+  const blocks: string[] = [];
+  for (const tag of AGENT_CONTEXT_TAGS) {
+    // `wrapInSandbox` puts each block on its own lines; the rules that name
+    // the tags inline ("Content inside <user_profile>, …") don't match.
+    const body = prompt.match(new RegExp(`<${tag}>\\n([\\s\\S]*?)\\n</${tag}>`))?.[1]?.trim();
+    if (body) blocks.push(`${tag}:\n${body}`);
+  }
+  return blocks.length > 0 ? clip(redactContactDetails(blocks.join("\n\n")), AGENT_CONTEXT_MAX_CHARS) : null;
+}
+
+/**
+ * Masks contact details in every string attribute of a span. The exporter
+ * already masked the eval fields, but model and tool spans still carried
+ * resumes and profiles with users' emails and phone numbers to Arize.
+ */
+function withContactDetailsMasked(span: ReadableSpan): ReadableSpan {
+  for (const [key, value] of Object.entries(span.attributes)) {
+    if (typeof value === "string") {
+      span.attributes[key] = redactContactDetails(value);
+    } else if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
+      span.attributes[key] = (value as string[]).map(redactContactDetails);
+    }
+  }
+  return span;
+}
 
 /**
  * Renders the turn's tool calls as the ordered list a trajectory eval reads.
@@ -290,7 +405,7 @@ function formatToolResults(calls: ToolCallRecord[]): string {
   return calls
     .map((call, index) => {
       const args = clip(redactContactDetails(call.args), TOOL_ARGS_MAX_CHARS);
-      const result = clip(redactContactDetails(call.result), TOOL_RESULT_MAX_CHARS);
+      const result = clip(redactContactDetails(compactForJudge(call.result)), TOOL_RESULT_MAX_CHARS);
       return `[${index + 1}] ${call.name}(${args}): ${result}`;
     })
     .join("\n\n");
@@ -312,41 +427,70 @@ class VisibleTurnExporter extends OTLPTraceExporter {
   /** The tool calls each trace made so far, for the trace-level eval inputs. */
   #toolCalls = new Map<string, ToolCallRecord[]>();
 
+  /** What each trace's agent knew about the user (`agentContextOf`). */
+  #contexts = new Map<string, string>();
+
+  /**
+   * The latest model call's input messages per trace. A tool span reads the
+   * turn's earlier steps from it: card answers and calls that ran before it.
+   */
+  #modelInputs = new Map<string, unknown>();
+
   override export(spans: ReadableSpan[], done: (result: ExportResult) => void) {
-    const prepared = spans.map((span) => {
-      const traceId = span.spanContext().traceId;
-      const attributes = span.attributes;
-      const kind = attributes["openinference.span.kind"];
-
-      if (kind === "LLM") {
-        const catalogue = readToolCatalogue(attributes);
-        if (catalogue.size > 0) this.#catalogues.set(traceId, catalogue);
-        return withVisibleTurnText(span);
-      }
-
-      if (kind === "TOOL") {
-        this.#recordToolCall(traceId, attributes);
-        return withToolText(span, this.#catalogues.get(traceId));
-      }
-
-      // The root span closes the trace: give it the turn's tool work, then
-      // forget the trace so a long-lived process doesn't accumulate.
-      if (isTurnSpan(attributes)) {
-        // Read the earlier steps before the input is rewritten to text.
-        const earlier = earlierStepCalls(attributes["input.value"]);
-        const executed = this.#toolCalls.get(traceId) ?? [];
-        const earlierIds = new Set(earlier.map((call) => call.id));
-        const calls = [...earlier, ...executed.filter((call) => !call.id || !earlierIds.has(call.id))];
-        const executedIds = new Set(executed.flatMap((call) => (call.id ? [call.id] : [])));
-        const prepared = withToolSummary(withVisibleTurnText(span, executedIds), calls);
-        this.#catalogues.delete(traceId);
-        this.#toolCalls.delete(traceId);
-        return prepared;
-      }
-
-      return withVisibleTurnText(span);
-    });
+    const prepared = spans.map((span) => withContactDetailsMasked(this.#prepare(span)));
     super.export(prepared, done);
+  }
+
+  #prepare(span: ReadableSpan): ReadableSpan {
+    const traceId = span.spanContext().traceId;
+    const attributes = span.attributes;
+    const kind = attributes["openinference.span.kind"];
+
+    if (kind === "LLM") {
+      const catalogue = readToolCatalogue(attributes);
+      if (catalogue.size > 0) this.#catalogues.set(traceId, catalogue);
+      const context = agentContextOf(attributes);
+      if (context) this.#contexts.set(traceId, context);
+      if (attributes["input.value"] !== undefined) this.#modelInputs.set(traceId, attributes["input.value"]);
+      return withVisibleTurnText(span);
+    }
+
+    if (kind === "TOOL") {
+      this.#recordToolCall(traceId, attributes);
+      return withToolText(span, this.#catalogues.get(traceId), {
+        context: this.#contexts.get(traceId),
+        earlier: earlierStepCalls(this.#modelInputs.get(traceId)),
+      });
+    }
+
+    // The root span closes the trace: give it the turn's tool work, then
+    // forget the trace so a long-lived process doesn't accumulate.
+    if (isTurnSpan(attributes)) {
+      // Read the earlier steps before the input is rewritten to text.
+      const earlier = earlierStepCalls(attributes["input.value"]);
+      const executed = this.#toolCalls.get(traceId) ?? [];
+      const earlierIds = new Set(earlier.map((call) => call.id));
+      const calls = [...earlier, ...executed.filter((call) => !call.id || !earlierIds.has(call.id))];
+      const executedIds = new Set(executed.flatMap((call) => (call.id ? [call.id] : [])));
+      const context = agentContextOf(attributes) ?? this.#contexts.get(traceId);
+      const prepared = withToolSummary(withVisibleTurnText(span, executedIds), calls);
+      if (context) {
+        prepared.attributes[AGENT_CONTEXT_ATTRIBUTE] = context;
+        // Also ahead of the conversation, which every chat eval already reads,
+        // so the judges see it without a new column mapping.
+        const conversation = prepared.attributes["input.value"];
+        if (typeof conversation === "string") {
+          prepared.attributes["input.value"] = `${AGENT_CONTEXT_HEADING}\n${context}\n\n${conversation}`;
+        }
+      }
+      this.#catalogues.delete(traceId);
+      this.#toolCalls.delete(traceId);
+      this.#contexts.delete(traceId);
+      this.#modelInputs.delete(traceId);
+      return prepared;
+    }
+
+    return withVisibleTurnText(span);
   }
 
   #recordToolCall(traceId: string, attributes: ReadableSpan["attributes"]) {
@@ -376,6 +520,11 @@ function withToolSummary(span: ReadableSpan, calls?: ToolCallRecord[]): Readable
   if (!calls || calls.length === 0) return span;
   span.attributes[TOOL_CALLS_ATTRIBUTE] = formatToolCalls(calls);
   span.attributes[TOOL_RESULTS_ATTRIBUTE] = formatToolResults(calls);
+  const errors = calls.flatMap((call) => {
+    const error = toolErrorOf(call.result);
+    return error ? [`${call.name}: ${error}`] : [];
+  });
+  if (errors.length > 0) span.attributes[TOOL_ERRORS_ATTRIBUTE] = errors.join("\n");
   return span;
 }
 
@@ -488,7 +637,11 @@ function argumentNames(schema: unknown): string[] {
  * span exports first (a tool only runs after the model replies) and carries
  * the advertised tools. `llm.*` and `gen_ai.tool.call.*` keep their own shape.
  */
-function withToolText(span: ReadableSpan, catalogue?: ToolCatalogue): ReadableSpan {
+function withToolText(
+  span: ReadableSpan,
+  catalogue?: ToolCatalogue,
+  { context, earlier = [] }: { context?: string; earlier?: ToolCallRecord[] } = {},
+): ReadableSpan {
   const attributes = span.attributes;
   if (attributes["openinference.span.kind"] !== "TOOL") return span;
 
@@ -529,12 +682,19 @@ function withToolText(span: ReadableSpan, catalogue?: ToolCatalogue): ReadableSp
     if (names.length > 0) parts.push(`takes these arguments: ${names.join(", ")}`);
     parts.push(`arguments: ${text(args ?? {})}`);
     if (typeof request === "string") parts.push(`user request: ${request}`);
+    // A call after a card (an upload, an answer) was judged against the
+    // message before it: "the user asked to upload a resume, not to search".
+    if (earlier.length > 0) parts.push(`earlier in this turn:\n${formatToolCalls(earlier)}`);
+    // Filling a search from the profile is right, not an invented constraint.
+    if (context) parts.push(`what the assistant knew about the user:\n${context}`);
     span.attributes["input.value"] = parts.join("\n");
     span.attributes["input.mime_type"] = "text/plain";
   }
   if (result !== undefined) {
     span.attributes["output.value"] = text(result);
     span.attributes["output.mime_type"] = "text/plain";
+    const error = toolErrorOf(result);
+    if (error) span.attributes[TOOL_ERROR_ATTRIBUTE] = error;
   }
   return span;
 }
@@ -581,6 +741,11 @@ export type AgentTraceContext = {
   role?: AgentRoleId;
   /** This turn's user message, for tool spans that have no prompt of their own. */
   userText?: string;
+  /**
+   * The assistant message this turn writes (`agent_messages.id`), so a 👍/👎
+   * on it finds its trace (`scripts/import-agent-feedback.ts`).
+   */
+  messageId?: string;
 };
 
 /**
@@ -620,6 +785,9 @@ const ROLE_ATTRIBUTE = "gethired.role";
 /** This turn's user message, for judging a tool call in context. */
 const USER_TEXT_ATTRIBUTE = "gethired.user_text";
 
+/** The assistant message the turn writes, for matching reply feedback to its trace. */
+export const MESSAGE_ID_ATTRIBUTE = "gethired.message_id";
+
 /**
  * Vercel AI SDK's span attribute. openinference-vercel renames the root span
  * to this when it is present, and uses it to pick the OpenInference span kind.
@@ -635,7 +803,7 @@ const OPERATION_NAME = "operation.name";
  */
 export function agentTelemetry(
   functionId: string,
-  { sessionId, userId, companyId, role, userText }: AgentTraceContext,
+  { sessionId, userId, companyId, role, userText, messageId }: AgentTraceContext,
   { recordContent = AGENT_TRACE_CONTENT }: { recordContent?: boolean } = {},
 ): TelemetryOptions {
   const tracerProvider = getProvider();
@@ -661,6 +829,8 @@ export function agentTelemetry(
           [SemanticConventions.USER_ID]: userId,
           ...(companyId ? { [COMPANY_ID_ATTRIBUTE]: companyId } : {}),
           ...(role ? { [ROLE_ATTRIBUTE]: role } : {}),
+          // An id, not content, so it stays when recording is off.
+          ...(messageId ? { [MESSAGE_ID_ATTRIBUTE]: messageId } : {}),
           // A turn's request is only recorded when content recording is on.
           ...(userText && recordContent ? { [USER_TEXT_ATTRIBUTE]: userText } : {}),
         }),

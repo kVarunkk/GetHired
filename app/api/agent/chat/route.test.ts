@@ -145,6 +145,7 @@ const TRACE_CONTEXT = {
   userId: "u1",
   role: "applicant",
   userText: "hi",
+  messageId: expect.stringMatching(/^msg-/),
 };
 
 describe("POST /api/agent/chat: guards", () => {
@@ -516,6 +517,43 @@ describe("POST /api/agent/chat: tracing (REQ-025 – REQ-029)", () => {
     for (const functionId of ["agent-chat", "agent-suggestions", "agent-title", "agent-summary"]) {
       expect(agentTelemetry).toHaveBeenCalledWith(functionId, TRACE_CONTEXT);
     }
+  });
+
+  it("traces the reply under the id it streams and saves, so feedback finds the trace", async () => {
+    queueSession();
+
+    const res = await submit(text("u1", "user", "hi"));
+    const body = await res.text();
+    await flushAfter();
+
+    const traced = vi.mocked(agentTelemetry).mock.calls.find(([id]) => id === "agent-chat")![1].messageId;
+    expect(body).toContain(`"type":"start","messageId":"${traced}"`);
+    expect(upserts(supabase).flat().some((m) => m.id === traced && m.role === "assistant")).toBe(true);
+  });
+
+  it("traces a continuation under the reply it continues", async () => {
+    const pending: UIMessage = {
+      id: "a1",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool-submitApplication",
+          toolCallId: "c1",
+          state: "approval-requested",
+          input: { resumeId: "22222222-2222-4222-8222-222222222222", jobId: "11111111-1111-4111-8111-111111111111" },
+          approval: { id: "ap1" },
+        },
+      ],
+    } as UIMessage;
+    queueSession({ history: [text("u1", "user", "apply for me"), pending], countCheck: false });
+
+    const res = await submit({
+      ...pending,
+      parts: [{ ...pending.parts[0], state: "approval-responded", approval: { id: "ap1", approved: false } }],
+    } as UIMessage);
+    await res.text();
+
+    expect(agentTelemetry).toHaveBeenCalledWith("agent-chat", expect.objectContaining({ messageId: "a1" }));
   });
 
   it("flushes traces before the response stream closes, after the suggestions", async () => {
