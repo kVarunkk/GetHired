@@ -357,7 +357,7 @@ describe("createInterview tool", () => {
       interviewId: INTERVIEW_ID,
       url: `/interview/${INTERVIEW_ID}`,
       message:
-        "The interview is ready. The user starts it from the link; each session uses 10 AI credits when it starts.",
+        "The interview is ready. The user starts it from the link; each session uses 5 AI credits when it starts.",
     });
   });
 
