@@ -5,6 +5,9 @@ import type { Database } from "@/utils/types/database.types";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { reportError } from "@/helpers/posthog/report-error";
 import { RESUME_LIMITS } from "@/helpers/resume/config";
+import { tailoredCopyName } from "./copy-name";
+import { resumeNames } from "./load-changes";
+import { reviewTarget } from "./target";
 import { readResume } from "@/helpers/resume/read-resume";
 import { buildResumeDocument, type ResumeDocument } from "@/helpers/resume/render/document";
 import type { ResumeContent } from "@/helpers/resume/resume-schema";
@@ -116,8 +119,6 @@ const saveContent = (
   );
 };
 
-const copyName = (resumeName: string | null, label: string | null | undefined) =>
-  [resumeName ?? "Untitled resume", label].filter(Boolean).join(" – ").slice(0, RESUME_LIMITS.shortFieldChars);
 
 /** The review, and the changes chosen from it. Reads only, and refuses text with a placeholder. */
 async function loadChosen(supabase: SupabaseClient<Database>, user: { id: string }, input: unknown) {
@@ -133,7 +134,7 @@ async function loadChosen(supabase: SupabaseClient<Database>, user: { id: string
 
   const { data: review, error: reviewError } = await supabase
     .from("resume_reviews")
-    .select("id, name, resume_id, applied_copy_id, ai_response, all_jobs ( job_name )")
+    .select("id, name, resume_id, applied_copy_id, ai_response, focus, job_id, target_jd, all_jobs ( job_name, company_name )")
     .eq("id", reviewId)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -290,11 +291,12 @@ export async function applyReviewSuggestions(
   }
 
   if (needsCopy) {
-    const jobName = review.all_jobs?.job_name;
-    const copy = await duplicateResume(supabase, user, {
-      resumeId: resume.id,
-      name: copyName(resume.name, jobName || review.name),
-    });
+    const aim = reviewTarget(review);
+    const name = tailoredCopyName(
+      { resumeName: resume.name, job: aim.job, focus: aim.focus, pastedJob: aim.pastedJob },
+      await resumeNames(supabase, user.id),
+    );
+    const copy = await duplicateResume(supabase, user, { resumeId: resume.id, name });
     if (!copy.ok) return { ok: false, code: "COPY_FAILED", error: copy.error };
 
     const { error: linkError } = await supabase

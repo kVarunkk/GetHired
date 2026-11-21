@@ -68,6 +68,53 @@ describe("improveResume tool", () => {
     );
   });
 
+  describe("a job description the user didn't paste", () => {
+    const PASTED =
+      "We are hiring an AI Engineer to build retrieval pipelines with LangChain, evaluate prompts, and ship agents to production on Kubernetes.";
+    const WRITTEN =
+      "Seeking an AI Engineer skilled in large language models, retrieval augmented generation, orchestration frameworks and agent workflows.";
+    const withChat = (userText: string, requestText = userText) =>
+      createResumeTools({ ...toolContext(supabase.client), userText, requestText }).improveResume;
+
+    it("drops one the model wrote, and tailors to the user's request instead", async () => {
+      await execTool(withChat("Tailor my resume for AI Engineer roles"), { resumeId: RESUME_ID, jobDescription: WRITTEN });
+
+      expect(vi.mocked(improveResume).mock.calls[0][2]).toEqual({
+        resumeId: RESUME_ID,
+        jobDescription: undefined,
+        focus: "Tailor my resume for AI Engineer roles",
+      });
+    });
+
+    it("keeps the model's focus when it gave one", async () => {
+      await execTool(withChat("Tailor my resume for AI Engineer roles"), {
+        resumeId: RESUME_ID,
+        jobDescription: WRITTEN,
+        focus: "AI Engineer roles: LLMs and RAG",
+      });
+
+      expect(vi.mocked(improveResume).mock.calls[0][2]).toMatchObject({
+        jobDescription: undefined,
+        focus: "AI Engineer roles: LLMs and RAG",
+      });
+    });
+
+    it("keeps one the user pasted, earlier in the chat too", async () => {
+      await execTool(withChat(`Here's the job:\n${PASTED}\nTailor my resume for it`, "go ahead"), {
+        resumeId: RESUME_ID,
+        jobDescription: PASTED.replace(/, /g, ",\n"),
+      });
+
+      expect(vi.mocked(improveResume).mock.calls[0][2]).toMatchObject({ jobDescription: PASTED.replace(/, /g, ",\n") });
+    });
+
+    it("isn't checked over MCP, which has no chat", async () => {
+      await execTool(mcpTool(), { resumeId: RESUME_ID, jobDescription: WRITTEN });
+
+      expect(vi.mocked(improveResume).mock.calls[0][2]).toMatchObject({ jobDescription: WRITTEN });
+    });
+  });
+
   it("takes the user from the context, never from input (RI-SEC-001)", async () => {
     await execTool(chatTool(), { resumeId: RESUME_ID, focus: "shorter" });
 

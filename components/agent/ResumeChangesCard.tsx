@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, ChevronDown, Loader2 } from "lucide-react";
 import { applyReviewSuggestionsAction } from "@/app/actions/resume-review/apply-suggestions";
 import { loadResumeChangesAction } from "@/app/actions/resume-review/load-resume-changes";
 import { undoReviewSuggestionAction } from "@/app/actions/resume-review/undo-suggestion";
@@ -11,13 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/utils/utils";
 import { buildResumeDocument } from "@/helpers/resume/render/document";
 import type { ResumeContent } from "@/helpers/resume/resume-schema";
 import { changeText, planChangeOperations, type ReviewChange } from "@/helpers/resume-review/changes";
 import type { ChangesTarget, ResumeChangesView } from "@/helpers/resume-review/load-changes";
 import { fillPlaceholders, hasPlaceholder, splitPlaceholders } from "@/helpers/resume-review/suggestions";
-import { reviewJobLabel, type ReviewTarget } from "@/helpers/resume-review/target";
+import { reviewJobLabel } from "@/helpers/resume-review/target";
 import type { ApplySuggestionsInput } from "@/helpers/resume-review/apply-suggestions";
 import { diffResume } from "@/helpers/resumes/resume-diff";
 import { runResumeOperations } from "@/helpers/resumes/resume-operations";
@@ -47,11 +47,31 @@ const APPLY_FAILED = "We couldn't apply that. Please try again.";
 
 const count = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-/** What the review was tailored for. Text only: a job title comes from its posting. */
-function TailoredFor({ target }: { target: ReviewTarget }) {
-  const { job, pastedJob, focus } = target;
+/** A longer summary is cut to three lines, with Show more. */
+const SUMMARY_PREVIEW_CHARS = 220;
+
+const resumeLabel = (name: string | null) => name?.trim() || "Untitled resume";
+
+/**
+ * The card's heading: which resume the review read, and what it was tailored
+ * for. Text only: a job title comes from its posting.
+ */
+function TailoredFor({ view }: { view: Pick<ResumeChangesView, "target" | "resumeName" | "original"> }) {
+  const { job, pastedJob, focus } = view.target;
+  const resumeId = view.original.resumeId;
+  const resumeName = resumeLabel(view.resumeName);
   return (
-    <div className="flex flex-col gap-0.5 rounded-md border px-2.5 py-1.5">
+    <div className="flex flex-col gap-0.5">
+      <p className="break-words text-sm font-semibold text-foreground">
+        Changes to{" "}
+        {resumeId ? (
+          <Link href={`/resume/${resumeId}`} target="_blank" className="underline underline-offset-2">
+            {resumeName}
+          </Link>
+        ) : (
+          resumeName
+        )}
+      </p>
       <p className="break-words text-muted-foreground">
         {job ? (
           <>
@@ -71,8 +91,47 @@ function TailoredFor({ target }: { target: ReviewTarget }) {
         ) : (
           "Not tailored to a job: reviewed on its own"
         )}
+        {(job || pastedJob) && focus && <> · Focus: {focus}</>}
       </p>
-      {(job || pastedJob) && focus && <p className="break-words text-muted-foreground">Focus: {focus}</p>}
+    </div>
+  );
+}
+
+/** A section that starts closed, so the changes stay the first thing on the card. */
+function Disclosure({ label, children }: { label: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex flex-col gap-1.5">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="flex items-center gap-1 self-start font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ChevronDown aria-hidden className={cn("h-3.5 w-3.5 transition-transform", !open && "-rotate-90")} />
+        {label}
+      </button>
+      {open && children}
+    </div>
+  );
+}
+
+/** The review's summary, cut to a few lines until the user asks for the rest. */
+function Summary({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const long = text.length > SUMMARY_PREVIEW_CHARS;
+  return (
+    <div className="flex flex-col items-start gap-0.5">
+      <p className={cn("whitespace-pre-line break-words text-foreground", long && !open && "line-clamp-3")}>{text}</p>
+      {long && (
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          className="font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        >
+          {open ? "Show less" : "Show more"}
+        </button>
+      )}
     </div>
   );
 }
@@ -164,8 +223,10 @@ function ChangeRow({
     onChange({ values, ...(filled ? { checked: true } : {}) });
   };
 
+  const needsValues = base !== null && hasPlaceholder(fillPlaceholders(base, draft.values));
+
   return (
-    <li className="flex items-start gap-2 border-t pt-2">
+    <li className="flex items-start gap-2.5 border-t py-2.5 first:border-t-0">
       <Checkbox
         className="mt-0.5"
         aria-label={label}
@@ -174,7 +235,24 @@ function ChangeRow({
         onCheckedChange={(checked) => onChange({ checked: checked === true })}
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="text-muted-foreground">{KIND_LABELS[change.kind]}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-medium text-muted-foreground">
+            {KIND_LABELS[change.kind]}
+            {needsValues && <span className="font-normal"> · fill in the blanks</span>}
+          </p>
+          {base !== null && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="-my-1 h-6 shrink-0 px-1.5 text-xs"
+              disabled={disabled}
+              onClick={() => onChange({ editing: !draft.editing })}
+            >
+              {draft.editing ? "Done" : "Edit"}
+            </Button>
+          )}
+        </div>
         {(change.kind === "rewrite" || change.kind === "remove") && (
           <del className="whitespace-pre-line break-words text-muted-foreground">{change.original}</del>
         )}
@@ -192,30 +270,20 @@ function ChangeRow({
             <FillableText text={base} values={draft.values} disabled={disabled} onValue={setValue} />
           ))}
         <p className="break-words text-muted-foreground">{change.reason}</p>
-        {base !== null && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-6 self-start px-1.5 text-xs"
-            disabled={disabled}
-            onClick={() => onChange({ editing: !draft.editing })}
-          >
-            {draft.editing ? "Done" : "Edit"}
-          </Button>
-        )}
       </div>
     </li>
   );
 }
 
 /** What a target would become with these changes, for the live diff (RI-REQ-027). */
-/** What the job wants and the resume doesn't show. Stays on the result card too, for answering after Apply. */
-function GapQuestions({ gaps }: { gaps: ResumeChangesView["gaps"] }) {
+/**
+ * What the job wants and the resume doesn't show. Closed on the form, so the
+ * changes come first; open on the result card, for answering after Apply.
+ */
+function GapQuestions({ gaps, collapsed = false }: { gaps: ResumeChangesView["gaps"]; collapsed?: boolean }) {
   if (gaps.length === 0) return null;
-  return (
-    <div className="flex flex-col gap-1.5 border-t pt-2">
-      <p className="font-medium text-muted-foreground">Questions for you</p>
+  const list = (
+    <div className="flex flex-col gap-1">
       <ul className="flex flex-col gap-1">
         {gaps.map((gap) => (
           <li key={gap.requirement} className="break-words">
@@ -225,6 +293,19 @@ function GapQuestions({ gaps }: { gaps: ResumeChangesView["gaps"] }) {
         ))}
       </ul>
       <p className="text-muted-foreground">Answer in the chat, and the assistant will add what you say.</p>
+    </div>
+  );
+  const label = `${count(gaps.length, "question")} to make it stronger`;
+  return (
+    <div className="border-t pt-2">
+      {collapsed ? (
+        <Disclosure label={label}>{list}</Disclosure>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          <p className="font-medium text-muted-foreground">{label}</p>
+          {list}
+        </div>
+      )}
     </div>
   );
 }
@@ -351,59 +432,49 @@ export function ChangesForm({
       targetResumeId: null,
     });
 
+  const tickedCount = chosen.length;
+  const resumeName = resumeLabel(view.resumeName);
+  const hasCopy = view.copy.resumeId !== null;
+  const applyLabel =
+    target === "original"
+      ? `Apply ${count(tickedCount, "change")} to ${resumeName}`
+      : hasCopy
+        ? `Add ${count(tickedCount, "change")} to the copy`
+        : `Create copy with ${count(tickedCount, "change")}`;
+
   return (
     <div className="flex flex-col gap-3 text-xs">
-      <TailoredFor target={view.target} />
-      {view.summary && <p className="whitespace-pre-line break-words text-foreground">{view.summary}</p>}
+      <TailoredFor view={view} />
+      {view.summary && <Summary text={view.summary} />}
 
       {open.length > 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1">
-            <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => tickAll(true)}>
-              Select all
-            </Button>
-            <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => tickAll(false)}>
-              Clear all
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-muted-foreground">Apply to</span>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              size="sm"
-              value={target}
+        <div className="flex flex-col rounded-md border">
+          <div className="flex items-center gap-2.5 border-b bg-muted/40 px-2.5 py-1.5">
+            <Checkbox
+              aria-label="Select all"
+              checked={tickedCount === open.length ? true : tickedCount === 0 ? false : "indeterminate"}
               disabled={busy}
-              onValueChange={(value) => value && setTarget(value as Target)}
-            >
-              <ToggleGroupItem value="copy">A copy</ToggleGroupItem>
-              <ToggleGroupItem value="original">The original</ToggleGroupItem>
-            </ToggleGroup>
+              onCheckedChange={() => tickAll(tickedCount !== open.length)}
+            />
+            <span className="font-medium text-muted-foreground">
+              {tickedCount} of {count(open.length, "change")} selected
+            </span>
           </div>
+          <ul className="flex flex-col px-2.5">
+            {open.map((change) => (
+              <ChangeRow
+                key={change.id}
+                change={change}
+                draft={drafts[change.id]}
+                content={current.content}
+                disabled={busy}
+                onChange={(next) => update(change.id, next)}
+              />
+            ))}
+          </ul>
         </div>
       ) : (
         <p className="text-muted-foreground">Nothing left to apply here.</p>
-      )}
-
-      {target === "original" && open.length > 0 && (
-        <p className="text-muted-foreground">
-          Only rewrites can be undone. New bullets, removals and moves on the original stay until you edit the resume.
-        </p>
-      )}
-
-      {open.length > 0 && (
-        <ul className="flex flex-col gap-2">
-          {open.map((change) => (
-            <ChangeRow
-              key={change.id}
-              change={change}
-              draft={drafts[change.id]}
-              content={current.content}
-              disabled={busy}
-              onChange={(next) => update(change.id, next)}
-            />
-          ))}
-        </ul>
       )}
 
       {staleCount > 0 && (
@@ -413,13 +484,38 @@ export function ChangesForm({
       )}
 
       {diff?.hasChanges && (
-        <div className="flex flex-col gap-1.5 border-t pt-2">
-          <p className="font-medium text-muted-foreground">Your resume with these changes</p>
+        <Disclosure label="Preview the whole resume">
           <ResumeDiffView diff={diff} />
-        </div>
+        </Disclosure>
       )}
 
-      <GapQuestions gaps={view.gaps} />
+      <GapQuestions gaps={view.gaps} collapsed />
+
+      {open.length > 0 && (
+        <div className="flex flex-col gap-1 border-t pt-2">
+          {target === "copy" ? (
+            <p className="break-words text-muted-foreground">
+              {hasCopy ? "Saves to your copy " : "Saves as a new copy "}
+              <span className="font-medium text-foreground">{view.copyName}</span>. {resumeName} stays as it is.
+            </p>
+          ) : (
+            <p className="break-words text-muted-foreground">
+              Changes <span className="font-medium text-foreground">{resumeName}</span> itself. Only rewrites can be
+              undone: new bullets, removals and moves stay until you edit the resume.
+            </p>
+          )}
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto self-start p-0 text-xs"
+            disabled={busy}
+            onClick={() => setTarget(target === "copy" ? "original" : "copy")}
+          >
+            {target === "copy" ? `Change ${resumeName} instead` : "Save as a copy instead"}
+          </Button>
+        </div>
+      )}
 
       {error && <ErrorNote>{error}</ErrorNote>}
       {unfilled && <p className="text-muted-foreground">Fill in the bracketed values, or untick those changes.</p>}
@@ -434,7 +530,7 @@ export function ChangesForm({
             onClick={apply}
           >
             {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Apply {chosen.length} of {open.length}
+            {applyLabel}
           </Button>
         )}
         <Button type="button" variant="outline" size="sm" disabled={busy} onClick={discard}>
@@ -494,7 +590,7 @@ export function ResumeChangesResult({ reviewId, output }: { reviewId: string; ou
 
   return (
     <div className="flex flex-col gap-2 text-xs">
-      {view && <TailoredFor target={view.target} />}
+      {view && <TailoredFor view={view} />}
       <p className="text-foreground">
         Applied {count(stillApplied.length, "change")}.{" "}
         {targetResumeId && (
@@ -552,10 +648,14 @@ export function ResumeChangesResult({ reviewId, output }: { reviewId: string; ou
 export default function ResumeChangesCard({
   reviewId,
   onComplete,
+  collapsed = false,
 }: {
   reviewId: string;
   onComplete?: (output: ResumeChangesOutput) => void;
+  /** The user moved on without answering: show one line until they open it. */
+  collapsed?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const [view, setView] = useState<ResumeChangesView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [finished, setFinished] = useState<ResumeChangesOutput | null>(null);
@@ -578,6 +678,21 @@ export default function ResumeChangesCard({
   if (finished) return <ResumeChangesResult reviewId={reviewId} output={finished} />;
   if (error) return <ErrorNote>{error}</ErrorNote>;
   if (!view) return <p className="text-xs text-muted-foreground">Loading the changes…</p>;
+
+  if (collapsed && !expanded) {
+    const left = view.changes.filter((change) => view.copy.states[change.id] === "pending").length;
+    return (
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        <span className="break-words">
+          Changes to <span className="font-medium text-foreground">{resumeLabel(view.resumeName)}</span> ·{" "}
+          {left > 0 ? `${count(left, "suggestion")}, not applied` : "nothing left to apply"}
+        </span>
+        <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setExpanded(true)}>
+          Show
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <ChangesForm
