@@ -12,7 +12,7 @@ vi.mock("@/app/actions/resume-review/apply-suggestions", () => ({ applyReviewSug
 vi.mock("@/app/actions/resume-review/load-resume-changes", () => ({ loadResumeChangesAction: vi.fn() }));
 vi.mock("@/app/actions/resume-review/undo-suggestion", () => ({ undoReviewSuggestionAction: vi.fn() }));
 
-const applyButton = () => screen.getByRole("button", { name: /^Apply \d+ of \d+$/ });
+const applyButton = () => screen.getByRole("button", { name: /^Create copy with \d+ changes?$/ });
 
 describe("ResumeCheckerHeroDemo", () => {
   beforeEach(() => {
@@ -31,23 +31,24 @@ describe("ResumeCheckerHeroDemo", () => {
     expect(screen.getByText("Suggested changes")).toBeInTheDocument();
     expect(screen.getByText("Choose your changes")).toBeInTheDocument();
     expect(screen.getByText(/Led the React and TypeScript component library/)).toBeInTheDocument();
-    expect(screen.getByText("Questions for you")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "2 questions to make it stronger" })).toBeInTheDocument();
   });
 
   it("leaves a change with values to fill in unticked, and ticks it once they're filled", () => {
     render(<ResumeCheckerHeroDemo />);
 
     // Six changes, five ticked: the new bullet has [X] and [N].
-    expect(applyButton()).toHaveTextContent("Apply 5 of 6");
+    expect(applyButton()).toHaveTextContent("Create copy with 5 changes");
     fireEvent.change(screen.getByLabelText("Value for [X]"), { target: { value: "2.5" } });
     fireEvent.change(screen.getByLabelText("Value for [N]"), { target: { value: "30" } });
-    expect(applyButton()).toHaveTextContent("Apply 6 of 6");
+    expect(applyButton()).toHaveTextContent("Create copy with 6 changes");
   });
 
   it("previews the whole resume with the chosen changes", () => {
     render(<ResumeCheckerHeroDemo />);
 
-    expect(screen.getByText("Your resume with these changes")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Preview the whole resume" }));
+    expect(screen.getByRole("button", { name: "Full view" })).toBeInTheDocument();
   });
 
   it("applies locally, never through the server action, and can start over", async () => {
@@ -64,7 +65,7 @@ describe("ResumeCheckerHeroDemo", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Try it again" }));
-    expect(applyButton()).toHaveTextContent("Apply 5 of 6");
+    expect(applyButton()).toHaveTextContent("Create copy with 5 changes");
   });
 
   it("says nothing changed on Discard", () => {

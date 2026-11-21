@@ -94,6 +94,21 @@ describe("loadResumeChanges (RI-REQ-023)", () => {
     expect(result.ok && result.copy.content).toEqual(result.ok && result.original.content);
   });
 
+  it("names the copy Apply would make, after the job and the names already taken", async () => {
+    db.queue("resume_reviews", { data: REVIEW, error: null });
+    db.queue("resumes", { data: [resume(SOURCE_ID)], error: null });
+    db.queue("resumes", { data: [{ name: "Backend" }, { name: "Backend – AI Engineer at Acme" }], error: null });
+
+    expect(await load()).toMatchObject({ copyName: "Backend – AI Engineer at Acme (2)" });
+  });
+
+  it("names the copy this review already made by its own name", async () => {
+    db.queue("resume_reviews", { data: { ...REVIEW, applied_copy_id: COPY_ID }, error: null });
+    db.queue("resumes", { data: [resume(SOURCE_ID), { ...resume(COPY_ID), name: "My AI copy" }], error: null });
+
+    expect(await load()).toMatchObject({ copyName: "My AI copy" });
+  });
+
   it("gives each target its own states", async () => {
     db.queue("resume_reviews", {
       data: {

@@ -9,6 +9,7 @@
     "test:watch": "vitest",
     "eval:screening": "vitest run -c evals/screening-interview/vitest.config.mts",
     "eval:resume-improve": "vitest run -c evals/resume-improve/vitest.config.mts",
+    "eval:agent-search": "vitest run -c evals/agent-search/vitest.config.mts",
     "build:emails": "email build",
     "dev:emails": "email dev",
     "postinstall": "patch-package"

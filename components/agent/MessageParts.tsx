@@ -4,7 +4,7 @@ import { memo, useEffect, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { getToolName, isToolUIPart, type UIMessage } from "ai";
-import { ChevronDown, Coins, MapPin } from "lucide-react";
+import { BriefcaseBusiness, ChevronDown, Coins, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 import ResumeUploadWidget, { type ResumeUploadOutput } from "./ResumeUploadWidget";
@@ -285,6 +285,8 @@ type CompactJob = {
   company: string | null;
   locations?: string[];
   salary?: string | null;
+  /** The posting's own text, e.g. "2-5 years" or "3+ years". */
+  experience?: string | null;
   postedAt?: string | null;
   url: string;
 };
@@ -304,7 +306,8 @@ function postedAgo(postedAt: string | null | undefined) {
 
 /**
  * A job row's layout. On phones the salary drops to its own line next to the
- * date, so it can't squeeze the title and company down to nothing.
+ * date, so it can't squeeze the title and company down to nothing, and the
+ * company, location and experience wrap instead of truncating to nothing.
  */
 const JOB_ROW_GRID =
   "grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 [grid-template-areas:'title_title'_'meta_meta'_'salary_posted'] sm:[grid-template-areas:'title_salary'_'meta_posted']";
@@ -340,13 +343,23 @@ function JobResults({ jobs, totalCount }: { jobs: CompactJob[]; totalCount?: num
                 <span className="min-w-0 truncate text-sm tabular-nums text-foreground [grid-area:salary] sm:text-right">
                   {job.salary}
                 </span>
-                <span className="flex min-w-0 items-center gap-3 text-[13px] text-muted-foreground [grid-area:meta]">
-                  {job.company && <span className="min-w-0 truncate">{job.company}</span>}
+                <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-muted-foreground [grid-area:meta] sm:flex-nowrap">
+                  {job.company && <span className="min-w-0 max-w-full truncate">{job.company}</span>}
                   {job.locations && job.locations.length > 0 && (
                     // Shrinks before the company does, so the company name stays readable.
-                    <span className="flex min-w-0 shrink-[3] items-center gap-1">
+                    <span className="flex min-w-0 max-w-full shrink-[3] items-center gap-1">
                       <MapPin aria-hidden className="h-3 w-3 shrink-0" />
                       <span className="truncate">{job.locations.join(", ")}</span>
+                    </span>
+                  )}
+                  {job.experience && (
+                    // Short ("2-5 years"), so it keeps its width and the others truncate first.
+                    <span className="flex min-w-0 max-w-full shrink-0 items-center gap-1 sm:max-w-[10rem]">
+                      <BriefcaseBusiness aria-hidden className="h-3 w-3 shrink-0" />
+                      <span className="truncate">
+                        <span className="sr-only">Experience: </span>
+                        {job.experience}
+                      </span>
                     </span>
                   )}
                 </span>
@@ -1201,6 +1214,7 @@ function ToolStep({
               <ResumeChangesCard
                 reviewId={reviewId}
                 onComplete={latest ? (output) => onToolOutput(part.toolCallId, output, name) : undefined}
+                collapsed={!latest}
               />
             </Step>
           );

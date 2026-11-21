@@ -76,6 +76,7 @@ const view = (changes: ReviewChange[], extra: Partial<Extract<LoadResumeChangesR
     reviewId: REVIEW_ID,
     summary: "Too many task descriptions.",
     resumeName: "Backend",
+    copyName: "Backend – Improved",
     target: { job: null, pastedJob: false, focus: null },
     changes,
     gaps: [],
@@ -100,7 +101,8 @@ const applied = (ids: string[], targetResumeId = COPY_ID) =>
     items: ids.map((id) => ({ id, status: "applied" as const })),
   });
 
-const applyButton = () => screen.getByRole("button", { name: /^Apply \d+ of \d+$/ });
+const applyButton = () => screen.getByRole("button", { name: /^(Create copy with|Add|Apply) \d+ changes?\b/ });
+const selected = () => screen.getByText(/ selected$/);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -113,6 +115,18 @@ describe("ResumeChangesCard", () => {
     );
 
     expect(screen.getByRole("link", { name: "AI Engineer at Acme" })).toHaveAttribute("href", "/jobs/j1");
+  });
+
+  it("names the resume the changes are for, linking to it", async () => {
+    await show(view([REWRITE]));
+
+    expect(screen.getByRole("link", { name: "Backend" })).toHaveAttribute("href", `/resume/${SOURCE_ID}`);
+  });
+
+  it("names an unnamed resume as untitled", async () => {
+    await show(view([REWRITE], { resumeName: null }));
+
+    expect(screen.getByRole("link", { name: "Untitled resume" })).toBeInTheDocument();
   });
 
   it("says the role it's tailored for without a job, or that it wasn't tailored", async () => {
@@ -136,22 +150,26 @@ describe("ResumeChangesCard", () => {
 
     expect(screen.getByRole("checkbox", { name: /^Rewrite/ })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: /^New bullet/ })).not.toBeChecked();
-    expect(applyButton()).toHaveTextContent("Apply 1 of 2");
+    expect(selected()).toHaveTextContent("1 of 2 changes selected");
+    expect(applyButton()).toHaveTextContent("Create copy with 1 change");
+    expect(screen.getByText(/fill in the blanks/)).toBeInTheDocument();
   });
 
-  it("counts as the user ticks, and has Select all and Clear all", async () => {
+  it("counts as the user ticks, and selects or clears all with one checkbox", async () => {
     await show(view([REWRITE, REMOVE, MOVE]));
-    expect(applyButton()).toHaveTextContent("Apply 3 of 3");
+    expect(selected()).toHaveTextContent("3 of 3 changes selected");
+    expect(applyButton()).toHaveTextContent("Create copy with 3 changes");
 
     await userEvent.click(screen.getByRole("checkbox", { name: /^Remove/ }));
-    expect(applyButton()).toHaveTextContent("Apply 2 of 3");
+    expect(selected()).toHaveTextContent("2 of 3 changes selected");
+    expect(screen.getByRole("checkbox", { name: "Select all" })).toHaveAttribute("data-state", "indeterminate");
 
-    await userEvent.click(screen.getByRole("button", { name: "Clear all" }));
-    expect(applyButton()).toHaveTextContent("Apply 0 of 3");
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
+    expect(selected()).toHaveTextContent("3 of 3 changes selected");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
+    expect(selected()).toHaveTextContent("0 of 3 changes selected");
     expect(applyButton()).toBeDisabled();
-
-    await userEvent.click(screen.getByRole("button", { name: "Select all" }));
-    expect(applyButton()).toHaveTextContent("Apply 3 of 3");
   });
 
   it("gives each placeholder an input, and ticks the change once all are filled (RI-REQ-026)", async () => {
@@ -174,8 +192,17 @@ describe("ResumeChangesCard", () => {
     expect(screen.getByText(/Fill in the bracketed values/)).toBeInTheDocument();
   });
 
+  it("keeps the whole-resume preview closed until asked", async () => {
+    await show(view([REWRITE]));
+    expect(screen.queryByRole("button", { name: "Full view" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Preview the whole resume" }));
+    expect(screen.getByRole("button", { name: "Full view" })).toBeInTheDocument();
+  });
+
   it("updates the diff as the user ticks (RI-REQ-027)", async () => {
     await show(view([REWRITE]));
+    await userEvent.click(screen.getByRole("button", { name: "Preview the whole resume" }));
     expect(screen.getByRole("button", { name: "Full view" })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("checkbox", { name: /^Rewrite/ }));
@@ -189,8 +216,17 @@ describe("ResumeChangesCard", () => {
 
     await userEvent.type(screen.getByLabelText("Value for [X%]"), "30%");
     await userEvent.type(screen.getByLabelText("Value for [N]"), "4");
+    await userEvent.click(screen.getByRole("button", { name: "Preview the whole resume" }));
 
     expect(container.ownerDocument.querySelector("ins")).toHaveTextContent("Cut costs by 30% for 4 teams");
+  });
+
+  it("names the new copy the changes will be saved to", async () => {
+    await show(view([REWRITE], { copyName: "Backend – AI Engineer at Acme" }));
+
+    expect(screen.getByText(/Saves as a new copy/)).toHaveTextContent(
+      "Saves as a new copy Backend – AI Engineer at Acme. Backend stays as it is.",
+    );
   });
 
   it("applies to a copy by default, sending only what changed, and reports back (RI-REQ-021, 028)", async () => {
@@ -235,8 +271,9 @@ describe("ResumeChangesCard", () => {
     await show(view([REWRITE]));
     expect(screen.queryByText(/Only rewrites can be undone/)).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("radio", { name: "The original" }));
+    await userEvent.click(screen.getByRole("button", { name: "Change Backend instead" }));
     expect(screen.getByText(/Only rewrites can be undone/)).toBeInTheDocument();
+    expect(applyButton()).toHaveTextContent("Apply 1 change to Backend");
 
     await userEvent.click(applyButton());
     expect(vi.mocked(applyReviewSuggestionsAction).mock.calls[0][0].target).toBe("original");
@@ -304,7 +341,8 @@ describe("ResumeChangesCard", () => {
     );
 
     expect(screen.queryByRole("checkbox", { name: /^Rewrite/ })).not.toBeInTheDocument();
-    expect(applyButton()).toHaveTextContent("Apply 1 of 1");
+    expect(applyButton()).toHaveTextContent("Add 1 change to the copy");
+    expect(screen.getByText(/Saves to your copy/)).toBeInTheDocument();
   });
 
   it("says how many no longer fit", async () => {
@@ -315,7 +353,9 @@ describe("ResumeChangesCard", () => {
 
   it("lists the gaps as questions (RI-REQ-029)", async () => {
     await show(view([REWRITE], { gaps: [{ requirement: "Kubernetes", question: "Have you run it?" }] }));
+    expect(screen.queryByText("Have you run it?")).not.toBeInTheDocument();
 
+    await userEvent.click(screen.getByRole("button", { name: "1 question to make it stronger" }));
     expect(screen.getByText("Have you run it?")).toBeInTheDocument();
     expect(screen.getByText(/Answer in the chat/)).toBeInTheDocument();
   });
@@ -345,6 +385,24 @@ describe("ResumeChangesCard", () => {
     await userEvent.click(applyButton());
 
     expect(await screen.findByText(/Applied 1 change/)).toBeInTheDocument();
+  });
+
+  it("shows an older, unanswered card as one line until the user opens it", async () => {
+    vi.mocked(loadResumeChangesAction).mockResolvedValue(view([REWRITE, REMOVE]));
+    render(<ResumeChangesCard reviewId={REVIEW_ID} collapsed />);
+
+    expect(await screen.findByText(/2 suggestions, not applied/)).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /^Rewrite/ })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Show" }));
+    expect(screen.getByRole("checkbox", { name: /^Rewrite/ })).toBeInTheDocument();
+  });
+
+  it("cuts a long summary to a few lines, with Show more", async () => {
+    await show(view([REWRITE], { summary: "Long. ".repeat(60) }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+    expect(screen.getByRole("button", { name: "Show less" })).toBeInTheDocument();
   });
 });
 

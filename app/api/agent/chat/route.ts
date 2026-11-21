@@ -53,6 +53,7 @@ import {
 import { stoppedReply } from "@/helpers/agent/stopped";
 import { canRegenerate, withRegeneration } from "@/helpers/agent/regenerations";
 import { agentTelemetry, flushAgentTraces, turnRequestText } from "@/helpers/agent/telemetry";
+import { chatUserText } from "@/helpers/agent/tools/request-intent";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
@@ -62,6 +63,7 @@ export const maxDuration = 60;
 
 const DEFAULT_TITLE = "New chat";
 const STREAM_ERROR_MESSAGE = "Sorry, something went wrong. Please try again.";
+const generateMessageId = createIdGenerator({ prefix: "msg", size: 16 });
 
 const bodySchema = z
   .object({
@@ -211,22 +213,31 @@ export async function POST(request: NextRequest) {
       listMemories(supabase, user.id),
     ]);
 
-    const tools = role.createTools({ supabase, user, sessionId, company });
+    // This turn's request: a continuation (after an approval or a card) has
+    // no user message of its own, so this reads the latest one and the card
+    // answers since. The tracing and the search guards both use it.
+    const requestText = turnRequestText(history);
+    const tools = role.createTools({ supabase, user, sessionId, company, requestText, userText: chatUserText(history) });
     const contextMessages = selectContextMessages(
       dropAbandonedToolCalls(history),
       session.summary_upto_message_id,
       { window: AGENT_CONTEXT_WINDOW, fullToolTurns: AGENT_FULL_TOOL_OUTPUT_TURNS },
     );
 
+    // The id the reply is saved under: a continuation keeps the reply it
+    // continues, otherwise a new one. Chosen here rather than by the stream so
+    // the trace carries it, and a 👍/👎 on the reply finds its trace.
+    const continued = history.at(-1);
+    const replyId = continued?.role === "assistant" ? continued.id : generateMessageId();
+
     // Agent-only tracing to Arize AX; off when it isn't configured (spec §13).
     const traceContext = {
+      messageId: replyId,
       sessionId,
       userId: user.id,
       role: role.id,
-      // This turn's request, so a tool span can be judged in context. A
-      // continuation (after an approval or a card) has no user message of
-      // its own, so this reads the latest one and the card answers since.
-      userText: turnRequestText(history),
+      // This turn's request, so a tool span can be judged in context.
+      userText: requestText,
       ...(company ? { companyId: company.id } : {}),
     };
     const traceId = (name: string) => `${role.telemetryPrefix}-${name}`;
@@ -309,7 +320,8 @@ export async function POST(request: NextRequest) {
 
     const stream = createUIMessageStream({
       originalMessages: history,
-      generateId: createIdGenerator({ prefix: "msg", size: 16 }),
+      // Called once, for a reply that doesn't continue an assistant message.
+      generateId: () => replyId,
       execute: async ({ writer }) => {
         // Tools that finish this turn, for the survey card's milestones. A
         // call approved in the last request runs now, named by the reply

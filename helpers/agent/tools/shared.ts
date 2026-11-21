@@ -2,6 +2,7 @@ import { SupabaseClient, User } from "@supabase/supabase-js";
 import { z } from "zod";
 import { Database } from "@/utils/types/database.types";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
+import { normalizeSalaryText } from "@/helpers/salary/salary-text";
 import { AGENT_LIST_DEFAULT_LIMIT, AGENT_LIST_MAX_LIMIT } from "../config";
 
 /**
@@ -15,6 +16,17 @@ export type AgentToolContext = {
   sessionId: string | null;
   /** Where the call comes from: the chat agent or the MCP server. */
   surface: "agent" | "mcp";
+  /**
+   * The user's words this turn (`turnRequestText`: the latest message plus
+   * card answers since), for guards that check what they asked for.
+   * Undefined on MCP, which has no turns.
+   */
+  requestText?: string;
+  /**
+   * Everything the user typed in this chat (`chatUserText`), so a tool can
+   * tell text the user pasted from text the model wrote. Undefined on MCP.
+   */
+  userText?: string;
 };
 
 export type ToolError = { error: string; [key: string]: unknown };
@@ -54,7 +66,8 @@ export function compactJob(job: JobLike) {
     title: job.job_name ?? null,
     company: job.company_name ?? null,
     locations: job.locations ?? [],
-    salary: job.salary_range ?? null,
+    // Lakh-grouped amounts (15,00,000) were read as ten times too much.
+    salary: job.salary_range ? normalizeSalaryText(job.salary_range) : null,
     jobType: job.job_type ?? null,
     experience: job.experience ?? null,
     postedAt: job.created_at ?? null,

@@ -57,6 +57,7 @@ const REVIEW = {
   name: "Stripe review",
   resume_id: SOURCE_ID,
   applied_copy_id: null as string | null,
+  job_id: "55555555-5555-4555-8555-555555555555" as string | null,
   all_jobs: { job_name: "Backend Engineer" } as { job_name: string } | null,
   ai_response: {
     bullet_points: [
@@ -83,6 +84,8 @@ let db: SupabaseMock;
 const queueReview = (overrides: Record<string, unknown> = {}) =>
   db.queue("resume_reviews", { data: { ...REVIEW, ...overrides }, error: null });
 const queueResume = (data: unknown) => db.queue("resumes", { data, error: null });
+/** The user's resume names, read before a copy is made. */
+const queueNames = (...names: string[]) => queueResume(names.map((name) => ({ name })));
 
 const savedInput = () => vi.mocked(saveResume).mock.calls[0][2];
 const bulletTexts = (saved: ResumeContent) => saved.sections[0].items[0].bullets.map((bullet) => bullet.text);
@@ -106,6 +109,7 @@ describe("applyReviewSuggestions: copy target (RE-REQ-057)", () => {
   it("is the default, and the first apply creates a copy named for the job", async () => {
     queueReview();
     queueResume(row(SOURCE_ID));
+    queueNames();
     queueResume(row(COPY_ID, { revision: 1 }));
 
     const result = await applyOne();
@@ -127,6 +131,7 @@ describe("applyReviewSuggestions: copy target (RE-REQ-057)", () => {
   it("stores the copy on the review", async () => {
     queueReview();
     queueResume(row(SOURCE_ID));
+    queueNames();
     queueResume(row(COPY_ID, { revision: 1 }));
 
     await applyOne();
@@ -136,14 +141,38 @@ describe("applyReviewSuggestions: copy target (RE-REQ-057)", () => {
     expect(stored?.chain).toContainEqual({ method: "eq", args: ["user_id", USER.id] });
   });
 
-  it("names the copy after the review when there's no job", async () => {
-    queueReview({ all_jobs: null });
+  it("names the copy after the job and company, the focus, or a pasted job", async () => {
+    const nameFor = async (review: Record<string, unknown>) => {
+      vi.mocked(duplicateResume).mockClear();
+      queueReview(review);
+      queueResume(row(SOURCE_ID));
+      queueNames();
+      queueResume(row(COPY_ID));
+      await applyOne();
+      return vi.mocked(duplicateResume).mock.calls[0][2].name;
+    };
+
+    expect(await nameFor({ all_jobs: { job_name: "AI Engineer", company_name: "Acme" } })).toBe(
+      "Backend – AI Engineer at Acme",
+    );
+    expect(await nameFor({ job_id: null, all_jobs: null, focus: "AI engineer roles" })).toBe("Backend – AI engineer roles");
+    expect(await nameFor({ all_jobs: null, job_id: null, target_jd: "We want a backend dev" })).toBe(
+      "Backend – Pasted job",
+    );
+    expect(await nameFor({ job_id: null, all_jobs: null })).toBe("Backend – Improved");
+  });
+
+  it("gives the copy a name the user's resumes don't have yet", async () => {
+    queueReview();
     queueResume(row(SOURCE_ID));
+    queueNames("Backend", "Backend – Backend Engineer", "Backend – Backend Engineer (2)");
     queueResume(row(COPY_ID));
 
     await applyOne();
 
-    expect(vi.mocked(duplicateResume).mock.calls[0][2].name).toBe("Backend – Stripe review");
+    expect(vi.mocked(duplicateResume).mock.calls[0][2].name).toBe("Backend – Backend Engineer (3)");
+    const names = db.callsFor("resumes").find((call) => call.chain.some((step) => step.args[0] === "name"));
+    expect(names?.chain).toContainEqual({ method: "eq", args: ["user_id", USER.id] });
   });
 
   it("reuses the copy on later applies", async () => {
@@ -160,6 +189,7 @@ describe("applyReviewSuggestions: copy target (RE-REQ-057)", () => {
     queueReview({ applied_copy_id: COPY_ID });
     queueResume(null);
     queueResume(row(SOURCE_ID));
+    queueNames();
     queueResume(row("44444444-4444-4444-8444-444444444444", { revision: 1 }));
     vi.mocked(duplicateResume).mockResolvedValue({ ok: true, resumeId: "44444444-4444-4444-8444-444444444444" });
 

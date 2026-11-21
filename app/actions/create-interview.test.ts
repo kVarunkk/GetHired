@@ -81,7 +81,7 @@ describe("createInterviewAction", () => {
       { filled: false, ai_credits: 10 },
       "User profile is incomplete. Please complete onboarding to use this feature.",
     ],
-    ["too few credits", { filled: true, ai_credits: 9 }, "Insufficient AI credits (10 required)."],
+    ["too few credits", { filled: true, ai_credits: 4 }, "Insufficient AI credits (5 required)."],
   ])("refuses with %s", async (_label, profile, error) => {
     supabase.queue("user_info", { data: profile, error: null });
 

@@ -18,16 +18,18 @@ const LIMIT = "How many to return in this call. Defaults to 10.";
 
 const jobFilters = (prefix: string): McpInputDescriptions => ({
   [`${prefix}keywords`]:
-    "Words to look for in the job title. Add the common spellings of the same role, e.g. ['frontend', 'front-end', 'front end']. Put seniority (junior, senior, lead, fresher) in minExperience/maxExperience, not here.",
+    "Words to look for in the job title. Add the common spellings of the same role, e.g. ['frontend', 'front-end', 'front end']. Leave seniority (junior, senior, lead, fresher) out: use experienceYears, or minExperience/maxExperience for a level the user asked for.",
   [`${prefix}locations`]:
     "Where the user wants to work, e.g. ['Remote', 'Bengaluru']. Different spellings of a city, such as Bangalore and Bengaluru, find the same jobs.",
   [`${prefix}jobTypes`]: "Only these kinds of employment: full-time, contract or internship.",
   [`${prefix}minSalary`]:
     "The lowest salary the user would accept, as a plain whole number without a currency symbol or separators, e.g. 1500000.",
+  [`${prefix}experienceYears`]:
+    "The user's own years of experience, from get_my_profile or their resume. Finds jobs open to them: asking for at most one year more, and not far below their level. Use it whenever you know the user's years, instead of minExperience/maxExperience.",
   [`${prefix}minExperience`]:
-    "The bottom of the user's experience range, in years. A job matches when the experience it asks for overlaps the user's range. Seniority maps to this range: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5.",
+    "Only jobs whose experience range reaches at least this many years. On its own it never hides jobs asking for more (a '7+ years' job passes minExperience 1), so don't use it alone for the user's own level: use experienceYears. For a level the user asked for: senior is minExperience 5, mid level is minExperience 2 with maxExperience 5.",
   [`${prefix}maxExperience`]:
-    "The top of the user's experience range, in years: only jobs asking for at most this much. Seniority maps to this range: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5.",
+    "Only jobs asking for at most this many years: the filter that keeps out jobs above a level. For a level the user asked for: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5.",
   [`${prefix}visaRequirements`]:
     "Only jobs whose posting states one of these visa terms. 'Will Sponsor' is for users who need the employer to sponsor a visa.",
   [`${prefix}platforms`]:
@@ -59,9 +61,9 @@ export const MCP_INPUT_DESCRIPTIONS: Readonly<Record<string, McpInputDescription
   search_jobs: {
     ...jobFilters(""),
     anyRole:
-      "true only when the user asked for jobs of any role. Without it, a search needs keywords or companies.",
+      "true only when the user asked for jobs of any role. Without it, a search needs keywords or companies. Never for 'more jobs' or 'jobs for me': those keep the user's role keywords.",
     cursor:
-      "For the next page: the nextCursor from the previous search_jobs result, sent with the same filters, or with widened.searchedWith when the result was widened. Leave out for the first page.",
+      "For the next page: the nextCursor from the previous search_jobs result, sent with the same filters, or with widened.searchedWith when the result was widened (moreAfterRelaxing.searchedWith with its nextCursor for more of the relaxed jobs). Leave out for the first page.",
     limit: LIMIT,
   },
   natural_language_job_search: {
@@ -198,7 +200,7 @@ export const MCP_INPUT_DESCRIPTIONS: Readonly<Record<string, McpInputDescription
     resumeId: "The resume to improve: an id from get_resumes.",
     jobId: `A job to tailor the resume to: an id from ${JOB_ID_SOURCES}. Leave out, with jobDescription, for a general review.`,
     jobDescription:
-      "The text of a job description the user pasted, to tailor the resume to a job that isn't on GetHired. Don't send it with jobId.",
+      "The text of a job description the user pasted, to tailor the resume to a job that isn't on GetHired. Never write one yourself. Don't send it with jobId.",
   },
   list_interviews: { limit: LIMIT },
   get_interview_analysis: {
@@ -292,14 +294,22 @@ const resumeFit = output({
   missing: z.array(output({ text: z.string(), importance: z.enum(["must", "nice"]) })).optional(),
 });
 
-/** On a search that found nothing with every filter (helpers/agent/tools/widen-search.ts). */
+/** On a search that found nothing, or only a few jobs, with every filter (helpers/agent/tools/widen-search.ts). */
 const widenedSearch = {
   widened: output({
-    dropped: z.array(z.string()).describe("The filters relaxed to find these jobs, in the order they were relaxed."),
+    dropped: z.array(z.string()).describe("The filters relaxed to find these jobs: only the ones the jobs needed, in the order they were relaxed."),
     searchedWith: z.record(z.unknown()).describe("The filters these jobs match. Send them with cursor for the next page."),
   })
     .optional()
     .describe("Set when no jobs matched every filter and the search was relaxed. Tell the user what was relaxed."),
+  moreAfterRelaxing: output({
+    dropped: z.array(z.string()).describe("The filters these extra jobs don't meet."),
+    searchedWith: z.record(z.unknown()).describe("The filters the extra jobs match. Send them with nextCursor for more of them."),
+    jobs: z.array(job).describe("Jobs beyond the exact matches in jobs."),
+    nextCursor: text.describe("The next page of the relaxed search; null on its last page."),
+  })
+    .optional()
+    .describe("Set when only a few jobs matched every filter. List the exact matches first, then these, saying which filters they don't meet."),
   message: z.string().optional().describe("What to tell the user about a relaxed or empty search."),
 };
 

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { tailoredCopyName } from "./copy-name";
 import type { ResumeTemplate } from "@/helpers/resume/config";
 import { readResume } from "@/helpers/resume/read-resume";
 import type { ResumeContact, ResumeContent } from "@/helpers/resume/resume-schema";
@@ -26,6 +27,8 @@ export type ResumeChangesView = {
   reviewId: string;
   summary: string;
   resumeName: string | null;
+  /** The copy's name: the one this review made, or the one Apply will give a new copy. */
+  copyName: string;
   target: ReviewTarget;
   changes: ReviewChange[];
   gaps: ReviewGap[];
@@ -58,6 +61,13 @@ function toTarget(
     ]),
   );
   return { resumeId, content, contact: contact ?? NO_CONTACT, template, states, applied };
+}
+
+/** The user's resume names, so the name a new copy gets doesn't repeat one. */
+export async function resumeNames(supabase: SupabaseClient<Database>, userId: string) {
+  const { data, error } = await supabase.from("resumes").select("name").eq("user_id", userId);
+  if (error) throw new Error(`Failed to read the resumes: ${error.message}`);
+  return (data ?? []).map((row) => row.name);
 }
 
 /**
@@ -94,6 +104,13 @@ export async function loadResumeChanges(
   const copy = resumes?.find((row) => row.id === review.applied_copy_id);
 
   const changes = readChanges(review.ai_response);
+  const target = reviewTarget(review);
+  const copyName = copy?.name?.trim()
+    ? copy.name
+    : tailoredCopyName(
+        { resumeName: source.name, job: target.job, focus: target.focus, pastedJob: target.pastedJob },
+        await resumeNames(supabase, user.id),
+      );
   const appliedTo = (resumeId: string) =>
     Object.fromEntries(
       (review.resume_review_applied ?? [])
@@ -107,7 +124,8 @@ export async function loadResumeChanges(
     reviewId: review.id,
     summary: typeof feedback === "string" ? feedback : "",
     resumeName: source.name,
-    target: reviewTarget(review),
+    copyName,
+    target,
     changes,
     gaps: readGaps(review.ai_response),
     original: toTarget(source, source.id, changes, appliedTo(source.id)),

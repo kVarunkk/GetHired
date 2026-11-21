@@ -35,6 +35,8 @@ const DEFAULT_QUERY_ARGS = {
   salaryCurrency: null,
   minExperience: null,
   maxExperience: null,
+  // The agent's min-only searches set it; /api/jobs never does.
+  minExperienceFloor: null,
   platform: null,
   companyName: null,
   cursor: null,

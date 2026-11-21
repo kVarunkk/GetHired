@@ -26,12 +26,17 @@ import {
   withToolErrors,
 } from "./shared";
 import {
+  FEW_RESULTS,
+  fewResultsMessage,
   hasRoleOrCompany,
+  narrowWidened,
   stillEmptyMessage,
   widenedMessage,
   widenedSearches,
   type WidenStepName,
 } from "./widen-search";
+import { experienceFloor, needsProfileYears, resolveExperience } from "./experience-range";
+import { asksForAnyRole, namesExperienceLevel } from "./request-intent";
 
 const PLATFORMS = platformsArray.map((platform) => platform.value) as [
   string,
@@ -44,7 +49,7 @@ const jobFiltersInput = z.object({
     .max(10)
     .optional()
     .describe(
-      "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end']. Leave out seniority words such as junior, senior, lead or fresher: use minExperience/maxExperience.",
+      "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end']. Leave out seniority words such as junior, senior, lead or fresher: use experienceYears, or minExperience/maxExperience for a level the user asked for.",
     ),
   locations: z
     .array(z.string().min(1).max(60))
@@ -63,6 +68,15 @@ const jobFiltersInput = z.object({
     .describe(
       "ISO 4217 code of minSalary, e.g. INR for rupees or LPA, USD for dollars. Only jobs paid in this currency match. Defaults to the user's profile currency; ignored without minSalary.",
     ),
+  experienceYears: z
+    .number()
+    .int()
+    .min(0)
+    .max(50)
+    .optional()
+    .describe(
+      "The user's own years of experience, from their profile or resume. Finds jobs open to them: asking for at most one year more, and not far below their level. Use this whenever you know the user's years, instead of minExperience/maxExperience.",
+    ),
   minExperience: z
     .number()
     .int()
@@ -70,7 +84,7 @@ const jobFiltersInput = z.object({
     .max(30)
     .optional()
     .describe(
-      "Lower end of the user's experience range in years. Jobs match when their experience range overlaps the user's. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+      "Only jobs whose experience range reaches at least this many years. On its own it never hides jobs asking for more (a '7+ years' job passes minExperience 1), so never use it alone for the user's own level: use experienceYears. For a level the user asked for: senior is minExperience 5, mid level is minExperience 2 with maxExperience 5.",
     ),
   maxExperience: z
     .number()
@@ -79,7 +93,7 @@ const jobFiltersInput = z.object({
     .max(30)
     .optional()
     .describe(
-      "Upper end of the user's experience range in years: only jobs requiring at most this much. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+      "Only jobs asking for at most this many years: the filter that keeps out jobs above a level. For a level the user asked for: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5.",
     ),
   visaRequirements: z
     .array(z.enum(["Will Sponsor", "Not Required", "Required"]))
@@ -119,6 +133,7 @@ function filtersToParams(filters: JobFilters = {}): Partial<SearchJobsParams> {
     salaryCurrency: filters.minSalary !== undefined ? filters.salaryCurrency : undefined,
     minExperience: filters.minExperience?.toString(),
     maxExperience: filters.maxExperience?.toString(),
+    minExperienceFloor: experienceFloor(filters)?.toString(),
     visaRequirement: join(filters.visaRequirements),
     platform: join(filters.platforms),
     companyName: join(filters.companies),
@@ -169,6 +184,21 @@ function toJobList(result: SearchJobsResult) {
 const limitOrDefault = (limit?: number) => limit ?? AGENT_LIST_DEFAULT_LIMIT;
 
 /**
+ * The filters with the experience range in search terms (experience-range.ts).
+ * The profile's years are read only for a min-only range, and at call time,
+ * so a profile saved earlier in the same turn counts.
+ */
+async function withUserExperience(ctx: AgentToolContext, filters: JobFilters): Promise<JobFilters> {
+  if (!needsProfileYears(filters)) return resolveExperience(filters, null);
+  const { data } = await ctx.supabase
+    .from("user_info")
+    .select("experience_years")
+    .eq("user_id", ctx.user.id)
+    .maybeSingle();
+  return resolveExperience(filters, data?.experience_years ?? null);
+}
+
+/**
  * Logs a location-filtered search that found nothing (REQ-024), after the
  * response. Repeated misses for one name point to a missing location alias.
  */
@@ -189,59 +219,99 @@ function reportEmptyLocationSearch(
   );
 }
 
+type JobList = ReturnType<typeof toJobList>;
+type FoundList = Extract<JobList, { jobs: unknown }>;
+
+const isFound = (list: JobList): list is FoundList => "jobs" in list && Array.isArray(list.jobs);
+
 /**
  * Runs a search, and when a first page finds nothing, the widened searches
- * from widen-search.ts until one finds jobs. The result says what was
- * relaxed (`widened`) or, still empty, what the model should do instead of
- * searching again without keywords.
+ * from widen-search.ts until one finds jobs, then puts back each relaxed
+ * filter the jobs didn't need. A first page with only a few jobs and no next
+ * page is widened too, and the extra jobs come apart from the exact ones
+ * (`moreAfterRelaxing`). The result says what was relaxed (`widened`) or,
+ * still empty, what the model should do instead of searching again without
+ * keywords.
  */
 async function searchWithWidening(
   ctx: AgentToolContext,
   toolName: string,
-  filters: JobFilters,
+  input: JobFilters,
   extra: Partial<SearchJobsParams>,
 ) {
+  const filters = await withUserExperience(ctx, input);
   const search = async (f: JobFilters) =>
     toJobList(await searchJobs(ctx.supabase, ctx.user, { ...filtersToParams(f), ...extra }));
 
   const first = await search(filters);
-  if (!("jobs" in first) || !first.jobs || first.jobs.length > 0 || extra.cursor) return first;
+  if (!isFound(first) || extra.cursor) return first;
 
-  const searches = widenedSearches(filters);
+  const exactCount = first.jobs.length;
+  const limit = extra.limit ?? AGENT_LIST_DEFAULT_LIMIT;
+  const few = exactCount > 0 && exactCount < Math.min(FEW_RESULTS, limit) && !first.nextCursor;
+  if (exactCount > 0 && !few) return first;
+
+  // A level the user named is what they asked for: never widened (turn 3).
+  const keepExperience = ctx.requestText !== undefined && namesExperienceLevel(ctx.requestText);
+  const exactIds = new Set(first.jobs.map((job) => job.id));
+  // What counts as found: any job for an empty search, a job the exact search
+  // didn't have for a few.
+  const extraJobs = (list: FoundList) => list.jobs.filter((job) => !exactIds.has(job.id));
+  const runFound = async (f: JobFilters): Promise<FoundList | null> => {
+    const list = await search(f);
+    return isFound(list) && extraJobs(list).length > 0 ? list : null;
+  };
+
+  const searches = widenedSearches(filters, { keepExperience });
   let dropped: WidenStepName[] = [];
   for (const widened of searches) {
     const list = await search(widened.filters);
-    if (!("jobs" in list) || !list.jobs) return list;
+    if (!isFound(list)) return few ? first : list;
     dropped = widened.dropped;
-    if (list.jobs.length > 0) {
-      reportWidenedSearch(ctx, toolName, dropped, true);
+    if (extraJobs(list).length === 0) continue;
+
+    const narrowed = await narrowWidened(filters, { ...widened, result: list }, runFound);
+    reportWidenedSearch(ctx, toolName, narrowed.dropped, true, exactCount);
+    const searchedWith = narrowed.filters;
+    if (few) {
       return {
-        ...list,
-        widened: { dropped, searchedWith: widened.filters },
-        message: widenedMessage(dropped),
+        ...first,
+        moreAfterRelaxing: {
+          dropped: narrowed.dropped,
+          searchedWith,
+          jobs: extraJobs(narrowed.result),
+          nextCursor: narrowed.result.nextCursor,
+        },
+        message: fewResultsMessage(exactCount, narrowed.dropped, searchedWith),
       };
     }
+    return {
+      ...narrowed.result,
+      widened: { dropped: narrowed.dropped, searchedWith },
+      message: widenedMessage(narrowed.dropped, searchedWith),
+    };
   }
-  if (searches.length > 0) reportWidenedSearch(ctx, toolName, dropped, false);
-  return { ...first, message: stillEmptyMessage(dropped) };
+  if (searches.length > 0) reportWidenedSearch(ctx, toolName, dropped, false, exactCount);
+  return few ? first : { ...first, message: stillEmptyMessage(dropped) };
 }
 
 /**
  * Logs a search the tool widened, after the response: which filters it
- * relaxed and whether that found jobs. The last name in `dropped` is the
- * filter that emptied the search.
+ * relaxed (only what the jobs needed) and whether that found jobs.
+ * `exact_count` is above 0 for a search widened because it found only a few.
  */
 function reportWidenedSearch(
   ctx: AgentToolContext,
   toolName: string,
   dropped: WidenStepName[],
   found: boolean,
+  exactCount: number,
 ) {
   after(() =>
     eventCaptureServer({
       event: PostHogEvent.AgentSearchWidened,
       distinctId: ctx.user.id,
-      properties: { tool: toolName, surface: ctx.surface, dropped, found },
+      properties: { tool: toolName, surface: ctx.surface, dropped, found, exact_count: exactCount },
     }),
   );
 }
@@ -251,6 +321,32 @@ const KEYWORDS_REQUIRED = {
   message:
     "Add job-title keywords (or companies). For 'jobs in my field' or 'jobs for me', use the user's desired roles from their profile, with common spellings. If you don't know their role, ask. Set anyRole only when the user asked for jobs of any role.",
 } as const;
+
+/**
+ * Whether a keyword-less `anyRole` search is refused: in the chat, when the
+ * user's words don't ask for any role and their profile has desired roles
+ * to search instead. The prompt and the anyRole description both said so,
+ * and the model still answered "show more remote jobs" with every job of
+ * every kind (trace 95571a1f; test session edf8278a, turns 2 and 6).
+ * Returns the roles to search with, or null to allow it.
+ */
+async function anyRoleRefusedFor(ctx: AgentToolContext): Promise<string[] | null> {
+  if (ctx.requestText === undefined || asksForAnyRole(ctx.requestText)) return null;
+  const { data } = await ctx.supabase
+    .from("user_info")
+    .select("desired_roles")
+    .eq("user_id", ctx.user.id)
+    .maybeSingle();
+  const roles = (data?.desired_roles ?? []).filter((role) => role.trim());
+  return roles.length > 0 ? roles : null;
+}
+
+const anyRoleRefused = (desiredRoles: string[]) => ({
+  error: "KEYWORDS_REQUIRED",
+  message:
+    "The user didn't ask for jobs of any role, so this search needs job-title keywords. Search again with their desired roles (and common spellings or related titles), keeping the other filters. For 'more jobs', page with nextCursor or use related titles for the same role. Set anyRole only when the user asks for any role.",
+  desiredRoles,
+});
 
 /** The user's saved or applied jobs, as the /jobs tabs show them. MCP's get_applied_jobs uses it too. */
 export async function listJobsInTab(
@@ -269,12 +365,12 @@ export function createJobTools(ctx: AgentToolContext) {
   return {
     searchJobs: tool({
       description:
-        "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page. Needs keywords or companies unless anyRole is set. When nothing matches every filter, it relaxes the posting date, salary, visa and sources, job type, then experience, in that order, and never the keywords, locations or companies: the result's widened says what was relaxed, and later pages need the filters in widened.searchedWith.",
+        "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page. Needs keywords or companies unless anyRole is set. When nothing matches every filter, it relaxes the posting date, salary, visa and sources, job type, then experience, in that order, keeps every filter the jobs didn't need, and never relaxes the keywords, locations or companies, or an experience level the user named: the result's widened says what was relaxed, and later pages need the filters in widened.searchedWith. When only a few jobs match and there is no next page, moreAfterRelaxing adds jobs that miss some filters.",
       inputSchema: jobFiltersInput.extend({
         anyRole: z
           .boolean()
           .optional()
-          .describe("true only when the user asked for jobs of any role, so the search has no keywords."),
+          .describe("true only when the user asked for jobs of any role, so the search has no keywords. Never for 'more jobs', 'more matching jobs' or 'jobs for me': those keep the user's role keywords."),
         cursor: z
           .string()
           .optional()
@@ -283,7 +379,11 @@ export function createJobTools(ctx: AgentToolContext) {
       }),
       execute: ({ anyRole, cursor, limit, ...filters }) =>
         withToolErrors(ctx, "searchJobs", async () => {
-          if (!anyRole && !hasRoleOrCompany(filters)) return KEYWORDS_REQUIRED;
+          if (!hasRoleOrCompany(filters)) {
+            if (!anyRole) return KEYWORDS_REQUIRED;
+            const desiredRoles = await anyRoleRefusedFor(ctx);
+            if (desiredRoles) return anyRoleRefused(desiredRoles);
+          }
 
           const list = await searchWithWidening(ctx, "searchJobs", filters, {
             ...(cursor ? { cursor } : {}),
@@ -409,7 +509,7 @@ export function createJobTools(ctx: AgentToolContext) {
 
           const list = toJobList(
             await searchJobs(supabase, ctx.user, {
-              ...filtersToParams(filters),
+              ...filtersToParams(filters && (await withUserExperience(ctx, filters))),
               sortBy: "relevance",
               limit: limitOrDefault(limit),
             }),

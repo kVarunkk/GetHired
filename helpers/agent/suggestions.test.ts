@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
-import { generateFollowUps } from "./suggestions";
+import { generateFollowUps, inventsUserFact } from "./suggestions";
 import { mockGenerateModel } from "@/test/utils/ai";
 
 const promptOf = (model: MockLanguageModelV4) => JSON.stringify(model.doGenerateCalls[0].prompt);
@@ -112,5 +112,40 @@ describe("generateFollowUps telemetry (REQ-025)", () => {
     const applicant = mockGenerateModel(JSON.stringify({ suggestions: [] }));
     await generateFollowUps({ userText: "a", replyText: "b" }, { model: applicant });
     expect(promptOf(applicant)).toContain("can't send emails");
+  });
+});
+
+describe("inventsUserFact", () => {
+  const context = "What is your full name and which roles are you looking for?";
+
+  it("flags a made-up name or number stated as the user's own", () => {
+    expect(inventsUserFact("My name is Alex and I want engineering", context)).toBe(true);
+    expect(inventsUserFact("I have 5 years experience, salary 80000", context)).toBe(true);
+    expect(inventsUserFact("My salary is 15 LPA", context)).toBe(true);
+  });
+
+  it("allows facts that are in the conversation", () => {
+    const named = "user: I am Hiro Nagasaki, 3 years in design";
+    expect(inventsUserFact("My name is Hiro Nagasaki", named)).toBe(false);
+    expect(inventsUserFact("I have 3 years experience", named)).toBe(false);
+  });
+
+  it("allows requests and replies that claim nothing", () => {
+    for (const suggestion of [
+      "Show my top 3 matches",
+      "Skip this for now",
+      "Compare the top 3",
+      "I want remote roles",
+      "Use what's on my resume",
+    ]) {
+      expect(inventsUserFact(suggestion, context), suggestion).toBe(false);
+    }
+  });
+
+  it("drops such suggestions from the follow-ups", async () => {
+    const model = mockGenerateModel(JSON.stringify({ suggestions: ["My name is Alex", "Skip this for now"] }));
+    expect(await generateFollowUps({ userText: "set up my profile", replyText: context }, { model })).toEqual([
+      "Skip this for now",
+    ]);
   });
 });

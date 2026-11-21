@@ -45,6 +45,12 @@ describe("compactJob", () => {
       experience: null,
     });
   });
+
+  it("regroups a lakh-grouped salary, which the model read as ten times too much", () => {
+    expect(compactJob({ id: "j3", salary_range: "INR 15,00,000.00 - 20,00,000.00" }).salary).toBe(
+      "INR 1,500,000 - 2,000,000",
+    );
+  });
 });
 
 describe("INSUFFICIENT_CREDITS", () => {

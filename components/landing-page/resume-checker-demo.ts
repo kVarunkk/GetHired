@@ -169,6 +169,7 @@ export const DEMO_VIEW: ResumeChangesView = {
   summary:
     "You're a strong fit: design-system work, checkout experience and mentoring all match this role. Your bullets describe tasks rather than results, though, so I've rewritten them around ownership and numbers.",
   resumeName: DEMO_RESUME_NAME,
+  copyName: `${DEMO_RESUME_NAME} – Senior Frontend Engineer`,
   target: { job: null, pastedJob: true, focus: "Senior Frontend Engineer" },
   changes: DEMO_CHANGES,
   gaps: [

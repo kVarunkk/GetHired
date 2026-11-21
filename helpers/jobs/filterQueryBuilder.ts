@@ -68,6 +68,7 @@ export const buildQuery = async (
     salaryCurrency,
     minExperience,
     maxExperience,
+    minExperienceFloor,
     platform,
     companyName,
     cursor,
@@ -91,6 +92,8 @@ export const buildQuery = async (
     salaryCurrency?: string | null;
     minExperience: string | null;
     maxExperience: string | null;
+    /** Only jobs whose experience starts at or above this (the agent's min-only searches). */
+    minExperienceFloor?: string | null;
     platform: string | null;
     companyName: string | null;
     cursor: string | null;
@@ -310,8 +313,11 @@ export const buildQuery = async (
     // The filter is the applicant's experience range; a job matches when its
     // range overlaps it. A job without a max ("2+ years") is open-ended, and
     // one without a min is unknown, so it's left out.
-    if (minExperience || maxExperience) {
+    if (minExperience || maxExperience || minExperienceFloor) {
       query = query.not("experience_min", "is", null);
+    }
+    if (minExperienceFloor) {
+      query = query.gte("experience_min", parseInt(minExperienceFloor));
     }
     if (minExperience) {
       query = query.or(

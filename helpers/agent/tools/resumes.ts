@@ -39,6 +39,7 @@ import { RESUME_SHORTLIST_MAX, shortlistResumes } from "@/helpers/resume-review/
 import { deductUserCreditsHelper } from "@/helpers/ai/deduct-user-credits";
 import { TAICredits, type TResumeRowContent } from "@/utils/types";
 import { agentTelemetry } from "../telemetry";
+import { pastedByUser } from "./request-intent";
 import {
   AgentToolContext,
   compactJob,
@@ -76,6 +77,24 @@ const changeForModel = (change: ReviewChange) => ({
 });
 
 const RESUME_NOT_FOUND = { error: "Resume not found." };
+
+/**
+ * Drops a job description the user didn't paste. Asked to "tailor my resume
+ * for AI Engineer roles", the model wrote one, and the card then said it was
+ * tailored for "the job description you pasted" (2026-11-21). The review is
+ * then for the user's request as the focus. MCP has no chat text, so it isn't
+ * checked there.
+ */
+function withoutWrittenJobDescription<T extends { jobDescription?: string; focus?: string }>(
+  input: T,
+  ctx: AgentToolContext,
+): T {
+  if (!input.jobDescription || ctx.userText === undefined || pastedByUser(input.jobDescription, ctx.userText)) {
+    return input;
+  }
+  const focus = input.focus?.trim() || ctx.requestText?.trim().slice(0, RESUME_IMPROVE_FOCUS_MAX_CHARS) || undefined;
+  return { ...input, jobDescription: undefined, focus };
+}
 
 const changeCount = (count: number) => `${count} ${count === 1 ? "change" : "changes"}`;
 
@@ -259,7 +278,7 @@ export function createResumeTools(ctx: AgentToolContext) {
             .min(50)
             .max(4000)
             .optional()
-            .describe("A job description the user pasted, when there is no jobId."),
+            .describe("The text of a job description the user pasted in the chat, when there is no jobId. Never one you wrote."),
           resumeIds: z
             .array(uuidInput("resume"))
             // One resume is allowed: the model sometimes names just the one
@@ -335,7 +354,7 @@ export function createResumeTools(ctx: AgentToolContext) {
           const ranking = await rankResumesForJob(
             rankingJob,
             shortlist,
-            { telemetry: agentTelemetry("pickResumeForJob", { sessionId: ctx.sessionId, userId: ctx.user.id }) },
+            { telemetry: agentTelemetry("pickResumeForJob", { sessionId: ctx.sessionId, userId: ctx.user.id, role: "applicant" }) },
           );
 
           const charged = await deductUserCreditsHelper(supabase, ctx.user.id, RESUME_PICK_CREDITS);
@@ -364,7 +383,7 @@ export function createResumeTools(ctx: AgentToolContext) {
     }),
 
     improveResume: tool({
-      description: `Suggest how to improve or tailor one of the user's resumes: rewrites, new bullets, removals, moves, and gaps to ask the user about. Pass a jobId or a pasted jobDescription to tailor it to a job, or neither to judge it on its own. It reads the job and the resume itself, so don't read them first. It changes nothing. Costs ${TAICredits.RESUME_IMPROVE} AI credits once it succeeds.`,
+      description: `Suggest how to improve or tailor one of the user's resumes: rewrites, new bullets, removals, moves, and gaps to ask the user about. Pass a jobId or a jobDescription the user pasted to tailor it to a job, or neither to judge it on its own. For a kind of role ("AI engineer roles"), pass neither and put the role in focus: never write a job description yourself. It reads the job and the resume itself, so don't read them first. It changes nothing. Costs ${TAICredits.RESUME_IMPROVE} AI credits once it succeeds.`,
       inputSchema: z
         .object({
           resumeId: uuidInput("resume"),
@@ -384,11 +403,12 @@ export function createResumeTools(ctx: AgentToolContext) {
         .refine((input) => !(input.jobId && input.jobDescription), {
           message: "Provide jobId or jobDescription, not both.",
         }),
-      execute: (input, { abortSignal }) =>
+      execute: (rawInput, { abortSignal }) =>
         withToolErrors(ctx, "improveResume", async () => {
+          const input = withoutWrittenJobDescription(rawInput, ctx);
           const result = await improveResume(supabase, ctx.user, input, {
             abortSignal,
-            telemetry: agentTelemetry("improveResume", { sessionId: ctx.sessionId, userId: ctx.user.id }),
+            telemetry: agentTelemetry("improveResume", { sessionId: ctx.sessionId, userId: ctx.user.id, role: "applicant" }),
           });
           if (!result.ok) return result.code === "INSUFFICIENT_CREDITS" ? INSUFFICIENT_CREDITS : { error: result.error };
 

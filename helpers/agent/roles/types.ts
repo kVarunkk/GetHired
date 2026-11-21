@@ -14,6 +14,10 @@ export type AgentRoleToolContext = {
   sessionId: string;
   /** The company a company user acts for; null for applicants. */
   company: MyCompany | null;
+  /** The user's words this turn (`turnRequestText`), for tools that check what was asked. */
+  requestText?: string;
+  /** Everything the user typed in this chat (`chatUserText`). */
+  userText?: string;
 };
 
 export type PromptInput = {

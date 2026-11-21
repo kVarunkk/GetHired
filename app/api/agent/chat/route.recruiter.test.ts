@@ -266,6 +266,7 @@ describe("POST /api/agent/chat for a company user (RA-TEST-007)", () => {
       role: "company",
       userText: "hi",
       companyId: COMPANY_A.id,
+      messageId: expect.stringMatching(/^msg-/),
     };
     expect(agentTelemetry).toHaveBeenCalledWith("recruiter-agent-chat", context);
     expect(agentTelemetry).toHaveBeenCalledWith("recruiter-agent-suggestions", context);
