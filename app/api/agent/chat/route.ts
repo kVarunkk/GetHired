@@ -53,6 +53,7 @@ import {
 import { stoppedReply } from "@/helpers/agent/stopped";
 import { canRegenerate, withRegeneration } from "@/helpers/agent/regenerations";
 import { agentTelemetry, flushAgentTraces, turnRequestText } from "@/helpers/agent/telemetry";
+import { chatUserText } from "@/helpers/agent/tools/request-intent";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
@@ -212,7 +213,11 @@ export async function POST(request: NextRequest) {
       listMemories(supabase, user.id),
     ]);
 
-    const tools = role.createTools({ supabase, user, sessionId, company });
+    // This turn's request: a continuation (after an approval or a card) has
+    // no user message of its own, so this reads the latest one and the card
+    // answers since. The tracing and the search guards both use it.
+    const requestText = turnRequestText(history);
+    const tools = role.createTools({ supabase, user, sessionId, company, requestText, userText: chatUserText(history) });
     const contextMessages = selectContextMessages(
       dropAbandonedToolCalls(history),
       session.summary_upto_message_id,
@@ -231,10 +236,8 @@ export async function POST(request: NextRequest) {
       sessionId,
       userId: user.id,
       role: role.id,
-      // This turn's request, so a tool span can be judged in context. A
-      // continuation (after an approval or a card) has no user message of
-      // its own, so this reads the latest one and the card answers since.
-      userText: turnRequestText(history),
+      // This turn's request, so a tool span can be judged in context.
+      userText: requestText,
       ...(company ? { companyId: company.id } : {}),
     };
     const traceId = (name: string) => `${role.telemetryPrefix}-${name}`;

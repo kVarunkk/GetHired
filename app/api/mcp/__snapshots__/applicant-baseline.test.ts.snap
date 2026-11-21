@@ -143,12 +143,12 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": true,
       "title": "Search jobs",
     },
-    "description": "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page. Needs keywords or companies unless anyRole is set. When nothing matches every filter, it relaxes the posting date, salary, visa and sources, job type, then experience, in that order, and never the keywords, locations or companies: the result's widened says what was relaxed, and later pages need the filters in widened.searchedWith.",
+    "description": "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page. Needs keywords or companies unless anyRole is set. When nothing matches every filter, it relaxes the posting date, salary, visa and sources, job type, then experience, in that order, keeps every filter the jobs didn't need, and never relaxes the keywords, locations or companies, or an experience level the user named: the result's widened says what was relaxed, and later pages need the filters in widened.searchedWith. When only a few jobs match and there is no next page, moreAfterRelaxing adds jobs that miss some filters.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
         "anyRole": {
-          "description": "true only when the user asked for jobs of any role. Without it, a search needs keywords or companies.",
+          "description": "true only when the user asked for jobs of any role. Without it, a search needs keywords or companies. Never for 'more jobs' or 'jobs for me': those keep the user's role keywords.",
           "type": "boolean",
         },
         "companies": {
@@ -162,8 +162,14 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "cursor": {
-          "description": "For the next page: the nextCursor from the previous search_jobs result, sent with the same filters, or with widened.searchedWith when the result was widened. Leave out for the first page.",
+          "description": "For the next page: the nextCursor from the previous search_jobs result, sent with the same filters, or with widened.searchedWith when the result was widened (moreAfterRelaxing.searchedWith with its nextCursor for more of the relaxed jobs). Leave out for the first page.",
           "type": "string",
+        },
+        "experienceYears": {
+          "description": "The user's own years of experience, from get_my_profile or their resume. Finds jobs open to them: asking for at most one year more, and not far below their level. Use it whenever you know the user's years, instead of minExperience/maxExperience.",
+          "maximum": 50,
+          "minimum": 0,
+          "type": "integer",
         },
         "jobTypes": {
           "description": "Only these kinds of employment: full-time, contract or internship.",
@@ -178,7 +184,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "keywords": {
-          "description": "Words to look for in the job title. Add the common spellings of the same role, e.g. ['frontend', 'front-end', 'front end']. Put seniority (junior, senior, lead, fresher) in minExperience/maxExperience, not here.",
+          "description": "Words to look for in the job title. Add the common spellings of the same role, e.g. ['frontend', 'front-end', 'front end']. Leave seniority (junior, senior, lead, fresher) out: use experienceYears, or minExperience/maxExperience for a level the user asked for.",
           "items": {
             "maxLength": 50,
             "minLength": 1,
@@ -204,13 +210,13 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "array",
         },
         "maxExperience": {
-          "description": "The top of the user's experience range, in years: only jobs asking for at most this much. Seniority maps to this range: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5.",
+          "description": "Only jobs asking for at most this many years: the filter that keeps out jobs above a level. For a level the user asked for: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5.",
           "maximum": 30,
           "minimum": 0,
           "type": "integer",
         },
         "minExperience": {
-          "description": "The bottom of the user's experience range, in years. A job matches when the experience it asks for overlaps the user's range. Seniority maps to this range: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5.",
+          "description": "Only jobs whose experience range reaches at least this many years. On its own it never hides jobs asking for more (a '7+ years' job passes minExperience 1), so don't use it alone for the user's own level: use experienceYears. For a level the user asked for: senior is minExperience 5, mid level is minExperience 2 with maxExperience 5.",
           "maximum": 30,
           "minimum": 0,
           "type": "integer",
@@ -346,6 +352,111 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "description": "What to tell the user about a relaxed or empty search.",
           "type": "string",
         },
+        "moreAfterRelaxing": {
+          "additionalProperties": true,
+          "description": "Set when only a few jobs matched every filter. List the exact matches first, then these, saying which filters they don't meet.",
+          "properties": {
+            "dropped": {
+              "description": "The filters these extra jobs don't meet.",
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "jobs": {
+              "description": "Jobs beyond the exact matches in jobs.",
+              "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "company": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "experience": {
+                    "description": "The experience the posting asks for, as it gives it.",
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "id": {
+                    "description": "The job id, for get_job_details, favorite_job and the other job tools.",
+                    "type": "string",
+                  },
+                  "jobType": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "locations": {
+                    "items": {
+                      "type": "string",
+                    },
+                    "type": "array",
+                  },
+                  "postedAt": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "salary": {
+                    "description": "The salary range as the posting gives it.",
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "title": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "url": {
+                    "description": "The job's page on GetHired.",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "company",
+                  "locations",
+                  "salary",
+                  "jobType",
+                  "experience",
+                  "postedAt",
+                  "url",
+                ],
+                "type": "object",
+              },
+              "type": "array",
+            },
+            "nextCursor": {
+              "description": "The next page of the relaxed search; null on its last page.",
+              "type": [
+                "string",
+                "null",
+              ],
+            },
+            "searchedWith": {
+              "additionalProperties": {},
+              "description": "The filters the extra jobs match. Send them with nextCursor for more of them.",
+              "type": "object",
+            },
+          },
+          "required": [
+            "dropped",
+            "searchedWith",
+            "jobs",
+            "nextCursor",
+          ],
+          "type": "object",
+        },
         "nextCursor": {
           "description": "Pass to search_jobs as cursor for the next page; null on the last page.",
           "type": [
@@ -365,7 +476,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "description": "Set when no jobs matched every filter and the search was relaxed. Tell the user what was relaxed.",
           "properties": {
             "dropped": {
-              "description": "The filters relaxed to find these jobs, in the order they were relaxed.",
+              "description": "The filters relaxed to find these jobs: only the ones the jobs needed, in the order they were relaxed.",
               "items": {
                 "type": "string",
               },
@@ -508,6 +619,111 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "description": "What to tell the user about a relaxed or empty search.",
           "type": "string",
         },
+        "moreAfterRelaxing": {
+          "additionalProperties": true,
+          "description": "Set when only a few jobs matched every filter. List the exact matches first, then these, saying which filters they don't meet.",
+          "properties": {
+            "dropped": {
+              "description": "The filters these extra jobs don't meet.",
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "jobs": {
+              "description": "Jobs beyond the exact matches in jobs.",
+              "items": {
+                "additionalProperties": true,
+                "properties": {
+                  "company": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "experience": {
+                    "description": "The experience the posting asks for, as it gives it.",
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "id": {
+                    "description": "The job id, for get_job_details, favorite_job and the other job tools.",
+                    "type": "string",
+                  },
+                  "jobType": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "locations": {
+                    "items": {
+                      "type": "string",
+                    },
+                    "type": "array",
+                  },
+                  "postedAt": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "salary": {
+                    "description": "The salary range as the posting gives it.",
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "title": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "url": {
+                    "description": "The job's page on GetHired.",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "company",
+                  "locations",
+                  "salary",
+                  "jobType",
+                  "experience",
+                  "postedAt",
+                  "url",
+                ],
+                "type": "object",
+              },
+              "type": "array",
+            },
+            "nextCursor": {
+              "description": "The next page of the relaxed search; null on its last page.",
+              "type": [
+                "string",
+                "null",
+              ],
+            },
+            "searchedWith": {
+              "additionalProperties": {},
+              "description": "The filters the extra jobs match. Send them with nextCursor for more of them.",
+              "type": "object",
+            },
+          },
+          "required": [
+            "dropped",
+            "searchedWith",
+            "jobs",
+            "nextCursor",
+          ],
+          "type": "object",
+        },
         "nextCursor": {
           "description": "Pass to search_jobs as cursor for the next page; null on the last page.",
           "type": [
@@ -527,7 +743,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "description": "Set when no jobs matched every filter and the search was relaxed. Tell the user what was relaxed.",
           "properties": {
             "dropped": {
-              "description": "The filters relaxed to find these jobs, in the order they were relaxed.",
+              "description": "The filters relaxed to find these jobs: only the ones the jobs needed, in the order they were relaxed.",
               "items": {
                 "type": "string",
               },
@@ -582,6 +798,12 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
               "maxItems": 10,
               "type": "array",
             },
+            "experienceYears": {
+              "description": "The user's own years of experience, from get_my_profile or their resume. Finds jobs open to them: asking for at most one year more, and not far below their level. Use it whenever you know the user's years, instead of minExperience/maxExperience.",
+              "maximum": 50,
+              "minimum": 0,
+              "type": "integer",
+            },
             "jobTypes": {
               "description": "Only these kinds of employment: full-time, contract or internship.",
               "items": {
@@ -595,7 +817,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
               "type": "array",
             },
             "keywords": {
-              "description": "Words to look for in the job title. Add the common spellings of the same role, e.g. ['frontend', 'front-end', 'front end']. Put seniority (junior, senior, lead, fresher) in minExperience/maxExperience, not here.",
+              "description": "Words to look for in the job title. Add the common spellings of the same role, e.g. ['frontend', 'front-end', 'front end']. Leave seniority (junior, senior, lead, fresher) out: use experienceYears, or minExperience/maxExperience for a level the user asked for.",
               "items": {
                 "maxLength": 50,
                 "minLength": 1,
@@ -615,13 +837,13 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
               "type": "array",
             },
             "maxExperience": {
-              "description": "The top of the user's experience range, in years: only jobs asking for at most this much. Seniority maps to this range: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5.",
+              "description": "Only jobs asking for at most this many years: the filter that keeps out jobs above a level. For a level the user asked for: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5.",
               "maximum": 30,
               "minimum": 0,
               "type": "integer",
             },
             "minExperience": {
-              "description": "The bottom of the user's experience range, in years. A job matches when the experience it asks for overlaps the user's range. Seniority maps to this range: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5.",
+              "description": "Only jobs whose experience range reaches at least this many years. On its own it never hides jobs asking for more (a '7+ years' job passes minExperience 1), so don't use it alone for the user's own level: use experienceYears. For a level the user asked for: senior is minExperience 5, mid level is minExperience 2 with maxExperience 5.",
               "maximum": 30,
               "minimum": 0,
               "type": "integer",
@@ -3949,7 +4171,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
           "type": "string",
         },
         "jobDescription": {
-          "description": "The text of a job description the user pasted, to tailor the resume to a job that isn't on GetHired. Don't send it with jobId.",
+          "description": "The text of a job description the user pasted, to tailor the resume to a job that isn't on GetHired. Never write one yourself. Don't send it with jobId.",
           "maxLength": 4000,
           "minLength": 50,
           "type": "string",
@@ -4355,7 +4577,7 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "readOnlyHint": false,
       "title": "Set up a mock interview",
     },
-    "description": "Set up an AI mock interview for a job, using a resume (the primary one by default). Returns the new interview's id and the link where the user starts it. Free to create; each session uses 10 AI credits when it starts.",
+    "description": "Set up an AI mock interview for a job, using a resume (the primary one by default). Returns the new interview's id and the link where the user starts it. Free to create; each session uses 5 AI credits when it starts.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {

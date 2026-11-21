@@ -109,6 +109,50 @@ describe("searchJobs tool", () => {
     expect(await execTool(tools.searchJobs, { keywords: ["frontend"] })).toEqual({ error: "Nope" });
   });
 
+  it("turns experienceYears into the user's range without reading the profile", async () => {
+    await execTool(tools.searchJobs, { keywords: ["backend"], experienceYears: 2 });
+
+    expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, {
+      jobTitleKeywords: "backend",
+      maxExperience: "3",
+      limit: 10,
+    });
+    expect(supabase.callsFor("user_info")).toHaveLength(0);
+  });
+
+  // Trace 0ca86f53 (2026-11-20): a 2-year profile, minExperience 1 alone, and a 7+ years job.
+  it("caps a min-only range at the profile's years", async () => {
+    supabase.queue("user_info", { data: { experience_years: 2 }, error: null });
+
+    await execTool(tools.searchJobs, { keywords: ["backend"], minExperience: 1 });
+
+    expect(supabase.callsFor("user_info")[0].chain).toEqual([
+      { method: "select", args: ["experience_years"] },
+      { method: "eq", args: ["user_id", "u1"] },
+      { method: "maybeSingle", args: [] },
+    ]);
+    expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, {
+      jobTitleKeywords: "backend",
+      minExperience: "1",
+      maxExperience: "3",
+      limit: 10,
+    });
+  });
+
+  it("keeps a min above the profile's years open-ended", async () => {
+    supabase.queue("user_info", { data: { experience_years: 2 }, error: null });
+
+    await execTool(tools.searchJobs, { keywords: ["backend"], minExperience: 5 });
+
+    expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, {
+      jobTitleKeywords: "backend",
+      minExperience: "5",
+      // Review 2026-11-20, turn 4: "3+ years" jobs passed a senior search.
+      minExperienceFloor: "4",
+      limit: 10,
+    });
+  });
+
   it("maps 402 to INSUFFICIENT_CREDITS", async () => {
     vi.mocked(searchJobs).mockResolvedValue({ ok: false, status: 402, error: "x" });
 
@@ -137,12 +181,62 @@ describe("searchJobs tool", () => {
   });
 });
 
+// Trace 95571a1f and test session edf8278a turns 2 and 6: "show more remote
+// jobs" answered with every job of every kind.
+describe("anyRole in the chat", () => {
+  const chatTools = (requestText: string) => createJobTools(toolContext(supabase.client, { requestText }));
+
+  it("refuses anyRole when the user didn't ask for any role and has desired roles", async () => {
+    supabase.queue("user_info", { data: { desired_roles: ["AI Engineer", "Frontend Developer"] }, error: null });
+
+    const result = await execTool(chatTools("Show more remote jobs").searchJobs, { anyRole: true, locations: ["Remote"] });
+
+    expect(result).toMatchObject({ error: "KEYWORDS_REQUIRED", desiredRoles: ["AI Engineer", "Frontend Developer"] });
+    expect(supabase.callsFor("user_info")[0].chain).toEqual([
+      { method: "select", args: ["desired_roles"] },
+      { method: "eq", args: ["user_id", "u1"] },
+      { method: "maybeSingle", args: [] },
+    ]);
+    expect(searchJobs).not.toHaveBeenCalled();
+  });
+
+  it("allows it when the user asked for any role, without reading the profile", async () => {
+    await execTool(chatTools("show me any remote job, the role doesn't matter").searchJobs, {
+      anyRole: true,
+      locations: ["Remote"],
+    });
+
+    expect(searchJobs).toHaveBeenCalledOnce();
+    expect(supabase.callsFor("user_info")).toHaveLength(0);
+  });
+
+  it("allows it when the profile has no desired roles", async () => {
+    supabase.queue("user_info", { data: { desired_roles: [] }, error: null });
+
+    await execTool(chatTools("show more remote jobs").searchJobs, { anyRole: true, locations: ["Remote"] });
+
+    expect(searchJobs).toHaveBeenCalledOnce();
+  });
+
+  it("doesn't check a search with keywords", async () => {
+    await execTool(chatTools("show more remote jobs").searchJobs, { anyRole: true, keywords: ["ai engineer"] });
+
+    expect(searchJobs).toHaveBeenCalledOnce();
+    expect(supabase.callsFor("user_info")).toHaveLength(0);
+  });
+});
+
 describe("widening an empty search", () => {
   const empty = { ok: true, data: [], totalCount: 0, nextCursor: null } as never;
   const found = { ok: true, data: [JOB], totalCount: 1, nextCursor: null } as never;
 
   it("relaxes filters in order until a search finds jobs, and says what it relaxed", async () => {
-    vi.mocked(searchJobs).mockResolvedValueOnce(empty).mockResolvedValueOnce(empty).mockResolvedValueOnce(found);
+    // The first three as before; then putting back the salary, or the date, finds nothing.
+    vi.mocked(searchJobs)
+      .mockResolvedValueOnce(empty)
+      .mockResolvedValueOnce(empty)
+      .mockResolvedValueOnce(found)
+      .mockResolvedValue(empty);
 
     const result = await execTool(tools.searchJobs, {
       keywords: ["frontend"],
@@ -157,6 +251,8 @@ describe("widening an empty search", () => {
       { jobTitleKeywords: "frontend", location: "Bengaluru", createdAfterDays: "7", minSalary: "2000000", jobType: "Fulltime", limit: 10 },
       { jobTitleKeywords: "frontend", location: "Bengaluru", minSalary: "2000000", jobType: "Fulltime", limit: 10 },
       { jobTitleKeywords: "frontend", location: "Bengaluru", jobType: "Fulltime", limit: 10 },
+      { jobTitleKeywords: "frontend", location: "Bengaluru", minSalary: "2000000", jobType: "Fulltime", limit: 10 },
+      { jobTitleKeywords: "frontend", location: "Bengaluru", createdAfterDays: "7", jobType: "Fulltime", limit: 10 },
     ]);
     expect(result).toMatchObject({
       jobs: [COMPACT_JOB],
@@ -171,7 +267,7 @@ describe("widening an empty search", () => {
     expect(eventCaptureServer).toHaveBeenCalledWith({
       event: "agent_search_widened",
       distinctId: "u1",
-      properties: { tool: "searchJobs", surface: "agent", dropped: ["postedWithinDays", "minSalary"], found: true },
+      properties: { tool: "searchJobs", surface: "agent", dropped: ["postedWithinDays", "minSalary"], found: true, exact_count: 0 },
     });
   });
 
@@ -226,7 +322,7 @@ describe("widening an empty search", () => {
       ok: true,
       filters: { jobTitleKeywords: ["react"], location: ["Remote"], createdAfter: "7", sortBy: "created_at", sortOrder: "desc" },
     } as never);
-    vi.mocked(searchJobs).mockResolvedValueOnce(empty).mockResolvedValueOnce(found);
+    vi.mocked(searchJobs).mockResolvedValueOnce(empty).mockResolvedValueOnce(found).mockResolvedValue(empty);
 
     const result = await execTool(tools.naturalLanguageJobSearch, { query: "remote react jobs this week" });
 
@@ -239,6 +335,96 @@ describe("widening an empty search", () => {
       limit: 10,
     });
     expect(result).toMatchObject({ jobs: [COMPACT_JOB], widened: { dropped: ["postedWithinDays"] } });
+  });
+
+  // Review 2026-11-20, turn 5: visa was the blocker, but salary was dropped and reported.
+  it("puts back the filters the jobs didn't need, and reports only the rest", async () => {
+    vi.mocked(searchJobs).mockImplementation(async (_s, _u, params) => (params.visaRequirement ? empty : found));
+
+    const result = await execTool(tools.searchJobs, {
+      keywords: ["ai engineer"],
+      locations: ["Remote", "India"],
+      minSalary: 1500000,
+      salaryCurrency: "INR",
+      visaRequirements: ["Will Sponsor"],
+    });
+
+    expect(vi.mocked(searchJobs).mock.calls.at(-1)![2]).toEqual({
+      jobTitleKeywords: "ai engineer",
+      location: "Remote|India",
+      minSalary: "1500000",
+      salaryCurrency: "INR",
+      limit: 10,
+    });
+    expect(result).toMatchObject({
+      jobs: [COMPACT_JOB],
+      widened: { dropped: ["visaRequirements"], searchedWith: { minSalary: 1500000 } },
+      message: expect.stringContaining("relaxing only the visa requirement;"),
+    });
+  });
+
+  it("widens a fresher's range by a year, and not at all when they named the level", async () => {
+    vi.mocked(searchJobs).mockResolvedValue(empty);
+
+    await execTool(tools.searchJobs, { keywords: ["backend"], experienceYears: 1 });
+    expect(vi.mocked(searchJobs).mock.calls.map(([, , p]) => p.maxExperience)).toEqual(["2", "3"]);
+
+    vi.mocked(searchJobs).mockClear();
+    const leveled = createJobTools(toolContext(supabase.client, { requestText: "show some fresher backend roles" }));
+    const result = await execTool(leveled.searchJobs, { keywords: ["backend"], maxExperience: 1 });
+
+    expect(searchJobs).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({ jobs: [], message: expect.stringMatching(/^No jobs found\. Don't search again/) });
+  });
+
+  it("doesn't widen a search that found only a few when there's a next page", async () => {
+    vi.mocked(searchJobs).mockResolvedValue({ ok: true, data: [JOB], totalCount: 30, nextCursor: "next" } as never);
+
+    await execTool(tools.searchJobs, { keywords: ["frontend"], postedWithinDays: 7 });
+
+    expect(searchJobs).toHaveBeenCalledOnce();
+  });
+
+  // Trace 95571a1f: a salary floor left one job, since it hides every job without a salary.
+  it("adds relaxed jobs apart from the exact ones when only a few match", async () => {
+    const other = { ...JOB, id: "22222222-2222-4222-8222-222222222222", job_name: "Backend Engineer" };
+    vi.mocked(searchJobs).mockImplementation(
+      async (_s, _u, params) =>
+        ({
+          ok: true,
+          data: params.minSalary ? [JOB] : [JOB, other],
+          totalCount: params.minSalary ? 1 : 2,
+          nextCursor: params.minSalary ? null : "more",
+        }) as never,
+    );
+
+    const result = await execTool(tools.searchJobs, { keywords: ["backend"], minSalary: 1500000, salaryCurrency: "INR" });
+
+    expect(result).toMatchObject({
+      jobs: [COMPACT_JOB],
+      moreAfterRelaxing: {
+        dropped: ["minSalary"],
+        searchedWith: { keywords: ["backend"] },
+        jobs: [{ id: other.id, title: "Backend Engineer" }],
+        nextCursor: "more",
+      },
+      message: expect.stringMatching(/^Only 1 job matches every filter/),
+    });
+    expect(result).not.toHaveProperty("widened");
+
+    await flushAfter();
+    expect(eventCaptureServer).toHaveBeenCalledWith(
+      expect.objectContaining({ properties: expect.objectContaining({ dropped: ["minSalary"], exact_count: 1 }) }),
+    );
+  });
+
+  it("returns the few exact jobs alone when relaxing adds none", async () => {
+    vi.mocked(searchJobs).mockResolvedValue({ ok: true, data: [JOB], totalCount: 1, nextCursor: null } as never);
+
+    const result = await execTool(tools.searchJobs, { keywords: ["backend"], postedWithinDays: 7 });
+
+    expect(searchJobs).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({ jobs: [COMPACT_JOB], totalCount: 1, nextCursor: null });
   });
 
   it("doesn't widen a natural-language search with no role", async () => {

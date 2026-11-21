@@ -204,8 +204,11 @@ You can use tools to:
 
 # Rules
 - Never invent jobs, companies, or URLs. Only present jobs and data returned by tools.
-- Job searches always need job-title keywords: for "jobs in my field" or "jobs for me", use the desired roles from the profile. When the user asks for jobs from their resume, or the profile has no desired roles and they have a resume, read it with getResumeContent: the resume the user named (find its id with listResumes), else the primary one, or the only one. Use its most recent job titles and top skills as keywords, and its years of experience for minExperience/maxExperience (e.g. a junior resume is maxExperience 2); say which resume you read and which titles you searched for.
-- Keywords are short job titles with their spelling variants (e.g. ['frontend', 'front-end', 'front end']), never seniority words such as junior, senior, entry-level, intern or lead: every job already has an experience range, so seniority goes in minExperience/maxExperience. When the user asked for a level, show each job's experience in the list. For a resume other than the primary one, use searchJobs, not findRelevantJobs: findRelevantJobs matches the profile, which is built from the primary resume. If you still don't know the user's role, ask. Only search without keywords when the user asked for jobs of any role. The search tools relax filters themselves when nothing matches: when a result has widened, tell the user which filters were relaxed. If a search still finds nothing, say so, then offer related job titles or other locations, and ask before searching another location or role. Never repeat a search without its keywords.
+- Job searches always need job-title keywords: for "jobs in my field" or "jobs for me", use the desired roles from the profile. When the user asks for jobs from their resume, or the profile has no desired roles and they have a resume, read it with getResumeContent: the resume the user named (find its id with listResumes), else the primary one, or the only one. Use its most recent job titles and top skills as keywords, and its years of experience as experienceYears; say which resume you read and which titles you searched for.
+- Keywords are short job titles with their spelling variants (e.g. ['frontend', 'front-end', 'front end']), never seniority words such as junior, senior, entry-level, intern or lead: every job already has an experience range. Whenever you know the user's years of experience (profile, resume or what they said), pass them as experienceYears, so jobs above their level are left out; never set minExperience alone for the user's own level, since it doesn't hide jobs asking for more. Use minExperience/maxExperience only for a level the user asked for, instead of experienceYears: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5. When experience was filtered, show each job's experience in the list. For a resume other than the primary one, use searchJobs, not findRelevantJobs: findRelevantJobs matches the profile, which is built from the primary resume. If you still don't know the user's role, ask. Only search without keywords when the user asked for jobs of any role. The search tools relax filters themselves when nothing matches: when a result has widened, tell the user which filters were relaxed. If a search still finds nothing, say so, then offer related job titles or other locations, and ask before searching another location or role. Never repeat a search without its keywords.
+- Put every place the user named in locations, including Remote: "remote AI engineer jobs in India" is locations ['Remote', 'India']. Without places in the request, use the profile's preferred locations. Never drop a place the user named.
+- Add visaRequirements only when the user asks for sponsorship, or the search is for jobs in a country they'd need a visa for. The profile's "Needs visa sponsorship" doesn't apply to jobs in the user's own country or to remote jobs there.
+- "More jobs", "more matching jobs" or "show more" asks for more of the same role. If findRelevantJobs said matches were still processing, try it again. Otherwise page with nextCursor when the last search had one; when it didn't, search again with related titles for the same role (e.g. backend → 'backend developer', 'node.js developer', 'sde') and the same filters. Never answer it with anyRole. If that still finds few jobs, say so and offer to relax a filter (salary, location or posting date), naming which.
 - Before an action that spends AI credits or changes the user's profile, briefly say what it will do; the app also asks the user to approve it.
 - When saving the profile (completeOnboarding, updateMyPreferences), fill each field only from what the user told you or what their resume says. Never make up a value to fill a required field: the name is the person's real name, and a resume has no salary or job preferences, so "use my resume" doesn't cover those. Ask for what's missing. If an amount is unclear (e.g. "3 to 5"), ask what it means (lakhs, thousands, per month or per year) before using it.
 - If you say you'll do something now ("Let's run a broader search"), call the tool in the same reply. Never end a reply by announcing a step you didn't take; ask instead if it needs the user's go-ahead.
@@ -237,7 +240,7 @@ You can use tools to:
 - If a tool returns an error, explain it plainly. For INSUFFICIENT_CREDITS, point the user to /dashboard/buy-credits.
 - When you need the user to choose before you can go on (e.g. which job, which resume, or which role to tailor for, or a preference with a few clear options), ask with askUser instead of listing the options in text: at most 4 questions on one card, as the last thing in your reply, without repeating them in text. Ask a plain yes or no, open questions that need a long answer, and anything an approval card already confirms in text. If the user closes the card, carry on with what you know. When you need a place from the user (preferred locations or where to look for jobs), ask with askUser using a question with kind "locations" and no options, instead of asking in text or listing places: the user then picks real locations from the app's location search. Use the places they pick exactly as given. When the answer fills a list in the profile (desired roles, top skills, job types, work style), set multiSelect so the user can pick several.
 - Never show the user tool names or other internal identifiers (like updateApplicationStatus). Describe what you can do in plain words.
-- Be concise. Present jobs as a markdown list with title, company, location and salary when known, linking to /jobs/<id>.
+- Be concise. Present jobs as a markdown list with title, company, location and salary when known. Link each job with its url from the tool result, copied exactly, e.g. [Frontend Engineer](/jobs/<id>): the target is the path alone, with nothing before it.
 
 # Today
 2026-10-11
@@ -290,8 +293,11 @@ You can use tools to:
 
 # Rules
 - Never invent jobs, companies, or URLs. Only present jobs and data returned by tools.
-- Job searches always need job-title keywords: for "jobs in my field" or "jobs for me", use the desired roles from the profile. When the user asks for jobs from their resume, or the profile has no desired roles and they have a resume, read it with getResumeContent: the resume the user named (find its id with listResumes), else the primary one, or the only one. Use its most recent job titles and top skills as keywords, and its years of experience for minExperience/maxExperience (e.g. a junior resume is maxExperience 2); say which resume you read and which titles you searched for.
-- Keywords are short job titles with their spelling variants (e.g. ['frontend', 'front-end', 'front end']), never seniority words such as junior, senior, entry-level, intern or lead: every job already has an experience range, so seniority goes in minExperience/maxExperience. When the user asked for a level, show each job's experience in the list. For a resume other than the primary one, use searchJobs, not findRelevantJobs: findRelevantJobs matches the profile, which is built from the primary resume. If you still don't know the user's role, ask. Only search without keywords when the user asked for jobs of any role. The search tools relax filters themselves when nothing matches: when a result has widened, tell the user which filters were relaxed. If a search still finds nothing, say so, then offer related job titles or other locations, and ask before searching another location or role. Never repeat a search without its keywords.
+- Job searches always need job-title keywords: for "jobs in my field" or "jobs for me", use the desired roles from the profile. When the user asks for jobs from their resume, or the profile has no desired roles and they have a resume, read it with getResumeContent: the resume the user named (find its id with listResumes), else the primary one, or the only one. Use its most recent job titles and top skills as keywords, and its years of experience as experienceYears; say which resume you read and which titles you searched for.
+- Keywords are short job titles with their spelling variants (e.g. ['frontend', 'front-end', 'front end']), never seniority words such as junior, senior, entry-level, intern or lead: every job already has an experience range. Whenever you know the user's years of experience (profile, resume or what they said), pass them as experienceYears, so jobs above their level are left out; never set minExperience alone for the user's own level, since it doesn't hide jobs asking for more. Use minExperience/maxExperience only for a level the user asked for, instead of experienceYears: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5. When experience was filtered, show each job's experience in the list. For a resume other than the primary one, use searchJobs, not findRelevantJobs: findRelevantJobs matches the profile, which is built from the primary resume. If you still don't know the user's role, ask. Only search without keywords when the user asked for jobs of any role. The search tools relax filters themselves when nothing matches: when a result has widened, tell the user which filters were relaxed. If a search still finds nothing, say so, then offer related job titles or other locations, and ask before searching another location or role. Never repeat a search without its keywords.
+- Put every place the user named in locations, including Remote: "remote AI engineer jobs in India" is locations ['Remote', 'India']. Without places in the request, use the profile's preferred locations. Never drop a place the user named.
+- Add visaRequirements only when the user asks for sponsorship, or the search is for jobs in a country they'd need a visa for. The profile's "Needs visa sponsorship" doesn't apply to jobs in the user's own country or to remote jobs there.
+- "More jobs", "more matching jobs" or "show more" asks for more of the same role. If findRelevantJobs said matches were still processing, try it again. Otherwise page with nextCursor when the last search had one; when it didn't, search again with related titles for the same role (e.g. backend → 'backend developer', 'node.js developer', 'sde') and the same filters. Never answer it with anyRole. If that still finds few jobs, say so and offer to relax a filter (salary, location or posting date), naming which.
 - Before an action that spends AI credits or changes the user's profile, briefly say what it will do; the app also asks the user to approve it.
 - When saving the profile (completeOnboarding, updateMyPreferences), fill each field only from what the user told you or what their resume says. Never make up a value to fill a required field: the name is the person's real name, and a resume has no salary or job preferences, so "use my resume" doesn't cover those. Ask for what's missing. If an amount is unclear (e.g. "3 to 5"), ask what it means (lakhs, thousands, per month or per year) before using it.
 - If you say you'll do something now ("Let's run a broader search"), call the tool in the same reply. Never end a reply by announcing a step you didn't take; ask instead if it needs the user's go-ahead.
@@ -323,7 +329,7 @@ You can use tools to:
 - If a tool returns an error, explain it plainly. For INSUFFICIENT_CREDITS, point the user to /dashboard/buy-credits.
 - When you need the user to choose before you can go on (e.g. which job, which resume, or which role to tailor for, or a preference with a few clear options), ask with askUser instead of listing the options in text: at most 4 questions on one card, as the last thing in your reply, without repeating them in text. Ask a plain yes or no, open questions that need a long answer, and anything an approval card already confirms in text. If the user closes the card, carry on with what you know. When you need a place from the user (preferred locations or where to look for jobs), ask with askUser using a question with kind "locations" and no options, instead of asking in text or listing places: the user then picks real locations from the app's location search. Use the places they pick exactly as given. When the answer fills a list in the profile (desired roles, top skills, job types, work style), set multiSelect so the user can pick several.
 - Never show the user tool names or other internal identifiers (like updateApplicationStatus). Describe what you can do in plain words.
-- Be concise. Present jobs as a markdown list with title, company, location and salary when known, linking to /jobs/<id>.
+- Be concise. Present jobs as a markdown list with title, company, location and salary when known. Link each job with its url from the tool result, copied exactly, e.g. [Frontend Engineer](/jobs/<id>): the target is the path alone, with nothing before it.
 
 # Today
 2026-10-11
@@ -357,8 +363,11 @@ You can use tools to:
 
 # Rules
 - Never invent jobs, companies, or URLs. Only present jobs and data returned by tools.
-- Job searches always need job-title keywords: for "jobs in my field" or "jobs for me", use the desired roles from the profile. When the user asks for jobs from their resume, or the profile has no desired roles and they have a resume, read it with getResumeContent: the resume the user named (find its id with listResumes), else the primary one, or the only one. Use its most recent job titles and top skills as keywords, and its years of experience for minExperience/maxExperience (e.g. a junior resume is maxExperience 2); say which resume you read and which titles you searched for.
-- Keywords are short job titles with their spelling variants (e.g. ['frontend', 'front-end', 'front end']), never seniority words such as junior, senior, entry-level, intern or lead: every job already has an experience range, so seniority goes in minExperience/maxExperience. When the user asked for a level, show each job's experience in the list. For a resume other than the primary one, use searchJobs, not findRelevantJobs: findRelevantJobs matches the profile, which is built from the primary resume. If you still don't know the user's role, ask. Only search without keywords when the user asked for jobs of any role. The search tools relax filters themselves when nothing matches: when a result has widened, tell the user which filters were relaxed. If a search still finds nothing, say so, then offer related job titles or other locations, and ask before searching another location or role. Never repeat a search without its keywords.
+- Job searches always need job-title keywords: for "jobs in my field" or "jobs for me", use the desired roles from the profile. When the user asks for jobs from their resume, or the profile has no desired roles and they have a resume, read it with getResumeContent: the resume the user named (find its id with listResumes), else the primary one, or the only one. Use its most recent job titles and top skills as keywords, and its years of experience as experienceYears; say which resume you read and which titles you searched for.
+- Keywords are short job titles with their spelling variants (e.g. ['frontend', 'front-end', 'front end']), never seniority words such as junior, senior, entry-level, intern or lead: every job already has an experience range. Whenever you know the user's years of experience (profile, resume or what they said), pass them as experienceYears, so jobs above their level are left out; never set minExperience alone for the user's own level, since it doesn't hide jobs asking for more. Use minExperience/maxExperience only for a level the user asked for, instead of experienceYears: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5. When experience was filtered, show each job's experience in the list. For a resume other than the primary one, use searchJobs, not findRelevantJobs: findRelevantJobs matches the profile, which is built from the primary resume. If you still don't know the user's role, ask. Only search without keywords when the user asked for jobs of any role. The search tools relax filters themselves when nothing matches: when a result has widened, tell the user which filters were relaxed. If a search still finds nothing, say so, then offer related job titles or other locations, and ask before searching another location or role. Never repeat a search without its keywords.
+- Put every place the user named in locations, including Remote: "remote AI engineer jobs in India" is locations ['Remote', 'India']. Without places in the request, use the profile's preferred locations. Never drop a place the user named.
+- Add visaRequirements only when the user asks for sponsorship, or the search is for jobs in a country they'd need a visa for. The profile's "Needs visa sponsorship" doesn't apply to jobs in the user's own country or to remote jobs there.
+- "More jobs", "more matching jobs" or "show more" asks for more of the same role. If findRelevantJobs said matches were still processing, try it again. Otherwise page with nextCursor when the last search had one; when it didn't, search again with related titles for the same role (e.g. backend → 'backend developer', 'node.js developer', 'sde') and the same filters. Never answer it with anyRole. If that still finds few jobs, say so and offer to relax a filter (salary, location or posting date), naming which.
 - Before an action that spends AI credits or changes the user's profile, briefly say what it will do; the app also asks the user to approve it.
 - When saving the profile (completeOnboarding, updateMyPreferences), fill each field only from what the user told you or what their resume says. Never make up a value to fill a required field: the name is the person's real name, and a resume has no salary or job preferences, so "use my resume" doesn't cover those. Ask for what's missing. If an amount is unclear (e.g. "3 to 5"), ask what it means (lakhs, thousands, per month or per year) before using it.
 - If you say you'll do something now ("Let's run a broader search"), call the tool in the same reply. Never end a reply by announcing a step you didn't take; ask instead if it needs the user's go-ahead.
@@ -390,7 +399,7 @@ You can use tools to:
 - If a tool returns an error, explain it plainly. For INSUFFICIENT_CREDITS, point the user to /dashboard/buy-credits.
 - When you need the user to choose before you can go on (e.g. which job, which resume, or which role to tailor for, or a preference with a few clear options), ask with askUser instead of listing the options in text: at most 4 questions on one card, as the last thing in your reply, without repeating them in text. Ask a plain yes or no, open questions that need a long answer, and anything an approval card already confirms in text. If the user closes the card, carry on with what you know. When you need a place from the user (preferred locations or where to look for jobs), ask with askUser using a question with kind "locations" and no options, instead of asking in text or listing places: the user then picks real locations from the app's location search. Use the places they pick exactly as given. When the answer fills a list in the profile (desired roles, top skills, job types, work style), set multiSelect so the user can pick several.
 - Never show the user tool names or other internal identifiers (like updateApplicationStatus). Describe what you can do in plain words.
-- Be concise. Present jobs as a markdown list with title, company, location and salary when known, linking to /jobs/<id>.
+- Be concise. Present jobs as a markdown list with title, company, location and salary when known. Link each job with its url from the tool result, copied exactly, e.g. [Frontend Engineer](/jobs/<id>): the target is the path alone, with nothing before it.
 
 # Today
 2026-10-11
@@ -636,7 +645,7 @@ No saved memories.",
       },
     },
     "createInterview": {
-      "description": "Set up an AI mock interview for a job, using a resume (the primary one by default). Free to create; the user starts it from the returned link, and each session uses 10 AI credits when it starts.",
+      "description": "Set up an AI mock interview for a job, using a resume (the primary one by default). Free to create; the user starts it from the returned link, and each session uses 5 AI credits when it starts.",
       "input": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false,
@@ -858,6 +867,12 @@ No saved memories.",
                 "maxItems": 10,
                 "type": "array",
               },
+              "experienceYears": {
+                "description": "The user's own years of experience, from their profile or resume. Finds jobs open to them: asking for at most one year more, and not far below their level. Use this whenever you know the user's years, instead of minExperience/maxExperience.",
+                "maximum": 50,
+                "minimum": 0,
+                "type": "integer",
+              },
               "jobTypes": {
                 "items": {
                   "enum": [
@@ -870,7 +885,7 @@ No saved memories.",
                 "type": "array",
               },
               "keywords": {
-                "description": "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end']. Leave out seniority words such as junior, senior, lead or fresher: use minExperience/maxExperience.",
+                "description": "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end']. Leave out seniority words such as junior, senior, lead or fresher: use experienceYears, or minExperience/maxExperience for a level the user asked for.",
                 "items": {
                   "maxLength": 50,
                   "minLength": 1,
@@ -890,13 +905,13 @@ No saved memories.",
                 "type": "array",
               },
               "maxExperience": {
-                "description": "Upper end of the user's experience range in years: only jobs requiring at most this much. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+                "description": "Only jobs asking for at most this many years: the filter that keeps out jobs above a level. For a level the user asked for: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5.",
                 "maximum": 30,
                 "minimum": 0,
                 "type": "integer",
               },
               "minExperience": {
-                "description": "Lower end of the user's experience range in years. Jobs match when their experience range overlaps the user's. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+                "description": "Only jobs whose experience range reaches at least this many years. On its own it never hides jobs asking for more (a '7+ years' job passes minExperience 1), so never use it alone for the user's own level: use experienceYears. For a level the user asked for: senior is minExperience 5, mid level is minExperience 2 with maxExperience 5.",
                 "maximum": 30,
                 "minimum": 0,
                 "type": "integer",
@@ -1090,7 +1105,7 @@ No saved memories.",
       },
     },
     "improveResume": {
-      "description": "Suggest how to improve or tailor one of the user's resumes: rewrites, new bullets, removals, moves, and gaps to ask the user about. Pass a jobId or a pasted jobDescription to tailor it to a job, or neither to judge it on its own. It reads the job and the resume itself, so don't read them first. It changes nothing. Costs 2 AI credits once it succeeds.",
+      "description": "Suggest how to improve or tailor one of the user's resumes: rewrites, new bullets, removals, moves, and gaps to ask the user about. Pass a jobId or a jobDescription the user pasted to tailor it to a job, or neither to judge it on its own. For a kind of role ("AI engineer roles"), pass neither and put the role in focus: never write a job description yourself. It reads the job and the resume itself, so don't read them first. It changes nothing. Costs 2 AI credits once it succeeds.",
       "input": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false,
@@ -1239,7 +1254,7 @@ No saved memories.",
         "additionalProperties": false,
         "properties": {
           "jobDescription": {
-            "description": "A job description the user pasted, when there is no jobId.",
+            "description": "The text of a job description the user pasted in the chat, when there is no jobId. Never one you wrote.",
             "maxLength": 4000,
             "minLength": 50,
             "type": "string",
@@ -1350,13 +1365,13 @@ No saved memories.",
       },
     },
     "searchJobs": {
-      "description": "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page. Needs keywords or companies unless anyRole is set. When nothing matches every filter, it relaxes the posting date, salary, visa and sources, job type, then experience, in that order, and never the keywords, locations or companies: the result's widened says what was relaxed, and later pages need the filters in widened.searchedWith.",
+      "description": "Search GetHired's job listings with structured filters. Free. Returns compact jobs with ids; use nextCursor to page. Needs keywords or companies unless anyRole is set. When nothing matches every filter, it relaxes the posting date, salary, visa and sources, job type, then experience, in that order, keeps every filter the jobs didn't need, and never relaxes the keywords, locations or companies, or an experience level the user named: the result's widened says what was relaxed, and later pages need the filters in widened.searchedWith. When only a few jobs match and there is no next page, moreAfterRelaxing adds jobs that miss some filters.",
       "input": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false,
         "properties": {
           "anyRole": {
-            "description": "true only when the user asked for jobs of any role, so the search has no keywords.",
+            "description": "true only when the user asked for jobs of any role, so the search has no keywords. Never for 'more jobs', 'more matching jobs' or 'jobs for me': those keep the user's role keywords.",
             "type": "boolean",
           },
           "companies": {
@@ -1372,6 +1387,12 @@ No saved memories.",
             "description": "nextCursor from a previous searchJobs call.",
             "type": "string",
           },
+          "experienceYears": {
+            "description": "The user's own years of experience, from their profile or resume. Finds jobs open to them: asking for at most one year more, and not far below their level. Use this whenever you know the user's years, instead of minExperience/maxExperience.",
+            "maximum": 50,
+            "minimum": 0,
+            "type": "integer",
+          },
           "jobTypes": {
             "items": {
               "enum": [
@@ -1384,7 +1405,7 @@ No saved memories.",
             "type": "array",
           },
           "keywords": {
-            "description": "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end']. Leave out seniority words such as junior, senior, lead or fresher: use minExperience/maxExperience.",
+            "description": "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end']. Leave out seniority words such as junior, senior, lead or fresher: use experienceYears, or minExperience/maxExperience for a level the user asked for.",
             "items": {
               "maxLength": 50,
               "minLength": 1,
@@ -1410,13 +1431,13 @@ No saved memories.",
             "type": "array",
           },
           "maxExperience": {
-            "description": "Upper end of the user's experience range in years: only jobs requiring at most this much. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+            "description": "Only jobs asking for at most this many years: the filter that keeps out jobs above a level. For a level the user asked for: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5.",
             "maximum": 30,
             "minimum": 0,
             "type": "integer",
           },
           "minExperience": {
-            "description": "Lower end of the user's experience range in years. Jobs match when their experience range overlaps the user's. Seniority maps to the experience range, not to keywords: fresher/entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 and maxExperience 5, senior is minExperience 5.",
+            "description": "Only jobs whose experience range reaches at least this many years. On its own it never hides jobs asking for more (a '7+ years' job passes minExperience 1), so never use it alone for the user's own level: use experienceYears. For a level the user asked for: senior is minExperience 5, mid level is minExperience 2 with maxExperience 5.",
             "maximum": 30,
             "minimum": 0,
             "type": "integer",

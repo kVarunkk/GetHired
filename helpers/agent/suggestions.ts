@@ -18,6 +18,7 @@ const FOLLOW_UP_SYSTEM_PROMPT = `You suggest what a job seeker might say next to
 Write ${AGENT_FOLLOW_UP_COUNT} short replies (at most 8 words each) in the user's voice, e.g. "Show more jobs like these" or "Review my resume for this job".
 Each must be a natural next step the assistant can do: searching or matching jobs, job details, saving jobs, resumes (creating, editing, tailoring, exporting as PDF) and resume reviews, applications, profile preferences, or memories.
 The job catalogue is small, so stacking filters often finds nothing. Never suggest narrowing a search with an extra filter (remote only, a posting date like "this week", a salary floor, a specific city or company). If the reply found few or no jobs, suggest broadening instead, e.g. "Include on-site roles too" or "Search older postings".
+A suggestion for more jobs names the role that was searched, e.g. "Show more AI engineer jobs", never only a filter like "Show more remote jobs": the assistant would search every role.
 The assistant can't send emails or messages, contact companies or hiring teams, or do anything outside GetHired, so never suggest that.
 ${NO_INVENTED_FACTS}
 Don't repeat what was just done.

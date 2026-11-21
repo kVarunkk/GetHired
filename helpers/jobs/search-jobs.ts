@@ -18,6 +18,8 @@ export type SearchJobsParams = {
   salaryCurrency: string | null;
   minExperience: string | null;
   maxExperience: string | null;
+  /** Only jobs whose experience starts at or above this many years. The agent's min-only searches set it. */
+  minExperienceFloor?: string | null;
   platform: string | null;
   companyName: string | null;
   sortBy: string;
@@ -231,6 +233,7 @@ export async function searchJobs(
       salaryCurrency,
       minExperience: params.minExperience,
       maxExperience: params.maxExperience,
+      minExperienceFloor: params.minExperienceFloor ?? null,
       platform: params.platform,
       companyName: params.companyName,
       cursor: params.cursor,

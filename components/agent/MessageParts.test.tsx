@@ -199,7 +199,15 @@ describe("MessageParts", () => {
           input: {},
           output: {
             jobs: [
-              { id: "j1", title: "Frontend Engineer", company: "Acme", locations: ["Remote"], salary: "$120k", url: "/jobs/j1" },
+              {
+                id: "j1",
+                title: "Frontend Engineer",
+                company: "Acme",
+                locations: ["Remote"],
+                salary: "$120k",
+                experience: "2-5 years",
+                url: "/jobs/j1",
+              },
             ],
             totalCount: 1,
           },
@@ -212,6 +220,23 @@ describe("MessageParts", () => {
     expect(link).toHaveTextContent("Acme");
     expect(link).toHaveTextContent("Remote");
     expect(link).toHaveTextContent("$120k");
+    expect(link).toHaveTextContent("Experience: 2-5 years");
+  });
+
+  it("leaves experience out of a job row that has none", () => {
+    renderParts(
+      assistant([
+        {
+          type: "tool-searchJobs",
+          toolCallId: "c1",
+          state: "output-available",
+          input: {},
+          output: { jobs: [{ id: "j1", title: "Data Engineer", company: "Acme", experience: null, url: "/jobs/j1" }] },
+        },
+      ]),
+    );
+
+    expect(screen.getByRole("link", { name: /Data Engineer/ })).not.toHaveTextContent("Experience");
   });
 
   describe("long job lists", () => {

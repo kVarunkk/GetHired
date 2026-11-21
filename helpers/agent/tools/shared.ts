@@ -16,6 +16,17 @@ export type AgentToolContext = {
   sessionId: string | null;
   /** Where the call comes from: the chat agent or the MCP server. */
   surface: "agent" | "mcp";
+  /**
+   * The user's words this turn (`turnRequestText`: the latest message plus
+   * card answers since), for guards that check what they asked for.
+   * Undefined on MCP, which has no turns.
+   */
+  requestText?: string;
+  /**
+   * Everything the user typed in this chat (`chatUserText`), so a tool can
+   * tell text the user pasted from text the model wrote. Undefined on MCP.
+   */
+  userText?: string;
 };
 
 export type ToolError = { error: string; [key: string]: unknown };

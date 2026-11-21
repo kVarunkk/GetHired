@@ -11,6 +11,9 @@ describe("repairJobLinks", () => {
     [`invocation:default_api:getJobDetails{jobId: ${ID}}`],
     [`مرحبا /jobs/${ID}`],
     [`/jobs/${ID} "Apply here"`],
+    [`Mo: ${ID}`],
+    [ID],
+    [`id: ${ID.toUpperCase()}`],
   ])("repairs %s", (target) => {
     expect(repairJobLinks(`- [Frontend Engineer](${target}) at Acme`)).toBe(
       `- [Frontend Engineer](/jobs/${ID}) at Acme`,
@@ -30,6 +33,9 @@ describe("repairJobLinks", () => {
     ["[Resume](/resume/abc)"],
     ["[Evil](https://evil.example/steal)"],
     ["[Broken](EE /dashboard)"],
+    [`[Resume](Mo: /resume/${ID})`],
+    [`[Two](${ID} ${ID.replace("5585", "6585")})`],
+    [`[Partial](x${ID})`],
     ["no links here"],
   ])("leaves %s alone", (text) => {
     expect(repairJobLinks(text)).toBe(text);

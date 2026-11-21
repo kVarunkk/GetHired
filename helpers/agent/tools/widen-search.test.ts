@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { stillEmptyMessage, widenedMessage, widenedSearches } from "./widen-search";
+import {
+  fewResultsMessage,
+  narrowWidened,
+  restoreFilter,
+  stillEmptyMessage,
+  widenedMessage,
+  widenedSearches,
+  type WidenableFilters,
+} from "./widen-search";
 
 const ALL = {
   keywords: ["frontend"],
@@ -48,10 +56,28 @@ describe("widenedSearches", () => {
     expect(searches.map((s) => s.dropped)).toEqual([["postedWithinDays"], ["postedWithinDays", "jobTypes"]]);
   });
 
-  it("widens a fresher's range instead of removing it", () => {
-    const [search] = widenedSearches({ keywords: ["react"], maxExperience: 1 });
+  // Review 2026-11-20, turn 3: +2 showed a fresher 3–6 year jobs.
+  it("widens a junior's range by one year only", () => {
+    const [fresher] = widenedSearches({ keywords: ["react"], maxExperience: 1 });
+    const [junior] = widenedSearches({ keywords: ["react"], minExperience: 1, maxExperience: 2 });
 
-    expect(search).toEqual({ filters: { keywords: ["react"], maxExperience: 3 }, dropped: ["experience"] });
+    expect(fresher).toEqual({ filters: { keywords: ["react"], maxExperience: 2 }, dropped: ["experience"] });
+    expect(junior.filters).toEqual({ keywords: ["react"], maxExperience: 3 });
+  });
+
+  it("widens a range above junior by two years", () => {
+    const [search] = widenedSearches({ keywords: ["react"], maxExperience: 3 });
+
+    expect(search.filters).toEqual({ keywords: ["react"], maxExperience: 5 });
+  });
+
+  it("never widens experience when the user named a level", () => {
+    const searches = widenedSearches(
+      { keywords: ["react"], maxExperience: 1, postedWithinDays: 7 },
+      { keepExperience: true },
+    );
+
+    expect(searches).toEqual([{ filters: { keywords: ["react"], maxExperience: 1 }, dropped: ["postedWithinDays"] }]);
   });
 
   it("drops a minimum experience the widening takes to zero", () => {
@@ -73,11 +99,71 @@ describe("widenedSearches", () => {
   });
 });
 
+describe("restoreFilter", () => {
+  it("puts back a filter's keys as they were, and removes ones that weren't set", () => {
+    const original = { keywords: ["ai"], minSalary: 1500000, salaryCurrency: "INR", maxExperience: 2 };
+    const current: WidenableFilters = { keywords: ["ai"], maxExperience: 3 };
+
+    expect(restoreFilter(current, original, "minSalary")).toEqual({ ...current, minSalary: 1500000, salaryCurrency: "INR" });
+    expect(restoreFilter(current, original, "experience")).toEqual({ keywords: ["ai"], maxExperience: 2 });
+    expect(restoreFilter({ ...current, jobTypes: ["Intern"] }, current, "jobTypes")).toEqual(current);
+  });
+});
+
+describe("narrowWidened", () => {
+  // Review 2026-11-20, turn 5: only the visa filter blocked the search, but
+  // salary went first and the user was told it was relaxed.
+  it("puts back every relaxed filter the jobs don't need", async () => {
+    const original = {
+      keywords: ["ai engineer"],
+      minSalary: 1500000,
+      salaryCurrency: "INR",
+      visaRequirements: ["Will Sponsor"],
+    };
+    const [, widened] = widenedSearches(original);
+    const tried: object[] = [];
+    const run = async (filters: typeof original) => {
+      tried.push(filters);
+      return filters.visaRequirements ? null : "jobs";
+    };
+
+    const narrowed = await narrowWidened(original, { ...widened, result: "first" }, run);
+
+    expect(widened.dropped).toEqual(["minSalary", "visaRequirements"]);
+    expect(narrowed).toEqual({
+      filters: { keywords: ["ai engineer"], minSalary: 1500000, salaryCurrency: "INR" },
+      dropped: ["visaRequirements"],
+      result: "jobs",
+    });
+    // The most important first: visa, then salary.
+    expect(tried).toHaveLength(2);
+    expect(tried[0]).toHaveProperty("visaRequirements");
+  });
+
+  it("keeps everything relaxed when each one is needed", async () => {
+    const original = { keywords: ["ai"], postedWithinDays: 7, jobTypes: ["Intern"] };
+    const [, widened] = widenedSearches(original);
+
+    const narrowed = await narrowWidened(original, { ...widened, result: 1 }, async () => null);
+
+    expect(narrowed).toEqual({ ...widened, result: 1 });
+  });
+});
+
 describe("messages", () => {
   it("names what was relaxed", () => {
     expect(widenedMessage(["postedWithinDays", "minSalary"])).toContain(
-      "relaxing the posting date, the minimum salary",
+      "relaxing only the posting date, the minimum salary",
     );
+  });
+
+  it("says what the experience range became", () => {
+    expect(widenedMessage(["experience"], { maxExperience: 2 })).toContain("the experience range (now up to 2 years)");
+    expect(widenedMessage(["experience"], { minExperience: 1, maxExperience: 4 })).toContain("(now 1–4 years)");
+  });
+
+  it("tells the model to list exact matches apart from the relaxed ones", () => {
+    expect(fewResultsMessage(1, ["minSalary"])).toMatch(/^Only 1 job matches every filter.*relaxing only the minimum salary/);
   });
 
   it("tells the model not to drop the keywords when still empty", () => {
