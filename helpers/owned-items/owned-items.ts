@@ -1,8 +1,6 @@
 import { z } from "zod";
 
 const name = z.string().trim().min(1).max(200);
-// An in-app link: a path and query, never another origin.
-const inAppUrl = z.string().trim().max(2000).regex(/^\/(?!\/)/, "Use a link from this site, starting with /.");
 
 /**
  * The tables whose rows a user renames or deletes from their own lists
@@ -13,7 +11,6 @@ const inAppUrl = z.string().trim().max(2000).regex(/^\/(?!\/)/, "Use a link from
 export const OWNED_ITEM_FIELDS = {
   resume_reviews: z.object({ name }).strict(),
   interviews: z.object({ name }).strict(),
-  bookmarks: z.object({ name, url: inAppUrl }).strict(),
 } as const;
 
 export type OwnedItemTable = keyof typeof OWNED_ITEM_FIELDS;

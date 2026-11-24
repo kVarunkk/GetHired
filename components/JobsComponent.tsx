@@ -39,6 +39,9 @@ import type { SuggestedTier } from "@/helpers/billing/errors";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useRelevantJobPoller } from "@/hooks/useRelevantJobPoller";
 import ProfileCompletionBanner from "./ProfileCompletionBanner";
+import JobAlertSlot, {
+  type JobAlertFeedProps,
+} from "./job-alerts/JobAlertSlot";
 import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
 
 export default function JobsComponent({
@@ -57,6 +60,7 @@ export default function JobsComponent({
   profilesPerSearch = null,
   hiddenCount = 0,
   upgradePlan = null,
+  jobAlert = null,
 }: {
   initialJobs:
     AllJobWithRelations[] | AllProfileWithRelations[] | TCompanyInfo[];
@@ -76,6 +80,8 @@ export default function JobsComponent({
   /** Talent search: matches beyond the cap (BL-REQ-023). */
   hiddenCount?: number;
   upgradePlan?: SuggestedTier | null;
+  /** Jobs search: the viewer's alert state for this search (JA-REQ-010–016). */
+  jobAlert?: JobAlertFeedProps | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -91,6 +97,7 @@ export default function JobsComponent({
   );
 
   const [aiGenBtnLoading, setAiGenBtnLoading] = useState(false);
+  const showAlerts = !!jobAlert && current_page === "jobs" && isAllJobsTab;
 
   const { data: currentUserData, isLoading: currentUserDataLoading } = useSWR(
     PROFILE_API_KEY,
@@ -258,27 +265,34 @@ export default function JobsComponent({
 
     if (jobs.length === 0) {
       return (
-        <p className="text-muted-foreground mt-20 mx-auto text-center">
-          No{" "}
-          {isCompanyUser && current_page === "profiles"
-            ? "profiles"
-            : current_page === "jobs"
-              ? "jobs"
-              : "companies"}{" "}
-          found for the selected Filter. <br />
-          <ModifiedLink
-            href={
-              isCompanyUser && current_page === "profiles"
-                ? "/company/profiles"
-                : current_page === "jobs"
-                  ? "/jobs"
-                  : "/companies"
-            }
-            className="underline"
-          >
-            Clear Filters
-          </ModifiedLink>
-        </p>
+        <>
+          {showAlerts && (
+            <div className="mt-10">
+              <JobAlertSlot placement="empty" {...jobAlert} />
+            </div>
+          )}
+          <p className="text-muted-foreground mt-20 mx-auto text-center">
+            No{" "}
+            {isCompanyUser && current_page === "profiles"
+              ? "profiles"
+              : current_page === "jobs"
+                ? "jobs"
+                : "companies"}{" "}
+            found for the selected Filter. <br />
+            <ModifiedLink
+              href={
+                isCompanyUser && current_page === "profiles"
+                  ? "/company/profiles"
+                  : current_page === "jobs"
+                    ? "/jobs"
+                    : "/companies"
+              }
+              className="underline"
+            >
+              Clear Filters
+            </ModifiedLink>
+          </p>
+        </>
       );
     }
 
@@ -349,12 +363,22 @@ export default function JobsComponent({
           />
         ));
 
+      // JA-REQ-011: after the 5th job, or the last when there are fewer. It
+      // keeps its place when more jobs load, so it shows once.
+      const alertAfter = Math.min(5, items.length);
+      const alertSlot = showAlerts ? (
+        <JobAlertSlot key="job-alert" placement="inline" {...jobAlert} />
+      ) : null;
+      const withAlert = (nodes: React.ReactNode[], offset: number) =>
+        nodes.flatMap((node, i) =>
+          offset + i + 1 === alertAfter ? [node, alertSlot] : [node],
+        );
       return [
-        ...items1,
+        ...withAlert(items1, 0),
         user && !isOnboardingComplete && !isCompanyUser && (
           <ProfileCompletionBanner key={"profile-completion-banner"} />
         ),
-        ...items2,
+        ...withAlert(items2, items1.length),
       ];
     }
 
@@ -385,10 +409,15 @@ export default function JobsComponent({
     initialJobUrlMap,
     isInitialJobUrlsLoading,
     jobPostingId,
+    showAlerts,
+    jobAlert,
   ]);
 
   return (
     <div className="flex flex-col gap-4 w-full pb-4">
+      {showAlerts && jobs.length > 0 && (
+        <JobAlertSlot placement="above" {...jobAlert} />
+      )}
       <div className="w-full flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-2 ">
           {isSuitable && (

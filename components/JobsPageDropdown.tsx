@@ -1,5 +1,7 @@
 "use client";
-import { Sheet, SheetTrigger } from "./ui/sheet";
+import Link from "next/link";
+import { User } from "@supabase/supabase-js";
+import { Bell, MoreHorizontal, Share2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,48 +9,39 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { Bookmark, MoreHorizontal, Share2 } from "lucide-react";
-import { User } from "@supabase/supabase-js";
-import JobsPageCommonSheet from "./JobsPageCommonSheet";
 import { copyToClipboard } from "@/utils/utils";
-import { useState } from "react";
+import { JOB_ALERTS_SETTINGS_PATH } from "@/helpers/job-alerts/paths";
 
 export default function JobsPageDropdown({ user }: { user: User | null }) {
-  const [sheetOpen, setSheetOpen] = useState(false);
-
   return (
-    <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild>
-          <Button variant={"ghost"}>
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button variant={"ghost"} aria-label="More">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        {user && (
           <DropdownMenuItem asChild>
-            <SheetTrigger className="w-full" asChild>
-              <Button variant={"ghost"} onClick={() => setSheetOpen(true)}>
-                <Bookmark className=" h-4 w-4" />
-                View Bookmarks
-              </Button>
-            </SheetTrigger>
+            <Link href={JOB_ALERTS_SETTINGS_PATH}>
+              <Bell className="h-4 w-4" />
+              Manage job alerts
+            </Link>
           </DropdownMenuItem>
+        )}
 
-          <DropdownMenuItem
-            onClick={() => {
-              copyToClipboard(
-                window.location.href,
-                "Job Search URL copied to clipboard!",
-              );
-            }}
-          >
-            <Share2 className="h-4 w-4" />
-            Share Job Search
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {sheetOpen ? <JobsPageCommonSheet user={user} /> : ""}
-    </Sheet>
+        <DropdownMenuItem
+          onClick={() => {
+            copyToClipboard(
+              window.location.href,
+              "Job Search URL copied to clipboard!",
+            );
+          }}
+        >
+          <Share2 className="h-4 w-4" />
+          Share Job Search
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

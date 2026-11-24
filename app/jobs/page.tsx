@@ -13,6 +13,8 @@ import {
   serializeFiltersToURL,
 } from "@/helpers/jobs/filterSchema";
 import { getBaseUrl } from "@/utils/get-base-url";
+import JobAlertClickTracker from "@/components/job-alerts/JobAlertClickTracker";
+import { loadJobAlertFeedState } from "@/helpers/job-alerts/page-state";
 
 export async function generateMetadata({
   searchParams,
@@ -155,6 +157,13 @@ export default async function JobsPage({
     }
   }
 
+  const jobAlert = await loadJobAlertFeedState({
+    supabase,
+    userId: user?.id ?? null,
+    isCompany: isCompanyUser,
+    searchParams: searchParameters,
+  });
+
   // --- Data Fetching ---
   const headersList = await headers();
   const url = await getBaseUrl();
@@ -212,6 +221,7 @@ export default async function JobsPage({
 
   return (
     <div className="flex items-start px-4  gap-5">
+      <JobAlertClickTracker page="jobs" />
       <div className="hidden lg:block w-1/4 px-2 sticky top-0 z-10 max-h-[100vh] overflow-y-auto">
         <FilterComponent
           dynamicKey={params.toString()}
@@ -236,6 +246,7 @@ export default async function JobsPage({
           isAISearch={isAISearch}
           applicationStatusFilter={applicationStatusFilter}
           page="jobs"
+          jobAlert={jobAlert}
         >
           {!applicationStatusFilter && (
             <TabsContent value="all">
@@ -251,6 +262,7 @@ export default async function JobsPage({
                 current_page="jobs"
                 initialCursor={initialCursor}
                 error={error}
+                jobAlert={jobAlert}
               />
             </TabsContent>
           )}
