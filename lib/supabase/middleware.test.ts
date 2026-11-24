@@ -608,3 +608,29 @@ describe("middleware: interview calendar crons (IVT-046, IVT-047)", () => {
     }
   });
 });
+
+describe("My Jobs (AT-REQ-010)", () => {
+  it.each(["/my-jobs", "/my-jobs/applications/10000000-0000-4000-8000-000000000001"])(
+    "sends signed-out visitors from %s to login",
+    async (path) => {
+      vi.mocked(getUserFromRequest).mockResolvedValue(null);
+      expect(redirectTarget(await updateSession(request(path)))).toBe(`/auth/login?returnTo=${encodeURIComponent(path)}`);
+    },
+  );
+
+  it.each(["/my-jobs", "/my-jobs/applications/abc"])("sends a company from %s to switch accounts", async (path) => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(company);
+    expect(redirectTarget(await updateSession(request(path)))).toBe("/switch-to-applicant");
+  });
+
+  it("lets an applicant in", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+    const res = await updateSession(request("/my-jobs"));
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("sends a user without a role to login", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue({ ...applicant, app_metadata: {} });
+    expect(redirectTarget(await updateSession(request("/my-jobs")))).toBe("/auth/login");
+  });
+});

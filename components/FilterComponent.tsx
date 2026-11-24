@@ -34,12 +34,12 @@ const FALLBACK_SALARY_CURRENCY = "USD";
 export default function FilterComponent({
   setOpenSheet,
   currentPage,
-  onboardingComplete,
   dynamicKey,
 }: {
   setOpenSheet?: Dispatch<SetStateAction<boolean>>;
   currentPage: "jobs" | "profiles" | "companies";
-  onboardingComplete: boolean;
+  /** Kept so callers needn't change; the filters no longer depend on it. */
+  onboardingComplete?: boolean;
   dynamicKey: string;
 }) {
   const router = useRouter();
@@ -70,11 +70,9 @@ export default function FilterComponent({
       uniqueSkills,
       uniqueWorkStylePreferences,
       uniqueIndustries,
-      onboardingComplete,
     );
   }, [
     currentPage,
-    onboardingComplete,
     uniqueCompanies,
     uniqueIndustries,
     uniqueIndustryPreferences,
@@ -142,9 +140,6 @@ export default function FilterComponent({
       // The currency only qualifies a salary amount; it's added below.
       if (key === "salaryCurrency") continue;
       const filterConfig = FILTER_CONFIG.find((config) => config.name === key);
-
-      if (key === "applicationStatus" && value && value.length > 0)
-        params.set("tab", "applied");
 
       if (
         filterConfig?.type === "multi-select" ||

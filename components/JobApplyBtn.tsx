@@ -15,6 +15,7 @@ import { Skeleton } from "./ui/skeleton";
 import { deductApplicationCreditsAction } from "@/app/actions/deduct-application-credits";
 import { PROFILE_API_KEY } from "@/utils/utils";
 import { mutate } from "swr";
+import { myJobsPath } from "@/helpers/tracker/paths";
 
 export default function JobApplyBtn({
   isCompanyUser,
@@ -34,6 +35,8 @@ export default function JobApplyBtn({
   appliedJob?: {
     all_jobs_id: string;
     status: string;
+    /** The tracker's label ("In review"); the raw status when absent. */
+    statusLabel?: string;
   };
   isJobIdPage: boolean;
   isDialogOpen: boolean;
@@ -56,16 +59,23 @@ export default function JobApplyBtn({
               <PropagationStopper>
                 <div className="flex items-center gap-2">
                   <Button className="capitalize" disabled>
-                    {appliedJob.status}
+                    {appliedJob.statusLabel ?? appliedJob.status}
                   </Button>
 
                   <InfoTooltip
                     content={
                       <p>
                         Your current application status is{" "}
-                        <b className="capitalize">{appliedJob.status}</b>.
-                        You&apos;ll have to manually track your application
-                        status via the{" "}
+                        <b className="capitalize">{appliedJob.statusLabel ?? appliedJob.status}</b>.
+                        It&apos;s in{" "}
+                        <Link
+                          onClick={(e) => e.stopPropagation()}
+                          className="font-medium underline underline-offset-4"
+                          href={myJobsPath({ tab: "applications" })}
+                        >
+                          My Jobs
+                        </Link>
+                        . Check for updates on the{" "}
                         <Link
                           onClick={(e) => e.stopPropagation()}
                           className="font-medium underline underline-offset-4"

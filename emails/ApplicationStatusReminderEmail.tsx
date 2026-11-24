@@ -1,4 +1,5 @@
 import * as React from "react";
+import { myJobsPath } from "@/helpers/tracker/paths";
 import { BaseEmailLayout } from "./BaseEmailLayout";
 import { Heading, Text, Section, Button, Row, Column, Link } from "react-email";
 import { AppliedJob } from "@/app/api/updates/applicants/applications/route";
@@ -118,7 +119,7 @@ export const ApplicationStatusReminderEmail = ({
       {/* CTA Button */}
       <Section className="text-start my-16">
         <Button
-          href="https://gethired.devhub.co.in/jobs?tab=applied&sortBy=created_at&sortOrder=desc"
+          href={`https://gethired.devhub.co.in${myJobsPath({ tab: "applications" })}`}
           className="bg-black text-white link-color py-3 px-6 rounded-md text-lg font-bold no-underline"
         >
           View All Applied Jobs

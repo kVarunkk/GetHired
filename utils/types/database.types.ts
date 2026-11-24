@@ -333,6 +333,38 @@ export type Database = {
         }
         Relationships: []
       }
+      applicant_application_notes: {
+        Row: {
+          application_id: string
+          next_follow_up_at: string | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_id: string
+          next_follow_up_at?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          application_id?: string
+          next_follow_up_at?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applicant_application_notes_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_attachments: {
         Row: {
           application_id: string
@@ -4723,6 +4755,134 @@ export type Database = {
           },
         ]
       }
+      tracked_application_events: {
+        Row: {
+          created_at: string
+          from_status: Database["public"]["Enums"]["tracked_application_status"] | null
+          id: string
+          kind: string
+          to_status: Database["public"]["Enums"]["tracked_application_status"]
+          tracked_application_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["tracked_application_status"] | null
+          id?: string
+          kind: string
+          to_status: Database["public"]["Enums"]["tracked_application_status"]
+          tracked_application_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["tracked_application_status"] | null
+          id?: string
+          kind?: string
+          to_status?: Database["public"]["Enums"]["tracked_application_status"]
+          tracked_application_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracked_application_events_tracked_application_id_fkey"
+            columns: ["tracked_application_id"]
+            isOneToOne: false
+            referencedRelation: "tracked_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracked_applications: {
+        Row: {
+          all_jobs_id: string | null
+          applied_at: string | null
+          company_name: string
+          contact_name: string | null
+          created_at: string
+          id: string
+          job_description: string | null
+          job_title: string
+          job_url: string | null
+          job_url_key: string | null
+          location: string | null
+          next_follow_up_at: string | null
+          notes: string | null
+          position: number
+          resume_id: string | null
+          salary_amount: number | null
+          salary_currency: string | null
+          source: string
+          status: Database["public"]["Enums"]["tracked_application_status"]
+          status_changed_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          all_jobs_id?: string | null
+          applied_at?: string | null
+          company_name: string
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          job_description?: string | null
+          job_title: string
+          job_url?: string | null
+          job_url_key?: string | null
+          location?: string | null
+          next_follow_up_at?: string | null
+          notes?: string | null
+          position?: number
+          resume_id?: string | null
+          salary_amount?: number | null
+          salary_currency?: string | null
+          source: string
+          status?: Database["public"]["Enums"]["tracked_application_status"]
+          status_changed_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          all_jobs_id?: string | null
+          applied_at?: string | null
+          company_name?: string
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          job_description?: string | null
+          job_title?: string
+          job_url?: string | null
+          job_url_key?: string | null
+          location?: string | null
+          next_follow_up_at?: string | null
+          notes?: string | null
+          position?: number
+          resume_id?: string | null
+          salary_amount?: number | null
+          salary_currency?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["tracked_application_status"]
+          status_changed_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracked_applications_all_jobs_id_fkey"
+            columns: ["all_jobs_id"]
+            isOneToOne: false
+            referencedRelation: "all_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracked_applications_resume_id_fkey"
+            columns: ["resume_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_api_tokens: {
         Row: {
           created_at: string | null
@@ -6943,6 +7103,16 @@ export type Database = {
         | "cancelled"
         | "no_show"
       screening_recommendation: "strong_yes" | "yes" | "maybe" | "no"
+      tracked_application_status:
+        | "saved"
+        | "applied"
+        | "in_review"
+        | "interviewing"
+        | "offer"
+        | "accepted"
+        | "rejected"
+        | "withdrawn"
+        | "ghosted"
       visa_job_postings: "Will Sponsor" | "Not Required" | "Required"
       workplace_type: "onsite" | "hybrid" | "remote"
     }
@@ -7118,6 +7288,17 @@ export const Constants = {
         "no_show",
       ],
       screening_recommendation: ["strong_yes", "yes", "maybe", "no"],
+      tracked_application_status: [
+        "saved",
+        "applied",
+        "in_review",
+        "interviewing",
+        "offer",
+        "accepted",
+        "rejected",
+        "withdrawn",
+        "ghosted",
+      ],
       visa_job_postings: ["Will Sponsor", "Not Required", "Required"],
       workplace_type: ["onsite", "hybrid", "remote"],
     },

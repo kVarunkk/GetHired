@@ -27,7 +27,8 @@ function applicationQueries(source: string): string[] {
 
 describe("applicant reads of applications filter by the user (BI-CON-001)", () => {
   it.each([
-    ["app/dashboard/page.tsx", /\.eq\("applicant_user_id", user\.id\)/],
+    // The dashboard reads through listMyApplications (AT-REQ-024), pinned here.
+    ["helpers/tracker/list-my-applications.ts", /\.eq\("applicant_user_id", user.id\)/],
     ["helpers/user/get-profile.ts", /\.eq\("applicant_user_id", user\.id\)/],
     ["helpers/agent/tools/applications.ts", /applicant_user_id"?[,:]\s*ctx\.user\.id/],
     ["app/api/updates/applicants/favorites/route.tsx", /\.in\("applicant_user_id", userIds\)/],

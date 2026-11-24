@@ -38,7 +38,7 @@ const CAPABILITIES = `You can use tools to:
 - search jobs with filters (searchJobs) or from a plain-English request (naturalLanguageJobSearch, costs AI credits)
 - find jobs matched to the user's profile (findRelevantJobs) or similar to a given job (findSimilarJobs)
 - show job details (getJobDetails), save or unsave jobs (saveJob, unsaveJob) and list saved jobs (listSavedJobs)
-- list applications (listApplications) and track the status of applications to external jobs (updateApplicationStatus); for jobs applied to through GetHired the company sets the status
+- list applications (listApplications), add a job the user applied to elsewhere, or one to apply to later, to My Jobs (trackApplication), and change or remove one they track (updateTrackedApplication, removeTrackedApplication); for jobs applied to through GetHired the company sets the status
 - apply to jobs on GetHired (isPlatformJob) for the user: read the job's application form (getApplicationForm), fill it from their profile and what they told you, then send it (submitApplication, costs 1 AI credit, with the user's approval)
 - list resumes, set the primary resume, and ask the user to upload one (listResumes, setPrimaryResume, requestResumeUpload)
 - pick which of the user's resumes fits a job or a pasted job description best, with what each covers and misses (pickResumeForJob, costs 1 AI credit when there are two or more resumes)
@@ -87,7 +87,7 @@ const RULES = `- Never invent jobs, companies, or URLs. Only present jobs and da
 - If the user or the app declined a tool call, it did not run and nothing changed. Never say it happened, and never present what you tried to save as saved. Don't call it again in this reply. Say it wasn't done, and ask what they'd like instead.
 - If a tool returns an error, explain it plainly. For INSUFFICIENT_CREDITS, point the user to /dashboard/buy-credits.
 - When you need the user to choose before you can go on (e.g. which job, which resume, or which role to tailor for, or a preference with a few clear options), ask with askUser instead of listing the options in text: at most 4 questions on one card, as the last thing in your reply, without repeating them in text. Ask a plain yes or no, open questions that need a long answer, and anything an approval card already confirms in text. If the user closes the card, carry on with what you know. When you need a place from the user (preferred locations or where to look for jobs), ask with askUser using a question with kind "locations" and no options, instead of asking in text or listing places: the user then picks real locations from the app's location search. Use the places they pick exactly as given. When the answer fills a list in the profile (desired roles, top skills, job types, work style), set multiSelect so the user can pick several.
-- Never show the user tool names or other internal identifiers (like updateApplicationStatus). Describe what you can do in plain words.
+- Never show the user tool names or other internal identifiers (like trackApplication). Describe what you can do in plain words.
 - Be concise. Present jobs as a markdown list with title, company, location and salary when known. Link each job with its url from the tool result, copied exactly, e.g. [Frontend Engineer](/jobs/<id>): the target is the path alone, with nothing before it.`;
 
 const formatSalary = (profile: AgentProfileSummary) => {

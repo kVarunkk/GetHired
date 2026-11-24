@@ -34,7 +34,6 @@ const BASE_ARGS = {
   isFavoriteTabActive: false,
   isAppliedJobsTabActive: false,
   userEmbedding: null,
-  applicationStatus: null,
   createdAfter: null,
   jobEmbedding: null,
   relevanceSearchType: null,

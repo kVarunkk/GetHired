@@ -178,6 +178,8 @@ export async function updateSession(request: NextRequest) {
     "/api/debug/heapdump",
     "/api/extension/generate-answer",
     "/api/extension/ensure-user",
+    "/api/extension/track-application",
+    "/api/extension/tracked-applications",
   ];
 
   const authPaths = [
@@ -198,6 +200,8 @@ export async function updateSession(request: NextRequest) {
     pathname === "/interview" || pathname.startsWith("/interview/");
 
   const isAgentPath = pathname === "/agent" || pathname.startsWith("/agent/");
+  // An applicant's own applications and saved jobs (AT-REQ-010).
+  const isMyJobsPath = pathname === "/my-jobs" || pathname.startsWith("/my-jobs/");
   const isAgentApiPath = pathname.startsWith("/api/agent/");
 
   const isCompanyOnboardingPath =
@@ -379,7 +383,8 @@ export async function updateSession(request: NextRequest) {
     // company user is offered a candidate account, onboarded or not. The
     // applicant prompt and the board's filters don't carry over. A single
     // job's page (/jobs/<id>) stays open, e.g. to see a posting as it's listed.
-    if (isCompany && (isAgentPath || pathname === "/jobs")) {
+    // My Jobs is a job seeker's list as well.
+    if (isCompany && (isAgentPath || isMyJobsPath || pathname === "/jobs")) {
       const url = request.nextUrl.clone();
       url.pathname = SWITCH_TO_APPLICANT_PATH;
       deleteSearchParams(url);
@@ -437,7 +442,8 @@ export async function updateSession(request: NextRequest) {
         pathname.startsWith("/opportunities") ||
         isApplicantOnboardingPath ||
         isInterviewPath ||
-        isAgentPath) &&
+        isAgentPath ||
+        isMyJobsPath) &&
       !isApplicant
     ) {
       const url = request.nextUrl.clone();

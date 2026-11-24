@@ -3,7 +3,6 @@ import { createServiceRoleClient } from "../../lib/supabase/service-role";
 import {
   AllJobWithRelations,
   JobsBuildQueryResult,
-  TApplicationStatus,
   TJobTypeEnum,
 } from "@/utils/types";
 import { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
@@ -79,7 +78,6 @@ export const buildQuery = async (
     sortBy,
     sortOrder,
     userEmbedding,
-    applicationStatus,
     createdAfter,
     jobEmbedding,
     relevanceSearchType,
@@ -104,7 +102,6 @@ export const buildQuery = async (
     isFavoriteTabActive: boolean;
     isAppliedJobsTabActive: boolean;
     userEmbedding: string | null;
-    applicationStatus: string | null;
     createdAfter: string | null;
     jobEmbedding: string | null;
     relevanceSearchType:
@@ -122,11 +119,6 @@ export const buildQuery = async (
     const platformsArray = parseMultiSelectParam(platform);
     const companyNamesArray = parseMultiSelectParam(companyName);
     const jobTitleKeywordsArray = parseMultiSelectParam(jobTitleKeywords);
-    const applicationStatusArray = parseMultiSelectParam(
-      applicationStatus,
-    ).filter((s): s is TApplicationStatus =>
-      Object.values(TApplicationStatus).includes(s as TApplicationStatus),
-    );
 
     let query;
     let selectString;
@@ -298,10 +290,6 @@ export const buildQuery = async (
     );
     if (titleConditions.length > 0) {
       query = query.or(titleConditions.join(","));
-    }
-
-    if (applicationStatusArray.length > 0) {
-      query = query.in("applications.status", applicationStatusArray);
     }
 
     if (salaryCurrency) {

@@ -1,11 +1,14 @@
+import { myJobsPath } from "@/helpers/tracker/paths";
 import ErrorComponent from "@/components/Error";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TApplicationStatus } from "@/utils/types";
+import { Badge } from "@/components/ui/badge";
+import { appliedAgo, newestApplications } from "@/helpers/tracker/card";
+import { listMyApplications } from "@/helpers/tracker/list-my-applications";
+import { trackedApplicationPath } from "@/helpers/tracker/paths";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import InfoTooltip from "@/components/InfoTooltip";
-import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
 import { simpleTimeAgo } from "@/utils/date";
 import { ArrowRight } from "lucide-react";
 import RechargeCredits from "@/components/RechargeCredits";
@@ -61,14 +64,10 @@ export default async function DashboardPage() {
 
     const [metricsRes, appliedJobsRes, viewsRes, screeningInterviews, scheduledInterviews] = await Promise.all([
       supabase.rpc("get_applicant_weekly_metrics", { p_user_id: user.id }),
-      supabase
-        .from("applications")
-        .select(
-          "status, created_at, all_jobs!inner(id, job_name, company_name, platform, locations)",
-        )
-        .eq("applicant_user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(3),
+      // Applications from GetHired and tracked ones, as My Jobs shows them (AT-REQ-024).
+      listMyApplications({ supabase, user: { id: user.id } })
+        .then((items) => ({ data: newestApplications(items, 3), error: null }))
+        .catch((error: Error) => ({ data: null, error })),
       supabase.rpc("get_my_profile_view_count", { p_days: PROFILE_VIEW_WINDOW_DAYS }),
       // An extra too: a failure reads as no interviews.
       listMyScreeningInterviews(supabase),
@@ -86,14 +85,7 @@ export default async function DashboardPage() {
     const profileViews = viewsRes.error ? 0 : (viewsRes.data ?? 0);
 
     const metrics = metricsData?.[0] || {};
-    const jobPosts =
-      appliedJobsData && appliedJobsData.length > 0
-        ? appliedJobsData.map((each) => ({
-            ...each.all_jobs,
-            status: each.status,
-            created_at: each.created_at,
-          }))
-        : [];
+    const recentApplications = appliedJobsData ?? [];
 
     return (
       <div className="flex flex-col w-full gap-5 mb-20 p-4">
@@ -190,43 +182,34 @@ export default async function DashboardPage() {
             <h3 className="text-lg font-semibold tracking-tight">
               Recently Applied Jobs
             </h3>
-            <Link href={"/jobs?tab=applied"}>
+            <Link href={myJobsPath({ tab: "applications" })}>
               <Button variant={"ghost"}>View all</Button>
             </Link>
           </div>
 
-          {jobPosts.length > 0 ? (
+          {recentApplications.length > 0 ? (
             <ul className="divide-y rounded-xl border">
-              {(
-                jobPosts as unknown as {
-                  id: string;
-                  status: TApplicationStatus;
-                  created_at: string;
-                  job_name: string;
-                  platform: string;
-                  locations: string[];
-                  company_name: string;
-                }[]
-              ).map((job) => (
+              {recentApplications.map((item) => (
                 <li
-                  key={job.id}
+                  key={`${item.kind}:${item.id}`}
                   className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/60 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                 >
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <Link
                       className="font-medium underline underline-offset-4 transition-colors hover:text-brand sm:no-underline"
-                      href={`/jobs/${job.id}`}
-                      target="_blank"
+                      href={trackedApplicationPath(item.id)}
                     >
-                      {job.job_name}
+                      {item.jobTitle}
                     </Link>
                     <p className="text-sm text-muted-foreground">
-                      {job.company_name}
+                      {item.companyName}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-3 text-sm text-muted-foreground">
-                    <ApplicationStatusBadge status={job.status} />
-                    <p>Applied {simpleTimeAgo("variant1", job.created_at)}</p>
+                    <Badge variant="outline" className="font-normal">
+                      {item.statusLabel}
+                    </Badge>
+                    <p>{appliedAgo(item.appliedAt)}</p>
                   </div>
                 </li>
               ))}

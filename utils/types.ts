@@ -395,6 +395,8 @@ export enum PostHogEvent {
   CompanyDefaultRoleChanged = "company_default_role_changed",
   JobAssigned = "job_assigned",
   JobUnassigned = "job_unassigned",
+
+  TrackerUrlRead = "tracker_url_read",
 }
 
 export type JobUrlPatch = {

@@ -40,6 +40,7 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useRelevantJobPoller } from "@/hooks/useRelevantJobPoller";
 import ProfileCompletionBanner from "./ProfileCompletionBanner";
 import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
+import { appliedJobFor } from "@/helpers/tracker/applied-state";
 
 export default function JobsComponent({
   initialJobs,
@@ -251,10 +252,6 @@ export default function JobsComponent({
       currentUserData?.profile?.user_favorites_companies ?? [];
     const favoriteProfiles: { user_id: string }[] =
       currentUserData?.profile?.company_favorites ?? [];
-    const appliedJobs: {
-      all_jobs_id: string;
-      status: string;
-    }[] = currentUserData?.profile?.applications ?? [];
 
     if (jobs.length === 0) {
       return (
@@ -327,7 +324,7 @@ export default function JobsComponent({
             isSuitable={isSuitable}
             isOnboardingComplete={isOnboardingComplete}
             isFavorite={!!favoriteJobs?.some((fav) => fav.job_id === job.id)}
-            appliedJob={appliedJobs?.find((app) => app.all_jobs_id === job.id)}
+            appliedJob={appliedJobFor(currentUserData?.profile, job.id, Boolean(job.is_platform_job))}
             isLoading={isInitialJobUrlsLoading}
             hasCredits={hasCredits}
           />
@@ -343,7 +340,7 @@ export default function JobsComponent({
             isSuitable={isSuitable}
             isOnboardingComplete={isOnboardingComplete}
             isFavorite={!!favoriteJobs?.some((fav) => fav.job_id === job.id)}
-            appliedJob={appliedJobs?.find((app) => app.all_jobs_id === job.id)}
+            appliedJob={appliedJobFor(currentUserData?.profile, job.id, Boolean(job.is_platform_job))}
             isLoading={isInitialJobUrlsLoading}
             hasCredits={hasCredits}
           />

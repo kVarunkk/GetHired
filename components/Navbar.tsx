@@ -158,6 +158,7 @@ export default function NavbarComponent({
               pathname.startsWith("/interview") ||
               pathname.startsWith("/agent") ||
               pathname.startsWith("/dashboard") ||
+              pathname.startsWith("/my-jobs") ||
               pathname.startsWith("/opportunities") ||
               pathname.startsWith("/settings") ||
               pathname.startsWith("/get-started")) &&

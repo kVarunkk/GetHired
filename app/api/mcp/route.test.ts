@@ -724,7 +724,7 @@ describe("/api/mcp legacy (2025) clients", () => {
       ),
     );
 
-    expect(body.result.structuredContent).toEqual({ jobs: [], totalCount: 0, nextCursor: null });
+    expect(body.result.structuredContent).toEqual({ jobs: [], totalCount: 0, nextCursor: null, otherSavedJobs: [] });
   });
 
   it.each([

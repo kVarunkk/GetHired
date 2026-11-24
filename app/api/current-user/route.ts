@@ -68,6 +68,19 @@ export async function GET() {
 
     profileData = data;
 
+    if (userRole === "applicant") {
+      // The Applied state of board jobs (AT-REQ-034): tracked cards next to
+      // `applications`. Saved cards aren't applied, so they're left out.
+      const { data: tracked, error: trackedError } = await supabase
+        .from("tracked_applications")
+        .select("id, all_jobs_id, status")
+        .eq("user_id", userId)
+        .not("all_jobs_id", "is", null)
+        .neq("status", "saved");
+      if (trackedError) reportError("[current-user] couldn't load tracked applications", trackedError);
+      profileData = { ...(data as object), tracked_applications: tracked ?? [] };
+    }
+
     if (userRole === "company") {
       // "Plan: Startup · 1,240 credits" in the profile menu.
       const companyId = (data as unknown as { id: string }).id;

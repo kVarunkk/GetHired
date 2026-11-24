@@ -1,5 +1,6 @@
 "use client";
 
+import { myJobsPath } from "@/helpers/tracker/paths";
 import { useVoiceAgent } from "@/hooks/useVoiceAgent";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -580,7 +581,7 @@ function SubmittedNextSteps() {
           </Link>
         </Button>
         <Button asChild variant="brand" className="w-full lg:w-auto lg:shrink-0 border border-transparent">
-          <Link href="/jobs?tab=applied">
+          <Link href={myJobsPath({ tab: "applications" })}>
             <ListChecks />
             View applications
           </Link>

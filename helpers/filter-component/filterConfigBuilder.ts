@@ -1,5 +1,5 @@
 import { platformsArray } from "@/utils/platforms";
-import { FilterConfig, TApplicationStatus } from "@/utils/types";
+import { FilterConfig } from "@/utils/types";
 
 export const filterConfigBuilder = (
   currentPage: "jobs" | "profiles" | "companies",
@@ -10,7 +10,6 @@ export const filterConfigBuilder = (
   uniqueSkills?: { skill: string }[],
   uniqueWorkStylePreferences?: { work_style_preference: string }[],
   uniqueIndustries?: { industry: string }[],
-  onboardingComplete?: boolean,
 ) => {
   let config: FilterConfig[] = [];
   switch (currentPage) {
@@ -70,17 +69,6 @@ export const filterConfigBuilder = (
           type: "multi-select",
           placeholder: "Select the platform",
           options: platformsArray,
-        },
-        {
-          name: "applicationStatus",
-          label: "Application Status",
-          type: "multi-select",
-          placeholder: "Select the status",
-          options: Object.keys(TApplicationStatus).map((each) => ({
-            label: each,
-            value: TApplicationStatus[each as keyof typeof TApplicationStatus],
-          })),
-          hidden: !onboardingComplete,
         },
 
         // Picked next to the salary amount, not as its own filter.

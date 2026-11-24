@@ -107,7 +107,7 @@ describe("ClientTabs: talent lists (PL-TASK-051)", () => {
     expect(screen.getAllByRole("tab")).toHaveLength(2);
   });
 
-  it("leaves the jobs page's tabs as they were", () => {
+  it("shows no tabs on the jobs page: Discover is only the feed (AT-REQ-025)", () => {
     search = "tab=applied";
     render(
       <ClientTabs
@@ -120,7 +120,7 @@ describe("ClientTabs: talent lists (PL-TASK-051)", () => {
       </ClientTabs>,
     );
 
-    expect(tab(/Applied/)).toHaveAttribute("data-state", "active");
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
   });
 });
 

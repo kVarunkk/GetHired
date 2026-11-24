@@ -1,8 +1,8 @@
 import FilterComponent from "@/components/FilterComponent";
 import { createClient } from "@/lib/supabase/server";
-import { TabsContent } from "@/components/ui/tabs";
 import { AllJobWithRelations, JobListingSearchParams } from "@/utils/types";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { ClientTabs } from "@/components/ClientTabs";
 import PageHeader from "@/components/PageHeader";
 import { AskAgentAboutJobs } from "@/components/agent/AskAgentOnApplicantPages";
@@ -13,6 +13,7 @@ import {
   serializeFiltersToURL,
 } from "@/helpers/jobs/filterSchema";
 import { getBaseUrl } from "@/utils/get-base-url";
+import { myJobsPath } from "@/helpers/tracker/paths";
 
 export async function generateMetadata({
   searchParams,
@@ -115,9 +116,10 @@ export default async function JobsPage({
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
   const searchParameters = await searchParams;
-  const applicationStatusFilter = searchParameters?.applicationStatus ?? false;
+  // The Saved and Applied tabs moved to My Jobs. Old links, emails included, still land (AT-REQ-012).
+  if (searchParameters?.tab === "applied") redirect(myJobsPath({ tab: "applications" }));
+  if (searchParameters?.tab === "saved") redirect(myJobsPath({ tab: "saved" }));
   const isAISearch = searchParameters?.sortBy === "relevance";
-  const activeTab = searchParameters?.tab || "all";
 
   const supabase = await createClient();
   const {
@@ -162,10 +164,8 @@ export default async function JobsPage({
   const validated = jobFilterSchema.safeParse(searchParameters);
   const cleanParams = validated.success ? validated.data : {};
   const params = new URLSearchParams(serializeFiltersToURL(cleanParams));
-  params.set("tab", activeTab);
   const isRelevantSorting = params.get("sortBy") === "relevance";
   // const isSimilarSearch = !!(isRelevantSorting && params.get("jobId"));
-  const isSavedOrAppliedTab = activeTab === "saved" || activeTab === "applied";
 
   // if (isSimilarSearch) {
   //   params.set("createdAfter", "30");
@@ -181,7 +181,7 @@ export default async function JobsPage({
       cache: isRelevantSorting ? "no-cache" : "force-cache",
       next: { revalidate: 3600, tags: ["jobs-feed"] },
       headers:
-        isRelevantSorting || isSavedOrAppliedTab
+        isRelevantSorting
           ? { Cookie: headersList.get("Cookie") || "" }
           : undefined,
     });
@@ -222,7 +222,7 @@ export default async function JobsPage({
       <div className="w-full lg:w-3/4 ">
         <div className="flex flex-col gap-6 pt-4">
           <PageHeader
-            title="Jobs"
+            title="Discover"
             description="Open roles from GetHired companies and across the web. Filter them, or search with AI."
           />
           {/* Signed-out visitors get it too: the agent keeps the prompt through login. */}
@@ -234,63 +234,21 @@ export default async function JobsPage({
           user={user}
           isCompanyUser={isCompanyUser}
           isAISearch={isAISearch}
-          applicationStatusFilter={applicationStatusFilter}
           page="jobs"
         >
-          {!applicationStatusFilter && (
-            <TabsContent value="all">
-              <JobsComponent
-                dynamicKey={params.toString()}
-                initialJobs={initialJobs || []}
-                user={user}
-                isCompanyUser={isCompanyUser}
-                isOnboardingComplete={onboardingComplete}
-                isAllJobsTab={true}
-                isAppliedJobsTabActive={false}
-                totalCount={count}
-                current_page="jobs"
-                initialCursor={initialCursor}
-                error={error}
-              />
-            </TabsContent>
-          )}
-          {user &&
-            !isCompanyUser &&
-            !applicationStatusFilter &&
-            !isAISearch && (
-              <TabsContent value="saved">
-                <JobsComponent
-                  dynamicKey={params.toString()}
-                  initialJobs={initialJobs || []}
-                  user={user}
-                  isCompanyUser={isCompanyUser}
-                  isOnboardingComplete={onboardingComplete}
-                  isAllJobsTab={false}
-                  isAppliedJobsTabActive={false}
-                  totalCount={count}
-                  current_page="jobs"
-                  initialCursor={initialCursor}
-                  error={error}
-                />
-              </TabsContent>
-            )}
-          {user && !isCompanyUser && !isAISearch && (
-            <TabsContent value="applied">
-              <JobsComponent
-                dynamicKey={params.toString()}
-                initialJobs={initialJobs || []}
-                user={user}
-                isCompanyUser={isCompanyUser}
-                isOnboardingComplete={onboardingComplete}
-                isAllJobsTab={false}
-                isAppliedJobsTabActive={true}
-                totalCount={count}
-                current_page="jobs"
-                initialCursor={initialCursor}
-                error={error}
-              />
-            </TabsContent>
-          )}
+          <JobsComponent
+            dynamicKey={params.toString()}
+            initialJobs={initialJobs || []}
+            user={user}
+            isCompanyUser={isCompanyUser}
+            isOnboardingComplete={onboardingComplete}
+            isAllJobsTab={true}
+            isAppliedJobsTabActive={false}
+            totalCount={count}
+            current_page="jobs"
+            initialCursor={initialCursor}
+            error={error}
+          />
         </ClientTabs>
       </div>
     </div>

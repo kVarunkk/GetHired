@@ -10,7 +10,7 @@ import {
 
 import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
-import { Briefcase, Contact, Home, Inbox, LayoutDashboard, Send } from "lucide-react";
+import { Briefcase, Compass, Contact, Home, Inbox, LayoutDashboard, Send } from "lucide-react";
 import { INavItem } from "./types";
 import { User } from "@supabase/supabase-js";
 import { platformsArray } from "./platforms";
@@ -218,8 +218,15 @@ export const applicantNavbarItems: INavItem[] = [
   },
   {
     id: "jobs",
-    label: "Jobs",
+    label: "Discover",
     href: "/jobs",
+    type: "startswith",
+    icon: <Compass className="h-4 w-4" />,
+  },
+  {
+    id: "my-jobs",
+    label: "My Jobs",
+    href: "/my-jobs",
     type: "startswith",
     icon: <Briefcase className="h-4 w-4" />,
   },
@@ -367,6 +374,7 @@ const verticalNavbarPaths = [
   "/resume",
   "/interview",
   "/agent",
+  "/my-jobs",
 ];
 
 // Pages that take exactly the viewport height (below the navbar on phones)

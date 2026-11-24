@@ -8,7 +8,7 @@ import { createAgentTools, type AgentTools } from "@/helpers/agent/tools";
 import { APPLICANT_APPROVAL_POLICY } from "@/helpers/agent/approval";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { toolContext } from "@/test/utils/tools";
-import { searchJobs } from "@/helpers/jobs/search-jobs";
+import { listMyApplications } from "@/helpers/tracker/list-my-applications";
 import { getResumeDetails } from "@/helpers/resumes/get-resume-details";
 import { listResumeReviews } from "@/helpers/resume-review/list-resume-reviews";
 import { asSchema } from "ai";
@@ -23,6 +23,7 @@ import type { AgentToolContext } from "@/helpers/agent/tools/shared";
 import { toMcpSchema } from "./schema";
 
 vi.mock("@/helpers/jobs/search-jobs", () => ({ searchJobs: vi.fn() }));
+vi.mock("@/helpers/tracker/list-my-applications", () => ({ listMyApplications: vi.fn() }));
 vi.mock("@/helpers/resumes/get-resume-details", () => ({ getResumeDetails: vi.fn() }));
 vi.mock("@/helpers/resume-review/list-resume-reviews", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/helpers/resume-review/list-resume-reviews")>()),
@@ -50,7 +51,9 @@ const LEGACY_NAMES = [
 const NEW_NAMES = [
   "natural_language_job_search",
   "list_applications",
-  "update_application_status",
+  "track_application",
+  "update_tracked_application",
+  "remove_tracked_application",
   "get_application_form",
   "submit_application",
   "set_primary_resume",
@@ -140,6 +143,7 @@ describe("MCP_TOOLS", () => {
         "complete_onboarding",
         "create_resume",
         "delete_resume",
+        "remove_tracked_application",
         "submit_application",
         "update_my_preferences",
         "update_resume",
@@ -304,14 +308,14 @@ describe("MCP_TOOLS", () => {
       expect(await properties("search_jobs")).toContain("keywords");
     });
 
-    it("get_applied_jobs searches the applied tab and exposes no tab", async () => {
-      vi.mocked(searchJobs).mockResolvedValue({ ok: true, data: [], totalCount: 0, nextCursor: null } as never);
+    it("get_applied_jobs lists the applications and exposes only a limit", async () => {
+      vi.mocked(listMyApplications).mockResolvedValue([]);
 
       expect(await properties("get_applied_jobs")).toEqual(["limit"]);
       const result = await bind("get_applied_jobs").run({ limit: 5 });
 
-      expect(searchJobs).toHaveBeenCalledWith(supabase.client, ctx.user, { tab: "applied", limit: 5 });
-      expect(result).toEqual({ jobs: [], totalCount: 0, nextCursor: null });
+      expect(listMyApplications).toHaveBeenCalled();
+      expect(result).toEqual({ totalCount: 0, applications: [] });
     });
 
     it("favorite_job saves or removes by action", async () => {
