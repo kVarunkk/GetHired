@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { companyOnboardingPath, homePathFor, safeReturnPath } from "./home-path";
+import {
+  alertReturnPath,
+  applicantOnboardingPath,
+  companyOnboardingPath,
+  homePathFor,
+  safeReturnPath,
+} from "./home-path";
 
 describe("homePathFor", () => {
   it("sends applicants to the agent", () => {
@@ -42,5 +48,22 @@ describe("companyOnboardingPath", () => {
     expect(companyOnboardingPath("/company")).toBe("/get-started?company=true");
     expect(companyOnboardingPath(null)).toBe("/get-started?company=true");
     expect(companyOnboardingPath("//evil.example")).toBe("/get-started?company=true");
+  });
+});
+
+describe("alertReturnPath / applicantOnboardingPath (JAT-044)", () => {
+  it("accepts only a jobs search carrying createAlert", () => {
+    expect(alertReturnPath("/jobs?location=pune&createAlert=weekly")).toBe("/jobs?location=pune&createAlert=weekly");
+    expect(alertReturnPath("/jobs?createAlert=daily")).toBe("/jobs?createAlert=daily");
+    expect(alertReturnPath("/jobs?createAlert=monthly")).toBeNull();
+    expect(alertReturnPath("/settings?createAlert=daily")).toBeNull();
+    expect(alertReturnPath("//evil.com/jobs?createAlert=daily")).toBeNull();
+    expect(alertReturnPath(undefined)).toBeNull();
+  });
+
+  it("carries the path through onboarding", () => {
+    expect(applicantOnboardingPath("/jobs?a=1&createAlert=daily")).toBe(
+      "/get-started?returnTo=%2Fjobs%3Fa%3D1%26createAlert%3Ddaily",
+    );
   });
 });
