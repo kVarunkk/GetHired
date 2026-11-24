@@ -6185,13 +6185,8 @@ export type Database = {
           min_created_at: string
         }
         Returns: {
-          description: string
           distance_score: number
-          experience: string
           id: string
-          job_name: string
-          job_type: string
-          locations: string[]
         }[]
       }
       match_company_candidates: {
