@@ -123,7 +123,7 @@ above, called by `enqueue_missing_job_embeddings`, or has no caller at all.
 | `/api/updates/applicants/recharge/{enqueue,worker}`      | `recharge enqueue` / `recharge worker` (both inactive)                                    |
 | `/api/updates/applicants/applications`                   | `weekly-applications-reminder`, `0 8 * * 2`                                               |
 | `/api/updates/applicants/favorites`                      | `weekly-favorites-reminder`, `0 8 * * 6`                                                  |
-| `/api/updates/applicants/job-alert`                      | `weekly-bookmark-alert`, `0 0 * * 1`                                                      |
+| `/api/updates/applicants/job-alert`                      | `job-alerts`, `30 3 * * *` (daily; weekly alerts send on Mondays). Replaces `weekly-bookmark-alert` in migration B |
 | `/api/updates/applicants/onboarding`                     | `weekly-onboarding-reminder`, `0 8 * * 0` (inactive)                                      |
 | **`/api/updates/billing`** (GET or POST)                          | `billing-daily`, `0 3 * * *` (migration `20261109120000`, inactive)                                                         |
 | **`/api/updates/knockouts/worker`**                      | `knockouts-worker`, `*/5` (migration `20261109120000`, active since 2026-11-09)                                                          |
