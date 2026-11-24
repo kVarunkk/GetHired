@@ -24,6 +24,12 @@
 --
 -- The return type changes, so the function is dropped and recreated.
 
+-- Load pgvector first. Until its library is loaded, hnsw.* are unknown
+-- placeholder settings, which only a superuser may put on a function, so the
+-- CREATE below fails for other roles with "permission denied to set
+-- parameter". Reading a vector value loads the library.
+SELECT '[0]'::public.vector;
+
 DROP FUNCTION IF EXISTS public.match_all_jobs_test(
   public.vector, double precision, integer, timestamp without time zone
 );
