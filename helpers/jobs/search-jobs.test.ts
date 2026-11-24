@@ -94,6 +94,14 @@ describe("parseJobSearchParams", () => {
     });
   });
 
+  it("never reads the internal job alert params from a URL (JAT-030)", () => {
+    const params = parseJobSearchParams(
+      new URLSearchParams({ createdSince: "2020-01-01", excludeJobIds: "j1,j2" }),
+    );
+    expect(params).not.toHaveProperty("createdSince");
+    expect(params).not.toHaveProperty("excludeJobIds");
+  });
+
   it("ignores unknown tab values", () => {
     const params = parseJobSearchParams(new URLSearchParams({ tab: "other" }));
 
@@ -118,6 +126,17 @@ describe("searchJobs", () => {
         isAppliedJobsTabActive: false,
         relevanceSearchType: null,
       }),
+    );
+  });
+
+  it("passes the job alert window and exclusions to the query (JAT-030)", async () => {
+    const since = new Date("2026-11-20T00:00:00Z");
+    await searchJobs(supabase.client, null, { createdSince: since, createdAfterDays: "7", excludeJobIds: ["j1"] });
+
+    expect(buildQuery).toHaveBeenCalledWith(
+      supabase.client,
+      null,
+      expect.objectContaining({ createdAfter: since.toISOString(), excludeJobIds: ["j1"] }),
     );
   });
 

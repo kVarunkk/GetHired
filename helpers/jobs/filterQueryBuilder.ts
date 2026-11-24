@@ -81,6 +81,7 @@ export const buildQuery = async (
     userEmbedding,
     applicationStatus,
     createdAfter,
+    excludeJobIds,
     jobEmbedding,
     relevanceSearchType,
   }: {
@@ -106,6 +107,8 @@ export const buildQuery = async (
     userEmbedding: string | null;
     applicationStatus: string | null;
     createdAfter: string | null;
+    /** Jobs to leave out (job alerts: ones the user applied to). Internal callers only. */
+    excludeJobIds?: string[] | null;
     jobEmbedding: string | null;
     relevanceSearchType:
       | "standard"
@@ -268,6 +271,12 @@ export const buildQuery = async (
 
     if (relevanceSearchType === "standard" && createdAfter) {
       query = query.gte("created_at", createdAfter);
+    }
+
+    // Before the limit, so the page and the total both leave them out.
+    const excluded = (excludeJobIds ?? []).filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+    if (excluded.length > 0) {
+      query = query.not("id", "in", `(${excluded.join(",")})`);
     }
 
     if (jobTypesArray.length > 0) {
