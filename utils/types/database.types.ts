@@ -484,6 +484,7 @@ export type Database = {
       }
       application_interviews: {
         Row: {
+          applicant_dismissed_at: string | null
           accommodation_request: string | null
           applicant_user_id: string | null
           application_id: string
@@ -512,6 +513,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          applicant_dismissed_at?: string | null
           accommodation_request?: string | null
           applicant_user_id?: string | null
           application_id: string
@@ -540,6 +542,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          applicant_dismissed_at?: string | null
           accommodation_request?: string | null
           applicant_user_id?: string | null
           application_id?: string
@@ -5761,6 +5764,7 @@ export type Database = {
         Returns: Json
       }
       decline_screening_interview: { Args: { p_id: string }; Returns: Json }
+      dismiss_my_screening_interview: { Args: { p_id: string }; Returns: Json }
       deduct_interview_session_credits: {
         Args: { p_interview_id: string; p_session_id: string }
         Returns: string
@@ -6464,12 +6468,14 @@ export type Database = {
           consented_at: string
           created_at: string
           deadline_at: string
+          dismissed: boolean
           duration_minutes: number
           id: string
           interview_id: string
           job_post_id: string
           job_title: string
           max_attempts: number
+          paused_at: string | null
           status: string
         }[]
       }

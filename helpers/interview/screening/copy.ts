@@ -46,6 +46,7 @@ export const APPLICANT_MESSAGES: Record<string, string> = {
   active_session: "Your interview is already open in another tab or device.",
   reservation_expired: "Starting took too long. Try again.",
   invalid_text: "Write up to 500 characters.",
+  not_dismissable: "You still need to take this interview, so it stays on your dashboard.",
 };
 
 export const applicantMessage = (reason: string) => APPLICANT_MESSAGES[reason] ?? "Something went wrong. Try again.";
