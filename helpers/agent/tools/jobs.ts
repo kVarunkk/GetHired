@@ -568,7 +568,7 @@ export function createJobTools(ctx: AgentToolContext) {
             summary: job.ai_summary ? wrapInSandbox("job_summary", job.ai_summary) : null,
             isPlatformJob: job.is_platform_job,
             // externalUrl: job.job_url,
-            applyUrl: `/jobs/${job.id}${job.is_platform_job ? `?apply=true` : ""}`,
+            applyUrl: `/jobs/${job.id}${job.is_platform_job ? "/apply" : ""}`,
           };
         }),
     }),

@@ -19,7 +19,7 @@ describe("homePathFor", () => {
 describe("safeReturnPath", () => {
   it("keeps paths on this site, query included", () => {
     expect(safeReturnPath("/company/agent")).toBe("/company/agent");
-    expect(safeReturnPath("/jobs/1?apply=true")).toBe("/jobs/1?apply=true");
+    expect(safeReturnPath("/jobs/1/apply")).toBe("/jobs/1/apply");
   });
 
   it("refuses anything that could leave the site", () => {

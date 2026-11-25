@@ -47,7 +47,7 @@ export default function RespondForm({
   status: OutreachStatus;
   /** Still answerable (sent and not past its expiry). */
   open: boolean;
-  /** `/jobs/<all_jobs id>?apply=true` when the job is still open. */
+  /** `/jobs/<all_jobs id>/apply` when the job is still open. */
   applyHref: string | null;
 }) {
   const router = useRouter();
