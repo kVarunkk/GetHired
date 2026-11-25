@@ -676,11 +676,11 @@ describe("getJobDetails tool", () => {
     expect(result.description).toBe(`<job_description>\n${"x".repeat(2000)}…\n</job_description>`);
   });
 
-  it("adds ?apply=true to the apply link for platform jobs", async () => {
+  it("adds /apply to the apply link for platform jobs", async () => {
     supabase.queue("all_jobs", { data: { ...JOB, is_platform_job: true }, error: null });
 
     expect(await execTool(tools.getJobDetails, { jobId: JOB_ID })).toMatchObject({
-      applyUrl: `/jobs/${JOB_ID}?apply=true`,
+      applyUrl: `/jobs/${JOB_ID}/apply`,
     });
   });
 

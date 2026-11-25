@@ -10,7 +10,7 @@ import {
 
 import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
-import { Briefcase, Contact, Home, Inbox, LayoutDashboard, Send } from "lucide-react";
+import { Briefcase, Compass, Contact, Home, Inbox, LayoutDashboard, Send } from "lucide-react";
 import { INavItem } from "./types";
 import { User } from "@supabase/supabase-js";
 import { platformsArray } from "./platforms";
@@ -196,6 +196,13 @@ export const copyToClipboard = (content: string, toastMessage: string) => {
 
 export const applicantNavbarItems: INavItem[] = [
   {
+    id: "dashboard",
+    label: "Dashboard",
+    href: "/dashboard",
+    type: "startswith",
+    icon: <LayoutDashboard className="h-4 w-4" />,
+  },
+  {
     id: "agent",
     label: "Agent",
     href: "/agent",
@@ -203,11 +210,18 @@ export const applicantNavbarItems: INavItem[] = [
     icon: <Bot className="h-4 w-4" />,
   },
   {
-    id: "dashboard",
-    label: "Dashboard",
-    href: "/dashboard",
+    id: "jobs",
+    label: "Discover",
+    href: "/jobs",
     type: "startswith",
-    icon: <LayoutDashboard className="h-4 w-4" />,
+    icon: <Compass className="h-4 w-4" />,
+  },
+  {
+    id: "my-jobs",
+    label: "My Jobs",
+    href: "/my-jobs",
+    type: "startswith",
+    icon: <Briefcase className="h-4 w-4" />,
   },
   {
     id: "opportunities",
@@ -217,11 +231,11 @@ export const applicantNavbarItems: INavItem[] = [
     icon: <Inbox className="h-4 w-4" />,
   },
   {
-    id: "jobs",
-    label: "Jobs",
-    href: "/jobs",
+    id: "resumes",
+    label: "Resumes",
+    href: "/resume",
     type: "startswith",
-    icon: <Briefcase className="h-4 w-4" />,
+    icon: <FileUser className="h-4 w-4" />,
   },
   {
     id: "interviews",
@@ -229,13 +243,6 @@ export const applicantNavbarItems: INavItem[] = [
     href: "/interview",
     type: "startswith",
     icon: <Headset className="h-4 w-4" />,
-  },
-  {
-    id: "resumes",
-    label: "Resumes",
-    href: "/resume",
-    type: "startswith",
-    icon: <FileUser className="h-4 w-4" />,
   },
   {
     id: "settings",
@@ -367,6 +374,7 @@ const verticalNavbarPaths = [
   "/resume",
   "/interview",
   "/agent",
+  "/my-jobs",
 ];
 
 // Pages that take exactly the viewport height (below the navbar on phones)

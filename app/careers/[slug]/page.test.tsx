@@ -5,6 +5,7 @@ import { getCareersJobs, getCareersPage, type CareersPage } from "@/helpers/care
 import type { CareersJob } from "@/helpers/careers/search-company-jobs";
 import CareersPageRoute, { generateMetadata } from "./page";
 
+vi.mock("@/components/careers/CareersAccount", () => ({ default: () => null }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/helpers/careers/get-careers-page", () => ({ getCareersPage: vi.fn(), getCareersJobs: vi.fn() }));
 vi.mock("next/navigation", () => ({

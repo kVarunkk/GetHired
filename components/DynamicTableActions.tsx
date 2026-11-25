@@ -19,7 +19,6 @@ import {
 import { Button } from "./ui/button";
 import { Loader2, Pencil, Trash } from "lucide-react";
 import { Input } from "./ui/input";
-import { BookmarkRow } from "@/utils/types";
 import { TInterviewPageServer } from "@/utils/types/interview.types";
 
 interface FormField {
@@ -30,9 +29,7 @@ interface FormField {
   required?: boolean;
 }
 
-type Item =
-  | BookmarkRow
-  | TInterviewPageServer;
+type Item = TInterviewPageServer;
 
 interface DynamicActionsProps<T extends Item> {
   tableName: OwnedItemTable;

@@ -27,7 +27,7 @@ beforeEach(() => vi.clearAllMocks());
 describe("/company/job-posts (RP-REQ-010/016)", () => {
   it("locks Create New Job Post without jobs.create", async () => {
     signInAs(MEMBER_A);
-    render(await CompanyJobPostsPage());
+    render(await CompanyJobPostsPage({}));
     expect(screen.getByRole("heading", { level: 1, name: "Job posts" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /back/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create New Job Post" })).toBeDisabled();
@@ -35,7 +35,7 @@ describe("/company/job-posts (RP-REQ-010/016)", () => {
 
   it("enables it for an owner and lists every job", async () => {
     signInAs(OWNER_A);
-    render(await CompanyJobPostsPage());
+    render(await CompanyJobPostsPage({}));
 
     expect(screen.getByRole("button", { name: "Create New Job Post" })).toBeEnabled();
     expect(db.callsFor("job_postings")[0].chain.some((c) => c.method === "in")).toBe(false);
@@ -43,8 +43,26 @@ describe("/company/job-posts (RP-REQ-010/016)", () => {
 
   it("lists only a hiring manager's assigned jobs, through the user's client (RPT-053)", async () => {
     signInAs(HIRING_MANAGER_A);
-    render(await CompanyJobPostsPage());
+    render(await CompanyJobPostsPage({}));
 
     expect(db.callsFor("job_postings")[0].chain).toContainEqual({ method: "in", args: ["id", [JOB_A1]] });
+  });
+
+  it("hides archived posts by default and links to them", async () => {
+    signInAs(OWNER_A);
+    render(await CompanyJobPostsPage({}));
+
+    expect(db.callsFor("job_postings")[0].chain).toContainEqual({ method: "filter", args: ["archived_at", "is", null] });
+    expect(screen.getByRole("link", { name: "Archived" })).toHaveAttribute("href", "/company/job-posts?archived=1");
+  });
+
+  it("lists only archived posts on ?archived=1, without Create", async () => {
+    signInAs(OWNER_A);
+    render(await CompanyJobPostsPage({ searchParams: Promise.resolve({ archived: "1" }) }));
+
+    expect(screen.getByRole("heading", { level: 1, name: "Archived job posts" })).toBeInTheDocument();
+    expect(db.callsFor("job_postings")[0].chain).toContainEqual({ method: "filter", args: ["archived_at", "not.is", null] });
+    expect(screen.queryByRole("button", { name: "Create New Job Post" })).toBeNull();
+    expect(screen.getByRole("link", { name: "All job posts" })).toHaveAttribute("href", "/company/job-posts");
   });
 });

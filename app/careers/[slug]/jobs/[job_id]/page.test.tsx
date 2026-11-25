@@ -5,6 +5,8 @@ import { getClosedJobSummary, getStaticJobDetails } from "@/helpers/jobs/jobId/g
 import { useApplicationSource } from "@/components/jobs/ApplicationSourceContext";
 import CareersJobPage, { generateMetadata } from "./page";
 
+vi.mock("@/components/careers/CareersAccount", () => ({ default: () => null }));
+vi.mock("@/components/jobs/MyApplicationLink", () => ({ default: () => null }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/helpers/careers/get-careers-page", () => ({ getCareersPage: vi.fn() }));
 vi.mock("@/helpers/jobs/jobId/get-job-details", () => ({ getStaticJobDetails: vi.fn(), getClosedJobSummary: vi.fn() }));
@@ -33,7 +35,7 @@ vi.mock("next/navigation", () => ({
 const COMPANY_ID = "c0000000-0000-4000-8000-000000000001";
 const JOB_ID = "d0000000-0000-4000-8000-000000000001";
 const PAGE = { id: COMPANY_ID, slug: "acme", name: "Acme", accentColor: null } as never;
-const JOB = { id: JOB_ID, job_name: "Backend Engineer", job_postings: [{ company_id: COMPANY_ID }] } as never;
+const JOB = { id: JOB_ID, job_name: "Backend Engineer", status: "active", job_postings: [{ company_id: COMPANY_ID }] } as never;
 
 const show = async (searchParams: Record<string, string> = {}) =>
   render(await CareersJobPage({ params: Promise.resolve({ slug: "acme", job_id: JOB_ID }), searchParams: Promise.resolve(searchParams) }));
@@ -52,7 +54,8 @@ describe("/careers/[slug]/jobs/[job_id] (CPT-046, CP-DEC-001)", () => {
     expect(JSON.parse(screen.getByTestId("job").dataset.source!)).toEqual({
       source: "careers_page",
       ref: "linkedin",
-      returnTo: `/careers/acme/jobs/${JOB_ID}?apply=true&ref=linkedin`,
+      returnTo: `/careers/acme/jobs/${JOB_ID}?ref=linkedin`,
+      applyHref: `/careers/acme/jobs/${JOB_ID}/apply?ref=linkedin`,
     });
     expect(screen.getByRole("link", { name: "Back to Acme careers" })).toHaveAttribute("href", "/careers/acme?ref=linkedin");
   });
@@ -71,6 +74,7 @@ describe("/careers/[slug]/jobs/[job_id] (CPT-046, CP-DEC-001)", () => {
     const meta = await generateMetadata({ params: Promise.resolve({ slug: "acme", job_id: JOB_ID }) });
     expect(meta.alternates?.canonical).toBe(`https://gethired.devhub.co.in/jobs/${JOB_ID}`);
     expect(meta.title).toBe("Backend Engineer at Acme");
+    expect(meta.robots).toBeUndefined();
   });
 });
 
@@ -89,6 +93,7 @@ describe("/careers/[slug]/jobs/[job_id] for a job that closed (JLT-025, JL-REQ-0
     expect(screen.queryByTestId("job")).not.toBeInTheDocument();
     expect(container.querySelector("script")).toBeNull();
     expect(screen.getByRole("link", { name: "See open jobs at Acme" })).toHaveAttribute("href", "/careers/acme?ref=linkedin");
+    expect(screen.getByRole("link", { name: "Back to Acme careers" })).toHaveAttribute("href", "/careers/acme?ref=linkedin");
   });
 
   it("is a 404 for another company's closed job", async () => {

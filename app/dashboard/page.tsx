@@ -1,34 +1,56 @@
-import ErrorComponent from "@/components/Error";
-import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TApplicationStatus } from "@/utils/types";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import InfoTooltip from "@/components/InfoTooltip";
-import ApplicationStatusBadge from "@/components/ApplicationStatusBadge";
-import { simpleTimeAgo } from "@/utils/date";
-import { ArrowRight } from "lucide-react";
-import RechargeCredits from "@/components/RechargeCredits";
-import DashboardDropdown from "@/components/DashboardDropdown";
-import CreditDepositDialog from "@/components/CreditDepositDialog";
-import ProfileViewsCard from "@/components/ProfileViewsCard";
-import McpConnectCard from "@/components/mcp/McpConnectCard";
-import { PROFILE_VIEW_WINDOW_DAYS } from "@/helpers/outreach/config";
-import AskApplicantAgent from "@/components/agent/AskApplicantAgent";
-import PageHeader from "@/components/PageHeader";
-import MyScreeningInterviews from "@/components/interviews/MyScreeningInterviews";
-import { listMyScreeningInterviews } from "@/helpers/interview/screening/my-interviews";
-import MyScheduledInterviews from "@/components/interviews/MyScheduledInterviews";
-import { listMyScheduledInterviews } from "@/helpers/interviews/my-scheduled-interviews";
 import type { Metadata } from "next";
+import ErrorComponent from "@/components/Error";
+import PageHeader from "@/components/PageHeader";
+import CreditDepositDialog from "@/components/CreditDepositDialog";
+import AskApplicantAgent from "@/components/agent/AskApplicantAgent";
+import MyScreeningInterviews from "@/components/interviews/MyScreeningInterviews";
+import MyScheduledInterviews from "@/components/interviews/MyScheduledInterviews";
+import NeedsAttention from "@/components/dashboard/NeedsAttention";
+import PipelineCard from "@/components/dashboard/PipelineCard";
+import RecommendedJobs from "@/components/dashboard/RecommendedJobs";
+import SavedToApply from "@/components/dashboard/SavedToApply";
+import ProfileChecklist from "@/components/dashboard/ProfileChecklist";
+import JobAlertsCard from "@/components/dashboard/JobAlertsCard";
+import AccountStrip from "@/components/dashboard/AccountStrip";
+import { createClient } from "@/lib/supabase/server";
+import { loadRecommendedJobs, type RecommendedJobs as Recommended } from "@/helpers/dashboard/recommended-jobs";
+import { dashboardSuggestions } from "@/helpers/dashboard/suggestions";
+import {
+  attentionItems,
+  dashboardHeadline,
+  pipelineOf,
+  profileProgress,
+  savedNotApplied,
+} from "@/helpers/dashboard/summary";
+import { listMyScreeningInterviews } from "@/helpers/interview/screening/my-interviews";
+import { screeningCardState, visibleOnDashboard } from "@/helpers/interview/screening/dashboard-state";
+import { listMyScheduledInterviews } from "@/helpers/interviews/my-scheduled-interviews";
+import { listJobAlerts } from "@/helpers/job-alerts/writes";
+import { requireAlertSession } from "@/helpers/job-alerts/session";
+import { PROFILE_VIEW_WINDOW_DAYS } from "@/helpers/outreach/config";
+import { listMyApplications } from "@/helpers/tracker/list-my-applications";
+import { listMySavedJobs } from "@/helpers/tracker/list-my-saved";
+import type { SavedJobItem } from "@/helpers/tracker/types";
+import { simpleTimeAgo } from "@/utils/date";
 
 export const metadata: Metadata = {
   title: "Dashboard",
-  description:
-    "Your applications, saved jobs and AI-matched openings.",
+  description: "What needs you today, where your applications stand, and jobs matched to you.",
   robots: { index: false, follow: false },
 };
 
+/** "today", "yesterday" or "N days ago" since the profile was last saved. */
+function updatedAgo(updatedAt: string | null): string | null {
+  if (!updatedAt) return null;
+  const days = Number(simpleTimeAgo("variant2", updatedAt));
+  return days <= 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
+}
+
+/**
+ * The applicant dashboard: what needs the user today (interviews, follow-ups,
+ * replies), their pipeline, matched and saved jobs to apply to, their profile
+ * and alerts. Account housekeeping sits in one row under the matched jobs.
+ */
 export default async function DashboardPage() {
   try {
     const supabase = await createClient();
@@ -39,298 +61,138 @@ export default async function DashboardPage() {
 
     if (error) throw error;
     if (!user) throw new Error("User not found");
+    const ctx = { supabase, user: { id: user.id } };
 
     const { data: userInfoData, error: userInfoError } = await supabase
       .from("user_info")
       .select(
-        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id)",
+        "full_name, email, ai_credits, updated_at, filled, invitations(*), invitations_count, payments(id), relevant_jobs_update_status, relevance_started_at, desired_roles, top_skills, preferred_locations, min_salary, max_salary, experience_years, linkedin_url, github_url",
       )
       .eq("user_id", user.id)
       .single();
 
-    if (userInfoError) throw error;
+    if (userInfoError) throw userInfoError;
     const pendingCompleteInvitationDialogEmails = userInfoData.invitations
-      .filter(
-        (each) =>
-          each.status === "complete" &&
-          !each.isDialogShown &&
-          each.invited_email,
-      )
+      .filter((each) => each.status === "complete" && !each.isDialogShown && each.invited_email)
       .map((each) => each.invited_email)
       .filter((email): email is string => email !== null);
 
-    const [metricsRes, appliedJobsRes, viewsRes, screeningInterviews, scheduledInterviews] = await Promise.all([
-      supabase.rpc("get_applicant_weekly_metrics", { p_user_id: user.id }),
-      supabase
-        .from("applications")
-        .select(
-          "status, created_at, all_jobs!inner(id, job_name, company_name, platform, locations)",
-        )
-        .eq("applicant_user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(3),
-      supabase.rpc("get_my_profile_view_count", { p_days: PROFILE_VIEW_WINDOW_DAYS }),
-      // An extra too: a failure reads as no interviews.
-      listMyScreeningInterviews(supabase),
-      // IV-REQ-043: interviews with people, through my_scheduled_interviews() only.
-      listMyScheduledInterviews(supabase),
-    ]);
+    // Applications are the page; everything else is an extra whose failure hides it.
+    const applicationsP = listMyApplications(ctx);
+    const savedP = listMySavedJobs(ctx).catch((): SavedJobItem[] => []);
+    const recommendedP: Promise<Recommended | null> = Promise.all([applicationsP, savedP])
+      .then(([applications, saved]) => {
+        const exclude = new Set(
+          [...applications, ...saved].map((item) => item.allJobsId).filter((id): id is string => Boolean(id)),
+        );
+        return loadRecommendedJobs(ctx, { profile: userInfoData, exclude });
+      })
+      .catch(() => null);
+    const alertsP = requireAlertSession()
+      .then((session) => (session.ok ? listJobAlerts(session.ctx) : null))
+      .catch(() => null);
 
-    const { data: metricsData, error: metricsError } = metricsRes;
-    const { data: appliedJobsData, error: appliedJobsError } = appliedJobsRes;
+    // Its own query so a missing column (migration not pushed yet) only hides the goal.
+    const weeklyGoalP = Promise.resolve(
+      supabase.from("user_info").select("weekly_application_goal").eq("user_id", user.id).maybeSingle(),
+    )
+      .then(({ data }) => data?.weekly_application_goal ?? null)
+      .catch(() => null);
 
-    if (metricsError) throw metricsError;
-    if (appliedJobsError) throw appliedJobsError;
+    const [
+      applications,
+      saved,
+      recommended,
+      alerts,
+      viewsRes,
+      resumeRes,
+      screeningInterviews,
+      scheduledInterviews,
+      weeklyGoal,
+    ] = await Promise.all([
+        applicationsP,
+        savedP,
+        recommendedP,
+        alertsP,
+        supabase.rpc("get_my_profile_view_count", { p_days: PROFILE_VIEW_WINDOW_DAYS }),
+        supabase
+          .from("resumes")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("is_primary", true),
+        listMyScreeningInterviews(supabase),
+        listMyScheduledInterviews(supabase),
+        weeklyGoalP,
+      ]);
 
-    // The view count is an extra: a failure hides it, not the page.
+    const now = new Date();
     const profileViews = viewsRes.error ? 0 : (viewsRes.data ?? 0);
-
-    const metrics = metricsData?.[0] || {};
-    const jobPosts =
-      appliedJobsData && appliedJobsData.length > 0
-        ? appliedJobsData.map((each) => ({
-            ...each.all_jobs,
-            status: each.status,
-            created_at: each.created_at,
-          }))
-        : [];
+    const attention = attentionItems(applications, now);
+    const pipeline = pipelineOf(applications, now);
+    const readyToApply = savedNotApplied(saved, applications, saved.length);
+    const progress = profileProgress({ ...userInfoData, hasResume: (resumeRes.count ?? 0) > 0 });
+    const screeningToDo = screeningInterviews.filter(
+      (interview) => visibleOnDashboard(interview, now) && screeningCardState(interview, now).tone === "action",
+    ).length;
+    const nextInterview = scheduledInterviews.find((interview) => interview.status !== "awaiting_candidate") ?? null;
+    const topJob = recommended?.state === "ready" ? (recommended.jobs[0] ?? null) : null;
 
     return (
-      <div className="flex flex-col w-full gap-5 mb-20 p-4">
+      <div className="mb-20 flex w-full flex-col gap-6 p-4">
         <PageHeader
           title={
             <span className="capitalize">
-              How are you doing today,{" "}
-              {userInfoData.full_name ?? userInfoData.email?.split("@")[0]}?
+              How are you doing today, {userInfoData.full_name ?? userInfoData.email?.split("@")[0]}?
             </span>
           }
+          description={dashboardHeadline({
+            attention,
+            scheduledInterviews: scheduledInterviews.length,
+            screeningInterviews: screeningToDo,
+          })}
         />
 
-        <AskApplicantAgent />
+        <AskApplicantAgent
+          suggestions={dashboardSuggestions({
+            attention,
+            nextInterview: nextInterview && {
+              interviewName: nextInterview.interview_name,
+              jobTitle: nextInterview.job_title,
+              companyName: nextInterview.company_name,
+            },
+            topJob,
+          })}
+        />
 
-        {/* --- Metrics Section --- */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="flex flex-col items-center p-6 text-center hover:bg-muted/60 transition-colors">
-            <CardHeader className="p-0"></CardHeader>
-            <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-3xl font-semibold tracking-tight">
-                {metrics.applications_submitted_weekly || 0}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
-                Applications Submitted
-                <InfoTooltip
-                  content="
-                Number of Jobs you applied to in the past week.
-                "
-                />
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="flex flex-col items-center p-6 text-center hover:bg-muted/60 transition-colors">
-            <CardHeader className="p-0"></CardHeader>
-            <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-3xl font-semibold tracking-tight">
-                {metrics.status_updates_weekly || 0}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
-                Status Updates Received
-                <InfoTooltip content="Number of application status updates you received from companies in the past week." />
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="flex flex-col items-center p-6 text-center hover:bg-muted/60 transition-colors">
-            <CardHeader className="p-0"></CardHeader>
-            <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-3xl font-semibold tracking-tight">
-                {metrics.jobs_favorited_weekly || 0}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
-                Jobs Favorited
-                <InfoTooltip content="Number of Jobs you favorited in the past week." />
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="flex flex-col items-center p-6 text-center hover:bg-muted/60 transition-colors">
-            <CardHeader className="p-0"></CardHeader>
-            <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-3xl font-semibold tracking-tight">
-                {metrics.resumes_created_weekly || 0}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
-                Resumes Created
-                <InfoTooltip content="Number of resumes you have created in the past week." />
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="flex flex-col items-center p-6 text-center hover:bg-muted/60 transition-colors">
-            <CardHeader className="p-0"></CardHeader>
-            <CardContent className="p-0 space-y-2">
-              <CardTitle className="text-3xl font-semibold tracking-tight">
-                {metrics.resume_reviews_created_weekly || 0}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
-                Resumes Analyzed
-                <InfoTooltip content="Number of resumes you have analyzed in the past week." />
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <MyScheduledInterviews interviews={scheduledInterviews} />
-
-        <MyScreeningInterviews interviews={screeningInterviews} />
-
-        {/* --- Active Job Posts Section --- */}
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold tracking-tight">
-              Recently Applied Jobs
-            </h3>
-            <Link href={"/jobs?tab=applied"}>
-              <Button variant={"ghost"}>View all</Button>
-            </Link>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="flex min-w-0 flex-col gap-8 lg:col-span-2">
+            <MyScheduledInterviews interviews={scheduledInterviews} />
+            <MyScreeningInterviews interviews={screeningInterviews} now={now} />
+            <NeedsAttention items={attention} />
+            {recommended && <RecommendedJobs recommended={recommended} />}
+            <AccountStrip
+              user={user}
+              credits={userInfoData.ai_credits || 0}
+              invitationsCount={userInfoData.invitations_count}
+              hasPurchases={userInfoData.payments.length > 0}
+            />
           </div>
 
-          {jobPosts.length > 0 ? (
-            <ul className="divide-y rounded-xl border">
-              {(
-                jobPosts as unknown as {
-                  id: string;
-                  status: TApplicationStatus;
-                  created_at: string;
-                  job_name: string;
-                  platform: string;
-                  locations: string[];
-                  company_name: string;
-                }[]
-              ).map((job) => (
-                <li
-                  key={job.id}
-                  className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/60 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
-                >
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <Link
-                      className="font-medium underline underline-offset-4 transition-colors hover:text-brand sm:no-underline"
-                      href={`/jobs/${job.id}`}
-                      target="_blank"
-                    >
-                      {job.job_name}
-                    </Link>
-                    <p className="text-sm text-muted-foreground">
-                      {job.company_name}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3 text-sm text-muted-foreground">
-                    <ApplicationStatusBadge status={job.status} />
-                    <p>Applied {simpleTimeAgo("variant1", job.created_at)}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              You have no recently applied Jobs.{" "}
-              <Link
-                className="font-medium text-foreground underline underline-offset-4 transition-colors hover:text-brand"
-                href={"/jobs"}
-              >
-                Find your next Job today
-              </Link>
-            </p>
-          )}
+          <aside className="flex min-w-0 flex-col gap-6" aria-label="Your search at a glance">
+            <PipelineCard pipeline={pipeline} weeklyGoal={weeklyGoal} />
+            <SavedToApply items={readyToApply.slice(0, 3)} total={readyToApply.length} />
+            <ProfileChecklist
+              filled={userInfoData.filled}
+              progress={progress}
+              profileViews={profileViews}
+              lastUpdated={updatedAgo(userInfoData.updated_at)}
+            />
+            <JobAlertsCard alerts={alerts} />
+          </aside>
         </div>
 
-        {/* --- More Section --- */}
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold tracking-tight">More</h3>
-            <DashboardDropdown />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card className="flex flex-col p-4 text-center">
-              <CardHeader className="p-0"></CardHeader>
-              <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full">
-                <div className=" flex items-center gap-3 ">
-                  <span className="text-3xl font-semibold tracking-tight">
-                    {userInfoData.ai_credits || 0}
-                  </span>
-                  <span className="text-sm text-muted-foreground font-medium">
-                    AI Credits left
-                  </span>
-                </div>
-                <RechargeCredits
-                  user={user}
-                  invitationsCount={userInfoData.invitations_count}
-                />
-              </CardContent>
-            </Card>
-
-            <Card className="flex flex-col p-4 text-center">
-              {/* <CardHeader className="p-0"></CardHeader> */}
-              <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full flex-1">
-                <div className=" flex items-center gap-3 ">
-                  {userInfoData.filled ? (
-                    <span className="text-3xl font-semibold tracking-tight">
-                      {simpleTimeAgo("variant2", userInfoData.updated_at) || 0}
-                    </span>
-                  ) : (
-                    ""
-                  )}
-                  <span className="text-sm text-muted-foreground font-medium">
-                    {userInfoData.filled
-                      ? "Days since the last Profile Update"
-                      : "You've not completed your Profile. Please complete to use AI features."}
-                  </span>
-                </div>
-                <Button asChild>
-                  <Link href={"/get-started"}>
-                    {userInfoData.filled
-                      ? "Update Profile"
-                      : "Complete Profile"}{" "}
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="flex flex-col p-4 text-center">
-              {/* <CardHeader className="p-0"></CardHeader> */}
-              <CardContent className="p-0 space-y-4 text-start flex flex-col justify-between h-full flex-1">
-                <div className=" flex items-center gap-3 ">
-                  <span className="text-3xl font-semibold tracking-tight">
-                    {userInfoData.payments.length}
-                  </span>
-
-                  <span className="text-sm text-muted-foreground font-medium">
-                    AI Credits purchases made
-                  </span>
-                </div>
-                <Button asChild>
-                  <Link href={"/dashboard/buy-credits/payments"}>
-                    View Purchase History
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            <McpConnectCard />
-
-            <ProfileViewsCard count={profileViews} />
-          </div>
-        </div>
-
-        {/* --- AI Credits Granted Dialog --- */}
-        {pendingCompleteInvitationDialogEmails.length > 0 ? (
-          <CreditDepositDialog
-            pendingDialogEmails={pendingCompleteInvitationDialogEmails}
-          />
-        ) : (
-          ""
+        {pendingCompleteInvitationDialogEmails.length > 0 && (
+          <CreditDepositDialog pendingDialogEmails={pendingCompleteInvitationDialogEmails} />
         )}
       </div>
     );

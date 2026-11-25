@@ -40,6 +40,8 @@ const invite = (overrides: Partial<MyScreeningInterview> = {}): MyScreeningInter
   job_title: "Backend Engineer",
   duration_minutes: 15,
   competency_names: ["System design", "Communication"],
+  paused_at: null,
+  dismissed: false,
   ...overrides,
 });
 

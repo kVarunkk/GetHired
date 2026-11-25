@@ -74,7 +74,7 @@ export function LoginForm({
       form.reset();
       // The signed-out profile (and anything else per-user) is still cached by SWR
       // and deduped for minutes, so the page we return to would render as signed out
-      // (e.g. no Apply dialog for ?apply=true). Drop it so it refetches on mount.
+      // (e.g. a signed-in apply page). Drop it so it refetches on mount.
       // revalidate must stay true: only that clears SWR's dedupe markers, otherwise
       // the next mount reuses the signed-out request for the rest of the interval.
       await mutate(() => true, undefined, { revalidate: true });

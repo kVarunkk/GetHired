@@ -27,6 +27,22 @@ export function claimReturnPath(value: unknown): string | null {
 }
 
 /**
+ * `value` when it's the job search a logged-out visitor chose to create an
+ * alert from (`/jobs?...&createAlert=daily|weekly`, JA-REQ-024), else null.
+ */
+export function alertReturnPath(value: unknown): string | null {
+  const path = safeReturnPath(value);
+  return path && /^\/jobs\?(?:[^#]*&)?createAlert=(?:daily|weekly)(?:&|$)/.test(path) ? path : null;
+}
+
+/**
+ * Applicant onboarding, carrying where to go once it's done (`returnTo`).
+ */
+export function applicantOnboardingPath(returnTo: string) {
+  return `/get-started?returnTo=${encodeURIComponent(returnTo)}`;
+}
+
+/**
  * Company onboarding, carrying where to go once it's done (`returnTo`). The
  * dashboard is the default, so it isn't carried.
  */

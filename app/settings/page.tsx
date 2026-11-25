@@ -1,19 +1,21 @@
 import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, KeyRound } from "lucide-react";
 import ErrorComponent from "@/components/Error";
 import PageHeader from "@/components/PageHeader";
 import { AskAgentAboutSettings } from "@/components/agent/AskAgentOnApplicantPages";
 import { Button } from "@/components/ui/button";
 import PrivacySettings from "@/components/settings/PrivacySettings";
 import EmailPreferences from "@/components/settings/EmailPreferences";
+import JobAlertsList from "@/components/job-alerts/JobAlertsList";
+import { listJobAlerts } from "@/helpers/job-alerts/writes";
 import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Settings",
   description:
-    "Your privacy, email preferences and profile.",
+    "Your privacy, email preferences, profile and password.",
   robots: { index: false, follow: false },
 };
 
@@ -50,7 +52,7 @@ export default async function SettingsPage() {
     } = await supabase.auth.getUser();
     if (!user) notFound();
 
-    const [infoResult, blocksResult] = await Promise.all([
+    const [infoResult, blocksResult, alerts] = await Promise.all([
       supabase
         .from("user_info")
         .select(
@@ -63,6 +65,8 @@ export default async function SettingsPage() {
         .select("company_id, company_info(name)")
         .eq("candidate_user_id", user.id)
         .order("created_at", { ascending: false }),
+      // An extra: a failure shows an empty list, not an error page.
+      listJobAlerts({ userId: user.id, supabase }).catch(() => []),
     ]);
     if (infoResult.error) throw infoResult.error;
     const info = infoResult.data;
@@ -97,7 +101,20 @@ export default async function SettingsPage() {
               initialJobDigest={info.is_job_digest_active ?? false}
               initialPromotions={info.is_promotion_active ?? false}
             />
+            <p className="text-sm text-muted-foreground">
+              The digest is a weekly mix of jobs picked for your profile. Job
+              alerts, below, email you new jobs for a search you chose.
+            </p>
           </Section>
+
+          <div id="job-alerts" className="scroll-mt-20">
+            <Section
+              title="Job alerts"
+              description="Emails for the job searches you saved. We send them only when something new matches."
+            >
+              <JobAlertsList initialAlerts={alerts} />
+            </Section>
+          </div>
 
           <Section
             title="Profile"
@@ -107,6 +124,18 @@ export default async function SettingsPage() {
               <Link href="/get-started">
                 Edit profile
                 <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </Section>
+
+          <Section
+            title="Account"
+            description={user.email ? `Signed in as ${user.email}.` : "Your sign-in details."}
+          >
+            <Button asChild variant="outline" className="w-fit">
+              <Link href="/auth/update-password">
+                <KeyRound className="h-4 w-4" />
+                Change password
               </Link>
             </Button>
           </Section>

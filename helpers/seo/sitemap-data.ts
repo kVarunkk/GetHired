@@ -1,5 +1,6 @@
 import { createReader } from "@keystatic/core/reader";
 import keystaticConfig from "@/app/keystatic.config";
+import { COMPANY_FEATURE_PATHS } from "@/helpers/marketing/content";
 import { createPublicClient } from "@/lib/supabase/public";
 
 const PAGE_SIZE = 1000;
@@ -9,6 +10,10 @@ const STATIC_PATHS = [
   "/",
   "/jobs",
   "/hire",
+  ...COMPANY_FEATURE_PATHS,
+  "/ai-job-search-agent",
+  "/application-tracker",
+  "/job-alerts",
   "/ai-interview",
   "/ai-resume-checker",
   "/mcp-server",
@@ -16,6 +21,10 @@ const STATIC_PATHS = [
   "/mcp",
   "/companies",
   "/blog",
+  "/about",
+  "/contact",
+  "/pricing/companies",
+  "/extension",
   "/privacy-policy",
   "/terms-of-service",
 ];

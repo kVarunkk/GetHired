@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, Trash } from "lucide-react";
+import { archivedJobPostsPath } from "@/helpers/jobs/paths";
 import { Button, buttonVariants } from "./ui/button";
 import {
   AlertDialog,
@@ -24,13 +25,17 @@ export default function DeleteJobPosting({
   job_posting_id,
   is_job_posting_page = false,
   disabled = false,
+  applications = 0,
 }: {
   job_posting_id: string;
   is_job_posting_page?: boolean;
+  /** How many applications the job has: with any, deleting archives it instead. The server decides again. */
+  applications?: number;
   /** Without jobs.delete on this job (RP-REQ-016). */
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const archives = applications > 0;
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const handleDelete = async () => {
@@ -44,9 +49,16 @@ export default function DeleteJobPosting({
         return;
       }
 
-      toast.success("Job posting deleted successfully.");
       setOpen(false);
 
+      if (result.outcome === "archived") {
+        // Its page stays, showing it archived with Restore.
+        toast.success("Job post archived. Candidates keep their history.");
+        router.refresh();
+        return;
+      }
+
+      toast.success("Job posting deleted successfully.");
       if (is_job_posting_page) {
         router.push("/company");
       } else {
@@ -79,10 +91,21 @@ export default function DeleteJobPosting({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Job Posting</AlertDialogTitle>
+          <AlertDialogTitle>{archives ? "Archive job posting?" : "Delete Job Posting"}</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this job posting? This action cannot
-            be undone.
+            {archives ? (
+              <>
+                This job has {applications} {applications === 1 ? "application" : "applications"}, so it&apos;ll be
+                archived instead of deleted: it closes, leaves your job posts and dashboard, and candidates keep their
+                history. You can restore it from{" "}
+                <a className="underline" href={archivedJobPostsPath}>
+                  archived job posts
+                </a>
+                .
+              </>
+            ) : (
+              "Are you sure you want to delete this job posting? This action cannot be undone."
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -97,7 +120,7 @@ export default function DeleteJobPosting({
             }}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Delete
+            {archives ? "Archive" : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

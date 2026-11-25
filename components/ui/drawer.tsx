@@ -16,6 +16,11 @@ const Drawer = ({
 );
 Drawer.displayName = "Drawer";
 
+// True inside a DrawerContent, so a drawer opened from inside one (a
+// ResponsiveSelect in a drawer form) stacks on it as a nested drawer.
+const InDrawerContext = React.createContext(false);
+const useInDrawer = () => React.useContext(InDrawerContext);
+
 const DrawerTrigger = DrawerPrimitive.Trigger;
 
 const DrawerPortal = DrawerPrimitive.Portal;
@@ -49,7 +54,7 @@ const DrawerContent = React.forwardRef<
       {...props}
     >
       <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-      {children}
+      <InDrawerContext.Provider value={true}>{children}</InDrawerContext.Provider>
     </DrawerPrimitive.Content>
   </DrawerPortal>
 ));
@@ -115,4 +120,5 @@ export {
   DrawerFooter,
   DrawerTitle,
   DrawerDescription,
+  useInDrawer,
 };

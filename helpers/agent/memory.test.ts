@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  APPLICATION_MEMORY_REFUSED,
   deleteMemory,
   listMemories,
   memoryRef,
@@ -194,6 +195,28 @@ describe("upsertMemory: create", () => {
     await expect(
       upsertMemory(supabase.client, "u1", { content: "x", category: "fact", sessionId: "s1" }),
     ).rejects.toThrow("insert failed");
+  });
+});
+
+describe("upsertMemory: application facts (AT-REQ-053)", () => {
+  it.each([
+    "I applied to Acme last week",
+    "My application status at Globex is interviewing",
+    "Got a rejection from Hooli",
+    "I was ghosted by Initech",
+  ])("refuses %s, since My Jobs holds it", async (content) => {
+    const result = await upsertMemory(supabase.client, "u1", { content, category: "fact", sessionId: "s1" });
+
+    expect(result).toEqual({ ok: false, error: APPLICATION_MEMORY_REFUSED });
+    expect(supabase.callsFor("agent_memories").some((c) => c.chain.some((s) => s.method === "insert"))).toBe(false);
+  });
+
+  it("still saves a preference", async () => {
+    supabase.queue("agent_memories", { data: [], error: null });
+    supabase.queue("agent_memories", { data: row("m2", "Prefers remote roles"), error: null });
+
+    const result = await upsertMemory(supabase.client, "u1", { content: "Prefers remote roles", category: "preference", sessionId: "s1" });
+    expect(result).toMatchObject({ ok: true });
   });
 });
 

@@ -1,9 +1,8 @@
 "use client";
 
-import { useLoginToApplyHref } from "./jobs/ApplicationSourceContext";
+import { useApplyHref, useLoginToApplyHref } from "./jobs/ApplicationSourceContext";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import JobApplicationDialog from "./JobApplicationDialog";
 import { ArrowRight, MoreHorizontal } from "lucide-react";
 import { AllJobWithRelations, PostHogEvent } from "@/utils/types";
 import { useState } from "react";
@@ -15,6 +14,7 @@ import { Skeleton } from "./ui/skeleton";
 import { deductApplicationCreditsAction } from "@/app/actions/deduct-application-credits";
 import { PROFILE_API_KEY } from "@/utils/utils";
 import { mutate } from "swr";
+import { myJobsPath } from "@/helpers/tracker/paths";
 
 export default function JobApplyBtn({
   isCompanyUser,
@@ -23,7 +23,6 @@ export default function JobApplyBtn({
   isOnboardingComplete,
   appliedJob,
   isJobIdPage,
-  isDialogOpen,
   isLoading,
   hasCredits,
 }: {
@@ -34,15 +33,17 @@ export default function JobApplyBtn({
   appliedJob?: {
     all_jobs_id: string;
     status: string;
+    /** The tracker's label ("In review"); the raw status when absent. */
+    statusLabel?: string;
   };
   isJobIdPage: boolean;
-  isDialogOpen: boolean;
   isLoading: boolean;
   hasCredits: boolean;
 }) {
   const [showReturnDialog, setShowReturnDialog] = useState(false);
   // Apply is the main action on the job page (brand); in a list every row has one, so it stays default there.
   const loginHref = useLoginToApplyHref(job.id);
+  const applyHref = useApplyHref(job.id);
   const applyVariant = isJobIdPage ? "brand" : "default";
 
   return (
@@ -56,16 +57,23 @@ export default function JobApplyBtn({
               <PropagationStopper>
                 <div className="flex items-center gap-2">
                   <Button className="capitalize" disabled>
-                    {appliedJob.status}
+                    {appliedJob.statusLabel ?? appliedJob.status}
                   </Button>
 
                   <InfoTooltip
                     content={
                       <p>
                         Your current application status is{" "}
-                        <b className="capitalize">{appliedJob.status}</b>.
-                        You&apos;ll have to manually track your application
-                        status via the{" "}
+                        <b className="capitalize">{appliedJob.statusLabel ?? appliedJob.status}</b>.
+                        It&apos;s in{" "}
+                        <Link
+                          onClick={(e) => e.stopPropagation()}
+                          className="font-medium underline underline-offset-4"
+                          href={myJobsPath({ tab: "applications" })}
+                        >
+                          My Jobs
+                        </Link>
+                        . Check for updates on the{" "}
                         <Link
                           onClick={(e) => e.stopPropagation()}
                           className="font-medium underline underline-offset-4"
@@ -151,21 +159,28 @@ export default function JobApplyBtn({
             </Link>
           )
         ) : isOnboardingComplete ? (
-          !isJobIdPage && job.status === "active" ? (
-            <Link
-              onClick={(e) => e.stopPropagation()}
-              href={"/jobs/" + job.id + "?apply=true"}
-              target={"_blank"}
-            >
-              <Button variant={applyVariant}>Easy Apply</Button>
-            </Link>
+          appliedJob?.status ? (
+            <PropagationStopper>
+              <div className="flex items-center gap-2">
+                <Button className="capitalize" disabled>
+                  {appliedJob.status}
+                </Button>
+                <InfoTooltip
+                  content={
+                    <p>
+                      Your current application status is <b>{appliedJob.status}</b>. You&apos;ll be notified via
+                      email if the status changes.
+                    </p>
+                  }
+                />
+              </div>
+            </PropagationStopper>
           ) : (
-            <JobApplicationDialog
-              jobPost={job}
-              userId={userId}
-              appliedJob={appliedJob}
-              isApplyDialogOpen={isDialogOpen}
-            />
+            <Link onClick={(e) => e.stopPropagation()} href={applyHref}>
+              <Button variant={applyVariant} disabled={job.status === "inactive"}>
+                Easy Apply <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           )
         ) : (
           <Link onClick={(e) => e.stopPropagation()} href={"/get-started"}>

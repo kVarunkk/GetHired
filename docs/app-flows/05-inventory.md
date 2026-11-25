@@ -44,7 +44,7 @@ flowchart LR
 |---|---|
 | P2 Auth / identity | `user_info`, `invitations`, `waitlist`, `feedbacks` |
 | P4 Ingestion | `all_jobs`, `all_jobs_archive`, `scraper_state` (written by the scraper, not the app) |
-| A2 Discovery | `countries_and_cities`, `location_aliases`, `flat_locations` (view), `user_relevant_jobs`, `bookmarks` (≤ 5 alerts) |
+| A2 Discovery | `countries_and_cities`, `location_aliases`, `flat_locations` (view), `user_relevant_jobs`, `bookmarks` (job alerts, ≤ 5 active) |
 | A3 Job page | `user_favorites`, `user_favorites_companies`, `job_feedback` |
 | A1/A5 Resumes | `resumes`, `resume_public_sections` |
 | A6 Review | `resume_reviews` |
@@ -73,7 +73,7 @@ flowchart LR
 | A4 attachments | `enqueue_company_interview_analysis` |
 | A8 screening (candidate) | `my_screening_interviews`, `lock_my_screening_interview`, `record_screening_consent`, `request_screening_accommodation`, `decline_screening_interview`, `reserve_screening_attempt`, `start_screening_attempt`, `finish_screening_session` |
 | A9 outreach | `respond_to_outreach`, `get_my_profile_view_count` |
-| Dashboard | `get_applicant_weekly_metrics`, `get_company_metrics`, `get_recruiter_job_summaries`, `get_platform_stats` |
+| Dashboard | `get_applicant_weekly_metrics` (profile API and agent `getMyProfile`; the applicant dashboard counts from `listMyApplications`), `get_company_metrics`, `get_recruiter_job_summaries`, `get_platform_stats` |
 | Access | `my_company_access`, `touch_company_membership`, `has_company_permission` (RLS), `company_can_view_candidate`, `company_has_candidate_access` |
 | C2 team | `create_company_invite`, `accept_company_invite`, `revoke_company_invite`, `set_company_member_role`, `remove_company_member`, `set_company_owner`, `make_primary_owner`, `set_my_display_name`, `member_display_name`, `list_company_team`, `list_company_hiring_teams`, `list_job_hiring_team`, `list_mentionable_members`, `list_company_audit` |
 | C2 roles | `create_company_role`, `update_company_role`, `delete_company_role`, `set_default_company_role`, `list_company_roles`, `assign_job`, `unassign_job`, `assign_job_creator` |
@@ -132,7 +132,7 @@ flowchart LR
     o14["user_info BEFORE protect_user_info_columns"]
     o15["invitations BEFORE UPDATE protect_invitation_columns"]
     o16["interviews BEFORE protect_interview_charge_columns"]
-    o17["bookmarks BEFORE bookmarks_alert_cap"]
+    o17["bookmarks BEFORE bookmarks_alert_cap, protect_bookmarks_alert_columns"]
   end
 ```
 
@@ -161,9 +161,9 @@ flowchart LR
 | Flow | Actions (`app/actions/…`) |
 |---|---|
 | P1/P2 | `sign-up-email`, `reset-password-email`, `update-user-metadata`, `clear-router-cache`, `send-invite-credit-email`, `invitations/mark-invite-dialogs-shown`, `send-promotion-email` |
-| P3 shared | `update-owned-item`, `delete-owned-item` (rename / delete the user's own resumes, reviews, interviews, bookmarks), `submit-feedback` |
+| P3 shared | `update-owned-item`, `delete-owned-item` (rename / delete the user's own resumes, reviews, interviews), `submit-feedback` |
 | A1 | `submit-onboarding`, `upload-resume-file` |
-| A2/A3 | `summarize-job`, `jobs-feedback`, `relevant-jobs-update`, `bookmarks/toggle-search-bookmark`, `bookmarks/set-bookmark-alert`, `favorites/set-favorite`, `revalidate-path`, `revalidate-tag` |
+| A2/A3 | `summarize-job`, `jobs-feedback`, `relevant-jobs-update`, `job-alerts/{create,update,delete}-job-alert`, `job-alerts/pause-job-alert-from-email`, `favorites/set-favorite`, `revalidate-path`, `revalidate-tag` |
 | A4 | `submit-application`, `deduct-application-credits`, `applications/track-external-application`, `set-external-application-status`, `remove-external-application`, `preview-agent-application`, `applications/attachments` |
 | A5/A6 | `retry-resume-parsing`, `set-primary-resume`, `create-resume-review`, `resume-review/update-review-jd`, `resume-review/link-review-resume`, `mark-review-analysis-failed`, `send-resume-status-email`, `send-review-status-email` |
 | A7 | `create-interview`, `interview-session-lock`, `interviews/save-practice-turns`, `deduct-interview-session-credits`, `finalize-interview-session` |

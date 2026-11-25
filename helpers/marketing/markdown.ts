@@ -19,6 +19,7 @@ import {
   howWeHelpCopy,
   LANDING_PAGES,
   markdownPath,
+  MARKDOWN_PAGES,
   MCP_CAPABILITIES,
   MCP_SERVER_URL,
   PRICING_DESCRIPTION,
@@ -60,6 +61,13 @@ function featureBlocks(page: LandingPageCopy, jobCount: number) {
       `## ${copy.heading}`,
       copy.subheading,
       copy.items.map((f) => `- **${f.name}.** ${f.description}`).join("\n"),
+    ];
+  }
+  if (page.features) {
+    return [
+      `## ${page.features.heading}`,
+      page.features.subheading,
+      page.features.items.map((f) => `- **${f.name}.** ${f.description}`).join("\n"),
     ];
   }
   if (!page.howWeHelp) return [];
@@ -186,6 +194,26 @@ async function blogPostMarkdown(slug: string) {
     `Canonical page: ${absolute(`/blog/${slug}`)}`,
     markdocTablesToGfm(body),
   ];
+}
+
+/**
+ * Every marketing page and blog post as one text file (`/llms-full.txt`): the
+ * pages in `MARKDOWN_PAGES` except the blog index, then each post, newest first.
+ */
+export async function llmsFullText(): Promise<string> {
+  const posts = (await reader().collections.posts.all()).sort((a, b) =>
+    b.entry.publishedAt.localeCompare(a.entry.publishedAt),
+  );
+  const paths = [
+    ...MARKDOWN_PAGES.filter((p) => p !== "/blog"),
+    ...posts.map(({ slug }) => `/blog/${slug}`),
+  ];
+  const pages = await Promise.all(paths.map((p) => pageMarkdown(p)));
+  const intro = [
+    "# GetHired",
+    "> The full text of GetHired's public pages and blog posts in one file. Each page is also served on its own: add `.md` to its URL.",
+  ].join("\n\n");
+  return `${[intro, ...pages.filter((p) => p !== null).map((p) => p.trim())].join("\n\n---\n\n")}\n`;
 }
 
 /** The markdown version of a page (`/`, `/hire`, `/blog/<slug>`...), or null if it has none. */

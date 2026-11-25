@@ -5,7 +5,12 @@ import { UserAppMetadata } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { getUserFromRequest } from "./get-user-from-request";
 import { APPLICANT_HOME, COMPANY_HOME, companyOnboardingPath } from "@/helpers/user/home-path";
-import { pageForMarkdownPath } from "@/helpers/marketing/content";
+import {
+  acceptsMarkdown,
+  COMPANY_FEATURE_PATHS,
+  pageForContentNegotiation,
+  pageForMarkdownPath,
+} from "@/helpers/marketing/content";
 import { decodeJwt } from "jose";
 import { MCP_PATH, PROTECTED_RESOURCE_METADATA_PATH } from "@/helpers/mcp/config";
 import { SWITCH_TO_APPLICANT_PATH, SWITCH_TO_COMPANY_PATH } from "@/helpers/user/account-switch";
@@ -19,9 +24,24 @@ function isOAuthAppToken(token: string) {
 }
 
 export async function updateSession(request: NextRequest) {
+  const response = await routeRequest(request);
+  // A page with a markdown version answers differently by `Accept`, so caches
+  // and the CDN must keep the two apart.
+  if (pageForContentNegotiation(request.nextUrl.pathname)) {
+    response.headers.append("Vary", "Accept");
+  }
+  return response;
+}
+
+async function routeRequest(request: NextRequest) {
   // Markdown versions of public pages, for AI agents: /hire.md, /index.md,
-  // /blog/<slug>.md. Public, so they skip the auth checks below.
-  const markdownPage = pageForMarkdownPath(request.nextUrl.pathname);
+  // /blog/<slug>.md, or the page's own URL with `Accept: text/markdown`.
+  // Public, so they skip the auth checks below.
+  const markdownPage =
+    pageForMarkdownPath(request.nextUrl.pathname) ??
+    (acceptsMarkdown(request.headers.get("accept"))
+      ? pageForContentNegotiation(request.nextUrl.pathname)
+      : null);
   if (markdownPage) {
     const url = request.nextUrl.clone();
     url.pathname = markdownPage === "/" ? "/md/index" : `/md${markdownPage}`;
@@ -71,11 +91,16 @@ export async function updateSession(request: NextRequest) {
     "/oauth/consent",
     "/jobs",
     "/hire",
+    // The company feature pages under /hire.
+    ...COMPANY_FEATURE_PATHS,
     // Signed out, these send visitors on to sign-up; signed in with the other
     // kind of account, they sign the user out first.
     SWITCH_TO_COMPANY_PATH,
     SWITCH_TO_APPLICANT_PATH,
     "/ai-interview",
+    "/ai-job-search-agent",
+    "/application-tracker",
+    "/job-alerts",
     "/mcp-server",
     "/mcp-server/companies",
     // The MCP docs page, and the MCP endpoint, which answers signed-out
@@ -171,6 +196,7 @@ export async function updateSession(request: NextRequest) {
     "/about",
     "/contact",
     "/llms.txt",
+    "/llms-full.txt",
     "/robots.txt",
     "/opengraph-image.jpg",
     "/twitter-image.jpg",
@@ -179,6 +205,8 @@ export async function updateSession(request: NextRequest) {
     "/api/debug/heapdump",
     "/api/extension/generate-answer",
     "/api/extension/ensure-user",
+    "/api/extension/track-application",
+    "/api/extension/tracked-applications",
   ];
 
   const authPaths = [
@@ -199,6 +227,8 @@ export async function updateSession(request: NextRequest) {
     pathname === "/interview" || pathname.startsWith("/interview/");
 
   const isAgentPath = pathname === "/agent" || pathname.startsWith("/agent/");
+  // An applicant's own applications and saved jobs (AT-REQ-010).
+  const isMyJobsPath = pathname === "/my-jobs" || pathname.startsWith("/my-jobs/");
   const isAgentApiPath = pathname.startsWith("/api/agent/");
 
   const isCompanyOnboardingPath =
@@ -235,6 +265,10 @@ export async function updateSession(request: NextRequest) {
   // BI-REQ-034 / BI-CON-004: a company candidate's unsubscribe link is public.
   const isCandidateUnsubscribePath =
     pathname.startsWith("/unsubscribe/candidate/") && pathname.length > "/unsubscribe/candidate/".length;
+  // JA-REQ-036: a job alert email's pause page and its one-click (List-Unsubscribe) POST.
+  const isAlertPausePath =
+    (pathname.startsWith("/unsubscribe/alert/") && pathname.length > "/unsubscribe/alert/".length) ||
+    (pathname.startsWith("/api/job-alerts/pause/") && pathname.length > "/api/job-alerts/pause/".length);
   // BI-REQ-041: a claim link shows its sign-up and log-in choices to anyone.
   const isClaimPath = pathname.startsWith("/claim/") && pathname.length > "/claim/".length;
   // IV-SEC-007: a self-scheduling link's page and its booking API (the token
@@ -260,6 +294,7 @@ export async function updateSession(request: NextRequest) {
     isProtectedResourceMetadata ||
     isCareersPath ||
     isCandidateUnsubscribePath ||
+    isAlertPausePath ||
     isClaimPath ||
     isSchedulingLinkPath;
 
@@ -380,7 +415,8 @@ export async function updateSession(request: NextRequest) {
     // company user is offered a candidate account, onboarded or not. The
     // applicant prompt and the board's filters don't carry over. A single
     // job's page (/jobs/<id>) stays open, e.g. to see a posting as it's listed.
-    if (isCompany && (isAgentPath || pathname === "/jobs")) {
+    // My Jobs is a job seeker's list as well.
+    if (isCompany && (isAgentPath || isMyJobsPath || pathname === "/jobs")) {
       const url = request.nextUrl.clone();
       url.pathname = SWITCH_TO_APPLICANT_PATH;
       deleteSearchParams(url);
@@ -438,7 +474,8 @@ export async function updateSession(request: NextRequest) {
         pathname.startsWith("/opportunities") ||
         isApplicantOnboardingPath ||
         isInterviewPath ||
-        isAgentPath) &&
+        isAgentPath ||
+        isMyJobsPath) &&
       !isApplicant
     ) {
       const url = request.nextUrl.clone();

@@ -60,7 +60,7 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
         .maybeSingle();
       if (listing && listing.status === "active") {
         openJobId = listing.id;
-        applyHref = `/jobs/${listing.id}?apply=true`;
+        applyHref = `/jobs/${listing.id}/apply`;
       }
     }
 

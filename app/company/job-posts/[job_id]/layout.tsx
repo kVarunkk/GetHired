@@ -8,6 +8,8 @@ import EntityLayout from "@/components/EntityLayout";
 import type { EntityNavItem } from "@/components/EntityNav";
 import PageHeader from "@/components/PageHeader";
 import DeleteJobPosting from "@/components/DeleteJobPosting";
+import RestoreJobPosting from "@/components/RestoreJobPosting";
+import { Badge } from "@/components/ui/badge";
 import FindSuitableProfilesForJobPost from "@/components/FindSuitableProfilesForJobPost";
 import JobStateMenu from "@/components/jobs/JobStateMenu";
 import ShareJobPosting from "@/components/ShareJobPosting";
@@ -77,7 +79,7 @@ export default async function JobPostLayout({
     const controls = jobControls(company, job.id);
     // JL-REQ-030: hires against openings, open AI interviews for the close
     // dialog (D9), and who submitted a pending job (they may withdraw it).
-    const [careersLink, hires, openInterviews, submitter] = await Promise.all([
+    const [careersLink, hires, openInterviews, submitter, { count: applications }] = await Promise.all([
       getMyCareersLink(supabase, company.id).catch(() => null),
       countHiresFor(supabase, job.id).catch(() => 0),
       controls.publish && can(company, "interviews.manage", job.id) && (job.state === "open" || job.state === "paused")
@@ -86,6 +88,8 @@ export default async function JobPostLayout({
       job.state === "pending_approval"
         ? latestSubmission(supabase, job.id).then((s) => s?.actorUserId ?? null)
         : Promise.resolve(null),
+      // How the delete dialog words itself: a job with applications is archived instead.
+      supabase.from("applications").select("id", { count: "exact", head: true }).eq("job_post_id", job.id),
     ]);
 
     const base = `/company/job-posts/${job.id}`;
@@ -149,22 +153,40 @@ export default async function JobPostLayout({
                 {job.closes_at && job.state !== "filled" && job.state !== "closed" && (
                   <> · Closes {format(new Date(`${job.closes_at}T00:00:00`), "PPP")}</>
                 )}
+                {job.archived_at && <> · Archived on {format(new Date(job.archived_at), "PPP")}</>}
               </>
             }
             actions={
               <>
-                <JobStateMenu
-                  key={job.state}
-                  job={job}
-                  viewer={{
-                    canPublish: controls.publish,
-                    canApprove: !!controls.approve,
-                    approvalRequired: !!job.company_info?.job_approval_required,
-                    isSubmitter: !!user && submitter === user.id,
-                  }}
-                  openInterviews={openInterviews}
-                />
-                <DeleteJobPosting job_posting_id={job.id} is_job_posting_page disabled={!controls.delete} />
+                {/* An archived job is restored first; reopening it then goes through the state menu. */}
+                {job.archived_at ? (
+                  <>
+                    <Badge variant="outline" className="font-normal">
+                      Archived
+                    </Badge>
+                    <RestoreJobPosting job_posting_id={job.id} disabled={!controls.delete} />
+                  </>
+                ) : (
+                  <>
+                    <JobStateMenu
+                      key={job.state}
+                      job={job}
+                      viewer={{
+                        canPublish: controls.publish,
+                        canApprove: !!controls.approve,
+                        approvalRequired: !!job.company_info?.job_approval_required,
+                        isSubmitter: !!user && submitter === user.id,
+                      }}
+                      openInterviews={openInterviews}
+                    />
+                    <DeleteJobPosting
+                      job_posting_id={job.id}
+                      is_job_posting_page
+                      disabled={!controls.delete}
+                      applications={applications ?? 0}
+                    />
+                  </>
+                )}
                 <ShareJobPosting job_id={job.first_opened_at ? job.job_id : null} careersSlug={careersLink?.published ? careersLink.slug : null} />
                 <FindSuitableProfilesForJobPost job_post_id={job.id} />
               </>

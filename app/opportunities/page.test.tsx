@@ -87,7 +87,7 @@ describe("/opportunities/[id] (ORT-033)", () => {
       companyName: "Acme",
       status: "sent",
       open: true,
-      applyHref: "/jobs/d0000000-0000-4000-8000-000000000001?apply=true",
+      applyHref: "/jobs/d0000000-0000-4000-8000-000000000001/apply",
     });
   });
 

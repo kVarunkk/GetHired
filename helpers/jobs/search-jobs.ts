@@ -26,7 +26,6 @@ export type SearchJobsParams = {
   sortOrder: string;
   jobTitleKeywords: string | null;
   tab: "saved" | "applied" | null;
-  applicationStatus: string | null;
   /** Raw "created within N days" value; converted with getCutOffDate. */
   createdAfterDays: string | null;
   /** Explicit applicant for job digests (internal calls). */
@@ -37,6 +36,13 @@ export type SearchJobsParams = {
   limit: number;
   /** "digest" selects job_digest_with_suggestions for job digests. */
   digestType: string | null;
+  /**
+   * Internal only (job alerts): jobs created at or after this. Overrides
+   * createdAfterDays. parseJobSearchParams never sets it, so no URL can.
+   */
+  createdSince?: Date | null;
+  /** Internal only (job alerts): jobs to leave out, e.g. ones the user applied to. Never from a URL. */
+  excludeJobIds?: string[] | null;
 };
 
 export type SearchJobsResult =
@@ -68,7 +74,6 @@ const DEFAULT_PARAMS: SearchJobsParams = {
   sortOrder: "desc",
   jobTitleKeywords: null,
   tab: null,
-  applicationStatus: null,
   createdAfterDays: null,
   applicantUserId: null,
   jobId: null,
@@ -96,7 +101,6 @@ export function parseJobSearchParams(
     sortOrder: searchParams.get("sortOrder") ?? DEFAULT_PARAMS.sortOrder,
     jobTitleKeywords: searchParams.get("jobTitleKeywords"),
     tab: tab === "saved" || tab === "applied" ? tab : null,
-    applicationStatus: searchParams.get("applicationStatus"),
     createdAfterDays: searchParams.get("createdAfter"),
     applicantUserId: searchParams.get("userId"),
     jobId: searchParams.get("jobId"),
@@ -244,10 +248,12 @@ export async function searchJobs(
       isFavoriteTabActive: params.tab === "saved",
       isAppliedJobsTabActive: params.tab === "applied",
       userEmbedding,
-      applicationStatus: params.applicationStatus,
-      createdAfter: params.createdAfterDays
-        ? getCutOffDate(Number(params.createdAfterDays))
-        : null,
+      createdAfter: params.createdSince
+        ? params.createdSince.toISOString()
+        : params.createdAfterDays
+          ? getCutOffDate(Number(params.createdAfterDays))
+          : null,
+      excludeJobIds: params.excludeJobIds ?? null,
       jobEmbedding,
       relevanceSearchType,
     },

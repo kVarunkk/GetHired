@@ -96,7 +96,6 @@ export async function GET(request: NextRequest) {
             "platform",
             "companyName",
             "jobTitleKeywords",
-            "applicationStatus",
           ] as const
         ).filter((key) => params[key]),
         tab: params.tab,

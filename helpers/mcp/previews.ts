@@ -10,6 +10,8 @@ import { canonicalizeLocations } from "@/helpers/locations/aliases";
 import { PREFERENCE_COLUMNS } from "@/helpers/agent/tools/profile";
 import type { AgentToolContext } from "@/helpers/agent/tools/shared";
 import { previewResumeEdit, type ResumeEditTool } from "@/helpers/resumes/preview-resume-edit";
+import { wrapInSandbox } from "@/helpers/ai/security";
+import { trackedStatusLabel } from "@/helpers/tracker/status";
 import { deploymentUrl } from "@/utils/formatters";
 import { TAICredits } from "@/utils/types";
 
@@ -105,6 +107,27 @@ export const previewCreateResume = resumeEditPreview("createResume");
 export const previewUpdateResume = resumeEditPreview("updateResume");
 export const previewDeleteResume = resumeEditPreview("deleteResume");
 export const previewApplySuggestions = resumeEditPreview("applyReviewSuggestions");
+
+/** The card to remove, with its text sandboxed: the user or a web page wrote it. No side effects. */
+export const previewRemoveTrackedApplication: McpPreviewBuilder = async (ctx, input) => {
+  const id = typeof input.id === "string" ? input.id : "";
+  const { data, error } = await ctx.supabase
+    .from("tracked_applications")
+    .select("job_title, company_name, status")
+    .eq("id", id)
+    .eq("user_id", ctx.user.id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return { ok: false, error: "Application not found." };
+  return {
+    ok: true,
+    summary: "Remove this application from My Jobs? Its notes and timeline go with it.",
+    details: [
+      { label: "Job", value: wrapInSandbox("tracked_job", JSON.stringify({ title: data.job_title, company: data.company_name })) },
+      { label: "Status", value: trackedStatusLabel(data.status) },
+    ],
+  };
+};
 
 export const previewUpdatePreferences: McpPreviewBuilder = async (ctx, input) => {
   const after = { ...input };

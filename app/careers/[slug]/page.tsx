@@ -50,7 +50,7 @@ export default async function CareersPageRoute({
     const view = toSearchView(searchCompanyJobs(jobs, filters));
 
     return (
-      <CareersShell page={page}>
+      <CareersShell page={page} refQuery={readRef(query) ? `?ref=${encodeURIComponent(readRef(query)!)}` : ""}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(careersOrganizationJsonLd(page)).replace(/</g, "\\u003c") }}

@@ -119,7 +119,7 @@ describe("NavbarComponent: horizontal links", () => {
     renderNavbar(applicant);
 
     const desktopLinks = screen.getByRole("navigation", { name: "Main" });
-    expect(within(desktopLinks).getByRole("link", { name: "Jobs" })).toBeInTheDocument();
+    expect(within(desktopLinks).getByRole("link", { name: "Discover" })).toBeInTheDocument();
     expect(within(desktopLinks).queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Open menu" }));

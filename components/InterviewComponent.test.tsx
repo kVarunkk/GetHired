@@ -219,7 +219,7 @@ describe("InterviewComponent (screening, SIT-052)", () => {
     expect(screen.getByText("Interview submitted", { selector: "h2" })).toBeInTheDocument();
     expect(screen.getByText("Your interview has been submitted")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /find jobs/i })).toHaveAttribute("href", "/jobs");
-    expect(screen.getByRole("link", { name: /view applications/i })).toHaveAttribute("href", "/jobs?tab=applied");
+    expect(screen.getByRole("link", { name: /view applications/i })).toHaveAttribute("href", "/my-jobs");
     expect(screen.getByText("I build payment APIs.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /start|restart|try again/i })).not.toBeInTheDocument();
   });

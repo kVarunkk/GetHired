@@ -24,6 +24,7 @@ export const FORBIDDEN_CANDIDATE_COLUMNS = [
   "matched_at",
   "embedding_new",
   "embedding_updated_at",
+  "weekly_application_goal",
 ];
 
 export const FREE_TIER: CompanyTierRow = {
@@ -152,6 +153,7 @@ function applicant(n: number, name: string, isPublic: boolean): ApplicantFixture
       is_promotion_active: true,
       is_job_digest_active: true,
       last_promo_version_seen: "v9",
+      weekly_application_goal: 9,
       embedding_new: "[0.1,0.2,0.3]",
       embedding_updated_at: CREATED_AT,
       relevant_jobs_update_status: "completed",
@@ -185,6 +187,7 @@ export function jobPostingOf(
     id: seqId("b0000000", postingSeq),
     job_id: seqId("d0000000", postingSeq),
     company_id: owner.id,
+    archived_at: null,
     title: "Frontend Engineer",
     description: "Build the product UI with React and TypeScript.",
     location: ["bengaluru"],

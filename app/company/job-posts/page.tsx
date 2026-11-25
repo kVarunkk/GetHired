@@ -12,6 +12,9 @@ import { countJobHires } from "@/helpers/jobs/job-hires";
 import PageHeader from "@/components/PageHeader";
 import { AskAgentAboutJobPosts } from "@/components/agent/recruiter/AskAgentOnMainPages";
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { archivedJobPostsPath, JOB_POSTS_PATH } from "@/helpers/jobs/paths";
 
 export const metadata: Metadata = {
   title: "Job Posts",
@@ -19,7 +22,13 @@ export const metadata: Metadata = {
     "Your company's job posts, their status and applicants.",
 };
 
-export default async function CompanyJobPostsPage() {
+export default async function CompanyJobPostsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // Archived posts (removed, but with applications) are listed only here.
+  const archived = (await searchParams)?.archived === "1";
   try {
     const supabase = await createClient();
     const {
@@ -52,7 +61,8 @@ export default async function CompanyJobPostsPage() {
           company_info(name, website, job_approval_required)
         `,
         )
-        .eq("company_id", companyInfo.id),
+        .eq("company_id", companyInfo.id)
+        .filter("archived_at", archived ? "not.is" : "is", null),
       companyInfo,
     ).order("created_at", { ascending: false });
 
@@ -67,13 +77,22 @@ export default async function CompanyJobPostsPage() {
     return (
       <div className="flex flex-col w-full gap-6 p-4 mb-20">
         <PageHeader
-          title="Job posts"
-          description="Your company's job posts, their status and applicants."
+          title={archived ? "Archived job posts" : "Job posts"}
+          description={
+            archived
+              ? "Job posts you removed that have applications. They're closed, and candidates keep their history. Open one to restore it."
+              : "Your company's job posts, their status and applicants."
+          }
           actions={
-            <CreateJobPostButton disabled={!canCreateJobs} />
+            <>
+              <Button asChild variant="outline">
+                <Link href={archived ? JOB_POSTS_PATH : archivedJobPostsPath}>{archived ? "All job posts" : "Archived"}</Link>
+              </Button>
+              {!archived && <CreateJobPostButton disabled={!canCreateJobs} />}
+            </>
           }
         />
-        {can(companyInfo, "agent.use") && (
+        {!archived && can(companyInfo, "agent.use") && (
           <AskAgentAboutJobPosts
             canCreate={canCreateJobs}
             canViewApplicants={canAny(companyInfo, "applicants.view")}
@@ -81,11 +100,12 @@ export default async function CompanyJobPostsPage() {
             canMatch={canAny(companyInfo, "matching.run")}
           />
         )}
-        {careersLink && <CareersLinkBar slug={careersLink.slug} published={careersLink.published} />}
+        {!archived && careersLink && <CareersLinkBar slug={careersLink.slug} published={careersLink.published} />}
         <JobPostingsTable
           data={posts}
-          publishable={posts.filter((j) => jobControls(companyInfo, j.id).publish).map((j) => j.id)}
-          approvable={posts.filter((j) => jobControls(companyInfo, j.id).approve).map((j) => j.id)}
+          // An archived post is restored from its page, not published or approved from the list.
+          publishable={archived ? [] : posts.filter((j) => jobControls(companyInfo, j.id).publish).map((j) => j.id)}
+          approvable={archived ? [] : posts.filter((j) => jobControls(companyInfo, j.id).approve).map((j) => j.id)}
           approvalRequired={!!posts[0]?.company_info?.job_approval_required}
           hires={Object.fromEntries(hires)}
         />

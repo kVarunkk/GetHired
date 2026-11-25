@@ -92,13 +92,23 @@ const cases: [string, Record<string, unknown>, (() => void)?][] = [
       error: null,
     });
   }],
-  ["update_application_status", { jobId: JOB_ID, status: "reviewed" }, () => {
-    supabase.queue("all_jobs", {
-      data: { id: JOB_ID, is_platform_job: false, job_name: "Frontend Engineer", company_name: "Acme" },
+  ["update_tracked_application", { id: JOB_ID, status: "interviewing" }, () => {
+    supabase.queue("tracked_applications", {
+      data: {
+        id: JOB_ID, all_jobs_id: null, job_title: "Frontend Engineer", company_name: "Acme", location: null,
+        job_url: null, status: "applied", status_changed_at: AT, applied_at: "2026-11-17", next_follow_up_at: null,
+        notes: null, source: "manual", position: 1, created_at: AT, updated_at: AT,
+      },
       error: null,
     });
-    supabase.queue("applications", { data: [], error: null });
-    supabase.queue("applications", { data: null, error: null });
+    supabase.queue("tracked_applications", {
+      data: {
+        id: JOB_ID, all_jobs_id: null, job_title: "Frontend Engineer", company_name: "Acme", location: null,
+        job_url: null, status: "interviewing", status_changed_at: AT, applied_at: "2026-11-17", next_follow_up_at: null,
+        notes: null, source: "manual", position: 1, created_at: AT, updated_at: AT,
+      },
+      error: null,
+    });
   }],
   ["get_my_profile", {}, () => {
     supabase.queue("user_info", {

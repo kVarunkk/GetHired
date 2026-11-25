@@ -5,6 +5,7 @@ import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-moc
 import { PUBLIC_APPLICANT } from "@/test/utils/recruiter";
 import { setEmailPreferenceAction } from "./set-email-preference";
 import { setProfileVisibilityAction } from "./set-profile-visibility";
+import { setWeeklyApplicationGoalAction } from "./set-weekly-application-goal";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -70,5 +71,30 @@ describe("setProfileVisibilityAction (BW-F01)", () => {
     db.queue("user_info", { data: null, error: { message: "denied" } });
     expect(await setProfileVisibilityAction({ isPublic: true })).toMatchObject({ ok: false });
     expect(revalidateTag).not.toHaveBeenCalled();
+  });
+});
+
+describe("setWeeklyApplicationGoalAction", () => {
+  it.each([7, null])("writes only weekly_application_goal = %s for the session user", async (goal) => {
+    expect(await setWeeklyApplicationGoalAction({ goal })).toEqual({ ok: true });
+
+    const chain = db.callsFor("user_info")[0].chain;
+    expect(chain).toContainEqual({ method: "update", args: [{ weekly_application_goal: goal }] });
+    expect(chain).toContainEqual({ method: "eq", args: ["user_id", PUBLIC_APPLICANT.id] });
+  });
+
+  it.each([0, 101, 2.5])("rejects %s", async (goal) => {
+    expect(await setWeeklyApplicationGoalAction({ goal })).toMatchObject({ ok: false });
+    expect(db.callsFor("user_info")).toHaveLength(0);
+  });
+
+  it("rejects extra columns", async () => {
+    expect(await setWeeklyApplicationGoalAction({ goal: 5, ai_credits: 999 } as never)).toMatchObject({ ok: false });
+    expect(db.callsFor("user_info")).toHaveLength(0);
+  });
+
+  it("refuses a signed-out caller", async () => {
+    await setRequestUser(null);
+    expect(await setWeeklyApplicationGoalAction({ goal: 5 })).toMatchObject({ ok: false });
   });
 });

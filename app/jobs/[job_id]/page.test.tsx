@@ -10,6 +10,8 @@ vi.mock("@/components/jobs/JobSourceProvider", () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock("@/components/PageHeader", () => ({ BackLink: () => null }));
+vi.mock("@/components/job-alerts/JobAlertClickTracker", () => ({ default: () => null }));
+vi.mock("@/components/jobs/MyApplicationLink", () => ({ default: () => null }));
 vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
@@ -24,6 +26,7 @@ describe("/jobs/[job_id] structured data", () => {
       job_name: `Engineer ${payload}`,
       company_name: `Acme ${payload}`,
       description: "Build things.",
+      status: "active",
       created_at: "2026-11-01T00:00:00Z",
     } as unknown as TJobIdPageData);
 

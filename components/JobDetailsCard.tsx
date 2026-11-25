@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { Skeleton } from "./ui/skeleton";
+import JobMarkdown from "./JobMarkdown";
 import { SummarizeJobAction } from "@/app/actions/summarize-job";
 
 type JobDescriptionCardProps =
@@ -155,10 +156,7 @@ export default function JobDescriptionCard({
             isExpanded && "max-h-[1000px] overflow-y-auto",
           )}
         >
-          <div
-            className="whitespace-pre-line leading-[25px]"
-            style={{ overflowWrap: "anywhere" }}
-          >
+          <div>
             {isLoading ? (
               <div className="flex flex-col gap-3 items-center w-full min-h-[200px] justify-center">
                 <Loader2 className="animate-spin h-6 w-6 mx-auto text-muted-foreground" />
@@ -167,7 +165,7 @@ export default function JobDescriptionCard({
                 </span>
               </div>
             ) : (
-              displayedContent
+              <JobMarkdown>{displayedContent || ""}</JobMarkdown>
             )}
           </div>
           <div

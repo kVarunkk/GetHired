@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import ErrorComponent from "@/components/Error";
 import ScreeningInterviewView from "@/components/interviews/ScreeningInterviewView";
 import { getMyScreeningInterview } from "@/helpers/interview/screening/my-interviews";
+import { effectiveStatus } from "@/helpers/interview/screening/dashboard-state";
 import { isUuid } from "@/helpers/agent/auth";
 import type { Metadata } from "next";
 
@@ -39,7 +40,9 @@ export default async function ScreeningInterviewPage({ params }: { params: Promi
       analysisStatus: null,
     }));
 
-    return <ScreeningInterviewView invite={invite} interview={interview} sessionHistory={sessionHistory} />;
+    // Past its deadline but not yet expired by the job: show it as expired.
+    const shown = { ...invite, status: effectiveStatus(invite) };
+    return <ScreeningInterviewView invite={shown} interview={interview} sessionHistory={sessionHistory} />;
   } catch (err) {
     unstable_rethrow(err);
     return <ErrorComponent />;

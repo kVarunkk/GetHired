@@ -272,7 +272,7 @@ export default function CareersJobs({
                 </h3>
               )}
               <ul
-                className="divide-y rounded-xl border"
+                className="divide-y overflow-hidden rounded-xl border"
                 aria-label={group.name ?? "Roles"}
               >
                 {group.jobs.map((job) => (

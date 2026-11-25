@@ -91,9 +91,11 @@ export const APPLICANT_APPROVAL_POLICY: ToolApprovalPolicy = {
     "updateResume",
     "deleteResume",
     "applyReviewSuggestions",
+    "removeTrackedApplication",
   ],
   untrustedContentTools: [
     "getJobDetails",
+    "getTrackedApplication",
     "getApplicationForm",
     "getResumeContent",
     "getResumeReview",

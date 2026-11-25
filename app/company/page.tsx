@@ -102,7 +102,8 @@ export default async function CompanyPage() {
           company_info(name, website, job_approval_required)
         `,
         )
-        .eq("company_id", companyInfo.id),
+        .eq("company_id", companyInfo.id)
+        .is("archived_at", null),
         companyInfo,
       )
         .order("created_at", { ascending: false })

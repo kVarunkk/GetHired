@@ -187,7 +187,7 @@ const previewJobDelete: Builder = async (ctx, input) => {
   return preview(
     result.applications === 0
       ? "Delete this job post? This can't be undone."
-      : `Delete this job post? The ${applications} and their notes are deleted too. This can't be undone.`,
+      : `This job post has ${applications}, so it'll be archived instead of deleted: it closes and leaves your lists, candidates keep their history, and you can restore it.`,
     [
       { label: "Job", value: result.title },
       { label: "Status", value: result.status === "active" ? "Published" : "Not published" },

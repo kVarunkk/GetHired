@@ -1,13 +1,16 @@
 "use client";
 
+import { jobApplyPath } from "@/helpers/jobs/apply-path";
 import { createContext, useContext, type ReactNode } from "react";
 
 /** CP-REQ-013: where an application starts. The default is the job board. */
 export type ApplicationSource = {
   source?: "applied" | "careers_page" | "job_board";
   ref?: string | null;
-  /** Where login (or sign-up) returns to, e.g. the careers job page with ?apply=true&ref=… */
+  /** Where login (or sign-up) returns to, e.g. the careers job page with its ?ref=… */
   returnTo?: string;
+  /** AP-REQ-022: the apply page for this context (the careers one, or /jobs/<id>/apply with its source tag). */
+  applyHref?: string;
 };
 
 const ApplicationSourceContext = createContext<ApplicationSource>({});
@@ -23,4 +26,10 @@ export const useApplicationSource = () => useContext(ApplicationSourceContext);
 export function useLoginToApplyHref(allJobsId: string): string {
   const { returnTo } = useApplicationSource();
   return `/auth/login?returnTo=${encodeURIComponent(returnTo ?? `/jobs/${allJobsId}`)}`;
+}
+
+/** AP-REQ-022: where Apply goes for a job: the context's apply page, else /jobs/<id>/apply. */
+export function useApplyHref(allJobsId: string): string {
+  const { applyHref } = useApplicationSource();
+  return applyHref ?? jobApplyPath(allJobsId);
 }

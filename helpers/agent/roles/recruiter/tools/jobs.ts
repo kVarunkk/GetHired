@@ -451,7 +451,7 @@ export function createJobTools(ctx: RecruiterToolContext) {
 
     deleteJobPost: tool({
       description:
-        "Permanently delete one of the company's job posts, with its applications and its public listing. Only when the user asked to delete it; to take a job down, setJobPostState paused or closed instead.",
+        "Delete one of the company's job posts. A job post with applications is archived instead: it closes, leaves the company's lists and can be restored, and candidates keep their history. One with no applications is permanently deleted with its public listing. Only when the user asked to delete it; to take a job down, setJobPostState paused or closed instead.",
       inputSchema: z.object({ jobPostId: uuidInput("job post") }),
       execute: ({ jobPostId }) =>
         withToolErrors(ctx, "deleteJobPost", async () => {
@@ -459,7 +459,9 @@ export function createJobTools(ctx: RecruiterToolContext) {
           if (denied) return denied;
           const result = await deleteJobPost(ctx, { jobPostingId: jobPostId });
           if (!result.ok) return { error: result.error };
-          return { id: jobPostId, title: result.title, deleted: true };
+          return result.outcome === "archived"
+            ? { id: jobPostId, title: result.title, archived: true, applications: result.applications }
+            : { id: jobPostId, title: result.title, deleted: true };
         }),
     }),
   };

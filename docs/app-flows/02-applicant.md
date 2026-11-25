@@ -78,14 +78,14 @@ flowchart TD
   RR --> JEV{{"Rerank service"}}
   RR --> G{{"Gemini (reasons)"}}
   RR --> CR["rpc deduct_user_credits"]
-  J --> BM["Save search: toggleSearchBookmarkAction → bookmarks<br/>setBookmarkAlertAction (≤ 5 alerts) → A11 job-alert"]
+  J --> BM["Create alert (banner, bell, empty state): createJobAlertAction → bookmarks<br/>≤ 5 active alerts → A11 job-alert; managed in /settings#job-alerts"]
 ```
 
 ## A3. Job page tools (`/jobs/[job_id]`)
 
 ```mermaid
 flowchart LR
-  JP["/jobs/[job_id]<br/>get-job-details → all_jobs"] --> SUM["summarizeJobAction<br/>Gemini → credits"]
+  JP["/jobs/[job_id]<br/>get-job-details → all_jobs<br/>closed (inactive) → ClosedJobView, noindex"] --> SUM["summarizeJobAction<br/>Gemini → credits"]
   JP --> Q["POST /api/ai-search/jobs/questions/[job_id]<br/>validateAndSanitize → Gemini → credits"]
   JP --> SIM["POST /api/ai-search/jobs/similar-jobs<br/>match_all_jobs_test + rerank"]
   JP --> FAV["favorite: POST /api/jobs/[id]/favorite<br/>or JobFavoriteBtn → setFavoriteAction →<br/>user_favorites, user_favorites_companies"]
@@ -103,6 +103,7 @@ sequenceDiagram
   autonumber
   actor U as Applicant
   participant JP as /jobs/[id] or /careers/[slug]/jobs/[id]
+  participant AP as /jobs/[id]/apply or /careers/[slug]/jobs/[id]/apply
   participant SA as submitApplicationAction<br/>(helpers/applications/submit-application)
   participant DB as Postgres
   participant TR as applications triggers
@@ -117,8 +118,10 @@ sequenceDiagram
     JP->>DB: trackExternalApplicationAction → applications insert (user client, job_post_id null)
     Note over JP,DB: later: setExternalApplicationStatusAction / removeExternalApplicationAction<br/>(JobPageDropdown, refused for platform jobs)
   else company job (job_postings): form, or the agent's Easy Apply (A12)
-    U->>JP: JobApplicationForm (readApplicationForm / publicApplicationForm)
-    JP->>SA: resume + answers
+    U->>JP: Easy Apply (a link, no ?apply=true)
+    JP->>AP: loadApplyPage: 404 (missing or closed job) / external job → job page / signed out → login returnTo (query kept) /<br/>company user → job page / not onboarded → /get-started / already applied → job page
+    U->>AP: JobApplicationForm, one page: Resume + Questions (readApplicationForm / publicApplicationForm)<br/>source: careers_page from the careers route, job_board from ?src= on /jobs
+    AP->>SA: resume + answers
     SA->>DB: resume belongs to user, job_postings (status active),<br/>job_posting_form_rules + duplicate check (service role)
     SA->>SA: validateAnswers + evaluateKnockouts
     SA->>DB: insert applications as the service role<br/>(answers, answers_v2, form_snapshot), users can't insert these themselves
@@ -132,10 +135,6 @@ sequenceDiagram
     SA->>DB: application_knockouts (reject_email_due_at = +24h)
     SA->>DB: deduct_user_credits
     KW->>DB: due + still rejected → Resend email, reject_email_sent_at, email_sent event
-  end
-  opt share proof with company
-    U->>DB: attachments action → application_attachments (trigger check_application_attachment)
-    DB->>DB: rpc enqueue_company_interview_analysis → interview_analyses + interview_analysis_queue
   end
 ```
 
@@ -309,7 +308,7 @@ flowchart LR
   SCH --> E3["/updates/applicants/recharge/enqueue<br/>ai_credits low"] --> Q3[["recharge_jobs"]] --> W3["…/recharge/worker → recharge email"]
   SCH --> D1["/updates/applicants/applications<br/>7-day status reminder"]
   SCH --> D2["/updates/applicants/favorites<br/>favourited, not applied"]
-  SCH --> D3["/updates/applicants/job-alert<br/>bookmarks.is_alert_on"]
+  SCH --> D3["/updates/applicants/job-alert (daily)<br/>active bookmarks; weekly alerts on Mondays; one email per alert"]
   SCH --> D4["/updates/applicants/onboarding<br/>user_info.filled = false"]
   RJA["relevantJobsUpdateAction (manual refresh)"] --> Q2
 ```

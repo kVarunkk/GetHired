@@ -490,7 +490,7 @@ describe("MessageParts: recruiter approvals (RA-REQ-005)", () => {
     expect(screen.getByText("Delete this job post?")).toBeInTheDocument();
     expect(await screen.findByText("Backend Engineer")).toBeInTheDocument();
     expect(screen.getByText("Published")).toBeInTheDocument();
-    expect(screen.getByText(/The 4 applications and their notes are deleted too/)).toBeInTheDocument();
+    expect(screen.getByText(/It has 4 applications, so it.ll be archived instead of deleted/)).toBeInTheDocument();
     // The id isn't shown as a field.
     expect(screen.queryByText("b0000000-0000-4000-8000-000000000001")).not.toBeInTheDocument();
   });

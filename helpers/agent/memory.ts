@@ -61,6 +61,18 @@ export function sanitiseMemoryContent(content: string) {
     .trim();
 }
 
+/**
+ * Application statuses and notes live in My Jobs, read through listApplications
+ * (AT-REQ-053): they change, and every memory goes into every prompt.
+ */
+const APPLICATION_FACT =
+  /\b(applied (to|at|for|with)|my application (to|at|for|status)|application status|(got|received|have) an? (offer|rejection) (from|at)|(was|been|got|am) (rejected|ghosted) (by|from)|interviewing (at|with))\b/i;
+
+export const APPLICATION_MEMORY_REFUSED =
+  "Application statuses and notes belong in My Jobs, not in memory. Add or update them with trackApplication or updateTrackedApplication.";
+
+export const refusesApplicationFact = (content: string) => APPLICATION_FACT.test(content);
+
 const normalise = (content: string) => content.toLowerCase().replace(/\s+/g, " ").trim();
 
 /** The user's memories, most recently updated first. */
@@ -106,6 +118,8 @@ export async function upsertMemory(
       error: `Memory content must be between 1 and ${AGENT_MEMORY_MAX_CHARS} characters.`,
     };
   }
+
+  if (refusesApplicationFact(content)) return { ok: false, error: APPLICATION_MEMORY_REFUSED };
 
   if (memoryId) {
     const { data, error } = await supabase

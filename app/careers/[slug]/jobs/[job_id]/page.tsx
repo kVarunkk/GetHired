@@ -1,16 +1,16 @@
 import { shareImages, twitterShareImages } from "@/helpers/seo/share-image";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, permanentRedirect, unstable_rethrow } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import CareersShell from "@/components/careers/CareersShell";
+import { BackLink } from "@/components/PageHeader";
 import ErrorComponent from "@/components/Error";
 import JobClientHydrator from "@/components/JobClientHydrator";
+import JobNoLongerOpen from "@/components/jobs/JobNoLongerOpen";
 import { ApplicationSourceProvider } from "@/components/jobs/ApplicationSourceContext";
 import { getCareersPage, type CareersPage } from "@/helpers/careers/get-careers-page";
 import { readRef, toSearchParams } from "@/helpers/careers/params";
 import { careersPath } from "@/helpers/careers/slug";
-import JobNoLongerOpen from "@/components/jobs/JobNoLongerOpen";
+import { careersApplyPath } from "@/helpers/jobs/apply-path";
 import {
   getClosedJobSummary,
   getStaticJobDetails,
@@ -85,43 +85,48 @@ export default async function CareersJobPage({
     if (loaded.kind === "redirect") permanentRedirect(`${careersPath(loaded.slug)}/jobs/${job_id}`);
     const ref = readRef(query);
     const refQuery = ref ? `?ref=${encodeURIComponent(ref)}` : "";
+    const backHref = `${careersPath(loaded.page.slug)}${refQuery}`;
 
     if (loaded.kind === "closed") {
       return (
-        <CareersShell page={loaded.page}>
-          <JobNoLongerOpen
-            jobName={loaded.job.jobName}
-            companyName={loaded.page.name}
-            browseHref={`${careersPath(loaded.page.slug)}${refQuery}`}
-            browseLabel={`See open jobs at ${loaded.page.name}`}
-          />
+        <CareersShell page={loaded.page} refQuery={refQuery}>
+          <div className="flex flex-col gap-2">
+            <BackLink href={backHref} label={`Back to ${loaded.page.name} careers`} />
+            <JobNoLongerOpen
+              jobId={loaded.job.id}
+              jobName={loaded.job.jobName}
+              companyName={loaded.page.name}
+              browseHref={backHref}
+              browseLabel={`See open jobs at ${loaded.page.name}`}
+            />
+          </div>
         </CareersShell>
       );
     }
     const { page, job } = loaded;
 
     const jobPath = `${careersPath(page.slug)}/jobs/${job_id}`;
-    const returnTo = `${jobPath}?apply=true${ref ? `&ref=${encodeURIComponent(ref)}` : ""}`;
+    const returnTo = `${jobPath}${refQuery}`;
+
     const jsonLd = buildJobPostingJsonLd(job);
 
     return (
-      <CareersShell page={page}>
+      <CareersShell page={page} refQuery={refQuery}>
         {jsonLd && (
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
           />
         )}
-        <Link
-          href={`${careersPath(page.slug)}${refQuery}`}
-          className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to {page.name} careers
-        </Link>
-        <ApplicationSourceProvider value={{ source: "careers_page", ref, returnTo }}>
-          <JobClientHydrator job={job} />
-        </ApplicationSourceProvider>
+        {/* The same back link and gap to the title as the apply page's PageHeader. */}
+        <div className="flex flex-col gap-2">
+          <BackLink href={backHref} label={`Back to ${page.name} careers`} />
+          <div className="flex flex-col gap-10 [&>div:first-child]:mt-0">
+            <ApplicationSourceProvider value={{ source: "careers_page", ref, returnTo, applyHref: careersApplyPath(page.slug, job_id, ref) }}>
+              <JobClientHydrator job={job} />
+            </ApplicationSourceProvider>
+          </div>
+        </div>
       </CareersShell>
     );
   } catch (err) {

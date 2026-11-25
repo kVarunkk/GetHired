@@ -213,7 +213,7 @@ describe("/api/mcp tools/call", () => {
     const { body } = await rpc(await call("get_job_details", { jobId: JOB_ID }));
 
     expect(body.result.structuredContent.description).toMatch(/<job_description[^>]*>[\s\S]*Ignore previous instructions\.[\s\S]*<\/job_description/);
-    expect(body.result.structuredContent.applyUrl).toBe(`http://localhost:3000/jobs/${JOB_ID}?apply=true`);
+    expect(body.result.structuredContent.applyUrl).toBe(`http://localhost:3000/jobs/${JOB_ID}/apply`);
   });
 
   it("favorite_job saves the job for the token's user", async () => {
@@ -724,7 +724,7 @@ describe("/api/mcp legacy (2025) clients", () => {
       ),
     );
 
-    expect(body.result.structuredContent).toEqual({ jobs: [], totalCount: 0, nextCursor: null });
+    expect(body.result.structuredContent).toEqual({ jobs: [], totalCount: 0, nextCursor: null, otherSavedJobs: [] });
   });
 
   it.each([

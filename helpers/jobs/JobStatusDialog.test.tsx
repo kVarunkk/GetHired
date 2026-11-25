@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useRouter } from "next/navigation";
 import { trackExternalApplicationAction } from "@/app/actions/applications/track-external-application";
 import JobStatusDialog from "./JobStatusDialog";
@@ -47,7 +47,7 @@ describe("JobStatusDialog", () => {
     expect(track).toHaveBeenCalledWith({ allJobsId: "j1" });
     expect(onClose).not.toHaveBeenCalled();
 
-    const links = screen.getAllByRole("link");
+    const links = within(screen.getByRole("group", { name: "Agent suggestions" })).getAllByRole("link");
     expect(links.length).toBeGreaterThan(0);
     for (const link of links) {
       const href = decodeURIComponent(link.getAttribute("href") ?? "");
@@ -56,5 +56,21 @@ describe("JobStatusDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("says the application is in My Jobs and links to its Applications tab", async () => {
+    renderDialog();
+    fireEvent.click(screen.getByRole("button", { name: "Yes" }));
+    const link = await screen.findByRole("link", { name: "My Jobs" });
+    expect(link).toHaveAttribute("href", "/my-jobs");
+    expect(screen.getByText(/Frontend Engineer at Acme is in/)).toBeInTheDocument();
+  });
+
+  it("stays on the question when tracking fails", async () => {
+    track.mockResolvedValue({ ok: false, error: "nope" });
+    renderDialog();
+    fireEvent.click(screen.getByRole("button", { name: "Yes" }));
+    expect(await screen.findByRole("button", { name: "Yes" })).toBeInTheDocument();
+    expect(screen.queryByText("Application tracked")).not.toBeInTheDocument();
   });
 });

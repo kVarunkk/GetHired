@@ -83,7 +83,9 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   unsaveJob: { running: "Removing the saved job…", done: "Removed the saved job", action: "remove the saved job" },
   listSavedJobs: { running: "Loading saved jobs…", done: "Loaded saved jobs", action: "load saved jobs" },
   listApplications: { running: "Loading applications…", done: "Loaded applications", action: "load applications" },
-  updateApplicationStatus: { running: "Updating the application…", done: "Updated the application", action: "update the application" },
+  trackApplication: { running: "Adding to My Jobs…", done: "Added to My Jobs", action: "add the job to My Jobs" },
+  updateTrackedApplication: { running: "Updating the application…", done: "Updated the application", action: "update the application" },
+  removeTrackedApplication: { running: "Removing the application…", done: "Removed the application", action: "remove the application" },
   getApplicationForm: { running: "Reading the application form…", done: "Read the application form", action: "read the application form" },
   submitApplication: { running: "Sending the application…", done: "Sent the application", action: "apply to the job" },
   listResumes: { running: "Loading resumes…", done: "Loaded resumes", action: "load resumes" },
@@ -564,6 +566,8 @@ function approvalTitle(name: string, input: unknown) {
       return "Make these changes to your resume?";
     case "deleteResume":
       return "Delete this resume?";
+    case "removeTrackedApplication":
+      return "Remove this application from My Jobs? Its notes and timeline go with it.";
     case "applyReviewSuggestions":
       return "Apply these suggestions?";
     case "createJobPost":
@@ -923,6 +927,15 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
 
   if (name === "deleteJobPost" && result.deleted === true) {
     return <Step tone="done" label={`Deleted “${String(result.title ?? "the job post")}”.`} />;
+  }
+
+  if (name === "deleteJobPost" && result.archived === true) {
+    return (
+      <Step
+        tone="done"
+        label={`Archived “${String(result.title ?? "the job post")}”: it has applications, so candidates keep their history. Restore it from archived job posts.`}
+      />
+    );
   }
 
   if (name === "moveApplications" && typeof result.moved === "number") {

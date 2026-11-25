@@ -39,7 +39,14 @@ import type { SuggestedTier } from "@/helpers/billing/errors";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useRelevantJobPoller } from "@/hooks/useRelevantJobPoller";
 import ProfileCompletionBanner from "./ProfileCompletionBanner";
+import JobAlertSlot, {
+  searchWithoutControls,
+  type JobAlertFeedProps,
+} from "./job-alerts/JobAlertSlot";
+import JobAlertButton from "./job-alerts/JobAlertButton";
+import JobsPageDropdown from "./JobsPageDropdown";
 import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
+import { appliedJobFor } from "@/helpers/tracker/applied-state";
 
 export default function JobsComponent({
   initialJobs,
@@ -57,6 +64,7 @@ export default function JobsComponent({
   profilesPerSearch = null,
   hiddenCount = 0,
   upgradePlan = null,
+  jobAlert = null,
 }: {
   initialJobs:
     AllJobWithRelations[] | AllProfileWithRelations[] | TCompanyInfo[];
@@ -76,6 +84,8 @@ export default function JobsComponent({
   /** Talent search: matches beyond the cap (BL-REQ-023). */
   hiddenCount?: number;
   upgradePlan?: SuggestedTier | null;
+  /** Jobs search: the viewer's alert state for this search (JA-REQ-010–016). */
+  jobAlert?: JobAlertFeedProps | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -91,6 +101,7 @@ export default function JobsComponent({
   );
 
   const [aiGenBtnLoading, setAiGenBtnLoading] = useState(false);
+  const showAlerts = !!jobAlert && current_page === "jobs" && isAllJobsTab;
 
   const { data: currentUserData, isLoading: currentUserDataLoading } = useSWR(
     PROFILE_API_KEY,
@@ -251,34 +262,37 @@ export default function JobsComponent({
       currentUserData?.profile?.user_favorites_companies ?? [];
     const favoriteProfiles: { user_id: string }[] =
       currentUserData?.profile?.company_favorites ?? [];
-    const appliedJobs: {
-      all_jobs_id: string;
-      status: string;
-    }[] = currentUserData?.profile?.applications ?? [];
 
     if (jobs.length === 0) {
       return (
-        <p className="text-muted-foreground mt-20 mx-auto text-center">
-          No{" "}
-          {isCompanyUser && current_page === "profiles"
-            ? "profiles"
-            : current_page === "jobs"
-              ? "jobs"
-              : "companies"}{" "}
-          found for the selected Filter. <br />
-          <ModifiedLink
-            href={
-              isCompanyUser && current_page === "profiles"
-                ? "/company/profiles"
-                : current_page === "jobs"
-                  ? "/jobs"
-                  : "/companies"
-            }
-            className="underline"
-          >
-            Clear Filters
-          </ModifiedLink>
-        </p>
+        <>
+          {showAlerts && (
+            <div className="mt-10">
+              <JobAlertSlot placement="empty" {...jobAlert} />
+            </div>
+          )}
+          <p className="text-muted-foreground mt-20 mx-auto text-center">
+            No{" "}
+            {isCompanyUser && current_page === "profiles"
+              ? "profiles"
+              : current_page === "jobs"
+                ? "jobs"
+                : "companies"}{" "}
+            found for the selected Filter. <br />
+            <ModifiedLink
+              href={
+                isCompanyUser && current_page === "profiles"
+                  ? "/company/profiles"
+                  : current_page === "jobs"
+                    ? "/jobs"
+                    : "/companies"
+              }
+              className="underline"
+            >
+              Clear Filters
+            </ModifiedLink>
+          </p>
+        </>
       );
     }
 
@@ -327,7 +341,7 @@ export default function JobsComponent({
             isSuitable={isSuitable}
             isOnboardingComplete={isOnboardingComplete}
             isFavorite={!!favoriteJobs?.some((fav) => fav.job_id === job.id)}
-            appliedJob={appliedJobs?.find((app) => app.all_jobs_id === job.id)}
+            appliedJob={appliedJobFor(currentUserData?.profile, job.id, Boolean(job.is_platform_job))}
             isLoading={isInitialJobUrlsLoading}
             hasCredits={hasCredits}
           />
@@ -343,18 +357,28 @@ export default function JobsComponent({
             isSuitable={isSuitable}
             isOnboardingComplete={isOnboardingComplete}
             isFavorite={!!favoriteJobs?.some((fav) => fav.job_id === job.id)}
-            appliedJob={appliedJobs?.find((app) => app.all_jobs_id === job.id)}
+            appliedJob={appliedJobFor(currentUserData?.profile, job.id, Boolean(job.is_platform_job))}
             isLoading={isInitialJobUrlsLoading}
             hasCredits={hasCredits}
           />
         ));
 
+      // JA-REQ-011: after the 5th job, or the last when there are fewer. It
+      // keeps its place when more jobs load, so it shows once.
+      const alertAfter = Math.min(5, items.length);
+      const alertSlot = showAlerts ? (
+        <JobAlertSlot key="job-alert" placement="inline" {...jobAlert} />
+      ) : null;
+      const withAlert = (nodes: React.ReactNode[], offset: number) =>
+        nodes.flatMap((node, i) =>
+          offset + i + 1 === alertAfter ? [node, alertSlot] : [node],
+        );
       return [
-        ...items1,
+        ...withAlert(items1, 0),
         user && !isOnboardingComplete && !isCompanyUser && (
           <ProfileCompletionBanner key={"profile-completion-banner"} />
         ),
-        ...items2,
+        ...withAlert(items2, items1.length),
       ];
     }
 
@@ -385,6 +409,8 @@ export default function JobsComponent({
     initialJobUrlMap,
     isInitialJobUrlsLoading,
     jobPostingId,
+    showAlerts,
+    jobAlert,
   ]);
 
   return (
@@ -440,6 +466,12 @@ export default function JobsComponent({
         </div>
 
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full sm:w-auto">
+          {user && !isCompanyUser && current_page === "jobs" && jobAlert && (
+            <JobAlertButton
+              {...jobAlert}
+              search={searchWithoutControls(searchParams)}
+            />
+          )}
           {user &&
             isOnboardingComplete &&
             !isCompanyUser &&
@@ -526,6 +558,10 @@ export default function JobsComponent({
             currentPage={current_page}
             onboardingComplete={isOnboardingComplete}
           />
+
+          {user && !isCompanyUser && current_page === "jobs" && (
+            <JobsPageDropdown user={user} />
+          )}
         </div>
       </div>
 

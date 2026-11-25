@@ -9,6 +9,8 @@ import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAd
 import { getPlatformStats } from "@/utils/platform-stats";
 import { Metadata } from "next";
 import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
+import JsonLd from "@/components/seo/JsonLd";
+import { landingJsonLd } from "@/helpers/seo/schema";
 
 const page = LANDING_PAGES["ai-interview"];
 
@@ -56,6 +58,7 @@ export default async function AIInterviewPage() {
 
   return (
     <div className="flex-1 flex flex-col gap-32  w-full">
+      <JsonLd data={landingJsonLd(page, "AI Interview Practice")} />
       <HeroAiInterview />
       <HowWeHelp jobCount={jobCount} />
       <PlatformStats
