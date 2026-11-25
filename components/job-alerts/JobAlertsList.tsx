@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import useSWR, { mutate } from "swr";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
+import { listJobAlertsAction } from "@/app/actions/job-alerts/list-job-alerts";
 import { deleteJobAlertAction } from "@/app/actions/job-alerts/delete-job-alert";
 import { updateJobAlertAction } from "@/app/actions/job-alerts/update-job-alert";
 import {
@@ -27,6 +29,16 @@ import { alertNameParts, ALERT_NAME_MAX } from "@/helpers/job-alerts/name";
 export default function JobAlertsList({ initialAlerts }: { initialAlerts: JobAlert[] }) {
   const [alerts, setAlerts] = useState(initialAlerts);
 
+  // Coming back with the browser's back button restores a cached copy of the
+  // page, so what was changed since (on the jobs page, say) is read again.
+  const { data: fresh } = useSWR("job-alerts-list", () => listJobAlertsAction(), {
+    revalidateOnMount: true,
+    revalidateOnFocus: true,
+  });
+  useEffect(() => {
+    if (fresh) setAlerts(fresh);
+  }, [fresh]);
+
   if (alerts.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -45,8 +57,14 @@ export default function JobAlertsList({ initialAlerts }: { initialAlerts: JobAle
         <AlertRow
           key={alert.id}
           alert={alert}
-          onChange={(next) => setAlerts((list) => list.map((a) => (a.id === next.id ? next : a)))}
-          onDeleted={() => setAlerts((list) => list.filter((a) => a.id !== alert.id))}
+          onChange={(next) => {
+            setAlerts((list) => list.map((a) => (a.id === next.id ? next : a)));
+            void mutate("job-alerts-list");
+          }}
+          onDeleted={() => {
+            setAlerts((list) => list.filter((a) => a.id !== alert.id));
+            void mutate("job-alerts-list");
+          }}
         />
       ))}
     </ul>

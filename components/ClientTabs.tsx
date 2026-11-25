@@ -5,23 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProgress } from "react-transition-progress";
 import { User } from "@supabase/supabase-js";
-import JobAlertButton from "./job-alerts/JobAlertButton";
 import type { JobAlertFeedProps } from "./job-alerts/JobAlertSlot";
-import { CREATE_ALERT_PARAM } from "@/helpers/job-alerts/paths";
-import JobsPageDropdown from "./JobsPageDropdown";
 import { Loader2 } from "lucide-react";
 import { activeTabFrom, type TalentListTab } from "@/utils/talent-list-tabs";
 import ScrollMaskX from "./ScrollMaskX";
 
 /** A list tab's candidates table's URL state (`candidateFiltersFrom`). */
 const CANDIDATE_TABLE_PARAMS = ["q", "tag", "batch", "inJob", "loc", "resume", "email", "added", "matchJob", "page"];
-
-/** The search's query string without what isn't a filter. */
-function alertSearch(searchParams: URLSearchParams) {
-  const next = new URLSearchParams(searchParams.toString());
-  for (const key of [CREATE_ALERT_PARAM, "ref", "aid", "tab"]) next.delete(key);
-  return next.toString();
-}
 
 export function ClientTabs({
   user,
@@ -88,7 +78,7 @@ export function ClientTabs({
   return (
     <>
       <Tabs value={activeTab}>
-        {user ? (
+        {user && page !== "jobs" ? (
           <div className="flex items-center justify-between flex-wrap gap-4 py-6">
             {!isCompanyUser && !isAISearch && page === "companies" && (
               <div className="flex min-w-0 max-w-full items-center gap-2">
@@ -165,18 +155,6 @@ export function ClientTabs({
                 {isPending && (
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 )}
-              </div>
-            )}
-
-            {page === "jobs" && !isCompanyUser && (
-              <div className="flex items-center gap-2">
-                {jobAlert && (
-                  <JobAlertButton
-                    {...jobAlert}
-                    search={alertSearch(searchParams)}
-                  />
-                )}
-                <JobsPageDropdown user={user} />
               </div>
             )}
           </div>

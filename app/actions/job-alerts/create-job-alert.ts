@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { JOB_ALERT_COPY, type JobAlert, type JobAlertFailure } from "@/helpers/job-alerts/alerts";
 import { createJobAlert } from "@/helpers/job-alerts/create-alert";
@@ -55,6 +54,5 @@ export async function createJobAlertAction(input: z.input<typeof inputSchema>): 
       resumed: result.resumed,
     },
   });
-  revalidatePath("/settings");
   return result;
 }

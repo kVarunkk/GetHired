@@ -81,21 +81,6 @@ describe("JobAlertSlot (JAT-043, JAT-044)", () => {
     expect(createJobAlertAction).not.toHaveBeenCalled();
   });
 
-  it("shows the quiet line above the list for an active alert", () => {
-    render(
-      <JobAlertSlot placement="above" {...FEED} alert={{ state: "active", id: "a1", frequency: "weekly" }} />,
-    );
-    expect(screen.getByText(/You get alerts for this search/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Manage" })).toHaveAttribute("href", "/settings#job-alerts");
-  });
-
-  it("shows no line without an alert, and on an AI search", () => {
-    expect(render(<JobAlertSlot placement="above" {...FEED} />).container).toBeEmptyDOMElement();
-    setQuery("sortBy=relevance");
-    const active = { state: "active", id: "a1", frequency: "weekly" } as const;
-    expect(render(<JobAlertSlot placement="above" {...FEED} alert={active} />).container).toBeEmptyDOMElement();
-  });
-
   it("the empty state offers the alert with its own copy", async () => {
     render(<JobAlertSlot placement="empty" {...FEED} />);
     expect(

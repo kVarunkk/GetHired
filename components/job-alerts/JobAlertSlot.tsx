@@ -1,13 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { BellRing } from "lucide-react";
-import {
-  CREATE_ALERT_PARAM,
-  JOB_ALERTS_SETTINGS_PATH,
-} from "@/helpers/job-alerts/paths";
+import { CREATE_ALERT_PARAM } from "@/helpers/job-alerts/paths";
 import JobAlertBanner, { type JobAlertBannerProps } from "./JobAlertBanner";
 import type { AlertFrequency } from "./useJobAlertControls";
 
@@ -18,7 +13,7 @@ export type JobAlertFeedProps = Pick<
 >;
 
 /** The search's query string without what isn't a filter. */
-function searchWithoutControls(searchParams: URLSearchParams) {
+export function searchWithoutControls(searchParams: URLSearchParams) {
   const next = new URLSearchParams(searchParams.toString());
   for (const key of [CREATE_ALERT_PARAM, "ref", "aid", "tab"]) next.delete(key);
   return next.toString();
@@ -26,12 +21,12 @@ function searchWithoutControls(searchParams: URLSearchParams) {
 
 /**
  * Where `JobsComponent` puts the alert card (inline after the 5th job, or in
- * the empty state) and the quiet line above the list.
+ * the empty state).
  */
 export default function JobAlertSlot({
   placement,
   ...props
-}: JobAlertFeedProps & { placement: "inline" | "empty" | "above" }) {
+}: JobAlertFeedProps & { placement: "inline" | "empty" }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -48,25 +43,6 @@ export default function JobAlertSlot({
 
   const tab = searchParams.get("tab");
   const sortBy = searchParams.get("sortBy");
-
-  if (placement === "above") {
-    const quiet =
-      props.alert.state === "active" &&
-      props.filtersKey &&
-      !props.isCompany &&
-      (!tab || tab === "all") &&
-      sortBy !== "relevance";
-    if (!quiet) return null;
-    return (
-      <p className="flex items-center gap-2 text-sm text-muted-foreground">
-        <BellRing className="h-4 w-4" aria-hidden />
-        You get alerts for this search ·{" "}
-        <Link href={JOB_ALERTS_SETTINGS_PATH} className="underline">
-          Manage
-        </Link>
-      </p>
-    );
-  }
 
   return (
     <JobAlertBanner

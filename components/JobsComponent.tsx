@@ -40,8 +40,11 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useRelevantJobPoller } from "@/hooks/useRelevantJobPoller";
 import ProfileCompletionBanner from "./ProfileCompletionBanner";
 import JobAlertSlot, {
+  searchWithoutControls,
   type JobAlertFeedProps,
 } from "./job-alerts/JobAlertSlot";
+import JobAlertButton from "./job-alerts/JobAlertButton";
+import JobsPageDropdown from "./JobsPageDropdown";
 import { triggerJobPostingRelevanceUpdate } from "@/app/actions/relevant-profiles-update";
 import { appliedJobFor } from "@/helpers/tracker/applied-state";
 
@@ -412,9 +415,6 @@ export default function JobsComponent({
 
   return (
     <div className="flex flex-col gap-4 w-full pb-4">
-      {showAlerts && jobs.length > 0 && (
-        <JobAlertSlot placement="above" {...jobAlert} />
-      )}
       <div className="w-full flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-2 ">
           {isSuitable && (
@@ -466,6 +466,12 @@ export default function JobsComponent({
         </div>
 
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full sm:w-auto">
+          {user && !isCompanyUser && current_page === "jobs" && jobAlert && (
+            <JobAlertButton
+              {...jobAlert}
+              search={searchWithoutControls(searchParams)}
+            />
+          )}
           {user &&
             isOnboardingComplete &&
             !isCompanyUser &&
@@ -552,6 +558,10 @@ export default function JobsComponent({
             currentPage={current_page}
             onboardingComplete={isOnboardingComplete}
           />
+
+          {user && !isCompanyUser && current_page === "jobs" && (
+            <JobsPageDropdown user={user} />
+          )}
         </div>
       </div>
 

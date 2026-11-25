@@ -10,6 +10,7 @@ import {
 import { createJobAlertAction } from "@/app/actions/job-alerts/create-job-alert";
 import { updateJobAlertAction } from "@/app/actions/job-alerts/update-job-alert";
 import type { AlertState } from "./banner-state";
+import { refreshLiveAlert } from "./useLiveJobAlert";
 
 export type AlertFrequency = "daily" | "weekly";
 export type AlertSource = "feed_banner" | "empty_state" | "settings";
@@ -39,6 +40,20 @@ const subscribe = (l: () => void) => {
 };
 const readShared = () => shared;
 
+/**
+ * What the viewer did only holds while the page that has the controls is up.
+ * Once it's gone (to settings, say) the server is the truth again: an alert
+ * paused there must not read as on when the viewer comes back.
+ */
+let mounted = 0;
+const useForgetWhenUnmounted = () =>
+  useEffect(() => {
+    mounted++;
+    return () => {
+      if (--mounted === 0) publish(null);
+    };
+  }, []);
+
 /** For tests: forget what was done on the page. */
 export const resetSharedAlertState = () => publish(null);
 
@@ -55,6 +70,7 @@ export function useJobAlertControls({
   initial: AlertSnapshot;
   source: AlertSource;
 }) {
+  useForgetWhenUnmounted();
   const [local, setLocal] = useState(initial);
   const latest = useSyncExternalStore(subscribe, readShared, readShared);
   const snapshot = latest?.search === search ? latest.snapshot : local;
@@ -74,6 +90,19 @@ export function useJobAlertControls({
     setCreated(false);
   }
 
+  // The server's answer can land after the search changed (navigating back from
+  // the AI search renders the new URL with the old props first), so follow it
+  // when it changes. Only `local` is touched: the "created" confirmation stays.
+  const [seenInitial, setSeenInitial] = useState(initial);
+  if (
+    seenInitial.state !== initial.state ||
+    seenInitial.id !== initial.id ||
+    seenInitial.frequency !== initial.frequency
+  ) {
+    setSeenInitial(initial);
+    setLocal(initial);
+  }
+
   // What was done for another search no longer applies.
   useEffect(() => {
     if (shared && shared.search !== search) publish(null);
@@ -83,6 +112,7 @@ export function useJobAlertControls({
     (next: AlertSnapshot) => {
       setLocal(next);
       publish({ search, snapshot: next });
+      void refreshLiveAlert(search);
     },
     [search],
   );

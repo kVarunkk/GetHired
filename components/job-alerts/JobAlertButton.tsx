@@ -23,6 +23,7 @@ import {
   JOB_ALERTS_SETTINGS_PATH,
 } from "@/helpers/job-alerts/paths";
 import { BANNER_ACTIVE_CAP } from "./banner-state";
+import { useLiveJobAlert } from "./useLiveJobAlert";
 import {
   useJobAlertControls,
   type AlertFrequency,
@@ -47,10 +48,16 @@ export default function JobAlertButton({
   name,
   isLoggedIn,
   isCompany,
-  alert,
-  activeCount,
+  alert: serverAlert,
+  activeCount: serverActiveCount,
 }: JobAlertButtonProps) {
   const [frequency, setFrequency] = useState<AlertFrequency>("weekly");
+  const { alert, activeCount } = useLiveJobAlert({
+    search,
+    enabled: isLoggedIn && !isCompany && !!filtersKey,
+    alert: serverAlert,
+    activeCount: serverActiveCount,
+  });
   const controls = useJobAlertControls({
     search,
     initial: alert,
@@ -68,7 +75,7 @@ export default function JobAlertButton({
         <Button
           variant="ghost"
           size="sm"
-          className="gap-1.5"
+          className="shrink-0 gap-1.5 whitespace-nowrap"
           title={on ? "Alert on" : "Get alerts for this search"}
         >
           {on ? (

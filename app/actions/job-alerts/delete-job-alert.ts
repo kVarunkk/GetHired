@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { JOB_ALERT_COPY } from "@/helpers/job-alerts/alerts";
 import { deleteJobAlert, type DeleteJobAlertResult } from "@/helpers/job-alerts/writes";
@@ -22,6 +21,5 @@ export async function deleteJobAlertAction(input: z.input<typeof inputSchema>): 
   if (!result.ok) return result;
 
   await eventCaptureServer({ event: PostHogEvent.JobAlertDeleted, distinctId: session.ctx.userId });
-  revalidatePath("/settings");
   return result;
 }

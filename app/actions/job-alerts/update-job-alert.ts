@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { JOB_ALERT_COPY } from "@/helpers/job-alerts/alerts";
 import { updateJobAlert, type UpdateJobAlertResult } from "@/helpers/job-alerts/writes";
@@ -33,6 +32,5 @@ export async function updateJobAlertAction(input: z.input<typeof inputSchema>): 
     distinctId: session.ctx.userId,
     properties: { changed: result.changed, ...(parsed.data.on !== undefined ? { on: parsed.data.on } : {}) },
   });
-  revalidatePath("/settings");
   return result;
 }

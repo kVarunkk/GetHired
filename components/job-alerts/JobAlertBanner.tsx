@@ -23,6 +23,7 @@ import {
   BANNER_ACTIVE_CAP,
   type BannerInput,
 } from "./banner-state";
+import { useLiveJobAlert } from "./useLiveJobAlert";
 import { useAlertBannerDismissals } from "./useAlertBannerDismissals";
 import {
   useJobAlertControls,
@@ -62,13 +63,19 @@ export default function JobAlertBanner({
   isCompany,
   tab,
   sortBy,
-  alert,
-  activeCount,
+  alert: serverAlert,
+  activeCount: serverActiveCount,
   variant = "feed",
   autoCreate = null,
   onAutoCreated,
 }: JobAlertBannerProps) {
   const { store, ready, dismiss } = useAlertBannerDismissals();
+  const { alert, activeCount } = useLiveJobAlert({
+    search,
+    enabled: isLoggedIn && !isCompany && !!filtersKey,
+    alert: serverAlert,
+    activeCount: serverActiveCount,
+  });
   const [frequency, setFrequency] = useState<AlertFrequency>("weekly");
   const controls = useJobAlertControls({
     search,
