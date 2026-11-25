@@ -50,6 +50,7 @@ const DEFAULT_QUERY_ARGS = {
   createdAfter: null,
   jobEmbedding: null,
   relevanceSearchType: null,
+  excludeJobIds: null,
 };
 
 let supabase: SupabaseMock;
