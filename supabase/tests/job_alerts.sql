@@ -157,7 +157,7 @@ begin
 end $$;
 
 -- ------------------------------------------------------ 4. cutover (migration B)
--- Keep the statements below in step with 20261125130000_job_alerts_cutover.sql.
+-- Keep the statements below in step with 20261128140000_job_alerts_cutover.sql.
 do $$
 begin
   delete from public.bookmarks where user_id = 'a0000000-0000-4000-8000-0000000000a2';
