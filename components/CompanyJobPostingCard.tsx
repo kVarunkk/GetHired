@@ -29,7 +29,7 @@ export default function CompanyJobPostingCard({
           </Link>
           <div className="items-center gap-1 flex sm:hidden sm:group-hover:flex">
             <EditJobPostButton jobPostId={job.id} disabled={!controls.edit} />
-            <DeleteJobPosting job_posting_id={job.id} disabled={!controls.delete} />
+            <DeleteJobPosting job_posting_id={job.id} disabled={!controls.delete} applications={job.applications?.length ?? 0} />
           </div>
         </CardTitle>
         <p className="text-sm text-muted-foreground">

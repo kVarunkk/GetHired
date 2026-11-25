@@ -85,7 +85,7 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  JP["/jobs/[job_id]<br/>get-job-details → all_jobs"] --> SUM["summarizeJobAction<br/>Gemini → credits"]
+  JP["/jobs/[job_id]<br/>get-job-details → all_jobs<br/>closed (inactive) → ClosedJobView, noindex"] --> SUM["summarizeJobAction<br/>Gemini → credits"]
   JP --> Q["POST /api/ai-search/jobs/questions/[job_id]<br/>validateAndSanitize → Gemini → credits"]
   JP --> SIM["POST /api/ai-search/jobs/similar-jobs<br/>match_all_jobs_test + rerank"]
   JP --> FAV["favorite: POST /api/jobs/[id]/favorite<br/>or JobFavoriteBtn → setFavoriteAction →<br/>user_favorites, user_favorites_companies"]
@@ -119,7 +119,7 @@ sequenceDiagram
     Note over JP,DB: later: setExternalApplicationStatusAction / removeExternalApplicationAction<br/>(JobPageDropdown, refused for platform jobs)
   else company job (job_postings): form, or the agent's Easy Apply (A12)
     U->>JP: Easy Apply (a link, no ?apply=true)
-    JP->>AP: loadApplyPage: 404 / external job → job page / signed out → login returnTo (query kept) /<br/>company user → job page / not onboarded → /get-started / already applied → job page
+    JP->>AP: loadApplyPage: 404 (missing or closed job) / external job → job page / signed out → login returnTo (query kept) /<br/>company user → job page / not onboarded → /get-started / already applied → job page
     U->>AP: JobApplicationForm, one page: Resume + Questions (readApplicationForm / publicApplicationForm)<br/>source: careers_page from the careers route, job_board from ?src= on /jobs
     AP->>SA: resume + answers
     SA->>DB: resume belongs to user, job_postings (status active),<br/>job_posting_form_rules + duplicate check (service role)

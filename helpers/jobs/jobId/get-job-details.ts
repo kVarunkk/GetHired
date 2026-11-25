@@ -5,8 +5,12 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { isUuid } from "@/helpers/agent/auth";
 import type { TJobIdPageData } from "@/utils/types/jobs.types";
 
-/** One active job for its public page (/jobs/[id] and the careers job page), cached per job. */
-export const getStaticJobDetails = async (
+/**
+ * One job for its public page (/jobs/[id] and the careers job page), whatever
+ * its status, cached per job. A closed (`inactive`) job still has a page so
+ * the people who applied can read it; only a missing job is null.
+ */
+export const getJobPageDetails = async (
   jobId: string,
 ): Promise<TJobIdPageData | null> => {
   // A malformed id (e.g. a truncated link) makes Postgres reject the uuid
@@ -26,7 +30,6 @@ export const getStaticJobDetails = async (
         .from("all_jobs")
         .select(selectString)
         .eq("id", id)
-        .eq("status", "active")
         .maybeSingle();
 
       if (error) {
@@ -39,8 +42,18 @@ export const getStaticJobDetails = async (
         company_url: null,
       };
     },
-    [`job-detail-${jobId}`],
+    [`job-page-${jobId}`],
     { revalidate: 86400, tags: [`job-${jobId}`] },
   )(jobId);
 };
 
+/** Whether a job page shows the job as closed: anything but `active`. */
+export const isJobClosed = (job: Pick<TJobIdPageData, "status">) => job.status !== "active";
+
+/** One active job, for the apply pages: a closed job can't be applied to. */
+export const getStaticJobDetails = async (
+  jobId: string,
+): Promise<TJobIdPageData | null> => {
+  const job = await getJobPageDetails(jobId);
+  return job && !isJobClosed(job) ? job : null;
+};

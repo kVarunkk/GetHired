@@ -41,11 +41,14 @@ export function JobDeleteApprovalDetails({ input }: { input: unknown }) {
         <dt className="text-muted-foreground">Applications</dt>
         <dd className="text-foreground">{preview.applications === 0 ? "None" : applications}</dd>
       </dl>
-      <p className="text-destructive">
-        {preview.applications === 0
-          ? "This can't be undone."
-          : `The ${applications} and their notes are deleted too. This can't be undone.`}
-      </p>
+      {preview.applications === 0 ? (
+        <p className="text-destructive">This can&apos;t be undone.</p>
+      ) : (
+        <p className="text-muted-foreground">
+          It has {applications}, so it&apos;ll be archived instead of deleted: it closes and leaves your lists, candidates
+          keep their history, and you can restore it.
+        </p>
+      )}
     </div>
   );
 }

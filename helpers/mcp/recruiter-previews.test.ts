@@ -235,7 +235,7 @@ const CASES: Case[] = [
     input: { jobPostId: JOB_A1 },
     seed: () =>
       vi.mocked(previewAgentJobDelete).mockResolvedValue(ok({ title: "Frontend Engineer", status: "active", applications: 2 })),
-    facts: [/The 2 applications and their notes are deleted too/, /Job: Frontend Engineer/, /Status: Published/],
+    facts: [/This job post has 2 applications, so it.ll be archived instead of deleted/, /Job: Frontend Engineer/, /Status: Published/],
   },
   // --- job pipelines (JPT-042) ---
   {

@@ -3,10 +3,11 @@
 // `applications` row (a GetHired application, or an old external one until
 // migration B moves it).
 
+import { myJobsPath, trackedApplicationPath } from "./paths";
 import { legacyTrackedStatus, trackedStatusLabel, isTrackedStatus, type ApplicationStatus, type AppliedStatus } from "./status";
 
-export type ProfileApplication = { all_jobs_id: string | null; status: string };
-export type ProfileTracked = { all_jobs_id: string | null; status: string };
+export type ProfileApplication = { id?: string; all_jobs_id: string | null; job_post_id?: string | null; status: string };
+export type ProfileTracked = { id?: string; all_jobs_id: string | null; status: string };
 
 export type AppliedJob = {
   all_jobs_id: string;
@@ -50,4 +51,21 @@ export function appliedJobFor(
   }
   const mapped = legacyTrackedStatus(status);
   return { all_jobs_id: jobId, status: mapped, statusLabel: trackedStatusLabel(mapped), kind: "tracked", trackedStatus: mapped };
+}
+
+/**
+ * Where the user's own record of a board job lives, for the closed-job page:
+ * the card's page for a tracked row or a GetHired application, My Jobs for an
+ * old external row (it has no page of its own), or null when they never
+ * applied.
+ */
+export function myApplicationHref(
+  profile: { applications?: ProfileApplication[] | null; tracked_applications?: ProfileTracked[] | null } | null | undefined,
+  jobId: string,
+): string | null {
+  const tracked = profile?.tracked_applications?.find((row) => row.all_jobs_id === jobId && row.status !== "saved");
+  if (tracked) return tracked.id ? trackedApplicationPath(tracked.id) : myJobsPath();
+  const application = profile?.applications?.find((row) => row.all_jobs_id === jobId);
+  if (!application) return null;
+  return application.id && application.job_post_id ? trackedApplicationPath(application.id) : myJobsPath();
 }

@@ -8,6 +8,8 @@ import EntityLayout from "@/components/EntityLayout";
 import type { EntityNavItem } from "@/components/EntityNav";
 import PageHeader from "@/components/PageHeader";
 import DeleteJobPosting from "@/components/DeleteJobPosting";
+import RestoreJobPosting from "@/components/RestoreJobPosting";
+import { Badge } from "@/components/ui/badge";
 import FindSuitableProfilesForJobPost from "@/components/FindSuitableProfilesForJobPost";
 import { JobStatusSwitch } from "@/components/JobPostingsTable";
 import ShareJobPosting from "@/components/ShareJobPosting";
@@ -72,7 +74,11 @@ export default async function JobPostLayout({
     // the viewer's permissions on this job; the server refuses them too.
     if (!job || !can(company, "jobs.view", job.id)) notFound();
     const controls = jobControls(company, job.id);
-    const careersLink = await getMyCareersLink(supabase, company.id).catch(() => null);
+    const [careersLink, { count: applications }] = await Promise.all([
+      getMyCareersLink(supabase, company.id).catch(() => null),
+      // How the delete dialog words itself: a job with applications is archived instead.
+      supabase.from("applications").select("id", { count: "exact", head: true }).eq("job_post_id", job.id),
+    ]);
 
     const base = `/company/job-posts/${job.id}`;
     const items: EntityNavItem[] = [
@@ -131,12 +137,29 @@ export default async function JobPostLayout({
             description={
               <>
                 at {job.company_info?.name} · Posted on {format(new Date(job.created_at), "PPP")}
+                {job.archived_at && <> · Archived on {format(new Date(job.archived_at), "PPP")}</>}
               </>
             }
             actions={
               <>
-                <JobStatusSwitch job={job} disabled={!controls.publish} />
-                <DeleteJobPosting job_posting_id={job.id} is_job_posting_page disabled={!controls.delete} />
+                {job.archived_at ? (
+                  <>
+                    <Badge variant="outline" className="font-normal">
+                      Archived
+                    </Badge>
+                    <RestoreJobPosting job_posting_id={job.id} disabled={!controls.delete} />
+                  </>
+                ) : (
+                  <>
+                    <JobStatusSwitch job={job} disabled={!controls.publish} />
+                    <DeleteJobPosting
+                      job_posting_id={job.id}
+                      is_job_posting_page
+                      disabled={!controls.delete}
+                      applications={applications ?? 0}
+                    />
+                  </>
+                )}
                 <ShareJobPosting job_id={job.job_id} careersSlug={careersLink?.published ? careersLink.slug : null} />
                 <FindSuitableProfilesForJobPost job_post_id={job.id} />
               </>

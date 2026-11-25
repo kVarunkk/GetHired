@@ -404,7 +404,7 @@ describe("setJobPostStatus tool", () => {
 
 describe("deleteJobPost tool", () => {
   it("deletes through the shared helper, within the session company", async () => {
-    vi.mocked(deleteJobPost).mockResolvedValue({ ok: true, title: JOB.title });
+    vi.mocked(deleteJobPost).mockResolvedValue({ ok: true, title: JOB.title, outcome: "deleted", applications: 0 });
 
     expect(await execTool(tools.deleteJobPost, { jobPostId: JOB.id })).toEqual({
       id: JOB.id,
@@ -414,6 +414,17 @@ describe("deleteJobPost tool", () => {
     const [deps, params] = vi.mocked(deleteJobPost).mock.calls[0];
     expect(deps.company.id).toBe(COMPANY_A.id);
     expect(params).toEqual({ jobPostingId: JOB.id });
+  });
+
+  it("says when the job was archived because it has applications", async () => {
+    vi.mocked(deleteJobPost).mockResolvedValue({ ok: true, title: JOB.title, outcome: "archived", applications: 4 });
+
+    expect(await execTool(tools.deleteJobPost, { jobPostId: JOB.id })).toEqual({
+      id: JOB.id,
+      title: JOB.title,
+      archived: true,
+      applications: 4,
+    });
   });
 
   it("passes on the helper's error", async () => {

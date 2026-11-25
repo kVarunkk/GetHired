@@ -4,9 +4,10 @@ import { BackLink } from "@/components/PageHeader";
 import JobClientHydrator from "@/components/JobClientHydrator";
 import JobSourceProvider from "@/components/jobs/JobSourceProvider";
 import JobAlertClickTracker from "@/components/job-alerts/JobAlertClickTracker";
+import ClosedJobView from "@/components/jobs/ClosedJobView";
 import { Metadata } from "next";
 import { buildJobPostingJsonLd } from "@/helpers/jobs/jobId/jsonld";
-import { getStaticJobDetails } from "@/helpers/jobs/jobId/get-job-details";
+import { getJobPageDetails, isJobClosed } from "@/helpers/jobs/jobId/get-job-details";
 
 export const revalidate = 86400;
 export const dynamic = "force-static";
@@ -17,8 +18,9 @@ export async function generateMetadata({
   params: Promise<{ job_id: string }>;
 }): Promise<Metadata> {
   const { job_id } = await params;
-  const data = await getStaticJobDetails(job_id);
+  const data = await getJobPageDetails(job_id);
   if (!data) notFound();
+  const closed = isJobClosed(data);
 
   const title = `${data.job_name} at ${data.company_name}`;
   const descriptionSource =
@@ -39,6 +41,8 @@ export async function generateMetadata({
     alternates: {
       canonical,
     },
+    // A closed job keeps its page for the people who applied, but leaves search.
+    ...(closed ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       type: "website",
       siteName: "GetHired",
@@ -61,10 +65,19 @@ export default async function JobPage({
   params: Promise<{ job_id: string }>;
 }) {
   const { job_id } = await params;
-  const job = await getStaticJobDetails(job_id);
+  const job = await getJobPageDetails(job_id);
 
   if (!job) {
     notFound();
+  }
+
+  if (isJobClosed(job)) {
+    return (
+      <div className="flex flex-col gap-4 w-full p-4 mb-20">
+        <BackLink href="/jobs" label="Back to jobs" />
+        <ClosedJobView job={job} browseHref="/jobs" />
+      </div>
+    );
   }
 
   const jsonLd = buildJobPostingJsonLd(job);

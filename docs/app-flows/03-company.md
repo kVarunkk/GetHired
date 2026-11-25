@@ -119,7 +119,7 @@ sequenceDiagram
     H->>DB: insert all_jobs mirror → job_postings.job_id
   end
   H->>H: revalidateTag job-…, careersCompanyTag
-  Note over R,DB: status → setJobPostingStatusAction (jobs.publish) → job_postings + all_jobs<br/>delete → deleteJobPostingAction (jobs.delete)<br/>question sets → save/delete/list → company_question_sets (check_question_set_cap)
+  Note over R,DB: status → setJobPostingStatusAction (jobs.publish) → job_postings + all_jobs<br/>delete → deleteJobPostingAction (jobs.delete) → rpc remove_job_post:<br/>no applications → delete job_postings + all_jobs / any → archive (inactive, archived_at)<br/>archived list → /company/job-posts?archived=1, restore → restoreJobPostingAction → rpc restore_job_post<br/>question sets → save/delete/list → company_question_sets (check_question_set_cap)
 ```
 
 ## C4. Application intake (what one apply sets off)

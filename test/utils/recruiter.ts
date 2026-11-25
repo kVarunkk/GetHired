@@ -184,6 +184,7 @@ export function jobPostingOf(
     id: seqId("b0000000", postingSeq),
     job_id: seqId("d0000000", postingSeq),
     company_id: owner.id,
+    archived_at: null,
     title: "Frontend Engineer",
     description: "Build the product UI with React and TypeScript.",
     location: ["bengaluru"],

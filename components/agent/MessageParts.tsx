@@ -891,6 +891,15 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
     return <Step tone="done" label={`Deleted “${String(result.title ?? "the job post")}”.`} />;
   }
 
+  if (name === "deleteJobPost" && result.archived === true) {
+    return (
+      <Step
+        tone="done"
+        label={`Archived “${String(result.title ?? "the job post")}”: it has applications, so candidates keep their history. Restore it from archived job posts.`}
+      />
+    );
+  }
+
   if (name === "moveApplications" && typeof result.moved === "number") {
     const stage = (result.stage as { name?: string } | undefined)?.name ?? "the stage";
     const moved = result.moved;

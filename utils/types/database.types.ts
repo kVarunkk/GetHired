@@ -3582,6 +3582,7 @@ export type Database = {
       job_postings: {
         Row: {
           application_form: Json
+          archived_at: string | null
           company_id: string
           created_at: string
           department: string | null
@@ -3619,6 +3620,7 @@ export type Database = {
         }
         Insert: {
           application_form?: Json
+          archived_at?: string | null
           company_id: string
           created_at?: string
           department?: string | null
@@ -3656,6 +3658,7 @@ export type Database = {
         }
         Update: {
           application_form?: Json
+          archived_at?: string | null
           company_id?: string
           created_at?: string
           department?: string | null
@@ -6599,6 +6602,7 @@ export type Database = {
         Returns: Json
       }
       remove_import_row: { Args: { p_row_id: string }; Returns: Json }
+      remove_job_post: { Args: { p_job_post_id: string }; Returns: Json }
       rename_pipeline: {
         Args: { p_name: string; p_pipeline_id: string }
         Returns: Json
@@ -6625,6 +6629,7 @@ export type Database = {
         Returns: Json
       }
       resolve_scheduling_token: { Args: { p_token: string }; Returns: Json }
+      restore_job_post: { Args: { p_job_post_id: string }; Returns: Json }
       respond_to_outreach: {
         Args: {
           p_block?: boolean
