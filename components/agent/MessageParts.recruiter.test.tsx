@@ -464,9 +464,18 @@ describe("MessageParts: recruiter approvals (RA-REQ-005)", () => {
   });
 
   it("asks before publishing a job post", () => {
-    renderParts(assistant([approval("setJobPostStatus", { jobPostId: "b1", status: "active" })]));
+    renderParts(assistant([approval("setJobPostState", { jobPostId: "b1", state: "open" })]));
 
     expect(screen.getByText("Publish this job post?")).toBeInTheDocument();
+  });
+
+  it("shows the close reason and the team note before closing a job post", () => {
+    renderParts(
+      assistant([approval("setJobPostState", { jobPostId: "b1", state: "closed", reason: "cancelled", note: "Budget cut" })]),
+    );
+
+    expect(screen.getByText("Close this job post?")).toBeInTheDocument();
+    expect(screen.getByText("Budget cut")).toBeInTheDocument();
   });
 
   it("names the job and its applications before deleting it", async () => {

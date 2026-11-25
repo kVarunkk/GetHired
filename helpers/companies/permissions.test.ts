@@ -341,6 +341,28 @@ describe("applicants.import (BI-PERM-001)", () => {
   });
 });
 
+describe("jobs.approve (JL-REQ-019, JLT-050)", () => {
+  it("is a scopable Jobs key that requires jobs.view and jobs.publish", () => {
+    const entry = permissionEntry("jobs.approve");
+    expect(entry.group).toBe("Jobs");
+    expect(entry.scopable).toBe(true);
+    expect([...entry.requires].sort()).toEqual(["jobs.publish", "jobs.view"]);
+    const grants = expandDependencies([{ key: "jobs.approve", scope: "assigned" }]);
+    expect(grants.get("jobs.publish")).toBe("assigned");
+    expect(grants.get("jobs.view")).toBe("assigned");
+  });
+
+  it("names the missing permission in the 403 copy", () => {
+    expect(forbiddenMessage("jobs.approve")).toBe("Your role can't approve job posts.");
+  });
+
+  it("is on for Admin and off for Member and Hiring manager", () => {
+    expect(templateGrants(roleTemplate("admin")!).get("jobs.approve")).toBe("all");
+    expect(templateGrants(roleTemplate("member")!).has("jobs.approve")).toBe(false);
+    expect(templateGrants(roleTemplate("hiring_manager")!).has("jobs.approve")).toBe(false);
+  });
+});
+
 describe("mcp.use (RMCP spec §4.1, RMT-010)", () => {
   it("is an Agent key of its own, not scopable, with no dependencies", () => {
     expect(permissionEntry("mcp.use")).toMatchObject({

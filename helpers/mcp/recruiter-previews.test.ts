@@ -466,10 +466,24 @@ const CASES: Case[] = [
     foreign: /Job posting not found/,
   },
   {
-    tool: "set_job_post_status",
-    input: { jobPostId: JOB_A1, status: "active" },
-    seed: () => db.queue("job_postings", { data: { ...JOB_ROW, status: "inactive" }, error: null }),
-    facts: [/Publish this job post\?/, /Status: Not published → Published/, /active job post limit/],
+    tool: "set_job_post_state",
+    input: { jobPostId: JOB_A1, state: "open" },
+    seed: () => db.queue("job_postings", { data: { ...JOB_ROW, state: "draft" }, error: null }),
+    facts: [/Publish this job post\?/, /State: Draft → Open/, /active job post limit/],
+    foreign: /Job posting not found/,
+  },
+  {
+    tool: "submit_job_for_approval",
+    input: { jobPostId: JOB_A1, note: "Ready for review" },
+    seed: () => db.queue("job_postings", { data: { ...JOB_ROW, state: "draft" }, error: null }),
+    facts: [/Submit this job post for approval\?/, /State: Draft → Waiting for approval/, /approvers are emailed/],
+    foreign: /Job posting not found/,
+  },
+  {
+    tool: "review_job_approval",
+    input: { jobPostId: JOB_A1, decision: "request_changes", note: "Add the salary range" },
+    seed: () => db.queue("job_postings", { data: { ...JOB_ROW, state: "pending_approval" }, error: null }),
+    facts: [/Send this job post back with your note\?/, /Waiting for approval → Draft/, /Add the salary range/],
     foreign: /Job posting not found/,
   },
   {
@@ -932,13 +946,42 @@ describe("refusals that match the run", () => {
     expect(await RECRUITER_MCP_PREVIEWS.run_matching_for_job(ctx, { jobPostId: JOB_A1 })).toMatchObject({ ok: true });
   });
 
-  it("a status that's already set isn't asked about", async () => {
+  it("a state that's already set isn't asked about", async () => {
     const ctx = ctxFor(OWNER_A);
-    db.queue("job_postings", { data: { ...JOB_ROW, status: "active" }, error: null });
+    db.queue("job_postings", { data: { ...JOB_ROW, state: "open" }, error: null });
 
-    const preview = await RECRUITER_MCP_PREVIEWS.set_job_post_status(ctx, { jobPostId: JOB_A1, status: "active" });
+    const preview = await RECRUITER_MCP_PREVIEWS.set_job_post_state(ctx, { jobPostId: JOB_A1, state: "open" });
 
-    expect(preview).toEqual({ ok: false, error: '"Frontend Engineer" is already published.' });
+    expect(preview).toEqual({ ok: false, error: '"Frontend Engineer" is already open.' });
+  });
+
+  it("refuses a move outside the table and a close with no reason (JL-REQ-031)", async () => {
+    const ctx = ctxFor(OWNER_A);
+    db.queue("job_postings", { data: { ...JOB_ROW, state: "draft" }, error: null });
+    expect(await RECRUITER_MCP_PREVIEWS.set_job_post_state(ctx, { jobPostId: JOB_A1, state: "filled" })).toMatchObject({ ok: false });
+
+    db.queue("job_postings", { data: { ...JOB_ROW, state: "open" }, error: null });
+    expect(await RECRUITER_MCP_PREVIEWS.set_job_post_state(ctx, { jobPostId: JOB_A1, state: "closed" })).toMatchObject({ ok: false });
+  });
+
+  it("names the close reason, the team note and the interviews it cancels", async () => {
+    const ctx = ctxFor(OWNER_A);
+    db.queue("job_postings", { data: { ...JOB_ROW, state: "open" }, error: null });
+    db.queue("application_interviews", { data: null, error: null, count: 2 });
+
+    const preview = await RECRUITER_MCP_PREVIEWS.set_job_post_state(ctx, {
+      jobPostId: JOB_A1,
+      state: "closed",
+      reason: "cancelled",
+      note: "Budget cut",
+      cancelOpenInterviews: true,
+    });
+
+    const text = JSON.stringify(preview);
+    expect(text).toMatch(/Close this job post\?/);
+    expect(text).toMatch(/Cancelled/);
+    expect(text).toMatch(/Budget cut/);
+    expect(text).toMatch(/2 open AI interviews are cancelled/);
   });
 
   it("archives in the pipeline the call names (JPT-040)", async () => {

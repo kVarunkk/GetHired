@@ -87,9 +87,14 @@ describe("serializeTalent (Talent.com XML guide)", () => {
     expect(serializeTalent([{ ...job, category: null, title: "Chief of Staff" }])).not.toContain("<category>");
   });
 
-  it("never sends cpc or expirationdate", () => {
-    const xml = serializeTalent([job]);
-    for (const t of ["cpc", "expirationdate"]) expect(xml).not.toContain(`<${t}>`);
+  it("never sends cpc", () => {
+    expect(serializeTalent([job])).not.toContain("<cpc>");
+  });
+
+  it("sends expirationdate only for a job with a closing date (JLT-043)", () => {
+    expect(serializeTalent([job])).not.toContain("<expirationdate>");
+    const xml = serializeTalent([{ ...job, expiresAt: new Date("2026-12-31T18:29:59.000Z") }]);
+    expect(xml).toContain("<expirationdate><![CDATA[2026-12-31T18:29:59Z]]></expirationdate>");
   });
 
   it("adds Talent Apply's posturl only when it's on", () => {

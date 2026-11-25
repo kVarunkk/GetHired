@@ -61,6 +61,26 @@ describe("GET /api/current-user (company)", () => {
     });
   });
 
+  it("counts the jobs waiting for an approver's approval (JL-REQ-022)", async () => {
+    vi.mocked(getPlanSummary).mockResolvedValue(null as never);
+    db.queue("job_postings", { data: null, count: 2, error: null });
+
+    const body = await (await GET()).json();
+
+    expect(body.profile.pendingJobApprovals).toBe(2);
+    expect(db.callsFor("job_postings")[0].chain).toContainEqual({ method: "eq", args: ["state", "pending_approval"] });
+  });
+
+  it("counts none for a member without jobs.approve, with no query", async () => {
+    signInAs(MEMBER_A);
+    vi.mocked(getPlanSummary).mockResolvedValue(null as never);
+
+    const body = await (await GET()).json();
+
+    expect(body.profile.pendingJobApprovals).toBe(0);
+    expect(db.callsFor("job_postings")).toHaveLength(0);
+  });
+
   it("reports a missing profile for a company user without a membership", async () => {
     db = createSupabaseMock({ user: MEMBER_A.user });
     vi.mocked(createClient).mockResolvedValue(db.client);

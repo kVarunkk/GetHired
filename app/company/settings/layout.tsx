@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { notFound, unstable_rethrow } from "next/navigation";
 import {
   Bell,
+  Briefcase,
   CalendarClock,
   CalendarDays,
   Globe,
@@ -23,6 +24,7 @@ import { MY_CALENDAR_PATH } from "@/helpers/calendar/config";
 import { calendarEnabled } from "@/helpers/calendar/connect";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can, canAny } from "@/helpers/companies/permissions";
+import { JOB_SETTINGS_PATH } from "@/helpers/jobs/job-states";
 import { QUESTION_SETS_PATH } from "@/helpers/jobs/question-sets";
 import { PIPELINE_EDITOR_BASE } from "@/helpers/pipeline/config";
 import { createClient } from "@/lib/supabase/server";
@@ -32,7 +34,7 @@ const SETTINGS_PATH = "/company/settings";
 /**
  * Settings' frame: the sections sidebar (pipelines, email templates,
  * scheduling link, my calendar, notifications, careers page, distribution,
- * question sets,
+ * jobs, question sets,
  * team, hiring teams, roles, audit log) and the Settings header. A main page, so the
  * sidebar has no back link or title. Each section shows only with the
  * permission its page checks, and the page checks it again.
@@ -67,7 +69,11 @@ export default async function CompanySettingsLayout({ children }: { children: Re
     if (canAny(company, "distribution.view")) {
       items.push({ href: DISTRIBUTION_SETTINGS_PATH, label: "Distribution", icon: <Share2 /> });
     }
-    if (can(company, "jobs.view")) items.push({ href: QUESTION_SETS_PATH, label: "Question sets", icon: <ListChecks /> });
+    if (can(company, "jobs.view")) {
+      // JL-REQ-018: approval before a job opens (owners change it).
+      items.push({ href: JOB_SETTINGS_PATH, label: "Jobs", icon: <Briefcase /> });
+      items.push({ href: QUESTION_SETS_PATH, label: "Question sets", icon: <ListChecks /> });
+    }
     if (can(company, "team.view")) items.push({ href: `${SETTINGS_PATH}/team`, label: "Team", icon: <Users /> });
     if (canAny(company, "jobs.assign")) {
       items.push({ href: `${SETTINGS_PATH}/hiring-teams`, label: "Hiring teams", icon: <UsersRound /> });

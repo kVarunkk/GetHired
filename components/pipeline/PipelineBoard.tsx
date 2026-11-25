@@ -30,6 +30,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { moveApplicationsAction } from "@/app/actions/pipeline/move-applications";
+import { toastFillSuggestions } from "@/components/jobs/fill-suggestion-toast";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -137,6 +138,7 @@ export default function PipelineBoard({
         } else if (result.emailed > 0) {
           toast.success(`Moved ${app.name}. Email sends in 2 minutes. Move back to cancel it.`);
         }
+        toastFillSuggestions(result.suggestFill);
         // D8: offer to schedule the new stage's plan interviews.
         const items = schedulingPlan?.[stage.id];
         setPrompt(items?.length ? { app, items } : null);

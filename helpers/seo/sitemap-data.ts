@@ -30,6 +30,8 @@ export async function getSitemapData() {
         .from("all_jobs")
         .select("id", { count: "exact", head: true })
         .eq("status", "active")
+        // Link-only jobs are never listed (JL-REQ-025).
+        .eq("listed", true)
         .not("job_name", "is", null)
         .neq("job_name", ""),
       reader.collections.posts.all(),

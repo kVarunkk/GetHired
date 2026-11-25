@@ -12,6 +12,10 @@ export type RecruiterJobSummary = {
   id: string;
   title: string;
   status: Enums["job_posting_status"];
+  state: Enums["job_post_state"];
+  openings: number;
+  hires: number;
+  closes_at: string | null;
   matching_status: Enums["job_posting_matching_status"];
   applicants: number;
   new_24h: number;
@@ -47,10 +51,12 @@ const CAPABILITIES: Record<string, string> = {
   getMyCompany: "read the company's plan, credits and what's left of this month's limits",
   listMyJobs: "list the company's job posts with applicant counts",
   getJobPost: "read a job post's full details",
-  createJobPost: "write a new job post from the conversation (saved as inactive, with the user's approval)",
+  createJobPost: "write a new job post from the conversation (saved as a draft that applicants can't see, with the user's approval)",
   updateJobPost: "edit a job post (with the user's approval)",
-  setJobPostStatus: "publish or unpublish a job post (with the user's approval)",
-  deleteJobPost: "permanently delete a job post and its applications, only when the user asks to delete it; offer unpublishing if they only want it taken down (with the user's approval)",
+  setJobPostState: "publish a draft, pause, close (with a reason), mark filled or reopen a job post (with the user's approval)",
+  submitJobForApproval: "submit a draft job post for approval when the company requires it and the user can't approve it (with the user's approval)",
+  reviewJobApproval: "approve a job post that's waiting for approval, or send it back with a note saying what to change (with the user's approval)",
+  deleteJobPost: "permanently delete a job post and its applications, only when the user asks to delete it; offer pausing or closing it if they only want it taken down (with the user's approval)",
   listQuestionSets: "list the company's saved question sets (reusable application forms)",
   applyQuestionSet: "apply a saved question set to a job post, replacing its application form (with the user's approval)",
   saveQuestionSet: "save a job's application form, or one you write, as a reusable question set (with the user's approval)",
@@ -203,7 +209,7 @@ function renderCompany(context: RecruiterPromptContext) {
   } else {
     for (const job of jobs.slice(0, RA_PROMPT_JOBS)) {
       lines.push(
-        `- ${job.title} [id ${job.id}] (${job.status}; matching ${job.matching_status}): ${job.applicants} applicants (${job.new_24h} in the last 24 hours)`,
+        `- ${job.title} [id ${job.id}] (${job.state}; hired ${job.hires} of ${job.openings}; matching ${job.matching_status}): ${job.applicants} applicants (${job.new_24h} in the last 24 hours)`,
       );
     }
   }

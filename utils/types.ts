@@ -135,6 +135,8 @@ export interface INavItem {
   icon?: React.ReactNode;
   /** A count shown next to the label, e.g. open outreach. */
   count?: number;
+  /** What the count is, read after it ("3 open"). Defaults to "open". */
+  countLabel?: string;
 }
 
 export interface INavItemWithActive extends INavItem {

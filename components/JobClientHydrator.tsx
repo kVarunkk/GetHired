@@ -20,6 +20,8 @@ import { Skeleton } from "./ui/skeleton";
 import { useSearchParams } from "next/navigation";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { useMemo } from "react";
+import { jobClosingDate } from "@/helpers/jobs/jobId/jsonld";
+import { formatClosingDate } from "@/helpers/jobs/closing-date";
 
 export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
   const searchParams = useSearchParams();
@@ -61,6 +63,8 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
   );
 
   const loginHref = useLoginToApplyHref(job.id);
+  // JL-REQ-016: the company's closing date, as the company wrote it.
+  const closesAt = jobClosingDate(job);
   const isCompanyUser = currentUserData?.role === "company";
   const onboardingComplete = currentUserData?.profile?.filled ?? false;
 
@@ -115,6 +119,7 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
           </p>
           <p className="text-sm text-muted-foreground mt-2">
             Posted on {formatDate(jobData.created_at, { dateStyle: "long" }, "en-US")}
+            {closesAt && <> · Applications close on {formatClosingDate(closesAt)}</>}
           </p>
 
           {isLoading ? (

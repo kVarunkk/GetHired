@@ -94,10 +94,12 @@ export default async function CompanyPage() {
           department,
           workplace_type,
           status,
+          state,
+          openings,
           job_id,
           updated_at,
           applications(id),
-          company_info(name, website)
+          company_info(name, website, job_approval_required)
         `,
         )
         .eq("company_id", companyInfo.id),

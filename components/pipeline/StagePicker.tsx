@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { moveApplicationsAction } from "@/app/actions/pipeline/move-applications";
+import { toastFillSuggestions } from "@/components/jobs/fill-suggestion-toast";
 import {
   Select,
   SelectContent,
@@ -103,6 +104,7 @@ export default function StagePicker({
       }
       // D8: offer to schedule the new stage's plan interviews.
       const moved = result.ok && !(result.moved === 0 && result.skipped.some((s) => s.reason === "not_found"));
+      if (moved && result.ok) toastFillSuggestions(result.suggestFill);
       const items = schedulingPlan?.[target.id];
       if (moved && items?.length) setPrompt(items);
     } catch {

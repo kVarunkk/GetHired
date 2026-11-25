@@ -13,6 +13,11 @@ import AskAgentAboutJobPost from "@/components/agent/recruiter/AskAgentAboutJobP
 import PoolMatchesNotice from "@/components/candidates/PoolMatchesNotice";
 import { loadPoolMatchesCard, poolNoticeCount } from "@/helpers/candidates/pool-matches-card";
 import { JOB_CREATED_PARAM } from "@/helpers/jobs/paths";
+import FillJobNotice from "@/components/jobs/FillJobNotice";
+import JobApprovalNotice from "@/components/jobs/JobApprovalNotice";
+import { loadApprovalStatus } from "@/helpers/jobs/job-approval";
+import { countHiresFor, shouldSuggestFill } from "@/helpers/jobs/job-hires";
+import { countOpenScreeningInterviews } from "@/helpers/jobs/job-interviews";
 
 export default async function JobPostPage({
   params,
@@ -35,7 +40,7 @@ export default async function JobPostPage({
         `
           *,
           applications(id),
-          company_info(name, website)
+          company_info(name, website, job_approval_required)
         ` as const,
       )
       .eq("id", job_id)
@@ -53,10 +58,35 @@ export default async function JobPostPage({
     const noticeCount = created
       ? poolNoticeCount(await loadPoolMatchesCard(supabase, company, job.id), created)
       : null;
+    // JL-REQ-013: once hires reach the openings, offer Mark as filled to jobs.publish.
+    const canFill = can(company, "jobs.publish", job.id) && (job.state === "open" || job.state === "paused");
+    const hires = canFill ? await countHiresFor(supabase, job.id).catch(() => 0) : 0;
+    const suggestFill = canFill && shouldSuggestFill(job, hires);
+    const openInterviews =
+      suggestFill && can(company, "interviews.manage", job.id)
+        ? await countOpenScreeningInterviews(supabase, job.id).catch(() => 0)
+        : 0;
+
+    // JL-REQ-020/022: a pending job's submission and moves, or the note on a
+    // draft an approver sent back.
+    const approval = await loadApprovalStatus(supabase, job).catch(() => null);
 
     // The layout shows the header and the job's controls.
     return (
       <div className="mb-20 flex flex-col gap-6">
+        {approval && (
+          <JobApprovalNotice
+            job={job}
+            status={approval}
+            viewer={{
+              canPublish: can(company, "jobs.publish", job.id),
+              canApprove: can(company, "jobs.approve", job.id),
+              approvalRequired: !!job.company_info?.job_approval_required,
+              isSubmitter: approval.kind === "pending" && !!user && approval.submitterId === user.id,
+            }}
+          />
+        )}
+        {suggestFill && <FillJobNotice job={job} hires={hires} openInterviews={openInterviews} />}
         {noticeCount !== null && <PoolMatchesNotice jobId={job.id} count={noticeCount} />}
         {can(company, "agent.use") && (
           <AskAgentAboutJobPost

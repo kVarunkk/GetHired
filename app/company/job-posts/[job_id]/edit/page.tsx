@@ -3,10 +3,13 @@ import { notFound, unstable_rethrow } from "next/navigation";
 import Error from "@/components/Error";
 import SectionHeader from "@/components/SectionHeader";
 import Forbidden from "@/components/roles/Forbidden";
+import { linkOnlyEnabled } from "@/helpers/jobs/link-only";
 import JobPostingForm from "@/components/jobs/JobPostingForm";
 import { isUuid } from "@/helpers/agent/auth";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { loadCompanyTimeZone } from "@/helpers/companies/load-time-zone";
 import { can } from "@/helpers/companies/permissions";
+import { loadJobApprovalRequired } from "@/helpers/jobs/job-approval";
 import { loadJobForm } from "@/helpers/jobs/load-job-form";
 import { listPipelines } from "@/helpers/pipeline/pipelines";
 import { createClient } from "@/lib/supabase/server";
@@ -43,10 +46,12 @@ export default async function EditJobPostPage({ params }: { params: Promise<{ jo
       .maybeSingle();
     if (error) throw error;
     if (!job) notFound();
-    const [loaded, pipelines, applications] = await Promise.all([
+    const [loaded, pipelines, applications, timeZone, approvalRequired] = await Promise.all([
       loadJobForm(supabase, company.id, job.id),
       listPipelines({ supabase, company }),
       supabase.from("applications").select("id", { count: "exact", head: true }).eq("job_post_id", job.id),
+      loadCompanyTimeZone(supabase, company.id),
+      job.state === "draft" ? loadJobApprovalRequired(supabase, company.id) : Promise.resolve(false),
     ]);
     if (!loaded) notFound();
     if (applications.error) throw applications.error;
@@ -74,12 +79,20 @@ export default async function EditJobPostPage({ params }: { params: Promise<{ jo
             department: job.department ?? "",
             workplace_type: job.workplace_type ?? null,
             pipeline_id: job.pipeline_id ?? undefined,
+            openings: job.openings,
+            closes_at: job.closes_at,
+            visibility: job.visibility,
           }}
           initialForm={loaded.form}
           answeredQuestionIds={loaded.answeredQuestionIds}
           cancelHref={`/company/job-posts/${job.id}`}
           pipelines={pipelines.map((p) => ({ id: p.id, name: p.name, isDefault: p.is_default }))}
           hasApplications={(applications.count ?? 0) > 0}
+          state={job.state}
+          canPublish={can(company, "jobs.publish", job.id)}
+          submitForApproval={approvalRequired && !can(company, "jobs.approve", job.id)}
+          timeZone={timeZone}
+          linkOnlyEnabled={linkOnlyEnabled()}
         />
       </div>
     );

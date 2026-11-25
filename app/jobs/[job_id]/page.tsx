@@ -4,8 +4,9 @@ import { BackLink } from "@/components/PageHeader";
 import JobClientHydrator from "@/components/JobClientHydrator";
 import JobSourceProvider from "@/components/jobs/JobSourceProvider";
 import { Metadata } from "next";
-import { buildJobPostingJsonLd } from "@/helpers/jobs/jobId/jsonld";
-import { getStaticJobDetails } from "@/helpers/jobs/jobId/get-job-details";
+import { buildJobPostingJsonLd, isLinkOnlyJob } from "@/helpers/jobs/jobId/jsonld";
+import { getClosedJobSummary, getStaticJobDetails } from "@/helpers/jobs/jobId/get-job-details";
+import JobNoLongerOpen from "@/components/jobs/JobNoLongerOpen";
 
 export const revalidate = 86400;
 export const dynamic = "force-static";
@@ -17,7 +18,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { job_id } = await params;
   const data = await getStaticJobDetails(job_id);
-  if (!data) notFound();
+  if (!data) {
+    // JL-REQ-028: a job that was open keeps a page, out of search results.
+    const closed = await getClosedJobSummary(job_id);
+    if (!closed) notFound();
+    return {
+      title: `${closed.jobName} at ${closed.companyName}`,
+      robots: { index: false, follow: true },
+    };
+  }
 
   const title = `${data.job_name} at ${data.company_name}`;
   const descriptionSource =
@@ -35,6 +44,8 @@ export async function generateMetadata({
   return {
     title,
     description,
+    // JL-REQ-025: a link-only job is reachable by its link, not by search.
+    ...(isLinkOnlyJob(data) ? { robots: { index: false, follow: false } } : {}),
     alternates: {
       canonical,
     },
@@ -63,7 +74,20 @@ export default async function JobPage({
   const job = await getStaticJobDetails(job_id);
 
   if (!job) {
-    notFound();
+    // JL-REQ-028: paused, closed and filled read the same, with no JSON-LD.
+    const closed = await getClosedJobSummary(job_id);
+    if (!closed) notFound();
+    return (
+      <div className="flex flex-col gap-4 w-full p-4 mb-20">
+        <BackLink href="/jobs" label="Back to jobs" />
+        <JobNoLongerOpen
+          jobName={closed.jobName}
+          companyName={closed.companyName}
+          browseHref="/jobs"
+          browseLabel="Browse open jobs"
+        />
+      </div>
+    );
   }
 
   const jsonLd = buildJobPostingJsonLd(job);

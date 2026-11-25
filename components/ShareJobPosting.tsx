@@ -25,7 +25,7 @@ export default function ShareJobPosting({
     copyToClipboard(window.location.origin + "/jobs/" + job_id, "Job link copied to clipboard!");
   const trigger = (
     <Button
-      title={job_id ? "Share Job Post" : "Activate once to share"}
+      title={job_id ? "Share Job Post" : "Publish the job to share it"}
       aria-label="Share Job Post"
       className="text-muted-foreground hover:text-primary"
       variant={"ghost"}

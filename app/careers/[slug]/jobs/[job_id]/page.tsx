@@ -10,8 +10,13 @@ import { ApplicationSourceProvider } from "@/components/jobs/ApplicationSourceCo
 import { getCareersPage, type CareersPage } from "@/helpers/careers/get-careers-page";
 import { readRef, toSearchParams } from "@/helpers/careers/params";
 import { careersPath } from "@/helpers/careers/slug";
-import { getStaticJobDetails } from "@/helpers/jobs/jobId/get-job-details";
-import { buildJobPostingJsonLd } from "@/helpers/jobs/jobId/jsonld";
+import JobNoLongerOpen from "@/components/jobs/JobNoLongerOpen";
+import {
+  getClosedJobSummary,
+  getStaticJobDetails,
+  type ClosedJobSummary,
+} from "@/helpers/jobs/jobId/get-job-details";
+import { buildJobPostingJsonLd, isLinkOnlyJob } from "@/helpers/jobs/jobId/jsonld";
 
 const SITE_URL = "https://gethired.devhub.co.in";
 
@@ -19,16 +24,25 @@ type Params = Promise<{ slug: string; job_id: string }>;
 
 type Loaded =
   | { kind: "redirect"; slug: string }
-  | { kind: "job"; page: CareersPage; job: NonNullable<Awaited<ReturnType<typeof getStaticJobDetails>>> };
+  | { kind: "job"; page: CareersPage; job: NonNullable<Awaited<ReturnType<typeof getStaticJobDetails>>> }
+  | { kind: "closed"; page: CareersPage; job: ClosedJobSummary };
 
-/** The job, only when it belongs to the page's company (CP-DEC-001). */
+/**
+ * The job, only when it belongs to the page's company (CP-DEC-001). A job
+ * that was open and isn't any more is `closed` (JL-REQ-028).
+ */
 async function load(slug: string, jobId: string): Promise<Loaded | null> {
   const result = await getCareersPage(slug);
   if (!result) return null;
   if ("redirect" in result) return { kind: "redirect", slug: result.redirect };
   const job = await getStaticJobDetails(jobId);
-  const posting = job?.job_postings?.[0];
-  if (!job || !posting || posting.company_id !== result.page.id) return null;
+  if (!job) {
+    const closed = await getClosedJobSummary(jobId);
+    if (!closed || closed.companyId !== result.page.id) return null;
+    return { kind: "closed", page: result.page, job: closed };
+  }
+  const posting = job.job_postings?.[0];
+  if (!posting || posting.company_id !== result.page.id) return null;
   return { kind: "job", page: result.page, job };
 }
 
@@ -36,11 +50,15 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { slug, job_id } = await params;
   const loaded = await load(slug, job_id).catch(() => null);
   if (!loaded || loaded.kind === "redirect") return { title: "Careers" };
+  if (loaded.kind === "closed") {
+    return { title: `${loaded.job.jobName} at ${loaded.page.name}`, robots: { index: false, follow: true } };
+  }
   const title = `${loaded.job.job_name} at ${loaded.page.name}`;
   // CP-REQ-011: the job board's page stays canonical, so there's no duplicate content.
   const canonical = `${SITE_URL}/jobs/${job_id}`;
   return {
     title,
+    ...(isLinkOnlyJob(loaded.job) ? { robots: { index: false, follow: false } } : {}),
     alternates: { canonical },
     openGraph: { type: "website", siteName: "GetHired", title, url: canonical, ...shareImages },
     twitter: { ...twitterShareImages, title },
@@ -65,10 +83,23 @@ export default async function CareersJobPage({
     const loaded = await load(slug, job_id);
     if (!loaded) notFound();
     if (loaded.kind === "redirect") permanentRedirect(`${careersPath(loaded.slug)}/jobs/${job_id}`);
-    const { page, job } = loaded;
-
     const ref = readRef(query);
     const refQuery = ref ? `?ref=${encodeURIComponent(ref)}` : "";
+
+    if (loaded.kind === "closed") {
+      return (
+        <CareersShell page={loaded.page}>
+          <JobNoLongerOpen
+            jobName={loaded.job.jobName}
+            companyName={loaded.page.name}
+            browseHref={`${careersPath(loaded.page.slug)}${refQuery}`}
+            browseLabel={`See open jobs at ${loaded.page.name}`}
+          />
+        </CareersShell>
+      );
+    }
+    const { page, job } = loaded;
+
     const jobPath = `${careersPath(page.slug)}/jobs/${job_id}`;
     const returnTo = `${jobPath}?apply=true${ref ? `&ref=${encodeURIComponent(ref)}` : ""}`;
     const jsonLd = buildJobPostingJsonLd(job);

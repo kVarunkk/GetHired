@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CLOSE_REASON_LABEL } from "@/helpers/jobs/job-states";
 import { auditActorLabel, auditDateBounds, describeAuditEntry, toAuditEntry, type AuditEntry } from "./audit";
 
 const entry = (overrides: Partial<AuditEntry>): AuditEntry => ({
@@ -127,8 +128,22 @@ describe("describeAuditEntry (RP-REQ-015)", () => {
         "removed Sam from the hiring team for Backend Engineer",
       ],
       [{ action: "role.default_changed" }, "made Recruiter the default role for invites"],
+      [
+        { action: "job.state_changed", targetLabel: "Backend Engineer", before: { state: "open" }, after: { state: "paused" } },
+        "moved Backend Engineer from open to paused",
+      ],
     ];
     for (const [overrides, text] of cases) expect(describeAuditEntry(entry(overrides)).text).toBe(text);
+  });
+
+  it("gives a closed job's reason (JL-REQ-008)", () => {
+    const entryOf = entry({
+      action: "job.state_changed",
+      targetLabel: "Backend Engineer",
+      before: { state: "open" },
+      after: { state: "closed", reason: "cancelled" },
+    });
+    expect(describeAuditEntry(entryOf).details).toEqual([`Reason: ${CLOSE_REASON_LABEL.cancelled}`]);
   });
 
   it("says when the agent made the change", () => {

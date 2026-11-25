@@ -47,6 +47,11 @@ describe("serializeJooble", () => {
     expect(xml).toContain("<updated><![CDATA[10.11.2026]]></updated>");
   });
 
+  it("sends expire as the closing date only when there is one (JLT-043)", () => {
+    expect(serializeJooble([job])).not.toContain("<expire>");
+    expect(serializeJooble([{ ...job, closesOn: "2026-12-31" }])).toContain("<expire><![CDATA[31.12.2026]]></expire>");
+  });
+
   it("refreshes updated on every edit", () => {
     const xml = serializeJooble([{ ...job, updatedAt: new Date("2026-11-15T00:00:00Z") }]);
     expect(xml).toContain("<updated><![CDATA[15.11.2026]]></updated>");

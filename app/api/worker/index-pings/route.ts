@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
   const jobIds = [...new Set(messages.map((m) => m.message.jobId))];
   const { data: rows, error: loadError } = await admin
     .from("job_postings")
-    .select("job_id, status, title, description, location, workplace_type, company_info(name, logo_url)")
+    .select("job_id, status, visibility, title, description, location, workplace_type, company_info(name, logo_url)")
     .in("job_id", jobIds);
   if (loadError) {
     reportError("[index pings worker] couldn't load the jobs", loadError.message);
@@ -63,7 +63,8 @@ export async function GET(request: NextRequest) {
   for (const { msg_id, read_ct, message } of messages) {
     const row = byJob.get(message.jobId);
     const url = jobPageUrl(message.jobId);
-    const active = row?.status === "active";
+    // A link-only job is never pinged as live; one that just became link-only is told as removed.
+    const active = row?.status === "active" && row.visibility === "public";
 
     if (row && active) {
       const company = row.company_info;

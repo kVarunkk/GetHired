@@ -28,6 +28,7 @@ const msg = (msg_id: number, jobId: string, read_ct = 1, reason: IndexPingMessag
 const job = (jobId: string, over: Record<string, unknown> = {}) => ({
   job_id: jobId,
   status: "active",
+  visibility: "public",
   title: "Backend Engineer",
   description: "Build and run the services behind our hiring platform. ".repeat(4),
   location: ["Bengaluru"],
@@ -66,6 +67,14 @@ describe("GET /api/worker/index-pings", () => {
 
     await run();
     expect(vi.mocked(pingGoogleIndexing).mock.calls.map((c) => c[1])).toEqual(["URL_DELETED", "URL_DELETED"]);
+  });
+
+  it("announces a link-only job as deleted, never as live (JLT-062)", async () => {
+    db.queueRpc("read", { data: [msg(1, "j1")], error: null }, "pgmq_public");
+    db.queue("job_postings", { data: [job("j1", { visibility: "link_only" })], error: null });
+
+    await run();
+    expect(pingGoogleIndexing).toHaveBeenCalledWith(expect.stringContaining("/jobs/j1"), "URL_DELETED");
   });
 
   it("does not ping an active job that fails the eligibility checks", async () => {

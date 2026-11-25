@@ -9,7 +9,7 @@ import type { EntityNavItem } from "@/components/EntityNav";
 import PageHeader from "@/components/PageHeader";
 import DeleteJobPosting from "@/components/DeleteJobPosting";
 import FindSuitableProfilesForJobPost from "@/components/FindSuitableProfilesForJobPost";
-import { JobStatusSwitch } from "@/components/JobPostingsTable";
+import JobStateMenu from "@/components/jobs/JobStateMenu";
 import ShareJobPosting from "@/components/ShareJobPosting";
 import { isUuid } from "@/helpers/agent/auth";
 import { jobImportPath } from "@/helpers/candidates/paths";
@@ -18,6 +18,9 @@ import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { jobControls } from "@/helpers/companies/job-scope";
 import { can } from "@/helpers/companies/permissions";
 import { jobDistributionPath, jobPipelinePath, jobPoolMatchesPath } from "@/helpers/jobs/paths";
+import { latestSubmission } from "@/helpers/jobs/job-approval";
+import { countHiresFor, hiresLabel } from "@/helpers/jobs/job-hires";
+import { countOpenScreeningInterviews } from "@/helpers/jobs/job-interviews";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -62,7 +65,7 @@ export default async function JobPostLayout({
 
     const { data: job, error } = await supabase
       .from("job_postings")
-      .select("*, company_info(name, website)")
+      .select("*, company_info(name, website, job_approval_required)")
       .eq("id", job_id)
       .eq("company_id", company.id)
       .maybeSingle();
@@ -72,7 +75,18 @@ export default async function JobPostLayout({
     // the viewer's permissions on this job; the server refuses them too.
     if (!job || !can(company, "jobs.view", job.id)) notFound();
     const controls = jobControls(company, job.id);
-    const careersLink = await getMyCareersLink(supabase, company.id).catch(() => null);
+    // JL-REQ-030: hires against openings, open AI interviews for the close
+    // dialog (D9), and who submitted a pending job (they may withdraw it).
+    const [careersLink, hires, openInterviews, submitter] = await Promise.all([
+      getMyCareersLink(supabase, company.id).catch(() => null),
+      countHiresFor(supabase, job.id).catch(() => 0),
+      controls.publish && can(company, "interviews.manage", job.id) && (job.state === "open" || job.state === "paused")
+        ? countOpenScreeningInterviews(supabase, job.id)
+        : Promise.resolve(0),
+      job.state === "pending_approval"
+        ? latestSubmission(supabase, job.id).then((s) => s?.actorUserId ?? null)
+        : Promise.resolve(null),
+    ]);
 
     const base = `/company/job-posts/${job.id}`;
     const items: EntityNavItem[] = [
@@ -130,14 +144,28 @@ export default async function JobPostLayout({
             title={<span className="[overflow-wrap:anywhere]">{job.title}</span>}
             description={
               <>
-                at {job.company_info?.name} · Posted on {format(new Date(job.created_at), "PPP")}
+                at {job.company_info?.name} · {job.first_opened_at ? "Posted on" : "Created on"}{" "}
+                {format(new Date(job.first_opened_at ?? job.created_at), "PPP")} · {hiresLabel(hires, job.openings)}
+                {job.closes_at && job.state !== "filled" && job.state !== "closed" && (
+                  <> · Closes {format(new Date(`${job.closes_at}T00:00:00`), "PPP")}</>
+                )}
               </>
             }
             actions={
               <>
-                <JobStatusSwitch job={job} disabled={!controls.publish} />
+                <JobStateMenu
+                  key={job.state}
+                  job={job}
+                  viewer={{
+                    canPublish: controls.publish,
+                    canApprove: !!controls.approve,
+                    approvalRequired: !!job.company_info?.job_approval_required,
+                    isSubmitter: !!user && submitter === user.id,
+                  }}
+                  openInterviews={openInterviews}
+                />
                 <DeleteJobPosting job_posting_id={job.id} is_job_posting_page disabled={!controls.delete} />
-                <ShareJobPosting job_id={job.job_id} careersSlug={careersLink?.published ? careersLink.slug : null} />
+                <ShareJobPosting job_id={job.first_opened_at ? job.job_id : null} careersSlug={careersLink?.published ? careersLink.slug : null} />
                 <FindSuitableProfilesForJobPost job_post_id={job.id} />
               </>
             }

@@ -191,7 +191,8 @@ export const buildQuery = async (
       query = supabase
         .from("all_jobs")
         .select(selectString, countOption)
-        .eq("user_relevant_jobs.user_id", user.id);
+        .eq("user_relevant_jobs.user_id", user.id)
+        .eq("listed", true);
     } else {
       selectString = `
        ${allJobsSelectString}
@@ -200,7 +201,9 @@ export const buildQuery = async (
       query = supabase
         .from("all_jobs")
         .select(selectString, countOption)
-        .eq("status", "active");
+        .eq("status", "active")
+        // Link-only jobs are never listed (JL-REQ-025).
+        .eq("listed", true);
     }
 
     if (cursor && sortBy !== "relevance") {

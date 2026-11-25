@@ -28,12 +28,13 @@ export function scopeToJobs<Q extends { in: (column: string, values: string[]) =
 }
 
 /** Per-job controls for a job post card or row (RP-REQ-016). */
-export type JobControls = { edit: boolean; publish: boolean; delete: boolean };
+export type JobControls = { edit: boolean; publish: boolean; delete: boolean; approve?: boolean };
 
 export function jobControls(company: MyCompany | null | undefined, jobId: string): JobControls {
   return {
     edit: can(company, "jobs.edit", jobId),
     publish: can(company, "jobs.publish", jobId),
+    approve: can(company, "jobs.approve", jobId),
     delete: can(company, "jobs.delete", jobId),
   };
 }

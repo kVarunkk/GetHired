@@ -34,6 +34,8 @@ function arg(name: string): string | undefined {
 }
 
 const JOB_ID = "b0000000-0000-4000-8000-000000000001";
+/** A draft (JL-REQ-031): new posts start here, and "publish" opens one. */
+const DRAFT_JOB_ID = "b0000000-0000-4000-8000-0000000000d1";
 const STAGES = ["applied", "screening", "interview", "offer", "hired", "rejected", "on_hold"].map((kind, i) => ({
   id: `90000000-0000-4000-8000-00000000000${i}`,
   name: kind === "on_hold" ? "On hold" : kind.charAt(0).toUpperCase() + kind.slice(1),
@@ -56,10 +58,27 @@ const CONTEXT: RecruiterPromptContext = {
       id: JOB_ID,
       title: "Founding Backend Engineer",
       status: "active",
+      state: "open",
+      openings: 2,
+      hires: 0,
+      closes_at: null,
       matching_status: "completed",
       applicants: 6,
       new_24h: 2,
       updated_at: "2026-10-14T00:00:00.000Z",
+    },
+    {
+      id: DRAFT_JOB_ID,
+      title: "Product Designer",
+      status: "inactive",
+      state: "draft",
+      openings: 1,
+      hires: 0,
+      closes_at: null,
+      matching_status: "pending",
+      applicants: 0,
+      new_24h: 0,
+      updated_at: "2026-10-15T00:00:00.000Z",
     },
   ],
 };
@@ -252,9 +271,14 @@ const FIXTURES: Record<string, (input: Record<string, unknown>) => unknown> = {
   saveMemory: (input) => ({ status: "created", memory: { id: "a1b2c3d4", category: input.category, content: input.content } }),
   deleteMemory: () => ({ deleted: true }),
   // Writes only run if the policy let them through, which the scoring flags.
-  createJobPost: () => ({ id: JOB_ID, status: "inactive", url: `/company/job-posts/${JOB_ID}` }),
+  createJobPost: () => ({ id: DRAFT_JOB_ID, state: "draft", url: `/company/job-posts/${DRAFT_JOB_ID}` }),
   updateJobPost: () => ({ id: JOB_ID, updated: [], url: `/company/job-posts/${JOB_ID}` }),
-  setJobPostStatus: (input) => ({ id: JOB_ID, status: input.status, url: `/company/job-posts/${JOB_ID}` }),
+  setJobPostState: (input) => ({
+    id: input.jobPostId,
+    state: input.state,
+    changed: true,
+    url: `/company/job-posts/${String(input.jobPostId)}`,
+  }),
   runMatchingForJob: () => ({ status: "processing", jobPostId: JOB_ID }),
   screenApplicants: () => ({ jobPostId: JOB_ID, queued: 3 }),
   moveApplications: (input) => ({

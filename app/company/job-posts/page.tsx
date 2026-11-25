@@ -8,6 +8,7 @@ import { jobControls, scopeToJobs } from "@/helpers/companies/job-scope";
 import ErrorComponent from "@/components/Error";
 import { CreateJobPostButton } from "@/components/jobs/JobPostButtons";
 import JobPostingsTable from "@/components/JobPostingsTable";
+import { countJobHires } from "@/helpers/jobs/job-hires";
 import PageHeader from "@/components/PageHeader";
 import { AskAgentAboutJobPosts } from "@/components/agent/recruiter/AskAgentOnMainPages";
 import type { Metadata } from "next";
@@ -48,7 +49,7 @@ export default async function CompanyJobPostsPage() {
           `
           *,
           applications(count),
-          company_info(name, website)
+          company_info(name, website, job_approval_required)
         `,
         )
         .eq("company_id", companyInfo.id),
@@ -59,6 +60,9 @@ export default async function CompanyJobPostsPage() {
       // console.error("Error fetching job postings:", jobPostsError);
       throw jobPostsError;
     }
+    const posts = jobPosts ?? [];
+    // JL-REQ-012: "Hired 1 / 3" per job.
+    const hires = await countJobHires(supabase, posts.map((j) => j.id)).catch(() => new Map<string, number>());
 
     return (
       <div className="flex flex-col w-full gap-6 p-4 mb-20">
@@ -79,8 +83,11 @@ export default async function CompanyJobPostsPage() {
         )}
         {careersLink && <CareersLinkBar slug={careersLink.slug} published={careersLink.published} />}
         <JobPostingsTable
-          data={jobPosts || []}
-          publishable={(jobPosts ?? []).filter((j) => jobControls(companyInfo, j.id).publish).map((j) => j.id)}
+          data={posts}
+          publishable={posts.filter((j) => jobControls(companyInfo, j.id).publish).map((j) => j.id)}
+          approvable={posts.filter((j) => jobControls(companyInfo, j.id).approve).map((j) => j.id)}
+          approvalRequired={!!posts[0]?.company_info?.job_approval_required}
+          hires={Object.fromEntries(hires)}
         />
       </div>
     );

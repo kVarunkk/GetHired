@@ -1,3 +1,4 @@
+import { fillSuggestions, type FillSuggestion } from "@/helpers/jobs/job-hires";
 import "server-only";
 import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
@@ -71,6 +72,8 @@ export type MoveResult =
       /** Every application that was found, moved or not (in input order). */
       applications: LoadedApplication[];
       movedIds: string[];
+      /** JL-REQ-013: jobs whose hires just reached their openings ("Mark as filled"). */
+      suggestFill?: FillSuggestion[];
     }
   | MoveFailure;
 
@@ -482,7 +485,26 @@ export async function moveApplications(ctx: Ctx, input: MoveInput): Promise<Move
   const { error: eventsError } = await supabase.from("application_events").insert(events);
   if (eventsError) reportError("[pipeline/move] couldn't log the stage changes", eventsError);
 
-  return { ...result, moved: toMove.length, emailed: queued.size, movedIds };
+  // JL-REQ-013: a hint only; nothing changes the job's state by itself.
+  let suggestFill: FillSuggestion[] = [];
+  if (stage.kind === "hired") {
+    try {
+      suggestFill = await fillSuggestions(
+        supabase,
+        toMove.filter((a) => moved.has(a.id)).map((a) => ({ jobPostId: a.jobPostId, fromKind: a.fromKind })),
+      );
+    } catch (err) {
+      reportError("[pipeline/move] couldn't check the jobs' openings", err);
+    }
+  }
+
+  return {
+    ...result,
+    moved: toMove.length,
+    emailed: queued.size,
+    movedIds,
+    ...(suggestFill.length > 0 ? { suggestFill } : {}),
+  };
 }
 
 export type MovePreview = {

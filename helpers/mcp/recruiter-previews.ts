@@ -10,6 +10,16 @@
  * the call would fail anyway. Candidate-written text (names, notes, import
  * rows) is sandboxed, and contact details never appear (RMCP-SEC-003/004).
  */
+import {
+  CLOSE_REASON_LABEL,
+  JOB_STATE_LABEL,
+  isJobPostState,
+  isManualCloseReason,
+  moveAllowed,
+  type JobPostState,
+} from "@/helpers/jobs/job-states";
+import { JOB_STATE_REFUSALS } from "@/helpers/jobs/job-state-copy";
+import { countOpenScreeningInterviews } from "@/helpers/jobs/job-interviews";
 import "server-only";
 import { wrapInSandbox } from "@/helpers/ai/security";
 import type { RecruiterToolContext } from "@/helpers/agent/roles/recruiter/tools";
@@ -406,7 +416,7 @@ const jobInputFields = (input: Input) =>
   (Object.keys(JOB_FIELDS) as JobField[]).filter((field) => input[field] !== undefined);
 
 const previewCreateJob = gated("createJobPost", async (_ctx, input) =>
-  preview("Create this job post as a draft? It isn't published until set_job_post_status publishes it, which counts toward the plan's active job post limit.", [
+  preview("Create this job post as a draft? It isn't published until set_job_post_state opens it, which counts toward the plan's active job post limit.", [
     ...jobInputFields(input)
       .filter((f) => !["salaryCurrency", "minSalary", "maxSalary"].includes(f))
       .map((field) => ({ label: JOB_FIELDS[field].label, value: fieldValue(field, input[field]) })),
@@ -451,24 +461,93 @@ const previewUpdateJob = gated("updateJobPost", async (ctx, input) => {
   ]);
 });
 
-const previewJobStatus = gated("setJobPostStatus", async (ctx, input) => {
+const STATE_TITLE: Record<JobPostState, string> = {
+  open: "Publish this job post?",
+  pending_approval: "Submit this job post for approval?",
+  draft: "Send this job post back to draft?",
+  paused: "Pause this job post?",
+  closed: "Close this job post?",
+  filled: "Mark this job post as filled?",
+};
+
+const previewJobState = gated("setJobPostState", async (ctx, input) => {
   const { data: job, error } = await ctx.supabase
     .from("job_postings")
-    .select("id, title, status")
+    .select("id, title, state")
     .eq("id", str(input.jobPostId) ?? "")
     .eq("company_id", ctx.company.id)
     .maybeSingle();
   if (error) throw error;
   if (!job) return refuse("Job posting not found.");
-  const publish = input.status === "active";
-  const label = (status: string) => (status === "active" ? "Published" : "Not published");
-  if (job.status === input.status) return refuse(`"${job.title}" is already ${publish ? "published" : "unpublished"}.`);
-  return preview(publish ? "Publish this job post?" : "Unpublish this job post?", [
+  const to = input.state;
+  if (!isJobPostState(to)) return refuse(JOB_STATE_REFUSALS.invalid_transition);
+  if (job.state === to) return refuse(`"${job.title}" is already ${JOB_STATE_LABEL[to].toLowerCase()}.`);
+  if (!moveAllowed(job.state, to)) return refuse(JOB_STATE_REFUSALS.invalid_transition);
+  if (to === "closed" && !isManualCloseReason(input.reason)) return refuse(JOB_STATE_REFUSALS.reason_required);
+
+  const cancelling = input.cancelOpenInterviews === true && (to === "closed" || to === "filled");
+  const openInterviews = cancelling ? await countOpenScreeningInterviews(ctx.supabase, job.id) : 0;
+  return preview(STATE_TITLE[to], [
     { label: "Job", value: job.title },
-    { label: "Status", value: `${label(job.status)} → ${label(String(input.status))}` },
-    publish
+    { label: "State", value: `${JOB_STATE_LABEL[job.state]} → ${JOB_STATE_LABEL[to]}` },
+    to === "closed" && isManualCloseReason(input.reason) && { label: "Reason", value: CLOSE_REASON_LABEL[input.reason] },
+    str(input.note) && { label: "Note (team only)", value: str(input.note)! },
+    to === "open"
       ? { label: "Plan", value: "Counts toward the plan's active job post limit. It's listed publicly and people can apply." }
-      : { label: "Note", value: "It's taken off the public listings; its applications stay." },
+      : job.state === "open" && { label: "Note", value: "It stops taking applications and leaves the public listings; its applications stay." },
+    cancelling && {
+      label: "AI interviews",
+      value: openInterviews > 0 ? `${openInterviews} open AI interviews are cancelled and their minutes released.` : "None are open.",
+    },
+  ]);
+});
+
+/** The job a review or submit acts on, refused unless it's in `from` (JL-REQ-031). */
+async function approvalJob(ctx: RecruiterToolContext, input: Input, from: JobPostState) {
+  const { data: job, error } = await ctx.supabase
+    .from("job_postings")
+    .select("id, title, state")
+    .eq("id", str(input.jobPostId) ?? "")
+    .eq("company_id", ctx.company.id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!job) return refuse("Job posting not found.");
+  if (job.state !== from) {
+    return refuse(`"${job.title}" is ${JOB_STATE_LABEL[job.state].toLowerCase()}, not ${JOB_STATE_LABEL[from].toLowerCase()}.`);
+  }
+  return job;
+}
+
+const previewSubmitForApproval = gated("submitJobForApproval", async (ctx, input) => {
+  const job = await approvalJob(ctx, input, "draft");
+  if ("ok" in job) return job;
+  return preview("Submit this job post for approval?", [
+    { label: "Job", value: job.title },
+    { label: "State", value: `${JOB_STATE_LABEL.draft} → ${JOB_STATE_LABEL.pending_approval}` },
+    str(input.note) && { label: "Note (for the approver)", value: str(input.note)! },
+    { label: "Note", value: "The company's approvers are emailed. It opens to applicants once one approves it." },
+  ]);
+});
+
+const previewReviewJobApproval = gated("reviewJobApproval", async (ctx, input) => {
+  const decision = input.decision;
+  if (decision !== "approve" && decision !== "request_changes") return refuse(JOB_STATE_REFUSALS.invalid_transition);
+  const note = str(input.note)?.trim();
+  if (decision === "request_changes" && !note) return refuse(JOB_STATE_REFUSALS.note_required);
+  const job = await approvalJob(ctx, input, "pending_approval");
+  if ("ok" in job) return job;
+  const approve = decision === "approve";
+  return preview(approve ? "Approve and publish this job post?" : "Send this job post back with your note?", [
+    { label: "Job", value: job.title },
+    {
+      label: "State",
+      value: `${JOB_STATE_LABEL.pending_approval} → ${JOB_STATE_LABEL[approve ? "open" : "draft"]}`,
+    },
+    note && { label: approve ? "Note (team only)" : "What to change (emailed to the submitter)", value: note },
+    approve && {
+      label: "Plan",
+      value: "Counts toward the plan's active job post limit. It's listed publicly and people can apply.",
+    },
   ]);
 });
 
@@ -1057,7 +1136,9 @@ export const RECRUITER_MCP_PREVIEWS: Readonly<Record<string, Builder>> = {
   // jobs
   create_job_post: previewCreateJob,
   update_job_post: previewUpdateJob,
-  set_job_post_status: previewJobStatus,
+  set_job_post_state: previewJobState,
+  submit_job_for_approval: previewSubmitForApproval,
+  review_job_approval: previewReviewJobApproval,
   delete_job_post: gated("deleteJobPost", previewJobDelete),
   apply_question_set: previewApplyQuestionSet,
   save_question_set: previewSaveQuestionSet,

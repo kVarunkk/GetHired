@@ -42,6 +42,15 @@ describe("toFeedJob", () => {
     expect(job.updatedAt.toISOString()).toBe("2026-11-10T00:00:00.000Z");
   });
 
+  it("carries the closing date and its end in the company's time zone (JLT-043)", () => {
+    const job = toFeedJob(
+      row({ closes_at: "2026-12-31", company_info: { ...row().company_info!, time_zone: "Asia/Kolkata" } }),
+    )!;
+    expect(job.closesOn).toBe("2026-12-31");
+    expect(job.expiresAt?.toISOString()).toBe("2026-12-31T18:29:59.000Z");
+    expect(toFeedJob(row())!.expiresAt).toBeNull();
+  });
+
   it("leaves out ineligible jobs and jobs without a public id", () => {
     expect(toFeedJob(row({ description: "short" }))).toBeNull();
     expect(toFeedJob(row({ company_info: { name: "Acme", logo_url: null } }))).toBeNull();
@@ -97,6 +106,15 @@ describe("loadFeedJobs", () => {
     db.queue("company_channel_settings", { data: [], error: null });
     expect(await loadFeedJobs("jooble")).toEqual([]);
     expect(db.callsFor("job_postings")).toHaveLength(0);
+  });
+
+  it("reads public jobs only, so a link-only job is never in a feed (JLT-062)", async () => {
+    const db = createSupabaseMock();
+    vi.mocked(createServiceRoleClient).mockReturnValue(db.client);
+    db.queue("company_channel_settings", { data: [{ company_id: "c1" }], error: null });
+    db.queue("job_postings", { data: [], error: null });
+    await loadFeedJobs("jooble");
+    expect(db.callsFor("job_postings")[0].chain).toContainEqual({ method: "eq", args: ["visibility", "public"] });
   });
 
   it("pages past 1000 jobs and drops opted-out ones", async () => {

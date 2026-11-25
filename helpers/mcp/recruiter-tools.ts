@@ -69,7 +69,10 @@ export const RECRUITER_MCP_TOOLS: readonly RecruiterMcpToolDef[] = [
   row("list_question_sets", "Question sets", "jobs", READ, "listQuestionSets"),
   confirmRow("create_job_post", "Create a job post", "jobs", ND_NI, "createJobPost"),
   confirmRow("update_job_post", "Edit a job post", "jobs", D_I, "updateJobPost"),
-  confirmRow("set_job_post_status", "Publish or unpublish a job post", "jobs", D_I_O, "setJobPostStatus"),
+  confirmRow("set_job_post_state", "Publish, pause, close or reopen a job post", "jobs", D_I_O, "setJobPostState"),
+  // JL-REQ-032: approval before a job opens. A submit emails the approvers (not candidates).
+  confirmRow("submit_job_for_approval", "Submit a job post for approval", "jobs", ND_I, "submitJobForApproval"),
+  confirmRow("review_job_approval", "Approve or send back a job post", "jobs", D_I_O, "reviewJobApproval"),
   confirmRow("delete_job_post", "Delete a job post", "jobs", D_NI, "deleteJobPost"),
   confirmRow("apply_question_set", "Apply a question set", "jobs", D_I, "applyQuestionSet"),
   confirmRow("save_question_set", "Save a question set", "jobs", ND_NI, "saveQuestionSet"),

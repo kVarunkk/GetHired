@@ -344,6 +344,17 @@ export function createPipelineTools(ctx: RecruiterToolContext) {
             moved: result.moved,
             emailed: result.emailed,
             skipped: result.skipped,
+            // JL-REQ-013: hires reached the openings. Offer setJobPostState filled; never do it unasked.
+            ...(result.suggestFill
+              ? {
+                  suggestFill: result.suggestFill.map((job) => ({
+                    jobPostId: job.jobPostId,
+                    title: job.title,
+                    hires: job.hires,
+                    openings: job.openings,
+                  })),
+                }
+              : {}),
           };
         }),
     }),

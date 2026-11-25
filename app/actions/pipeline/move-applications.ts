@@ -13,6 +13,7 @@ import {
   MAX_TEMPLATE_BODY,
   MAX_TEMPLATE_SUBJECT,
 } from "@/helpers/pipeline/templates";
+import type { FillSuggestion } from "@/helpers/jobs/job-hires";
 import { eventCaptureServer } from "@/helpers/posthog/EventCaptureServer";
 import { PostHogEvent } from "@/utils/types";
 
@@ -49,6 +50,8 @@ export type MoveApplicationsActionResult =
       moved: number;
       emailed: number;
       skipped: { id: string; reason: MoveSkipReason }[];
+      /** JL-REQ-013: jobs whose hires just reached their openings, for the board's toast. */
+      suggestFill?: FillSuggestion[];
     }
   | (Omit<MoveFailure, "ok"> & { ok: false });
 
@@ -100,5 +103,6 @@ export async function moveApplicationsAction(
     moved: result.moved,
     emailed: result.emailed,
     skipped: result.skipped,
+    ...(result.suggestFill ? { suggestFill: result.suggestFill } : {}),
   };
 }

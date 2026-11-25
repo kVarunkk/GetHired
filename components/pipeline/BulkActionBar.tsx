@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { moveApplicationsAction } from "@/app/actions/pipeline/move-applications";
+import { toastFillSuggestions } from "@/components/jobs/fill-suggestion-toast";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -106,6 +107,7 @@ export default function BulkActionBar({
           (noEmail > 0 ? ` ${noEmail} not emailed: no email.` : "") +
           (skipped > 0 ? ` ${plural(skipped)} couldn't be found.` : ""),
       );
+      toastFillSuggestions(result.suggestFill);
       onDone();
       router.refresh();
     } catch {

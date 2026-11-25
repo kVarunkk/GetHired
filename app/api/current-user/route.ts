@@ -5,6 +5,7 @@ import { getPlanSummary } from "@/helpers/billing/entitlements";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { roleLabel } from "@/helpers/companies/roles";
+import { countPendingApprovals } from "@/helpers/jobs/job-approval";
 
 export const dynamic = "force-dynamic";
 
@@ -71,10 +72,14 @@ export async function GET() {
     if (userRole === "company") {
       // "Plan: Startup · 1,240 credits" in the profile menu.
       const companyId = (data as unknown as { id: string }).id;
-      const plan = await getPlanSummary(companyId).catch((err) => {
-        reportError("[current-user] couldn't load the plan", err);
-        return null;
-      });
+      const [plan, pendingJobApprovals] = await Promise.all([
+        getPlanSummary(companyId).catch((err) => {
+          reportError("[current-user] couldn't load the plan", err);
+          return null;
+        }),
+        // JL-REQ-022: the Job posts badge, for members with jobs.approve.
+        company ? countPendingApprovals(supabase, company).catch(() => 0) : Promise.resolve(0),
+      ]);
       // The role's name and what the menus may show (RP-REQ-016); the server
       // checks every permission again on each request.
       profileData = {
@@ -86,6 +91,7 @@ export async function GET() {
           talentView: can(company, "talent.view"),
           isOwner: Boolean(company?.isOwner),
         },
+        pendingJobApprovals,
       };
     }
   } catch (error) {

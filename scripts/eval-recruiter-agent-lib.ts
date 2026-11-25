@@ -32,7 +32,7 @@ export type RunTrace = {
 export const WRITE_TOOLS = [
   "createJobPost",
   "updateJobPost",
-  "setJobPostStatus",
+  "setJobPostState",
   "runMatchingForJob",
   "screenApplicants",
   "moveApplications",

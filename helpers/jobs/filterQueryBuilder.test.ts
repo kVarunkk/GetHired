@@ -423,3 +423,22 @@ describe("buildQuery: title keywords", () => {
     expect(orCalls).toEqual([]);
   });
 });
+
+describe("buildQuery: link-only jobs (JLT-061, JL-SEC-004)", () => {
+  const listedFilter = { method: "eq", args: ["listed", true] };
+
+  it("lists only listed jobs on the job board", async () => {
+    await buildQuery(supabase.client, null, { ...BASE_ARGS });
+    expect(supabase.callsFor("all_jobs")[0].chain).toContainEqual(listedFilter);
+  });
+
+  it("lists only listed jobs in the user's relevant jobs", async () => {
+    await buildQuery(supabase.client, mockUser({ id: "u1" }), { ...BASE_ARGS, relevanceSearchType: "standard" });
+    expect(supabase.callsFor("all_jobs")[0].chain).toContainEqual(listedFilter);
+  });
+
+  it("keeps a saved link-only job in the user's saved tab", async () => {
+    await buildQuery(supabase.client, mockUser({ id: "u1" }), { ...BASE_ARGS, isFavoriteTabActive: true });
+    expect(supabase.callsFor("all_jobs")[0].chain).not.toContainEqual(listedFilter);
+  });
+});

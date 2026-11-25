@@ -3,7 +3,9 @@ import { createCompanyTools } from "./company";
 import { createJobTools } from "./jobs";
 import { getEntitlements } from "@/helpers/billing/entitlements";
 import { upsertJobPosting } from "@/helpers/jobs/upsert-job-posting";
-import { setJobPostStatus } from "@/helpers/jobs/set-job-post-status";
+import { setJobPostState } from "@/helpers/jobs/set-job-post-state";
+import { cancelOpenScreeningInterviews } from "@/helpers/jobs/job-interviews";
+import { countHiresFor } from "@/helpers/jobs/job-hires";
 import { deleteJobPost } from "@/helpers/jobs/delete-job-post";
 import { execTool, inputJsonSchema, recruiterToolContext, validateInput } from "@/test/utils/tools";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
@@ -17,7 +19,12 @@ vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
 }));
 vi.mock("@/helpers/billing/entitlements", () => ({ getEntitlements: vi.fn() }));
 vi.mock("@/helpers/jobs/upsert-job-posting", () => ({ upsertJobPosting: vi.fn() }));
-vi.mock("@/helpers/jobs/set-job-post-status", () => ({ setJobPostStatus: vi.fn() }));
+vi.mock("@/helpers/jobs/set-job-post-state", () => ({ setJobPostState: vi.fn() }));
+vi.mock("@/helpers/jobs/job-interviews", () => ({ cancelOpenScreeningInterviews: vi.fn() }));
+vi.mock("@/helpers/jobs/job-hires", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/helpers/jobs/job-hires")>()),
+  countHiresFor: vi.fn(async () => 0),
+}));
 vi.mock("@/helpers/jobs/delete-job-post", () => ({ deleteJobPost: vi.fn() }));
 
 const JOB = jobPostingOf(COMPANY_A, {
@@ -125,6 +132,10 @@ describe("listMyJobs tool", () => {
           id: JOB.id,
           title: JOB.title,
           status: "active",
+          state: "open",
+          openings: 3,
+          hires: 1,
+          closes_at: "2026-12-31",
           matching_status: "completed",
           applicants: 4,
           new_24h: 1,
@@ -135,11 +146,11 @@ describe("listMyJobs tool", () => {
       error: null,
     });
 
-    const result = await execTool(tools.listMyJobs, { status: "active", limit: 5 });
+    const result = await execTool(tools.listMyJobs, { states: ["open", "paused"], limit: 5 });
 
     expect(supabase.callsFor("get_recruiter_job_summaries")[0].chain[0].args[1]).toEqual({
       p_company_id: COMPANY_A.id,
-      p_status: "active",
+      p_states: ["open", "paused"],
       p_limit: 5,
     });
     expect(result).toEqual({
@@ -147,7 +158,10 @@ describe("listMyJobs tool", () => {
         {
           id: JOB.id,
           title: JOB.title,
-          status: "active",
+          state: "open",
+          openings: 3,
+          hires: 1,
+          closesAt: "2026-12-31",
           matchingStatus: "completed",
           applicants: 4,
           newInLast24h: 1,
@@ -155,6 +169,10 @@ describe("listMyJobs tool", () => {
         },
       ],
     });
+  });
+
+  it("refuses an unknown state filter", async () => {
+    expect((await validateInput(tools.listMyJobs, { states: ["active"] })).success).toBe(false);
   });
 });
 
@@ -192,10 +210,21 @@ describe("getJobPost tool", () => {
     expect(String(result.description).length).toBeLessThan(RA_JOB_DESCRIPTION_MAX_CHARS + 60);
     expect(result.applicantsByStatus).toEqual({ submitted: 2, reviewed: 1 });
     expect(result.department).toBe("Engineering");
+    expect(result).toMatchObject({ state: "open", openings: 1, hires: 0 });
+    expect(result).not.toHaveProperty("suggestFill");
     expect(result.applicationForm).toMatchObject({
       questions: [{ id: qid, label: "Can you relocate?", knockout: rule }],
     });
     expect(result.url).toBe(`/company/job-posts/${JOB.id}`);
+  });
+
+  it("hints at marking the job filled once hires reach the openings (JL-REQ-013)", async () => {
+    supabase.queue("job_postings", { data: { ...JOB, openings: 2 }, error: null });
+    supabase.queue("job_posting_form_rules", { data: null, error: null });
+    supabase.queue("applications", { data: [], error: null });
+    vi.mocked(countHiresFor).mockResolvedValueOnce(2);
+
+    expect(await execTool(tools.getJobPost, { jobPostId: JOB.id })).toMatchObject({ hires: 2, suggestFill: true });
   });
 
   it("treats another company's job as not found", async () => {
@@ -208,7 +237,7 @@ describe("getJobPost tool", () => {
 });
 
 describe("createJobPost tool", () => {
-  it("creates an inactive posting for the session's company and links to it", async () => {
+  it("creates a draft for the session's company and links to it", async () => {
     vi.mocked(upsertJobPosting).mockResolvedValue({ success: true, isUpdate: false, postingId: JOB.id });
 
     const result = await execTool(tools.createJobPost, DRAFT);
@@ -234,7 +263,7 @@ describe("createJobPost tool", () => {
     expect(result).toEqual({
       id: JOB.id,
       title: DRAFT.title,
-      status: "inactive",
+      state: "draft",
       url: `/company/job-posts/${JOB.id}`,
     });
   });
@@ -263,6 +292,39 @@ describe("createJobPost tool", () => {
     vi.mocked(upsertJobPosting).mockResolvedValue({ success: false, error: "Job title is required." });
 
     expect(await execTool(tools.createJobPost, DRAFT)).toEqual({ error: "Job title is required." });
+  });
+});
+
+describe("job tools: closing date (JLT-040, JL-REQ-014)", () => {
+  it("createJobPost passes closesAt as closes_at", async () => {
+    vi.mocked(upsertJobPosting).mockResolvedValue({ success: true, isUpdate: false, postingId: JOB.id });
+    await execTool(tools.createJobPost, { ...DRAFT, closesAt: "2026-12-31" });
+    expect(vi.mocked(upsertJobPosting).mock.calls[0][1].values).toMatchObject({ closes_at: "2026-12-31" });
+  });
+
+  it("updateJobPost clears the date with null", async () => {
+    supabase.queue("job_postings", { data: JOB, error: null });
+    vi.mocked(upsertJobPosting).mockResolvedValue({ success: true, isUpdate: true, postingId: JOB.id });
+    await execTool(tools.updateJobPost, { jobPostId: JOB.id, closesAt: null });
+    expect(vi.mocked(upsertJobPosting).mock.calls[0][1].values).toMatchObject({ closes_at: null });
+  });
+
+  it("updateJobPost leaves the date out when it isn't changed", async () => {
+    supabase.queue("job_postings", { data: { ...JOB, closes_at: "2026-12-31" }, error: null });
+    vi.mocked(upsertJobPosting).mockResolvedValue({ success: true, isUpdate: true, postingId: JOB.id });
+    await execTool(tools.updateJobPost, { jobPostId: JOB.id, title: "Staff Backend Engineer" });
+    expect(vi.mocked(upsertJobPosting).mock.calls[0][1].values).not.toHaveProperty("closes_at");
+  });
+
+  it("refuses a date that isn't YYYY-MM-DD", async () => {
+    expect((await validateInput(tools.createJobPost, { ...DRAFT, closesAt: "31/12/2026" })).success).toBe(false);
+  });
+
+  it("passes the save path's refusal through", async () => {
+    vi.mocked(upsertJobPosting).mockResolvedValue({ success: false, error: "The closing date must be today or later." });
+    expect(await execTool(tools.createJobPost, { ...DRAFT, closesAt: "2020-01-01" })).toEqual({
+      error: "The closing date must be today or later.",
+    });
   });
 });
 
@@ -375,28 +437,67 @@ describe("updateJobPost tool", () => {
   });
 });
 
-describe("setJobPostStatus tool", () => {
-  it("changes the status through the shared helper", async () => {
-    vi.mocked(setJobPostStatus).mockResolvedValue({ ok: true });
+describe("setJobPostState tool", () => {
+  const moved = (state: "open" | "paused" | "closed" | "filled", changed = true) =>
+    ({ ok: true, changed, from: "open", state, jobId: "j1" }) as const;
 
-    expect(await execTool(tools.setJobPostStatus, { jobPostId: JOB.id, status: "active" })).toEqual({
+  it("moves the job through the shared helper as the agent", async () => {
+    vi.mocked(setJobPostState).mockResolvedValue(moved("paused"));
+
+    expect(await execTool(tools.setJobPostState, { jobPostId: JOB.id, state: "paused" })).toEqual({
       id: JOB.id,
-      status: "active",
+      state: "paused",
+      changed: true,
       url: `/company/job-posts/${JOB.id}`,
     });
-    const [deps, params] = vi.mocked(setJobPostStatus).mock.calls[0];
+    const [deps, params] = vi.mocked(setJobPostState).mock.calls[0];
     expect(deps.company.id).toBe(COMPANY_A.id);
-    expect(params).toEqual({ jobPostingId: JOB.id, status: "active" });
+    expect(deps.actorKind).toBe("agent");
+    expect(params).toEqual({ jobPostId: JOB.id, to: "paused", reason: null, note: null });
+    expect(cancelOpenScreeningInterviews).not.toHaveBeenCalled();
   });
 
-  it("maps the limit and not-found errors", async () => {
-    vi.mocked(setJobPostStatus).mockResolvedValueOnce({ ok: false, error: AT_LIMIT });
-    expect(await execTool(tools.setJobPostStatus, { jobPostId: JOB.id, status: "active" })).toMatchObject(
-      { error: "PLAN_LIMIT" },
-    );
+  it("passes the close reason and note, and cancels open interviews only when asked", async () => {
+    vi.mocked(setJobPostState).mockResolvedValue(moved("closed"));
+    vi.mocked(cancelOpenScreeningInterviews).mockResolvedValue({ ok: true, cancelled: 2, failed: 0 });
 
-    vi.mocked(setJobPostStatus).mockResolvedValueOnce({ ok: false, error: "Job posting not found." });
-    expect(await execTool(tools.setJobPostStatus, { jobPostId: OTHER_ID, status: "inactive" })).toEqual({
+    const result = await execTool(tools.setJobPostState, {
+      jobPostId: JOB.id,
+      state: "closed",
+      reason: "cancelled",
+      note: "Budget cut",
+      cancelOpenInterviews: true,
+    });
+
+    expect(vi.mocked(setJobPostState).mock.calls[0][1]).toEqual({
+      jobPostId: JOB.id,
+      to: "closed",
+      reason: "cancelled",
+      note: "Budget cut",
+    });
+    expect(result).toMatchObject({ state: "closed", interviews: { cancelled: 2 } });
+  });
+
+  it("leaves interviews alone when nothing changed", async () => {
+    vi.mocked(setJobPostState).mockResolvedValue(moved("filled", false));
+
+    await execTool(tools.setJobPostState, { jobPostId: JOB.id, state: "filled", cancelOpenInterviews: true });
+    expect(cancelOpenScreeningInterviews).not.toHaveBeenCalled();
+  });
+
+  it("never takes the deadline reason or an old status", async () => {
+    expect((await validateInput(tools.setJobPostState, { jobPostId: JOB.id, state: "closed", reason: "deadline" })).success).toBe(false);
+    expect((await validateInput(tools.setJobPostState, { jobPostId: JOB.id, status: "active" })).success).toBe(false);
+  });
+
+  it("maps the limit and refusal errors", async () => {
+    vi.mocked(setJobPostState).mockResolvedValueOnce({ ok: false, error: AT_LIMIT });
+    expect(await execTool(tools.setJobPostState, { jobPostId: JOB.id, state: "open" })).toMatchObject({
+      error: "PLAN_LIMIT",
+    });
+
+    vi.mocked(setJobPostState).mockResolvedValueOnce({ ok: false, error: "Job posting not found." });
+    expect(await execTool(tools.setJobPostState, { jobPostId: OTHER_ID, state: "paused" })).toEqual({
       error: "Job posting not found.",
     });
   });
@@ -445,12 +546,12 @@ describe("job write tools for a member (TM-REQ-004, teams difference 15)", () =>
   it("refuses create, edit and close without querying", async () => {
     expect(await execTool(tools.createJobPost, DRAFT)).toEqual(NO_CREATE);
     expect(await execTool(tools.updateJobPost, { jobPostId: JOB.id, title: "Staff Engineer" })).toEqual(NO_EDIT);
-    expect(await execTool(tools.setJobPostStatus, { jobPostId: JOB.id, status: "inactive" })).toEqual(NO_PUBLISH);
+    expect(await execTool(tools.setJobPostState, { jobPostId: JOB.id, state: "paused" })).toEqual(NO_PUBLISH);
     expect(await execTool(tools.deleteJobPost, { jobPostId: JOB.id })).toEqual(NO_DELETE);
 
     expect(supabase.calls).toHaveLength(0);
     expect(upsertJobPosting).not.toHaveBeenCalled();
-    expect(setJobPostStatus).not.toHaveBeenCalled();
+    expect(setJobPostState).not.toHaveBeenCalled();
     expect(deleteJobPost).not.toHaveBeenCalled();
   });
 
@@ -463,10 +564,10 @@ describe("job write tools for a member (TM-REQ-004, teams difference 15)", () =>
   it("lets an admin close a job", async () => {
     const ctx = recruiterToolContext(supabase.client, { user: ADMIN_A.user, company: ADMIN_A.myCompany });
     tools = { ...createCompanyTools(ctx), ...createJobTools(ctx) };
-    vi.mocked(setJobPostStatus).mockResolvedValue({ ok: true });
+    vi.mocked(setJobPostState).mockResolvedValue({ ok: true, changed: true, from: "open", state: "paused", jobId: "j1" });
 
-    expect(await execTool(tools.setJobPostStatus, { jobPostId: JOB.id, status: "inactive" })).toMatchObject({
-      status: "inactive",
+    expect(await execTool(tools.setJobPostState, { jobPostId: JOB.id, state: "paused" })).toMatchObject({
+      state: "paused",
     });
   });
 });

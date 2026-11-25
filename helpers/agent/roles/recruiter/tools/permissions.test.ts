@@ -76,7 +76,7 @@ describe("RECRUITER_TOOL_PERMISSIONS (RP-REQ-030, RP-TEST-008)", () => {
 
   it("leaves out what the role can't do", () => {
     const member = Object.keys(toolsFor(MEMBER_A));
-    for (const name of ["createJobPost", "updateJobPost", "setJobPostStatus", "createRole", "assignRole", "assignToJob"]) {
+    for (const name of ["createJobPost", "updateJobPost", "setJobPostState", "createRole", "assignRole", "assignToJob"]) {
       expect(member, name).not.toContain(name);
     }
     expect(member).toEqual(expect.arrayContaining(["sendOutreach", "listApplicants", "listTeam", "listRoles"]));

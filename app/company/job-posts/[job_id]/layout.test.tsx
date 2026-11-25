@@ -24,20 +24,32 @@ vi.mock("@/helpers/careers/my-careers-link", () => ({ getMyCareersLink: vi.fn(as
 vi.mock("@/components/DeleteJobPosting", () => ({ default: () => null }));
 vi.mock("@/components/FindSuitableProfilesForJobPost", () => ({ default: () => null }));
 vi.mock("@/components/ShareJobPosting", () => ({ default: () => null }));
-vi.mock("@/components/JobPostingsTable", () => ({ JobStatusSwitch: () => null }));
+vi.mock("@/components/jobs/JobStateMenu", () => ({
+  default: ({ job, viewer }: { job: { state: string }; viewer: Record<string, boolean> }) => (
+    <span data-testid="state-menu">
+      {job.state} publish:{String(viewer.canPublish)} approve:{String(viewer.canApprove)} approval:
+      {String(viewer.approvalRequired)} submitter:{String(viewer.isSubmitter)}
+    </span>
+  ),
+}));
 
 const JOB = {
   id: JOB_A1,
   job_id: "d0000000-0000-4000-8000-000000000001",
   title: "Backend Engineer",
   created_at: "2026-10-01T00:00:00.000Z",
-  company_info: { name: "Acme", website: null },
+  first_opened_at: "2026-10-02T00:00:00.000Z",
+  state: "open",
+  openings: 3,
+  closes_at: null as string | null,
+  company_info: { name: "Acme", website: null, job_approval_required: false },
 };
 
-async function renderAs(member: MemberFixture) {
+async function renderAs(member: MemberFixture, job: Partial<typeof JOB> = {}, hires = 0) {
   const db = createSupabaseMock({ user: member.user });
   db.queueRpc("my_company_access", { data: member.membership, error: null });
-  db.queue("job_postings", { data: JOB, error: null });
+  db.queue("job_postings", { data: { ...JOB, ...job }, error: null });
+  db.queue("applications", { data: Array.from({ length: hires }, () => ({ job_post_id: JOB_A1 })), error: null });
   await setRequestUser(member.user, db.client);
   render(
     <TooltipProvider>
@@ -106,5 +118,33 @@ describe("the job's Distribution nav item (MPT-015, MP-REQ-001)", () => {
   it("is hidden without distribution.view", async () => {
     const nav = await renderAs(memberWith(["jobs.view"]));
     expect(within(nav).queryByRole("link", { name: /Distribution/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("the job's header (JLT-020, JLT-023, JL-REQ-030)", () => {
+  it("shows hires against openings and the closing date", async () => {
+    await renderAs(OWNER_A, { closes_at: "2026-12-31" }, 1);
+    expect(screen.getByText(/Hired 1 of 3/)).toBeInTheDocument();
+    expect(screen.getByText(/Closes December 31st, 2026/)).toBeInTheDocument();
+  });
+
+  it("leaves the closing date out of a closed job", async () => {
+    await renderAs(OWNER_A, { state: "closed", closes_at: "2026-12-31" });
+    expect(screen.queryByText(/Closes/)).not.toBeInTheDocument();
+  });
+
+  it("gives the state menu the viewer's permissions on this job", async () => {
+    await renderAs(OWNER_A);
+    expect(screen.getByTestId("state-menu")).toHaveTextContent("open publish:true approve:true approval:false");
+  });
+
+  it("a member without jobs.publish gets a menu with no moves", async () => {
+    await renderAs(memberWith(["jobs.view"]));
+    expect(screen.getByTestId("state-menu")).toHaveTextContent("publish:false approve:false");
+  });
+
+  it("says Created on for a job that never opened", async () => {
+    await renderAs(OWNER_A, { state: "draft", first_opened_at: null as unknown as string });
+    expect(screen.getByText(/Created on/)).toBeInTheDocument();
   });
 });

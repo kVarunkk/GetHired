@@ -111,6 +111,7 @@ export async function updateSession(request: NextRequest) {
     "/api/updates/company/match-explanations/worker",
     // Knockout rejection emails, 24 hours after the move (X-Internal-Secret).
     "/api/updates/knockouts/worker",
+    "/api/updates/jobs/auto-close",
     "/api/worker/user/onboarding",
     "/api/worker/application-screening",
     // Pipeline notifications (X-Internal-Secret).

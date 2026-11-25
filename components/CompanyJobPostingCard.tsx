@@ -5,7 +5,7 @@ import DeleteJobPosting from "@/components/DeleteJobPosting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { EditJobPostButton } from "./jobs/JobPostButtons";
-import { JobStatusSwitch } from "./JobPostingsTable";
+import JobStateMenu from "./jobs/JobStateMenu";
 import { TCompanyIdPageData } from "@/utils/types/jobs.types";
 import type { JobControls } from "@/helpers/companies/job-scope";
 
@@ -13,7 +13,7 @@ export default function CompanyJobPostingCard({
   job,
   controls = { edit: true, publish: true, delete: true },
 }: {
-  job: TCompanyIdPageData;
+  job: TCompanyIdPageData & { company_info: { job_approval_required?: boolean } | null };
   /** What the viewer's role allows on this job (RP-REQ-016); the server checks again. */
   controls?: JobControls;
 }) {
@@ -43,7 +43,14 @@ export default function CompanyJobPostingCard({
           </span>{" "}
           Application{job.applications?.length !== 1 ? "s" : ""}
         </div>
-        <JobStatusSwitch job={job} disabled={!controls.publish} />
+        <JobStateMenu
+          job={job}
+          viewer={{
+            canPublish: controls.publish,
+            canApprove: !!controls.approve,
+            approvalRequired: !!job.company_info?.job_approval_required,
+          }}
+        />
       </CardContent>
     </Card>
   );
