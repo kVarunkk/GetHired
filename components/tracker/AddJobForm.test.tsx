@@ -9,7 +9,7 @@ vi.mock("@/app/actions/tracker/add-tracked-application", () => ({ addTrackedAppl
 vi.mock("@/app/actions/tracker/read-job-from-url", () => ({ readJobFromUrlAction: vi.fn() }));
 vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
-vi.mock("@/components/ui/select", () => import("@/test/utils/select-mock"));
+vi.mock("@/components/ui/responsive-select", () => import("@/test/utils/select-mock"));
 vi.mock("@/components/agent/AgentHandoff", () => ({ default: () => <div>agent handoff</div> }));
 
 const open = (props: Partial<Parameters<typeof AddJobForm>[0]> = {}) =>

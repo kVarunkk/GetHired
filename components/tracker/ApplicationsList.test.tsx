@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/my-jobs",
   useSearchParams: () => new URLSearchParams("view=list"),
 }));
-vi.mock("@/components/ui/select", () => import("@/test/utils/select-mock"));
+vi.mock("@/components/ui/responsive-select", () => import("@/test/utils/select-mock"));
 vi.mock("@/components/ui/tooltip", () => {
   const Pass = ({ children }: { children?: ReactNode }) => <>{children}</>;
   return { Tooltip: Pass, TooltipContent: Pass, TooltipProvider: Pass, TooltipTrigger: Pass };

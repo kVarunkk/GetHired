@@ -15,7 +15,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/responsive-select";
 import AgentHandoff from "@/components/agent/AgentHandoff";
 import StickyActionBar from "@/components/StickyActionBar";
 import { AGENT_PATH } from "@/helpers/agent/prompt-draft";
@@ -309,6 +309,7 @@ export default function AddJobForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field id="add-job-status" label="Status">
                 <Select
+                  title="Status"
                   value={status}
                   onValueChange={(value) => setStatus(value as TrackedStatus)}
                 >
@@ -344,7 +345,7 @@ export default function AddJobForm({
               </Field>
               {resumes.length > 0 && (
                 <Field id="add-job-resume" label="Resume used (optional)">
-                  <Select value={resumeId} onValueChange={setResumeId}>
+                  <Select title="Resume used" value={resumeId} onValueChange={setResumeId}>
                     <SelectTrigger id="add-job-resume">
                       <SelectValue />
                     </SelectTrigger>

@@ -10,7 +10,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/responsive-select";
 import posthog from "@/lib/posthog/client";
 import { PostHogEvent } from "@/utils/types";
 import { JOB_ALERT_COPY } from "@/helpers/job-alerts/alerts";
@@ -181,6 +181,7 @@ export default function JobAlertBanner({
 
   const frequencyPicker = (
     <Select
+      title="Alert frequency"
       value={frequency}
       onValueChange={(v) => setFrequency(v as AlertFrequency)}
     >

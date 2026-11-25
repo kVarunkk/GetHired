@@ -101,9 +101,17 @@ describe("ApplicationsBoard on mobile (AT-REQ-018)", () => {
     expect(screen.queryByText("Frontend Engineer")).toBeNull();
   });
 
+  // On a phone a card's menu is a bottom drawer, with Move to… as a group in it.
+  const openCardMenu = async (title: string) => {
+    fireEvent.click(screen.getByRole("button", { name: `Actions for ${title}` }));
+    return within(await screen.findByRole("menu", { name: title }));
+  };
+
   it("says when a column is empty, and moves a card with Move to…", async () => {
     render(<ApplicationsBoard items={items} />);
-    fireEvent.click(screen.getByRole("button", { name: "In review" }));
+    const menu = await openCardMenu("Frontend Engineer");
+    expect(menu.getByRole("group", { name: "Move to…" })).toBeTruthy();
+    fireEvent.click(menu.getByRole("menuitem", { name: "In review" }));
     await waitFor(() => expect(setTrackedStatusAction).toHaveBeenCalledWith(expect.objectContaining({ id: "a1", status: "in_review" })));
     fireEvent.mouseDown(screen.getByRole("tab", { name: /Offer/ }));
     fireEvent.click(screen.getByRole("tab", { name: /Offer/ }));
@@ -112,7 +120,8 @@ describe("ApplicationsBoard on mobile (AT-REQ-018)", () => {
 
   it("closes a card with a named outcome from its menu", async () => {
     render(<ApplicationsBoard items={items} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Withdrawn" })[0]);
+    const menu = await openCardMenu("Frontend Engineer");
+    fireEvent.click(menu.getByRole("menuitem", { name: "Withdrawn" }));
     await waitFor(() => expect(setTrackedStatusAction).toHaveBeenCalledWith(expect.objectContaining({ id: "a1", status: "withdrawn" })));
   });
 });

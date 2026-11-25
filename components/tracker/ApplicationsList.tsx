@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/responsive-select";
 import DataTable, { SortableHeader } from "@/components/DataTable";
 import { setTrackedStatusAction } from "@/app/actions/tracker/set-tracked-status";
 import { setExternalApplicationStatusAction } from "@/app/actions/applications/set-external-application-status";
@@ -40,7 +40,7 @@ function StatusCell({ item, onChange }: { item: TrackerItem; onChange: (status: 
     );
   }
   return (
-    <Select value={item.status} onValueChange={(value) => onChange(value as AppliedStatus)}>
+    <Select title={`Status of ${item.jobTitle}`} value={item.status} onValueChange={(value) => onChange(value as AppliedStatus)}>
       <SelectTrigger aria-label={`Status of ${item.jobTitle}`} className="h-8 w-36 text-xs">
         <SelectValue />
       </SelectTrigger>

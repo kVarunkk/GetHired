@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/responsive-select";
 import { Switch } from "@/components/ui/switch";
 import type { JobAlert } from "@/helpers/job-alerts/alerts";
 import { alertNameParts, ALERT_NAME_MAX } from "@/helpers/job-alerts/name";
@@ -134,6 +134,7 @@ function AlertRow({
       {details.length > 0 && <p className="text-sm text-muted-foreground">{details.join(" · ")}</p>}
       <div className="flex flex-wrap items-center gap-2">
         <Select
+          title="Alert frequency"
           value={alert.frequency}
           disabled={pending}
           onValueChange={(frequency) => update({ frequency: frequency as "daily" | "weekly" })}

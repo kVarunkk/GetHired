@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-vi.mock("@/components/ui/select", () => import("@/test/utils/select-mock"));
+vi.mock("@/components/ui/responsive-select", () => import("@/test/utils/select-mock"));
 vi.mock("@/app/actions/job-alerts/update-job-alert", () => ({ updateJobAlertAction: vi.fn() }));
 vi.mock("@/app/actions/job-alerts/list-job-alerts", () => ({ listJobAlertsAction: vi.fn().mockResolvedValue(null) }));
 vi.mock("@/app/actions/job-alerts/delete-job-alert", () => ({ deleteJobAlertAction: vi.fn() }));

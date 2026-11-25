@@ -9,14 +9,8 @@ import { Bookmark, ExternalLink, MapPin, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { ResponsivePopover } from "@/components/ui/responsive-popover";
+import { ResponsiveMenu, ResponsiveMenuItem, ResponsiveMenuSeparator } from "@/components/ui/responsive-menu";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import JobItem from "@/components/JobItem";
 import { setTrackedStatusAction } from "@/app/actions/tracker/set-tracked-status";
@@ -200,13 +194,18 @@ export function SavedTrackedCard({ item }: { item: TrackedSaved }) {
             </a>
           </Button>
         )}
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
+        <ResponsivePopover
+          open={open}
+          onOpenChange={setOpen}
+          title="Mark as applied"
+          description={`${item.jobTitle} at ${item.companyName}`}
+          className="w-64 space-y-3"
+          trigger={
             <Button size="sm" variant="outline">
               Mark as applied
             </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 space-y-3">
+          }
+        >
             <div className="space-y-1">
               <Label htmlFor={`applied-${item.id}`}>Applied on</Label>
               <Input
@@ -220,24 +219,24 @@ export function SavedTrackedCard({ item }: { item: TrackedSaved }) {
             <Button size="sm" className="w-full" onClick={markAsApplied} disabled={marking}>
               Move to Applications
             </Button>
-          </PopoverContent>
-        </Popover>
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
+        </ResponsivePopover>
+        <ResponsiveMenu
+          title={item.jobTitle}
+          description={item.companyName}
+          trigger={
             <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Actions for ${item.jobTitle}`}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
-              <Link href={trackedApplicationPath(item.id)}>Edit</Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setRemoving(true)}>
-              Remove
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          }
+        >
+          <ResponsiveMenuItem asChild>
+            <Link href={trackedApplicationPath(item.id)}>Edit</Link>
+          </ResponsiveMenuItem>
+          <ResponsiveMenuSeparator />
+          <ResponsiveMenuItem destructive onClick={() => setRemoving(true)}>
+            Remove
+          </ResponsiveMenuItem>
+        </ResponsiveMenu>
       </div>
       <ConfirmDialog
         open={removing}

@@ -4,18 +4,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { Bell, BellRing } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { ResponsivePopover } from "@/components/ui/responsive-popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/responsive-select";
 import posthog from "@/lib/posthog/client";
 import { PostHogEvent } from "@/utils/types";
 import {
@@ -70,8 +66,11 @@ export default function JobAlertButton({
   const atCap = !on && activeCount >= BANNER_ACTIVE_CAP;
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <ResponsivePopover
+      title={on ? name : `Get new ${name} by email`}
+      showTitleOnDesktop
+      className="w-72 space-y-3"
+      trigger={
         <Button
           variant="ghost"
           size="sm"
@@ -85,11 +84,8 @@ export default function JobAlertButton({
           )}
           {on ? "Alert on" : "Alert"}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 space-y-3">
-        <p className="text-sm font-semibold">
-          {on ? name : `Get new ${name} by email`}
-        </p>
+      }
+    >
         {controls.error && (
           <p role="alert" className="text-sm text-destructive">
             {controls.error}
@@ -122,6 +118,7 @@ export default function JobAlertButton({
         ) : (
           <div className="flex items-center gap-2">
             <Select
+              title="Alert frequency"
               value={frequency}
               onValueChange={(v) => setFrequency(v as AlertFrequency)}
             >
@@ -166,7 +163,6 @@ export default function JobAlertButton({
             )}
           </div>
         )}
-      </PopoverContent>
-    </Popover>
+    </ResponsivePopover>
   );
 }

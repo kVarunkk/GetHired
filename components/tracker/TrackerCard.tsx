@@ -6,16 +6,11 @@ import { CalendarClock, Lock, MapPin, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  ResponsiveMenu,
+  ResponsiveMenuItem,
+  ResponsiveMenuSeparator,
+  ResponsiveMenuSub,
+} from "@/components/ui/responsive-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { appliedAgo, isFollowUpDue, shortDate, sourceMark } from "@/helpers/tracker/card";
 import { trackedApplicationPath } from "@/helpers/tracker/paths";
@@ -143,55 +138,54 @@ export default function TrackerCard({
 
 function CardMenu({ item, onMove, onRemove }: { item: TrackerItem; onMove: (status: AppliedStatus) => void; onRemove: () => void }) {
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
+    <ResponsiveMenu
+      title={item.jobTitle}
+      description={item.companyName}
+      trigger={
         <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 sm:h-6 sm:w-6" aria-label={`Actions for ${item.jobTitle}`}>
           <MoreHorizontal className="h-4 w-4 shrink-0" />
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {item.kind === "gethired" ? (
-          <>
-            {item.allJobsId && (
-              <DropdownMenuItem asChild>
-                <Link href={`/jobs/${item.allJobsId}`}>View job</Link>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem asChild>
-              <Link href={trackedApplicationPath(item.id)}>Add a note or follow-up</Link>
-            </DropdownMenuItem>
-            {item.screeningInterviewId && (
-              <DropdownMenuItem asChild>
-                <Link href={`/interview/screening/${item.screeningInterviewId}`}>Open AI interview</Link>
-              </DropdownMenuItem>
-            )}
-          </>
-        ) : (
-          <>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Move to…</DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  {APPLIED_STATUSES.filter((status) => status !== item.status).map((status) => (
-                    <DropdownMenuItem key={status} onClick={() => onMove(status)}>
-                      {trackedStatusLabel(status)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-            {!item.legacy && (
-              <DropdownMenuItem asChild>
+      }
+    >
+      {item.kind === "gethired" ? (
+        <>
+          {item.allJobsId && (
+            <ResponsiveMenuItem asChild>
+              <Link href={`/jobs/${item.allJobsId}`}>View job</Link>
+            </ResponsiveMenuItem>
+          )}
+          <ResponsiveMenuItem asChild>
+            <Link href={trackedApplicationPath(item.id)}>Add a note or follow-up</Link>
+          </ResponsiveMenuItem>
+          {item.screeningInterviewId && (
+            <ResponsiveMenuItem asChild>
+              <Link href={`/interview/screening/${item.screeningInterviewId}`}>Open AI interview</Link>
+            </ResponsiveMenuItem>
+          )}
+        </>
+      ) : (
+        <>
+          <ResponsiveMenuSub label="Move to…">
+            {APPLIED_STATUSES.filter((status) => status !== item.status).map((status) => (
+              <ResponsiveMenuItem key={status} onClick={() => onMove(status)}>
+                {trackedStatusLabel(status)}
+              </ResponsiveMenuItem>
+            ))}
+          </ResponsiveMenuSub>
+          {!item.legacy && (
+            <>
+              <ResponsiveMenuSeparator />
+              <ResponsiveMenuItem asChild>
                 <Link href={trackedApplicationPath(item.id)}>Edit</Link>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onRemove}>
-              Remove
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+              </ResponsiveMenuItem>
+            </>
+          )}
+          <ResponsiveMenuSeparator />
+          <ResponsiveMenuItem destructive onClick={onRemove}>
+            Remove
+          </ResponsiveMenuItem>
+        </>
+      )}
+    </ResponsiveMenu>
   );
 }

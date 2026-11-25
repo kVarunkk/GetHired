@@ -17,7 +17,7 @@ vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() 
 const push = vi.fn();
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
-vi.mock("@/components/ui/select", () => import("@/test/utils/select-mock"));
+vi.mock("@/components/ui/responsive-select", () => import("@/test/utils/select-mock"));
 vi.mock("@/components/ConfirmDialog", () => ({
   default: ({ open, onConfirm, confirmLabel }: { open: boolean; onConfirm: () => void; confirmLabel: string }) =>
     open ? <button onClick={onConfirm}>{`Confirm ${confirmLabel}`}</button> : null,

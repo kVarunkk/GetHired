@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-vi.mock("@/components/ui/select", () => import("@/test/utils/select-mock"));
+vi.mock("@/components/ui/responsive-select", () => import("@/test/utils/select-mock"));
 vi.mock("@/lib/posthog/client", () => ({ default: { capture: vi.fn() } }));
 vi.mock("@/app/actions/job-alerts/create-job-alert", () => ({
   createJobAlertAction: vi.fn(),

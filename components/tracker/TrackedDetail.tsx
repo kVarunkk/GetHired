@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/responsive-select";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import StickyActionBar from "@/components/StickyActionBar";
 import { AGENT_PATH, agentPromptHref } from "@/helpers/agent/prompt-draft";
@@ -157,7 +157,7 @@ export default function TrackedDetail({
               </>
             )}
             <Field id="td-status" label="Status">
-              <Select value={status} onValueChange={(value) => setStatus(value as TrackedStatus)}>
+              <Select title="Status" value={status} onValueChange={(value) => setStatus(value as TrackedStatus)}>
                 <SelectTrigger id="td-status">
                   <SelectValue />
                 </SelectTrigger>
@@ -184,7 +184,7 @@ export default function TrackedDetail({
             </Field>
             {resumes.length > 0 && (
               <Field id="td-resume" label="Resume used">
-                <Select value={resumeId} onValueChange={setResumeId}>
+                <Select title="Resume used" value={resumeId} onValueChange={setResumeId}>
                   <SelectTrigger id="td-resume">
                     <SelectValue />
                   </SelectTrigger>

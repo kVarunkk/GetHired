@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/jobs",
   useRouter: () => ({ replace }),
 }));
-vi.mock("@/components/ui/select", () => import("@/test/utils/select-mock"));
+vi.mock("@/components/ui/responsive-select", () => import("@/test/utils/select-mock"));
 vi.mock("@/lib/posthog/client", () => ({ default: { capture: vi.fn() } }));
 vi.mock("@/app/actions/job-alerts/create-job-alert", () => ({ createJobAlertAction: vi.fn() }));
 vi.mock("@/app/actions/job-alerts/update-job-alert", () => ({ updateJobAlertAction: vi.fn() }));
