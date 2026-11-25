@@ -48,7 +48,8 @@ describe("/careers/[slug]/jobs/[job_id] (CPT-046, CP-DEC-001)", () => {
     expect(JSON.parse(screen.getByTestId("job").dataset.source!)).toEqual({
       source: "careers_page",
       ref: "linkedin",
-      returnTo: `/careers/acme/jobs/${JOB_ID}?apply=true&ref=linkedin`,
+      returnTo: `/careers/acme/jobs/${JOB_ID}?ref=linkedin`,
+      applyHref: `/careers/acme/jobs/${JOB_ID}/apply?ref=linkedin`,
     });
     expect(screen.getByRole("link", { name: "Back to Acme careers" })).toHaveAttribute("href", "/careers/acme?ref=linkedin");
   });

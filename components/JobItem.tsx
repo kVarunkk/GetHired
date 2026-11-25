@@ -88,7 +88,6 @@ const JobItem = React.memo(
             isOnboardingComplete={isOnboardingComplete}
             appliedJob={appliedJob}
             isJobIdPage={false}
-            isDialogOpen={false}
             isLoading={isLoading}
             hasCredits={hasCredits}
           />

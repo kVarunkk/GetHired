@@ -10,6 +10,7 @@ import { ApplicationSourceProvider } from "@/components/jobs/ApplicationSourceCo
 import { getCareersPage, type CareersPage } from "@/helpers/careers/get-careers-page";
 import { readRef, toSearchParams } from "@/helpers/careers/params";
 import { careersPath } from "@/helpers/careers/slug";
+import { careersApplyPath } from "@/helpers/jobs/apply-path";
 import { getStaticJobDetails } from "@/helpers/jobs/jobId/get-job-details";
 import { buildJobPostingJsonLd } from "@/helpers/jobs/jobId/jsonld";
 
@@ -70,7 +71,7 @@ export default async function CareersJobPage({
     const ref = readRef(query);
     const refQuery = ref ? `?ref=${encodeURIComponent(ref)}` : "";
     const jobPath = `${careersPath(page.slug)}/jobs/${job_id}`;
-    const returnTo = `${jobPath}?apply=true${ref ? `&ref=${encodeURIComponent(ref)}` : ""}`;
+    const returnTo = `${jobPath}${refQuery}`;
     const jsonLd = buildJobPostingJsonLd(job);
 
     return (
@@ -88,7 +89,7 @@ export default async function CareersJobPage({
           <ArrowLeft className="h-4 w-4" />
           Back to {page.name} careers
         </Link>
-        <ApplicationSourceProvider value={{ source: "careers_page", ref, returnTo }}>
+        <ApplicationSourceProvider value={{ source: "careers_page", ref, returnTo, applyHref: careersApplyPath(page.slug, job_id, ref) }}>
           <JobClientHydrator job={job} />
         </ApplicationSourceProvider>
       </CareersShell>

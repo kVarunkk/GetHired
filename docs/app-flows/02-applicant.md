@@ -103,6 +103,7 @@ sequenceDiagram
   autonumber
   actor U as Applicant
   participant JP as /jobs/[id] or /careers/[slug]/jobs/[id]
+  participant AP as /jobs/[id]/apply or /careers/[slug]/jobs/[id]/apply
   participant SA as submitApplicationAction<br/>(helpers/applications/submit-application)
   participant DB as Postgres
   participant TR as applications triggers
@@ -117,8 +118,10 @@ sequenceDiagram
     JP->>DB: trackExternalApplicationAction → applications insert (user client, job_post_id null)
     Note over JP,DB: later: setExternalApplicationStatusAction / removeExternalApplicationAction<br/>(JobPageDropdown, refused for platform jobs)
   else company job (job_postings): form, or the agent's Easy Apply (A12)
-    U->>JP: JobApplicationForm (readApplicationForm / publicApplicationForm)
-    JP->>SA: resume + answers
+    U->>JP: Easy Apply (a link, no ?apply=true)
+    JP->>AP: loadApplyPage: 404 / external job → job page / signed out → login returnTo (query kept) /<br/>company user → job page / not onboarded → /get-started / already applied → job page
+    U->>AP: JobApplicationForm, one page: Resume + Questions (readApplicationForm / publicApplicationForm)<br/>source: careers_page from the careers route, job_board from ?src= on /jobs
+    AP->>SA: resume + answers
     SA->>DB: resume belongs to user, job_postings (status active),<br/>job_posting_form_rules + duplicate check (service role)
     SA->>SA: validateAnswers + evaluateKnockouts
     SA->>DB: insert applications as the service role<br/>(answers, answers_v2, form_snapshot), users can't insert these themselves
@@ -132,10 +135,6 @@ sequenceDiagram
     SA->>DB: application_knockouts (reject_email_due_at = +24h)
     SA->>DB: deduct_user_credits
     KW->>DB: due + still rejected → Resend email, reject_email_sent_at, email_sent event
-  end
-  opt share proof with company
-    U->>DB: attachments action → application_attachments (trigger check_application_attachment)
-    DB->>DB: rpc enqueue_company_interview_analysis → interview_analyses + interview_analysis_queue
   end
 ```
 

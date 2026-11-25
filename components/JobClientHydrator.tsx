@@ -17,15 +17,11 @@ import ProfileCompletionBanner from "./ProfileCompletionBanner";
 import JobDescriptionCard from "./JobDetailsCard";
 import AskAgentAboutJob from "./AskAgentAboutJob";
 import { Skeleton } from "./ui/skeleton";
-import { useSearchParams } from "next/navigation";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { useMemo } from "react";
 import { appliedJobFor } from "@/helpers/tracker/applied-state";
 
 export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
-  const searchParams = useSearchParams();
-  const shouldApplyDialogOpen = searchParams.get("apply") === "true";
-
   const { data: currentUserData, isLoading } = useSWR(
     PROFILE_API_KEY,
     fetcher,
@@ -139,7 +135,6 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
               isOnboardingComplete={onboardingComplete}
               appliedJob={activeApplication}
               isJobIdPage={true}
-              isDialogOpen={shouldApplyDialogOpen}
               isLoading={isUrlsLoading}
               hasCredits={hasCredits}
             />
