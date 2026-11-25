@@ -14,11 +14,13 @@ import { getPlatformStats } from "@/utils/platform-stats";
 import { Metadata } from "next";
 import Link from "next/link";
 import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
+import JsonLd from "@/components/seo/JsonLd";
+import { landingJsonLd } from "@/helpers/seo/schema";
 
 const page = LANDING_PAGES.hire;
 
 export const metadata: Metadata = {
-  title: "AI Recruiting Software to Hire Tech Talent",
+  title: "AI Recruiting Software for Every Hire",
   description: page.description,
   alternates: {
     canonical: "/hire",
@@ -27,25 +29,25 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "GetHired",
-    title: "AI Recruiting Software to Hire Tech Talent",
+    title: "AI Recruiting Software for Every Hire",
     description:
-      "Post tech roles, review applicants, and use AI recruiting tools to help identify qualified candidates with GetHired.",
+      "Post jobs for any role, review applicants, and use AI recruiting tools to help identify qualified candidates with GetHired.",
     url: "/hire",
     ...shareImages,
   },
   twitter: {
     ...twitterShareImages,
-    title: "AI Recruiting Software to Hire Tech Talent",
+    title: "AI Recruiting Software for Every Hire",
     description:
-      "Post tech roles, review applicants, and use AI recruiting tools to help identify qualified candidates with GetHired.",
+      "Post jobs for any role, review applicants, and use AI recruiting tools to help identify qualified candidates with GetHired.",
   },
   keywords: [
-    "hire tech talent",
+    "hire talent",
     "ai recruiting platform",
     "post job free",
     "conversational AI hiring",
     "recruitment software",
-    "find developers",
+    "find candidates",
     "ats",
   ],
 };
@@ -59,6 +61,7 @@ export default async function HirePage() {
 
   return (
     <div className="flex-1 flex flex-col gap-32 w-full">
+      <JsonLd data={landingJsonLd(page, "AI Recruiting Software for Every Hire")} />
       <Hero
         eyebrow={
           <HeroEyebrow

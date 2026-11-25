@@ -2,6 +2,8 @@ import FootComponent from "@/components/FootComponent";
 import Footer from "@/components/landing-page/Footer";
 import PrivacyPolicy from "@/components/PrivacyPolicy";
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbJsonLd, webPageJsonLd } from "@/helpers/seo/schema";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -15,6 +17,16 @@ export const dynamic = "force-static";
 export default async function PrivacyPolicyPage() {
   return (
     <>
+      <JsonLd
+        data={[
+          webPageJsonLd({
+            path: "/privacy-policy",
+            name: "Privacy Policy",
+            description: "How GetHired collects, uses and protects your personal data.",
+          }),
+          breadcrumbJsonLd([{ name: "Privacy Policy", path: "/privacy-policy" }]),
+        ]}
+      />
       <PrivacyPolicy />
       <div className="px-4 lg:px-20 xl:px-40 2xl:px-80 my-20">
         <FootComponent />

@@ -5,7 +5,12 @@ import { UserAppMetadata } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { getUserFromRequest } from "./get-user-from-request";
 import { APPLICANT_HOME, COMPANY_HOME, companyOnboardingPath } from "@/helpers/user/home-path";
-import { pageForMarkdownPath } from "@/helpers/marketing/content";
+import {
+  acceptsMarkdown,
+  COMPANY_FEATURE_PATHS,
+  pageForContentNegotiation,
+  pageForMarkdownPath,
+} from "@/helpers/marketing/content";
 import { decodeJwt } from "jose";
 import { MCP_PATH, PROTECTED_RESOURCE_METADATA_PATH } from "@/helpers/mcp/config";
 import { SWITCH_TO_APPLICANT_PATH, SWITCH_TO_COMPANY_PATH } from "@/helpers/user/account-switch";
@@ -19,9 +24,24 @@ function isOAuthAppToken(token: string) {
 }
 
 export async function updateSession(request: NextRequest) {
+  const response = await routeRequest(request);
+  // A page with a markdown version answers differently by `Accept`, so caches
+  // and the CDN must keep the two apart.
+  if (pageForContentNegotiation(request.nextUrl.pathname)) {
+    response.headers.append("Vary", "Accept");
+  }
+  return response;
+}
+
+async function routeRequest(request: NextRequest) {
   // Markdown versions of public pages, for AI agents: /hire.md, /index.md,
-  // /blog/<slug>.md. Public, so they skip the auth checks below.
-  const markdownPage = pageForMarkdownPath(request.nextUrl.pathname);
+  // /blog/<slug>.md, or the page's own URL with `Accept: text/markdown`.
+  // Public, so they skip the auth checks below.
+  const markdownPage =
+    pageForMarkdownPath(request.nextUrl.pathname) ??
+    (acceptsMarkdown(request.headers.get("accept"))
+      ? pageForContentNegotiation(request.nextUrl.pathname)
+      : null);
   if (markdownPage) {
     const url = request.nextUrl.clone();
     url.pathname = markdownPage === "/" ? "/md/index" : `/md${markdownPage}`;
@@ -71,11 +91,16 @@ export async function updateSession(request: NextRequest) {
     "/oauth/consent",
     "/jobs",
     "/hire",
+    // The company feature pages under /hire.
+    ...COMPANY_FEATURE_PATHS,
     // Signed out, these send visitors on to sign-up; signed in with the other
     // kind of account, they sign the user out first.
     SWITCH_TO_COMPANY_PATH,
     SWITCH_TO_APPLICANT_PATH,
     "/ai-interview",
+    "/ai-job-search-agent",
+    "/application-tracker",
+    "/job-alerts",
     "/mcp-server",
     "/mcp-server/companies",
     // The MCP docs page, and the MCP endpoint, which answers signed-out
@@ -170,6 +195,7 @@ export async function updateSession(request: NextRequest) {
     "/about",
     "/contact",
     "/llms.txt",
+    "/llms-full.txt",
     "/robots.txt",
     "/opengraph-image.jpg",
     "/twitter-image.jpg",

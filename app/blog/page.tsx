@@ -5,6 +5,8 @@ import FootComponent from "@/components/FootComponent";
 import BlogPostList from "@/components/blog/BlogPostList";
 import type { BlogPostSummary } from "@/helpers/blog/post-types";
 import { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbJsonLd, webPageJsonLd } from "@/helpers/seo/schema";
 import { BLOG_DESCRIPTION, markdownAlternate } from "@/helpers/marketing/content";
 
 export const revalidate = 86400;
@@ -41,6 +43,17 @@ export default async function Page() {
 
   return (
     <div>
+      <JsonLd
+        data={[
+          webPageJsonLd({
+            path: "/blog",
+            name: "GetHired Blog",
+            description: BLOG_DESCRIPTION,
+            type: "CollectionPage",
+          }),
+          breadcrumbJsonLd([{ name: "Blog", path: "/blog" }]),
+        ]}
+      />
       <div className="mx-auto mb-20 max-w-6xl px-4">
         <h1 className="text-5xl sm:text-7xl font-semibold tracking-tight leading-[1.1] mb-12 text-center">
           Blog

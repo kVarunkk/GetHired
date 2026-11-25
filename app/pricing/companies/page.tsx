@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import PlanCards from "@/components/billing/PlanCards";
 import PricingViewed from "@/components/billing/PricingViewed";
 import Footer from "@/components/landing-page/Footer";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbJsonLd, pricingJsonLd, webPageJsonLd } from "@/helpers/seo/schema";
 import { listPublicPlans, type Plan } from "@/helpers/billing/plans";
 import {
   markdownAlternate,
@@ -32,6 +34,17 @@ export default async function CompanyPricingPage() {
 
   return (
     <main className="flex min-h-screen flex-col">
+      <JsonLd
+        data={[
+          webPageJsonLd({
+            path: "/pricing/companies",
+            name: "Pricing for companies",
+            description: PRICING_DESCRIPTION,
+          }),
+          breadcrumbJsonLd([{ name: "Pricing for companies", path: "/pricing/companies" }]),
+          ...(plans.length > 0 ? [pricingJsonLd(plans)] : []),
+        ]}
+      />
       <PricingViewed />
       <div className="flex w-full flex-col gap-8 px-4 py-12 lg:px-20 xl:px-40">
         <div className="flex flex-col gap-2">

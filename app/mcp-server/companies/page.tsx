@@ -2,6 +2,8 @@ import { shareImages, twitterShareImages } from "@/helpers/seo/share-image";
 import type { Metadata } from "next";
 import McpLandingPage from "@/components/mcp/McpLandingPage";
 import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
+import JsonLd from "@/components/seo/JsonLd";
+import { landingJsonLd } from "@/helpers/seo/schema";
 
 const page = { ...LANDING_PAGES["mcp-server-companies"], mcp: "company" as const };
 
@@ -36,5 +38,10 @@ export const dynamic = "force-static";
 
 export default function McpServerCompaniesPage() {
   // The hiring page doesn't use the job count.
-  return <McpLandingPage page={page} jobCount={0} />;
+  return (
+    <>
+      <JsonLd data={landingJsonLd(page, TITLE)} />
+      <McpLandingPage page={page} jobCount={0} />
+    </>
+  );
 }

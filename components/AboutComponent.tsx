@@ -3,7 +3,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
 import {
@@ -18,9 +17,9 @@ export default function AboutComponent() {
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl sm:text-[28px] font-semibold tracking-tight text-center mb-2">
+          <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-center mb-2">
             About Us
-          </CardTitle>
+          </h1>
           <CardDescription className="text-center">
             Last updated: {ABOUT_UPDATED}
           </CardDescription>
