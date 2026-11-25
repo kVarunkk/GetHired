@@ -586,6 +586,28 @@ describe("middleware: markdown versions of public pages", () => {
   it("leaves other .md paths to the usual rules", async () => {
     expect(redirectTarget(await updateSession(request("/dashboard.md")))).toMatch(/^\/auth\/login/);
   });
+
+  it("serves markdown from the page's own URL when the client asks for it", async () => {
+    const md = { headers: { accept: "text/markdown" } };
+    expect(rewriteTarget(await updateSession(request("/", md)))).toBe("/md/index");
+    expect(rewriteTarget(await updateSession(request("/hire", md)))).toBe("/md/hire");
+    expect(rewriteTarget(await updateSession(request("/blog/some-post", md)))).toBe("/md/blog/some-post");
+    expect(getUserFromRequest).not.toHaveBeenCalled();
+  });
+
+  it("keeps serving HTML to browsers and varies on Accept", async () => {
+    const browser = { headers: { accept: "text/html,application/xhtml+xml,*/*;q=0.8" } };
+    const res = await updateSession(request("/hire", browser));
+    expect(rewriteTarget(res)).toBeNull();
+    expect(res.headers.get("vary")).toContain("Accept");
+  });
+
+  it("doesn't negotiate other pages", async () => {
+    const md = { headers: { accept: "text/markdown" } };
+    const res = await updateSession(request("/dashboard", md));
+    expect(rewriteTarget(res)).toBeNull();
+    expect(res.headers.get("vary")).toBeNull();
+  });
 });
 
 describe("middleware: Google Calendar routes (IVT-035, IV-SEC-007)", () => {

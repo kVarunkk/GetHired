@@ -1,3 +1,4 @@
+import { SITE_URL } from "@/helpers/marketing/content";
 import { pageMarkdown } from "@/helpers/marketing/markdown";
 
 // Markdown versions of the marketing pages and blog posts. Reached through the
@@ -22,6 +23,10 @@ export async function GET(
     });
   }
   return new Response(markdown, {
-    headers: { "Content-Type": "text/markdown; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/markdown; charset=utf-8",
+      // The HTML page is the one to index and cite; this is its plain-text copy.
+      Link: `<${SITE_URL}${pagePath === "/" ? "" : pagePath}>; rel="canonical"`,
+    },
   });
 }
