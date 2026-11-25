@@ -196,13 +196,6 @@ export const copyToClipboard = (content: string, toastMessage: string) => {
 
 export const applicantNavbarItems: INavItem[] = [
   {
-    id: "agent",
-    label: "Agent",
-    href: "/agent",
-    type: "startswith",
-    icon: <Bot className="h-4 w-4" />,
-  },
-  {
     id: "dashboard",
     label: "Dashboard",
     href: "/dashboard",
@@ -210,11 +203,11 @@ export const applicantNavbarItems: INavItem[] = [
     icon: <LayoutDashboard className="h-4 w-4" />,
   },
   {
-    id: "opportunities",
-    label: "Opportunities",
-    href: "/opportunities",
+    id: "agent",
+    label: "Agent",
+    href: "/agent",
     type: "startswith",
-    icon: <Inbox className="h-4 w-4" />,
+    icon: <Bot className="h-4 w-4" />,
   },
   {
     id: "jobs",
@@ -231,11 +224,11 @@ export const applicantNavbarItems: INavItem[] = [
     icon: <Briefcase className="h-4 w-4" />,
   },
   {
-    id: "interviews",
-    label: "Interviews",
-    href: "/interview",
+    id: "opportunities",
+    label: "Opportunities",
+    href: "/opportunities",
     type: "startswith",
-    icon: <Headset className="h-4 w-4" />,
+    icon: <Inbox className="h-4 w-4" />,
   },
   {
     id: "resumes",
@@ -243,6 +236,13 @@ export const applicantNavbarItems: INavItem[] = [
     href: "/resume",
     type: "startswith",
     icon: <FileUser className="h-4 w-4" />,
+  },
+  {
+    id: "interviews",
+    label: "Interviews",
+    href: "/interview",
+    type: "startswith",
+    icon: <Headset className="h-4 w-4" />,
   },
   {
     id: "settings",

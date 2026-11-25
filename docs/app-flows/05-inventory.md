@@ -73,7 +73,7 @@ flowchart LR
 | A4 attachments | `enqueue_company_interview_analysis` |
 | A8 screening (candidate) | `my_screening_interviews`, `lock_my_screening_interview`, `record_screening_consent`, `request_screening_accommodation`, `decline_screening_interview`, `reserve_screening_attempt`, `start_screening_attempt`, `finish_screening_session` |
 | A9 outreach | `respond_to_outreach`, `get_my_profile_view_count` |
-| Dashboard | `get_applicant_weekly_metrics`, `get_company_metrics`, `get_recruiter_job_summaries`, `get_platform_stats` |
+| Dashboard | `get_applicant_weekly_metrics` (profile API and agent `getMyProfile`; the applicant dashboard counts from `listMyApplications`), `get_company_metrics`, `get_recruiter_job_summaries`, `get_platform_stats` |
 | Access | `my_company_access`, `touch_company_membership`, `has_company_permission` (RLS), `company_can_view_candidate`, `company_has_candidate_access` |
 | C2 team | `create_company_invite`, `accept_company_invite`, `revoke_company_invite`, `set_company_member_role`, `remove_company_member`, `set_company_owner`, `make_primary_owner`, `set_my_display_name`, `member_display_name`, `list_company_team`, `list_company_hiring_teams`, `list_job_hiring_team`, `list_mentionable_members`, `list_company_audit` |
 | C2 roles | `create_company_role`, `update_company_role`, `delete_company_role`, `set_default_company_role`, `list_company_roles`, `assign_job`, `unassign_job`, `assign_job_creator` |

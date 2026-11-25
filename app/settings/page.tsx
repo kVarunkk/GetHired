@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, KeyRound } from "lucide-react";
 import ErrorComponent from "@/components/Error";
 import PageHeader from "@/components/PageHeader";
 import { AskAgentAboutSettings } from "@/components/agent/AskAgentOnApplicantPages";
@@ -15,7 +15,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Settings",
   description:
-    "Your privacy, email preferences and profile.",
+    "Your privacy, email preferences, profile and password.",
   robots: { index: false, follow: false },
 };
 
@@ -124,6 +124,18 @@ export default async function SettingsPage() {
               <Link href="/get-started">
                 Edit profile
                 <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </Section>
+
+          <Section
+            title="Account"
+            description={user.email ? `Signed in as ${user.email}.` : "Your sign-in details."}
+          >
+            <Button asChild variant="outline" className="w-fit">
+              <Link href="/auth/update-password">
+                <KeyRound className="h-4 w-4" />
+                Change password
               </Link>
             </Button>
           </Section>

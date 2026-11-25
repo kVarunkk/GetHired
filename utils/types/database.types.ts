@@ -5078,6 +5078,7 @@ export type Database = {
           updated_at: string | null
           user_id: string
           visa_sponsorship_required: boolean | null
+          weekly_application_goal: number | null
           work_style_preferences: string[] | null
           desired_roles_search: string | null
           industry_preferences_search: string | null
@@ -5120,6 +5121,7 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           visa_sponsorship_required?: boolean | null
+          weekly_application_goal?: number | null
           work_style_preferences?: string[] | null
         }
         Update: {
@@ -5158,6 +5160,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           visa_sponsorship_required?: boolean | null
+          weekly_application_goal?: number | null
           work_style_preferences?: string[] | null
         }
         Relationships: []
