@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import Brand from "../Brand";
 import SocialsComponent from "../SocialsComponent";
+import { COMPANY_NAV } from "@/helpers/marketing/company-nav";
 
 const popularSearches = [
   {
@@ -64,11 +65,11 @@ const popularSearches = [
     href: "/jobs?location=New+York",
   },
   {
-    name: "Tech Jobs in Bengaluru",
-    href: "/jobs?jobTitleKeywords=developer%7Cengineer&location=Bengaluru",
+    name: "Jobs in Bengaluru",
+    href: "/jobs?location=Bengaluru",
   },
   {
-    name: "Senior Developer Roles",
+    name: "Senior Roles",
     href: "/jobs?jobTitleKeywords=senior",
   },
 ];
@@ -156,6 +157,20 @@ export default function Footer() {
           <div className="col-span-2 md:col-span-1">
             <h3 className="text-sm font-semibold mb-3">Quick Links</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
+              {[
+                { href: "/ai-job-search-agent", label: "AI Job Search Agent" },
+                { href: "/application-tracker", label: "Application Tracker" },
+                { href: "/job-alerts", label: "Job Alerts" },
+              ].map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="transition-colors hover:text-foreground hover:underline"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
               <li>
                 <Link
                   href="/ai-interview"
@@ -302,6 +317,21 @@ export default function Footer() {
               ))}
             </ul>
           </div>
+        </div>
+        <div className="container mx-auto mt-12 max-w-6xl text-center md:text-left">
+          <h3 className="text-sm font-semibold mb-3">For Hiring Teams</h3>
+          <ul className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm text-muted-foreground md:grid-cols-4">
+            {COMPANY_NAV.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="transition-colors hover:text-foreground hover:underline"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
       {/* The wordmark spans the full viewport width and sits flush on the

@@ -9,6 +9,9 @@ import { createPublicClient } from "@/lib/supabase/public";
 // import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getPlatformStats } from "@/utils/platform-stats";
 import { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbJsonLd, webPageJsonLd } from "@/helpers/seo/schema";
+import { shareImages } from "@/helpers/seo/share-image";
 
 export async function generateStaticParams() {
   // const supabase = createServiceRoleClient();
@@ -66,14 +69,22 @@ export async function generateMetadata({
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join(" ");
 
-  const title = `Remote Jobs in ${displayLocation} | AI-Powered Tech Roles `;
-  const description = `Find the best remote jobs in ${displayLocation}. Our AI-first platform matches your tech stack to high-growth startup roles instantly.`;
+  const title = `Remote Jobs in ${displayLocation} | AI Job Search`;
+  const description = `Find the best remote jobs in ${displayLocation}. Our AI agent matches your resume to open roles across every field.`;
 
   return {
     title,
     description,
     alternates: {
-      canonical: `https://gethired.devhub.co.in/remote-jobs/${location.toLowerCase()}`,
+      canonical: `/remote-jobs/${location.toLowerCase()}`,
+    },
+    openGraph: {
+      type: "website",
+      siteName: "GetHired",
+      title,
+      description,
+      url: `/remote-jobs/${location.toLowerCase()}`,
+      ...shareImages,
     },
     robots: {
       index: true,
@@ -103,6 +114,20 @@ export default async function RemoteJobsLocationPage({
 
   return (
     <div className="flex-1 flex flex-col gap-32  w-full">
+      <JsonLd
+        data={[
+          webPageJsonLd({
+            path: `/remote-jobs/${rawSlug.toLowerCase()}`,
+            name: `Remote Jobs in ${displayLocation}`,
+            description: `Find the best remote jobs in ${displayLocation}. Our AI agent matches your resume to open roles across every field.`,
+            type: "CollectionPage",
+          }),
+          breadcrumbJsonLd([
+            { name: "Jobs", path: "/jobs" },
+            { name: `Remote Jobs in ${displayLocation}`, path: `/remote-jobs/${rawSlug.toLowerCase()}` },
+          ]),
+        ]}
+      />
       <HeroRemotePage location={displayLocation} jobCount={jobCount} />
       <HowWeHelp jobCount={jobCount} />
       <PlatformStats

@@ -10,6 +10,8 @@ import { getPlatformStats } from "@/utils/platform-stats";
 import { CHROME_EXTENSION_DARK, CHROME_EXTENSION_LIGHT } from "@/utils/utils";
 import { Metadata } from "next";
 import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
+import JsonLd from "@/components/seo/JsonLd";
+import { landingJsonLd } from "@/helpers/seo/schema";
 
 const page = LANDING_PAGES.extension;
 
@@ -39,6 +41,7 @@ export default async function MCPServerPage() {
     <main className="min-h-screen flex flex-col items-center">
       <div className="flex-1 w-full flex flex-col gap-20 items-center">
         <div className="flex-1 flex flex-col gap-32  w-full">
+          <JsonLd data={landingJsonLd(page, "GetHired Chrome Extension")} />
           <Hero
             eyebrow={
               <HeroEyebrow

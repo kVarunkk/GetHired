@@ -25,18 +25,17 @@ export async function generateMetadata({
     (value) => value !== undefined && value !== "",
   );
 
-  const baseTitle = "Find Tech & Remote Jobs";
+  const baseTitle = "Find Jobs & Remote Jobs";
   let title = baseTitle;
   let description =
-    "Search active tech and developer jobs by role, location, job type, salary, and experience. Explore remote and on-site openings from companies around the world.";
+    "Search active jobs in every field by role, location, job type, salary, and experience. Explore remote and on-site openings from companies around the world.";
   const keywords = [
     "jobs",
     "career",
     "employment",
     "remote jobs",
-    "tech jobs",
     "remote jobs in india",
-    "software engineer jobs",
+    "tech jobs",
     "hiring",
     "job search",
   ];

@@ -12,19 +12,26 @@ import TheGetHiredAdvantageSection from "@/components/landing-page/TheGetHiredAd
 import { getPlatformStats } from "@/utils/platform-stats";
 import type { Metadata } from "next";
 import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
+import JsonLd from "@/components/seo/JsonLd";
+import {
+  landingJsonLd,
+  organizationJsonLd,
+  softwareApplicationJsonLd,
+  websiteJsonLd,
+} from "@/helpers/seo/schema";
 
 const page = LANDING_PAGES.home;
 
 export const metadata: Metadata = {
-  title: { absolute: "Find Tech & Remote Jobs | GetHired" },
+  title: { absolute: "AI Job Search for Every Role | GetHired" },
   description: page.description,
   alternates: { canonical: "/", types: markdownAlternate(page.path) },
   openGraph: {
     type: "website",
     siteName: "GetHired",
-    title: "Find Tech & Remote Jobs | GetHired",
+    title: "AI Job Search for Every Role | GetHired",
     description:
-      "Search developer and tech jobs, including remote roles, and use AI tools to focus your job search.",
+      "Search jobs in every field, including remote roles, and use an AI agent to match them to your resume, track applications and prepare for interviews.",
     url: "/",
     ...shareImages,
   },
@@ -39,6 +46,14 @@ export default async function Home() {
 
   return (
     <div className="flex-1 flex flex-col gap-32 w-full">
+      <JsonLd
+        data={[
+          organizationJsonLd(),
+          websiteJsonLd(),
+          softwareApplicationJsonLd(),
+          ...landingJsonLd(page, "GetHired"),
+        ]}
+      />
       <Hero
         eyebrow={
           <HeroEyebrow
