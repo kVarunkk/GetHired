@@ -644,7 +644,8 @@ begin
   assert n = 1, 'the Hiring manager could not edit their own job';
   begin
     update public.job_postings set status = 'active' where id = 'b0000000-0000-4000-8000-000000000001';
-    raise exception 'the Hiring manager changed a status without jobs.publish';
+    -- JLT-011: nobody writes status directly any more; the guard refuses it.
+    raise exception 'the Hiring manager changed a status directly';
   exception when insufficient_privilege then null;
   end;
 end $$;

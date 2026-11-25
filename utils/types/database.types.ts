@@ -257,13 +257,14 @@ export type Database = {
           job_name: string | null
           job_name_search: string | null
           job_type: Database["public"]["Enums"]["job_type_enum"]
+          listed: boolean
           job_url: string | null
           locations: string[]
           normalized_locations: string[] | null
           platform: string | null
+          salary_currency: string | null
           salary_max: number | null
           salary_min: number | null
-          salary_currency: string | null
           salary_range: string | null
           status: Database["public"]["Enums"]["job_posting_status"]
           updated_at: string | null
@@ -288,13 +289,14 @@ export type Database = {
           job_name?: string | null
           job_name_search?: string | null
           job_type?: Database["public"]["Enums"]["job_type_enum"]
+          listed?: boolean
           job_url?: string | null
           locations?: string[]
           normalized_locations?: string[] | null
           platform?: string | null
+          salary_currency?: string | null
           salary_max?: number | null
           salary_min?: number | null
-          salary_currency?: string | null
           salary_range?: string | null
           status?: Database["public"]["Enums"]["job_posting_status"]
           updated_at?: string | null
@@ -319,13 +321,14 @@ export type Database = {
           job_name?: string | null
           job_name_search?: string | null
           job_type?: Database["public"]["Enums"]["job_type_enum"]
+          listed?: boolean
           job_url?: string | null
           locations?: string[]
           normalized_locations?: string[] | null
           platform?: string | null
+          salary_currency?: string | null
           salary_max?: number | null
           salary_min?: number | null
-          salary_currency?: string | null
           salary_range?: string | null
           status?: Database["public"]["Enums"]["job_posting_status"]
           updated_at?: string | null
@@ -582,9 +585,9 @@ export type Database = {
       }
       application_knockouts: {
         Row: {
-          application_knockout_state: string | null
           action_taken: string
           application_id: string
+          application_knockout_state: string | null
           company_id: string
           created_at: string
           failed: boolean
@@ -595,9 +598,9 @@ export type Database = {
           reject_email_sent_at: string | null
         }
         Insert: {
-          application_knockout_state?: never
           action_taken: string
           application_id: string
+          application_knockout_state?: never
           company_id: string
           created_at?: string
           failed: boolean
@@ -608,9 +611,9 @@ export type Database = {
           reject_email_sent_at?: string | null
         }
         Update: {
-          application_knockout_state?: never
           action_taken?: string
           application_id?: string
+          application_knockout_state?: never
           company_id?: string
           created_at?: string
           failed?: boolean
@@ -1650,9 +1653,9 @@ export type Database = {
       }
       company_candidate_claims: {
         Row: {
-          company_candidate_claim_state: string | null
           application_interview_id: string | null
           candidate_id: string
+          company_candidate_claim_state: string | null
           company_id: string
           created_at: string
           expires_at: string
@@ -1661,9 +1664,9 @@ export type Database = {
           used_by: string | null
         }
         Insert: {
-          company_candidate_claim_state?: never
           application_interview_id?: string | null
           candidate_id: string
+          company_candidate_claim_state?: never
           company_id: string
           created_at?: string
           expires_at: string
@@ -1672,9 +1675,9 @@ export type Database = {
           used_by?: string | null
         }
         Update: {
-          company_candidate_claim_state?: never
           application_interview_id?: string | null
           candidate_id?: string
+          company_candidate_claim_state?: never
           company_id?: string
           created_at?: string
           expires_at?: string
@@ -2095,6 +2098,7 @@ export type Database = {
           headquarters: string | null
           id: string
           industry: string | null
+          job_approval_required: boolean
           job_posts_created: number
           last_applicant_digest_at: string | null
           logo_url: string | null
@@ -2130,6 +2134,7 @@ export type Database = {
           headquarters?: string | null
           id?: string
           industry?: string | null
+          job_approval_required?: boolean
           job_posts_created?: number
           last_applicant_digest_at?: string | null
           logo_url?: string | null
@@ -2165,6 +2170,7 @@ export type Database = {
           headquarters?: string | null
           id?: string
           industry?: string | null
+          job_approval_required?: boolean
           job_posts_created?: number
           last_applicant_digest_at?: string | null
           logo_url?: string | null
@@ -2198,10 +2204,10 @@ export type Database = {
       }
       company_invites: {
         Row: {
-          company_invite_state: string | null
           accepted_at: string | null
           accepted_by: string | null
           company_id: string
+          company_invite_state: string | null
           created_at: string
           email: string
           expires_at: string
@@ -2212,10 +2218,10 @@ export type Database = {
           token_hash: string
         }
         Insert: {
-          company_invite_state?: never
           accepted_at?: string | null
           accepted_by?: string | null
           company_id: string
+          company_invite_state?: never
           created_at?: string
           email: string
           expires_at?: string
@@ -2226,10 +2232,10 @@ export type Database = {
           token_hash: string
         }
         Update: {
-          company_invite_state?: never
           accepted_at?: string | null
           accepted_by?: string | null
           company_id?: string
+          company_invite_state?: never
           created_at?: string
           email?: string
           expires_at?: string
@@ -3493,6 +3499,57 @@ export type Database = {
           },
         ]
       }
+      job_post_state_events: {
+        Row: {
+          actor_user_id: string | null
+          company_id: string
+          created_at: string
+          from_state: Database["public"]["Enums"]["job_post_state"] | null
+          id: string
+          job_post_id: string
+          note: string | null
+          reason: Database["public"]["Enums"]["job_close_reason"] | null
+          to_state: Database["public"]["Enums"]["job_post_state"]
+        }
+        Insert: {
+          actor_user_id?: string | null
+          company_id: string
+          created_at?: string
+          from_state?: Database["public"]["Enums"]["job_post_state"] | null
+          id?: string
+          job_post_id: string
+          note?: string | null
+          reason?: Database["public"]["Enums"]["job_close_reason"] | null
+          to_state: Database["public"]["Enums"]["job_post_state"]
+        }
+        Update: {
+          actor_user_id?: string | null
+          company_id?: string
+          created_at?: string
+          from_state?: Database["public"]["Enums"]["job_post_state"] | null
+          id?: string
+          job_post_id?: string
+          note?: string | null
+          reason?: Database["public"]["Enums"]["job_close_reason"] | null
+          to_state?: Database["public"]["Enums"]["job_post_state"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_post_state_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_post_state_events_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_posting_form_rules: {
         Row: {
           company_id: string
@@ -3532,6 +3589,10 @@ export type Database = {
       job_postings: {
         Row: {
           application_form: Json
+          close_reason: Database["public"]["Enums"]["job_close_reason"] | null
+          closed_at: string | null
+          closes_at: string | null
+          closes_reminder_sent_at: string | null
           company_id: string
           created_at: string
           department: string | null
@@ -3541,6 +3602,7 @@ export type Database = {
           embedding_updated_at: string | null
           equity_range: string | null
           experience: string | null
+          first_opened_at: string | null
           id: string
           job_id: string | null
           job_type: Database["public"]["Enums"]["job_type_enum"]
@@ -3556,19 +3618,27 @@ export type Database = {
           min_equity: number | null
           min_experience: number | null
           min_salary: number | null
+          openings: number
           pipeline_id: string | null
           questions: string[]
           salary_currency: string | null
           salary_range: string | null
           skills: string[]
+          state: Database["public"]["Enums"]["job_post_state"]
+          state_changed_at: string
           status: Database["public"]["Enums"]["job_posting_status"]
           title: string
           updated_at: string
           visa_sponsorship: Database["public"]["Enums"]["visa_job_postings"]
+          visibility: Database["public"]["Enums"]["job_post_visibility"]
           workplace_type: Database["public"]["Enums"]["workplace_type"] | null
         }
         Insert: {
           application_form?: Json
+          close_reason?: Database["public"]["Enums"]["job_close_reason"] | null
+          closed_at?: string | null
+          closes_at?: string | null
+          closes_reminder_sent_at?: string | null
           company_id: string
           created_at?: string
           department?: string | null
@@ -3578,6 +3648,7 @@ export type Database = {
           embedding_updated_at?: string | null
           equity_range?: string | null
           experience?: string | null
+          first_opened_at?: string | null
           id?: string
           job_id?: string | null
           job_type?: Database["public"]["Enums"]["job_type_enum"]
@@ -3593,19 +3664,27 @@ export type Database = {
           min_equity?: number | null
           min_experience?: number | null
           min_salary?: number | null
+          openings?: number
           pipeline_id?: string | null
           questions?: string[]
           salary_currency?: string | null
           salary_range?: string | null
           skills?: string[]
+          state?: Database["public"]["Enums"]["job_post_state"]
+          state_changed_at?: string
           status?: Database["public"]["Enums"]["job_posting_status"]
           title: string
           updated_at?: string
           visa_sponsorship?: Database["public"]["Enums"]["visa_job_postings"]
+          visibility?: Database["public"]["Enums"]["job_post_visibility"]
           workplace_type?: Database["public"]["Enums"]["workplace_type"] | null
         }
         Update: {
           application_form?: Json
+          close_reason?: Database["public"]["Enums"]["job_close_reason"] | null
+          closed_at?: string | null
+          closes_at?: string | null
+          closes_reminder_sent_at?: string | null
           company_id?: string
           created_at?: string
           department?: string | null
@@ -3615,6 +3694,7 @@ export type Database = {
           embedding_updated_at?: string | null
           equity_range?: string | null
           experience?: string | null
+          first_opened_at?: string | null
           id?: string
           job_id?: string | null
           job_type?: Database["public"]["Enums"]["job_type_enum"]
@@ -3630,15 +3710,19 @@ export type Database = {
           min_equity?: number | null
           min_experience?: number | null
           min_salary?: number | null
+          openings?: number
           pipeline_id?: string | null
           questions?: string[]
           salary_currency?: string | null
           salary_range?: string | null
           skills?: string[]
+          state?: Database["public"]["Enums"]["job_post_state"]
+          state_changed_at?: string
           status?: Database["public"]["Enums"]["job_posting_status"]
           title?: string
           updated_at?: string
           visa_sponsorship?: Database["public"]["Enums"]["visa_job_postings"]
+          visibility?: Database["public"]["Enums"]["job_post_visibility"]
           workplace_type?: Database["public"]["Enums"]["workplace_type"] | null
         }
         Relationships: [
@@ -3758,31 +3842,31 @@ export type Database = {
       }
       mcp_confirmations: {
         Row: {
-          mcp_confirmation_state: string | null
           code: string | null
           digest: string | null
           expires_at: string
           jti: string
+          mcp_confirmation_state: string | null
           tool: string
           used_at: string | null
           user_id: string
         }
         Insert: {
-          mcp_confirmation_state?: never
           code?: string | null
           digest?: string | null
           expires_at: string
           jti: string
+          mcp_confirmation_state?: never
           tool: string
           used_at?: string | null
           user_id: string
         }
         Update: {
-          mcp_confirmation_state?: never
           code?: string | null
           digest?: string | null
           expires_at?: string
           jti?: string
+          mcp_confirmation_state?: never
           tool?: string
           used_at?: string | null
           user_id?: string
@@ -5417,6 +5501,15 @@ export type Database = {
         Returns: Json
       }
       claim_careers_slug: { Args: { p_slug: string }; Returns: Json }
+      claim_closing_soon_job_posts: {
+        Args: { p_days?: number }
+        Returns: {
+          closes_at: string
+          company_id: string
+          job_post_id: string
+          title: string
+        }[]
+      }
       claim_company_candidate: { Args: { p_token: string }; Returns: Json }
       claim_interview_feedback_email: {
         Args: { p_interview_id: string; p_kind: string; p_user_id: string }
@@ -5429,6 +5522,16 @@ export type Database = {
       claim_note_mention_emails: {
         Args: { p_note_id: string; p_user_ids: string[] }
         Returns: string[]
+      }
+      close_due_job_posts: {
+        Args: never
+        Returns: {
+          closes_at: string
+          company_id: string
+          job_id: string
+          job_post_id: string
+          title: string
+        }[]
       }
       company_can_view_candidate: {
         Args: { p_user_id: string }
@@ -5470,6 +5573,7 @@ export type Database = {
         Args: { p_company_id: string; p_key: string }
         Returns: string
       }
+      company_today: { Args: { p_company_id: string }; Returns: string }
       complete_applicant_onboarding: {
         Args: {
           p_email: string
@@ -5749,14 +5853,19 @@ export type Database = {
         Args: {
           p_company_id: string
           p_limit?: number
+          p_states?: Database["public"]["Enums"]["job_post_state"][]
           p_status?: Database["public"]["Enums"]["job_posting_status"]
         }
         Returns: {
           applicants: number
+          closes_at: string
           created_at: string
+          hires: number
           id: string
           matching_status: Database["public"]["Enums"]["job_posting_matching_status"]
           new_24h: number
+          openings: number
+          state: Database["public"]["Enums"]["job_post_state"]
           status: Database["public"]["Enums"]["job_posting_status"]
           title: string
           updated_at: string
@@ -5936,6 +6045,7 @@ export type Database = {
       }
       is_valid_time_zone: { Args: { p_zone: string }; Returns: boolean }
       is_valid_working_hours: { Args: { p_hours: Json }; Returns: boolean }
+      iso_currency: { Args: { p_value: string }; Returns: string }
       job_interview_badges: {
         Args: { p_job_post_id: string }
         Returns: {
@@ -5944,6 +6054,13 @@ export type Database = {
           feedback_total: number
           next_starts_at: string
         }[]
+      }
+      job_post_move_allowed: {
+        Args: {
+          p_from: Database["public"]["Enums"]["job_post_state"]
+          p_to: Database["public"]["Enums"]["job_post_state"]
+        }
+        Returns: boolean
       }
       job_title_search_text: { Args: { title: string }; Returns: string }
       legacy_question_id: { Args: { p_index: number }; Returns: string }
@@ -6555,6 +6672,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      salary_text_currency: { Args: { p_text: string }; Returns: string }
       save_careers_page: {
         Args: {
           p_accent_color: string
@@ -6747,6 +6865,16 @@ export type Database = {
         Args: { p_job_post_id: string; p_mapping?: Json; p_pipeline_id: string }
         Returns: Json
       }
+      set_job_post_state: {
+        Args: {
+          p_actor_kind?: string
+          p_job_post_id: string
+          p_note?: string
+          p_reason?: Database["public"]["Enums"]["job_close_reason"]
+          p_to: Database["public"]["Enums"]["job_post_state"]
+        }
+        Returns: Json
+      }
       set_job_post_status: {
         Args: {
           p_job_post_id: string
@@ -6917,7 +7045,20 @@ export type Database = {
         | "accepted"
         | "declined"
         | "tentative"
+      job_close_reason:
+        | "cancelled"
+        | "deadline"
+        | "on_hold_indefinitely"
+        | "other"
       job_feedback_vote: "upvote" | "downvote"
+      job_post_state:
+        | "draft"
+        | "pending_approval"
+        | "open"
+        | "paused"
+        | "closed"
+        | "filled"
+      job_post_visibility: "public" | "link_only"
       job_posting_matching_status:
         | "pending"
         | "progress"
@@ -7089,7 +7230,22 @@ export const Constants = {
         "declined",
         "tentative",
       ],
+      job_close_reason: [
+        "cancelled",
+        "deadline",
+        "on_hold_indefinitely",
+        "other",
+      ],
       job_feedback_vote: ["upvote", "downvote"],
+      job_post_state: [
+        "draft",
+        "pending_approval",
+        "open",
+        "paused",
+        "closed",
+        "filled",
+      ],
+      job_post_visibility: ["public", "link_only"],
       job_posting_matching_status: [
         "pending",
         "progress",

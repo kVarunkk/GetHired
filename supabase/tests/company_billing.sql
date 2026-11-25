@@ -365,14 +365,17 @@ begin
 
   -- BL-DEC-007: A is on Free with 2 active posts; a third can't be activated directly.
   begin
-    update public.job_postings set status = 'active'
+    -- JLT-011: status is derived from state, and the limit fires first.
+    update public.job_postings set state = 'open'
      where company_id = i.a and title = 'A3';
     raise exception 'A activated a job post over its limit';
   exception when raise_exception then
     if sqlerrm <> 'entitlement:active_job_posts' then raise; end if;
   end;
-  -- Deactivating is always allowed.
-  update public.job_postings set status = 'inactive' where company_id = i.a and title = 'A1';
+  -- Deactivating is always allowed (through set_job_post_state since JLT-011:
+  -- people can't write status directly).
+  perform public.set_job_post_state(
+    (select id from public.job_postings where company_id = i.a and title = 'A1'), 'paused');
   assert (select status from public.job_postings where company_id = i.a and title = 'A1') = 'inactive',
     'A deactivated a post';
 
