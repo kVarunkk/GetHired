@@ -36,6 +36,13 @@ export type SearchJobsParams = {
   limit: number;
   /** "digest" selects job_digest_with_suggestions for job digests. */
   digestType: string | null;
+  /**
+   * Internal only (job alerts): jobs created at or after this. Overrides
+   * createdAfterDays. parseJobSearchParams never sets it, so no URL can.
+   */
+  createdSince?: Date | null;
+  /** Internal only (job alerts): jobs to leave out, e.g. ones the user applied to. Never from a URL. */
+  excludeJobIds?: string[] | null;
 };
 
 export type SearchJobsResult =
@@ -241,9 +248,12 @@ export async function searchJobs(
       isFavoriteTabActive: params.tab === "saved",
       isAppliedJobsTabActive: params.tab === "applied",
       userEmbedding,
-      createdAfter: params.createdAfterDays
-        ? getCutOffDate(Number(params.createdAfterDays))
-        : null,
+      createdAfter: params.createdSince
+        ? params.createdSince.toISOString()
+        : params.createdAfterDays
+          ? getCutOffDate(Number(params.createdAfterDays))
+          : null,
+      excludeJobIds: params.excludeJobIds ?? null,
       jobEmbedding,
       relevanceSearchType,
     },

@@ -960,27 +960,45 @@ export type Database = {
       bookmarks: {
         Row: {
           created_at: string
+          filters: Json
+          filters_key: string | null
+          frequency: string
           id: string
           is_alert_on: boolean
+          last_checked_at: string | null
+          last_sent_at: string | null
           name: string
+          source: string | null
           updated_at: string | null
           url: string | null
           user_id: string | null
         }
         Insert: {
           created_at?: string
+          filters?: Json
+          filters_key?: string | null
+          frequency?: string
           id?: string
           is_alert_on?: boolean
+          last_checked_at?: string | null
+          last_sent_at?: string | null
           name: string
+          source?: string | null
           updated_at?: string | null
           url?: string | null
           user_id?: string | null
         }
         Update: {
           created_at?: string
+          filters?: Json
+          filters_key?: string | null
+          frequency?: string
           id?: string
           is_alert_on?: boolean
+          last_checked_at?: string | null
+          last_sent_at?: string | null
           name?: string
+          source?: string | null
           updated_at?: string | null
           url?: string | null
           user_id?: string | null

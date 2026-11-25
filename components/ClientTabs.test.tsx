@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("react-transition-progress", () => ({ useProgress: () => vi.fn() }));
 // Only the jobs page renders these.
-vi.mock("./BookmarkJobSearch", () => ({ default: () => null }));
+vi.mock("./job-alerts/JobAlertButton", () => ({ default: () => null }));
 vi.mock("./JobsPageDropdown", () => ({ default: () => null }));
 
 const USER = { id: "u1" } as User;

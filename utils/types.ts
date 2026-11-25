@@ -10,7 +10,6 @@ type CompanyInfoRow = Tables<"company_info">;
 type JobFeedbackRow = Tables<"job_feedback">;
 type UserFavoritesCompanyInfoRow = Tables<"user_favorites_companies">;
 export type TJobTypeEnum = Enums<"job_type_enum">;
-export type BookmarkRow = Tables<"bookmarks">;
 export type PaymentsRow = Tables<"payments">;
 export type PricePlanRow = Tables<"price_plan">;
 export type UserInfoRow = Tables<"user_info">;
@@ -397,6 +396,17 @@ export enum PostHogEvent {
   JobUnassigned = "job_unassigned",
 
   TrackerUrlRead = "tracker_url_read",
+  // Job alerts (JA-REQ-050/051).
+  JobAlertBannerShown = "job_alert_banner_shown",
+  JobAlertBannerDismissed = "job_alert_banner_dismissed",
+  JobAlertSignupStarted = "job_alert_signup_started",
+  JobAlertClicked = "job_alert_clicked",
+  JobAlertCreated = "job_alert_created",
+  JobAlertCapHit = "job_alert_cap_hit",
+  JobAlertUpdated = "job_alert_updated",
+  JobAlertDeleted = "job_alert_deleted",
+  JobAlertPausedFromEmail = "job_alert_paused_from_email",
+  JobAlertEmailSent = "job_alert_email_sent",
 }
 
 export type JobUrlPatch = {

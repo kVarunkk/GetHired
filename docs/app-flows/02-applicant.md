@@ -78,7 +78,7 @@ flowchart TD
   RR --> JEV{{"Rerank service"}}
   RR --> G{{"Gemini (reasons)"}}
   RR --> CR["rpc deduct_user_credits"]
-  J --> BM["Save search: toggleSearchBookmarkAction → bookmarks<br/>setBookmarkAlertAction (≤ 5 alerts) → A11 job-alert"]
+  J --> BM["Create alert (banner, bell, empty state): createJobAlertAction → bookmarks<br/>≤ 5 active alerts → A11 job-alert; managed in /settings#job-alerts"]
 ```
 
 ## A3. Job page tools (`/jobs/[job_id]`)
@@ -308,7 +308,7 @@ flowchart LR
   SCH --> E3["/updates/applicants/recharge/enqueue<br/>ai_credits low"] --> Q3[["recharge_jobs"]] --> W3["…/recharge/worker → recharge email"]
   SCH --> D1["/updates/applicants/applications<br/>7-day status reminder"]
   SCH --> D2["/updates/applicants/favorites<br/>favourited, not applied"]
-  SCH --> D3["/updates/applicants/job-alert<br/>bookmarks.is_alert_on"]
+  SCH --> D3["/updates/applicants/job-alert (daily)<br/>active bookmarks; weekly alerts on Mondays; one email per alert"]
   SCH --> D4["/updates/applicants/onboarding<br/>user_info.filled = false"]
   RJA["relevantJobsUpdateAction (manual refresh)"] --> Q2
 ```

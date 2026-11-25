@@ -3,12 +3,12 @@ import { render, screen } from "@testing-library/react";
 import { appliedJobFor } from "@/helpers/tracker/applied-state";
 import JobApplyBtn from "./JobApplyBtn";
 
-vi.mock("./jobs/ApplicationSourceContext", () => ({ useLoginToApplyHref: () => "/auth/login" }));
+vi.mock("./jobs/ApplicationSourceContext", () => ({
+  useLoginToApplyHref: () => "/auth/login",
+  useApplyHref: () => "/jobs/j1/apply",
+}));
 vi.mock("@/app/actions/deduct-application-credits", () => ({ deductApplicationCreditsAction: vi.fn() }));
 vi.mock("@/helpers/jobs/JobStatusDialog", () => ({ default: () => null }));
-vi.mock("./JobApplicationDialog", () => ({
-  default: ({ appliedJob }: { appliedJob?: { status: string } }) => <div>dialog:{appliedJob?.status ?? "none"}</div>,
-}));
 vi.mock("swr", () => ({ mutate: vi.fn() }));
 
 const external = { id: "j1", job_name: "Engineer", company_name: "Acme", is_platform_job: false, job_url: "https://acme.com/jobs/1" } as never;
@@ -23,7 +23,6 @@ const renderBtn = (job: never, profile: Parameters<typeof appliedJobFor>[0]) =>
       isOnboardingComplete
       appliedJob={appliedJobFor(profile, "j1", Boolean((job as { is_platform_job: boolean }).is_platform_job))}
       isJobIdPage
-      isDialogOpen={false}
       isLoading={false}
       hasCredits
     />,
@@ -45,9 +44,14 @@ describe("JobApplyBtn's applied state (AT-REQ-034)", () => {
     expect(screen.getByRole("button", { name: "Offer" })).toBeDisabled();
   });
 
-  it("passes a GetHired application to the apply dialog unchanged", () => {
+  it("shows a GetHired application's status unchanged", () => {
     renderBtn(platform, { applications: [{ all_jobs_id: "j1", status: "reviewed" }] });
-    expect(screen.getByText("dialog:reviewed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "reviewed" })).toBeDisabled();
+  });
+
+  it("links Easy Apply to the apply page for an untouched GetHired job", () => {
+    renderBtn(platform, {});
+    expect(screen.getByRole("link", { name: /Easy Apply/ })).toHaveAttribute("href", "/jobs/j1/apply");
   });
 
   it("offers Apply with nothing tracked", () => {

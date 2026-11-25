@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProgress } from "react-transition-progress";
 import { User } from "@supabase/supabase-js";
-import BookmarkJobSearch from "./BookmarkJobSearch";
+import JobAlertButton from "./job-alerts/JobAlertButton";
+import type { JobAlertFeedProps } from "./job-alerts/JobAlertSlot";
+import { CREATE_ALERT_PARAM } from "@/helpers/job-alerts/paths";
 import JobsPageDropdown from "./JobsPageDropdown";
 import { Loader2 } from "lucide-react";
 import { activeTabFrom, type TalentListTab } from "@/utils/talent-list-tabs";
@@ -14,12 +16,20 @@ import ScrollMaskX from "./ScrollMaskX";
 /** A list tab's candidates table's URL state (`candidateFiltersFrom`). */
 const CANDIDATE_TABLE_PARAMS = ["q", "tag", "batch", "inJob", "loc", "resume", "email", "added", "matchJob", "page"];
 
+/** The search's query string without what isn't a filter. */
+function alertSearch(searchParams: URLSearchParams) {
+  const next = new URLSearchParams(searchParams.toString());
+  for (const key of [CREATE_ALERT_PARAM, "ref", "aid", "tab"]) next.delete(key);
+  return next.toString();
+}
+
 export function ClientTabs({
   user,
   isCompanyUser,
   isAISearch,
   page,
   talentLists = [],
+  jobAlert = null,
   children,
 }: {
   user: User | null;
@@ -28,6 +38,8 @@ export function ClientTabs({
   page: "jobs" | "profiles" | "companies";
   /** The company's talent lists, shown as tabs after Saved (profiles page). */
   talentLists?: TalentListTab[];
+  /** Jobs page: the viewer's alert state for this search (JA-REQ-017). */
+  jobAlert?: JobAlertFeedProps | null;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -158,7 +170,12 @@ export function ClientTabs({
 
             {page === "jobs" && !isCompanyUser && (
               <div className="flex items-center gap-2">
-                <BookmarkJobSearch user={user} />
+                {jobAlert && (
+                  <JobAlertButton
+                    {...jobAlert}
+                    search={alertSearch(searchParams)}
+                  />
+                )}
                 <JobsPageDropdown user={user} />
               </div>
             )}

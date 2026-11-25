@@ -238,6 +238,10 @@ export async function updateSession(request: NextRequest) {
   // BI-REQ-034 / BI-CON-004: a company candidate's unsubscribe link is public.
   const isCandidateUnsubscribePath =
     pathname.startsWith("/unsubscribe/candidate/") && pathname.length > "/unsubscribe/candidate/".length;
+  // JA-REQ-036: a job alert email's pause page and its one-click (List-Unsubscribe) POST.
+  const isAlertPausePath =
+    (pathname.startsWith("/unsubscribe/alert/") && pathname.length > "/unsubscribe/alert/".length) ||
+    (pathname.startsWith("/api/job-alerts/pause/") && pathname.length > "/api/job-alerts/pause/".length);
   // BI-REQ-041: a claim link shows its sign-up and log-in choices to anyone.
   const isClaimPath = pathname.startsWith("/claim/") && pathname.length > "/claim/".length;
   // IV-SEC-007: a self-scheduling link's page and its booking API (the token
@@ -263,6 +267,7 @@ export async function updateSession(request: NextRequest) {
     isProtectedResourceMetadata ||
     isCareersPath ||
     isCandidateUnsubscribePath ||
+    isAlertPausePath ||
     isClaimPath ||
     isSchedulingLinkPath;
 

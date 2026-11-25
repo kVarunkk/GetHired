@@ -461,6 +461,17 @@ describe("middleware: candidate unsubscribe links (BIT-060, BI-CON-004)", () => 
   });
 });
 
+describe("middleware: job alert pause links (JAT-033, JA-REQ-036)", () => {
+  it("lets the pause page and the one-click POST through without a session", async () => {
+    expect(passesThrough(await updateSession(request("/unsubscribe/alert/abc.def")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/api/job-alerts/pause/abc.def")))).toBe(true);
+  });
+
+  it("keeps the bare paths private", async () => {
+    expect(redirectTarget(await updateSession(request("/unsubscribe/alert/")))).toMatch(/^\/auth\/login/);
+  });
+});
+
 describe("middleware: claim links (BIT-064, BI-REQ-041)", () => {
   it("lets a claim link through without a session, so it can offer sign-up", async () => {
     expect(passesThrough(await updateSession(request("/claim/abcdefghijklmnopqrstuvwxyz")))).toBe(true);

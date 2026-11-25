@@ -10,6 +10,7 @@ export async function sendEmail({
   textContent,
   replyTo,
   senderName,
+  headers,
 }: {
   toEmail: string;
   subject: string;
@@ -19,6 +20,8 @@ export async function sendEmail({
   replyTo?: string;
   /** The From name; the address is always GetHired's. */
   senderName?: string;
+  /** Extra headers, e.g. List-Unsubscribe on job alerts (JA-REQ-035). */
+  headers?: Record<string, string>;
 }) {
   const brevo = new BrevoClient({ apiKey: process.env.BREVO_API_KEY || "" });
 
@@ -40,6 +43,7 @@ export async function sendEmail({
       sender: { name: senderName ?? "Varun from GetHired", email: "varun@devhub.co.in" },
       to: [{ email: toEmail }],
       ...(replyTo ? { replyTo: { email: replyTo } } : {}),
+      ...(headers ? { headers } : {}),
     });
     console.log("Sent via Brevo:", result);
     return; // Exit on success
@@ -68,6 +72,7 @@ export async function sendEmail({
             },
             To: [{ Email: toEmail }],
             ...(replyTo ? { ReplyTo: { Email: replyTo } } : {}),
+            ...(headers ? { Headers: headers } : {}),
             Subject: subject,
             HTMLPart: htmlContent,
             TextPart: textContent,
@@ -102,6 +107,7 @@ export async function sendEmail({
       from: `${(senderName ?? "GetHired").replace(/[<>"\r\n]/g, "")} <varun@devhub.co.in>`,
       to: [toEmail],
       ...(replyTo ? { replyTo } : {}),
+      ...(headers ? { headers } : {}),
       subject,
       html: htmlContent,
       text: textContent,

@@ -10,6 +10,7 @@ vi.mock("@/components/jobs/JobSourceProvider", () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock("@/components/PageHeader", () => ({ BackLink: () => null }));
+vi.mock("@/components/job-alerts/JobAlertClickTracker", () => ({ default: () => null }));
 vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
