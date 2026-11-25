@@ -1,38 +1,13 @@
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
-import ReactMarkdown from "react-markdown";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import JobMarkdown from "@/components/JobMarkdown";
 import type { TJobIdPageData } from "@/utils/types/jobs.types";
 
 const Detail = ({ label, value }: { label: string; value: string }) => (
   <div>
     <p className="text-xs font-medium text-muted-foreground">{label}</p>
     <p className="text-sm">{value}</p>
-  </div>
-);
-
-/** Descriptions are markdown: no raw HTML or images, links open safely. */
-const Markdown = ({ children }: { children: string }) => (
-  <div className="flex flex-col gap-2 text-sm leading-6 [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5">
-    <ReactMarkdown
-      skipHtml
-      components={{
-        img: () => null,
-        a: ({ href, children: label }) =>
-          href && /^https?:\/\//.test(href) ? (
-            <a href={href} target="_blank" rel="nofollow noopener noreferrer ugc" className="underline underline-offset-4">
-              {label}
-            </a>
-          ) : (
-            <span>{label}</span>
-          ),
-        h1: ({ children: t }) => <h3 className="font-semibold">{t}</h3>,
-        h2: ({ children: t }) => <h3 className="font-semibold">{t}</h3>,
-        h3: ({ children: t }) => <h4 className="font-semibold">{t}</h4>,
-      }}
-    >
-      {children}
-    </ReactMarkdown>
   </div>
 );
 
@@ -58,7 +33,7 @@ export default function ApplyJobSummary({ job }: { job: TJobIdPageData }) {
           )}
         </CardHeader>
         <CardContent>
-          <Markdown>{companyDescription || "No description provided."}</Markdown>
+          <JobMarkdown>{companyDescription || "No description provided."}</JobMarkdown>
         </CardContent>
       </Card>
       <Card>
@@ -71,7 +46,7 @@ export default function ApplyJobSummary({ job }: { job: TJobIdPageData }) {
         <CardContent className="space-y-4">
           <div>
             <p className="text-xs font-medium text-muted-foreground">Description</p>
-            <Markdown>{job.description || "No description provided."}</Markdown>
+            <JobMarkdown>{job.description || "No description provided."}</JobMarkdown>
           </div>
           {job.salary_range && <Detail label="Salary Range" value={job.salary_range} />}
           {job.experience && <Detail label="Experience" value={job.experience} />}

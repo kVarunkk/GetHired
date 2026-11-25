@@ -12,7 +12,7 @@ import { AGENT_PATH } from "@/helpers/agent/prompt-draft";
 import { applyHandoffPrompt } from "@/helpers/agent/handoff-prompts";
 import type { ScreeningInviteSummary } from "@/helpers/interview/screening/my-interviews";
 import type { TJobIdPageData } from "@/utils/types/jobs.types";
-import { PROFILE_API_KEY } from "@/utils/utils";
+import { cn, PROFILE_API_KEY } from "@/utils/utils";
 
 type ProfileCache = { profile?: { applications?: unknown[] } } | undefined;
 
@@ -27,6 +27,7 @@ export default function ApplyPage({
   sourceRef,
   doneHref,
   backLabel = "Back to job",
+  framed = false,
 }: {
   job: TJobIdPageData;
   userId: string;
@@ -35,6 +36,8 @@ export default function ApplyPage({
   /** The job page, where the button shows the application's status. */
   doneHref: string;
   backLabel?: string;
+  /** Inside a frame that already pads the page (the careers shell): no padding of its own. */
+  framed?: boolean;
 }) {
   const router = useRouter();
   const [invite, setInvite] = useState<ScreeningInviteSummary | null>(null);
@@ -63,7 +66,7 @@ export default function ApplyPage({
   };
 
   return (
-    <div className="mb-20 flex w-full flex-col gap-6 p-4">
+    <div className={cn("flex w-full flex-col gap-6", !framed && "mb-20 p-4")}>
       <PageHeader
         backHref={doneHref}
         backLabel={backLabel}

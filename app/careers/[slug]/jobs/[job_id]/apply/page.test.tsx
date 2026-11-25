@@ -5,6 +5,7 @@ import { getCareersPage } from "@/helpers/careers/get-careers-page";
 import { getStaticJobDetails } from "@/helpers/jobs/jobId/get-job-details";
 import CareersApplyPage, { metadata } from "./page";
 
+vi.mock("@/components/careers/CareersAccount", () => ({ default: () => null }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/helpers/applications/apply-page", () => ({ loadApplyPage: vi.fn() }));
 vi.mock("@/helpers/careers/get-careers-page", () => ({ getCareersPage: vi.fn() }));

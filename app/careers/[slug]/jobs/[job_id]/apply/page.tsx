@@ -42,8 +42,9 @@ export default async function CareersApplyPage({
     if (result.kind === "redirect") redirect(result.to);
 
     return (
-      <CareersShell page={page}>
+      <CareersShell page={page} refQuery={result.ref ? `?ref=${encodeURIComponent(result.ref)}` : ""}>
         <ApplyPage
+          framed
           job={result.job}
           userId={result.userId}
           source={result.source}

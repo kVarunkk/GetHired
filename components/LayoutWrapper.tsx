@@ -21,6 +21,8 @@ export default function LayoutWrapper({ user, children }: LayoutWrapperProps) {
   const variant = useMemo(() => {
     return getNavbarVairantByPath(pathname || "/");
   }, [pathname]);
+  // A company's careers pages are the company's own, so GetHired's navbar stays off them.
+  const hideNavbar = pathname === "/careers" || pathname.startsWith("/careers/");
   const isFullHeight = fullHeightPaths.some((p) => pathname.startsWith(p));
 
   return (
@@ -32,7 +34,7 @@ export default function LayoutWrapper({ user, children }: LayoutWrapperProps) {
         variant === "vertical" ? "flex-col md:flex-row" : "flex-col",
       )}
     >
-      <NavbarComponent variant={variant} initialUser={user} />
+      {!hideNavbar && <NavbarComponent variant={variant} initialUser={user} />}
 
       <div
         className={cn(
