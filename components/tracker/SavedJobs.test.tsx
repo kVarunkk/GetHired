@@ -16,7 +16,10 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/my-jobs",
   useSearchParams: () => new URLSearchParams(),
 }));
-vi.mock("swr", () => ({ default: () => ({ data: undefined, isLoading: false }) }));
+let profileData: unknown = undefined;
+vi.mock("swr", () => ({
+  default: (key: unknown) => ({ data: key === "/api/current-user" ? profileData : undefined, isLoading: false }),
+}));
 vi.mock("./KeywordSearch", () => ({ default: () => <input aria-label="Search" /> }));
 vi.mock("@/components/JobItem", () => ({
   default: ({ job, appliedJob }: { job: { id: string; job_name: string }; appliedJob?: unknown }) => (
@@ -51,6 +54,7 @@ const favorite = savedItem({ kind: "favorite", id: "job-1", allJobsId: "job-1" }
 
 beforeEach(() => {
   vi.resetAllMocks();
+  profileData = undefined;
   vi.mocked(setTrackedStatusAction).mockResolvedValue({ ok: true } as never);
   vi.mocked(removeTrackedApplicationAction).mockResolvedValue({ ok: true } as never);
 });
@@ -67,6 +71,23 @@ describe("SavedJobs (AT-REQ-026)", () => {
     expect(card).toHaveTextContent("jobs.lever.co");
     expect(card).toHaveTextContent("Referred by Sam");
     expect(screen.getByRole("link", { name: /Open posting/ })).toHaveAttribute("href", "https://jobs.lever.co/hooli/1");
+  });
+
+  it("drops a board job once its star is removed, without a refresh", () => {
+    profileData = { profile: { user_id: "u1", user_favorites: [{ job_id: "job-1" }] } };
+    const { rerender } = view();
+    expect(screen.getByTestId("job-item")).toBeInTheDocument();
+
+    profileData = { profile: { user_id: "u1", user_favorites: [] } };
+    rerender(<SavedJobs items={[favorite, tracked]} boardJobs={[boardJob]} matchedIds={[]} />);
+    expect(screen.queryByTestId("job-item")).not.toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "Designer at Hooli" })).toBeInTheDocument();
+  });
+
+  it("keeps a board job a stale cached profile doesn't list yet", () => {
+    profileData = { profile: { user_id: "u1", user_favorites: [] } };
+    view();
+    expect(screen.getByTestId("job-item")).toBeInTheDocument();
   });
 
   it("filters both kinds by the keyword", () => {

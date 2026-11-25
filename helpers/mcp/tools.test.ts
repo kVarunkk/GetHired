@@ -51,6 +51,7 @@ const LEGACY_NAMES = [
 const NEW_NAMES = [
   "natural_language_job_search",
   "list_applications",
+  "get_tracked_application",
   "track_application",
   "update_tracked_application",
   "remove_tracked_application",

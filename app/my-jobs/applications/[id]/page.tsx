@@ -72,6 +72,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
           notes: row.notes,
           contactName: row.contact_name,
           resumeId: row.resume_id,
+          jobClosed: Boolean(row.all_jobs && row.all_jobs.status !== "active"),
           salaryAmount: row.salary_amount,
           salaryCurrency: row.salary_currency,
         }}

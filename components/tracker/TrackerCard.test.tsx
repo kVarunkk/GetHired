@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { gethiredItem, trackerItem } from "@/test/utils/tracker";
-import TrackerCard, { LOCKED_TOOLTIP, cardHref } from "./TrackerCard";
+import TrackerCard, { JOB_CLOSED_LABEL, LOCKED_TOOLTIP, cardHref } from "./TrackerCard";
 
 // Radix menus and tooltips don't open in jsdom: render their content in place.
 vi.mock("@/components/ui/dropdown-menu", () => {
@@ -32,6 +32,19 @@ const render_ = (item: ReturnType<typeof trackerItem>, handlers = { onMove: vi.f
   render(<TrackerCard item={item} now={NOW} {...handlers} />);
   return handlers;
 };
+
+describe("TrackerCard: a closed posting", () => {
+  it("marks a card whose job the company closed, and still links to the job", () => {
+    render_(gethiredItem({ allJobsId: "job-1", jobClosed: true }));
+    expect(screen.getByText(JOB_CLOSED_LABEL)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View job" })).toHaveAttribute("href", "/jobs/job-1");
+  });
+
+  it("shows nothing extra for an open job", () => {
+    render_(trackerItem());
+    expect(screen.queryByText(JOB_CLOSED_LABEL)).toBeNull();
+  });
+});
 
 describe("TrackerCard: a tracked card (AT-REQ-016)", () => {
   it("shows the company, title, location and source", () => {

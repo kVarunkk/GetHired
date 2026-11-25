@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { saveApplicationNoteAction } from "@/app/actions/tracker/save-application-note";
 import { TRACKER_LIMITS } from "@/helpers/tracker/schema";
 import type { TrackerItem } from "@/helpers/tracker/types";
-import { LOCKED_TOOLTIP } from "./TrackerCard";
+import { JOB_CLOSED_LABEL, LOCKED_TOOLTIP } from "./TrackerCard";
 
 /** A GetHired application's page: the job and status read-only, and the applicant's private note (AT-REQ-023). */
 export default function GetHiredDetail({ item }: { item: TrackerItem }) {
@@ -39,11 +39,21 @@ export default function GetHiredDetail({ item }: { item: TrackerItem }) {
         <Badge variant="outline" className="font-normal">
           {item.statusLabel}
         </Badge>
+        {item.jobClosed && (
+          <Badge variant="outline" className="font-normal text-muted-foreground">
+            {JOB_CLOSED_LABEL}
+          </Badge>
+        )}
         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
           <Lock className="h-3 w-3" aria-hidden />
           {LOCKED_TOOLTIP}
         </span>
       </div>
+      {item.jobClosed && (
+        <p className="text-sm text-muted-foreground">
+          The company has closed this posting, so it no longer takes new applications. Yours is still with them, and its status updates here.
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
         {item.allJobsId && (
           <Button asChild variant="outline" size="sm">

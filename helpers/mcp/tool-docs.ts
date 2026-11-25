@@ -92,6 +92,9 @@ export const MCP_INPUT_DESCRIPTIONS: Readonly<Record<string, McpInputDescription
     column: "Only applications in this board column: applied, in_review, interviewing, offer or closed.",
     limit: LIMIT,
   },
+  get_tracked_application: {
+    id: "The tracked application: an id from list_applications whose kind is tracked.",
+  },
   track_application: {
     jobId: `A job on GetHired: an id from ${JOB_ID_SOURCES}. Leave out for a job from anywhere else.`,
     jobTitle: "The job's title, for a job that isn't on GetHired.",
@@ -372,6 +375,19 @@ export const MCP_OUTPUT_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   get_applied_jobs: output(applicationList),
   favorite_job: output({ jobId: z.string(), saved: z.boolean().describe("Whether the job is saved now.") }),
   list_applications: output(applicationList),
+  get_tracked_application: output({
+    id: z.string().optional(),
+    jobId: text.optional().describe("Set when the job is on GetHired: use get_job_details with it."),
+    status: z.string().optional(),
+    appliedAt: text.optional(),
+    followUpAt: text.optional(),
+    url: link.optional(),
+    note: z.string().optional(),
+    details: z
+      .string()
+      .optional()
+      .describe("The job's title, company, place, posting link, description and notes as JSON, delimited as data."),
+  }),
   track_application: output({
     id: z.string().optional(),
     status: z.string().optional(),

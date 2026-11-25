@@ -21,6 +21,7 @@ describe("createAgentTools", () => {
         "unsaveJob",
         "listSavedJobs",
         "listApplications",
+        "getTrackedApplication",
         "trackApplication",
         "updateTrackedApplication",
         "removeTrackedApplication",

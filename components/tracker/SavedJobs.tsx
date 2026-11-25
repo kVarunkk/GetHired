@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import toast from "react-hot-toast";
@@ -49,7 +49,6 @@ export default function SavedJobs({
   matchedIds: string[];
   q?: string | null;
 }) {
-  const visible = filterByKeyword(items, q);
   const jobsById = useMemo(() => new Map(boardJobs.map((job) => [job.id, job])), [boardJobs]);
   const matched = useMemo(() => new Set(matchedIds), [matchedIds]);
 
@@ -60,6 +59,14 @@ export default function SavedJobs({
     [profile],
   );
   const hasCredits = (profile?.ai_credits ?? 0) > 0;
+
+  // A board job leaves the tab once its star is removed. Only jobs the profile
+  // has shown as saved can drop out, so a stale cached profile hides nothing.
+  const seenSaved = useRef(new Set<string>());
+  for (const id of favoriteIds) seenSaved.current.add(id);
+  const unsaved = (item: SavedJobItem) =>
+    item.kind === "favorite" && seenSaved.current.has(item.allJobsId) && !favoriteIds.has(item.allJobsId);
+  const visible = filterByKeyword(items, q).filter((item) => !unsaved(item));
 
   const boardIds = useMemo(() => boardJobs.map((job) => job.id), [boardJobs]);
   const { data: urls, isLoading: urlsLoading } = useSWR(

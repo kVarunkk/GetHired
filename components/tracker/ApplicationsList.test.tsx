@@ -1,11 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import toast from "react-hot-toast";
+import { setTrackedStatusAction } from "@/app/actions/tracker/set-tracked-status";
+import { setExternalApplicationStatusAction } from "@/app/actions/applications/set-external-application-status";
 import { gethiredItem, trackerItem } from "@/test/utils/tracker";
 import ApplicationsList from "./ApplicationsList";
 
+vi.mock("@/app/actions/tracker/set-tracked-status", () => ({ setTrackedStatusAction: vi.fn() }));
+vi.mock("@/app/actions/applications/set-external-application-status", () => ({ setExternalApplicationStatusAction: vi.fn() }));
+vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() } }));
+const refresh = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), refresh }),
   usePathname: () => "/my-jobs",
   useSearchParams: () => new URLSearchParams("view=list"),
 }));
@@ -51,6 +58,38 @@ describe("ApplicationsList (AT-REQ-019)", () => {
     expect(bodyRows()).toHaveLength(1);
     rerender(<ApplicationsList items={items} q="zzz" />);
     expect(screen.getByText("No applications match your search.")).toBeTruthy();
+  });
+
+  it("changes a tracked row's status from its dropdown", async () => {
+    vi.mocked(setTrackedStatusAction).mockResolvedValue({ ok: true } as never);
+    render(<ApplicationsList items={items} />);
+    const select = screen.getByLabelText("Status of New role") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "interviewing" } });
+    expect((screen.getByLabelText("Status of New role") as HTMLSelectElement).value).toBe("interviewing");
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(setTrackedStatusAction).toHaveBeenCalledWith({ id: "new", status: "interviewing" });
+  });
+
+  it("puts the status back and says why when the save fails", async () => {
+    vi.mocked(setTrackedStatusAction).mockResolvedValue({ ok: false, error: "Nope." } as never);
+    render(<ApplicationsList items={items} />);
+    const select = screen.getByLabelText("Status of Old role") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "offer" } });
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Nope."));
+    await waitFor(() => expect((screen.getByLabelText("Status of Old role") as HTMLSelectElement).value).toBe("applied"));
+  });
+
+  it("saves an old external row through its board job", async () => {
+    vi.mocked(setExternalApplicationStatusAction).mockResolvedValue({ ok: true });
+    const legacy = trackerItem({ id: "leg", jobTitle: "Legacy role", legacy: true, allJobsId: "job-9" });
+    render(<ApplicationsList items={[legacy]} />);
+    fireEvent.change(screen.getByLabelText("Status of Legacy role"), { target: { value: "rejected" } });
+    await waitFor(() => expect(setExternalApplicationStatusAction).toHaveBeenCalledWith({ allJobsId: "job-9", status: "rejected" }));
+  });
+
+  it("gives GetHired rows no dropdown", () => {
+    render(<ApplicationsList items={items} />);
+    expect(screen.queryByLabelText("Status of Platform Engineer")).toBeNull();
   });
 
   it("says so when there are none", () => {

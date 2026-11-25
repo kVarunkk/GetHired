@@ -17,6 +17,7 @@ import { removeTrackedApplicationAction } from "@/app/actions/tracker/remove-tra
 import { setTrackedStatusAction } from "@/app/actions/tracker/set-tracked-status";
 import { updateTrackedApplicationAction } from "@/app/actions/tracker/update-tracked-application";
 import type { TimelineEvent } from "@/helpers/tracker/detail";
+import { canPracticeInterview, practiceInterviewPrompt, tailorResumePrompt } from "@/helpers/tracker/agent-prompts";
 import { myJobsPath } from "@/helpers/tracker/paths";
 import { TRACKER_LIMITS } from "@/helpers/tracker/schema";
 import { TRACKED_STATUSES, trackedStatusLabel, type TrackedStatus } from "@/helpers/tracker/status";
@@ -37,6 +38,8 @@ export type TrackedDetailRow = {
   notes: string | null;
   contactName: string | null;
   resumeId: string | null;
+  /** The linked board job is no longer open. */
+  jobClosed?: boolean;
   salaryAmount: number | null;
   salaryCurrency: string | null;
 };
@@ -70,7 +73,6 @@ export default function TrackedDetail({
   const [notes, setNotes] = useState(row.notes ?? "");
 
   const linked = row.allJobsId !== null;
-  const jobText = `${row.jobTitle} at ${row.companyName}`;
 
   const save = () =>
     startSaving(async () => {
@@ -109,11 +111,13 @@ export default function TrackedDetail({
           </Button>
         )}
         <Button asChild variant="outline" size="sm">
-          <Link href={agentPromptHref(`Tailor my resume for ${jobText}.`, AGENT_PATH)}>Tailor resume</Link>
+          <Link href={agentPromptHref(tailorResumePrompt(row), AGENT_PATH)}>Tailor resume</Link>
         </Button>
-        <Button asChild variant="outline" size="sm">
-          <Link href={agentPromptHref(`Set up a mock interview for ${jobText}.`, AGENT_PATH)}>Practice interview</Link>
-        </Button>
+        {canPracticeInterview(row) && (
+          <Button asChild variant="outline" size="sm">
+            <Link href={agentPromptHref(practiceInterviewPrompt(row), AGENT_PATH)}>Practice interview</Link>
+          </Button>
+        )}
         <Button variant="outline" size="sm" className="text-destructive" onClick={() => setRemoving(true)}>
           Remove
         </Button>
@@ -130,7 +134,8 @@ export default function TrackedDetail({
           <div className="grid gap-4 sm:grid-cols-2">
             {linked ? (
               <p className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground sm:col-span-2">
-                This is a job on GetHired, so its title, company and location come from the job.{" "}
+                This is a job on GetHired, so its title, company and location come from the job.
+                {row.jobClosed && " The company has closed this posting."}{" "}
                 <Link className="font-medium text-foreground underline" href={`/jobs/${row.allJobsId}`}>
                   Open the job
                 </Link>

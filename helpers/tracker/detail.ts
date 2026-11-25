@@ -7,7 +7,7 @@ import type { TrackerItem } from "./types";
 export type TimelineEvent = { id: string; kind: string; fromStatus: TrackedStatus | null; toStatus: TrackedStatus; createdAt: string };
 
 export type TrackerDetail =
-  | { kind: "tracked"; row: TrackedRow; events: TimelineEvent[] }
+  | { kind: "tracked"; row: TrackedRow & { all_jobs: { status: string } | null }; events: TimelineEvent[] }
   | { kind: "gethired"; item: TrackerItem };
 
 /**
@@ -19,7 +19,7 @@ export async function loadTrackerDetail(ctx: TrackerContext, id: string): Promis
   const { supabase, user } = ctx;
   const { data: row, error } = await supabase
     .from("tracked_applications")
-    .select("*")
+    .select("*, all_jobs ( status )")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();

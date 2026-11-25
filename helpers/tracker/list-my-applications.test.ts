@@ -59,6 +59,23 @@ describe("listMyApplications", () => {
     expect(byId.g4).toMatchObject({ column: "interviewing", screeningInterviewId: null });
   });
 
+  it("flags a card whose board job is closed, without changing its status or column", async () => {
+    const closedJob = { id: BOARD_JOB_ID, job_name: "Platform Engineer", company_name: "Initech", locations: ["Pune"], status: "inactive" };
+    seed({
+      applications: [gethiredApplication({ id: "g1", status: "reviewed" }), { ...gethiredApplication({ id: "g2" }), all_jobs: closedJob }],
+      tracked: [
+        { ...trackedRow({ id: "t1", all_jobs_id: OTHER_JOB_ID }), all_jobs: { status: "inactive" } },
+        { ...trackedRow({ id: "t2" }), all_jobs: null },
+      ],
+    });
+    const byId = Object.fromEntries((await listMyApplications(ctx())).map((item) => [item.id, item]));
+
+    expect(byId.g1).toMatchObject({ jobClosed: false, column: "in_review" });
+    expect(byId.g2).toMatchObject({ jobClosed: true, column: "applied", jobTitle: "Platform Engineer" });
+    expect(byId.t1).toMatchObject({ jobClosed: true, status: "applied" });
+    expect(byId.t2.jobClosed).toBe(false);
+  });
+
   it("ignores a cancelled screening interview", async () => {
     seed({
       applications: [gethiredApplication({ id: "g1", status: "submitted" })],

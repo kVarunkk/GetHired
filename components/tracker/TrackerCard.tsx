@@ -25,6 +25,10 @@ import { cn } from "@/utils/utils";
 
 export const LOCKED_TOOLTIP = "The company updates this status.";
 
+/** The badge on a card whose board job the company has closed. */
+export const JOB_CLOSED_LABEL = "Posting closed";
+export const JOB_CLOSED_TOOLTIP = "The company is no longer taking applications. Your application is unchanged.";
+
 /** A card's page. An old external row has none until it's moved, so it opens its board job. */
 export const cardHref = (item: TrackerItem) =>
   item.legacy && item.allJobsId ? `/jobs/${item.allJobsId}` : trackedApplicationPath(item.id);
@@ -104,7 +108,7 @@ export default function TrackerCard({
           )}
         </div>
 
-        {(item.column === "closed" || item.onHold) && (
+        {(item.column === "closed" || item.onHold || item.jobClosed) && (
           <div className="flex flex-wrap gap-1">
             {item.column === "closed" && (
               <Badge variant="outline" className="px-1.5 py-0 font-normal">
@@ -114,6 +118,11 @@ export default function TrackerCard({
             {item.onHold && (
               <Badge variant="outline" className="px-1.5 py-0 font-normal">
                 On hold
+              </Badge>
+            )}
+            {item.jobClosed && (
+              <Badge variant="outline" className="px-1.5 py-0 font-normal text-muted-foreground" title={JOB_CLOSED_TOOLTIP}>
+                {JOB_CLOSED_LABEL}
               </Badge>
             )}
           </div>

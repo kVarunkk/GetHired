@@ -58,10 +58,19 @@ describe("TrackedDetail (AT-REQ-023)", () => {
     render(<TrackedDetail row={row} events={events} resumes={[]} />);
     expect(screen.getByRole("link", { name: /Open posting/ }).getAttribute("href")).toBe("https://jobs.lever.co/hooli/1");
     expect(screen.getByRole("link", { name: "Tailor resume" }).getAttribute("href")).toMatch(/^\/agent\?prompt=/);
-    expect(screen.getByRole("link", { name: "Practice interview" }).getAttribute("href")).toMatch(/^\/agent\?prompt=/);
     expect(screen.getByText(/90,000 EUR a year/)).toBeTruthy();
     expect(screen.getByText("Added as Applied")).toBeTruthy();
     expect(screen.getByText("Moved to Interviewing")).toBeTruthy();
+  });
+
+  it("hides Practice interview for a job added by hand, and shows it for a GetHired job", () => {
+    const { unmount } = render(<TrackedDetail row={row} events={events} resumes={[]} />);
+    expect(screen.queryByRole("link", { name: "Practice interview" })).toBeNull();
+    unmount();
+    render(<TrackedDetail row={{ ...row, allJobsId: "job-1" }} events={events} resumes={[]} />);
+    const href = screen.getByRole("link", { name: "Practice interview" }).getAttribute("href") ?? "";
+    expect(href).toMatch(/^\/agent\?prompt=/);
+    expect(decodeURIComponent(href)).toContain("(/jobs/job-1)");
   });
 
   it("saves edited fields, and a changed status through setTrackedStatusAction", async () => {

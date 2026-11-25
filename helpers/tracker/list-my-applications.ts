@@ -21,10 +21,10 @@ import type { TrackerItem } from "./types";
  * list-my-applications.test.ts pins this list.
  */
 export const GETHIRED_APPLICATION_COLUMNS =
-  "id, status, created_at, updated_at, all_jobs_id, job_post_id, all_jobs ( id, job_name, company_name, locations )";
+  "id, status, created_at, updated_at, all_jobs_id, job_post_id, all_jobs ( id, job_name, company_name, locations, status )";
 
 export const TRACKED_COLUMNS =
-  "id, all_jobs_id, job_title, company_name, job_url, location, status, status_changed_at, applied_at, next_follow_up_at, notes, source, position, created_at, updated_at";
+  "id, all_jobs_id, job_title, company_name, job_url, location, status, status_changed_at, applied_at, next_follow_up_at, notes, source, position, created_at, updated_at, all_jobs ( status )";
 
 /** Screening interviews that put a card in Interviewing. */
 const LIVE_SCREENING = new Set(["invited", "in_progress", "paused", "completed"]);
@@ -39,8 +39,11 @@ type ApplicationRow = {
   updated_at: string | null;
   all_jobs_id: string | null;
   job_post_id: string | null;
-  all_jobs: { id: string; job_name: string | null; company_name: string | null; locations: string[] | null } | null;
+  all_jobs: { id: string; job_name: string | null; company_name: string | null; locations: string[] | null; status: string | null } | null;
 };
+
+/** A linked board job that's no longer open (closed or archived by the company). */
+const closedJob = (job: { status: string | null } | null | undefined) => Boolean(job && job.status !== "active");
 
 type TrackedListRow = Pick<
   TrackedRow,
@@ -59,7 +62,7 @@ type TrackedListRow = Pick<
   | "position"
   | "created_at"
   | "updated_at"
->;
+> & { all_jobs?: { status: string | null } | null };
 
 export type ListMyApplicationsFilters = {
   q?: string | null;
@@ -92,6 +95,7 @@ export function trackedItem(row: TrackedListRow): TrackerItem {
     position: row.position,
     legacy: false,
     screeningInterviewId: null,
+    jobClosed: closedJob(row.all_jobs),
   };
 }
 
@@ -155,6 +159,7 @@ export async function listMyApplications(ctx: TrackerContext, filters: ListMyApp
       appliedAt: row.created_at.slice(0, 10),
       updatedAt: row.updated_at ?? row.created_at,
       position: Date.parse(row.created_at) / 1000,
+      jobClosed: closedJob(job),
     };
 
     if (row.job_post_id) {

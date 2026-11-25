@@ -1,19 +1,61 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DataTable, { SortableHeader } from "@/components/DataTable";
+import { setTrackedStatusAction } from "@/app/actions/tracker/set-tracked-status";
+import { setExternalApplicationStatusAction } from "@/app/actions/applications/set-external-application-status";
 import { isFollowUpDue, shortDate, sourceMark } from "@/helpers/tracker/card";
 import { filterByKeyword } from "@/helpers/tracker/search";
+import { APPLIED_STATUSES, trackedStatusLabel, type AppliedStatus } from "@/helpers/tracker/status";
 import type { TrackerItem } from "@/helpers/tracker/types";
 import { cn } from "@/utils/utils";
-import { cardHref, LOCKED_TOOLTIP } from "./TrackerCard";
+import { cardHref, JOB_CLOSED_LABEL, JOB_CLOSED_TOOLTIP, LOCKED_TOOLTIP } from "./TrackerCard";
 import KeywordSearch from "./KeywordSearch";
 
-const columns: ColumnDef<TrackerItem>[] = [
+async function saveStatus(item: TrackerItem, status: AppliedStatus) {
+  if (item.legacy) {
+    if (!item.allJobsId) return { ok: false as const, error: "Application not found." };
+    return setExternalApplicationStatusAction({ allJobsId: item.allJobsId, status });
+  }
+  return setTrackedStatusAction({ id: item.id, status });
+}
+
+/** A tracked row's status, changeable in place. GetHired rows are the company's to move. */
+function StatusCell({ item, onChange }: { item: TrackerItem; onChange: (status: AppliedStatus) => void }) {
+  if (item.kind === "gethired" || !item.status) {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <Badge variant="outline" className="font-normal">
+          {item.statusLabel}
+        </Badge>
+        {item.kind === "gethired" && <Lock className="h-3 w-3 text-muted-foreground" aria-label={LOCKED_TOOLTIP} />}
+      </span>
+    );
+  }
+  return (
+    <Select value={item.status} onValueChange={(value) => onChange(value as AppliedStatus)}>
+      <SelectTrigger aria-label={`Status of ${item.jobTitle}`} className="h-8 w-36 text-xs">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {APPLIED_STATUSES.map((status) => (
+          <SelectItem key={status} value={status} className="text-xs">
+            {trackedStatusLabel(status)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+const buildColumns = (onStatusChange: (item: TrackerItem, status: AppliedStatus) => void): ColumnDef<TrackerItem>[] => [
   {
     accessorKey: "companyName",
     header: ({ column }) => <SortableHeader column={column} label="Company" />,
@@ -22,22 +64,22 @@ const columns: ColumnDef<TrackerItem>[] = [
     accessorKey: "jobTitle",
     header: ({ column }) => <SortableHeader column={column} label="Title" />,
     cell: ({ row }) => (
-      <Link href={cardHref(row.original)} className="font-medium hover:underline">
-        {row.original.jobTitle}
-      </Link>
+      <span className="inline-flex flex-wrap items-center gap-2">
+        <Link href={cardHref(row.original)} className="font-medium hover:underline">
+          {row.original.jobTitle}
+        </Link>
+        {row.original.jobClosed && (
+          <Badge variant="outline" className="font-normal text-muted-foreground" title={JOB_CLOSED_TOOLTIP}>
+            {JOB_CLOSED_LABEL}
+          </Badge>
+        )}
+      </span>
     ),
   },
   {
     accessorKey: "statusLabel",
     header: ({ column }) => <SortableHeader column={column} label="Status" />,
-    cell: ({ row }) => (
-      <span className="inline-flex items-center gap-1">
-        <Badge variant="outline" className="font-normal">
-          {row.original.statusLabel}
-        </Badge>
-        {row.original.kind === "gethired" && <Lock className="h-3 w-3 text-muted-foreground" aria-label={LOCKED_TOOLTIP} />}
-      </span>
-    ),
+    cell: ({ row }) => <StatusCell item={row.original} onChange={(status) => onStatusChange(row.original, status)} />,
   },
   {
     id: "source",
@@ -73,7 +115,41 @@ const columns: ColumnDef<TrackerItem>[] = [
 /** The Applications tab's List view (AT-REQ-019): every card, paged client-side. */
 export default function ApplicationsList({ items, q }: { items: TrackerItem[]; q?: string | null }) {
   const router = useRouter();
-  const rows = filterByKeyword(items, q);
+  // Status picks shown before the server confirms them; a failed save drops its pick.
+  const [picked, setPicked] = useState<Record<string, AppliedStatus>>({});
+
+  useEffect(() => {
+    setPicked({});
+  }, [items]);
+
+  const onStatusChange = useCallback(
+    async (item: TrackerItem, status: AppliedStatus) => {
+      if (status === item.status) return;
+      setPicked((current) => ({ ...current, [item.id]: status }));
+      const result = await saveStatus(item, status);
+      if (!result.ok) {
+        setPicked((current) => {
+          const next = { ...current };
+          delete next[item.id];
+          return next;
+        });
+        toast.error(result.error);
+        return;
+      }
+      router.refresh();
+    },
+    [router],
+  );
+
+  const columns = useMemo(() => buildColumns(onStatusChange), [onStatusChange]);
+  const rows = useMemo(
+    () =>
+      filterByKeyword(items, q).map((item) => {
+        const status = picked[item.id];
+        return status ? { ...item, status, statusLabel: trackedStatusLabel(status) } : item;
+      }),
+    [items, q, picked],
+  );
 
   return (
     <DataTable

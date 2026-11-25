@@ -8,6 +8,7 @@ import { standardAnswerKey } from "@/helpers/applications/validate-answers";
 import { PLATFORM_JOB_REFUSED } from "@/helpers/applications/external-application";
 import { APPLICANT_APPROVAL_POLICY } from "@/helpers/agent/approval";
 import { addTrackedApplication } from "@/helpers/tracker/add-tracked-application";
+import { loadTrackerDetail } from "@/helpers/tracker/detail";
 import { listMyApplications } from "@/helpers/tracker/list-my-applications";
 import { myJobsPath, trackedApplicationPath } from "@/helpers/tracker/paths";
 import {
@@ -23,6 +24,7 @@ vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
 vi.mock("@/helpers/applications/submit-application", () => ({ submitApplication: vi.fn() }));
 vi.mock("@/helpers/tracker/add-tracked-application", () => ({ addTrackedApplication: vi.fn() }));
 vi.mock("@/helpers/tracker/list-my-applications", () => ({ listMyApplications: vi.fn() }));
+vi.mock("@/helpers/tracker/detail", () => ({ loadTrackerDetail: vi.fn() }));
 vi.mock("@/helpers/tracker/writes", () => ({
   getTrackedItem: vi.fn(),
   removeTrackedApplication: vi.fn(),
@@ -31,6 +33,8 @@ vi.mock("@/helpers/tracker/writes", () => ({
 }));
 
 const JOB_ID = "11111111-1111-4111-8111-111111111111";
+const TRACKED_ID = "22222222-2222-4222-8222-222222222222";
+const GETHIRED_APP_ID = "33333333-3333-4333-8333-333333333333";
 const NOW = "2026-10-11T12:00:00.000Z";
 
 let supabase: SupabaseMock;
@@ -83,6 +87,57 @@ describe("listApplications tool", () => {
   it("rejects unknown statuses, and saved (listSavedJobs lists those)", async () => {
     expect((await validateInput(tools.listApplications, { status: "hired" })).success).toBe(false);
     expect((await validateInput(tools.listApplications, { status: "saved" })).success).toBe(false);
+  });
+});
+
+describe("getTrackedApplication tool", () => {
+  const trackedRow = {
+    id: TRACKED_ID,
+    all_jobs_id: null,
+    job_title: "Designer",
+    company_name: "Hooli",
+    location: "Berlin",
+    job_url: "https://hooli.test/jobs/1",
+    job_description: "Design things for Hooli.",
+    notes: "Referred by Sam",
+    status: "applied",
+    applied_at: "2026-11-17",
+    next_follow_up_at: null,
+  };
+
+  it("returns the job's text, sandboxed, with its description", async () => {
+    vi.mocked(loadTrackerDetail).mockResolvedValue({ kind: "tracked", row: trackedRow, events: [] } as never);
+
+    const result = (await execTool(tools.getTrackedApplication, { id: TRACKED_ID })) as Record<string, unknown>;
+
+    expect(loadTrackerDetail).toHaveBeenCalledWith({ supabase: supabase.client, user: { id: "u1" } }, TRACKED_ID);
+    expect(result).toMatchObject({ id: TRACKED_ID, jobId: null, url: trackedApplicationPath(TRACKED_ID) });
+    expect(result).not.toHaveProperty("note");
+    expect(String(result.details)).toMatch(/^<tracked_application>/);
+    expect(String(result.details)).toContain("Design things for Hooli.");
+    expect(String(result.details)).toContain("https://hooli.test/jobs/1");
+  });
+
+  it("points a job on GetHired to getJobDetails", async () => {
+    vi.mocked(loadTrackerDetail).mockResolvedValue({ kind: "tracked", row: { ...trackedRow, all_jobs_id: JOB_ID }, events: [] } as never);
+
+    const result = (await execTool(tools.getTrackedApplication, { id: TRACKED_ID })) as Record<string, unknown>;
+
+    expect(result).toMatchObject({ jobId: JOB_ID });
+    expect(String(result.note)).toContain("getJobDetails");
+  });
+
+  it("refuses an application made through GetHired and an unknown id", async () => {
+    vi.mocked(loadTrackerDetail).mockResolvedValueOnce({ kind: "gethired", item: gethiredItem({ id: GETHIRED_APP_ID, allJobsId: JOB_ID }) } as never);
+    expect(await execTool(tools.getTrackedApplication, { id: GETHIRED_APP_ID })).toMatchObject({ error: expect.stringContaining("getJobDetails"), jobId: JOB_ID });
+
+    vi.mocked(loadTrackerDetail).mockResolvedValueOnce(null);
+    expect(await execTool(tools.getTrackedApplication, { id: GETHIRED_APP_ID })).toEqual({ error: "No tracked application with this id in My Jobs." });
+  });
+
+  it("is a read of untrusted text", () => {
+    expect(APPLICANT_APPROVAL_POLICY.untrustedContentTools).toContain("getTrackedApplication");
+    expect(APPLICANT_APPROVAL_POLICY.alwaysAsk).not.toContain("getTrackedApplication");
   });
 });
 

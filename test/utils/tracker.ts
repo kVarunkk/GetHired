@@ -72,7 +72,7 @@ export function gethiredApplication(
     updated_at: "2026-11-20T10:00:00.000Z",
     all_jobs_id: BOARD_JOB_ID,
     job_post_id: "30000000-0000-4000-8000-000000000001",
-    all_jobs: { id: BOARD_JOB_ID, job_name: "Platform Engineer", company_name: "Initech", locations: ["Pune"] },
+    all_jobs: { id: BOARD_JOB_ID, job_name: "Platform Engineer", company_name: "Initech", locations: ["Pune"], status: "active" },
     ...overrides,
   };
 }
@@ -104,6 +104,7 @@ export function trackerItem(overrides: Partial<TrackerItem> = {}): TrackerItem {
     position: itemSeq,
     legacy: false,
     screeningInterviewId: null,
+    jobClosed: false,
     ...overrides,
   };
 }

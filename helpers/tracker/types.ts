@@ -34,6 +34,8 @@ export type TrackerItem = {
   legacy: boolean;
   /** The open AI screening interview of a GetHired application. */
   screeningInterviewId: string | null;
+  /** The linked board job is no longer open. The application itself is unchanged: the company may still be reviewing. */
+  jobClosed: boolean;
 };
 
 export type SavedJobItem =
