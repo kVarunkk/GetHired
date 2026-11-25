@@ -454,7 +454,6 @@ describe("naturalLanguageJobSearch tool", () => {
         createdAfter: "7",
         sortBy: "salary_min",
         tab: "saved",
-        applicationStatus: ["selected"],
       },
     } as never);
 
