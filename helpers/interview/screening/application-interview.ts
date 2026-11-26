@@ -32,6 +32,8 @@ export type ApplicationInterviewView = {
   accommodationRequest: string | null;
   invitedVia: string;
   completedAt: string | null;
+  /** When the team marked the report reviewed. It may be from an earlier attempt: see `isReviewed`. */
+  reviewedAt: string | null;
   createdAt: string;
   durationMinutes: number;
   competencies: Competency[];
@@ -53,7 +55,7 @@ export async function getApplicationInterview(
   const { data: row, error } = await supabase
     .from("application_interviews")
     .select(
-      "id, status, job_post_id, interview_id, deadline_at, attempts_used, max_attempts, attempt_granted, deadline_extensions, accommodation_request, invited_via, completed_at, created_at, config_snapshot",
+      "id, status, job_post_id, interview_id, deadline_at, attempts_used, max_attempts, attempt_granted, deadline_extensions, accommodation_request, invited_via, completed_at, company_reviewed_at, created_at, config_snapshot",
     )
     .eq("application_id", applicationId)
     .maybeSingle();
@@ -117,6 +119,7 @@ export async function getApplicationInterview(
     accommodationRequest: row.accommodation_request,
     invitedVia: row.invited_via,
     completedAt: row.completed_at,
+    reviewedAt: row.company_reviewed_at,
     createdAt: row.created_at,
     durationMinutes: snapshot?.duration_minutes ?? 0,
     competencies: snapshot?.competencies ?? [],

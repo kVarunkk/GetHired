@@ -55,6 +55,7 @@ const interview = (overrides: Partial<ApplicationInterviewView> = {}): Applicati
   accommodationRequest: null,
   invitedVia: "agent",
   completedAt: "2026-10-20T00:00:00.000Z",
+  reviewedAt: null,
   createdAt: "2026-10-19T00:00:00.000Z",
   durationMinutes: 15,
   competencies: CONFIG.competencies,

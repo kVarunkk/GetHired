@@ -22,6 +22,7 @@ const view = (overrides: Partial<ApplicationInterviewView> = {}): ApplicationInt
   accommodationRequest: null,
   invitedVia: "fit_threshold",
   completedAt: "2026-10-20T00:00:00.000Z",
+  reviewedAt: null,
   createdAt: "2026-10-19T00:00:00.000Z",
   durationMinutes: 15,
   competencies: [
