@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import { Coins, Receipt } from "lucide-react";
-import ClaudeIcon from "@/components/icons/ClaudeIcon";
+import McpConnectLink from "@/components/dashboard/McpConnectLink";
 import RechargeCredits from "@/components/RechargeCredits";
 
 const linkClass = "flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground";
@@ -39,10 +39,7 @@ export default function AccountStrip({
             Purchase history
           </Link>
         )}
-        <Link className={linkClass} href="/mcp">
-          <ClaudeIcon />
-          Use GetHired in Claude, Cursor or VS Code
-        </Link>
+        <McpConnectLink />
       </div>
       <RechargeCredits user={user} invitationsCount={invitationsCount} />
     </section>

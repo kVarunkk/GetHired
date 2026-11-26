@@ -3,9 +3,8 @@ import {
   createSupabaseMock,
   type SupabaseMock,
 } from "@/test/utils/supabase-mock";
-import { COMPANY_A } from "@/test/utils/recruiter";
 import { PIPELINE_JOB, stageOf } from "@/test/utils/pipeline";
-import { NEEDS_ATTENTION_DAYS, getCompanyFunnel, getJobFunnel } from "./funnel";
+import { getCompanyFunnel, getJobFunnel } from "./funnel";
 import { OWNER_A } from "@/test/utils/team";
 
 vi.mock("server-only", () => ({}));
@@ -137,235 +136,88 @@ describe("getJobFunnel (PLT-081, PL-TEST-005)", () => {
   });
 });
 
-describe("getCompanyFunnel (PLT-081, PL-REQ-011)", () => {
+describe("getCompanyFunnel (PLT-081, PL-REQ-011, CD-REQ-026)", () => {
   const JOB_2 = {
     id: "b0000000-0000-4000-8000-0000000000f2",
     title: "Designer",
   };
 
-  function twoJobs() {
-    db.queue("job_postings", {
-      data: [
-        { id: PIPELINE_JOB.id, title: PIPELINE_JOB.title },
-        { id: JOB_2.id, title: JOB_2.title },
-      ],
-      error: null,
-    });
-    db.queueRpc("get_job_funnel", { data: FUNNEL, error: null });
-    db.queueRpc("get_job_funnel", {
+  const waiting = {
+    application_id: "e0000000-0000-4000-8000-0000000000a1",
+    name: "Priya Sharma",
+    job_post_id: PIPELINE_JOB.id,
+    job_title: PIPELINE_JOB.title,
+    stage_entered_at: daysAgo(5),
+  };
+
+  function queueCompanyFunnel() {
+    db.queueRpc("get_company_funnel", {
       data: {
-        ...FUNNEL,
+        // Out of order: the result is in kind order.
         stages: [
-          rpcStage("applied", 3, 3, null),
-          rpcStage("hired", 0, 0, null),
+          { kind: "hired", count: 1 },
+          { kind: "applied", count: 5 },
         ],
-        total: 3,
+        jobs: [
+          { job_post_id: PIPELINE_JOB.id, title: PIPELINE_JOB.title, funnel: FUNNEL },
+          { job_post_id: JOB_2.id, title: JOB_2.title, funnel: { ...FUNNEL, total: 3 } },
+        ],
+        needs_attention: [waiting],
       },
       error: null,
     });
   }
 
-  it("sums the stage counts across the company's active jobs", async () => {
-    twoJobs();
-    db.queue("applications", { data: [], error: null });
+  it("makes one call, with no company in its arguments", async () => {
+    queueCompanyFunnel();
 
-    const result = await getCompanyFunnel({ supabase: db.client, company });
+    await getCompanyFunnel({ supabase: db.client, company });
 
-    const [jobs] = db.callsFor("job_postings");
-    expect(jobs.chain).toContainEqual({
-      method: "eq",
-      args: ["company_id", COMPANY_A.id],
-    });
-    expect(jobs.chain).toContainEqual({
-      method: "eq",
-      args: ["status", "active"],
-    });
-    expect(result.stages.find((s) => s.kind === "applied")).toMatchObject({
-      count: 5,
-    });
-    expect(result.stages.find((s) => s.kind === "screening")).toMatchObject({
-      count: 2,
-    });
-    expect(result.stages.find((s) => s.kind === "hired")).toMatchObject({
-      count: 1,
-    });
-    expect(result.jobs).toEqual([
-      {
-        jobPostId: PIPELINE_JOB.id,
-        title: PIPELINE_JOB.title,
-        total: 5,
-        stages: expect.any(Array),
-      },
-      {
-        jobPostId: JOB_2.id,
-        title: "Designer",
-        total: 3,
-        stages: expect.any(Array),
-      },
-    ]);
+    expect(db.calls).toHaveLength(1);
+    expect(db.callsFor("get_company_funnel")[0].chain[0].args[1]).toBeUndefined();
   });
 
-  it("totals jobs on two pipelines with differently named stages by kind (JPT-027)", async () => {
-    db.queue("job_postings", {
-      data: [
-        { id: PIPELINE_JOB.id, title: PIPELINE_JOB.title },
-        { id: JOB_2.id, title: JOB_2.title },
-      ],
-      error: null,
-    });
-    const named = (id: string, name: string, kind: Parameters<typeof stageOf>[0], count: number) => ({
-      stage_id: id,
-      name,
-      kind,
-      count,
-      reached: count,
-      median_days: null,
-    });
-    db.queueRpc("get_job_funnel", {
-      data: {
-        ...FUNNEL,
-        stages: [
-          named("5a000000-0000-4000-8000-0000000000e1", "New", "applied", 2),
-          named("5a000000-0000-4000-8000-0000000000e2", "Phone screen", "screening", 1),
-          named("5a000000-0000-4000-8000-0000000000e3", "Hired!", "hired", 1),
-        ],
-        total: 4,
-      },
-      error: null,
-    });
-    db.queueRpc("get_job_funnel", {
-      data: {
-        ...FUNNEL,
-        stages: [
-          named("5a000000-0000-4000-8000-0000000000f1", "Inbox", "applied", 3),
-          named("5a000000-0000-4000-8000-0000000000f2", "Take-home", "interview", 2),
-          named("5a000000-0000-4000-8000-0000000000f3", "Portfolio review", "screening", 1),
-        ],
-        total: 6,
-      },
-      error: null,
-    });
-    db.queue("applications", { data: [], error: null });
+  it("names the totals by kind, in kind order, and keeps each job's funnel", async () => {
+    queueCompanyFunnel();
 
     const result = await getCompanyFunnel({ supabase: db.client, company });
 
     expect(result.stages).toEqual([
       { stageId: "applied", name: "Applied", kind: "applied", count: 5 },
-      { stageId: "screening", name: "Screening", kind: "screening", count: 2 },
-      { stageId: "interview", name: "Interview", kind: "interview", count: 2 },
       { stageId: "hired", name: "Hired", kind: "hired", count: 1 },
     ]);
-    // Each job's own funnel keeps its stage names.
-    expect(result.jobs[1].stages.map((s) => s.name)).toEqual(["Inbox", "Take-home", "Portfolio review"]);
-  });
-
-  it("gives one pipeline's default stages the same rows as before (JPT-027)", async () => {
-    twoJobs();
-    db.queue("applications", { data: [], error: null });
-
-    const result = await getCompanyFunnel({ supabase: db.client, company });
-
-    expect(result.stages.map((s) => [s.name, s.count])).toEqual([
-      ["Applied", 5],
-      ["Screening", 2],
-      ["Interview", 0],
-      ["Offer", 0],
-      ["Hired", 1],
-      ["Rejected", 0],
-      ["On hold", 0],
+    expect(result.jobs).toEqual([
+      { jobPostId: PIPELINE_JOB.id, title: PIPELINE_JOB.title, total: 5, stages: expect.any(Array) },
+      { jobPostId: JOB_2.id, title: "Designer", total: 3, stages: expect.any(Array) },
     ]);
+    expect(result.jobs[0].stages[1]).toMatchObject({ kind: "screening", conversion: 0.6 });
   });
 
-  it(`lists applications in Applied for more than ${NEEDS_ATTENTION_DAYS} days with no event since`, async () => {
-    twoJobs();
-    const waiting = {
-      id: "e0000000-0000-4000-8000-0000000000a1",
-      stage_entered_at: daysAgo(5),
-      applicant_user_id: "a0000000-0000-4000-8000-000000000001",
-      company_candidate_id: null,
-      user_info: { full_name: "Priya Sharma" },
-      company_candidates: null,
-      job_postings: {
-        id: PIPELINE_JOB.id,
-        title: PIPELINE_JOB.title,
-        company_id: COMPANY_A.id,
-      },
-    };
-    const touched = {
-      ...waiting,
-      id: "e0000000-0000-4000-8000-0000000000a2",
-      stage_entered_at: daysAgo(6),
-    };
-    db.queue("applications", { data: [touched, waiting], error: null });
-    db.queue("application_events", {
-      data: [
-        // The applied event when they entered doesn't count; a note since does.
-        { application_id: waiting.id, type: "applied", created_at: daysAgo(5) },
-        {
-          application_id: touched.id,
-          type: "note_added",
-          created_at: daysAgo(1),
-        },
-      ],
-      error: null,
-    });
+  it("says how long each waiting application has been in Applied", async () => {
+    queueCompanyFunnel();
 
-    const { needsAttention } = await getCompanyFunnel({
-      supabase: db.client,
-      company,
-    });
+    const { needsAttention } = await getCompanyFunnel({ supabase: db.client, company });
 
     expect(needsAttention).toEqual([
       {
-        applicationId: waiting.id,
+        applicationId: waiting.application_id,
         name: "Priya Sharma",
         jobPostId: PIPELINE_JOB.id,
         jobTitle: PIPELINE_JOB.title,
         daysInApplied: 5,
       },
     ]);
-    const [apps] = db.callsFor("applications");
-    expect(apps.chain).toContainEqual({
-      method: "eq",
-      args: ["job_postings.company_id", COMPANY_A.id],
-    });
-    expect(apps.chain).toContainEqual({
-      method: "eq",
-      args: ["pipeline_stages.kind", "applied"],
-    });
-    expect(apps.chain).toContainEqual({
-      method: "lt",
-      args: ["stage_entered_at", daysAgo(NEEDS_ATTENTION_DAYS)],
-    });
   });
 
-  it("names a waiting imported applicant and leaves merged imports out (BI-REQ-030/042)", async () => {
-    twoJobs();
-    const CANDIDATE_ID = "cc000000-0000-4000-8000-000000000001";
-    db.queue("applications", {
-      data: [
-        {
-          id: "ea000000-0000-4000-8000-000000000001",
-          stage_entered_at: daysAgo(5),
-          applicant_user_id: null,
-          company_candidate_id: CANDIDATE_ID,
-          user_info: null,
-          company_candidates: { id: CANDIDATE_ID, full_name: "Meera Iyer", email: null, resume_path: null },
-          job_postings: { id: PIPELINE_JOB.id, title: PIPELINE_JOB.title, company_id: COMPANY_A.id },
-        },
-      ],
-      error: null,
-    });
-    // The import's own event, at the moment it entered Applied, doesn't count.
-    db.queue("application_events", {
-      data: [{ application_id: "ea000000-0000-4000-8000-000000000001", type: "imported", created_at: daysAgo(5) }],
-      error: null,
+  it("is empty for a non-member and throws on an RPC error", async () => {
+    db.queueRpc("get_company_funnel", { data: null, error: null });
+    expect(await getCompanyFunnel({ supabase: db.client, company })).toEqual({
+      stages: [],
+      jobs: [],
+      needsAttention: [],
     });
 
-    const { needsAttention } = await getCompanyFunnel({ supabase: db.client, company });
-
-    expect(needsAttention).toEqual([expect.objectContaining({ name: "Meera Iyer", daysInApplied: 5 })]);
-    const [apps] = db.callsFor("applications");
-    expect(apps.chain).toContainEqual({ method: "is", args: ["merged_into_application_id", null] });
+    db.queueRpc("get_company_funnel", { data: null, error: { message: "boom" } });
+    await expect(getCompanyFunnel({ supabase: db.client, company })).rejects.toThrow(/boom/);
   });
 });
