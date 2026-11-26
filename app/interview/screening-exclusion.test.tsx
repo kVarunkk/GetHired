@@ -7,8 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { createClient } from "@/lib/supabase/server";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import InterviewPage from "./page";
-import InterviewIdPage from "./[interviewId]/page";
+import InterviewPage from "./(list)/page";
+import InterviewIdPage from "./[interviewId]/(room)/page";
 import InterviewAnalysisPage from "./[interviewId]/analysis/[sessionId]/page";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
