@@ -6004,14 +6004,6 @@ export type Database = {
         Returns: Json
       }
       get_company_funnel: { Args: never; Returns: Json }
-      get_company_metrics: {
-        Args: { company_id: string }
-        Returns: {
-          new_applicants_today: number
-          total_applicants: number
-          total_jobs: number
-        }[]
-      }
       get_feedback_summary: {
         Args: { p_application_id: string }
         Returns: Json
