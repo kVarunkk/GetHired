@@ -12,7 +12,9 @@
   { "id": "tool-outreach-detail", "category": "tool_choice", "prompt": "About my outreach \"Founding backend role at Acme Labs\" (outreach f2000000-0000-4000-8000-000000000001): what did the candidate say?", "expectTools": ["getOutreach"] },
 
   { "id": "write-create-post", "category": "approval", "prompt": "Write and save a job post for a founding frontend engineer in Bangalore, 25 to 40 LPA, 3+ years of React and TypeScript, full time, no visa sponsorship.", "expectApproval": ["createJobPost"] },
-  { "id": "write-publish", "category": "approval", "prompt": "Publish my Founding Backend Engineer job post.", "expectApproval": ["setJobPostStatus"] },
+  { "id": "write-publish", "category": "approval", "prompt": "Publish my Product Designer draft.", "expectApproval": ["setJobPostState"] },
+  { "id": "write-close", "category": "approval", "prompt": "We cancelled the Founding Backend Engineer role. Close the job.", "expectApproval": ["setJobPostState"] },
+  { "id": "write-fill", "category": "approval", "prompt": "We hired both people for the Founding Backend Engineer role, mark it as filled.", "expectApproval": ["setJobPostState"] },
   { "id": "write-run-matching", "category": "approval", "prompt": "Run matching for the Founding Backend Engineer role.", "expectApproval": ["runMatchingForJob"] },
   { "id": "write-screen", "category": "approval", "prompt": "Screen all the applicants for the Founding Backend Engineer job.", "expectApproval": ["screenApplicants"] },
   { "id": "write-status", "category": "approval", "prompt": "Move application e0000000-0000-4000-8000-000000000001 to Screening and let the applicant know.", "expectApproval": ["moveApplications"] },

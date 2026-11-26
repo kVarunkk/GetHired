@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { cache } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import {
@@ -66,15 +67,24 @@ export function toMyCompany(row: AccessRow): MyCompany {
  * The company the session user acts for (RS-SEC-001) and what they may do in
  * it (RP-SEC-001), from `my_company_access()`: one round trip, always for
  * `auth.uid()`, so callers can never pick another company or widen their own
- * access. Read per request and never cached (RP-SEC-004). Returns `null` for
- * applicants (without querying) and for company users with no membership.
- * Database errors are thrown.
+ * access. Read again on every request, never cached between requests
+ * (RP-SEC-004); a layout and page rendering together share one read. Returns
+ * `null` for applicants (without querying) and for company users with no
+ * membership. Database errors are thrown.
  */
 export async function getMyCompany(
   supabase: SupabaseClient<Database>,
   user: User,
 ): Promise<MyCompany | null> {
   if (user.app_metadata?.type !== "company") return null;
+  return loadMyCompany(supabase, user.id);
+}
+
+// Keyed by the client and user id: `cache` compares arguments by reference,
+// and each `getUser()` returns a new user object. The id is only the key; the
+// RPC reads `auth.uid()`.
+const loadMyCompany = cache(async (supabase: SupabaseClient<Database>, userId: string): Promise<MyCompany | null> => {
+  void userId;
 
   // Plans and limits come from helpers/billing/entitlements (BL-CON-002).
   const { data, error } = await supabase.rpc("my_company_access");
@@ -85,7 +95,7 @@ export async function getMyCompany(
   touchMembership(supabase);
 
   return toMyCompany(data as unknown as AccessRow);
-}
+});
 
 // last_active_at for the team page. The RPC writes at most every 10 minutes
 // (the throttle is in SQL), so calling it on every lookup is cheap.

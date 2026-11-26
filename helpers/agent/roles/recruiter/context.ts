@@ -6,17 +6,17 @@ import { RA_PROMPT_JOBS } from "./config";
 import type { RecruiterJobSummary, RecruiterPromptContext } from "./system-prompt";
 
 /**
- * The company's jobs with applicant counts, active first (RA spec §4.5). The
+ * The company's jobs with applicant counts and hires, open first (RA spec §4.5, JL-REQ-031). The
  * RPC checks the caller is a member of the company. Errors are thrown.
  */
 export async function loadRecruiterJobSummaries(
   supabase: SupabaseClient<Database>,
   companyId: string,
-  { status, limit }: { status?: Database["public"]["Enums"]["job_posting_status"]; limit: number },
+  { states, limit }: { states?: Database["public"]["Enums"]["job_post_state"][]; limit: number },
 ): Promise<RecruiterJobSummary[]> {
   const { data, error } = await supabase.rpc("get_recruiter_job_summaries", {
     p_company_id: companyId,
-    ...(status ? { p_status: status } : {}),
+    ...(states && states.length > 0 ? { p_states: states } : {}),
     p_limit: limit,
   });
   if (error) throw new Error(`Failed to load job summaries: ${error.message}`);

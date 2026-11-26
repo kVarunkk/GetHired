@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import CollapsibleMarkdown from "./CollapsibleMarkdown";
 import type { CareersSection } from "@/helpers/careers/page-schema";
 
 /**
@@ -52,7 +53,7 @@ export default function CareersSections({
               <h2 id={`s-${section.id}`} className="text-lg font-semibold tracking-tight">
                 About us
               </h2>
-              <SafeMarkdown>{about}</SafeMarkdown>
+              <CollapsibleMarkdown>{about}</CollapsibleMarkdown>
             </section>
           );
         }

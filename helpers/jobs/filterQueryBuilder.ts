@@ -3,7 +3,6 @@ import { createServiceRoleClient } from "../../lib/supabase/service-role";
 import {
   AllJobWithRelations,
   JobsBuildQueryResult,
-  TApplicationStatus,
   TJobTypeEnum,
 } from "@/utils/types";
 import { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
@@ -79,8 +78,8 @@ export const buildQuery = async (
     sortBy,
     sortOrder,
     userEmbedding,
-    applicationStatus,
     createdAfter,
+    excludeJobIds,
     jobEmbedding,
     relevanceSearchType,
   }: {
@@ -104,8 +103,9 @@ export const buildQuery = async (
     isFavoriteTabActive: boolean;
     isAppliedJobsTabActive: boolean;
     userEmbedding: string | null;
-    applicationStatus: string | null;
     createdAfter: string | null;
+    /** Jobs to leave out (job alerts: ones the user applied to). Internal callers only. */
+    excludeJobIds?: string[] | null;
     jobEmbedding: string | null;
     relevanceSearchType:
       | "standard"
@@ -122,11 +122,6 @@ export const buildQuery = async (
     const platformsArray = parseMultiSelectParam(platform);
     const companyNamesArray = parseMultiSelectParam(companyName);
     const jobTitleKeywordsArray = parseMultiSelectParam(jobTitleKeywords);
-    const applicationStatusArray = parseMultiSelectParam(
-      applicationStatus,
-    ).filter((s): s is TApplicationStatus =>
-      Object.values(TApplicationStatus).includes(s as TApplicationStatus),
-    );
 
     let query;
     let selectString;
@@ -191,7 +186,8 @@ export const buildQuery = async (
       query = supabase
         .from("all_jobs")
         .select(selectString, countOption)
-        .eq("user_relevant_jobs.user_id", user.id);
+        .eq("user_relevant_jobs.user_id", user.id)
+        .eq("listed", true);
     } else {
       selectString = `
        ${allJobsSelectString}
@@ -200,7 +196,9 @@ export const buildQuery = async (
       query = supabase
         .from("all_jobs")
         .select(selectString, countOption)
-        .eq("status", "active");
+        .eq("status", "active")
+        // Link-only jobs are never listed (JL-REQ-025).
+        .eq("listed", true);
     }
 
     if (cursor && sortBy !== "relevance") {
@@ -270,6 +268,12 @@ export const buildQuery = async (
       query = query.gte("created_at", createdAfter);
     }
 
+    // Before the limit, so the page and the total both leave them out.
+    const excluded = (excludeJobIds ?? []).filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+    if (excluded.length > 0) {
+      query = query.not("id", "in", `(${excluded.join(",")})`);
+    }
+
     if (jobTypesArray.length > 0) {
       query = query.in("job_type", jobTypesArray);
     }
@@ -298,10 +302,6 @@ export const buildQuery = async (
     );
     if (titleConditions.length > 0) {
       query = query.or(titleConditions.join(","));
-    }
-
-    if (applicationStatusArray.length > 0) {
-      query = query.in("applications.status", applicationStatusArray);
     }
 
     if (salaryCurrency) {

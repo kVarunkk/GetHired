@@ -1,5 +1,6 @@
 "use client";
 
+import ScrollFadeX from "@/components/ScrollFadeX";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -396,7 +397,7 @@ function InterviewCard({
       {anyRated && (
         <div className="flex flex-col gap-2">
           <p className="text-xs font-medium text-muted-foreground">By competency</p>
-          <div className="overflow-x-auto rounded-lg border">
+          <ScrollFadeX className="rounded-lg border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
@@ -421,7 +422,7 @@ function InterviewCard({
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollFadeX>
         </div>
       )}
     </div>

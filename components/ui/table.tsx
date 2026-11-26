@@ -1,18 +1,19 @@
 import * as React from "react";
 
+import ScrollFadeX from "@/components/ScrollFadeX";
 import { cn } from "@/utils/utils";
 
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
+  <ScrollFadeX className="relative w-full overflow-auto">
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}
       {...props}
     />
-  </div>
+  </ScrollFadeX>
 ));
 Table.displayName = "Table";
 

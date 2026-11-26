@@ -25,4 +25,9 @@ describe("getSitemapData careers pages (CP-REQ-011)", () => {
     expect(data.staticPaths.filter((p) => p.startsWith("/careers/"))).toEqual(["/careers/acme"]);
     expect(db.callsFor("company_info")[0].chain).toContainEqual({ method: "eq", args: ["careers_published", true] });
   });
+
+  it("counts listed jobs only, so a link-only job has no sitemap entry (JLT-062)", async () => {
+    await getSitemapData();
+    expect(db.callsFor("all_jobs")[0].chain).toContainEqual({ method: "eq", args: ["listed", true] });
+  });
 });

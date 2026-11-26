@@ -55,7 +55,6 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         ),
         cell: ({ row }) => (
           <ModifiedLink
-            prefetch={false}
             href={`/dashboard/buy-credits/payments/${row.original.id}`}
             className="text-sm font-medium underline underline-offset-4 hover:underline sm:no-underline"
           >
@@ -113,7 +112,6 @@ export default function PaymentsTable({ data }: PaymentsTableProps) {
         header: "Actions",
         cell: ({ row }) => (
           <ModifiedLink
-            prefetch={false}
             href={`/dashboard/buy-credits/payments/${row.original.id}`}
           >
             <Button variant="ghost" size="sm">

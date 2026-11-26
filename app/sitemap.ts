@@ -50,6 +50,8 @@ export default async function sitemap({
         .from("all_jobs")
         .select("id, created_at, updated_at")
         .eq("status", "active")
+        // Link-only jobs are never listed (JL-REQ-025).
+        .eq("listed", true)
         .not("job_name", "is", null)
         .neq("job_name", "")
         .order("created_at", { ascending: false })

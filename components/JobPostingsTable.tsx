@@ -1,65 +1,67 @@
 "use client";
 
 import { useMemo } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
-import { Switch } from "./ui/switch";
-import { useJobPostingStatus } from "@/hooks/useJobPostingStatus";
-import RoleLocked from "./team/RoleLocked";
-import { forbiddenMessage } from "@/helpers/companies/permissions";
-import DataTable, { SelectFilter, SortableHeader, TextFilter } from "./DataTable";
+import DataTable, { FilterSelect, SelectFilter, SortableHeader, TextFilter } from "./DataTable";
+import JobStateMenu from "./jobs/JobStateMenu";
 import { Link as ModifiedLink } from "react-transition-progress/next";
 import { IJobPost } from "@/utils/types";
-import { TCompanyIdPageData } from "@/utils/types/jobs.types";
+import {
+  DEFAULT_JOB_STATE_FILTER,
+  JOB_STATE_FILTERS,
+  statesForFilter,
+  type JobStateFilter,
+} from "@/helpers/jobs/job-states";
 
 interface JobPostingsTableProps {
   data: IJobPost[];
-  /** Job ids whose status switch the viewer may use (jobs.publish, RP-REQ-016). Omitted: all. */
+  /** Job ids whose state the viewer may change (jobs.publish, RP-REQ-016). Omitted: all. */
   publishable?: string[];
+  /** Job ids the viewer may approve (jobs.approve). Omitted: none. */
+  approvable?: string[];
+  /** `company_info.job_approval_required` (D6). */
+  approvalRequired?: boolean;
+  /** Hires per job id (JL-REQ-012). */
+  hires?: Record<string, number>;
 }
 
-const JOB_STATUSES = ["active", "inactive"];
+/** The URL parameter of the state filter. Absent means the default (open and paused). */
+export const JOB_STATE_PARAM = "state";
 
-export const JobStatusSwitch = ({
-  job,
-  disabled = false,
-}: {
-  job: IJobPost | TCompanyIdPageData;
-  /** Without jobs.publish on this job (RP-REQ-016). */
-  disabled?: boolean;
-}) => {
-  const { checkedState, handleUpdateStatus, upgradeDialog } =
-    useJobPostingStatus(job.status, job);
-
-  if (disabled) {
-    return (
-      <RoleLocked reason={forbiddenMessage("jobs.publish")}>
-        <Switch
-          checked={checkedState}
-          disabled
-          aria-label={checkedState ? "Job is active" : "Job is inactive"}
-        />
-      </RoleLocked>
-    );
-  }
-
-  return (
-    <div className="flex items-center">
-      <Switch
-        title={`${checkedState ? "Deactivate" : "Activate"}`}
-        checked={checkedState}
-        onCheckedChange={handleUpdateStatus}
-      />
-      {upgradeDialog}
-    </div>
-  );
-};
+/** JL-REQ-029: the filter's value from the URL; `all` is the filter's "All" option. */
+export function stateFilterFrom(param: string | null): JobStateFilter {
+  return JOB_STATE_FILTERS.some((f) => f.value === param) ? (param as JobStateFilter) : DEFAULT_JOB_STATE_FILTER;
+}
 
 export default function JobPostingsTable({
   data,
   publishable,
+  approvable = [],
+  approvalRequired = false,
+  hires = {},
 }: JobPostingsTableProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const stateFilter = stateFilterFrom(searchParams?.get(JOB_STATE_PARAM) ?? null);
+
+  const setStateFilter = (value: JobStateFilter) => {
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    if (value === DEFAULT_JOB_STATE_FILTER) params.delete(JOB_STATE_PARAM);
+    else params.set(JOB_STATE_PARAM, value);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : (pathname ?? ""), { scroll: false });
+  };
+
+  const rows = useMemo(() => {
+    const states = statesForFilter(stateFilter) as readonly string[];
+    const archived = stateFilter === "archived";
+    return data.filter((job) => !!job.archived_at === archived && states.includes(job.state));
+  }, [data, stateFilter]);
+
   const jobTypes = useMemo(() => {
     const types = data.map((item) => item.job_type);
 
@@ -69,12 +71,19 @@ export default function JobPostingsTable({
   const columns: ColumnDef<IJobPost>[] = useMemo(
     () => [
       {
-        accessorKey: "status",
+        accessorKey: "state",
         header: "Status",
         cell: ({ row }) => (
-          <JobStatusSwitch job={row.original} disabled={publishable ? !publishable.includes(row.original.id) : false} />
+          <JobStateMenu
+            key={`${row.original.id}:${row.original.state}`}
+            job={row.original}
+            viewer={{
+              canPublish: publishable ? publishable.includes(row.original.id) : true,
+              canApprove: approvable.includes(row.original.id),
+              approvalRequired,
+            }}
+          />
         ),
-        filterFn: "equals",
       },
       {
         accessorKey: "title",
@@ -128,11 +137,19 @@ export default function JobPostingsTable({
         ),
       },
       {
+        id: "hired",
+        header: "Hired",
+        cell: ({ row }) => (
+          <div className="text-sm tabular-nums" aria-label={`Hired ${hires[row.original.id] ?? 0} of ${row.original.openings}`}>
+            {hires[row.original.id] ?? 0} / {row.original.openings}
+          </div>
+        ),
+      },
+      {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
           <ModifiedLink
-            prefetch={false}
             href={`/company/job-posts/${row.original.id}`}
             passHref
           >
@@ -144,14 +161,16 @@ export default function JobPostingsTable({
         ),
       },
     ],
-    [publishable],
+    [publishable, approvable, approvalRequired, hires],
   );
 
   return (
     <DataTable
-      data={data}
+      data={rows}
       columns={columns}
       noun="job postings"
+      externalFiltersActive={stateFilter !== DEFAULT_JOB_STATE_FILTER}
+      onClearFilters={() => setStateFilter(DEFAULT_JOB_STATE_FILTER)}
       filters={(table) => (
         <>
           <TextFilter table={table} column="title" placeholder="Job Title" />
@@ -162,11 +181,11 @@ export default function JobPostingsTable({
             options={jobTypes}
             label="Filter by job type"
           />
-          <SelectFilter
-            table={table}
-            column="status"
-            allLabel="All Statuses"
-            options={JOB_STATUSES}
+          <FilterSelect
+            value={stateFilter === "all" ? null : stateFilter}
+            onChange={(value) => setStateFilter((value as JobStateFilter | null) ?? "all")}
+            allLabel="All"
+            options={JOB_STATE_FILTERS.filter((f) => f.value !== "all").map((f) => ({ value: f.value, label: f.label }))}
             label="Filter by status"
           />
         </>

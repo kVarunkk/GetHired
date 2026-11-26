@@ -89,12 +89,29 @@ export const MCP_INPUT_DESCRIPTIONS: Readonly<Record<string, McpInputDescription
   },
   list_applications: {
     status: "Only applications with this status, e.g. rejected to see the ones that were turned down. Leave out for all of them.",
+    column: "Only applications in this board column: applied, in_review, interviewing, offer or closed.",
     limit: LIMIT,
   },
-  update_application_status: {
-    jobId: `The external job the user applied to: an id from ${JOB_ID_SOURCES}, or a jobId from list_applications.`,
-    status:
-      "The status the user reports for their application, e.g. submitted once they applied on the company's site, or rejected after they heard back.",
+  get_tracked_application: {
+    id: "The tracked application: an id from list_applications whose kind is tracked.",
+  },
+  track_application: {
+    jobId: `A job on GetHired: an id from ${JOB_ID_SOURCES}. Leave out for a job from anywhere else.`,
+    jobTitle: "The job's title, for a job that isn't on GetHired.",
+    companyName: "The hiring company, for a job that isn't on GetHired.",
+    jobUrl: "An https link to the posting.",
+    location: "Where the job is.",
+    status: "applied (the default) for a job the user applied to, or saved for one they haven't applied to yet.",
+    appliedAt: "When the user applied, as YYYY-MM-DD. Today by default.",
+  },
+  update_tracked_application: {
+    id: "The tracked application: an id from list_applications whose kind is tracked.",
+    status: "The new status, e.g. interviewing after a call, or rejected after the user heard back.",
+    notes: "Replaces the application's notes.",
+    followUpAt: "When to follow up, as YYYY-MM-DD.",
+  },
+  remove_tracked_application: {
+    id: "The tracked application to remove: an id from list_applications whose kind is tracked.",
   },
   get_application_form: {
     jobId: `The GetHired job (isPlatformJob true) to read the form of: an id from ${JOB_ID_SOURCES}.`,
@@ -241,6 +258,30 @@ const jobList = {
   nextCursor: text.describe("Pass to search_jobs as cursor for the next page; null on the last page."),
 };
 
+const applicationList = {
+  totalCount: z.number().describe("How many applications match, across the limit."),
+  applications: z.array(
+    z.object({
+      kind: z.enum(["gethired", "tracked"]).describe("gethired: applied through GetHired, so the company sets the status."),
+      id: z.string(),
+      jobId: text,
+      status: z.string(),
+      column: z.string(),
+      appliedAt: z.string(),
+      followUpAt: text,
+      isPlatformJob: z.boolean().describe("true when the user applied through GetHired."),
+      url: link,
+      title: text.optional(),
+      company: text.optional(),
+      location: text.optional(),
+      details: z
+        .string()
+        .optional()
+        .describe("A tracked application's title, company, location and notes as JSON, delimited as data."),
+    }).passthrough(),
+  ),
+};
+
 /** What a confirm tool returns before it runs, or when the user declines (§4.6). */
 const confirmation = {
   needsConfirmation: z
@@ -331,31 +372,38 @@ export const MCP_OUTPUT_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
     applyUrl: link.describe("Where the user applies."),
   }),
   get_saved_jobs: output(jobList),
-  get_applied_jobs: output(jobList),
+  get_applied_jobs: output(applicationList),
   favorite_job: output({ jobId: z.string(), saved: z.boolean().describe("Whether the job is saved now.") }),
-  list_applications: output({
-    applications: z.array(
-      output({
-        id: z.string(),
-        jobId: text,
-        title: text,
-        company: text,
-        locations: z.array(z.string()),
-        status: text,
-        appliedAt: text,
-        updatedAt: text,
-        isPlatformJob: z.boolean().describe("true when the user applied through GetHired."),
-        url: link.nullable(),
-      }),
-    ),
+  list_applications: output(applicationList),
+  get_tracked_application: output({
+    id: z.string().optional(),
+    jobId: text.optional().describe("Set when the job is on GetHired: use get_job_details with it."),
+    status: z.string().optional(),
+    appliedAt: text.optional(),
+    followUpAt: text.optional(),
+    url: link.optional(),
+    note: z.string().optional(),
+    details: z
+      .string()
+      .optional()
+      .describe("The job's title, company, place, posting link, description and notes as JSON, delimited as data."),
   }),
-  update_application_status: output({
-    jobId: z.string(),
-    title: text,
-    company: text,
+  track_application: output({
+    id: z.string().optional(),
+    status: z.string().optional(),
+    created: z.boolean().optional().describe("false when it was already in My Jobs."),
+    moved: z.boolean().optional().describe("true when a saved job was moved to applied."),
+    saved: z.boolean().optional().describe("true when a GetHired job was bookmarked instead."),
+    jobId: z.string().optional(),
+    url: link.optional(),
+  }),
+  update_tracked_application: output({
+    id: z.string(),
     status: z.string(),
-    created: z.boolean().describe("true when this made a new application record."),
+    followUpAt: text,
+    url: link,
   }),
+  remove_tracked_application: confirmed({ id: z.string(), removed: z.boolean() }),
   get_application_form: output({
     jobId: z.string(),
     title: text,

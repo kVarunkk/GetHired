@@ -1,8 +1,9 @@
 import { Children, isValidElement, type ReactNode } from "react";
 
 // Radix Select doesn't run in jsdom. This stands in for "@/components/ui/select"
-// with a native <select> that takes the trigger's id and aria-label, so
-// getByLabelText and fireEvent.change keep working:
+// (or "@/components/ui/responsive-select") with a native <select> that takes
+// the trigger's id and aria-label, so getByLabelText and fireEvent.change keep
+// working:
 //   vi.mock("@/components/ui/select", () => import("@/test/utils/select-mock"));
 
 type TriggerProps = { id?: string; "aria-label"?: string; children?: ReactNode };

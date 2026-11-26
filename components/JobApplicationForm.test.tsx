@@ -2,20 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { toast } from "react-hot-toast";
 import { mutate } from "swr";
-import {
-  attachToApplicationAction,
-  listShareableSignalsAction,
-} from "@/app/actions/applications/attachments";
 import { submitApplicationAction } from "@/app/actions/submit-application";
 import type { ApplicationForm } from "@/helpers/jobs/application-form-schema";
 import { standardAnswerKey } from "@/helpers/applications/validate-answers";
 import JobApplicationForm from "./JobApplicationForm";
 import { ApplicationSourceProvider } from "./jobs/ApplicationSourceContext";
 
-vi.mock("@/app/actions/applications/attachments", () => ({
-  attachToApplicationAction: vi.fn(),
-  listShareableSignalsAction: vi.fn(),
-}));
 vi.mock("@/app/actions/submit-application", () => ({ submitApplicationAction: vi.fn() }));
 vi.mock("@/app/actions/revalidate-tag", () => ({ revalidateCacheAction: vi.fn() }));
 vi.mock("react-hot-toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -41,7 +33,6 @@ vi.mock("./ResumeSourceSelector", () => ({
 const USER_ID = "a0000000-0000-4000-8000-000000000001";
 const RESUME_ID = "f0000000-0000-4000-8000-000000000001";
 const APPLICATION_ID = "e0000000-0000-4000-8000-000000000001";
-const SESSION_ID = "15000000-0000-4000-8000-000000000001";
 const ALL_JOBS_ID = "b1000000-0000-4000-8000-000000000001";
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
@@ -51,96 +42,65 @@ const JOB = jobWith({});
 
 const onSuccess = vi.fn();
 
-async function goToStep2(job = JOB, props: { source?: "careers_page"; sourceRef?: string } = {}) {
+async function renderForm(job = JOB, props: { source?: "careers_page"; sourceRef?: string } = {}) {
   render(<JobApplicationForm jobPost={job} userId={USER_ID} onSuccess={onSuccess} {...props} />);
-  fireEvent.click(await screen.findByRole("button", { name: /next step/i }));
+  await screen.findByRole("button", { name: /submit application/i });
 }
 
 const submit = () => fireEvent.click(screen.getByRole("button", { name: /submit application/i }));
 
 beforeEach(() => {
+  // jsdom has no scrollIntoView; a failed submit scrolls to the first error.
+  Element.prototype.scrollIntoView = vi.fn();
   vi.clearAllMocks();
   window.localStorage.clear();
   vi.mocked(submitApplicationAction).mockResolvedValue({ ok: true, applicationId: APPLICATION_ID, creditsDeducted: true, interview: null });
-  vi.mocked(attachToApplicationAction).mockResolvedValue({ ok: true, attachmentId: "x", analysisQueued: true });
-  vi.mocked(listShareableSignalsAction).mockResolvedValue({
-    sessions: [{ id: SESSION_ID, label: "Backend mock", endedAt: "2026-10-10T00:00:00.000Z" }],
-  });
 });
 
-describe("JobApplicationForm share step (ORT-064, OR-REQ-030/033)", () => {
-  it("lists completed sessions, offers no review, and shares nothing unless picked", async () => {
-    await goToStep2();
-    expect(await screen.findByRole("button", { name: /backend mock/i })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByText("Share with this company (optional)")).toBeInTheDocument();
-    expect(screen.queryByText("Resume review")).not.toBeInTheDocument();
+describe("JobApplicationForm one page (APT-003, AP-REQ-030/031/040)", () => {
+  it("has Resume and Questions sections, no steps and no share section", async () => {
+    await renderForm();
+    expect(screen.getByRole("heading", { name: "Resume" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Questions" })).toBeInTheDocument();
+    expect(screen.getByText("No extra questions for this role")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /next step/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/share with this company/i)).not.toBeInTheDocument();
+  });
+
+  it("shows every error on one submit: a missing resume and each field", async () => {
+    profile.value = { ...profile.value, resumes: [] };
+    await renderForm(jobWith({ questions: ["Why us?", "Notice period?"] }));
 
     submit();
 
-    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-    expect(attachToApplicationAction).not.toHaveBeenCalled();
+    expect(await screen.findAllByText("This question is required.")).toHaveLength(2);
+    expect(screen.getByText("Select a resume or upload a new one.")).toBeInTheDocument();
+    expect(submitApplicationAction).not.toHaveBeenCalled();
+    await waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: "center" }));
+    profile.value = { ...profile.value, resumes: [{ id: RESUME_ID, is_primary: true }] };
   });
 
-  it("attaches the picked session after the application is created", async () => {
-    await goToStep2();
-    fireEvent.click(await screen.findByRole("button", { name: /backend mock/i }));
-
+  it("passes the screening invite to onSuccess", async () => {
+    const interview = { id: "a1000000-0000-4000-8000-000000000001", durationMinutes: 15, deadlineAt: "2026-10-24T12:00:00.000Z" };
+    vi.mocked(submitApplicationAction).mockResolvedValue({ ok: true, applicationId: APPLICATION_ID, creditsDeducted: true, interview });
+    await renderForm();
     submit();
-
-    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-    expect(attachToApplicationAction).toHaveBeenCalledWith({
-      applicationId: APPLICATION_ID,
-      kind: "interview_session",
-      interviewSessionId: SESSION_ID,
-    });
-  });
-
-  it("a failed share doesn't fail the application", async () => {
-    vi.mocked(attachToApplicationAction).mockResolvedValue({ ok: false, error: "nope" });
-    await goToStep2();
-    fireEvent.click(await screen.findByRole("button", { name: /backend mock/i }));
-
-    submit();
-
-    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-    expect(toast.success).toHaveBeenCalledWith("Application sent!");
-    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/couldn't share/));
-  });
-
-  it("doesn't share when the application fails", async () => {
-    vi.mocked(submitApplicationAction).mockResolvedValue({ ok: false, error: "You've already applied to this job." });
-    await goToStep2();
-    fireEvent.click(await screen.findByRole("button", { name: /backend mock/i }));
-
-    submit();
-
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("You've already applied to this job."));
-    expect(attachToApplicationAction).not.toHaveBeenCalled();
-    expect(onSuccess).not.toHaveBeenCalled();
-  });
-
-  it("suggests a mock interview for this job when there's none to share", async () => {
-    vi.mocked(listShareableSignalsAction).mockResolvedValue({ sessions: [] });
-    await goToStep2();
-
-    const link = await screen.findByRole("link", { name: /stand out: share a 10-minute ai interview/i });
-    expect(link).toHaveAttribute("href", `/interview?create=true&jobUrl=${encodeURIComponent("/jobs/b1000000-0000-4000-8000-000000000001")}`);
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(interview));
   });
 });
 
 describe("JobApplicationForm legacy questions (CPT-000 characterisation, kept through CPT-016)", () => {
   const LEGACY = jobWith({ questions: ["Why us?", "Notice period?"] });
 
-  beforeEach(() => vi.mocked(listShareableSignalsAction).mockResolvedValue({ sessions: [] }));
 
   it("shows one text box per question, each labelled with the question", async () => {
-    await goToStep2(LEGACY);
+    await renderForm(LEGACY);
     expect(screen.getByLabelText("Why us?").tagName).toBe("TEXTAREA");
     expect(screen.getByLabelText("Notice period?").tagName).toBe("TEXTAREA");
   });
 
   it("requires every answer", async () => {
-    await goToStep2(LEGACY);
+    await renderForm(LEGACY);
     fireEvent.change(screen.getByLabelText("Why us?"), { target: { value: "Mission" } });
 
     submit();
@@ -150,7 +110,7 @@ describe("JobApplicationForm legacy questions (CPT-000 characterisation, kept th
   });
 
   it("submits the answers by question id and refreshes credits", async () => {
-    await goToStep2(LEGACY);
+    await renderForm(LEGACY);
     fireEvent.change(screen.getByLabelText("Why us?"), { target: { value: "Mission" } });
     fireEvent.change(screen.getByLabelText("Notice period?"), { target: { value: "30 days" } });
 
@@ -167,12 +127,10 @@ describe("JobApplicationForm legacy questions (CPT-000 characterisation, kept th
 });
 
 describe("JobApplicationForm with a new resume file", () => {
-  beforeEach(() => vi.mocked(listShareableSignalsAction).mockResolvedValue({ sessions: [] }));
 
   it("sends the file with the application instead of uploading it first", async () => {
     render(<JobApplicationForm jobPost={JOB} userId={USER_ID} onSuccess={onSuccess} />);
     fireEvent.click(await screen.findByRole("button", { name: /upload a new resume/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next step/i }));
 
     submit();
 
@@ -186,7 +144,6 @@ describe("JobApplicationForm with a new resume file", () => {
     vi.mocked(submitApplicationAction).mockResolvedValue({ ok: false, error: "Insufficient AI credits for resume upload." });
     render(<JobApplicationForm jobPost={JOB} userId={USER_ID} onSuccess={onSuccess} />);
     fireEvent.click(await screen.findByRole("button", { name: /upload a new resume/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next step/i }));
 
     submit();
 
@@ -206,10 +163,9 @@ describe("JobApplicationForm typed forms (CPT-016, AF-REQ-006)", () => {
   };
   const TYPED = jobWith({ application_form: FORM });
 
-  beforeEach(() => vi.mocked(listShareableSignalsAction).mockResolvedValue({ sessions: [] }));
 
   it("renders the typed form, prefills from the profile and skips empty optional fields", async () => {
-    await goToStep2(TYPED, { source: "careers_page", sourceRef: "linkedin" });
+    await renderForm(TYPED, { source: "careers_page", sourceRef: "linkedin" });
     expect(screen.getByLabelText("LinkedIn profile")).toHaveValue("https://linkedin.com/in/ada");
 
     fireEvent.click(screen.getByRole("radio", { name: "Yes" }));
@@ -231,7 +187,7 @@ describe("JobApplicationForm typed forms (CPT-016, AF-REQ-006)", () => {
         <JobApplicationForm jobPost={TYPED} userId={USER_ID} onSuccess={onSuccess} />
       </ApplicationSourceProvider>,
     );
-    fireEvent.click(await screen.findByRole("button", { name: /next step/i }));
+    await screen.findByRole("button", { name: /submit application/i });
     fireEvent.click(screen.getByRole("radio", { name: "Yes" }));
     submit();
 
@@ -245,7 +201,7 @@ describe("JobApplicationForm typed forms (CPT-016, AF-REQ-006)", () => {
       error: "Check your answers and try again.",
       fieldErrors: { [id(1)]: "Answer yes or no." },
     });
-    await goToStep2(TYPED);
+    await renderForm(TYPED);
     fireEvent.click(screen.getByRole("radio", { name: "No" }));
 
     submit();
@@ -256,50 +212,16 @@ describe("JobApplicationForm typed forms (CPT-016, AF-REQ-006)", () => {
 
   it("keeps a draft per job and clears it once sent", async () => {
     const first = render(<JobApplicationForm jobPost={TYPED} userId={USER_ID} onSuccess={onSuccess} />);
-    fireEvent.click(await screen.findByRole("button", { name: /next step/i }));
+    await screen.findByRole("button", { name: /submit application/i });
     fireEvent.change(screen.getByLabelText(/Nickname/), { target: { value: "Ada" } });
     first.unmount();
 
-    await goToStep2(TYPED);
+    await renderForm(TYPED);
     expect(screen.getByLabelText(/Nickname/)).toHaveValue("Ada");
 
     fireEvent.click(screen.getByRole("radio", { name: "Yes" }));
     submit();
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
     expect(window.localStorage.getItem(`gethired:apply-draft:${ALL_JOBS_ID}`)).toBeNull();
-  });
-});
-
-describe("JobApplicationForm screening interview card (SIT-050)", () => {
-  const INTERVIEW_ID = "a1000000-0000-4000-8000-000000000001";
-
-  it("shows the interview card when the application comes with an invite", async () => {
-    vi.mocked(submitApplicationAction).mockResolvedValue({
-      ok: true,
-      applicationId: APPLICATION_ID,
-      creditsDeducted: true,
-      interview: { id: INTERVIEW_ID, durationMinutes: 15, deadlineAt: "2026-10-24T12:00:00.000Z" },
-    });
-    await goToStep2();
-    submit();
-
-    expect(await screen.findByText(/ai interview/i, { selector: "h3" })).toBeInTheDocument();
-    expect(screen.getByText(/15-minute/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /start now/i })).toHaveAttribute(
-      "href",
-      `/interview/screening/${INTERVIEW_ID}`,
-    );
-    // The dialog stays open on the card until the applicant picks.
-    expect(onSuccess).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole("button", { name: /do it later/i }));
-    expect(onSuccess).toHaveBeenCalledTimes(1);
-  });
-
-  it("closes straight away without an invite", async () => {
-    await goToStep2();
-    submit();
-    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-    expect(screen.queryByRole("link", { name: /start now/i })).not.toBeInTheDocument();
   });
 });

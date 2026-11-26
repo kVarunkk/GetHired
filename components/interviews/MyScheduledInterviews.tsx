@@ -31,8 +31,8 @@ export default function MyScheduledInterviews({ interviews }: { interviews: MySc
   };
 
   return (
-    <section className="mt-8">
-      <h3 className="mb-4 text-lg font-semibold tracking-tight">Upcoming interviews</h3>
+    <section className="flex flex-col gap-3">
+      <h2 className="text-lg font-semibold tracking-tight">Upcoming interviews</h2>
       <ul className="divide-y rounded-xl border">
         {interviews.map((interview) => {
           const waiting = interview.status === "awaiting_candidate";

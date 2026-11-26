@@ -5,8 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProgress } from "react-transition-progress";
 import { User } from "@supabase/supabase-js";
-import BookmarkJobSearch from "./BookmarkJobSearch";
-import JobsPageDropdown from "./JobsPageDropdown";
 import { Loader2 } from "lucide-react";
 import { activeTabFrom, type TalentListTab } from "@/utils/talent-list-tabs";
 import ScrollMaskX from "./ScrollMaskX";
@@ -18,7 +16,6 @@ export function ClientTabs({
   user,
   isCompanyUser,
   isAISearch,
-  applicationStatusFilter,
   page,
   talentLists = [],
   children,
@@ -26,7 +23,6 @@ export function ClientTabs({
   user: User | null;
   isCompanyUser: boolean;
   isAISearch: boolean;
-  applicationStatusFilter?: string | false;
   page: "jobs" | "profiles" | "companies";
   /** The company's talent lists, shown as tabs after Saved (profiles page). */
   talentLists?: TalentListTab[];
@@ -78,51 +74,8 @@ export function ClientTabs({
   return (
     <>
       <Tabs value={activeTab}>
-        {user ? (
+        {user && page !== "jobs" ? (
           <div className="flex items-center justify-between flex-wrap gap-4 py-6">
-            {!isCompanyUser && !isAISearch && page === "jobs" && (
-              <div className="flex min-w-0 max-w-full items-center gap-2">
-                <ScrollMaskX revealSelector='[role="tab"][data-state="active"]'>
-                  <TabsList className="!my-0">
-                    {!applicationStatusFilter && (
-                      <TabsTrigger
-                        value="all"
-                        className="p-0"
-                        onClick={() => handleTabChange("all")}
-                      >
-                        <span className="py-1 px-2">
-                          All<span className="max-[400px]:hidden"> Jobs</span>
-                        </span>
-                      </TabsTrigger>
-                    )}
-                    {!applicationStatusFilter && (
-                      <TabsTrigger
-                        value="saved"
-                        className="p-0"
-                        onClick={() => handleTabChange("saved")}
-                      >
-                        <span className="py-1 px-2">
-                          Saved<span className="max-[400px]:hidden"> Jobs</span>
-                        </span>
-                      </TabsTrigger>
-                    )}
-                    <TabsTrigger
-                      value="applied"
-                      className="p-0"
-                      onClick={() => handleTabChange("applied")}
-                    >
-                      <span className="py-1 px-2">
-                        Applied<span className="max-[400px]:hidden"> Jobs</span>
-                      </span>
-                    </TabsTrigger>
-                  </TabsList>
-                </ScrollMaskX>
-                {isPending && (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                )}
-              </div>
-            )}
-
             {!isCompanyUser && !isAISearch && page === "companies" && (
               <div className="flex min-w-0 max-w-full items-center gap-2">
                 <ScrollMaskX revealSelector='[role="tab"][data-state="active"]'>
@@ -198,13 +151,6 @@ export function ClientTabs({
                 {isPending && (
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 )}
-              </div>
-            )}
-
-            {page === "jobs" && !isCompanyUser && (
-              <div className="flex items-center gap-2">
-                <BookmarkJobSearch user={user} />
-                <JobsPageDropdown user={user} />
               </div>
             )}
           </div>

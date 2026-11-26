@@ -70,6 +70,15 @@ export const PERMISSION_CATALOG = [
     deny: "open, pause or close job posts",
   },
   {
+    key: "jobs.approve",
+    group: "Jobs",
+    label: "Approve job posts",
+    description: "Approve a job post before it opens for the first time, when the company requires approval.",
+    scopable: true,
+    requires: ["jobs.view", "jobs.publish"],
+    deny: "approve job posts",
+  },
+  {
     key: "jobs.delete",
     group: "Jobs",
     label: "Delete job posts",

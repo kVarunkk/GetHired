@@ -84,7 +84,7 @@ The guards make direct REST calls with a user's own token harmless:
 | `applications` | users insert and delete only external rows (`job_post_id` null); platform applications are inserted by the service role inside `submitApplicationAction`; answers, form snapshot and resume are fixed after submit |
 | `invitations` | read and mark-as-shown only |
 | `interviews` | `charged_session_ids` belongs to the charge RPC |
-| `bookmarks` | at most 5 active job alerts per user |
+| `bookmarks` (job alerts) | at most 5 active alerts per user; `filters`, `filters_key`, `last_sent_at`, `last_checked_at` are written only by the server (guard trigger `protect_bookmarks_alert_columns`) |
 
 ## P4. Job ingestion and embeddings (scraped jobs + company posts)
 

@@ -1,17 +1,16 @@
 import "server-only";
-import {
-  applicationPersonOrNull,
-  COMPANY_CANDIDATE_PERSON_COLUMNS,
-} from "@/helpers/applications/application-person";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
 import { Constants, type Database } from "@/utils/types/database.types";
 import { STAGE_KIND_LABELS, type PipelineStageKind } from "./status-map";
 
-/** PL-REQ-011: an application waiting in Applied this long, untouched, needs attention. */
+/**
+ * PL-REQ-011: an application waiting in Applied this long, untouched, needs
+ * attention. `get_company_funnel` and `company_dashboard_summary` use the same
+ * number.
+ */
 export const NEEDS_ATTENTION_DAYS = 3;
-const NEEDS_ATTENTION_LIMIT = 20;
 const DAY_MS = 86_400_000;
 
 /** The funnel's steps, in order. Rejected and On hold sit outside it. */
@@ -72,8 +71,10 @@ export async function getJobFunnel(
   });
   if (error) throw new Error(`Failed to load the funnel: ${error.message}`);
   if (data === null) return null;
-  const funnel = RpcFunnel.parse(data);
+  return toJobFunnel(RpcFunnel.parse(data));
+}
 
+function toJobFunnel(funnel: z.infer<typeof RpcFunnel>): JobFunnel {
   let previousReached: number | null = null;
   const stages = funnel.stages.map((s): FunnelStage => {
     let conversion: number | null = null;
@@ -130,121 +131,63 @@ export type CompanyFunnel = {
   needsAttention: NeedsAttention[];
 };
 
+const RpcCompanyFunnel = z.object({
+  stages: z.array(
+    z.object({
+      kind: z.enum(Constants.public.Enums.pipeline_stage_kind),
+      count: z.number(),
+    }),
+  ),
+  jobs: z.array(
+    z.object({ job_post_id: z.string(), title: z.string(), funnel: RpcFunnel }),
+  ),
+  needs_attention: z.array(
+    z.object({
+      application_id: z.string(),
+      name: z.string(),
+      job_post_id: z.string(),
+      job_title: z.string(),
+      stage_entered_at: z.string(),
+    }),
+  ),
+});
+
 /**
- * The dashboard's view (PL-REQ-011): every active job's funnel, the totals,
- * and the applications waiting in Applied for more than 3 days with no event
- * since they got there.
+ * The company's view (PL-REQ-011), in one `get_company_funnel` call
+ * (CD-REQ-026): every active job's funnel, the totals, and the applications
+ * waiting in Applied for more than 3 days with no event since they got there.
+ * The database takes the company from the session and counts only the jobs
+ * the member may view. Throws on an RPC error.
  */
 export async function getCompanyFunnel(
-  {
-    supabase,
-    company,
-  }: { supabase: SupabaseClient<Database>; company: MyCompany },
+  { supabase }: { supabase: SupabaseClient<Database>; company: MyCompany },
   now: Date = new Date(),
 ): Promise<CompanyFunnel> {
-  const { data: jobs, error } = await supabase
-    .from("job_postings")
-    .select("id, title")
-    .eq("company_id", company.id)
-    .eq("status", "active")
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(`Failed to load the jobs: ${error.message}`);
+  const { data, error } = await supabase.rpc("get_company_funnel");
+  if (error) throw new Error(`Failed to load the funnel: ${error.message}`);
+  if (data === null) return { stages: [], jobs: [], needsAttention: [] };
+  const funnel = RpcCompanyFunnel.parse(data);
 
-  const funnels = await Promise.all(
-    (jobs ?? []).map((job) => getJobFunnel(supabase, job.id)),
-  );
-
-  const totals = new Map<string, CompanyFunnel["stages"][number]>();
-  const perJob: CompanyFunnel["jobs"] = [];
-  (jobs ?? []).forEach((job, i) => {
-    const funnel = funnels[i];
-    if (!funnel) return;
-    perJob.push({
-      jobPostId: job.id,
-      title: job.title,
-      total: funnel.total,
-      stages: funnel.stages,
-    });
-    for (const s of funnel.stages) {
-      const entry = totals.get(s.kind) ?? {
-        stageId: s.kind,
-        name: STAGE_KIND_LABELS[s.kind],
-        kind: s.kind,
-        count: 0,
-      };
-      entry.count += s.count;
-      totals.set(s.kind, entry);
-    }
-  });
-
-  const kindOrder = Constants.public.Enums.pipeline_stage_kind;
+  const totals = new Map(funnel.stages.map((s) => [s.kind, s.count]));
   return {
-    stages: kindOrder.flatMap((kind) => {
-      const entry = totals.get(kind);
-      return entry ? [entry] : [];
+    stages: Constants.public.Enums.pipeline_stage_kind.flatMap((kind) => {
+      const count = totals.get(kind);
+      return count === undefined
+        ? []
+        : [{ stageId: kind, name: STAGE_KIND_LABELS[kind], kind, count }];
     }),
-    jobs: perJob,
-    needsAttention: await loadNeedsAttention(supabase, company, now),
-  };
-}
-
-async function loadNeedsAttention(
-  supabase: SupabaseClient<Database>,
-  company: MyCompany,
-  now: Date,
-): Promise<NeedsAttention[]> {
-  const cutoff = new Date(
-    now.getTime() - NEEDS_ATTENTION_DAYS * DAY_MS,
-  ).toISOString();
-  const { data: apps, error } = await supabase
-    .from("applications")
-    .select(
-      `id, stage_entered_at, applicant_user_id, company_candidate_id, user_info(full_name), ${COMPANY_CANDIDATE_PERSON_COLUMNS}, job_postings!inner(id, title, company_id), pipeline_stages!inner(kind)` as const,
-    )
-    .eq("job_postings.company_id", company.id)
-    // BI-REQ-042: a merged import shows through the application it joined.
-    .is("merged_into_application_id", null)
-    .eq("pipeline_stages.kind", "applied")
-    .lt("stage_entered_at", cutoff)
-    .order("stage_entered_at", { ascending: true })
-    .limit(NEEDS_ATTENTION_LIMIT * 2);
-  if (error)
-    throw new Error(`Failed to load waiting applications: ${error.message}`);
-  if (!apps || apps.length === 0) return [];
-
-  const { data: events, error: eventsError } = await supabase
-    .from("application_events")
-    .select("application_id, type, created_at")
-    .in(
-      "application_id",
-      apps.map((a) => a.id),
-    )
-    .neq("type", "applied");
-  if (eventsError)
-    throw new Error(`Failed to load events: ${eventsError.message}`);
-
-  const enteredAt = new Map(apps.map((a) => [a.id, a.stage_entered_at]));
-  const touched = new Set(
-    (events ?? [])
-      .filter(
-        (e) =>
-          e.type !== "applied" &&
-          e.application_id &&
-          e.created_at > enteredAt.get(e.application_id)!,
-      )
-      .map((e) => e.application_id),
-  );
-
-  return apps
-    .filter((a) => !touched.has(a.id))
-    .slice(0, NEEDS_ATTENTION_LIMIT)
-    .map((a) => ({
-      applicationId: a.id,
-      name: applicationPersonOrNull(a)?.name ?? "Applicant",
-      jobPostId: a.job_postings.id,
-      jobTitle: a.job_postings.title,
+    jobs: funnel.jobs.map((job) => {
+      const { total, stages } = toJobFunnel(job.funnel);
+      return { jobPostId: job.job_post_id, title: job.title, total, stages };
+    }),
+    needsAttention: funnel.needs_attention.map((row) => ({
+      applicationId: row.application_id,
+      name: row.name,
+      jobPostId: row.job_post_id,
+      jobTitle: row.job_title,
       daysInApplied: Math.floor(
-        (now.getTime() - Date.parse(a.stage_entered_at)) / DAY_MS,
+        (now.getTime() - Date.parse(row.stage_entered_at)) / DAY_MS,
       ),
-    }));
+    })),
+  };
 }

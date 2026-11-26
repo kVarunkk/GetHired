@@ -61,6 +61,26 @@ describe("GET /api/current-user (company)", () => {
     });
   });
 
+  it("counts the jobs waiting for an approver's approval (JL-REQ-022)", async () => {
+    vi.mocked(getPlanSummary).mockResolvedValue(null as never);
+    db.queue("job_postings", { data: null, count: 2, error: null });
+
+    const body = await (await GET()).json();
+
+    expect(body.profile.pendingJobApprovals).toBe(2);
+    expect(db.callsFor("job_postings")[0].chain).toContainEqual({ method: "eq", args: ["state", "pending_approval"] });
+  });
+
+  it("counts none for a member without jobs.approve, with no query", async () => {
+    signInAs(MEMBER_A);
+    vi.mocked(getPlanSummary).mockResolvedValue(null as never);
+
+    const body = await (await GET()).json();
+
+    expect(body.profile.pendingJobApprovals).toBe(0);
+    expect(db.callsFor("job_postings")).toHaveLength(0);
+  });
+
   it("reports a missing profile for a company user without a membership", async () => {
     db = createSupabaseMock({ user: MEMBER_A.user });
     vi.mocked(createClient).mockResolvedValue(db.client);
@@ -70,5 +90,37 @@ describe("GET /api/current-user (company)", () => {
 
     expect(body.profile).toBeNull();
     expect(db.callsFor("company_info")).toHaveLength(0);
+  });
+});
+
+describe("GET /api/current-user (applicant)", () => {
+  const APPLICANT = { id: "00000000-0000-4000-8000-0000000000a1", app_metadata: { type: "applicant" } };
+
+  beforeEach(() => {
+    db = createSupabaseMock({ user: APPLICANT });
+    vi.mocked(createClient).mockResolvedValue(db.client);
+    db.queue("user_info", {
+      data: { user_id: APPLICANT.id, applications: [{ all_jobs_id: "j-legacy", status: "submitted" }] },
+      error: null,
+    });
+  });
+
+  it("returns the user's tracked board jobs next to their applications, without saved cards (AT-REQ-034)", async () => {
+    db.queue("tracked_applications", { data: [{ id: "t1", all_jobs_id: "j1", status: "in_review" }], error: null });
+
+    const body = await (await GET()).json();
+
+    expect(body.profile.applications).toEqual([{ all_jobs_id: "j-legacy", status: "submitted" }]);
+    expect(body.profile.tracked_applications).toEqual([{ id: "t1", all_jobs_id: "j1", status: "in_review" }]);
+    const chain = db.callsFor("tracked_applications")[0].chain;
+    expect(chain).toContainEqual({ method: "eq", args: ["user_id", APPLICANT.id] });
+    expect(chain).toContainEqual({ method: "neq", args: ["status", "saved"] });
+  });
+
+  it("still answers when the tracked read fails", async () => {
+    db.queue("tracked_applications", { data: null, error: { message: "down" } });
+    const body = await (await GET()).json();
+    expect(body.profile.tracked_applications).toEqual([]);
+    expect(body.profile.applications).toHaveLength(1);
   });
 });

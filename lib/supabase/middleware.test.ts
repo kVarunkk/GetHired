@@ -5,23 +5,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { SignJWT } from "jose";
-import { headers } from "next/headers";
 import { updateSession } from "./middleware";
 import { mockUser } from "@/test/utils/auth";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
-vi.mock("next/headers", () => ({ headers: vi.fn() }));
+// Routing only: get-middleware-auth.test.ts covers how the user is read.
+vi.mock("@/lib/supabase/get-middleware-auth", () => ({
+  getMiddlewareAuth: async () => ({
+    user: await getUserFromRequest(),
+    withSessionCookies: <T>(response: T) => response,
+  }),
+}));
 vi.mock("@/utils/utils", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/utils/utils")>()),
   hasEnvVars: true,
 }));
 
-const request = (path: string, init: { headers?: Record<string, string> } = {}) => {
-  const req = new NextRequest(new URL(path, "http://localhost:3000"), init);
-  vi.mocked(headers).mockResolvedValue(req.headers as never);
-  return req;
-};
+const request = (path: string, init: { headers?: Record<string, string> } = {}) =>
+  new NextRequest(new URL(path, "http://localhost:3000"), init);
 
 const redirectTarget = (res: Response) => {
   const location = res.headers.get("location");
@@ -461,6 +463,17 @@ describe("middleware: candidate unsubscribe links (BIT-060, BI-CON-004)", () => 
   });
 });
 
+describe("middleware: job alert pause links (JAT-033, JA-REQ-036)", () => {
+  it("lets the pause page and the one-click POST through without a session", async () => {
+    expect(passesThrough(await updateSession(request("/unsubscribe/alert/abc.def")))).toBe(true);
+    expect(passesThrough(await updateSession(request("/api/job-alerts/pause/abc.def")))).toBe(true);
+  });
+
+  it("keeps the bare paths private", async () => {
+    expect(redirectTarget(await updateSession(request("/unsubscribe/alert/")))).toMatch(/^\/auth\/login/);
+  });
+});
+
 describe("middleware: claim links (BIT-064, BI-REQ-041)", () => {
   it("lets a claim link through without a session, so it can offer sign-up", async () => {
     expect(passesThrough(await updateSession(request("/claim/abcdefghijklmnopqrstuvwxyz")))).toBe(true);
@@ -586,6 +599,28 @@ describe("middleware: markdown versions of public pages", () => {
   it("leaves other .md paths to the usual rules", async () => {
     expect(redirectTarget(await updateSession(request("/dashboard.md")))).toMatch(/^\/auth\/login/);
   });
+
+  it("serves markdown from the page's own URL when the client asks for it", async () => {
+    const md = { headers: { accept: "text/markdown" } };
+    expect(rewriteTarget(await updateSession(request("/", md)))).toBe("/md/index");
+    expect(rewriteTarget(await updateSession(request("/hire", md)))).toBe("/md/hire");
+    expect(rewriteTarget(await updateSession(request("/blog/some-post", md)))).toBe("/md/blog/some-post");
+    expect(getUserFromRequest).not.toHaveBeenCalled();
+  });
+
+  it("keeps serving HTML to browsers and varies on Accept", async () => {
+    const browser = { headers: { accept: "text/html,application/xhtml+xml,*/*;q=0.8" } };
+    const res = await updateSession(request("/hire", browser));
+    expect(rewriteTarget(res)).toBeNull();
+    expect(res.headers.get("vary")).toContain("Accept");
+  });
+
+  it("doesn't negotiate other pages", async () => {
+    const md = { headers: { accept: "text/markdown" } };
+    const res = await updateSession(request("/dashboard", md));
+    expect(rewriteTarget(res)).toBeNull();
+    expect(res.headers.get("vary")).toBeNull();
+  });
 });
 
 describe("middleware: Google Calendar routes (IVT-035, IV-SEC-007)", () => {
@@ -606,5 +641,31 @@ describe("middleware: interview calendar crons (IVT-046, IVT-047)", () => {
     for (const path of ["/api/updates/interviews/sync", "/api/updates/interviews/feedback", "/api/worker/interview-calendar-ops"]) {
       expect(passesThrough(await updateSession(request(path))), path).toBe(true);
     }
+  });
+});
+
+describe("My Jobs (AT-REQ-010)", () => {
+  it.each(["/my-jobs", "/my-jobs/applications/10000000-0000-4000-8000-000000000001"])(
+    "sends signed-out visitors from %s to login",
+    async (path) => {
+      vi.mocked(getUserFromRequest).mockResolvedValue(null);
+      expect(redirectTarget(await updateSession(request(path)))).toBe(`/auth/login?returnTo=${encodeURIComponent(path)}`);
+    },
+  );
+
+  it.each(["/my-jobs", "/my-jobs/applications/abc"])("sends a company from %s to switch accounts", async (path) => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(company);
+    expect(redirectTarget(await updateSession(request(path)))).toBe("/switch-to-applicant");
+  });
+
+  it("lets an applicant in", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue(applicant);
+    const res = await updateSession(request("/my-jobs"));
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("sends a user without a role to login", async () => {
+    vi.mocked(getUserFromRequest).mockResolvedValue({ ...applicant, app_metadata: {} });
+    expect(redirectTarget(await updateSession(request("/my-jobs")))).toBe("/auth/login");
   });
 });

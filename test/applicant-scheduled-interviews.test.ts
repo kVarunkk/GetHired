@@ -25,7 +25,7 @@ describe("applicants never read the interview tables (IVT-064)", () => {
 
   it("the applicant's helper and the dashboard use my_scheduled_interviews", () => {
     expect(readSource(APPLICANT_HELPER)).toContain('"my_scheduled_interviews"');
-    expect(readSource("app/dashboard/page.tsx")).toContain("listMyScheduledInterviews");
+    expect(readSource("app/dashboard/(overview)/page.tsx")).toContain("listMyScheduledInterviews");
   });
 
   it("the pattern catches a table read", () => {

@@ -1,3 +1,4 @@
+import { CLOSE_REASON_LABEL, JOB_STATE_LABEL, isJobPostState, isManualCloseReason } from "@/helpers/jobs/job-states";
 import { diffRole, describeGrantChange, describeLimitChange, toGrantMap, toLimits } from "./role-diff";
 
 // RP-REQ-015: audit log entries as `list_company_audit` returns them, and how
@@ -19,6 +20,7 @@ export const AUDIT_ACTIONS = [
   "invite.accepted",
   "job.assigned",
   "job.unassigned",
+  "job.state_changed",
   "candidates.imported",
   "candidates.deleted",
 ] as const;
@@ -33,7 +35,7 @@ export const AUDIT_ACTION_GROUP_LABEL: Record<AuditActionGroup, string> = {
   member: "Members",
   owner: "Owners",
   invite: "Invites",
-  job: "Hiring teams",
+  job: "Jobs and hiring teams",
   candidates: "Candidates",
 };
 
@@ -197,6 +199,19 @@ export function describeAuditEntry(entry: AuditEntry): { text: string; details: 
     }
     case "job.unassigned":
       return { text: `removed ${str(before.name) ?? "a member"} from the hiring team for ${target}${via}`, details: [] };
+    case "job.state_changed": {
+      // JL-REQ-008: the move, and the reason for a close. Notes stay on the job's history.
+      const label = (v: unknown) => (isJobPostState(v) ? JOB_STATE_LABEL[v].toLowerCase() : "another state");
+      const reason = isManualCloseReason(after.reason) || after.reason === "deadline"
+        ? after.reason === "deadline"
+          ? "Closing date passed"
+          : CLOSE_REASON_LABEL[after.reason as keyof typeof CLOSE_REASON_LABEL]
+        : null;
+      return {
+        text: `moved ${target} from ${label(before.state)} to ${label(after.state)}${via}`,
+        details: reason ? [`Reason: ${reason}`] : [],
+      };
+    }
     // No names or emails are logged for candidates (BI-REQ-007): counts only.
     case "candidates.imported": {
       const n = (key: string) => (typeof after[key] === "number" ? (after[key] as number) : 0);

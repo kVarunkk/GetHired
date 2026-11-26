@@ -3,22 +3,105 @@
 
 import { agentPromptHref, COMPANY_AGENT_PATH } from "@/helpers/agent/prompt-draft";
 import { MCP_PATH } from "@/helpers/mcp/config";
+import {
+  COMPANY_FAQS,
+  COMPANY_LANDING_PAGES,
+  COMPANY_PAGE_KEYS,
+  COMPANY_PAGE_SEO,
+  type CompanyPageKey,
+} from "./company-pages";
 
 export const SITE_URL = "https://gethired.devhub.co.in";
 
 export const IMPROVE_RESUME_PROMPT = "Improve my resume for a job I like. Ask me which job first.";
 
-export const FAQS = {
+const BASE_FAQS = {
+  "job-search-agent": [
+    {
+      question: "What is the GetHired job search agent?",
+      answer:
+        "An AI assistant you chat with to run your whole job search. It searches openings in any field, finds roles matched to your resume, saves jobs, tracks your applications, improves your resume and sets up mock interviews.",
+    },
+    {
+      question: "What kinds of jobs can the agent search for?",
+      answer:
+        "Any kind of role. Describe what you want in plain English, or filter by job title, location, job type, salary and experience. It searches listings from company career sites and hiring platforms such as Greenhouse, Workday and Ashby.",
+    },
+    {
+      question: "Can the agent apply to jobs for me?",
+      answer:
+        "On jobs posted on GetHired, yes. It reads the application form, fills it from your profile and what you tell it, shows you the answers and the resume it will send, and submits only after you approve. For jobs on other sites it links you to the company's page and can track the application.",
+    },
+    {
+      question: "Will the agent make things up?",
+      answer:
+        "It only shows jobs and companies that come from real search results, and it never invents answers to application questions or facts in your resume. It asks before changing your profile or using AI credits.",
+    },
+    {
+      question: "Can I use the agent from Claude or Cursor?",
+      answer:
+        "Yes. The GetHired MCP server connects the same job search, resume and application tools to Claude, Cursor, VS Code or any MCP client. Setup is at gethired.devhub.co.in/mcp-server.",
+    },
+  ],
+  "application-tracker": [
+    {
+      question: "What is the GetHired application tracker?",
+      answer:
+        "A place to keep every job you're pursuing: saved jobs you're considering and applications you've sent, shown on a board by stage or as a list, with a page for each application.",
+    },
+    {
+      question: "Can I track jobs I applied to outside GetHired?",
+      answer:
+        "Yes. Add a job from any company site or job board and update its status as you go. For jobs you applied to through GetHired, the company's status updates appear on your tracker automatically.",
+    },
+    {
+      question: "Can I ask the agent about my applications?",
+      answer:
+        "Yes. Ask it to show your applications, saved jobs and upcoming interviews, or to update the status of an application, in plain English.",
+    },
+    {
+      question: "Does the tracker work with the rest of GetHired?",
+      answer:
+        "Yes. Jobs you save while searching land in your tracker, and the agent can pick the right resume or set up a mock interview for any job on it.",
+    },
+  ],
+  "job-alerts": [
+    {
+      question: "What are GetHired job alerts?",
+      answer:
+        "Email alerts for a job search you care about. Set the role, location and other filters once, and GetHired emails you new matching jobs so you don't re-run the search.",
+    },
+    {
+      question: "How often do job alerts arrive?",
+      answer:
+        "Daily or weekly, as you choose. An alert is only sent when there are new jobs posted since the last one.",
+    },
+    {
+      question: "Will an alert show jobs I already applied to?",
+      answer:
+        "No. Jobs you have already applied to are left out of the email.",
+    },
+    {
+      question: "Can I pause or stop an alert?",
+      answer:
+        "Yes. Every alert email has a one-click pause link, and you can turn alerts on or off in your settings.",
+    },
+  ],
   "job-search": [
+    {
+      question: "What is GetHired?",
+      answer:
+        "GetHired is an AI job search platform for every kind of role. You chat with an agent that searches openings across industries, matches them to your resume, tracks your applications, reviews your CV and runs mock interviews. Companies use the same platform to post jobs, rank matched candidates, screen applicants with AI interviews and run a lightweight ATS.",
+    },
     {
       question: "What is the GetHired agent?",
       answer:
         "An AI assistant you chat with. It searches jobs, finds roles matched to your resume, tracks your applications, improves your resume and sets up mock interviews. It asks before changing your profile, and AI features use credits as shown in your account.",
     },
     {
-      question: "How can I find relevant tech jobs on GetHired?",
+      question: "How can I find relevant jobs on GetHired?",
       answer:
-        "Search current developer and tech openings, then narrow results by job title, location, job type, salary, and experience.",
+        "Search current openings in any field, then narrow results by job title, location, job type, salary, and experience. Or tell the agent what you want in plain English and it searches for you.",
     },
     {
       question: "How does AI help with my job search?",
@@ -37,6 +120,16 @@ export const FAQS = {
     },
   ],
   hiring: [
+    {
+      question: "What is the GetHired recruiter agent?",
+      answer:
+        "An AI recruiter you chat with. It drafts and publishes job posts, shows candidates matched to a role, screens applicants with AI interviews and moves people through your hiring pipeline, with a lightweight ATS built in.",
+    },
+    {
+      question: "How much does GetHired cost for companies?",
+      answer:
+        "Posting a job, seeing matched candidates and screening applicants are free. Paid plans add volume, team seats and AI interviews, and usage beyond a plan's allowances is paid with credits. Current plans and prices are at gethired.devhub.co.in/pricing/companies.",
+    },
     {
       question: "How can a company post a job on GetHired?",
       answer:
@@ -181,6 +274,8 @@ export const FAQS = {
     },
   ],
 } as const;
+
+export const FAQS = { ...BASE_FAQS, ...COMPANY_FAQS } as const;
 
 export type FAQTopic = keyof typeof FAQS;
 
@@ -332,27 +427,43 @@ export type LandingPageCopy = {
   /** Set on the MCP landing pages: their capabilities and the server URL. */
   mcp?: McpAudience;
   faq: FAQTopic;
+  /**
+   * A feature page's own section (what it does, in card order), shown in place
+   * of "How we help", and its message for the agent (the hero's pill link).
+   */
+  features?: {
+    heading: string;
+    subheading: string;
+    items: readonly { name: string; description: string }[];
+    agentPrompt: string;
+    /** "company" sends the pill to the recruiter agent and shows the hiring copy around it. */
+    audience?: "company";
+  };
   /** Extra links for the markdown version only. */
   related?: MarketingLink[];
 };
 
 export type LandingPageKey =
   | "home"
+  | "job-search-agent"
+  | "application-tracker"
+  | "job-alerts"
   | "hire"
   | "mcp-server"
   | "mcp-server-companies"
   | "extension"
   | "ai-interview"
-  | "ai-resume-checker";
+  | "ai-resume-checker"
+  | CompanyPageKey;
 
 export const LANDING_PAGES: Record<LandingPageKey, LandingPageCopy> = {
   home: {
     path: "/",
     description:
-      "Find developer and tech jobs, including remote roles. Search current openings by role and location, then use GetHired's AI tools to focus your job search.",
+      "Find jobs in every field, including remote roles. Search current openings by role, location and salary, then use GetHired's AI agent to match jobs to your resume, track applications and prepare for interviews.",
     heading: "Your AI Agent for the Job Hunt",
     subheading: (jobCount) =>
-      `Tell it what you're after. It searches ${jobCount.toLocaleString()} tech jobs, matches them to your resume, reviews your CV and preps you for interviews, all in one chat.`,
+      `Tell it what you're after. It searches ${jobCount.toLocaleString()} jobs across every kind of role, matches them to your resume, tracks your applications, reviews your CV and preps you for interviews, all in one chat.`,
     ctas: [
       { label: "Chat with the agent", href: "/agent" },
       { label: "Hire Talent", href: "/hire" },
@@ -361,16 +472,182 @@ export const LANDING_PAGES: Record<LandingPageKey, LandingPageCopy> = {
     faq: "job-search",
     related: [
       { label: "Browse jobs", href: "/jobs" },
+      { label: "AI job search agent", href: "/ai-job-search-agent" },
+      { label: "Job application tracker", href: "/application-tracker" },
+      { label: "Job alerts", href: "/job-alerts" },
       { label: "AI resume checker", href: "/ai-resume-checker" },
       { label: "AI interview practice", href: "/ai-interview" },
       { label: "MCP server", href: "/mcp-server" },
     ],
   },
+  "job-search-agent": {
+    path: "/ai-job-search-agent",
+    description:
+      "An AI agent for your whole job search, in any field. Describe the job you want, and it searches openings, matches them to your resume, tracks applications and preps you for interviews.",
+    heading: "An AI Agent for Your Whole Job Search",
+    subheading: (jobCount) =>
+      `Describe the job you want in plain English. The agent searches ${jobCount.toLocaleString("en-US")} jobs across every kind of role, ranks the best fits for your resume, and helps you apply, track and prepare.`,
+    ctas: [
+      { label: "Chat with the agent", href: "/agent" },
+      { label: "Browse jobs", href: "/jobs" },
+    ],
+    faq: "job-search-agent",
+    features: {
+      heading: "What the agent does for you",
+      subheading:
+        "One chat replaces the tabs, spreadsheets and copy-pasting of a typical job search.",
+      agentPrompt: "Find jobs that match my profile, best matches first.",
+      items: [
+        {
+          name: "Searches in plain English",
+          description:
+            "Say \"remote marketing manager jobs in London\" or \"part-time nursing roles near me\". It turns that into a search with the right titles, locations, salary and experience filters.",
+        },
+        {
+          name: "Matches jobs to your resume",
+          description:
+            "It reads your resume and profile, keeps jobs above your experience level out, and ranks the roles that fit you first.",
+        },
+        {
+          name: "Applies with your approval",
+          description:
+            "For jobs on GetHired it fills the application from your profile, shows you every answer and the resume it will send, and submits only after you approve.",
+        },
+        {
+          name: "Tracks your search",
+          description:
+            "Saved jobs, applications and interviews, all in one place you can ask about at any time.",
+        },
+        {
+          name: "Improves your resume and preps interviews",
+          description:
+            "It tailors your resume to a job you like, suggests changes you choose from, and sets up AI mock interviews with feedback.",
+        },
+        {
+          name: "Remembers what you want",
+          description:
+            "Your preferred roles, locations, salary and deal-breakers carry over between chats, and it never makes up jobs, companies or answers.",
+        },
+      ],
+    },
+    related: [
+      { label: "Job application tracker", href: "/application-tracker" },
+      { label: "Job alerts", href: "/job-alerts" },
+      { label: "AI resume checker", href: "/ai-resume-checker" },
+      { label: "AI interview practice", href: "/ai-interview" },
+      { label: "MCP server", href: "/mcp-server" },
+    ],
+  },
+  "application-tracker": {
+    path: "/application-tracker",
+    description:
+      "Track every job application in one place. Save jobs, add roles from any site, follow each application on a board or list, and ask the GetHired agent for a status update.",
+    heading: "A Job Application Tracker for Every Job Search",
+    subheading: () =>
+      "Keep every job you're considering and every application you've sent in one place, from any company or job board, and see where each one stands.",
+    ctas: [
+      {
+        label: "Track my applications",
+        href: agentPromptHref("Show my applications, saved jobs and upcoming interviews"),
+      },
+      { label: "Browse jobs", href: "/jobs" },
+    ],
+    faq: "application-tracker",
+    features: {
+      heading: "Everything about your applications, in one place",
+      subheading:
+        "Stop piecing your search together from spreadsheets, bookmarks and email.",
+      agentPrompt: "Show my applications, saved jobs and upcoming interviews",
+      items: [
+        {
+          name: "Board and list views",
+          description:
+            "See your applications as columns by stage, or as a list you can scan quickly.",
+        },
+        {
+          name: "A Saved tab for jobs you're weighing",
+          description:
+            "Save a job while you search and come back to it when you're ready to apply.",
+        },
+        {
+          name: "Add a job from anywhere",
+          description:
+            "Applied on a company's own site or another job board? Add the job and track it with the rest.",
+        },
+        {
+          name: "A page for each application",
+          description:
+            "Keep a job's details and status together instead of hunting through old emails.",
+        },
+        {
+          name: "Updates from companies",
+          description:
+            "When you apply through GetHired, the company's status changes show up on your tracker.",
+        },
+        {
+          name: "Ask the agent",
+          description:
+            "\"Which applications are waiting on me?\" or \"Mark the Acme application as interviewing.\" Ask in plain English.",
+        },
+      ],
+    },
+    related: [
+      { label: "AI job search agent", href: "/ai-job-search-agent" },
+      { label: "Job alerts", href: "/job-alerts" },
+      { label: "AI interview practice", href: "/ai-interview" },
+    ],
+  },
+  "job-alerts": {
+    path: "/job-alerts",
+    description:
+      "Get new jobs in your inbox. Set the role, location and filters you care about, and GetHired emails you daily or weekly when matching jobs are posted.",
+    heading: "Job Alerts for the Roles You Actually Want",
+    subheading: () =>
+      "Set your search once. GetHired emails you the new jobs that match, daily or weekly, and leaves out the ones you've already applied to.",
+    ctas: [
+      { label: "Browse jobs", href: "/jobs" },
+      { label: "Chat with the agent", href: "/agent" },
+    ],
+    faq: "job-alerts",
+    features: {
+      heading: "How job alerts work",
+      subheading:
+        "New roles are posted every day. Alerts mean you see them without searching again.",
+      agentPrompt: "Find jobs that match my profile, best matches first.",
+      items: [
+        {
+          name: "Alerts for any search",
+          description:
+            "Pick a job title, location, job type, salary or experience level, and turn that search into an alert.",
+        },
+        {
+          name: "Daily or weekly",
+          description:
+            "Choose how often to hear from us. An email goes out only when there are new jobs.",
+        },
+        {
+          name: "Only new, only relevant",
+          description:
+            "Each email lists jobs posted since the last one, and leaves out jobs you've already applied to.",
+        },
+        {
+          name: "Pause in one click",
+          description:
+            "Every email has a pause link, so a busy week or a new job never means unsubscribing from everything.",
+        },
+      ],
+    },
+    related: [
+      { label: "AI job search agent", href: "/ai-job-search-agent" },
+      { label: "Job application tracker", href: "/application-tracker" },
+      { label: "Browse jobs", href: "/jobs" },
+    ],
+  },
   hire: {
     path: "/hire",
     description:
-      "Post tech roles, review applicants, and use AI recruiting tools to help identify qualified candidates with GetHired.",
-    heading: "Your AI Recruiter for Tech Hiring",
+      "Post jobs for any role, review applicants, and use AI recruiting tools to help identify qualified candidates with GetHired.",
+    heading: "Your AI Recruiter for Every Hire",
     subheading: () =>
       "Tell it who you need. It drafts your job post, ranks matched candidates, screens applicants with AI interviews and keeps your pipeline moving, all in one chat.",
     ctas: [
@@ -381,6 +658,10 @@ export const LANDING_PAGES: Record<LandingPageKey, LandingPageCopy> = {
     faq: "hiring",
     related: [
       { label: "Plans and pricing", href: "/pricing/companies" },
+      ...COMPANY_PAGE_KEYS.map((key) => ({
+        label: COMPANY_PAGE_SEO[key].title,
+        href: COMPANY_LANDING_PAGES[key].path,
+      })),
       { label: "MCP server for hiring teams", href: "/mcp-server/companies" },
     ],
   },
@@ -390,7 +671,7 @@ export const LANDING_PAGES: Record<LandingPageKey, LandingPageCopy> = {
       "Use GetHired from Claude, Cursor, VS Code or any MCP client: search and save jobs, apply, and manage your resumes, reviews and mock interviews with the GetHired MCP server.",
     heading: "GetHired in your AI assistant",
     subheading: (jobCount) =>
-      `Connect Claude, Cursor, VS Code or any MCP client to your GetHired account. Search ${jobCount.toLocaleString("en-US")} tech jobs, apply, and work on your resume without leaving the chat.`,
+      `Connect Claude, Cursor, VS Code or any MCP client to your GetHired account. Search ${jobCount.toLocaleString("en-US")} jobs, apply, and work on your resume without leaving the chat.`,
     ctas: [
       { label: "Set up your client", href: "/mcp" },
       { label: "For hiring teams", href: "/mcp-server/companies" },
@@ -446,15 +727,19 @@ export const LANDING_PAGES: Record<LandingPageKey, LandingPageCopy> = {
   "ai-resume-checker": {
     path: "/ai-resume-checker",
     description:
-      "Get a deep semantic analysis of your resume. GetHired's AI Resume Checker optimizes your technical presence for modern ATS systems to help you land more interviews.",
+      "Get a deep semantic analysis of your resume. GetHired's AI Resume Checker tailors your resume to a job and to modern ATS systems to help you land more interviews, in any field.",
     heading: "AI Resume Checker",
     subheading: () =>
-      "Optimizing your technical presence for the modern ATS. Join the list to get early access to deep semantic analysis.",
+      "Paste a job or pick one you like. The agent checks your resume against it, suggests changes and lets you choose which to apply.",
     ctas: [{ label: "Improve My Resume", href: agentPromptHref(IMPROVE_RESUME_PROMPT) }],
     howWeHelp: "applicant",
     faq: "resume",
   },
+  ...COMPANY_LANDING_PAGES,
 };
+
+/** The /hire/<feature> pages, one per thing a hiring team can do. */
+export const COMPANY_FEATURE_PATHS = COMPANY_PAGE_KEYS.map((key) => COMPANY_LANDING_PAGES[key].path);
 
 export const FOUNDER = { name: "Varun", url: "https://varun.devhub.co.in" };
 export const CONTACT_EMAIL = "varun@devhub.co.in";
@@ -470,7 +755,7 @@ export const ABOUT_PARAGRAPHS = [
 ];
 
 export const ABOUT_DESCRIPTION =
-  "GetHired is an AI job platform for tech jobs: an agent that searches openings, matches them to your resume, reviews your CV and preps you for interviews, plus hiring tools for companies.";
+  "GetHired is an AI job search platform for every kind of role: an agent that searches openings, matches them to your resume, reviews your CV and preps you for interviews, plus hiring tools for companies.";
 export const CONTACT_DESCRIPTION =
   "Questions, feedback or partnership ideas? Get in touch with the GetHired team.";
 export const PRICING_DESCRIPTION =
@@ -507,7 +792,46 @@ export function pageForMarkdownPath(pathname: string): string | null {
   if (!pathname.endsWith(".md")) return null;
   if (pathname === "/index.md") return "/";
   const page = pathname.slice(0, -".md".length);
-  if (page !== "/" && MARKDOWN_PAGES.includes(page)) return page;
-  if (/^\/blog\/[a-z0-9-]+$/.test(page)) return page;
+  if (page !== "/" && isMarkdownPage(page)) return page;
   return null;
+}
+
+function isMarkdownPage(page: string) {
+  return MARKDOWN_PAGES.includes(page) || /^\/blog\/[a-z0-9-]+$/.test(page);
+}
+
+/**
+ * The page that has a markdown version served from its own URL when the client
+ * asks for markdown (`Accept: text/markdown`), or null. The same pages as
+ * `pageForMarkdownPath`, plus the home page. Responses for these pages vary on
+ * `Accept`.
+ */
+export function pageForContentNegotiation(pathname: string): string | null {
+  if (pathname === "/") return "/";
+  return isMarkdownPage(pathname) ? pathname : null;
+}
+
+/**
+ * Whether an `Accept` header prefers markdown over HTML: `text/markdown` is
+ * listed with a quality above zero, and HTML isn't ranked at least as high.
+ * Browsers list `text/html` first, so they never match. A wildcard-only header
+ * (curl, many HTTP libraries) doesn't either.
+ */
+export function acceptsMarkdown(accept: string | null | undefined): boolean {
+  if (!accept) return false;
+  let markdown = 0;
+  let html = 0;
+  for (const part of accept.split(",")) {
+    const [type, ...params] = part.trim().toLowerCase().split(";");
+    const q = params
+      .map((p) => p.trim())
+      .find((p) => p.startsWith("q="));
+    const quality = q ? Number.parseFloat(q.slice(2)) : 1;
+    const value = Number.isFinite(quality) ? quality : 0;
+    if (type.trim() === "text/markdown") markdown = Math.max(markdown, value);
+    if (type.trim() === "text/html" || type.trim() === "application/xhtml+xml") {
+      html = Math.max(html, value);
+    }
+  }
+  return markdown > 0 && markdown > html;
 }

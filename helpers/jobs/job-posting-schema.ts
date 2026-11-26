@@ -1,9 +1,13 @@
 import { z } from "zod";
 import { applicationFormSchema } from "./application-form-schema";
 import { currencyCodeSchema } from "@/helpers/currency/currencies";
+import { closingDateSchema } from "./closing-date";
 
 export const MAX_JOB_POSTING_QUESTIONS = 10;
 export const MAX_JOB_POSTING_QUESTION_CHARS = 300;
+/** JL-REQ-011, the same bounds as `job_postings_openings_check`. */
+export const MIN_OPENINGS = 1;
+export const MAX_OPENINGS = 500;
 
 const amount = z.number().finite().min(0);
 const optionalAmount = amount.optional();
@@ -63,6 +67,20 @@ export const jobPostingInputSchema = z
     // JP-REQ-003: the job's pipeline. Omitted on a new job = the company default.
     // An edit changes it only while the job has no applications.
     pipeline_id: z.string().uuid("Pipeline not found.").optional(),
+    // JL-REQ-011: how many people the job hires. Omitted = unchanged (1 on a new job).
+    openings: z
+      .number()
+      .int("Openings must be a whole number.")
+      .min(MIN_OPENINGS, `Openings must be at least ${MIN_OPENINGS}.`)
+      .max(MAX_OPENINGS, `Openings can be at most ${MAX_OPENINGS}.`)
+      .optional(),
+    // JL-REQ-014: the day the job closes itself, in the company's time zone.
+    // Omitted = unchanged, null = cleared. The save path checks the date
+    // against today and the job's state (`closingDateError`).
+    closes_at: closingDateSchema.nullable().optional(),
+    // JL-REQ-023: who can find the job. Omitted = unchanged (public on a new job).
+    // link_only needs JOB_LINK_ONLY_ENABLED (checked on save).
+    visibility: z.enum(["public", "link_only"]).optional(),
   })
   .strict()
   .refine((v) => v.salary_currency !== "" || (!v.min_salary && !v.max_salary), {

@@ -31,7 +31,7 @@ import { moveApplications, previewMove } from "@/helpers/pipeline/move";
 import { queueJobScreenings } from "@/helpers/matching/queue-screenings";
 import { queueJobPostingRelevance } from "@/helpers/profiles/queue-job-relevance";
 import { inviteApplicants } from "@/helpers/interview/screening/invite";
-import { setJobPostStatus } from "@/helpers/jobs/set-job-post-status";
+import { setJobPostState } from "@/helpers/jobs/set-job-post-state";
 import { upsertJobPosting } from "@/helpers/jobs/upsert-job-posting";
 import { loadRecruiterJobSummaries } from "@/helpers/agent/roles/recruiter/context";
 import { eventCaptureServerException } from "@/helpers/posthog/EventCaptureServerException";
@@ -72,10 +72,7 @@ vi.mock("@/helpers/interview/screening/invite", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/helpers/interview/screening/invite")>()),
   inviteApplicants: vi.fn(),
 }));
-vi.mock("@/helpers/jobs/set-job-post-status", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/helpers/jobs/set-job-post-status")>()),
-  setJobPostStatus: vi.fn(),
-}));
+vi.mock("@/helpers/jobs/set-job-post-state", () => ({ setJobPostState: vi.fn() }));
 vi.mock("@/helpers/jobs/upsert-job-posting", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/helpers/jobs/upsert-job-posting")>()),
   upsertJobPosting: vi.fn(),
@@ -907,12 +904,13 @@ describe("confirm tools (RMT-046, RMCP-REQ-005)", () => {
       },
     },
     {
-      tool: "set_job_post_status",
-      args: { jobPostId: JOB_A1, status: "active" },
-      spend: () => vi.mocked(setJobPostStatus),
+      tool: "set_job_post_state",
+      args: { jobPostId: JOB_A1, state: "open" },
+      spend: () => vi.mocked(setJobPostState),
       preview: () =>
-        supabase.queue("job_postings", { data: { id: JOB_A1, title: "Frontend Engineer", status: "inactive" }, error: null }),
-      run: () => vi.mocked(setJobPostStatus).mockResolvedValueOnce({ ok: true } as never),
+        supabase.queue("job_postings", { data: { id: JOB_A1, title: "Frontend Engineer", state: "draft" }, error: null }),
+      run: () =>
+        vi.mocked(setJobPostState).mockResolvedValueOnce({ ok: true, changed: true, from: "draft", state: "open", jobId: "j1" } as never),
     },
     {
       tool: "create_job_post",
@@ -979,7 +977,7 @@ describe("confirm tools (RMT-046, RMCP-REQ-005)", () => {
       confirmation_token: first.result.structuredContent.confirmation_token,
     });
 
-    expect(confirmed.result.structuredContent).toMatchObject({ status: "inactive" });
+    expect(confirmed.result.structuredContent).toMatchObject({ state: "draft" });
     expect(vi.mocked(upsertJobPosting).mock.calls[0][1].values).not.toHaveProperty("status", "active");
   });
 

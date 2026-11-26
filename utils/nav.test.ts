@@ -53,3 +53,20 @@ describe("signed-out horizontal navbar", () => {
     expect(ids).toEqual(expect.arrayContaining(["jobs", "interview", "hire", "cvreview"]));
   });
 });
+
+describe("Discover and My Jobs (AT-REQ-011)", () => {
+  it("shows Discover (/jobs) and then My Jobs (/my-jobs) to applicants, and never 'Jobs'", () => {
+    const items = getNavItemsByPath("/my-jobs", false, mockUser({ type: "applicant" }));
+    const ids = items.map((item) => item.id);
+
+    expect(ids.indexOf("my-jobs")).toBe(ids.indexOf("jobs") + 1);
+    expect(items.find((item) => item.id === "jobs")).toMatchObject({ label: "Discover", href: "/jobs" });
+    expect(items.find((item) => item.id === "my-jobs")).toMatchObject({ label: "My Jobs", href: "/my-jobs" });
+    expect(items.map((item) => item.label)).not.toContain("Jobs");
+  });
+
+  it("uses the sidebar layout on My Jobs", () => {
+    expect(getNavbarVairantByPath("/my-jobs")).toBe("vertical");
+    expect(getNavbarVairantByPath("/my-jobs/applications/abc")).toBe("vertical");
+  });
+});

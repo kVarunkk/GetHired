@@ -1,13 +1,13 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/utils/utils";
-import { User } from "@supabase/supabase-js";
+import type { SessionUser } from "@/lib/supabase/get-session-user";
 
 function AvatarComponent({
   user,
   open,
   isCompanyUser,
 }: {
-  user: User | null;
+  user: SessionUser | null;
   open?: boolean;
   isCompanyUser: boolean;
 }) {

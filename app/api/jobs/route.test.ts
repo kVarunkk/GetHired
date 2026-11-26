@@ -47,10 +47,10 @@ const DEFAULT_QUERY_ARGS = {
   isFavoriteTabActive: false,
   isAppliedJobsTabActive: false,
   userEmbedding: null,
-  applicationStatus: null,
   createdAfter: null,
   jobEmbedding: null,
   relevanceSearchType: null,
+  excludeJobIds: null,
 };
 
 let supabase: SupabaseMock;
@@ -161,8 +161,8 @@ describe("GET /api/jobs: listing and filters", () => {
     );
   });
 
-  it("maps tab=applied and applicationStatus", async () => {
-    await get({ tab: "applied", applicationStatus: "reviewed|selected" });
+  it("maps tab=applied", async () => {
+    await get({ tab: "applied" });
 
     expect(buildQuery).toHaveBeenCalledWith(
       supabase.client,
@@ -170,7 +170,6 @@ describe("GET /api/jobs: listing and filters", () => {
       expect.objectContaining({
         isFavoriteTabActive: false,
         isAppliedJobsTabActive: true,
-        applicationStatus: "reviewed|selected",
       }),
     );
   });

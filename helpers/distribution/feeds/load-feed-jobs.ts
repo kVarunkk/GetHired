@@ -5,6 +5,7 @@ import { jobPageUrl } from "@/helpers/distribution/index-ping";
 import type { FeedJob, FeedJobType } from "./feed-job";
 import { cityOf, cleanFeedTitle, indianState, isoCurrency, logoTypeOf, NO_SALARY_TEXT, salaryBound, textToHtml, type LogoType } from "./normalize";
 import type { FeedPlatform } from "./build";
+import { endOfDayIn } from "@/helpers/companies/time-zone";
 
 /**
  * MPT-020: the jobs of one feed. Reads public columns only (never the form
@@ -29,7 +30,13 @@ export type FeedJobRow = {
   max_experience: number | null;
   created_at: string;
   updated_at: string;
-  company_info: { name: string | null; logo_url: string | null; headquarters?: string | null } | null;
+  closes_at?: string | null;
+  company_info: {
+    name: string | null;
+    logo_url: string | null;
+    headquarters?: string | null;
+    time_zone?: string | null;
+  } | null;
 };
 
 const JOB_TYPES: Record<FeedJobRow["job_type"], FeedJobType> = {
@@ -91,7 +98,16 @@ export function toFeedJob(row: FeedJobRow, logoTypes: ReadonlyMap<string, LogoTy
     category: row.department,
     postedAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
+    closesOn: row.closes_at ?? null,
+    expiresAt: expiresAtOf(row),
   };
+}
+
+/** JL-REQ-016: the end of the closing date in the company's time zone. */
+function expiresAtOf(row: FeedJobRow): Date | null {
+  if (!row.closes_at) return null;
+  const iso = endOfDayIn(row.closes_at, row.company_info?.time_zone);
+  return iso ? new Date(iso) : null;
 }
 
 /** Supabase returns at most 1000 rows a query, so every read pages or chunks. */
@@ -153,9 +169,11 @@ export async function loadFeedJobs(
       const { data, error } = await admin
         .from("job_postings")
         .select(
-          "job_id, title, description, location, workplace_type, job_type, department, min_salary, max_salary, salary_currency, salary_range, min_experience, max_experience, created_at, updated_at, company_info(name, logo_url, headquarters)",
+          "job_id, title, description, location, workplace_type, job_type, department, min_salary, max_salary, salary_currency, salary_range, min_experience, max_experience, created_at, updated_at, closes_at, company_info(name, logo_url, headquarters, time_zone)",
         )
         .eq("status", "active")
+        // Link-only jobs never go into a feed (JL-REQ-025).
+        .eq("visibility", "public")
         .in("company_id", ids)
         .order("id")
         .range(from, from + PAGE_SIZE - 1);

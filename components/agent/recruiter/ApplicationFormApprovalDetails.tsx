@@ -8,9 +8,6 @@ import {
   type KnockoutRule,
 } from "@/helpers/jobs/application-form-schema";
 
-/** The tools whose approval card shows the form they save. */
-export const FORM_APPROVAL_TOOLS = ["createJobPost", "updateJobPost", "saveQuestionSet"];
-
 /** "Answers No → rejects the application." */
 function describeKnockout({ fail_if, action }: KnockoutRule) {
   const when =

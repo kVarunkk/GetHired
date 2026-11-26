@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import { reportError } from "@/helpers/posthog/report-error";
@@ -22,15 +23,18 @@ export type MyScheduledInterview = Omit<MyScheduledInterviewRow, "starts_at" | "
   meeting_url: string | null;
 };
 
-/** Upcoming interviews: a link waiting for a time, or a booked time that hasn't ended. A failure reads as none. */
-export async function listMyScheduledInterviews(supabase: Db): Promise<MyScheduledInterview[]> {
+/**
+ * Upcoming interviews: a link waiting for a time, or a booked time that hasn't
+ * ended. A failure reads as none. One render reads them once.
+ */
+export const listMyScheduledInterviews = cache(async (supabase: Db): Promise<MyScheduledInterview[]> => {
   const { data, error } = await supabase.rpc("my_scheduled_interviews");
   if (error) {
     reportError("[interviews] couldn't list my scheduled interviews", error.message);
     return [];
   }
   return data ?? [];
-}
+});
 
 /**
  * The applicant's own self-scheduling page for an interview they can still

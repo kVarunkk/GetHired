@@ -17,14 +17,13 @@ import ProfileCompletionBanner from "./ProfileCompletionBanner";
 import JobDescriptionCard from "./JobDetailsCard";
 import AskAgentAboutJob from "./AskAgentAboutJob";
 import { Skeleton } from "./ui/skeleton";
-import { useSearchParams } from "next/navigation";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
 import { useMemo } from "react";
+import { jobClosingDate } from "@/helpers/jobs/jobId/jsonld";
+import { formatClosingDate } from "@/helpers/jobs/closing-date";
+import { appliedJobFor } from "@/helpers/tracker/applied-state";
 
 export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
-  const searchParams = useSearchParams();
-  const shouldApplyDialogOpen = searchParams.get("apply") === "true";
-
   const { data: currentUserData, isLoading } = useSWR(
     PROFILE_API_KEY,
     fetcher,
@@ -61,17 +60,20 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
   );
 
   const loginHref = useLoginToApplyHref(job.id);
+  // JL-REQ-016: the company's closing date, as the company wrote it.
+  const closesAt = jobClosingDate(job);
   const isCompanyUser = currentUserData?.role === "company";
   const onboardingComplete = currentUserData?.profile?.filled ?? false;
 
   const isFavorited = !!currentUserData?.profile?.user_favorites?.some(
     (fav: { job_id: string }) => fav.job_id === jobData.id,
   );
-  const activeApplication = currentUserData?.profile?.applications?.find(
-    (app: { all_jobs_id: string; status: string }) =>
-      app.all_jobs_id === jobData.id,
-  );
-  const applicationStatus = activeApplication ? activeApplication.status : null;
+  // AT-REQ-034: a tracked card (not saved) or an applications row.
+  const activeApplication = appliedJobFor(currentUserData?.profile, jobData.id, Boolean(jobData.is_platform_job));
+  const trackedId: string | null =
+    currentUserData?.profile?.tracked_applications?.find(
+      (row: { id: string; all_jobs_id: string | null }) => row.all_jobs_id === jobData.id,
+    )?.id ?? null;
 
   const initialVote =
     currentUserData?.profile?.job_feedback?.find(
@@ -115,6 +117,7 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
           </p>
           <p className="text-sm text-muted-foreground mt-2">
             Posted on {formatDate(jobData.created_at, { dateStyle: "long" }, "en-US")}
+            {closesAt && <> · Applications close on {formatClosingDate(closesAt)}</>}
           </p>
 
           {isLoading ? (
@@ -137,7 +140,6 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
               isOnboardingComplete={onboardingComplete}
               appliedJob={activeApplication}
               isJobIdPage={true}
-              isDialogOpen={shouldApplyDialogOpen}
               isLoading={isUrlsLoading}
               hasCredits={hasCredits}
             />
@@ -146,7 +148,8 @@ export default function JobClientHydrator({ job }: { job: TJobIdPageData }) {
               userId={userId}
               jobId={jobData.id}
               isCompanyUser={isCompanyUser}
-              applicationStatus={applicationStatus}
+              applicationStatus={activeApplication?.trackedStatus ?? null}
+              trackedId={trackedId}
               isPlatformJob={jobData.is_platform_job}
             />
 

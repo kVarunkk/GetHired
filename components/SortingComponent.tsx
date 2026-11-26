@@ -7,7 +7,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
+} from "./ui/responsive-select";
 import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { useProgress } from "react-transition-progress";
@@ -55,8 +55,12 @@ export default function SortingComponent({
   };
 
   return (
-    <Select value={selectValue} onValueChange={(value) => handleSorting(value)}>
-      <SelectTrigger className="max-w-[120px] lg:max-w-full">
+    <Select
+      title="Sort by"
+      value={selectValue}
+      onValueChange={(value) => handleSorting(value)}
+    >
+      <SelectTrigger className="max-w-[120px] lg:max-w-full" aria-label="Sort by">
         {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
         <SelectValue placeholder="Sort By" />
       </SelectTrigger>

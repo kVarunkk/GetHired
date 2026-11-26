@@ -15,7 +15,7 @@ import { ChevronRight, CreditCard, Menu, Wallet } from "lucide-react";
 import Brand from "./Brand";
 import { cn, fetcher, getNavItemsByPath, PROFILE_API_KEY } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
-import { User } from "@supabase/supabase-js";
+import type { SessionUser } from "@/lib/supabase/get-session-user";
 import FeedbackForm from "./FeedbackForm";
 import SocialsComponent from "./SocialsComponent";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
@@ -42,12 +42,12 @@ import ClaudeIcon from "./icons/ClaudeIcon";
 const MCP_HREF = "/mcp";
 const MCP_LABEL = "Use with Claude";
 
-/** The count next to a nav label (open outreach), hidden at 0. */
-function NavCount({ count }: { count?: number }) {
+/** The count next to a nav label (open outreach, jobs to approve), hidden at 0. */
+function NavCount({ count, label = "open" }: { count?: number; label?: string }) {
   if (!count) return null;
   return (
     <span
-      aria-label={`${count} open`}
+      aria-label={`${count} ${label}`}
       className="ml-1 inline-flex min-w-5 items-center justify-center rounded-full border border-brand/30 bg-brandSoft px-1.5 text-[11px] font-medium text-brandSoft-foreground"
     >
       {count}
@@ -60,9 +60,9 @@ export default function NavbarComponent({
   initialUser,
 }: {
   variant?: "vertical" | "horizontal";
-  initialUser: User | null;
+  initialUser: SessionUser | null;
 }) {
-  const [user, setUser] = useState<User | null>(initialUser);
+  const [user, setUser] = useState<SessionUser | null>(initialUser);
   // Statically rendered pages (home, blog, job pages) are built without
   // cookies, so a null initialUser may just mean "unknown". Until the browser
   // reports the session, render neither signed-in nor signed-out controls, so
@@ -82,13 +82,19 @@ export default function NavbarComponent({
   // BI-PERM-002: the Candidates list needs talent.view.
   const showCandidates = profile?.profile?.access?.talentView !== false;
   const openOutreach = useOpenOutreachCount(user);
+  // JL-REQ-022: jobs waiting for the viewer's approval.
+  const pendingJobApprovals: number = isCompanyUser ? (profile?.profile?.pendingJobApprovals ?? 0) : 0;
   const navItems = useMemo(() => {
     return getNavItemsByPath(pathname, isCompanyUser, user)
       .filter((item) => item.id !== "candidates" || showCandidates)
       .map((item) =>
-        item.id === "opportunities" ? { ...item, count: openOutreach } : item,
+        item.id === "opportunities"
+          ? { ...item, count: openOutreach }
+          : item.id === "job_posts"
+            ? { ...item, count: pendingJobApprovals, countLabel: "waiting for approval" }
+            : item,
       );
-  }, [pathname, user, isCompanyUser, openOutreach, showCandidates]);
+  }, [pathname, user, isCompanyUser, openOutreach, showCandidates, pendingJobApprovals]);
 
   const navbarItems = navItems.map((each) => {
     let isActive = false;
@@ -158,6 +164,7 @@ export default function NavbarComponent({
               pathname.startsWith("/interview") ||
               pathname.startsWith("/agent") ||
               pathname.startsWith("/dashboard") ||
+              pathname.startsWith("/my-jobs") ||
               pathname.startsWith("/opportunities") ||
               pathname.startsWith("/settings") ||
               pathname.startsWith("/get-started")) &&
@@ -227,7 +234,7 @@ export default function NavbarComponent({
                       )}
                     >
                       {item.label}
-                      <NavCount count={item.count} />
+                      <NavCount count={item.count} label={item.countLabel} />
                     </ModifiedLink>
                   ))}
                 </nav>
@@ -326,7 +333,7 @@ export default function NavbarComponent({
                         </span>
                         <SidebarLabel
                           open={isMenuOpen}
-                          trailing={<NavCount count={item.count} />}
+                          trailing={<NavCount count={item.count} label={item.countLabel} />}
                         >
                           {item.label}
                         </SidebarLabel>
@@ -567,7 +574,7 @@ const NavbarSheet = ({
                 onClick={() => setOpen(false)}
               >
                 {item.label}
-                <NavCount count={item.count} />
+                <NavCount count={item.count} label={item.countLabel} />
               </ModifiedLink>
             );
           })}

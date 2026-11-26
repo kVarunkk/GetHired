@@ -7,7 +7,7 @@ export async function createInterviewAction(
   interviewName: string | null,
   resumeId: string,
   jobId: string,
-) {
+): ReturnType<typeof createInterview> {
   const supabase = await createClient();
 
   const {

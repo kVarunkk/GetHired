@@ -22,6 +22,7 @@ import { PROFILE_API_KEY } from "@/utils/utils";
 import AgentHandoff from "@/components/agent/AgentHandoff";
 import { AGENT_PATH, agentPromptHref, savePendingPrompt } from "@/helpers/agent/prompt-draft";
 import { appliedQuestionPrompt, appliedSuggestions } from "@/components/AskAgentAboutJob";
+import { myJobsPath } from "@/helpers/tracker/paths";
 
 export default function JobStatusDialog({
   job,
@@ -64,9 +65,19 @@ export default function JobStatusDialog({
               <AlertDialogTitle>Application tracked</AlertDialogTitle>
               <AlertDialogDescription>
                 {job.job_name && job.company_name
-                  ? `Your application for ${job.job_name} at ${job.company_name} is in your applications.`
-                  : "Your application is in your applications."}{" "}
-                Want the agent to help with what comes next?
+                  ? `Your application for ${job.job_name} at ${job.company_name} is in `
+                  : "Your application is in "}
+                <Link
+                  href={myJobsPath({ tab: "applications" })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                  }}
+                  className="font-medium text-foreground underline underline-offset-4"
+                >
+                  My Jobs
+                </Link>
+                . Want the agent to help with what comes next?
               </AlertDialogDescription>
             </AlertDialogHeader>
 

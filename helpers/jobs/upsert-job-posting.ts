@@ -1,6 +1,7 @@
 import { reportError } from "@/helpers/posthog/report-error";
 import { revalidateTag } from "next/cache";
 import { careersCompanyTag } from "@/helpers/careers/cache-tags";
+import { JOBS_FEED_TAG } from "@/helpers/jobs/feed-tag";
 import { enqueueFeedRebuild } from "@/helpers/distribution/feed-queue";
 import { enqueueIndexPing } from "@/helpers/distribution/index-queue";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -17,12 +18,9 @@ import { screenFormFairness } from "@/helpers/jobs/form-fairness";
 import { splitForm } from "@/helpers/jobs/public-application-form";
 import type { Json } from "@/utils/types/database.types";
 import { queueJobPostingRelevance } from "@/helpers/profiles/queue-job-relevance";
-import { assertLimit } from "@/helpers/billing/entitlements";
-import {
-  EntitlementError,
-  toEntitlementActionError,
-  type EntitlementActionError,
-} from "@/helpers/billing/errors";
+import type { EntitlementActionError } from "@/helpers/billing/errors";
+import { allJobsRowFrom } from "@/helpers/jobs/all-jobs-row";
+import { isPublicState, type JobPostState } from "@/helpers/jobs/job-states";
 import { jobSnapshotHash, JOB_SNAPSHOT_COLUMNS } from "@/helpers/matching/job-snapshot";
 import { markJobResultsStale } from "@/helpers/matching/mark-stale";
 import { embedJobs } from "@/helpers/jobs/job-embedding";
@@ -30,6 +28,9 @@ import { buildSalaryRange } from "@/utils/buildSalaryRange";
 import { buildEquityRange, buildExperience } from "@/utils/formatters";
 import { setJobPipeline } from "@/helpers/pipeline/pipelines";
 import { PIPELINE_NOT_FOUND } from "@/helpers/pipeline/copy";
+import { LINK_ONLY_DISABLED, linkOnlyEnabled, type JobVisibility } from "@/helpers/jobs/link-only";
+import { closingDateError } from "@/helpers/jobs/closing-date";
+import { loadCompanyTimeZone } from "@/helpers/companies/load-time-zone";
 
 export type UpsertJobPostingResult =
   | { success: true; isUpdate: boolean; postingId: string }
@@ -41,7 +42,11 @@ export type UpsertJobPostingResult =
  * `all_jobs` row in sync (RS-SEC-001, RS-SEC-002). Shared by the server action
  * and the recruiter agent's job tools. `company` must come from the session;
  * an existing posting is looked up within it with `supabase` (the session's
- * client), and its `job_id` comes from the database. New postings are inactive.
+ * client), and its `job_id` comes from the database.
+ *
+ * New postings are drafts (D4): no `all_jobs` row and no active-post slot
+ * until `setJobPostState` opens them. Editing a draft or a pending job writes
+ * no public row, ping, feed rebuild or matching run (JL-REQ-010).
  */
 export async function upsertJobPosting(
   {
@@ -73,7 +78,10 @@ export async function upsertJobPosting(
     let existing: {
       id: string;
       job_id: string | null;
+      state: JobPostState;
       pipeline_id: string | null;
+      closes_at: string | null;
+      visibility: JobVisibility;
       title: string;
       description: string | null;
       skills: string[] | null;
@@ -86,7 +94,7 @@ export async function upsertJobPosting(
       }
       const { data, error } = await supabase
         .from("job_postings")
-        .select(`id, job_id, pipeline_id, ${JOB_SNAPSHOT_COLUMNS}`)
+        .select(`id, job_id, state, pipeline_id, closes_at, visibility, ${JOB_SNAPSHOT_COLUMNS}`)
         .eq("id", existingPostingId)
         .eq("company_id", company.id)
         .maybeSingle();
@@ -99,17 +107,31 @@ export async function upsertJobPosting(
     const pipeline = await checkPipeline(supabase, company.id, values.pipeline_id, existing);
     if (!pipeline.ok) return { success: false, error: pipeline.error };
 
-    // BL-DEC-007: the limit counts active posts. Edits never need a slot.
-    if (!existing) {
-      try {
-        await assertLimit(company.id, "active_job_posts");
-      } catch (err) {
-        if (err instanceof EntitlementError) {
-          return { success: false, ...toEntitlementActionError(err) };
-        }
-        throw err;
-      }
+    // JL-REQ-026: a link-only job can't be created before the flag is on.
+    if (
+      values.visibility === "link_only" &&
+      existing?.visibility !== "link_only" &&
+      !linkOnlyEnabled()
+    ) {
+      return { success: false, error: LINK_ONLY_DISABLED };
     }
+
+    // JL-REQ-014: a new closing date is today or later in the company's time
+    // zone, and a filled job keeps its own. Clearing is always allowed.
+    const closesAtChanged =
+      values.closes_at !== undefined && values.closes_at !== (existing?.closes_at ?? null);
+    if (closesAtChanged && values.closes_at) {
+      const closesAtError = closingDateError({
+        next: values.closes_at,
+        previous: existing?.closes_at ?? null,
+        state: existing?.state,
+        timeZone: await loadCompanyTimeZone(supabase, company.id),
+      });
+      if (closesAtError) return { success: false, error: closesAtError };
+    }
+
+    // BL-DEC-007: the limit counts open posts, so neither a new draft nor an
+    // edit needs a slot (D4); opening the job checks it.
 
     const salary_range = buildSalaryRange(
       values.min_salary,
@@ -143,6 +165,10 @@ export async function upsertJobPosting(
       ...(values.department !== undefined ? { department: values.department } : {}),
       ...(values.workplace_type !== undefined ? { workplace_type: values.workplace_type } : {}),
       ...(values.skills ? { skills: values.skills } : {}),
+      ...(values.openings !== undefined ? { openings: values.openings } : {}),
+      // reset_job_closing_reminder gives a moved date its own reminder (JL-REQ-017).
+      ...(values.visibility !== undefined ? { visibility: values.visibility } : {}),
+      ...(closesAtChanged ? { closes_at: values.closes_at } : {}),
       salary_range,
       equity_range,
       experience,
@@ -213,25 +239,15 @@ export async function upsertJobPosting(
     // below ranks against the new text. The insert triggers queue new rows.
     const embedding = existing ? await embedEditedPosting(service, posting) : null;
 
-    if (existing?.job_id) {
+    // A draft or pending job has no public row (D4), or one that isn't listed
+    // yet; ensurePublicJobRow brings it up to date when the job first opens.
+    const isPublic = isPublicState(posting.state);
+
+    if (existing?.job_id && isPublic) {
       const { error: updateError } = await service
         .from("all_jobs")
         .update({
-          job_name: values.title,
-          job_type: values.job_type,
-          salary_range,
-          salary_currency: values.salary_currency || null,
-          salary_min: values.min_salary,
-          salary_max: values.max_salary,
-          experience,
-          experience_min: values.min_experience,
-          experience_max: values.max_experience,
-          equity_range,
-          equity_min: values.min_equity,
-          equity_max: values.max_equity,
-          visa_requirement: values.visa_sponsorship,
-          description: values.description,
-          locations: values.location,
+          ...allJobsRowFrom(posting),
           updated_at: new Date().toISOString(),
           ...(embedding ? { embedding_new: embedding } : {}),
         })
@@ -240,56 +256,21 @@ export async function upsertJobPosting(
       if (updateError) throw new Error("Failed to update public job feed.");
 
       revalidateTag(`job-${existing.job_id}`);
-    } else if (!posting.job_id) {
-      // Create the public entry for the first time.
-      const { data: insertedJob, error: insertError } = await service
-        .from("all_jobs")
-        .insert({
-          locations: posting.location,
-          job_type: posting.job_type,
-          job_name: posting.title,
-          description: posting.description,
-          visa_requirement: posting.visa_sponsorship,
-          salary_range: posting.salary_range,
-          salary_currency: posting.salary_currency || null,
-          salary_min: posting.min_salary,
-          salary_max: posting.max_salary,
-          experience_min: posting.min_experience ?? undefined,
-          experience_max: posting.max_experience,
-          equity_range: posting.equity_range,
-          equity_min: posting.min_equity,
-          equity_max: posting.max_equity,
-          experience: posting.experience,
-          company_url: "/companies/" + company.id,
-          company_name: posting.company_info?.name ?? company.name,
-          platform: "gethired",
-          status: "inactive",
-          is_platform_job: true,
-        })
-        .select("id")
-        .single();
-
-      if (insertError || !insertedJob) throw new Error("Failed to publish the job posting.");
-
-      // Map the new public job_id back to our internal posting.
-      await service
-        .from("job_postings")
-        .update({ job_id: insertedJob.id })
-        .eq("id", posting.id);
+      revalidateTag(JOBS_FEED_TAG);
     }
 
     // Couldn't embed inline: the scheduled worker re-embeds both rows instead.
     if (existing && !embedding) {
       await queueJobEmbeddings(service, [
         { id: posting.id, table: "job_postings" },
-        ...(existing.job_id ? [{ id: existing.job_id, table: "all_jobs" as const }] : []),
+        ...(existing.job_id && isPublic ? [{ id: existing.job_id, table: "all_jobs" as const }] : []),
       ]);
     }
 
     // CP-CON-001: the careers page lists the company's active jobs.
-    revalidateTag(careersCompanyTag(company.id));
+    if (isPublic) revalidateTag(careersCompanyTag(company.id));
 
-    if (posting.status === "active") {
+    if (posting.state === "open") {
       if (existing?.job_id) await enqueueIndexPing({ jobId: existing.job_id, reason: "updated" });
       await enqueueFeedRebuild();
       await queueJobPostingRelevance({ supabase, company, user }, posting.id);

@@ -6,7 +6,7 @@ import { readSource, sourceFiles } from "@/test/utils/source";
 // `contact` are known: each file here says why it may read them. A resumes
 // `select("*")` counts, because it brings `contact` along.
 const ALLOWED: Record<string, string> = {
-  "app/resume/[resumeId]/page.tsx": "the owner's resume page",
+  "app/resume/[resumeId]/(view)/page.tsx": "the owner's resume page",
   "app/resume/[resumeId]/edit/page.tsx": "the owner's editor",
   "components/ResumeSourceSelector.tsx": "previews the owner's picked resume in a dialog, through the browser client, so RLS limits it to them",
   "app/api/resumes/[resume_id]/export/route.ts": "the owner's own download, checked against the session user",
@@ -20,7 +20,7 @@ const ALLOWED: Record<string, string> = {
   "helpers/applications/backfill-snapshots.ts": "writes the applicant's own contact into the snapshot of an application sent before snapshots existed",
   "helpers/applications/resume-snapshot.ts": "the snapshot's own code: builds it and reads it back",
   "helpers/applications/application-resume.ts": "the company's resume view through the snapshot (RE-REQ-005)",
-  "app/company/applications/[application_id]/resume/page.tsx": "the company's resume view through the snapshot (RE-REQ-005)",
+  "app/company/applications/(entity)/[application_id]/resume/page.tsx": "the company's resume view through the snapshot (RE-REQ-005)",
   "app/api/company/applications/[id]/resume/export/route.ts": "the download of that same view (RE-REQ-063)",
   "app/company/profiles/[profile_id]/page.tsx": "only after company_has_candidate_access, and RLS gates the row (RE-REQ-064)",
 };

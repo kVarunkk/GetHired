@@ -92,6 +92,19 @@ describe("moveApplicationsAction (PLT-031)", () => {
     expect(revalidatePath).toHaveBeenCalledWith(`/company/job-posts/${PIPELINE_JOB.id}/applications`);
   });
 
+  it("passes the fill hint through for the board's toast (JLT-023, JL-REQ-013)", async () => {
+    const suggestFill = [{ jobPostId: PIPELINE_JOB.id, title: PIPELINE_JOB.title, hires: 2, openings: 2 }];
+    vi.mocked(moveApplications).mockResolvedValue({ ...moved, suggestFill });
+
+    expect(await moveApplicationsAction({ applicationIds: [APP.id], stageId: INTERVIEW.id })).toEqual({
+      ok: true,
+      moved: 1,
+      emailed: 0,
+      skipped: [],
+      suggestFill,
+    });
+  });
+
   it("passes an email choice through", async () => {
     const email = {
       templateId: "7e700000-0000-4000-8000-000000000001",

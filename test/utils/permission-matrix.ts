@@ -222,6 +222,20 @@ export const PERMISSION_MATRIX: MatrixEntry[] = [
       }),
   },
   {
+    name: "action:setJobPostState",
+    kind: "action",
+    permission: "jobs.publish",
+    run: async () =>
+      (await import("@/app/actions/set-job-post-state")).setJobPostStateAction({ jobPostId: JOB, to: "paused" }),
+  },
+  {
+    name: "action:reviewJobApproval",
+    kind: "action",
+    permission: "jobs.approve",
+    run: async () =>
+      (await import("@/app/actions/review-job-approval")).reviewJobApprovalAction({ jobPostId: JOB, decision: "approve" }),
+  },
+  {
     name: "action:deleteJobPosting",
     kind: "action",
     permission: "jobs.delete",
@@ -1021,6 +1035,13 @@ export const PERMISSION_MATRIX: MatrixEntry[] = [
       (await import("@/app/actions/team/set-owner")).setOwnerAction({ userId: OTHER_USER, isOwner: true }),
   },
   {
+    name: "action:setJobApprovalRequired",
+    kind: "action",
+    permission: "owner",
+    run: async () =>
+      (await import("@/app/actions/set-job-approval-required")).setJobApprovalRequiredAction({ required: true }),
+  },
+  {
     name: "action:makePrimaryOwner",
     kind: "action",
     permission: "owner",
@@ -1090,7 +1111,7 @@ export const PERMISSION_MATRIX: MatrixEntry[] = [
   toolEntry("getJobPost", "jobs.view"),
   toolEntry("createJobPost", "jobs.create", { title: "Engineer", description: "Build things" }),
   toolEntry("updateJobPost", "jobs.edit", { title: "Engineer" }),
-  toolEntry("setJobPostStatus", "jobs.publish", { status: "inactive" }),
+  toolEntry("setJobPostState", "jobs.publish", { state: "paused" }),
   toolEntry("deleteJobPost", "jobs.delete"),
   toolEntry("searchCandidates", "talent.view", { roles: ["Engineer"] }),
   toolEntry("findMatchesForJob", "matching.run"),

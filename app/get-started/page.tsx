@@ -3,7 +3,7 @@ import { OnboardingForm } from "@/components/OnboardingComponent";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { createClient } from "@/lib/supabase/server";
-import { safeReturnPath } from "@/helpers/user/home-path";
+import { alertReturnPath, safeReturnPath } from "@/helpers/user/home-path";
 import { loadClaimPrefill } from "@/helpers/candidates/claim-prefill";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import type { Metadata } from "next";
@@ -56,7 +56,7 @@ export default async function GetStartedPage({
       ) : (
         <OnboardingForm
           claimPrefill={claimPrefill && claimToken ? { ...claimPrefill, token: claimToken } : undefined}
-          returnTo={claimPrefill ? safeReturnPath(params.returnTo) : null}
+          returnTo={claimPrefill ? safeReturnPath(params.returnTo) : alertReturnPath(params.returnTo)}
         />
       )}
     </div>

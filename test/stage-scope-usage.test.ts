@@ -24,7 +24,7 @@ const COMPANY_WIDE: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason: "names one stage by id and refuses it unless its pipeline_id is the job's",
   },
-  "app/company/applications/[application_id]/activity/page.tsx": {
+  "app/company/applications/(entity)/[application_id]/activity/page.tsx": {
     count: 1,
     reason:
       "names the stages in the application's events, which can be from an earlier pipeline after a switch, so every stage of the company (archived too) is read for names only",

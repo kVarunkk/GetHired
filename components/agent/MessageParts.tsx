@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  CLOSE_REASON_LABEL,
+  JOB_STATE_LABEL,
+  isJobPostState,
+  isManualCloseReason,
+  type JobPostState,
+} from "@/helpers/jobs/job-states";
 import { memo, useEffect, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown, { type Components } from "react-markdown";
@@ -7,15 +14,49 @@ import { getToolName, isToolUIPart, type UIMessage } from "ai";
 import { BriefcaseBusiness, ChevronDown, Coins, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
-import ResumeUploadWidget, { type ResumeUploadOutput } from "./ResumeUploadWidget";
-import AskUserCard, { AskUserResult, type AskUserOutput } from "./AskUserCard";
+import type { ResumeUploadOutput } from "./ResumeUploadWidget";
+import type { AskUserOutput } from "./AskUserCard";
+import type { ResumeChangesOutput } from "./ResumeChangesCard";
+import type { CandidateResumeOutput } from "./recruiter/CandidateResumeWidget";
+import type { ResumeImportOutput } from "./recruiter/ResumeImportWidget";
+import type { SpreadsheetImportOutput } from "./recruiter/SpreadsheetImportWidget";
 import { askUserInputSchema } from "@/helpers/agent/ask-user";
-import { rehypeAnimateWords } from "./animate-words";
-import { ApplicationApprovalDetails } from "./ApplicationApprovalCard";
-import { SALARY_APPROVAL_TOOLS, SalaryApprovalWarning } from "./SalaryApprovalWarning";
 import { isSkippedApproval } from "@/helpers/agent/skipped-approvals";
-import ResumeChangesCard, { ResumeChangesResult, type ResumeChangesOutput } from "./ResumeChangesCard";
-import { ResumeEditApprovalDetails, isResumeEditTool } from "./ResumeEditApprovalCard";
+import { isSchedulingPreviewTool, schedulingApprovalTitle } from "@/helpers/interviews/agent-scheduling-schema";
+import { rehypeAnimateWords } from "./animate-words";
+import {
+  FORM_APPROVAL_TOOLS,
+  isPipelineApprovalTool,
+  isResumeEditTool,
+  isRoleApprovalTool,
+  SALARY_APPROVAL_TOOLS,
+} from "./approval-tools";
+import {
+  AddCandidateApprovalDetails,
+  AddToJobApprovalDetails,
+  ApplicationApprovalDetails,
+  ApplicationFormApprovalDetails,
+  AskUserCard,
+  AskUserResult,
+  CandidateResumeWidget,
+  DeleteCandidatesApprovalDetails,
+  ImportApprovalDetails,
+  InterviewConfigApprovalDetails,
+  InterviewInviteApprovalDetails,
+  JobDeleteApprovalDetails,
+  MoveApprovalDetails,
+  OutreachApprovalDetails,
+  PipelineApprovalDetails,
+  ResumeChangesCard,
+  ResumeChangesResult,
+  ResumeEditApprovalDetails,
+  ResumeImportWidget,
+  ResumeUploadWidget,
+  RoleApprovalDetails,
+  SalaryApprovalWarning,
+  SchedulingApprovalDetails,
+  SpreadsheetImportWidget,
+} from "./lazy-cards";
 import { inlineLink, isInAppHref, NEW_TAB, repairJobLinks } from "./links";
 import {
   ApplicantResults,
@@ -24,28 +65,7 @@ import {
   type CandidateRowData,
 } from "./recruiter/RecruiterResults";
 import { FunnelResult, type FunnelResultData } from "./recruiter/FunnelResult";
-import { JobDeleteApprovalDetails } from "./recruiter/JobDeleteApprovalCard";
-import { MoveApprovalDetails } from "./recruiter/MoveApprovalCard";
-import { OutreachApprovalDetails } from "./recruiter/OutreachApprovalCard";
-import { InterviewConfigApprovalDetails, InterviewInviteApprovalDetails } from "./recruiter/InterviewApprovalCard";
-import {
-  isSchedulingPreviewTool,
-  SchedulingApprovalDetails,
-  schedulingApprovalTitle,
-} from "./recruiter/SchedulingApprovalCard";
-import { AddToJobApprovalDetails } from "./recruiter/AddToJobApprovalDetails";
-import { ApplicationFormApprovalDetails, FORM_APPROVAL_TOOLS } from "./recruiter/ApplicationFormApprovalDetails";
-import CandidateResumeWidget, { type CandidateResumeOutput } from "./recruiter/CandidateResumeWidget";
-import {
-  AddCandidateApprovalDetails,
-  DeleteCandidatesApprovalDetails,
-  ImportApprovalDetails,
-  LawfulBasisNotice,
-} from "./recruiter/ImportApprovalDetails";
-import ResumeImportWidget, { type ResumeImportOutput } from "./recruiter/ResumeImportWidget";
-import SpreadsheetImportWidget, { type SpreadsheetImportOutput } from "./recruiter/SpreadsheetImportWidget";
-import { isRoleApprovalTool, RoleApprovalDetails } from "./recruiter/RoleApprovalCard";
-import { isPipelineApprovalTool, PipelineApprovalDetails } from "./recruiter/PipelineApprovalDetails";
+import { LawfulBasisNotice } from "./recruiter/LawfulBasisNotice";
 
 export { isInAppHref };
 
@@ -76,7 +96,9 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   unsaveJob: { running: "Removing the saved job…", done: "Removed the saved job", action: "remove the saved job" },
   listSavedJobs: { running: "Loading saved jobs…", done: "Loaded saved jobs", action: "load saved jobs" },
   listApplications: { running: "Loading applications…", done: "Loaded applications", action: "load applications" },
-  updateApplicationStatus: { running: "Updating the application…", done: "Updated the application", action: "update the application" },
+  trackApplication: { running: "Adding to My Jobs…", done: "Added to My Jobs", action: "add the job to My Jobs" },
+  updateTrackedApplication: { running: "Updating the application…", done: "Updated the application", action: "update the application" },
+  removeTrackedApplication: { running: "Removing the application…", done: "Removed the application", action: "remove the application" },
   getApplicationForm: { running: "Reading the application form…", done: "Read the application form", action: "read the application form" },
   submitApplication: { running: "Sending the application…", done: "Sent the application", action: "apply to the job" },
   listResumes: { running: "Loading resumes…", done: "Loaded resumes", action: "load resumes" },
@@ -115,7 +137,7 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   getJobPost: { running: "Reading the job post…", done: "Read the job post", action: "read the job post" },
   createJobPost: { running: "Saving the job post…", done: "Saved the job post", action: "create the job post" },
   updateJobPost: { running: "Updating the job post…", done: "Updated the job post", action: "update the job post" },
-  setJobPostStatus: { running: "Updating the job post…", done: "Updated the job post", action: "change the job post's status" },
+  setJobPostState: { running: "Updating the job post…", done: "Updated the job post", action: "change the job post's state" },
   deleteJobPost: { running: "Deleting the job post…", done: "Deleted the job post", action: "delete the job post" },
   listQuestionSets: { running: "Loading question sets…", done: "Loaded question sets", action: "load question sets" },
   applyQuestionSet: { running: "Applying the question set…", done: "Applied the question set", action: "apply the question set" },
@@ -440,6 +462,36 @@ const formatValue = (value: unknown) =>
         : "No"
       : String(value);
 
+/** JL-REQ-031: the approval card's question per target state. */
+const JOB_STATE_APPROVAL_TITLE: Record<JobPostState, string> = {
+  open: "Publish this job post?",
+  pending_approval: "Submit this job post for approval?",
+  draft: "Send this job post back to draft?",
+  paused: "Pause this job post?",
+  closed: "Close this job post?",
+  filled: "Mark this job post as filled?",
+};
+
+const JOB_STATE_DONE: Record<JobPostState, string> = {
+  open: "Published the job post.",
+  pending_approval: "Submitted the job post for approval.",
+  draft: "Moved the job post back to draft.",
+  paused: "Paused the job post.",
+  closed: "Closed the job post.",
+  filled: "Marked the job post as filled.",
+};
+
+/** The state move's approval details: reason, the team note and the AI interview choice. */
+function describeJobStateInput(input: unknown): (readonly [string, string])[] {
+  const values = (input ?? {}) as Record<string, unknown>;
+  const rows: (readonly [string, string])[] = [];
+  if (isJobPostState(values.state)) rows.push(["New state", JOB_STATE_LABEL[values.state]] as const);
+  if (isManualCloseReason(values.reason)) rows.push(["Reason", CLOSE_REASON_LABEL[values.reason]] as const);
+  if (typeof values.note === "string" && values.note.trim()) rows.push(["Note (team only)", values.note.trim()] as const);
+  if (values.cancelOpenInterviews === true) rows.push(["Open AI interviews", "Cancelled, minutes released"] as const);
+  return rows;
+}
+
 /**
  * Label and value pairs for an approval card. Ids mean nothing to the user, so
  * they're left out. A form's questions get their own list (ApplicationFormApprovalDetails).
@@ -527,14 +579,16 @@ function approvalTitle(name: string, input: unknown) {
       return "Make these changes to your resume?";
     case "deleteResume":
       return "Delete this resume?";
+    case "removeTrackedApplication":
+      return "Remove this application from My Jobs? Its notes and timeline go with it.";
     case "applyReviewSuggestions":
       return "Apply these suggestions?";
     case "createJobPost":
       return "Create this job post as a draft?";
     case "updateJobPost":
       return "Update this job post?";
-    case "setJobPostStatus":
-      return values.status === "active" ? "Publish this job post?" : "Unpublish this job post?";
+    case "setJobPostState":
+      return isJobPostState(values.state) ? JOB_STATE_APPROVAL_TITLE[values.state] : "Change this job post's state?";
     case "deleteJobPost":
       return "Delete this job post?";
     case "applyQuestionSet":
@@ -645,7 +699,8 @@ function approvalTitle(name: string, input: unknown) {
 
 function approvalDetails(name: string, input: unknown) {
   // Deletes, moves and outreach show a server preview (JobDeleteApprovalDetails, MoveApprovalDetails, OutreachApprovalDetails).
-  if (["setJobPostStatus", "deleteJobPost", "moveApplications", "sendOutreach"].includes(name)) return [];
+  if (["deleteJobPost", "moveApplications", "sendOutreach"].includes(name)) return [];
+  if (name === "setJobPostState") return describeJobStateInput(input);
   // The interview setup and invites have their own details (InterviewApprovalCard).
   if (["configureScreeningInterview", "inviteToInterview"].includes(name)) return [];
   // Adding company candidates names the job and the people (AddToJobApprovalDetails).
@@ -856,17 +911,17 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
   }
 
   if (
-    ["createJobPost", "updateJobPost", "setJobPostStatus"].includes(name) &&
+    ["createJobPost", "updateJobPost", "setJobPostState"].includes(name) &&
     typeof result.url === "string" &&
     isInAppHref(result.url)
   ) {
     const what =
       name === "createJobPost"
         ? `Saved “${String(result.title ?? "the job post")}” as a draft.`
-        : name === "setJobPostStatus"
-          ? result.status === "active"
-            ? "Published the job post."
-            : "Unpublished the job post."
+        : name === "setJobPostState"
+          ? isJobPostState(result.state)
+            ? JOB_STATE_DONE[result.state]
+            : "Updated the job post."
           : "Updated the job post.";
     return (
       <Step
@@ -885,6 +940,15 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
 
   if (name === "deleteJobPost" && result.deleted === true) {
     return <Step tone="done" label={`Deleted “${String(result.title ?? "the job post")}”.`} />;
+  }
+
+  if (name === "deleteJobPost" && result.archived === true) {
+    return (
+      <Step
+        tone="done"
+        label={`Archived “${String(result.title ?? "the job post")}”: it has applications, so candidates keep their history. Restore it from archived job posts.`}
+      />
+    );
   }
 
   if (name === "moveApplications" && typeof result.moved === "number") {

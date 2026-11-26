@@ -1,4 +1,5 @@
 import * as React from "react";
+import { myJobsPath } from "@/helpers/tracker/paths";
 import { BaseEmailLayout } from "./BaseEmailLayout"; // Assuming BaseEmailLayout is in the same directory
 import { Heading, Text, Section, Button } from "react-email";
 
@@ -47,7 +48,7 @@ export const ApplicationStatusUpdateEmail = ({
       <Section className="text-center my-8">
         <Button
           href={
-            "https://gethired.devhub.co.in/jobs?tab=applied&sortBy=created_at&sortOrder=desc"
+            `https://gethired.devhub.co.in${myJobsPath({ tab: "applications" })}`
           }
           className="bg-black text-white py-3 px-6 rounded-md text-lg font-bold no-underline"
         >

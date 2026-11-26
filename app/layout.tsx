@@ -9,18 +9,18 @@ import MetadataUpdateRefresh from "@/components/MetadataUpdateRefresh";
 import { Suspense } from "react";
 import ThemeAwareToaster from "@/components/ToasterComponent";
 import LayoutWrapper from "@/components/LayoutWrapper";
-import { createClient } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/supabase/get-session-user";
 import { hasEnvVars } from "@/utils/utils";
 import EnvWarning from "@/components/env-warning";
 import PostHogIdentify from "@/lib/posthog/posthogidentify";
 
 export const metadata: Metadata = {
   title: {
-    default: "Find Tech & Remote Jobs | GetHired",
+    default: "AI Job Search for Every Role | GetHired",
     template: "%s | GetHired",
   },
   description:
-    "Find developer and tech jobs, including remote roles. Search current openings by role and location, then use GetHired's AI tools to focus your job search.",
+    "Find jobs in every field, including remote roles. Search current openings by role, location and salary, then use GetHired's AI agent to match jobs to your resume, track applications and prepare for interviews.",
   metadataBase: new URL("https://gethired.devhub.co.in"),
   // Site-wide defaults only. No canonical, URL, title or description here:
   // every page inherits these, and Next fills og:title/og:description (and
@@ -37,14 +37,17 @@ export const metadata: Metadata = {
     follow: true,
   },
   keywords: [
-    "remote jobs in india",
-    "remote developer jobs",
-    "tech jobs",
-    "remote jobs",
-    "developer jobs",
-    "software engineer jobs",
-    "job search",
     "ai job search",
+    "ai job search agent",
+    "job search",
+    "jobs",
+    "remote jobs",
+    "remote jobs in india",
+    "job alerts",
+    "job application tracker",
+    "ai resume checker",
+    "ai mock interview",
+    "tech jobs",
     "job hunting",
   ],
 };
@@ -64,10 +67,7 @@ export default async function RootLayout({
     return <EnvWarning geistClassname={geistSans.className} />;
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
 
   return (
     <html lang="en" suppressHydrationWarning>

@@ -16,6 +16,11 @@ const Drawer = ({
 );
 Drawer.displayName = "Drawer";
 
+// True inside a DrawerContent, so a drawer opened from inside one (a
+// ResponsiveSelect in a drawer form) stacks on it as a nested drawer.
+const InDrawerContext = React.createContext(false);
+const useInDrawer = () => React.useContext(InDrawerContext);
+
 const DrawerTrigger = DrawerPrimitive.Trigger;
 
 const DrawerPortal = DrawerPrimitive.Portal;
@@ -49,7 +54,7 @@ const DrawerContent = React.forwardRef<
       {...props}
     >
       <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-      {children}
+      <InDrawerContext.Provider value={true}>{children}</InDrawerContext.Provider>
     </DrawerPrimitive.Content>
   </DrawerPortal>
 ));
@@ -65,6 +70,21 @@ const DrawerHeader = ({
   />
 );
 DrawerHeader.displayName = "DrawerHeader";
+
+// The same secondary band as DialogHeader and ResponsiveDialogHeader, under
+// the handle. A column, not DrawerHeader's grid, so a long title can truncate.
+const DrawerBandHeader = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <DrawerHeader
+    className={cn(
+      "mt-3 flex min-w-0 shrink-0 flex-col space-y-1.5 gap-0 border-y bg-secondary px-4 py-3 text-left",
+      className,
+    )}
+    {...props}
+  />
+);
 
 const DrawerFooter = ({
   className,
@@ -112,7 +132,9 @@ export {
   DrawerClose,
   DrawerContent,
   DrawerHeader,
+  DrawerBandHeader,
   DrawerFooter,
   DrawerTitle,
   DrawerDescription,
+  useInDrawer,
 };

@@ -47,7 +47,10 @@ export const RECRUITER_TOOL_PERMISSIONS = {
   getJobPost: p(["jobs.view"], "jobPostId"),
   createJobPost: p(["jobs.create"]),
   updateJobPost: p(["jobs.edit"], "jobPostId"),
-  setJobPostStatus: p(["jobs.publish"], "jobPostId"),
+  setJobPostState: p(["jobs.publish"], "jobPostId"),
+  submitJobForApproval: p(["jobs.publish"], "jobPostId"),
+  // JL-REQ-019: approving or sending back needs jobs.approve on the job.
+  reviewJobApproval: p(["jobs.approve"], "jobPostId"),
   deleteJobPost: p(["jobs.delete"], "jobPostId"),
   // AF-REQ-004: anyone who edits a job can apply a set; question_sets.manage saves them.
   listQuestionSets: p(["jobs.view"]),

@@ -5,9 +5,6 @@ import { toIsoCurrency } from "@/helpers/currency/currencies";
 import { formatSalaryAmount, lowSalaryHint } from "@/helpers/salary/period";
 import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
 
-/** The agent tools whose approval card can carry a salary. */
-export const SALARY_APPROVAL_TOOLS = ["updateMyPreferences", "completeOnboarding"];
-
 type SalaryInput = { minSalary?: unknown; maxSalary?: unknown; salaryCurrency?: unknown };
 
 const LABELS = { minSalary: "minimum", maxSalary: "maximum" } as const;

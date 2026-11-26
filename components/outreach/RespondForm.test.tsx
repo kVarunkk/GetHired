@@ -53,7 +53,7 @@ vi.mock("@/components/ui/select", () => {
 });
 
 const SENT = outreachOf("sent");
-const APPLY = "/jobs/d0000000-0000-4000-8000-000000000001?apply=true";
+const APPLY = "/jobs/d0000000-0000-4000-8000-000000000001/apply";
 
 const renderForm = (props: Partial<Parameters<typeof RespondForm>[0]> = {}) =>
   render(

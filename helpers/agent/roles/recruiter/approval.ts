@@ -13,7 +13,10 @@ export const RECRUITER_APPROVAL_POLICY: ToolApprovalPolicy = {
   alwaysAsk: [
     "createJobPost",
     "updateJobPost",
-    "setJobPostStatus",
+    "setJobPostState",
+    // JL-REQ-031: a submit emails the approvers; a review opens the job or sends it back.
+    "submitJobForApproval",
+    "reviewJobApproval",
     // Deleting takes the job's applications with it.
     "deleteJobPost",
     "applyQuestionSet",

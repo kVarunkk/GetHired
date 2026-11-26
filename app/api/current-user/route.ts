@@ -5,6 +5,7 @@ import { getPlanSummary } from "@/helpers/billing/entitlements";
 import { getMyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { roleLabel } from "@/helpers/companies/roles";
+import { countPendingApprovals } from "@/helpers/jobs/job-approval";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export async function GET() {
   if (userRole === "applicant") {
     tableName = "user_info";
     selectString =
-      "user_id, ai_credits, relevant_jobs_update_status, relevance_started_at, updated_at, linkedin_url, github_url, preferred_locations, min_salary, salary_currency, user_favorites(job_id), user_favorites_companies(company_id), applications(all_jobs_id, status), filled, resumes(id, name, created_at, is_primary, resume_path, parsing_failed), job_feedback(job_id, vote_type)";
+      "user_id, ai_credits, relevant_jobs_update_status, relevance_started_at, updated_at, linkedin_url, github_url, preferred_locations, min_salary, salary_currency, user_favorites(job_id), user_favorites_companies(company_id), applications(id, all_jobs_id, job_post_id, status), filled, resumes(id, name, created_at, is_primary, resume_path, parsing_failed), job_feedback(job_id, vote_type)";
   } else if (userRole === "company") {
     tableName = "company_info";
     selectString =
@@ -68,13 +69,30 @@ export async function GET() {
 
     profileData = data;
 
+    if (userRole === "applicant") {
+      // The Applied state of board jobs (AT-REQ-034): tracked cards next to
+      // `applications`. Saved cards aren't applied, so they're left out.
+      const { data: tracked, error: trackedError } = await supabase
+        .from("tracked_applications")
+        .select("id, all_jobs_id, status")
+        .eq("user_id", userId)
+        .not("all_jobs_id", "is", null)
+        .neq("status", "saved");
+      if (trackedError) reportError("[current-user] couldn't load tracked applications", trackedError);
+      profileData = { ...(data as object), tracked_applications: tracked ?? [] };
+    }
+
     if (userRole === "company") {
       // "Plan: Startup · 1,240 credits" in the profile menu.
       const companyId = (data as unknown as { id: string }).id;
-      const plan = await getPlanSummary(companyId).catch((err) => {
-        reportError("[current-user] couldn't load the plan", err);
-        return null;
-      });
+      const [plan, pendingJobApprovals] = await Promise.all([
+        getPlanSummary(companyId).catch((err) => {
+          reportError("[current-user] couldn't load the plan", err);
+          return null;
+        }),
+        // JL-REQ-022: the Job posts badge, for members with jobs.approve.
+        company ? countPendingApprovals(supabase, company).catch(() => 0) : Promise.resolve(0),
+      ]);
       // The role's name and what the menus may show (RP-REQ-016); the server
       // checks every permission again on each request.
       profileData = {
@@ -86,6 +104,7 @@ export async function GET() {
           talentView: can(company, "talent.view"),
           isOwner: Boolean(company?.isOwner),
         },
+        pendingJobApprovals,
       };
     }
   } catch (error) {

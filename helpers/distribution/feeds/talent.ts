@@ -3,10 +3,9 @@ import { talentCategory } from "./normalize";
 
 /**
  * Talent.com feed, plan/multiposting spec section 10.3 and their XML guide
- * (talent.com/integrations). Pure. Not sent:
- * - `expirationdate`: jobs have no deadline, and a closed job already drops
- *   out of the next build.
- * - `cpc`: paid placement is out of scope.
+ * (talent.com/integrations). Pure. `expirationdate` is the end of the job's
+ * closing date, when it has one (JL-REQ-016); a closed job also drops out of
+ * the next build. Not sent: `cpc`, since paid placement is out of scope.
  *
  * `city` and `state` are required with no exception for remote jobs
  * (`placeWithState`).
@@ -65,6 +64,7 @@ export function serializeTalent(jobs: FeedJob[], builtAt: Date = new Date(), opt
       tag("state", place.state),
       tag("country", job.country),
       tag("dateposted", talentDate(job.postedAt)),
+      tag("expirationdate", job.expiresAt ? talentDate(job.expiresAt) : null),
       tag("url", url),
       tag("description", job.descriptionHtml),
       tag("jobtype", JOB_TYPES[job.jobType]),

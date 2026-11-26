@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LINK_ONLY_DISABLED } from "@/helpers/jobs/link-only";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { revalidateTag } from "next/cache";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { mockUser, setRequestUser } from "@/test/utils/auth";
@@ -10,6 +11,8 @@ import { assertLimit } from "@/helpers/billing/entitlements";
 import { EntitlementError, type EntitlementPayload } from "@/helpers/billing/errors";
 import { embedJobs } from "@/helpers/jobs/job-embedding";
 import { pipelineReasonCopy } from "@/helpers/pipeline/copy";
+import type { JobPostState } from "@/helpers/jobs/job-states";
+import { CLOSES_AT_FILLED, CLOSES_AT_PAST } from "@/helpers/jobs/closing-date";
 import { upsertJobPostingAction } from "./upsert-job-posting";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
@@ -59,7 +62,11 @@ let service: SupabaseMock;
 let fetchMock: ReturnType<typeof vi.fn>;
 let state: {
   savedStatus: "active" | "inactive";
+  savedState: JobPostState;
   allJobsUpdateError: unknown;
+  timeZone: string | null;
+  /** Overrides on the existing posting the lookup finds. */
+  own: Partial<typeof OWN>;
 };
 
 const methods = (call: RecordedCall) => call.chain.map((c) => c.method);
@@ -79,6 +86,8 @@ function writtenPosting(call: RecordedCall) {
     ...base,
     ...payload,
     status: state.savedStatus,
+    // What the row is in after the write: a new posting is a draft (D4).
+    state: has(call, "update") ? state.savedState : "draft",
     company_info: { id: COMPANY_A.id, name: COMPANY_A.info.name, website: COMPANY_A.info.website },
   };
 }
@@ -89,7 +98,7 @@ function route(mock: SupabaseMock) {
     mock.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
     mock.queue("company_info", (call) => {
       if (has(call, "update")) return { data: null, error: null };
-      return { data: COMPANY_A.infoWithTier, error: null };
+      return { data: { ...COMPANY_A.infoWithTier, time_zone: state.timeZone }, error: null };
     });
     mock.queue("job_postings", (call) => {
       if (has(call, "insert") || has(call, "upsert") || (has(call, "update") && has(call, "select"))) {
@@ -97,7 +106,7 @@ function route(mock: SupabaseMock) {
       }
       if (has(call, "update")) return { data: null, error: null };
       // A lookup: only rows matching every eq filter are found.
-      const row = [OWN, OTHERS].find((p) =>
+      const row = [{ ...OWN, ...state.own }, OTHERS].find((p) =>
         eqs(call).every(([col, value]) => (p as Record<string, unknown>)[col as string] === value),
       );
       return { data: row ?? null, error: null };
@@ -126,7 +135,7 @@ const writes = (table: string) =>
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  state = { savedStatus: "inactive", allJobsUpdateError: null };
+  state = { savedStatus: "inactive", savedState: "paused", allJobsUpdateError: null, timeZone: null, own: {} };
   rls = createSupabaseMock({ user: COMPANY_A.user });
   service = createSupabaseMock();
   route(rls);
@@ -139,37 +148,51 @@ beforeEach(async () => {
 });
 
 describe("upsertJobPostingAction: behaviour that must survive", () => {
-  it("refuses a new posting at the plan's active job post limit (BL-TEST-006)", async () => {
+  it("saves a new posting at the plan's active job post limit: a draft needs no slot (D4)", async () => {
     vi.mocked(assertLimit).mockRejectedValue(new EntitlementError(AT_LIMIT));
 
-    const result = await upsertJobPostingAction({ values: VALUES });
+    expect(await upsertJobPostingAction({ values: VALUES })).toMatchObject({ success: true, isUpdate: false });
+    expect(assertLimit).not.toHaveBeenCalled();
+  });
 
-    expect(result).toEqual({
-      success: false,
-      error: expect.objectContaining({ code: "entitlement", key: "active_job_posts", used: 2, amount: 2 }),
-    });
-    expect(writes("job_postings")).toHaveLength(0);
+  it("creates a new posting as a draft with no all_jobs row, ping, feed or matching (D4, JLT-015)", async () => {
+    expect(await upsertJobPostingAction({ values: VALUES })).toMatchObject({ success: true, isUpdate: false });
+
+    const [insert] = writes("job_postings").filter((c) => has(c, "insert"));
+    expect(argsOf(insert, "insert")?.[0]).not.toHaveProperty("state");
+    expect(argsOf(insert, "insert")?.[0]).not.toHaveProperty("status");
     expect(writes("all_jobs")).toHaveLength(0);
+    expect(writes("job_postings").some((c) => (argsOf(c, "update")?.[0] as { job_id?: string })?.job_id)).toBe(false);
+    expect(queueJobPostingRelevance).not.toHaveBeenCalled();
+    expect(service.callsFor("enqueue_index_ping")).toHaveLength(0);
+    expect(revalidateTag).not.toHaveBeenCalled();
   });
 
-  it("creates the posting when the limit allows it", async () => {
-    expect(await upsertJobPostingAction({ values: VALUES })).toMatchObject({ success: true, isUpdate: false });
+  it.each(["draft", "pending_approval"] as const)(
+    "edits a %s without touching its public row, ping, feed or matching (JL-REQ-010)",
+    async (draftState) => {
+      state.savedState = draftState;
+
+      expect(await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id })).toMatchObject({
+        success: true,
+      });
+      expect(writes("all_jobs")).toHaveLength(0);
+      expect(queueJobPostingRelevance).not.toHaveBeenCalled();
+      expect(revalidateTag).not.toHaveBeenCalled();
+    },
+  );
+
+  it("saves openings when they're sent (JL-REQ-011)", async () => {
+    await upsertJobPostingAction({ values: { ...VALUES, openings: 3 } });
+
+    const [insert] = writes("job_postings").filter((c) => has(c, "insert"));
+    expect(argsOf(insert, "insert")?.[0]).toMatchObject({ openings: 3 });
   });
 
-  it("creates the posting, then the all_jobs row, and links job_id", async () => {
-    expect(await upsertJobPostingAction({ values: VALUES })).toMatchObject({ success: true, isUpdate: false });
-
-    const [insertAllJobs] = writes("all_jobs");
-    expect(argsOf(insertAllJobs, "insert")?.[0]).toMatchObject({
-      job_name: "Frontend Engineer",
-      company_name: COMPANY_A.info.name,
-      company_url: `/companies/${COMPANY_A.id}`,
-      platform: "gethired",
-      status: "inactive",
-      is_platform_job: true,
-    });
-    const link = writes("job_postings").find((c) => (argsOf(c, "update")?.[0] as object & { job_id?: string })?.job_id);
-    expect(argsOf(link!, "update")?.[0]).toEqual({ job_id: NEW_JOB_ID });
+  it("refuses openings outside 1–500", async () => {
+    expect(await upsertJobPostingAction({ values: { ...VALUES, openings: 0 } })).toMatchObject({ success: false });
+    expect(await upsertJobPostingAction({ values: { ...VALUES, openings: 501 } })).toMatchObject({ success: false });
+    expect(writes("job_postings")).toHaveLength(0);
   });
 
   it("embeds an edit inline, writes it to both rows, updates all_jobs and revalidates the job", async () => {
@@ -200,6 +223,7 @@ describe("upsertJobPostingAction: behaviour that must survive", () => {
 
   it("embeds an active posting before queueing its matching run", async () => {
     state.savedStatus = "active";
+    state.savedState = "open";
 
     await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id });
 
@@ -240,10 +264,88 @@ describe("upsertJobPostingAction: behaviour that must survive", () => {
 
   it("asks for a relevance update when the saved posting is active", async () => {
     state.savedStatus = "active";
+    state.savedState = "open";
 
     await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id });
 
     expect(queueJobPostingRelevance).toHaveBeenCalledWith(expect.objectContaining({ company: expect.objectContaining({ id: COMPANY_A.id }) }), OWN.id);
+  });
+});
+
+describe("upsertJobPostingAction: closing date (JLT-040, JL-REQ-014)", () => {
+  // 23:30 UTC on 2026-11-24: already the 25th in Asia/Kolkata.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-24T23:30:00Z"));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const insertOf = () => argsOf(writes("job_postings").find((c) => has(c, "insert"))!, "insert")?.[0];
+  const updateOf = () =>
+    argsOf(writes("job_postings").find((c) => has(c, "update") && has(c, "select"))!, "update")?.[0];
+
+  it("saves today's date in the company's time zone on a new job", async () => {
+    state.timeZone = "America/Los_Angeles";
+    expect(await upsertJobPostingAction({ values: { ...VALUES, closes_at: "2026-11-24" } })).toMatchObject({
+      success: true,
+    });
+    expect(insertOf()).toMatchObject({ closes_at: "2026-11-24" });
+  });
+
+  it("refuses a date that has passed in the company's time zone and writes nothing", async () => {
+    state.timeZone = "Asia/Kolkata";
+    expect(await upsertJobPostingAction({ values: { ...VALUES, closes_at: "2026-11-24" } })).toEqual({
+      success: false,
+      error: CLOSES_AT_PAST,
+    });
+    expect(writes("job_postings")).toHaveLength(0);
+  });
+
+  it("uses UTC when the company has no time zone", async () => {
+    expect(await upsertJobPostingAction({ values: { ...VALUES, closes_at: "2026-11-24" } })).toMatchObject({
+      success: true,
+    });
+    expect(await upsertJobPostingAction({ values: { ...VALUES, closes_at: "2026-11-23" } })).toMatchObject({
+      success: false,
+    });
+  });
+
+  it("refuses a malformed date", async () => {
+    expect(await upsertJobPostingAction({ values: { ...VALUES, closes_at: "2026-02-30" } })).toMatchObject({
+      success: false,
+    });
+  });
+
+  it("leaves the date alone when it isn't sent", async () => {
+    await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id });
+    expect(updateOf()).not.toHaveProperty("closes_at");
+  });
+
+  it("keeps a saved date that has passed, so an edit of a closed job still saves", async () => {
+    state.own = { state: "closed", closes_at: "2026-10-01" };
+    expect(
+      await upsertJobPostingAction({ values: { ...VALUES, closes_at: "2026-10-01" }, existingPostingId: OWN.id }),
+    ).toMatchObject({ success: true });
+    expect(updateOf()).not.toHaveProperty("closes_at");
+  });
+
+  it("moves the date (the trigger resets the reminder)", async () => {
+    state.own = { state: "open", closes_at: "2026-12-01" };
+    await upsertJobPostingAction({ values: { ...VALUES, closes_at: "2026-12-15" }, existingPostingId: OWN.id });
+    expect(updateOf()).toMatchObject({ closes_at: "2026-12-15" });
+  });
+
+  it("refuses a new date on a filled job but lets it be cleared", async () => {
+    state.own = { state: "filled", closes_at: "2026-12-01" };
+    expect(
+      await upsertJobPostingAction({ values: { ...VALUES, closes_at: "2026-12-15" }, existingPostingId: OWN.id }),
+    ).toEqual({ success: false, error: CLOSES_AT_FILLED });
+    expect(writes("job_postings")).toHaveLength(0);
+
+    expect(
+      await upsertJobPostingAction({ values: { ...VALUES, closes_at: null }, existingPostingId: OWN.id }),
+    ).toMatchObject({ success: true });
+    expect(updateOf()).toMatchObject({ closes_at: null });
   });
 });
 
@@ -321,11 +423,9 @@ describe("upsertJobPostingAction: access control (RS-TEST-001)", () => {
     expect(payload).toMatchObject({ company_id: COMPANY_A.id });
   });
 
-  it("checks the session company's limit and no longer counts posts created", async () => {
+  it("no longer counts posts created", async () => {
     await upsertJobPostingAction({ values: VALUES, companyId: COMPANY_B.id } as never);
 
-    expect(assertLimit).toHaveBeenCalledWith(COMPANY_A.id, "active_job_posts");
-    expect(assertLimit).not.toHaveBeenCalledWith(COMPANY_B.id, expect.anything());
     expect(writes("company_info")).toHaveLength(0);
   });
 
@@ -384,6 +484,7 @@ describe("upsertJobPostingAction: re-screen on job changes (MTT-074, MT-REQ-008)
 
   it("marks explanations stale before the relevance re-run starts, so the digest can't revert them", async () => {
     state.savedStatus = "active";
+    state.savedState = "open";
     let staleWritesWhenTriggered = -1;
     vi.mocked(queueJobPostingRelevance).mockImplementation(async () => {
       staleWritesWhenTriggered = writesTo("job_relevant_profiles").length;
@@ -507,8 +608,8 @@ describe("upsertJobPostingAction: application forms (CPT-017, AF-CON-001)", () =
     expect(writes("job_postings")).toHaveLength(0);
   });
 
-  it("revalidates the company's careers page (CP-CON-001)", async () => {
-    await upsertJobPostingAction({ values: VALUES });
+  it("revalidates the company's careers page on an edit of a public job (CP-CON-001)", async () => {
+    await upsertJobPostingAction({ values: VALUES, existingPostingId: OWN.id });
     expect(revalidateTag).toHaveBeenCalledWith(`careers-company:${COMPANY_A.id}`);
   });
 
@@ -631,5 +732,32 @@ describe("upsertJobPostingAction: the job's pipeline (JPT-034, JP-REQ-003)", () 
 
     expect(result).toEqual({ success: false, error: pipelineReasonCopy("forbidden", { permission: "jobs.edit" }) });
     expect(writes("job_postings")).toHaveLength(0);
+  });
+});
+
+describe("upsertJobPostingAction: link-only (JLT-064, JL-REQ-026)", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  const insertOf = () => argsOf(writes("job_postings").find((c) => has(c, "insert"))!, "insert")?.[0];
+
+  it("refuses link_only while the flag is off and writes nothing", async () => {
+    vi.stubEnv("JOB_LINK_ONLY_ENABLED", "");
+    expect(await upsertJobPostingAction({ values: { ...VALUES, visibility: "link_only" } })).toEqual({
+      success: false,
+      error: LINK_ONLY_DISABLED,
+    });
+    expect(writes("job_postings")).toHaveLength(0);
+  });
+
+  it("saves link_only once the flag is on", async () => {
+    vi.stubEnv("JOB_LINK_ONLY_ENABLED", "true");
+    expect(await upsertJobPostingAction({ values: { ...VALUES, visibility: "link_only" } })).toMatchObject({
+      success: true,
+    });
+    expect(insertOf()).toMatchObject({ visibility: "link_only" });
+  });
+
+  it("leaves visibility out of the write when it isn't sent", async () => {
+    await upsertJobPostingAction({ values: VALUES });
+    expect(insertOf()).not.toHaveProperty("visibility");
   });
 });

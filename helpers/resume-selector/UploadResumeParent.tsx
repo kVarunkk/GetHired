@@ -19,7 +19,6 @@ export const UploadResumeParent = ({
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
-    staleTime: 5 * 60 * 1000,
   });
   const creditsState = data && data.profile ? data.profile.ai_credits : 0;
 

@@ -30,7 +30,6 @@ export default function ProfileClientHydrator({
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      staleTime: 5 * 60 * 1000,
     },
   );
 

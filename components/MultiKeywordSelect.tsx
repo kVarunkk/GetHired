@@ -10,7 +10,7 @@ import React, {
   useEffect,
 } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { X, Check, ChevronsUpDown } from "lucide-react";
+import { X, Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/utils/utils";
 import { VariableSizeList } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -54,6 +54,16 @@ interface MultiKeywordSelectProps {
     description?: string;
   };
   isSingleSelect?: boolean;
+  /**
+   * For a list searched on the server: `availableItems` are already the matches
+   * for `term`, so they aren't filtered again here.
+   */
+  search?: {
+    term: string;
+    onTermChange: (term: string) => void;
+    loading: boolean;
+    emptyMessage: string;
+  };
 }
 
 export default function MultiKeywordSelect({
@@ -68,9 +78,12 @@ export default function MultiKeywordSelect({
   loading = false,
   header,
   isSingleSelect = false,
+  search,
 }: MultiKeywordSelectProps) {
   const [open, setOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [localSearchTerm, setLocalSearchTerm] = useState("");
+  const searchTerm = search ? search.term : localSearchTerm;
+  const setSearchTerm = search ? search.onTermChange : setLocalSearchTerm;
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const displayedKeywords = useMemo(() => {
@@ -78,10 +91,11 @@ export default function MultiKeywordSelect({
   }, [initialKeywords]);
 
   const filteredAvailableItems = useMemo(() => {
+    if (search) return availableItems;
     return availableItems.filter((item) =>
       item.toLowerCase().includes(searchTerm.toLowerCase()),
     );
-  }, [availableItems, searchTerm]);
+  }, [availableItems, searchTerm, search]);
 
   const addKeyword = useCallback(
     (contentToAdd: string) => {
@@ -99,7 +113,7 @@ export default function MultiKeywordSelect({
       }
       setSearchTerm("");
     },
-    [name, onChange, initialKeywords, isSingleSelect],
+    [name, onChange, initialKeywords, isSingleSelect, setSearchTerm],
   );
 
   const removeKeyword = useCallback(
@@ -154,6 +168,7 @@ export default function MultiKeywordSelect({
               name={name}
               header={header}
               loading={loading}
+              search={search}
             />
           </PopoverContent>
         </Popover>
@@ -197,6 +212,7 @@ export default function MultiKeywordSelect({
                 removeKeyword={removeKeyword}
                 name={name}
                 loading={loading}
+                search={search}
               />
             </div>
           </DrawerContent>
@@ -307,6 +323,7 @@ function ItemsList({
   name,
   header,
   loading,
+  search,
 }: {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
@@ -341,6 +358,7 @@ function ItemsList({
     description?: string;
   };
   loading: boolean;
+  search?: MultiKeywordSelectProps["search"];
 }) {
   const [rowHeights, setRowHeights] = useState<Record<string, number>>({});
   const listRef = useRef<VariableSizeList | null>(null);
@@ -400,13 +418,20 @@ function ItemsList({
         onValueChange={setSearchTerm}
       />
       <CommandList>
-        <CommandEmpty
-          className={`${
-            name === "profile" && "py-10"
-          } text-muted-foreground text-center py-5 h-60`}
-        >
-          No items available
-        </CommandEmpty>
+        {search?.loading && filteredAvailableItems.length === 0 ? (
+          <div role="status" className="flex h-60 items-center justify-center">
+            <Loader2 className="animate-spin text-muted-foreground" />
+            <span className="sr-only">Searching</span>
+          </div>
+        ) : (
+          <CommandEmpty
+            className={`${
+              name === "profile" && "py-10"
+            } text-muted-foreground text-center py-5 h-60`}
+          >
+            {search ? search.emptyMessage : "No items available"}
+          </CommandEmpty>
+        )}
         <CommandGroup
           // className="!overflow-y-hidden"
           heading={

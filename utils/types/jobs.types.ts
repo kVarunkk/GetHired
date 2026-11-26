@@ -71,6 +71,8 @@ const companyIdSelectString = supabase
           department,
           workplace_type,
           status,
+          state,
+          openings,
           job_id,
           updated_at,
           applications(id),

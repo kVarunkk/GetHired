@@ -10,7 +10,6 @@ type CompanyInfoRow = Tables<"company_info">;
 type JobFeedbackRow = Tables<"job_feedback">;
 type UserFavoritesCompanyInfoRow = Tables<"user_favorites_companies">;
 export type TJobTypeEnum = Enums<"job_type_enum">;
-export type BookmarkRow = Tables<"bookmarks">;
 export type PaymentsRow = Tables<"payments">;
 export type PricePlanRow = Tables<"price_plan">;
 export type UserInfoRow = Tables<"user_info">;
@@ -135,6 +134,8 @@ export interface INavItem {
   icon?: React.ReactNode;
   /** A count shown next to the label, e.g. open outreach. */
   count?: number;
+  /** What the count is, read after it ("3 open"). Defaults to "open". */
+  countLabel?: string;
 }
 
 export interface INavItemWithActive extends INavItem {
@@ -227,6 +228,7 @@ export interface FilterConfig {
     | "multi-select"
     | "multi-select-input"
     | "location-search-select"
+    | "company-search-select"
     | "currency-select"
     | "salary";
   placeholder?: string;
@@ -395,6 +397,22 @@ export enum PostHogEvent {
   CompanyDefaultRoleChanged = "company_default_role_changed",
   JobAssigned = "job_assigned",
   JobUnassigned = "job_unassigned",
+
+  TrackerUrlRead = "tracker_url_read",
+  // Job alerts (JA-REQ-050/051).
+  JobAlertBannerShown = "job_alert_banner_shown",
+  JobAlertBannerDismissed = "job_alert_banner_dismissed",
+  JobAlertSignupStarted = "job_alert_signup_started",
+  JobAlertClicked = "job_alert_clicked",
+  JobAlertCreated = "job_alert_created",
+  JobAlertCapHit = "job_alert_cap_hit",
+  JobAlertUpdated = "job_alert_updated",
+  JobAlertDeleted = "job_alert_deleted",
+  JobAlertPausedFromEmail = "job_alert_paused_from_email",
+  JobAlertEmailSent = "job_alert_email_sent",
+
+  CompanyDashboardViewed = "company_dashboard_viewed",
+  CompanyDashboardAction = "company_dashboard_action",
 }
 
 export type JobUrlPatch = {

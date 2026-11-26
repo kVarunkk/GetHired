@@ -27,6 +27,9 @@ const EXPECTED: Record<string, [owner: boolean, admin: boolean, member: boolean]
   "action:upsertJobPosting (create)": [true, true, false],
   "action:upsertJobPosting (edit)": [true, true, false],
   "action:setJobPostingStatus": [true, true, false],
+  "action:setJobPostState": [true, true, false],
+  // JL-REQ-019: jobs.approve, which Admin has and Member doesn't.
+  "action:reviewJobApproval": [true, true, false],
   "action:deleteJobPosting": [true, true, false],
   "route:GET /api/company/applications/[id]/screening": [true, true, true],
   "route:GET /api/company/job-posts/[job_id]/pipeline": [true, true, true],
@@ -114,6 +117,8 @@ const EXPECTED: Record<string, [owner: boolean, admin: boolean, member: boolean]
   // Owners (RP-REQ-006) replace transferOwnership: owners only, as before.
   "action:setOwner": [true, false, false],
   "action:makePrimaryOwner": [true, false, false],
+  // JL-REQ-018 / D7: the job approval setting is owners only.
+  "action:setJobApprovalRequired": [true, false, false],
   // New with roles: roles.manage and jobs.assign (Admin has both, Member neither).
   "action:createRole": [true, true, false],
   "action:updateRole": [true, true, false],
@@ -128,7 +133,7 @@ const EXPECTED: Record<string, [owner: boolean, admin: boolean, member: boolean]
   "tool:getJobPost": [true, true, true],
   "tool:createJobPost": [true, true, false],
   "tool:updateJobPost": [true, true, false],
-  "tool:setJobPostStatus": [true, true, false],
+  "tool:setJobPostState": [true, true, false],
   "tool:deleteJobPost": [true, true, false],
   "tool:searchCandidates": [true, true, true],
   "tool:findMatchesForJob": [true, true, true],

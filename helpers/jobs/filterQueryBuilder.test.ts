@@ -34,7 +34,6 @@ const BASE_ARGS = {
   isFavoriteTabActive: false,
   isAppliedJobsTabActive: false,
   userEmbedding: null,
-  applicationStatus: null,
   createdAfter: null,
   jobEmbedding: null,
   relevanceSearchType: null,
@@ -421,5 +420,42 @@ describe("buildQuery: title keywords", () => {
       .callsFor("all_jobs")[0]
       ?.chain.filter((step) => step.method === "or");
     expect(orCalls).toEqual([]);
+  });
+});
+
+describe("buildQuery: link-only jobs (JLT-061, JL-SEC-004)", () => {
+  const listedFilter = { method: "eq", args: ["listed", true] };
+
+  it("lists only listed jobs on the job board", async () => {
+    await buildQuery(supabase.client, null, { ...BASE_ARGS });
+    expect(supabase.callsFor("all_jobs")[0].chain).toContainEqual(listedFilter);
+  });
+
+  it("lists only listed jobs in the user's relevant jobs", async () => {
+    await buildQuery(supabase.client, mockUser({ id: "u1" }), { ...BASE_ARGS, relevanceSearchType: "standard" });
+    expect(supabase.callsFor("all_jobs")[0].chain).toContainEqual(listedFilter);
+  });
+
+  it("keeps a saved link-only job in the user's saved tab", async () => {
+    await buildQuery(supabase.client, mockUser({ id: "u1" }), { ...BASE_ARGS, isFavoriteTabActive: true });
+    expect(supabase.callsFor("all_jobs")[0].chain).not.toContainEqual(listedFilter);
+  });
+});
+
+describe("buildQuery: excluded jobs (JAT-030)", () => {
+  const A = "d0000000-0000-4000-8000-000000000001";
+  const B = "d0000000-0000-4000-8000-000000000002";
+
+  it("leaves out the given ids before the limit", async () => {
+    await buildQuery(supabase.client, null, { ...BASE_ARGS, excludeJobIds: [A, B] });
+    const chain = supabase.callsFor("all_jobs")[0].chain;
+    const not = chain.findIndex((s) => s.method === "not" && s.args[0] === "id");
+    expect(chain[not]).toEqual({ method: "not", args: ["id", "in", `(${A},${B})`] });
+    expect(not).toBeLessThan(chain.findIndex((s) => s.method === "limit"));
+  });
+
+  it("drops anything that isn't an id", async () => {
+    await buildQuery(supabase.client, null, { ...BASE_ARGS, excludeJobIds: ["x),or(id.eq.1"] });
+    expect(supabase.callsFor("all_jobs")[0].chain.some((s) => s.method === "not" && s.args[0] === "id")).toBe(false);
   });
 });

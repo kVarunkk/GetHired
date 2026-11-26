@@ -1,0 +1,188 @@
+import { createClient } from "@/lib/supabase/server";
+import { getMyCompany } from "@/helpers/companies/get-my-company";
+import { can } from "@/helpers/companies/permissions";
+import Error from "@/components/Error";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Briefcase, DollarSign, Users, MapPin } from "lucide-react";
+import Link from "next/link";
+import JobDescriptionCard from "@/components/JobDetailsCard";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { isUuid } from "@/helpers/agent/auth";
+import AskAgentAboutJobPost from "@/components/agent/recruiter/AskAgentAboutJobPost";
+import PoolMatchesNotice from "@/components/candidates/PoolMatchesNotice";
+import { loadPoolMatchesCard, poolNoticeCount } from "@/helpers/candidates/pool-matches-card";
+import { JOB_CREATED_PARAM } from "@/helpers/jobs/paths";
+import FillJobNotice from "@/components/jobs/FillJobNotice";
+import JobApprovalNotice from "@/components/jobs/JobApprovalNotice";
+import { loadApprovalStatus } from "@/helpers/jobs/job-approval";
+import { countHiresFor, shouldSuggestFill } from "@/helpers/jobs/job-hires";
+import { countOpenScreeningInterviews } from "@/helpers/jobs/job-interviews";
+
+export default async function JobPostPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ job_id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  try {
+    const { job_id } = await params;
+    const created = (await searchParams)?.[JOB_CREATED_PARAM] === "1";
+    if (!isUuid(job_id)) notFound();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const { data: job, error } = await supabase
+      .from("job_postings")
+      .select(
+        `
+          *,
+          applications(id),
+          company_info(name, website, job_approval_required)
+        ` as const,
+      )
+      .eq("id", job_id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!job) notFound();
+
+    // RP-REQ-010: a job the viewer's role doesn't cover is a 404 (the row
+    // itself is public, so RLS can't hide it). The layout checks it too.
+    const company = user ? await getMyCompany(supabase, user) : null;
+    if (!company || job.company_id !== company.id || !can(company, "jobs.view", job.id)) notFound();
+    // CP-REQ-061: right after the job is made, how many of the company's own
+    // candidates may fit. The matches themselves have their own section.
+    const noticeCount = created
+      ? poolNoticeCount(await loadPoolMatchesCard(supabase, company, job.id), created)
+      : null;
+    // JL-REQ-013: once hires reach the openings, offer Mark as filled to jobs.publish.
+    const canFill = can(company, "jobs.publish", job.id) && (job.state === "open" || job.state === "paused");
+    const hires = canFill ? await countHiresFor(supabase, job.id).catch(() => 0) : 0;
+    const suggestFill = canFill && shouldSuggestFill(job, hires);
+    const openInterviews =
+      suggestFill && can(company, "interviews.manage", job.id)
+        ? await countOpenScreeningInterviews(supabase, job.id).catch(() => 0)
+        : 0;
+
+    // JL-REQ-020/022: a pending job's submission and moves, or the note on a
+    // draft an approver sent back.
+    const approval = await loadApprovalStatus(supabase, job).catch(() => null);
+
+    // The layout shows the header and the job's controls.
+    return (
+      <div className="mb-20 flex flex-col gap-6">
+        {approval && (
+          <JobApprovalNotice
+            job={job}
+            status={approval}
+            viewer={{
+              canPublish: can(company, "jobs.publish", job.id),
+              canApprove: can(company, "jobs.approve", job.id),
+              approvalRequired: !!job.company_info?.job_approval_required,
+              isSubmitter: approval.kind === "pending" && !!user && approval.submitterId === user.id,
+            }}
+          />
+        )}
+        {suggestFill && <FillJobNotice job={job} hires={hires} openInterviews={openInterviews} />}
+        {noticeCount !== null && <PoolMatchesNotice jobId={job.id} count={noticeCount} />}
+        {can(company, "agent.use") && (
+          <AskAgentAboutJobPost
+            job={{ id: job.id, title: job.title }}
+            canMatch={can(company, "matching.run", job.id)}
+            canFindPoolCandidates={can(company, "talent.view")}
+            canViewApplicants={can(company, "applicants.view", job.id)}
+            canViewInterviews={can(company, "interviews.view", job.id)}
+            canManageInterviews={can(company, "interviews.manage", job.id) && can(company, "jobs.edit", job.id)}
+          />
+        )}
+
+        {/* --- Job Details Section --- */}
+        {/* The app sidebar and the job nav leave too little room for three columns below xl. */}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          {/* Details Card */}
+          <JobDescriptionCard
+            job={job}
+            page={"job-posts"}
+            userId={user?.id || null}
+          />
+
+          {/* Key Metrics/Details Sidebar */}
+          <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-1">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Location</CardTitle>
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2 text-2xl font-semibold">
+                  {job.location && job.location.length > 0 ? (
+                    job.location.map((loc, index) => (
+                      <Badge key={index} variant="secondary" className="p-2">
+                        {loc}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground text-base">
+                      Not specified
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Salary</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold tracking-tight">
+                  {job.salary_range ? job.salary_range : "Not specified"}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Experience
+                </CardTitle>
+                <Briefcase className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold tracking-tight">
+                  {job.experience ? job.experience : "Not specified"}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Link
+              href={`/company/job-posts/${job.id}/applications`}
+              className="rounded-xl transition-colors hover:bg-muted/60"
+            >
+              <Card className="h-full bg-transparent">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Applications
+                  </CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-semibold tracking-tight">
+                    {job.applications?.length}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  } catch (err) {
+    unstable_rethrow(err);
+    return <Error />;
+  }
+}

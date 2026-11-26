@@ -33,6 +33,10 @@ export type FeedJob = {
   category: string | null;
   postedAt: Date;
   updatedAt: Date;
+  /** JL-REQ-016: the closing date (`YYYY-MM-DD`, the company's day), for boards that take an expiry. */
+  closesOn?: string | null;
+  /** The end of that day in the company's time zone. */
+  expiresAt?: Date | null;
 };
 
 /** Escapes text for use outside CDATA. */

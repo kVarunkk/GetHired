@@ -73,8 +73,8 @@ export const MEMBER_KEYS: PermissionKey[] = [
  */
 export const MEMBER_ASSIGNED_KEYS: PermissionKey[] = ["applicants.import"];
 
-/** Job-scoped keys the Hiring manager template leaves out (BI-PERM-001). */
-const HIRING_MANAGER_EXCLUDED: PermissionKey[] = ["applicants.import"];
+/** Job-scoped keys the Hiring manager template leaves out (BI-PERM-001, JL-REQ-019). */
+const HIRING_MANAGER_EXCLUDED: PermissionKey[] = ["applicants.import", "jobs.approve"];
 
 const JOB_SCOPED_KEYS: PermissionKey[] = PERMISSION_CATALOG.filter((p) => p.scopable)
   .map((p) => p.key)

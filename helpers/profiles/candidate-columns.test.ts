@@ -52,6 +52,7 @@ const USER_INFO_COLUMNS = {
   updated_at: true,
   user_id: true,
   visa_sponsorship_required: true,
+  weekly_application_goal: true,
   work_style_preferences: true,
   work_style_preferences_search: true,
 } satisfies Record<UserInfoColumn, true>;

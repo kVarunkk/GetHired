@@ -7,8 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { createClient } from "@/lib/supabase/server";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import InterviewPage from "./page";
-import InterviewIdPage from "./[interviewId]/page";
+import InterviewPage from "./(list)/page";
+import InterviewIdPage from "./[interviewId]/(room)/page";
 import InterviewAnalysisPage from "./[interviewId]/analysis/[sessionId]/page";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
@@ -18,6 +18,13 @@ vi.mock("@/components/InterviewsTable", () => ({
 }));
 vi.mock("@/components/CreateInterviewDialog", () => ({ default: () => null }));
 vi.mock("@/components/agent/AskAgentOnApplicantPages", () => ({ AskAgentAboutInterviews: () => null }));
+vi.mock("@/helpers/interview/screening/my-interviews", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/helpers/interview/screening/my-interviews")>()),
+  listMyScreeningInterviews: vi.fn(async () => [{ id: "fa1" }]),
+}));
+vi.mock("@/components/interviews/MyScreeningInterviews", () => ({
+  default: ({ interviews }: { interviews: unknown[] }) => <p>{interviews.length} company interviews</p>,
+}));
 vi.mock("@/components/InterviewComponent", () => ({ default: () => <p>practice interview</p> }));
 vi.mock("@/components/InterviewAnalysisReport", () => ({ InterviewAnalysisReport: () => null }));
 vi.mock("next/navigation", async (importOriginal) => ({
@@ -50,6 +57,20 @@ describe("/interview list", () => {
     render(await InterviewPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText("1 interviews")).toBeInTheDocument();
     expect(db.callsFor("interviews")[0].chain).toContainEqual({ method: "eq", args: ["kind", "practice"] });
+    expect(screen.queryByText("1 company interviews")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Mock/ })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("lists company screening interviews on ?tab=companies, with both tabs' counts", async () => {
+    db.queue("interviews", { data: [{ id: INTERVIEW_ID }, { id: "x" }], error: null });
+    render(await InterviewPage({ searchParams: Promise.resolve({ tab: "companies" }) }));
+    expect(screen.getByText("1 company interviews")).toBeInTheDocument();
+    expect(screen.queryByText("2 interviews")).not.toBeInTheDocument();
+    const companies = screen.getByRole("link", { name: /From companies/ });
+    expect(companies).toHaveAttribute("aria-current", "page");
+    expect(companies).toHaveAttribute("href", "/interview?tab=companies");
+    expect(companies).toHaveTextContent("1");
+    expect(screen.getByRole("link", { name: /^Mock/ })).toHaveTextContent("2");
   });
 });
 

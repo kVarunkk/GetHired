@@ -4,24 +4,7 @@ import { useEffect, useState } from "react";
 import { previewAgentRoleAction } from "@/app/actions/roles/preview-agent-role";
 import type { PreviewAgentRoleResult } from "@/helpers/companies/preview-agent-role";
 import { describeGrantChange, describeLimitChange } from "@/helpers/companies/role-diff";
-
-export const ROLE_APPROVAL_TOOLS = [
-  "createRole",
-  "updateRole",
-  "deleteRole",
-  "assignRole",
-  "setDefaultRole",
-  "removeTeamMember",
-  "assignToJob",
-  "unassignFromJob",
-  "inviteTeamMember",
-  "resendInvite",
-  "revokeInvite",
-] as const;
-export type RoleApprovalTool = (typeof ROLE_APPROVAL_TOOLS)[number];
-
-export const isRoleApprovalTool = (name: string): name is RoleApprovalTool =>
-  (ROLE_APPROVAL_TOOLS as readonly string[]).includes(name);
+import type { RoleApprovalTool } from "../approval-tools";
 
 /**
  * RP-REQ-032: the approval card for the agent's role and hiring-team changes,

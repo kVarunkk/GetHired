@@ -1,5 +1,21 @@
 import { toIsoCurrency } from "@/helpers/currency/currencies";
 import { TJobIdPageData } from "@/utils/types/jobs.types";
+import { endOfDayIn } from "@/helpers/companies/time-zone";
+
+/** A company job's closing date (`YYYY-MM-DD`), or null; scraped jobs have none. */
+export function jobClosingDate(job: TJobIdPageData): string | null {
+  return job?.job_postings?.[0]?.closes_at ?? null;
+}
+
+/**
+ * JL-REQ-016: when the job stops taking applications, the end of its closing
+ * date in the company's time zone, or undefined without one.
+ */
+export function jobValidThrough(job: TJobIdPageData): string | undefined {
+  const closesAt = jobClosingDate(job);
+  if (!closesAt) return undefined;
+  return endOfDayIn(closesAt, job?.job_postings?.[0]?.company_info?.time_zone) ?? undefined;
+}
 
 function toISODate(value: string | null | undefined): string | undefined {
   if (!value) return undefined;
@@ -156,7 +172,14 @@ function getSalaryCurrency(salaryRange?: string | null) {
   return undefined;
 }
 
+/** A link-only company job (JL-REQ-025): reachable by link, never indexed. */
+export function isLinkOnlyJob(job: TJobIdPageData): boolean {
+  return job?.job_postings?.[0]?.visibility === "link_only";
+}
+
 export function buildJobPostingJsonLd(job: TJobIdPageData) {
+  // No structured data for a job that must stay out of search results.
+  if (isLinkOnlyJob(job)) return null;
   const title = job?.job_name?.trim() || "Job Opening";
   const description = stripHtml(job?.description || job?.ai_summary || "");
   const companyName = job?.company_name?.trim() || "Confidential Company";
@@ -194,6 +217,15 @@ export function buildJobPostingJsonLd(job: TJobIdPageData) {
       directApply: true,
     },
   };
+
+  // JL-REQ-011: a company job's openings (scraped jobs have no posting).
+  const openings = job?.job_postings?.[0]?.openings;
+  if (typeof openings === "number" && openings >= 1) {
+    jsonLd.totalJobOpenings = openings;
+  }
+
+  const validThrough = jobValidThrough(job);
+  if (validThrough) jsonLd.validThrough = validThrough;
 
   if (isRemote) {
     jsonLd.jobLocationType = "TELECOMMUTE";

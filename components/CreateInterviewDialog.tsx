@@ -52,7 +52,6 @@ export default function CreateInterviewDialog({
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
-    staleTime: 5 * 60 * 1000,
   });
   const isOnboardingComplete =
     data && data.profile ? data.profile.filled : false;

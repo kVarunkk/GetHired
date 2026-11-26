@@ -1,29 +1,104 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { IJobPost } from "@/utils/types";
-import { JobStatusSwitch } from "./JobPostingsTable";
+import { COMPANY_A } from "@/test/utils/recruiter";
+import { makeJobPost } from "@/test/utils/job-states";
+import JobPostingsTable, { stateFilterFrom } from "./JobPostingsTable";
 
-const handleUpdateStatus = vi.fn();
-vi.mock("@/hooks/useJobPostingStatus", () => ({
-  useJobPostingStatus: () => ({ checkedState: true, handleUpdateStatus, upgradeDialog: null }),
+const replace = vi.fn();
+let search = "";
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace }),
+  usePathname: () => "/company/job-posts",
+  useSearchParams: () => new URLSearchParams(search),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("react-transition-progress/next", () => ({ Link: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock("@/components/ui/select", () => import("@/test/utils/select-mock"));
+vi.mock("./jobs/JobStateMenu", () => ({
+  default: ({ job, viewer }: { job: IJobPost; viewer: { canPublish: boolean; canApprove: boolean } }) => (
+    <span data-testid={`menu-${job.title}`}>
+      {job.state} publish:{String(viewer.canPublish)} approve:{String(viewer.canApprove)}
+    </span>
+  ),
+}));
 
-const job = { id: "b0000000-0000-4000-8000-000000000001", status: "active" } as unknown as IJobPost;
+const job = (title: string, state: IJobPost["state"], openings = 1) =>
+  ({ ...makeJobPost(COMPANY_A, { state, openings }), title, applications: [{ count: 0 }] }) as IJobPost;
 
-describe("JobStatusSwitch (TM-REQ-004)", () => {
-  it("is disabled for a member and keeps showing the status", () => {
-    render(<JobStatusSwitch job={job} disabled />);
+const JOBS = [
+  job("Open job", "open", 3),
+  job("Paused job", "paused"),
+  job("Draft job", "draft"),
+  job("Pending job", "pending_approval"),
+  job("Closed job", "closed"),
+  job("Filled job", "filled"),
+];
 
-    const toggle = screen.getByRole("switch", { name: "Job is active" });
-    expect(toggle).toBeDisabled();
-    expect(toggle).toBeChecked();
+beforeEach(() => {
+  vi.clearAllMocks();
+  search = "";
+});
+
+const titles = () =>
+  ["Open job", "Paused job", "Draft job", "Pending job", "Closed job", "Filled job"].filter((t) => screen.queryByText(t));
+
+describe("JobPostingsTable: the state filter (JLT-022, JL-REQ-029)", () => {
+  it("shows open and paused jobs by default", () => {
+    render(<JobPostingsTable data={JOBS} />);
+    expect(titles()).toEqual(["Open job", "Paused job"]);
   });
 
-  it("is enabled for owners and admins", () => {
-    render(<JobStatusSwitch job={job} />);
+  it.each([
+    ["drafts", ["Draft job"]],
+    ["pending", ["Pending job"]],
+    ["archive", ["Closed job", "Filled job"]],
+    ["all", ["Open job", "Paused job", "Draft job", "Pending job", "Closed job", "Filled job"]],
+  ])("reads ?state=%s from the URL", (value, expected) => {
+    search = `state=${value}`;
+    render(<JobPostingsTable data={JOBS} />);
+    expect(titles()).toEqual(expected);
+  });
 
-    expect(screen.getByRole("switch")).toBeEnabled();
+  it("shows archived jobs only under ?state=archived", () => {
+    const data = [...JOBS, { ...job("Archived job", "closed"), archived_at: "2026-11-01T00:00:00Z" }];
+
+    search = "state=all";
+    const { unmount } = render(<JobPostingsTable data={data} />);
+    expect(screen.queryByText("Archived job")).toBeNull();
+    unmount();
+
+    search = "state=archived";
+    render(<JobPostingsTable data={data} />);
+    expect(screen.getByText("Archived job")).toBeInTheDocument();
+    expect(titles()).toEqual([]);
+  });
+
+  it("writes the filter to the URL, dropping it for the default", () => {
+    search = "state=drafts";
+    render(<JobPostingsTable data={JOBS} />);
+    const select = screen.getByLabelText("Filter by status");
+    fireEvent.change(select, { target: { value: "archive" } });
+    expect(replace).toHaveBeenLastCalledWith("/company/job-posts?state=archive", { scroll: false });
+    fireEvent.change(select, { target: { value: "current" } });
+    expect(replace).toHaveBeenLastCalledWith("/company/job-posts", { scroll: false });
+  });
+
+  it("falls back to the default for an unknown value", () => {
+    expect(stateFilterFrom("nonsense")).toBe("current");
+    expect(stateFilterFrom(null)).toBe("current");
+  });
+});
+
+describe("JobPostingsTable: columns", () => {
+  it("shows hires against openings", () => {
+    render(<JobPostingsTable data={JOBS} hires={{ [JOBS[0].id]: 1 }} />);
+    expect(screen.getByLabelText("Hired 1 of 3")).toHaveTextContent("1 / 3");
+    expect(screen.getByLabelText("Hired 0 of 1")).toBeInTheDocument();
+  });
+
+  it("gives each row's state menu the viewer's permissions on that job (RP-REQ-016)", () => {
+    render(<JobPostingsTable data={JOBS} publishable={[JOBS[0].id]} approvable={[]} />);
+    expect(screen.getByTestId("menu-Open job")).toHaveTextContent("open publish:true approve:false");
+    expect(screen.getByTestId("menu-Paused job")).toHaveTextContent("paused publish:false");
   });
 });

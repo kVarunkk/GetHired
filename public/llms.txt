@@ -1,19 +1,34 @@
 # GetHired
 
-> GetHired (https://gethired.devhub.co.in) is an AI job platform for tech roles. Job seekers chat with an AI agent that searches thousands of developer and tech openings, matches them to their resume, reviews their CV and runs mock interviews. Companies get an AI recruiter that drafts job posts, ranks matched candidates, screens applicants with AI interviews and runs a lightweight ATS.
+> GetHired (https://gethired.devhub.co.in) is an AI job search platform for every kind of role. Job seekers chat with an AI agent that searches thousands of openings across industries and matches them to their resume, tracks applications, emails job alerts, reviews their CV and runs mock interviews. Companies get an AI recruiter that drafts job posts, ranks matched candidates, screens applicants with AI interviews and runs a lightweight ATS.
 
 Every page listed here has a markdown version: add `.md` to the URL (the home page is `/index.md`). The links below point to the markdown versions.
 
 ## Job seekers
 
 - [Home](https://gethired.devhub.co.in/index.md): The AI job-search agent and what it does
+- [AI job search agent](https://gethired.devhub.co.in/ai-job-search-agent.md): Search, match, apply, track and prepare in one chat, for any kind of role
+- [Job application tracker](https://gethired.devhub.co.in/application-tracker.md): Saved jobs and applications from any site in one place
+- [Job alerts](https://gethired.devhub.co.in/job-alerts.md): Daily or weekly emails with new jobs for a search
 - [AI resume checker](https://gethired.devhub.co.in/ai-resume-checker.md): Resume feedback for a target role
 - [AI interview practice](https://gethired.devhub.co.in/ai-interview.md): Mock interviews with feedback
 - [Browse jobs](https://gethired.devhub.co.in/jobs): Current job listings, searchable by role, skill and location (HTML only)
 
 ## Companies
 
-- [Hire tech talent](https://gethired.devhub.co.in/hire.md): The AI recruiter, candidate matching, screening and pipeline
+- [Hire talent](https://gethired.devhub.co.in/hire.md): The AI recruiter, candidate matching, screening and pipeline
+- [AI recruiter agent](https://gethired.devhub.co.in/hire/ai-recruiter-agent.md): A chat assistant that drafts jobs, ranks candidates and moves your pipeline, with approvals
+- [AI job description generator](https://gethired.devhub.co.in/hire/ai-job-description-generator.md): Draft a full job post and application questions from a short description
+- [AI candidate matching](https://gethired.devhub.co.in/hire/ai-candidate-matching.md): Matched candidates with a 0 to 100 score and the reasons
+- [Talent pool software](https://gethired.devhub.co.in/hire/talent-pool.md): Import resumes and spreadsheets and match them to new jobs
+- [Candidate outreach](https://gethired.devhub.co.in/hire/candidate-outreach.md): Consent-based messages to matched candidates
+- [AI applicant screening](https://gethired.devhub.co.in/hire/ai-applicant-screening.md): Fit scores, must-have checks and knockout rules for every application
+- [AI screening interviews](https://gethired.devhub.co.in/hire/ai-screening-interviews.md): Structured voice interviews with one-page reports
+- [Applicant tracking system](https://gethired.devhub.co.in/hire/applicant-tracking-system.md): Pipelines, board, notes, email templates and funnel for startups
+- [Interview scheduling](https://gethired.devhub.co.in/hire/interview-scheduling.md): Interview plans, panels, self-scheduling links and scorecards
+- [Careers page builder](https://gethired.devhub.co.in/hire/careers-page-builder.md): A branded careers page and custom application forms
+- [Job multiposting](https://gethired.devhub.co.in/hire/job-multiposting.md): Google, Bing and job board distribution from one post
+- [Hiring team collaboration](https://gethired.devhub.co.in/hire/hiring-team-collaboration.md): Roles, permissions, hiring teams and an audit log
 - [Pricing for companies](https://gethired.devhub.co.in/pricing/companies.md): Plans, prices and what each includes
 
 ## Integrations
@@ -39,7 +54,10 @@ Every page listed here has a markdown version: add `.md` to the URL (the home pa
 
 ## Optional
 
+- [Full text](https://gethired.devhub.co.in/llms-full.txt): Every page and blog post above in one file
 - [Blog](https://gethired.devhub.co.in/blog.md): Every post, newest first, with links to their markdown versions
+- [Company careers pages](https://gethired.devhub.co.in/companies): Companies hiring on GetHired and their open roles (HTML only)
+- [Remote jobs by location](https://gethired.devhub.co.in/remote-jobs/india): Remote jobs for a country or city (HTML only; swap the last segment)
 - [Privacy policy](https://gethired.devhub.co.in/privacy-policy): How user data and cookies are handled
 - [Terms of service](https://gethired.devhub.co.in/terms-of-service): Rules for job seekers and employers
 - [Sitemap](https://gethired.devhub.co.in/sitemap/0.xml): Full list of pages on the site

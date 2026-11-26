@@ -1,10 +1,17 @@
 import { Database } from "@/utils/types/database.types";
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
+import { cache } from "react";
 
 let clientCreationCount = 0;
 
-export async function createClient() {
+/**
+ * The request's Supabase client. While Server Components render, React's
+ * `cache` gives the layout and the page the same client, so lookups cached by
+ * client (`getMyCompany`) are shared too. Elsewhere (route handlers, server
+ * actions) every call makes a new one.
+ */
+export const createClient = cache(async () => {
   clientCreationCount++;
   if (clientCreationCount % 10 === 0) {
     console.log(`[supabase] createClient called ${clientCreationCount} times`);
@@ -47,4 +54,4 @@ export async function createClient() {
       },
     },
   );
-}
+});

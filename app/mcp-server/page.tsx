@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import McpLandingPage from "@/components/mcp/McpLandingPage";
 import { LANDING_PAGES, markdownAlternate } from "@/helpers/marketing/content";
 import { getPlatformStats } from "@/utils/platform-stats";
+import JsonLd from "@/components/seo/JsonLd";
+import { landingJsonLd } from "@/helpers/seo/schema";
 
 const page = { ...LANDING_PAGES["mcp-server"], mcp: "applicant" as const };
 
@@ -38,5 +40,10 @@ export const dynamic = "force-static";
 
 export default async function McpServerPage() {
   const { jobCount } = await getPlatformStats();
-  return <McpLandingPage page={page} jobCount={jobCount} />;
+  return (
+    <>
+      <JsonLd data={landingJsonLd(page, TITLE)} />
+      <McpLandingPage page={page} jobCount={jobCount} />
+    </>
+  );
 }

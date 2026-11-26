@@ -1,6 +1,6 @@
 import useSWR from "swr";
 import { useMemo } from "react";
-import { fetcher, ONE_DAY_MS, commonIndustries } from "@/utils/utils";
+import { fetcher, commonIndustries } from "@/utils/utils";
 
 export interface FilterOptions {
   uniqueCompanies: { company_name: string }[];
@@ -21,12 +21,16 @@ export function useFilterOptions(
     data: filterData,
     error: filterError,
     isLoading: filterLoading,
-  } = useSWR(`/api/${currentPage}/filters`, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    staleTime: ONE_DAY_MS,
-    revalidateIfStale: false,
-  });
+  } = useSWR(
+    // The jobs page's company filter searches on the server, so nothing is loaded here for it.
+    currentPage === "jobs" ? null : `/api/${currentPage}/filters`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+    },
+  );
 
   const uniqueCompanies = useMemo(
     () => filterData?.companies || [],

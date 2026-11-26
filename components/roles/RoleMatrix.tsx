@@ -1,3 +1,4 @@
+import ScrollFadeX from "@/components/ScrollFadeX";
 import { Check, Minus } from "lucide-react";
 import {
   PERMISSION_CATALOG,
@@ -40,7 +41,7 @@ export default function RoleMatrix({
             : `Your role is highlighted. Owners can do everything, including billing and managing owners.`}
         </p>
       </div>
-      <div className="overflow-x-auto rounded-md border">
+      <ScrollFadeX className="rounded-md border">
         <table className="w-full text-sm" aria-label="Role permissions">
           <thead>
             <tr className="border-b">
@@ -99,7 +100,7 @@ export default function RoleMatrix({
             </tbody>
           ))}
         </table>
-      </div>
+      </ScrollFadeX>
     </section>
   );
 }

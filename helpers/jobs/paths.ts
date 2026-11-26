@@ -17,3 +17,7 @@ export const jobPoolMatchesPath = (jobId: string) => `/company/job-posts/${jobId
 
 /** A job's Distribution section (MPT-015). */
 export const jobDistributionPath = (jobId: string) => `/company/job-posts/${jobId}/distribution`;
+
+/** The company's job posts list, and the same list filtered to archived posts. */
+export const JOB_POSTS_PATH = "/company/job-posts";
+export const archivedJobPostsPath = `${JOB_POSTS_PATH}?state=archived`;

@@ -1,5 +1,6 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { careersCompanyTag } from "@/helpers/careers/cache-tags";
+import { JOBS_FEED_TAG } from "@/helpers/jobs/feed-tag";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
@@ -85,6 +86,7 @@ export async function setJobPostStatus(
   if (jobId) {
     revalidateTag(`job-${jobId}`);
     revalidateTag(careersCompanyTag(company.id));
+    revalidateTag(JOBS_FEED_TAG);
     revalidatePath(`/jobs/${jobId}`);
     // MP-REQ-002/003: tell the search engines, queued so it never slows the request.
     await enqueueIndexPing({ jobId, reason: status === "active" ? "activated" : "closed" });

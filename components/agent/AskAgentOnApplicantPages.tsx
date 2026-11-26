@@ -117,3 +117,22 @@ export function AskAgentAboutSettings() {
     />
   );
 }
+
+// listApplications, trackApplication, listSavedJobs (AT-REQ-013).
+export const MY_JOBS_SUGGESTIONS: AgentSuggestion[] = [
+  { label: "Where do my applications stand?", prompt: "Summarise my applications: what's in each stage and what needs a follow-up." },
+  { label: "Track an application", prompt: "I applied to a job outside GetHired. Help me track it. Ask me for the job first." },
+  { label: "Which saved jobs to apply to?", prompt: "List my saved jobs and tell me which ones to apply to first." },
+];
+
+export function AskAgentAboutMyJobs() {
+  return (
+    <AskAgentBox
+      title="Ask the agent about your applications"
+      placeholder="Which applications haven't heard back in two weeks?…"
+      basePath={AGENT_PATH}
+      suggestions={MY_JOBS_SUGGESTIONS}
+      toPrompt={(question) => `About my applications and saved jobs: ${question.trim()}`}
+    />
+  );
+}

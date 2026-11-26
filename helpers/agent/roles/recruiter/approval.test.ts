@@ -30,7 +30,9 @@ describe("recruiterToolApproval (RA-TEST-002, recruiter half)", () => {
       [
         "createJobPost",
         "updateJobPost",
-        "setJobPostStatus",
+        "setJobPostState",
+        "submitJobForApproval",
+        "reviewJobApproval",
         "deleteJobPost",
         "runMatchingForJob",
         "screenApplicants",

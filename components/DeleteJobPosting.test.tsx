@@ -24,7 +24,7 @@ beforeEach(() => {
 
 describe("DeleteJobPosting", () => {
   it("deletes through the server action and refreshes the list", async () => {
-    vi.mocked(deleteJobPostingAction).mockResolvedValue({ ok: true });
+    vi.mocked(deleteJobPostingAction).mockResolvedValue({ ok: true, outcome: "deleted" });
     render(<DeleteJobPosting job_posting_id={ID} />);
 
     openAndConfirm();
@@ -36,12 +36,25 @@ describe("DeleteJobPosting", () => {
   });
 
   it("goes back to /company from the posting's own page", async () => {
-    vi.mocked(deleteJobPostingAction).mockResolvedValue({ ok: true });
+    vi.mocked(deleteJobPostingAction).mockResolvedValue({ ok: true, outcome: "deleted" });
     render(<DeleteJobPosting job_posting_id={ID} is_job_posting_page />);
 
     openAndConfirm();
 
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/company"));
+  });
+
+  it("says it archives a job with applications, and stays on its page", async () => {
+    vi.mocked(deleteJobPostingAction).mockResolvedValue({ ok: true, outcome: "archived" });
+    render(<DeleteJobPosting job_posting_id={ID} is_job_posting_page applications={3} />);
+
+    fireEvent.click(screen.getByTitle("Delete Job Post"));
+    expect(screen.getByText(/This job has 3 applications, so it.ll be archived instead of deleted/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Archive" }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Job post archived. Candidates keep their history."));
+    expect(router.refresh).toHaveBeenCalled();
+    expect(router.push).not.toHaveBeenCalled();
   });
 
   it("shows the error and keeps the dialog usable on failure", async () => {

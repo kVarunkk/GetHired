@@ -119,7 +119,7 @@ describe("NavbarComponent: horizontal links", () => {
     renderNavbar(applicant);
 
     const desktopLinks = screen.getByRole("navigation", { name: "Main" });
-    expect(within(desktopLinks).getByRole("link", { name: "Jobs" })).toBeInTheDocument();
+    expect(within(desktopLinks).getByRole("link", { name: "Discover" })).toBeInTheDocument();
     expect(within(desktopLinks).queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
@@ -184,10 +184,10 @@ describe("NavbarComponent: open outreach badge (ORT-034)", () => {
 describe("NavbarComponent: company links (BI-REQ-003)", () => {
   const company = { id: "c1", app_metadata: { type: "company" }, user_metadata: {} } as unknown as User;
 
-  function withAccess(access: { billingView: boolean; talentView: boolean }) {
+  function withAccess(access: { billingView: boolean; talentView: boolean }, pendingJobApprovals = 0) {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ profile: { access } }) })),
+      vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ profile: { access, pendingJobApprovals } }) })),
     );
   }
 
@@ -221,6 +221,15 @@ describe("NavbarComponent: company links (BI-REQ-003)", () => {
 
     await waitFor(() => expect(screen.queryByRole("link", { name: /Candidates/ })).not.toBeInTheDocument());
     expect(screen.getAllByRole("link", { name: /Discover/ }).length).toBeGreaterThan(0);
+  });
+
+  it("counts the jobs waiting for approval on Job Posts (JL-REQ-022)", async () => {
+    withAccess({ billingView: true, talentView: true }, 3);
+    vi.mocked(usePathname).mockReturnValue("/company");
+
+    renderCompanyNavbar();
+
+    expect((await screen.findAllByLabelText("3 waiting for approval")).length).toBeGreaterThan(0);
   });
 
   it("shows My interviews to a member whose role grants nothing (IVT-021)", async () => {

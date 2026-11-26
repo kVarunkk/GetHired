@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,122 +11,93 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { Check, File, MoreHorizontal, Share2, Trash } from "lucide-react";
+import { Check, File, KanbanSquare, MoreHorizontal, Share2, Trash } from "lucide-react";
 import toast from "react-hot-toast";
-import { TApplicationStatus } from "@/utils/types";
 import { setExternalApplicationStatusAction } from "@/app/actions/applications/set-external-application-status";
 import { removeExternalApplicationAction } from "@/app/actions/applications/remove-external-application";
 import { copyToClipboard, PROFILE_API_KEY } from "@/utils/utils";
 import { mutate } from "swr";
 import { useState } from "react";
 import ConfirmDialog from "./ConfirmDialog";
+import { APPLIED_STATUSES, trackedStatusLabel, type AppliedStatus } from "@/helpers/tracker/status";
+import { myJobsPath, trackedApplicationPath } from "@/helpers/tracker/paths";
 
-const applicationStatuses = Object.values(TApplicationStatus);
+type ProfileRow = { id?: string; all_jobs_id: string | null; status: string };
+type ProfileCache = { profile?: { applications?: ProfileRow[]; tracked_applications?: ProfileRow[] } } | undefined;
 
+/**
+ * The job page's menu (AT-REQ-035). For an external job the user tracks, it
+ * moves or removes the tracker card and opens it in My Jobs. The actions
+ * copy an old external application into the tracker first.
+ */
 export default function JobPageDropdown({
   userId,
   jobId,
   isCompanyUser,
   applicationStatus,
+  trackedId = null,
   isPlatformJob,
 }: {
   userId: string | null;
   jobId: string;
   isCompanyUser: boolean;
-  applicationStatus: TApplicationStatus | null;
+  /** The tracked status of this job's card, or null when it isn't tracked. */
+  applicationStatus: AppliedStatus | null;
+  /** The card's id, for "Open in My Jobs"; null for an old row not moved yet. */
+  trackedId?: string | null;
   isPlatformJob: boolean;
 }) {
   const [confirmingRemove, setConfirmingRemove] = useState(false);
-  const updateApplicationStatus = async (status: TApplicationStatus) => {
+  const canTrack = !isCompanyUser && Boolean(userId) && Boolean(applicationStatus) && !isPlatformJob;
+
+  // The job's old applications row is copied into the tracker by the action,
+  // so the cache drops it and keeps one tracked row.
+  const optimistic = (change: (rows: ProfileRow[]) => ProfileRow[]) =>
+    mutate(
+      PROFILE_API_KEY,
+      (current: ProfileCache) => {
+        if (!current?.profile) return current;
+        const profile = current.profile;
+        return {
+          ...current,
+          profile: {
+            ...profile,
+            applications: (profile.applications ?? []).filter((row) => row.all_jobs_id !== jobId),
+            tracked_applications: change(profile.tracked_applications ?? []),
+          },
+        };
+      },
+      false,
+    );
+
+  const updateApplicationStatus = async (status: AppliedStatus) => {
+    if (!canTrack) return;
     try {
-      if (!userId || isCompanyUser || !applicationStatus || isPlatformJob) {
-        return;
-      }
-      mutate(
-        PROFILE_API_KEY,
-        (currentData) => {
-          if (!currentData) return currentData;
-
-          const profile = currentData.profile || {};
-
-          return {
-            ...currentData,
-            profile: {
-              ...profile,
-              applications: profile.applications.map(
-                (_: { all_jobs_id: string; status: string }) => {
-                  if (_.all_jobs_id === jobId) {
-                    return {
-                      ..._,
-                      status: status,
-                    };
-                  }
-                  return _;
-                },
-              ),
-            },
-          };
-        },
-        false,
-      );
-
-      const result = await setExternalApplicationStatusAction({
-        allJobsId: jobId,
-        status,
+      optimistic((rows) => {
+        const others = rows.filter((row) => row.all_jobs_id !== jobId);
+        return [...others, { id: trackedId ?? undefined, all_jobs_id: jobId, status }];
       });
+      const result = await setExternalApplicationStatusAction({ allJobsId: jobId, status });
       if (!result.ok) throw new Error(result.error);
-
       mutate(PROFILE_API_KEY);
-
       toast.success("Application status updated.");
     } catch (err) {
-      // Undo the optimistic change.
       mutate(PROFILE_API_KEY);
-      toast.error(
-        err instanceof Error ? err.message : "An unexpected error occurred.",
-      );
+      toast.error(err instanceof Error ? err.message : "An unexpected error occurred.");
     }
   };
 
   const removeApplication = async () => {
+    if (!canTrack) return;
     try {
-      if (!userId || isCompanyUser || !applicationStatus || isPlatformJob) {
-        return;
-      }
-
-      mutate(
-        PROFILE_API_KEY,
-        (currentData) => {
-          if (!currentData) return currentData;
-
-          const profile = currentData.profile || {};
-
-          return {
-            ...currentData,
-            profile: {
-              ...profile,
-              applications: profile.applications.filter(
-                (_: { all_jobs_id: string; status: string }) =>
-                  _.all_jobs_id !== jobId,
-              ),
-            },
-          };
-        },
-        false,
-      );
-
+      optimistic((rows) => rows.filter((row) => row.all_jobs_id !== jobId));
       const result = await removeExternalApplicationAction({ allJobsId: jobId });
       if (!result.ok) throw new Error(result.error);
-
       mutate(PROFILE_API_KEY);
-
-      toast.success("Application removed succesfully.");
+      toast.success("Removed from My Jobs.");
     } catch (err) {
-      // Undo the optimistic change.
       mutate(PROFILE_API_KEY);
-      toast.error(
-        err instanceof Error ? err.message : "An unexpected error occurred.",
-      );
+      toast.error(err instanceof Error ? err.message : "An unexpected error occurred.");
     }
   };
 
@@ -133,12 +105,12 @@ export default function JobPageDropdown({
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button className="p-2" variant={"ghost"}>
+          <Button className="p-2" variant={"ghost"} aria-label="Job actions">
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          {!isCompanyUser && userId && applicationStatus && !isPlatformJob && (
+          {canTrack && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <File className="h-4 w-4 " />
@@ -146,29 +118,29 @@ export default function JobPageDropdown({
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent>
-                  {applicationStatuses
-                    .filter(
-                      (_) =>
-                        _ !== TApplicationStatus.STAND_BY &&
-                        _ !== TApplicationStatus.REVIEWED,
-                    )
-                    .map((status) => (
-                      <DropdownMenuItem
-                        key={status}
-                        className="capitalize flex items-center justify-between"
-                        onClick={() => updateApplicationStatus(status)}
-                      >
-                        {status}
-                        {applicationStatus === status ? (
-                          <Check className="h-4 w-4 " />
-                        ) : null}
-                      </DropdownMenuItem>
-                    ))}
+                  {APPLIED_STATUSES.map((status) => (
+                    <DropdownMenuItem
+                      key={status}
+                      className="flex items-center justify-between"
+                      onClick={() => updateApplicationStatus(status)}
+                    >
+                      {trackedStatusLabel(status)}
+                      {applicationStatus === status ? <Check className="h-4 w-4 " /> : null}
+                    </DropdownMenuItem>
+                  ))}
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
             </DropdownMenuSub>
           )}
-          {!isCompanyUser && userId && applicationStatus && !isPlatformJob && (
+          {canTrack && (
+            <DropdownMenuItem asChild>
+              <Link href={trackedId ? trackedApplicationPath(trackedId) : myJobsPath({ tab: "applications" })}>
+                <KanbanSquare className="h-4 w-4" />
+                Open in My Jobs
+              </Link>
+            </DropdownMenuItem>
+          )}
+          {canTrack && (
             <DropdownMenuItem
               onClick={() => setConfirmingRemove(true)}
               className="cursor-pointer text-destructive focus:text-destructive"
@@ -179,10 +151,7 @@ export default function JobPageDropdown({
           )}
           <DropdownMenuItem
             onClick={() => {
-              copyToClipboard(
-                window.location.href,
-                "Job link copied to clipboard!",
-              );
+              copyToClipboard(window.location.href, "Job link copied to clipboard!");
             }}
           >
             <Share2 className="h-4 w-4" />
@@ -194,7 +163,7 @@ export default function JobPageDropdown({
         open={confirmingRemove}
         onOpenChange={setConfirmingRemove}
         title="Remove this application?"
-        description="It's removed from your tracked applications, along with its status. This can't be undone."
+        description="It's removed from My Jobs, along with its status, notes and timeline. This can't be undone."
         confirmLabel="Remove"
         onConfirm={removeApplication}
       />

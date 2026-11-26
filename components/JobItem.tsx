@@ -30,6 +30,8 @@ const JobItem = React.memo(
     appliedJob?: {
       all_jobs_id: string;
       status: string;
+      /** The tracker's label ("In review"); the raw status when absent. */
+      statusLabel?: string;
     };
     isLoading: boolean;
     hasCredits: boolean;
@@ -86,7 +88,6 @@ const JobItem = React.memo(
             isOnboardingComplete={isOnboardingComplete}
             appliedJob={appliedJob}
             isJobIdPage={false}
-            isDialogOpen={false}
             isLoading={isLoading}
             hasCredits={hasCredits}
           />

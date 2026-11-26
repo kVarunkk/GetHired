@@ -4,13 +4,6 @@ import { z } from "zod";
 
 const JOB_TYPES = ["Fulltime", "Contract", "Intern"] as const;
 
-const APPLICATION_STATUSES = [
-  "submitted",
-  "reviewed",
-  "selected",
-  "stand_by",
-  "rejected",
-] as const;
 const PLATFORMS = platformsArray.map((platform) => platform.value) as [
   (typeof platformsArray)[number]["value"],
   ...(typeof platformsArray)[number]["value"][],
@@ -50,10 +43,6 @@ export const jobFilterSchema = z.object({
   companyName: preprocessArray(z.array(z.string()))
     .optional()
     .describe("List of company names to filter by."),
-
-  applicationStatus: preprocessArray(z.array(z.enum(APPLICATION_STATUSES)))
-    .optional()
-    .describe("List of application status terms."),
 
   minSalary: z.coerce
     .number()

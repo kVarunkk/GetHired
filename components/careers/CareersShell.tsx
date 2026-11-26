@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/utils/utils";
 import type { CareersPage } from "@/helpers/careers/get-careers-page";
+import CareersNavbar from "./CareersNavbar";
 
 /** GetHired's brand indigo, for pages without an accent. */
 export const DEFAULT_ACCENT = "#4f46e5";
@@ -13,11 +14,14 @@ export const DEFAULT_ACCENT = "#4f46e5";
 export default function CareersShell({
   page,
   banner,
+  refQuery,
   embedded = false,
   children,
 }: {
-  page: Pick<CareersPage, "accentColor">;
+  page: Pick<CareersPage, "accentColor"> & Partial<Pick<CareersPage, "slug" | "name" | "logoUrl">>;
   banner?: ReactNode;
+  /** `?ref=…` the home link keeps. */
+  refQuery?: string;
   /** Inside the editor's preview: no full-screen height. */
   embedded?: boolean;
   children: ReactNode;
@@ -30,6 +34,14 @@ export default function CareersShell({
   return (
     <div style={style} className={embedded ? "bg-background" : "min-h-screen bg-background"} data-careers-page>
       {banner}
+      {page.slug && page.name && (
+        <CareersNavbar
+          page={{ slug: page.slug, name: page.name, logoUrl: page.logoUrl ?? null }}
+          gutter={gutter}
+          refQuery={refQuery}
+          account={!embedded}
+        />
+      )}
       <div className={cn("flex w-full flex-col gap-10 py-8 sm:py-12", gutter)}>{children}</div>
       <footer className={cn("w-full py-6 text-center text-xs text-muted-foreground", gutter)}>
         <div className="border-t pt-6">

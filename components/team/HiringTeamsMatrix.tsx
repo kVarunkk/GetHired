@@ -1,5 +1,6 @@
 "use client";
 
+import ScrollFadeX from "@/components/ScrollFadeX";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -149,7 +150,7 @@ export default function HiringTeamsMatrix({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <ScrollFadeX fadeStart={false} className="rounded-lg border">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b">
@@ -225,7 +226,7 @@ export default function HiringTeamsMatrix({
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollFadeX>
     </div>
   );
 }

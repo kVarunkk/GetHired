@@ -23,6 +23,7 @@ import { getInitialState } from "@/helpers/filter-component/getInitialState";
 import LocationSearchSelect from "./LocationSearchSelect";
 import ScrollFade from "./ScrollFade";
 import CurrencySelect from "./CurrencySelect";
+import CompanySearchSelect from "./CompanySearchSelect";
 import posthog from "@/lib/posthog/client";
 import useSWR from "swr";
 import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
@@ -34,12 +35,12 @@ const FALLBACK_SALARY_CURRENCY = "USD";
 export default function FilterComponent({
   setOpenSheet,
   currentPage,
-  onboardingComplete,
   dynamicKey,
 }: {
   setOpenSheet?: Dispatch<SetStateAction<boolean>>;
   currentPage: "jobs" | "profiles" | "companies";
-  onboardingComplete: boolean;
+  /** Kept so callers needn't change; the filters no longer depend on it. */
+  onboardingComplete?: boolean;
   dynamicKey: string;
 }) {
   const router = useRouter();
@@ -70,11 +71,9 @@ export default function FilterComponent({
       uniqueSkills,
       uniqueWorkStylePreferences,
       uniqueIndustries,
-      onboardingComplete,
     );
   }, [
     currentPage,
-    onboardingComplete,
     uniqueCompanies,
     uniqueIndustries,
     uniqueIndustryPreferences,
@@ -143,13 +142,11 @@ export default function FilterComponent({
       if (key === "salaryCurrency") continue;
       const filterConfig = FILTER_CONFIG.find((config) => config.name === key);
 
-      if (key === "applicationStatus" && value && value.length > 0)
-        params.set("tab", "applied");
-
       if (
         filterConfig?.type === "multi-select" ||
         filterConfig?.type === "multi-select-input" ||
-        filterConfig?.type === "location-search-select"
+        filterConfig?.type === "location-search-select" ||
+        filterConfig?.type === "company-search-select"
       ) {
         if (Array.isArray(value) && value.length > 0) {
           if (filterConfig.name === "createdAfter") {
@@ -264,6 +261,17 @@ export default function FilterComponent({
             onChange={handleMultiKeywordSelectChange}
             placeholder={config.placeholder}
             isSingleSelect={false}
+            className="mt-1 w-full"
+          />
+        );
+
+      case "company-search-select":
+        return (
+          <CompanySearchSelect
+            name={config.name}
+            initialCompanies={filters[config.name] as string[]}
+            onChange={handleMultiKeywordSelectChange}
+            placeholder={config.placeholder}
             className="mt-1 w-full"
           />
         );

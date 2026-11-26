@@ -14,11 +14,24 @@ import LocationSearchSelect from "@/components/LocationSearchSelect";
 import StickyActionBar from "@/components/StickyActionBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { upsertJobPostingAction } from "@/app/actions/upsert-job-posting";
+import { setJobPostStateAction } from "@/app/actions/set-job-post-state";
+import { MAX_OPENINGS, MIN_OPENINGS } from "@/helpers/jobs/job-posting-schema";
+import type { JobPostState } from "@/helpers/jobs/job-states";
+import { closingDateError } from "@/helpers/jobs/closing-date";
+import { VISIBILITY_OPTIONS } from "@/helpers/jobs/link-only";
 import { useEntitlementError } from "@/hooks/useEntitlementError";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
@@ -68,6 +81,15 @@ const jobFormSchema = z
     // CP-REQ-020: careers page filters.
     department: z.string().trim().max(60, "Departments can be at most 60 characters.").optional(),
     workplace_type: z.enum(["onsite", "hybrid", "remote"]).nullable().optional(),
+    // JL-REQ-011: how many people the job hires.
+    openings: z.coerce
+      .number()
+      .int("Openings must be a whole number.")
+      .min(MIN_OPENINGS, `Openings must be at least ${MIN_OPENINGS}.`)
+      .max(MAX_OPENINGS, `Openings can be at most ${MAX_OPENINGS}.`),
+    // JL-REQ-014: "" or null means no closing date.
+    closes_at: z.string().nullable().optional(),
+    visibility: z.enum(["public", "link_only"]).optional(),
   })
   .refine(
     (data) => {
@@ -122,6 +144,12 @@ export type JobFormPipeline = { id: string; name: string; isDefault: boolean };
  * section): the details, the pipeline, then the typed application form
  * (AF-REQ-001). An edit gets the full form, with its knockout rules, and the
  * questions that already have answers, loaded on the server (AF-REQ-005).
+ *
+ * A new job or a draft saves as a draft, and Publish saves it and then opens
+ * it through `setJobPostStateAction` (JL-REQ-030, spec §3). If opening is
+ * refused (the plan's limit, a permission), the draft stays saved and the
+ * form stays open on it. With `submitForApproval`, the button submits it for
+ * approval instead (JL-REQ-020). A job in any other state just saves.
  */
 export default function JobPostingForm({
   companyId,
@@ -131,6 +159,11 @@ export default function JobPostingForm({
   cancelHref,
   pipelines = [],
   hasApplications = false,
+  state,
+  canPublish = false,
+  submitForApproval = false,
+  timeZone = null,
+  linkOnlyEnabled = false,
 }: {
   companyId: string;
   existingValues?: ICreateJobPostingFormData;
@@ -142,8 +175,26 @@ export default function JobPostingForm({
   pipelines?: JobFormPipeline[];
   /** An edited job with applications changes pipeline on the switch page, not here. */
   hasApplications?: boolean;
+  /** The edited job's state; omitted for a new job. */
+  state?: JobPostState;
+  /** Whether the viewer may open the job (`jobs.publish`), which shows Publish. */
+  canPublish?: boolean;
+  /**
+   * The company requires approval and the viewer can't approve this job, so
+   * Publish becomes Submit for approval (JL-REQ-020).
+   */
+  submitForApproval?: boolean;
+  /** The company's time zone, for "today" on the closing date (JL-REQ-014); null is UTC. */
+  timeZone?: string | null;
+  /** JOB_LINK_ONLY_ENABLED (JL-REQ-026): shows "Who can find this job". */
+  linkOnlyEnabled?: boolean;
 }) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<"save" | "publish" | null>(null);
+  // Set once a new job is saved, so another click after a refused Publish
+  // updates that draft instead of creating a second one.
+  const [savedId, setSavedId] = useState<string | undefined>(existingValues?.id);
+  const isDraft = !existingValues || state === "draft";
+  const showPublish = isDraft && canPublish;
   const savedPipelineId = existingValues?.pipeline_id ?? pipelines.find((p) => p.isDefault)?.id ?? pipelines[0]?.id;
   const [pipelineId, setPipelineId] = useState(savedPipelineId);
   const pipelineChanged = pipelineId !== undefined && pipelineId !== savedPipelineId;
@@ -153,7 +204,7 @@ export default function JobPostingForm({
   const { handle: handleEntitlement, dialog: upgradeDialog } = useEntitlementError();
   const form = useForm({
     resolver: zodResolver(jobFormSchema),
-    defaultValues: existingValues || {
+    defaultValues: existingValues ? { openings: 1, ...existingValues } : {
       title: "",
       description: "",
       location: [],
@@ -168,17 +219,27 @@ export default function JobPostingForm({
       max_equity: 0,
       department: "",
       workplace_type: null,
+      openings: 1,
+      closes_at: "",
     },
   });
+  const savedClosesAt = existingValues?.closes_at ?? null;
+  const isFilled = state === "filled";
   const [applicationForm, setApplicationForm] = useState<ApplicationForm>(initialForm);
 
-  const onSubmit = async (values: ICreateJobPostingFormData) => {
+  const onSubmit = async (values: ICreateJobPostingFormData, publish: boolean) => {
     const checkedForm = applicationFormSchema.safeParse(applicationForm);
     if (!checkedForm.success) {
       toast.error(checkedForm.error.issues[0]?.message ?? "Check the application questions.");
       return;
     }
-    setLoading(true);
+    const closesAt = values.closes_at ? values.closes_at : null;
+    const closesAtError = closingDateError({ next: closesAt, previous: savedClosesAt, state, timeZone });
+    if (closesAtError) {
+      form.setError("closes_at", { message: closesAtError });
+      return;
+    }
+    setLoading(publish ? "publish" : "save");
 
     try {
       // The form replaces the old questions list (AF-CON-001: the server rebuilds it).
@@ -186,13 +247,15 @@ export default function JobPostingForm({
       delete fields.id;
       delete fields.questions;
       delete fields.pipeline_id;
+      const isNew = !savedId;
       const result = await upsertJobPostingAction({
         values: {
           ...fields,
+          closes_at: closesAt,
           application_form: checkedForm.data,
           ...(sendPipeline && pipelineId ? { pipeline_id: pipelineId } : {}),
         },
-        existingPostingId: existingValues?.id,
+        existingPostingId: savedId,
       });
 
       if (!result.success) {
@@ -200,10 +263,29 @@ export default function JobPostingForm({
         if (await handleEntitlement(result)) return;
         throw new Error(typeof result.error === "string" ? result.error : "Failed to save job posting");
       }
-
+      setSavedId(result.postingId);
       await mutate(`company-jobs-${companyId}`);
-      toast.success(`Job Posting ${result.isUpdate ? "updated" : "created"} Successfully!`, { duration: 8000 });
-      router.push(jobPostPath(result.postingId, { created: !result.isUpdate }));
+
+      if (publish) {
+        const opened = await setJobPostStateAction({
+          jobPostId: result.postingId,
+          to: submitForApproval ? "pending_approval" : "open",
+        });
+        if (!opened.ok) {
+          // The draft is saved; the upgrade dialog or the refusal says why it isn't open.
+          if (await handleEntitlement(opened)) {
+            toast.success("Saved as a draft.");
+            return;
+          }
+          const verb = submitForApproval ? "submitted for approval" : "published";
+          toast.error(`Saved as a draft, but it couldn't be ${verb}. ${opened.error}`, { duration: 8000 });
+          return;
+        }
+        toast.success(submitForApproval ? "Job submitted for approval." : "Job published.", { duration: 8000 });
+      } else {
+        toast.success(isDraft ? "Draft saved." : "Job post saved.", { duration: 8000 });
+      }
+      router.push(jobPostPath(result.postingId, { created: isNew }));
       router.refresh();
     } catch (e) {
       const errMsg =
@@ -212,7 +294,7 @@ export default function JobPostingForm({
           : `An error occurred while ${existingValues ? "updating" : "creating"} the job posting. Please try again.`;
       toast.error(errMsg);
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   };
 
@@ -234,7 +316,11 @@ export default function JobPostingForm({
           )
         }
       />
-      <form id="JobPostingForm" onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
+      <form
+        id="JobPostingForm"
+        onSubmit={form.handleSubmit((values) => onSubmit(values, false))}
+        className="flex flex-col gap-6"
+      >
         <Card>
           <CardHeader>
             <CardTitle>Details</CardTitle>
@@ -392,6 +478,86 @@ export default function JobPostingForm({
                 )}
               />
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="openings"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Openings</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                      />
+                    </FormControl>
+                    <FormDescription>How many people you&apos;re hiring for this job.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="closes_at"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Closing date</FormLabel>
+                    <div className="flex gap-2">
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                          value={field.value ?? ""}
+                          disabled={isFilled}
+                        />
+                      </FormControl>
+                      {field.value && (
+                        <Button type="button" variant="outline" onClick={() => field.onChange("")}>
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                    <FormDescription>
+                      {isFilled
+                        ? "A filled job keeps its closing date. Reopen it to change the date."
+                        : "Optional. The job closes itself at the end of this day."}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            {(linkOnlyEnabled || existingValues?.visibility === "link_only") && (
+              <FormField
+                control={form.control}
+                name="visibility"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Who can find this job</FormLabel>
+                    <Select value={field.value ?? "public"} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {VISIBILITY_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      A link-only job is open and takes applications, but it&apos;s kept out of the job board, search, your careers page list and job sites. It still counts toward your active job limit.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
@@ -572,7 +738,7 @@ export default function JobPostingForm({
             <CardContent className="space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="job-pipeline">Pipeline</Label>
-                <Select value={pipelineId} onValueChange={setPipelineId} disabled={loading}>
+                <Select value={pipelineId} onValueChange={setPipelineId} disabled={loading !== null}>
                   <SelectTrigger id="job-pipeline" aria-label="Pipeline" className="md:w-1/2">
                     <SelectValue placeholder="Pick a pipeline" />
                   </SelectTrigger>
@@ -608,34 +774,37 @@ export default function JobPostingForm({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <QuestionSetPicker
-              disabled={loading}
+              disabled={loading !== null}
               onApply={(copy) => setApplicationForm(applyQuestionSet(applicationForm, copy, answeredQuestionIds))}
             />
             <ApplicationFormBuilder
               value={applicationForm}
               onChange={setApplicationForm}
               answeredQuestionIds={answeredQuestionIds}
-              disabled={loading}
+              disabled={loading !== null}
             />
           </CardContent>
         </Card>
 
         <StickyActionBar className="justify-end">
-          <Button type="button" variant="outline" disabled={loading} onClick={() => router.push(cancelHref)}>
+          <Button type="button" variant="outline" disabled={loading !== null} onClick={() => router.push(cancelHref)}>
             Cancel
           </Button>
-          <Button type="submit" variant="brand" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {existingValues ? "Updating..." : "Posting..."}
-              </>
-            ) : existingValues ? (
-              "Update Job"
-            ) : (
-              "Post Job"
-            )}
+          <Button type="submit" variant={showPublish ? "outline" : "brand"} disabled={loading !== null}>
+            {loading === "save" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isDraft ? "Save draft" : "Save"}
           </Button>
+          {showPublish && (
+            <Button
+              type="button"
+              variant="brand"
+              disabled={loading !== null}
+              onClick={form.handleSubmit((values) => onSubmit(values, true))}
+            >
+              {loading === "publish" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {submitForApproval ? "Submit for approval" : "Publish"}
+            </Button>
+          )}
         </StickyActionBar>
       </form>
     </Form>
