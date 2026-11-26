@@ -2,6 +2,7 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { render } from "react-email";
 import JobAutoClosedEmail from "@/emails/JobAutoClosedEmail";
 import JobClosingSoonEmail from "@/emails/JobClosingSoonEmail";
+import { CLOSING_SOON_DAYS } from "@/helpers/company-dashboard/summary";
 import { enqueueFeedRebuild } from "@/helpers/distribution/feed-queue";
 import { formatClosingDate } from "@/helpers/jobs/closing-date";
 import { jobTeamEmails } from "@/helpers/jobs/job-team-emails";
@@ -11,9 +12,6 @@ import { reportError } from "@/helpers/posthog/report-error";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { sendEmail, sendEmailForStatusUpdate } from "@/utils/email";
 import { deploymentUrl, INTERNAL_API_SECRET } from "@/utils/formatters";
-
-/** JL-REQ-017: how many days before its closing date a job's team is reminded. */
-export const CLOSING_SOON_DAYS = 3;
 
 type ClosedJob = { job_post_id: string; job_id: string | null; company_id: string; title: string; closes_at: string };
 type ClosingSoonJob = { job_post_id: string; company_id: string; title: string; closes_at: string };

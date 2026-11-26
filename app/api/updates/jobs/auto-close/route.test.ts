@@ -6,7 +6,8 @@ import { announceJobStateChange } from "@/helpers/jobs/set-job-post-state";
 import { buildRequest } from "@/test/utils/request";
 import { flushAfter } from "@/test/utils/after";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
-import { CLOSING_SOON_DAYS, GET, POST } from "./route";
+import { CLOSING_SOON_DAYS } from "@/helpers/company-dashboard/summary";
+import { GET, POST } from "./route";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: vi.fn() }));
