@@ -65,7 +65,7 @@ sequenceDiagram
 ```mermaid
 flowchart TD
   J["/jobs, /remote-jobs/[location],<br/>/companies, /companies/[id]"] --> API["GET /api/jobs"]
-  J --> F["GET /api/jobs/filters → rpc get_unique_companies<br/>GET /api/locations → view flat_locations"]
+  J --> F["GET /api/jobs/filters?query= → rpc search_job_companies<br/>GET /api/locations → view flat_locations"]
   J --> CF["GET /api/companies (+/filters)<br/>companiesFilterQueryBuilder → rpc match_all_companies,<br/>get_unique_*_company_info"]
   API --> SJ["helpers/jobs/search-jobs"]
   SJ --> FQB["filterQueryBuilder<br/>expandLocations → location_aliases"]

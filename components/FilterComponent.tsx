@@ -23,6 +23,7 @@ import { getInitialState } from "@/helpers/filter-component/getInitialState";
 import LocationSearchSelect from "./LocationSearchSelect";
 import ScrollFade from "./ScrollFade";
 import CurrencySelect from "./CurrencySelect";
+import CompanySearchSelect from "./CompanySearchSelect";
 import posthog from "@/lib/posthog/client";
 import useSWR from "swr";
 import { fetcher, PROFILE_API_KEY } from "@/utils/utils";
@@ -144,7 +145,8 @@ export default function FilterComponent({
       if (
         filterConfig?.type === "multi-select" ||
         filterConfig?.type === "multi-select-input" ||
-        filterConfig?.type === "location-search-select"
+        filterConfig?.type === "location-search-select" ||
+        filterConfig?.type === "company-search-select"
       ) {
         if (Array.isArray(value) && value.length > 0) {
           if (filterConfig.name === "createdAfter") {
@@ -259,6 +261,17 @@ export default function FilterComponent({
             onChange={handleMultiKeywordSelectChange}
             placeholder={config.placeholder}
             isSingleSelect={false}
+            className="mt-1 w-full"
+          />
+        );
+
+      case "company-search-select":
+        return (
+          <CompanySearchSelect
+            name={config.name}
+            initialCompanies={filters[config.name] as string[]}
+            onChange={handleMultiKeywordSelectChange}
+            placeholder={config.placeholder}
             className="mt-1 w-full"
           />
         );

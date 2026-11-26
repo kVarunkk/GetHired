@@ -228,6 +228,7 @@ export interface FilterConfig {
     | "multi-select"
     | "multi-select-input"
     | "location-search-select"
+    | "company-search-select"
     | "currency-select"
     | "salary";
   placeholder?: string;
@@ -409,6 +410,9 @@ export enum PostHogEvent {
   JobAlertDeleted = "job_alert_deleted",
   JobAlertPausedFromEmail = "job_alert_paused_from_email",
   JobAlertEmailSent = "job_alert_email_sent",
+
+  CompanyDashboardViewed = "company_dashboard_viewed",
+  CompanyDashboardAction = "company_dashboard_action",
 }
 
 export type JobUrlPatch = {

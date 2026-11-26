@@ -67,7 +67,7 @@ flowchart LR
 
 | Flow | RPCs |
 |---|---|
-| A2 / A3 | `match_all_jobs_test`, `get_masked_job_urls`, `get_unique_companies`, `get_unique_locations`, `match_all_companies`, `get_unique_companies_company_info`, `get_unique_locations_company_info` |
+| A2 / A3 | `match_all_jobs_test`, `get_masked_job_urls`, `get_unique_companies`, `search_job_companies`, `get_unique_locations`, `match_all_companies`, `get_unique_companies_company_info`, `get_unique_locations_company_info` |
 | A10 credits | `deduct_user_credits`, `deduct_interview_session_credits`, `fulfil_payment` |
 | A7 practice | `reserve_interview_session`, `activate_interview_session`, `heartbeat_interview_session`, `release_interview_session`, `finalize_interview_analysis_session` |
 | A4 attachments | `enqueue_company_interview_analysis` |

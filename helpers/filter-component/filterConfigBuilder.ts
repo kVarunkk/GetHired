@@ -1,5 +1,8 @@
 import { platformsArray } from "@/utils/platforms";
+import { commonJobTitles, commonSkills, mergeOptions } from "@/utils/profile-options";
 import { FilterConfig } from "@/utils/types";
+
+const toOptions = (names: string[]) => names.map((name) => ({ value: name, label: name }));
 
 export const filterConfigBuilder = (
   currentPage: "jobs" | "profiles" | "companies",
@@ -55,13 +58,8 @@ export const filterConfigBuilder = (
         {
           name: "companyName",
           label: "Company",
-          type: "multi-select",
+          type: "company-search-select",
           placeholder: "Select the company",
-          options: uniqueCompanies?.map((each) => ({
-            value: each.company_name,
-            label: each.company_name,
-          })),
-          isVirtualized: true,
         },
         {
           name: "platform",
@@ -135,10 +133,9 @@ export const filterConfigBuilder = (
           label: "Job Role",
           type: "multi-select-input",
           placeholder: "Type or select from dropdown",
-          options: uniqueJobRoles?.map((each) => ({
-            value: each.job_role,
-            label: each.job_role,
-          })),
+          options: toOptions(
+            mergeOptions(commonJobTitles, uniqueJobRoles?.map((each) => each.job_role) ?? []),
+          ),
           isVirtualized: true,
         },
         {
@@ -168,10 +165,9 @@ export const filterConfigBuilder = (
           label: "Skills",
           type: "multi-select-input",
           placeholder: "Type or select from dropdown",
-          options: uniqueSkills?.map((each) => ({
-            value: each.skill,
-            label: each.skill,
-          })),
+          options: toOptions(
+            mergeOptions(commonSkills, uniqueSkills?.map((each) => each.skill) ?? []),
+          ),
           isVirtualized: true,
         },
         {
