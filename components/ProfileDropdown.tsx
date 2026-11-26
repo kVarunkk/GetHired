@@ -2,7 +2,7 @@
 
 import { LogOut, User as UserIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { User } from "@supabase/supabase-js";
+import type { SessionUser } from "@/lib/supabase/get-session-user";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +39,7 @@ export default function ProfileDropdown({
   isMenuOpen,
   isVertical = false,
 }: {
-  user: User | null;
+  user: SessionUser | null;
   open?: boolean;
   isMenuOpen: boolean;
   isVertical?: boolean;
@@ -58,7 +58,6 @@ export default function ProfileDropdown({
   const { data } = useSWR(PROFILE_API_KEY, fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
-    staleTime: 5 * 60 * 1000,
   });
 
   // "Owner" or the member's role name (/api/current-user, from company_members).

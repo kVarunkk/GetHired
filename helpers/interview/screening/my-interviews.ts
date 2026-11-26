@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { reportError } from "@/helpers/posthog/report-error";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/utils/types/database.types";
@@ -11,14 +12,20 @@ export type MyScreeningInterview = Database["public"]["Functions"]["my_screening
 /** What the apply form's success card needs (SIT-050). */
 export type ScreeningInviteSummary = { id: string; durationMinutes: number; deadlineAt: string };
 
-export async function listMyScreeningInterviews(supabase: SupabaseClient<Database>): Promise<MyScreeningInterview[]> {
-  const { data, error } = await supabase.rpc("my_screening_interviews");
-  if (error) {
-    reportError("[screening] couldn't list my interviews", error.message);
-    return [];
-  }
-  return data ?? [];
-}
+/**
+ * The applicant's screening interviews. A failure reads as none. One render
+ * reads them once: the dashboard and `listMyApplications` both ask.
+ */
+export const listMyScreeningInterviews = cache(
+  async (supabase: SupabaseClient<Database>): Promise<MyScreeningInterview[]> => {
+    const { data, error } = await supabase.rpc("my_screening_interviews");
+    if (error) {
+      reportError("[screening] couldn't list my interviews", error.message);
+      return [];
+    }
+    return data ?? [];
+  },
+);
 
 export async function getMyScreeningInterview(
   supabase: SupabaseClient<Database>,

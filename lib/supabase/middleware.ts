@@ -1,9 +1,7 @@
-// import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../../utils/utils";
 import { UserAppMetadata } from "@supabase/supabase-js";
-import { headers } from "next/headers";
-import { getUserFromRequest } from "./get-user-from-request";
+import { getMiddlewareAuth, type MiddlewareAuth } from "./get-middleware-auth";
 import { APPLICANT_HOME, COMPANY_HOME, companyOnboardingPath } from "@/helpers/user/home-path";
 import {
   acceptsMarkdown,
@@ -49,16 +47,11 @@ async function routeRequest(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  const supabaseResponse = NextResponse.next({
-    request,
-  });
-
   if (!hasEnvVars) {
-    return supabaseResponse;
+    return NextResponse.next({ request });
   }
-  const headersList = await headers();
 
-  const authHeader = headersList.get("Authorization");
+  const authHeader = request.headers.get("Authorization");
   const bearerToken = authHeader?.startsWith("Bearer ")
     ? authHeader.replace("Bearer ", "")
     : null;
@@ -68,7 +61,7 @@ async function routeRequest(request: NextRequest) {
   // Deny-only, so decoding without verifying is enough.
   if (bearerToken && isOAuthAppToken(bearerToken)) {
     if (request.nextUrl.pathname === MCP_PATH) {
-      return supabaseResponse;
+      return NextResponse.next({ request });
     }
     return NextResponse.json(
       { error: "OAuth app tokens can only be used with the MCP endpoint" },
@@ -76,7 +69,14 @@ async function routeRequest(request: NextRequest) {
     );
   }
 
-  const user = await getUserFromRequest();
+  const { user, withSessionCookies } = await getMiddlewareAuth(request, bearerToken);
+  return withSessionCookies(routeUser(request, user));
+}
+
+/** Where the request goes, given who is signed in. */
+function routeUser(request: NextRequest, user: MiddlewareAuth["user"]): NextResponse {
+  // Made after the auth check, so it carries a refreshed session to the page.
+  const supabaseResponse = NextResponse.next({ request });
 
   const deleteSearchParams = (url: URL) => {
     url.searchParams.forEach((value, key) => {

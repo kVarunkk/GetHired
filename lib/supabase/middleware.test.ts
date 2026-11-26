@@ -5,23 +5,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { SignJWT } from "jose";
-import { headers } from "next/headers";
 import { updateSession } from "./middleware";
 import { mockUser } from "@/test/utils/auth";
 import { getUserFromRequest } from "@/lib/supabase/get-user-from-request";
 
 vi.mock("@/lib/supabase/get-user-from-request", () => ({ getUserFromRequest: vi.fn() }));
-vi.mock("next/headers", () => ({ headers: vi.fn() }));
+// Routing only: get-middleware-auth.test.ts covers how the user is read.
+vi.mock("@/lib/supabase/get-middleware-auth", () => ({
+  getMiddlewareAuth: async () => ({
+    user: await getUserFromRequest(),
+    withSessionCookies: <T>(response: T) => response,
+  }),
+}));
 vi.mock("@/utils/utils", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/utils/utils")>()),
   hasEnvVars: true,
 }));
 
-const request = (path: string, init: { headers?: Record<string, string> } = {}) => {
-  const req = new NextRequest(new URL(path, "http://localhost:3000"), init);
-  vi.mocked(headers).mockResolvedValue(req.headers as never);
-  return req;
-};
+const request = (path: string, init: { headers?: Record<string, string> } = {}) =>
+  new NextRequest(new URL(path, "http://localhost:3000"), init);
 
 const redirectTarget = (res: Response) => {
   const location = res.headers.get("location");

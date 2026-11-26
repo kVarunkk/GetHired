@@ -2,7 +2,7 @@
 
 import { reportClientError } from "@/lib/posthog/report-client-error";
 import { useEffect, useState } from "react";
-import type { User } from "@supabase/supabase-js";
+import type { SessionUser } from "@/lib/supabase/get-session-user";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
  * (OR-TASK-004). RLS returns only the user's own rows. 0 for companies,
  * signed-out visitors and on any error.
  */
-export function useOpenOutreachCount(user: User | null): number {
+export function useOpenOutreachCount(user: SessionUser | null): number {
   const [count, setCount] = useState(0);
   const applicantId = user && user.app_metadata?.type !== "company" ? user.id : null;
 

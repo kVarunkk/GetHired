@@ -9,7 +9,7 @@ import MetadataUpdateRefresh from "@/components/MetadataUpdateRefresh";
 import { Suspense } from "react";
 import ThemeAwareToaster from "@/components/ToasterComponent";
 import LayoutWrapper from "@/components/LayoutWrapper";
-import { createClient } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/supabase/get-session-user";
 import { hasEnvVars } from "@/utils/utils";
 import EnvWarning from "@/components/env-warning";
 import PostHogIdentify from "@/lib/posthog/posthogidentify";
@@ -67,10 +67,7 @@ export default async function RootLayout({
     return <EnvWarning geistClassname={geistSans.className} />;
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
 
   return (
     <html lang="en" suppressHydrationWarning>

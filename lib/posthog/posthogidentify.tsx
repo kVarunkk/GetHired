@@ -2,13 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import posthog from "@/lib/posthog/client";
-import type { User } from "@supabase/supabase-js";
+import type { SessionUser } from "@/lib/supabase/get-session-user";
 import { createClient } from "../supabase/client";
 
 export default function PostHogIdentify({
   initialUser,
 }: {
-  initialUser: User | null;
+  initialUser: SessionUser | null;
 }) {
   const identifiedId = useRef<string | null>(null);
 

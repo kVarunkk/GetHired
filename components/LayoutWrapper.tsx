@@ -7,12 +7,12 @@ import {
   getNavbarVairantByPath,
 } from "../utils/utils";
 import { usePathname } from "next/navigation";
-import { User } from "@supabase/supabase-js";
+import type { SessionUser } from "@/lib/supabase/get-session-user";
 import NavbarComponent from "./Navbar";
 import ScrollToTopButton from "./ScrollToTopButton";
 
 interface LayoutWrapperProps {
-  user: User | null;
+  user: SessionUser | null;
   children: React.ReactNode;
 }
 

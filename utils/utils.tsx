@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
 import { Briefcase, Compass, Contact, Home, Inbox, LayoutDashboard, Send } from "lucide-react";
 import { INavItem } from "./types";
-import { User } from "@supabase/supabase-js";
+import type { SessionUser } from "@/lib/supabase/get-session-user";
 import { platformsArray } from "./platforms";
 
 export function cn(...inputs: ClassValue[]) {
@@ -24,86 +24,7 @@ export const hasEnvVars =
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const commonSkills = [
-  "Project Management",
-  "Data Analysis",
-  "Software Development",
-  "Cloud Computing",
-  "Cybersecurity",
-  "Digital Marketing",
-  "Content Creation",
-  "Financial Modeling",
-  "Customer Service",
-  "Sales",
-  "Communication",
-  "Leadership",
-  "Problem Solving",
-  "Critical Thinking",
-  "Adaptability",
-  "Teamwork",
-  "Time Management",
-  "Public Speaking",
-  "Negotiation",
-  "Research",
-  "UX/UI Design",
-  "Mobile Development",
-  "Machine Learning",
-  "Artificial Intelligence",
-  "Business Development",
-  "Strategic Planning",
-  "Data Visualization",
-  "SQL",
-  "Python",
-  "JavaScript",
-  "React",
-  "Node.js",
-];
-
-export const commonJobTitles = [
-  "Software Engineer",
-  "Product Manager",
-  "Data Scientist",
-  "DevOps Engineer",
-  "UI/UX Designer",
-  "Marketing Specialist",
-  "Sales Manager",
-  "Front End Developer",
-  "Back End Developer",
-  "JavaScript Developer",
-  "Fullstack Developer",
-  "Project Manager",
-  "Business Analyst",
-  "Financial Analyst",
-  "Accountant",
-  "Human Resources Manager",
-  "Customer Service Representative",
-  "Operations Manager",
-  "Data Analyst",
-  "Cybersecurity Analyst",
-  "Network Engineer",
-  "System Administrator",
-  "Technical Writer",
-  "Content Creator",
-  "Graphic Designer",
-  "Digital Marketing Manager",
-  "Recruiter",
-  "Legal Counsel",
-  "Research Scientist",
-  "Quality Assurance Engineer",
-  "Cloud Engineer",
-  "Machine Learning Engineer",
-  "Database Administrator",
-  "IT Support Specialist",
-  "Executive Assistant",
-  "Copywriter",
-  "Social Media Manager",
-  "Supply Chain Manager",
-  "Consultant",
-  "Architect",
-  "Civil Engineer",
-  "Mechanical Engineer",
-  "Electrical Engineer",
-];
+export { commonJobTitles, commonSkills } from "./profile-options";
 
 export const commonIndustries = [
   "Technology",
@@ -384,7 +305,7 @@ export const fullHeightPaths = ["/agent", "/company/agent"];
 export const getNavItemsByPath = (
   path: string,
   isCompanyUser: boolean,
-  user: User | null = null,
+  user: SessionUser | null = null,
 ): INavItem[] => {
   if (user && !isCompanyUser) {
     return applicantNavbarItems;

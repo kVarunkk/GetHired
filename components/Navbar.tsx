@@ -15,7 +15,7 @@ import { ChevronRight, CreditCard, Menu, Wallet } from "lucide-react";
 import Brand from "./Brand";
 import { cn, fetcher, getNavItemsByPath, PROFILE_API_KEY } from "@/utils/utils";
 import { createClient } from "@/lib/supabase/client";
-import { User } from "@supabase/supabase-js";
+import type { SessionUser } from "@/lib/supabase/get-session-user";
 import FeedbackForm from "./FeedbackForm";
 import SocialsComponent from "./SocialsComponent";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
@@ -60,9 +60,9 @@ export default function NavbarComponent({
   initialUser,
 }: {
   variant?: "vertical" | "horizontal";
-  initialUser: User | null;
+  initialUser: SessionUser | null;
 }) {
-  const [user, setUser] = useState<User | null>(initialUser);
+  const [user, setUser] = useState<SessionUser | null>(initialUser);
   // Statically rendered pages (home, blog, job pages) are built without
   // cookies, so a null initialUser may just mean "unknown". Until the browser
   // reports the session, render neither signed-in nor signed-out controls, so
