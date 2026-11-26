@@ -110,27 +110,31 @@ export function CandidateResults({ candidates }: { candidates: CandidateRowData[
         ]
           .filter(Boolean)
           .join(" · ");
+        const location = candidate.locations?.join(", ");
         return (
           <li key={candidate.id}>
             <RowLink href={candidate.url}>
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="truncate text-sm font-medium text-foreground">
-                  {candidate.name ?? "Unnamed candidate"}
+              {/* Stacked, so the role and the location don't squeeze each other on a phone. */}
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                    {candidate.name ?? "Unnamed candidate"}
+                  </span>
+                  <MatchScoreBadge score={candidate.matchScore} className="shrink-0" />
                 </span>
-                <span className="flex min-w-0 items-center gap-3 text-[13px] text-muted-foreground">
-                  {headline && <span className="min-w-0 truncate">{headline}</span>}
-                  {candidate.locations && candidate.locations.length > 0 && (
-                    <span className="flex min-w-0 shrink-[3] items-center gap-1">
-                      <MapPin aria-hidden className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{candidate.locations.join(", ")}</span>
-                    </span>
-                  )}
-                </span>
-              </span>
-              <span className="flex shrink-0 flex-col items-end gap-1">
-                <MatchScoreBadge score={candidate.matchScore} />
-                {candidate.salary && (
-                  <span className="text-xs tabular-nums text-muted-foreground">{candidate.salary}</span>
+                {headline && <span className="truncate text-[13px] text-muted-foreground">{headline}</span>}
+                {(location || candidate.salary) && (
+                  <span className="flex items-center gap-3 text-[13px] text-muted-foreground">
+                    {location && (
+                      <span className="flex min-w-0 items-center gap-1">
+                        <MapPin aria-hidden className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{location}</span>
+                      </span>
+                    )}
+                    {candidate.salary && (
+                      <span className="ml-auto shrink-0 text-xs tabular-nums">{candidate.salary}</span>
+                    )}
+                  </span>
                 )}
               </span>
             </RowLink>
