@@ -10,10 +10,14 @@ import type { AgentToolContext } from "@/helpers/agent/tools/shared";
 import { searchJobs } from "@/helpers/jobs/search-jobs";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 import { toolContext } from "@/test/utils/tools";
+import { alertRow } from "@/test/utils/job-alerts";
 import { toCallToolResult } from "./results";
 import { MCP_TOOLS, bindMcpTool } from "./tools";
 
 vi.mock("@/helpers/jobs/search-jobs", () => ({ searchJobs: vi.fn() }));
+// The alert tools read through the service-role client.
+const service = vi.hoisted(() => ({ client: null as unknown }));
+vi.mock("@/lib/supabase/service-role", () => ({ createServiceRoleClient: () => service.client }));
 vi.mock("@/helpers/posthog/EventCaptureServerException", () => ({
   eventCaptureServerException: vi.fn(),
 }));
@@ -40,6 +44,7 @@ let ctx: AgentToolContext;
 beforeEach(() => {
   vi.clearAllMocks();
   supabase = createSupabaseMock();
+  service.client = supabase.client;
   ctx = toolContext(supabase.client, { sessionId: null, surface: "mcp" });
   vi.mocked(searchJobs).mockResolvedValue({ ok: true, data: [JOB_ROW], totalCount: 1, nextCursor: "c1" } as never);
 });
@@ -187,6 +192,9 @@ const cases: [string, Record<string, unknown>, (() => void)?][] = [
   ["get_interview_analysis", { interviewId: INTERVIEW_ID }, () => {
     supabase.queue("interviews", { data: { id: INTERVIEW_ID, name: "Practice" }, error: null });
     supabase.queue("interview_sessions", { data: null, error: null });
+  }],
+  ["list_job_alerts", {}, () => {
+    supabase.queue("bookmarks", { data: [alertRow()], error: null });
   }],
   ["list_screening_interviews", {}, () => {
     supabase.queueRpc("my_screening_interviews", {

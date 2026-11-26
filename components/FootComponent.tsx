@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { usePathname } from "next/navigation";
 import McpServerCta from "./mcp/McpServerCta";
+import { BOOK_DEMO_HREF } from "@/helpers/billing/plan-lines";
 
 // Add a prop to check if we are on the /hire page
 export default function FootComponent() {
@@ -101,6 +102,20 @@ export default function FootComponent() {
             ""
           )}
         </div>
+
+        {isHirePage && (
+          <p className="mt-6 text-center text-[15px] leading-7 text-muted-foreground">
+            Want a walkthrough first?{" "}
+            <a
+              href={BOOK_DEMO_HREF}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-foreground underline underline-offset-4 hover:text-brand"
+            >
+              Book a demo
+            </a>
+          </p>
+        )}
       </div>
       <McpServerCta />
     </div>

@@ -22,6 +22,7 @@ import { myJobsPath } from "@/helpers/tracker/paths";
 import { TRACKER_LIMITS } from "@/helpers/tracker/schema";
 import { TRACKED_STATUSES, trackedStatusLabel, type TrackedStatus } from "@/helpers/tracker/status";
 import type { ResumeOption } from "./AddJobForm";
+import { formatDate } from "@/utils/date";
 
 export type TrackedDetailRow = {
   id: string;
@@ -45,7 +46,6 @@ export type TrackedDetailRow = {
 };
 
 const NO_RESUME = "none";
-const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
 /** A tracked card's page (AT-REQ-023): the editable fields, the timeline and its actions. */
 export default function TrackedDetail({
@@ -201,7 +201,7 @@ export default function TrackedDetail({
             )}
             {row.salaryAmount != null && (
               <p className="text-sm text-muted-foreground sm:col-span-2">
-                Salary: {row.salaryAmount.toLocaleString()} {row.salaryCurrency ?? ""} a year
+                Salary: {row.salaryAmount.toLocaleString(row.salaryCurrency === "INR" ? "en-IN" : "en-US")} {row.salaryCurrency ?? ""} a year
               </p>
             )}
           </div>
@@ -235,7 +235,7 @@ export default function TrackedDetail({
                 <span className="font-medium">
                   {event.kind === "created" ? `Added as ${trackedStatusLabel(event.toStatus)}` : `Moved to ${trackedStatusLabel(event.toStatus)}`}
                 </span>
-                <span className="block text-xs text-muted-foreground">{when(event.createdAt)}</span>
+                <span className="block text-xs text-muted-foreground">{formatDate(event.createdAt)}</span>
               </li>
             ))}
           </ol>

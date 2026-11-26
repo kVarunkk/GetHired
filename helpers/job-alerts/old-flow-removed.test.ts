@@ -46,6 +46,7 @@ describe("the old bookmark flow is removed (JAT-051)", () => {
         "helpers/job-alerts/create-alert.ts",
         "helpers/job-alerts/page-state.ts",
         "helpers/job-alerts/pause.ts",
+        "helpers/job-alerts/preview.ts",
         "helpers/job-alerts/run-alert.ts",
         "helpers/job-alerts/writes.ts",
       ].sort(),

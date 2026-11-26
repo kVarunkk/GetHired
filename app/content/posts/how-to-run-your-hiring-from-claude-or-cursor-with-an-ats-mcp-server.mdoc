@@ -1,0 +1,182 @@
+---
+title: How to Run Your Hiring From Claude or Cursor With an ATS MCP Server
+publishedAt: 2026-11-27
+type: companies
+description: >-
+  Connect Claude, Cursor or VS Code to your hiring with the GetHired MCP server:
+  setup, example prompts, permissions, confirmations and read-only mode.
+---
+**Quick answer:** An ATS MCP server connects an AI assistant such as Claude or Cursor to your hiring data, so you can review applicants, manage job posts and move your pipeline by asking. To use GetHired's, add `https://gethired.devhub.co.in/api/mcp` to your MCP client and sign in with your company account. There are no API keys. The assistant is limited to your role's permissions, and anything that changes data or emails a candidate waits for your confirmation.
+
+If your team already works in an AI assistant, you don't need to switch tools to ask "who applied this week?"
+
+## What is MCP in recruiting?
+
+The Model Context Protocol (MCP) is an open standard that lets AI applications use external tools. A recruiting MCP server offers your hiring system's actions as tools. You ask in plain English, and the assistant calls the right ones.
+
+## What can you do from your AI assistant?
+
+You get the same kinds of tools as the GetHired [recruiter agent](https://gethired.devhub.co.in/blog/meet-the-gethired-recruiter-agent-hire-tech-talent-from-one-chat). They're grouped into **toolsets**:
+
+{% table %}
+-
+- Toolset
+- What it covers
+---
+- jobs
+- Job posts and question sets
+---
+- talent
+- The talent pool and matches
+---
+- applicants
+- Applications, screening and notes
+---
+- pipeline
+- Pipelines, their stages and moves
+---
+- lists
+- Talent lists
+---
+- candidates
+- Your own candidates and imports
+---
+- outreach
+- Messages and email templates
+---
+- interviews
+- AI screening interviews
+---
+- scheduling
+- Interview plans, scheduling and feedback
+---
+- team
+- Members, roles and invites
+---
+- careers
+- The careers page
+---
+- distribution
+- Where jobs are published on job boards and feeds
+{% /table %}
+
+A small core set about your company and plan is always connected. Some actions depend on what's set up on your account.
+
+## How do you connect Claude Code, Cursor or another client?
+
+For **Claude Code**, run:
+
+```bash
+claude mcp add --transport http gethired https://gethired.devhub.co.in/api/mcp
+```
+
+For **Cursor**, add this to `~/.cursor/mcp.json`:
+
+```json
+{ "mcpServers": { "gethired": { "url": "https://gethired.devhub.co.in/api/mcp" } } }
+```
+
+Then connect and sign in with your GetHired company account. The [setup guide](https://gethired.devhub.co.in/mcp#for-hiring-teams) has steps for other clients, including Claude and VS Code.
+
+You need a company account that has finished onboarding, and a role with the **Use GetHired from AI clients** permission.
+
+## What can you ask it?
+
+- "Who applied to the backend role this week, and who should I talk to first?"
+- "Which of my open jobs have applicants still waiting in Applied?"
+- "Draft a job post for a product designer. Ask me what you need."
+- "Find candidates in our own pool who fit the data engineer job."
+- "Which interviewers still owe scorecards?"
+
+Check important answers against the application itself before you act on them.
+
+## Is it safe to connect an AI assistant to your ATS?
+
+It's worth asking of any recruiting integration. This is how GetHired handles it.
+
+### Each person keeps their own permissions
+
+A connection can't do more than its user can do in the app. Someone limited to two jobs is limited to those two jobs. Permissions are read again on every request.
+
+### Changes need confirmation
+
+Tools that make gated changes or email candidates show what they'll do and wait for you to confirm. In clients that support it you get a confirmation prompt. In others the assistant gets a preview and a single-use token that's valid for 10 minutes.
+
+### There are rate limits
+
+{% table %}
+-
+- Limit
+- Amount per user
+---
+- Tool calls
+- 60 a minute
+---
+- Calls that email candidates
+- 10 an hour
+{% /table %}
+
+### Calls are recorded
+
+Company tool calls are logged with their outcome, and members with permission to view the audit log can read them.
+
+### Contact details aren't handed over
+
+The recruiting tools don't give the assistant candidates' contact details. Text written by candidates is treated as untrusted content, not as instructions.
+
+You should still check your AI provider's data policy. Whatever your assistant reads is processed by that provider.
+
+## How do you limit what the assistant can touch?
+
+Add options to the server URL.
+
+**Only some toolsets:**
+
+```text
+https://gethired.devhub.co.in/api/mcp?toolsets=jobs,applicants
+```
+
+**Read-only:**
+
+```text
+https://gethired.devhub.co.in/api/mcp?readonly=true
+```
+
+You can combine them with `&`. Fewer toolsets also helps if your client limits how many tools it loads. A read-only connection is a sensible way to start.
+
+## When should you use MCP instead of the app?
+
+{% table %}
+-
+- Use your AI assistant for
+- Use the GetHired app for
+---
+- Summaries and questions across jobs
+- Dragging cards on the pipeline board
+---
+- Drafting job posts and messages
+- Uploading resumes in bulk
+---
+- Combining hiring data with your other notes in one chat
+- Reviewing a candidate in detail
+{% /table %}
+
+## Frequently asked questions
+
+### Do I need an API key for the GetHired MCP server?
+
+No. You sign in with your GetHired account and approve the connection.
+
+### Does the MCP server cost extra for companies?
+
+There's no charge per call. Tools use your plan's allowances, the same as doing that work in the app.
+
+### Can the assistant reject or email candidates by itself?
+
+No. Tools that email candidates or make gated changes wait for your confirmation.
+
+### Is there an MCP server for job seekers too?
+
+Yes. Job seekers connect to the same URL with their own account and get a different set of tools. See [the GetHired MCP server](https://gethired.devhub.co.in/blog/introducing-the-get-hired-mcp-server).
+
+[Read about the MCP server for hiring teams](https://gethired.devhub.co.in/mcp-server/companies) or [set up your client](https://gethired.devhub.co.in/mcp#for-hiring-teams).

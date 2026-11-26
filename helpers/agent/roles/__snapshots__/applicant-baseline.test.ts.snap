@@ -7,6 +7,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "askUser": "not-applicable",
       "completeOnboarding": "user-approval",
       "createInterview": "not-applicable",
+      "createJobAlert": "user-approval",
       "createResume": "user-approval",
       "deleteMemory": {
         "reason": "The assistant read a job posting, resume or report in this reply, so memory changes need your OK.",
@@ -30,6 +31,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       },
       "listApplications": "not-applicable",
       "listInterviews": "not-applicable",
+      "listJobAlerts": "not-applicable",
       "listResumes": "not-applicable",
       "listSavedJobs": "not-applicable",
       "listScreeningInterviews": "not-applicable",
@@ -58,6 +60,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "trackApplication": "not-applicable",
       "unknownTool": "not-applicable",
       "unsaveJob": "not-applicable",
+      "updateJobAlert": "user-approval",
       "updateMyPreferences": "user-approval",
       "updateResume": "user-approval",
       "updateTrackedApplication": "not-applicable",
@@ -66,6 +69,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "askUser": "not-applicable",
       "completeOnboarding": "user-approval",
       "createInterview": "not-applicable",
+      "createJobAlert": "user-approval",
       "createResume": "user-approval",
       "deleteMemory": {
         "reason": "The assistant read a job posting, resume or report in this reply, so memory changes need your OK.",
@@ -86,6 +90,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "improveResume": "not-applicable",
       "listApplications": "not-applicable",
       "listInterviews": "not-applicable",
+      "listJobAlerts": "not-applicable",
       "listResumes": "not-applicable",
       "listSavedJobs": "not-applicable",
       "listScreeningInterviews": "not-applicable",
@@ -105,6 +110,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "trackApplication": "not-applicable",
       "unknownTool": "not-applicable",
       "unsaveJob": "not-applicable",
+      "updateJobAlert": "user-approval",
       "updateMyPreferences": "user-approval",
       "updateResume": "user-approval",
       "updateTrackedApplication": "not-applicable",
@@ -113,6 +119,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "askUser": "not-applicable",
       "completeOnboarding": "user-approval",
       "createInterview": "not-applicable",
+      "createJobAlert": "user-approval",
       "createResume": "user-approval",
       "deleteMemory": "not-applicable",
       "deleteResume": "user-approval",
@@ -130,6 +137,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "improveResume": "not-applicable",
       "listApplications": "not-applicable",
       "listInterviews": "not-applicable",
+      "listJobAlerts": "not-applicable",
       "listResumes": "not-applicable",
       "listSavedJobs": "not-applicable",
       "listScreeningInterviews": "not-applicable",
@@ -146,6 +154,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
       "trackApplication": "not-applicable",
       "unknownTool": "not-applicable",
       "unsaveJob": "not-applicable",
+      "updateJobAlert": "user-approval",
       "updateMyPreferences": "user-approval",
       "updateResume": "user-approval",
       "updateTrackedApplication": "not-applicable",
@@ -155,6 +164,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
     "askUser",
     "completeOnboarding",
     "createInterview",
+    "createJobAlert",
     "createResume",
     "deleteMemory",
     "deleteResume",
@@ -172,6 +182,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
     "improveResume",
     "listApplications",
     "listInterviews",
+    "listJobAlerts",
     "listResumes",
     "listSavedJobs",
     "listScreeningInterviews",
@@ -187,6 +198,7 @@ exports[`applicant agent baseline (RA-TEST-001) > matches the snapshot taken bef
     "submitApplication",
     "trackApplication",
     "unsaveJob",
+    "updateJobAlert",
     "updateMyPreferences",
     "updateResume",
     "updateTrackedApplication",
@@ -201,6 +213,7 @@ You can use tools to:
 - search jobs with filters (searchJobs) or from a plain-English request (naturalLanguageJobSearch, costs AI credits)
 - find jobs matched to the user's profile (findRelevantJobs) or similar to a given job (findSimilarJobs)
 - show job details (getJobDetails), save or unsave jobs (saveJob, unsaveJob) and list saved jobs (listSavedJobs)
+- email the user new jobs matching a search, daily or weekly: create a job alert (createJobAlert), list their alerts (listJobAlerts), and pause, resume or change how often one is sent (updateJobAlert); creating and changing need the user's approval, and deleting is done at /settings#job-alerts
 - list applications (listApplications), read one job the user tracks themselves (getTrackedApplication), add a job the user applied to elsewhere, or one to apply to later, to My Jobs (trackApplication), and change or remove one they track (updateTrackedApplication, removeTrackedApplication); for jobs applied to through GetHired the company sets the status
 - apply to jobs on GetHired (isPlatformJob) for the user: read the job's application form (getApplicationForm), fill it from their profile and what they told you, then send it (submitApplication, costs 1 AI credit, with the user's approval)
 - list resumes, set the primary resume, and ask the user to upload one (listResumes, setPrimaryResume, requestResumeUpload)
@@ -218,6 +231,7 @@ You can use tools to:
 - Never invent jobs, companies, or URLs. Only present jobs and data returned by tools.
 - Job searches always need job-title keywords: for "jobs in my field" or "jobs for me", use the desired roles from the profile. When the user asks for jobs from their resume, or the profile has no desired roles and they have a resume, read it with getResumeContent: the resume the user named (find its id with listResumes), else the primary one, or the only one. Use its most recent job titles and top skills as keywords, and its years of experience as experienceYears; say which resume you read and which titles you searched for.
 - Keywords are short job titles with their spelling variants (e.g. ['frontend', 'front-end', 'front end']), never seniority words such as junior, senior, entry-level, intern or lead: every job already has an experience range. Whenever you know the user's years of experience (profile, resume or what they said), pass them as experienceYears, so jobs above their level are left out; never set minExperience alone for the user's own level, since it doesn't hide jobs asking for more. Use minExperience/maxExperience only for a level the user asked for, instead of experienceYears: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5. When experience was filtered, show each job's experience in the list. For a resume other than the primary one, use searchJobs, not findRelevantJobs: findRelevantJobs matches the profile, which is built from the primary resume. If you still don't know the user's role, ask. Only search without keywords when the user asked for jobs of any role. The search tools relax filters themselves when nothing matches: when a result has widened, tell the user which filters were relaxed. If a search still finds nothing, say so, then offer related job titles or other locations, and ask before searching another location or role. Never repeat a search without its keywords.
+- When a job search returns results and the user hasn't been offered an alert in this chat, you may end with one short offer: "Want me to email you new jobs like these?" Offer it once, and call createJobAlert only if they ask or say yes, with the filters of the search they saw.
 - Put every place the user named in locations, including Remote: "remote AI engineer jobs in India" is locations ['Remote', 'India']. Without places in the request, use the profile's preferred locations. Never drop a place the user named.
 - Add visaRequirements only when the user asks for sponsorship, or the search is for jobs in a country they'd need a visa for. The profile's "Needs visa sponsorship" doesn't apply to jobs in the user's own country or to remote jobs there.
 - "More jobs", "more matching jobs" or "show more" asks for more of the same role. If findRelevantJobs said matches were still processing, try it again. Otherwise page with nextCursor when the last search had one; when it didn't, search again with related titles for the same role (e.g. backend → 'backend developer', 'node.js developer', 'sde') and the same filters. Never answer it with anyRole. If that still finds few jobs, say so and offer to relax a filter (salary, location or posting date), naming which.
@@ -291,6 +305,7 @@ You can use tools to:
 - search jobs with filters (searchJobs) or from a plain-English request (naturalLanguageJobSearch, costs AI credits)
 - find jobs matched to the user's profile (findRelevantJobs) or similar to a given job (findSimilarJobs)
 - show job details (getJobDetails), save or unsave jobs (saveJob, unsaveJob) and list saved jobs (listSavedJobs)
+- email the user new jobs matching a search, daily or weekly: create a job alert (createJobAlert), list their alerts (listJobAlerts), and pause, resume or change how often one is sent (updateJobAlert); creating and changing need the user's approval, and deleting is done at /settings#job-alerts
 - list applications (listApplications), read one job the user tracks themselves (getTrackedApplication), add a job the user applied to elsewhere, or one to apply to later, to My Jobs (trackApplication), and change or remove one they track (updateTrackedApplication, removeTrackedApplication); for jobs applied to through GetHired the company sets the status
 - apply to jobs on GetHired (isPlatformJob) for the user: read the job's application form (getApplicationForm), fill it from their profile and what they told you, then send it (submitApplication, costs 1 AI credit, with the user's approval)
 - list resumes, set the primary resume, and ask the user to upload one (listResumes, setPrimaryResume, requestResumeUpload)
@@ -308,6 +323,7 @@ You can use tools to:
 - Never invent jobs, companies, or URLs. Only present jobs and data returned by tools.
 - Job searches always need job-title keywords: for "jobs in my field" or "jobs for me", use the desired roles from the profile. When the user asks for jobs from their resume, or the profile has no desired roles and they have a resume, read it with getResumeContent: the resume the user named (find its id with listResumes), else the primary one, or the only one. Use its most recent job titles and top skills as keywords, and its years of experience as experienceYears; say which resume you read and which titles you searched for.
 - Keywords are short job titles with their spelling variants (e.g. ['frontend', 'front-end', 'front end']), never seniority words such as junior, senior, entry-level, intern or lead: every job already has an experience range. Whenever you know the user's years of experience (profile, resume or what they said), pass them as experienceYears, so jobs above their level are left out; never set minExperience alone for the user's own level, since it doesn't hide jobs asking for more. Use minExperience/maxExperience only for a level the user asked for, instead of experienceYears: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5. When experience was filtered, show each job's experience in the list. For a resume other than the primary one, use searchJobs, not findRelevantJobs: findRelevantJobs matches the profile, which is built from the primary resume. If you still don't know the user's role, ask. Only search without keywords when the user asked for jobs of any role. The search tools relax filters themselves when nothing matches: when a result has widened, tell the user which filters were relaxed. If a search still finds nothing, say so, then offer related job titles or other locations, and ask before searching another location or role. Never repeat a search without its keywords.
+- When a job search returns results and the user hasn't been offered an alert in this chat, you may end with one short offer: "Want me to email you new jobs like these?" Offer it once, and call createJobAlert only if they ask or say yes, with the filters of the search they saw.
 - Put every place the user named in locations, including Remote: "remote AI engineer jobs in India" is locations ['Remote', 'India']. Without places in the request, use the profile's preferred locations. Never drop a place the user named.
 - Add visaRequirements only when the user asks for sponsorship, or the search is for jobs in a country they'd need a visa for. The profile's "Needs visa sponsorship" doesn't apply to jobs in the user's own country or to remote jobs there.
 - "More jobs", "more matching jobs" or "show more" asks for more of the same role. If findRelevantJobs said matches were still processing, try it again. Otherwise page with nextCursor when the last search had one; when it didn't, search again with related titles for the same role (e.g. backend → 'backend developer', 'node.js developer', 'sde') and the same filters. Never answer it with anyRole. If that still finds few jobs, say so and offer to relax a filter (salary, location or posting date), naming which.
@@ -362,6 +378,7 @@ You can use tools to:
 - search jobs with filters (searchJobs) or from a plain-English request (naturalLanguageJobSearch, costs AI credits)
 - find jobs matched to the user's profile (findRelevantJobs) or similar to a given job (findSimilarJobs)
 - show job details (getJobDetails), save or unsave jobs (saveJob, unsaveJob) and list saved jobs (listSavedJobs)
+- email the user new jobs matching a search, daily or weekly: create a job alert (createJobAlert), list their alerts (listJobAlerts), and pause, resume or change how often one is sent (updateJobAlert); creating and changing need the user's approval, and deleting is done at /settings#job-alerts
 - list applications (listApplications), read one job the user tracks themselves (getTrackedApplication), add a job the user applied to elsewhere, or one to apply to later, to My Jobs (trackApplication), and change or remove one they track (updateTrackedApplication, removeTrackedApplication); for jobs applied to through GetHired the company sets the status
 - apply to jobs on GetHired (isPlatformJob) for the user: read the job's application form (getApplicationForm), fill it from their profile and what they told you, then send it (submitApplication, costs 1 AI credit, with the user's approval)
 - list resumes, set the primary resume, and ask the user to upload one (listResumes, setPrimaryResume, requestResumeUpload)
@@ -379,6 +396,7 @@ You can use tools to:
 - Never invent jobs, companies, or URLs. Only present jobs and data returned by tools.
 - Job searches always need job-title keywords: for "jobs in my field" or "jobs for me", use the desired roles from the profile. When the user asks for jobs from their resume, or the profile has no desired roles and they have a resume, read it with getResumeContent: the resume the user named (find its id with listResumes), else the primary one, or the only one. Use its most recent job titles and top skills as keywords, and its years of experience as experienceYears; say which resume you read and which titles you searched for.
 - Keywords are short job titles with their spelling variants (e.g. ['frontend', 'front-end', 'front end']), never seniority words such as junior, senior, entry-level, intern or lead: every job already has an experience range. Whenever you know the user's years of experience (profile, resume or what they said), pass them as experienceYears, so jobs above their level are left out; never set minExperience alone for the user's own level, since it doesn't hide jobs asking for more. Use minExperience/maxExperience only for a level the user asked for, instead of experienceYears: fresher or entry level is maxExperience 1, junior is maxExperience 2, mid level is minExperience 2 with maxExperience 5, senior is minExperience 5. When experience was filtered, show each job's experience in the list. For a resume other than the primary one, use searchJobs, not findRelevantJobs: findRelevantJobs matches the profile, which is built from the primary resume. If you still don't know the user's role, ask. Only search without keywords when the user asked for jobs of any role. The search tools relax filters themselves when nothing matches: when a result has widened, tell the user which filters were relaxed. If a search still finds nothing, say so, then offer related job titles or other locations, and ask before searching another location or role. Never repeat a search without its keywords.
+- When a job search returns results and the user hasn't been offered an alert in this chat, you may end with one short offer: "Want me to email you new jobs like these?" Offer it once, and call createJobAlert only if they ask or say yes, with the filters of the search they saw.
 - Put every place the user named in locations, including Remote: "remote AI engineer jobs in India" is locations ['Remote', 'India']. Without places in the request, use the profile's preferred locations. Never drop a place the user named.
 - Add visaRequirements only when the user asks for sponsorship, or the search is for jobs in a country they'd need a visa for. The profile's "Needs visa sponsorship" doesn't apply to jobs in the user's own country or to remote jobs there.
 - "More jobs", "more matching jobs" or "show more" asks for more of the same role. If findRelevantJobs said matches were still processing, try it again. Otherwise page with nextCursor when the last search had one; when it didn't, search again with related titles for the same role (e.g. backend → 'backend developer', 'node.js developer', 'sde') and the same filters. Never answer it with anyRole. If that still finds few jobs, say so and offer to relax a filter (salary, location or posting date), naming which.
@@ -684,6 +702,117 @@ No saved memories.",
         },
         "required": [
           "jobId",
+        ],
+        "type": "object",
+      },
+    },
+    "createJobAlert": {
+      "description": "Email the user new jobs matching a search, daily or weekly (a job alert). It takes searchJobs' filters, except visa terms, posting date and experienceYears, which an alert can't keep: say so, and use minExperience/maxExperience for a level the user asked for. An alert already saved for the same search is turned on and gets the new frequency. The user is asked to confirm first.",
+      "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "filters": {
+            "additionalProperties": false,
+            "description": "The search to be alerted about. At least one filter.",
+            "properties": {
+              "companies": {
+                "items": {
+                  "maxLength": 80,
+                  "minLength": 1,
+                  "type": "string",
+                },
+                "maxItems": 10,
+                "type": "array",
+              },
+              "jobTypes": {
+                "items": {
+                  "enum": [
+                    "Fulltime",
+                    "Contract",
+                    "Intern",
+                  ],
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "keywords": {
+                "description": "Job title keywords, including common variants, e.g. ['frontend', 'front-end', 'front end']. No seniority words.",
+                "items": {
+                  "maxLength": 50,
+                  "minLength": 1,
+                  "type": "string",
+                },
+                "maxItems": 10,
+                "type": "array",
+              },
+              "locations": {
+                "description": "Locations, e.g. ['Remote', 'Bengaluru'].",
+                "items": {
+                  "maxLength": 60,
+                  "minLength": 1,
+                  "type": "string",
+                },
+                "maxItems": 10,
+                "type": "array",
+              },
+              "maxExperience": {
+                "description": "Only jobs asking for at most this many years.",
+                "maximum": 30,
+                "minimum": 0,
+                "type": "integer",
+              },
+              "minExperience": {
+                "description": "Only jobs whose experience range reaches at least this many years.",
+                "maximum": 30,
+                "minimum": 0,
+                "type": "integer",
+              },
+              "minSalary": {
+                "description": "Minimum yearly salary as a plain integer, in salaryCurrency (20 LPA = 2000000).",
+                "minimum": 0,
+                "type": "integer",
+              },
+              "platforms": {
+                "description": "Job source platforms.",
+                "items": {
+                  "enum": [
+                    "greenhouse",
+                    "jazzhr",
+                    "ashby",
+                    "rippling",
+                    "workable",
+                    "recruitee",
+                    "personio",
+                    "bamboohr",
+                    "jobvite",
+                    "workday",
+                    "keka",
+                    "gethired",
+                  ],
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "salaryCurrency": {
+                "description": "ISO 4217 code of minSalary. Defaults to the user's profile currency; ignored without minSalary.",
+                "type": "string",
+              },
+            },
+            "type": "object",
+          },
+          "frequency": {
+            "description": "How often new jobs are emailed. Weekly emails go out on Mondays.",
+            "enum": [
+              "daily",
+              "weekly",
+            ],
+            "type": "string",
+          },
+        },
+        "required": [
+          "filters",
+          "frequency",
         ],
         "type": "object",
       },
@@ -1228,6 +1357,15 @@ No saved memories.",
         "type": "object",
       },
     },
+    "listJobAlerts": {
+      "description": "List the user's job alerts: each one's id, search, how often it's emailed, whether it's on or paused, and when it was last sent.",
+      "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object",
+      },
+    },
     "listResumes": {
       "description": "List the user's uploaded resumes with whether each is primary and ready (parsed), processing, or failed.",
       "input": {
@@ -1702,6 +1840,35 @@ No saved memories.",
         },
         "required": [
           "jobId",
+        ],
+        "type": "object",
+      },
+    },
+    "updateJobAlert": {
+      "description": "Pause or resume one of the user's job alerts, or change how often it's emailed. Get its id from listJobAlerts. To change what an alert searches for, create a new one and pause the old one. Deleting is done in Settings. The user is asked to confirm first.",
+      "input": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false,
+        "properties": {
+          "alertId": {
+            "description": "The alert id, exactly as returned by another tool.",
+            "format": "uuid",
+            "type": "string",
+          },
+          "frequency": {
+            "enum": [
+              "daily",
+              "weekly",
+            ],
+            "type": "string",
+          },
+          "on": {
+            "description": "false pauses the alert, true resumes it.",
+            "type": "boolean",
+          },
+        },
+        "required": [
+          "alertId",
         ],
         "type": "object",
       },

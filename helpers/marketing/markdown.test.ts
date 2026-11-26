@@ -115,6 +115,7 @@ describe("pageMarkdown", () => {
     expect(md).toContain("## Growth\n\nPrice: $49 / month, ₹2,999 / month\n\nFor growing teams.");
     expect(md).toContain("- 500 screenings / month");
     expect(md).toContain("Price: Custom ([contact us](mailto:");
+    expect(md).toContain("[Book a demo](https://cal.com/varun-kumawat)");
   });
 
   it("serves a blog post's source without its frontmatter", async () => {

@@ -26,6 +26,7 @@ import { isSchedulingPreviewTool, schedulingApprovalTitle } from "@/helpers/inte
 import { rehypeAnimateWords } from "./animate-words";
 import {
   FORM_APPROVAL_TOOLS,
+  isJobAlertTool,
   isPipelineApprovalTool,
   isResumeEditTool,
   isRoleApprovalTool,
@@ -43,6 +44,7 @@ import {
   ImportApprovalDetails,
   InterviewConfigApprovalDetails,
   InterviewInviteApprovalDetails,
+  JobAlertApprovalDetails,
   JobDeleteApprovalDetails,
   MoveApprovalDetails,
   OutreachApprovalDetails,
@@ -99,6 +101,9 @@ const TOOL_LABELS: Record<string, { running: string; done: string; action: strin
   trackApplication: { running: "Adding to My Jobs…", done: "Added to My Jobs", action: "add the job to My Jobs" },
   updateTrackedApplication: { running: "Updating the application…", done: "Updated the application", action: "update the application" },
   removeTrackedApplication: { running: "Removing the application…", done: "Removed the application", action: "remove the application" },
+  createJobAlert: { running: "Setting up the job alert…", done: "Set up the job alert", action: "create a job alert" },
+  listJobAlerts: { running: "Loading job alerts…", done: "Loaded job alerts", action: "load your job alerts" },
+  updateJobAlert: { running: "Updating the job alert…", done: "Updated the job alert", action: "change a job alert" },
   getApplicationForm: { running: "Reading the application form…", done: "Read the application form", action: "read the application form" },
   submitApplication: { running: "Sending the application…", done: "Sent the application", action: "apply to the job" },
   listResumes: { running: "Loading resumes…", done: "Loaded resumes", action: "load resumes" },
@@ -583,6 +588,10 @@ function approvalTitle(name: string, input: unknown) {
       return "Remove this application from My Jobs? Its notes and timeline go with it.";
     case "applyReviewSuggestions":
       return "Apply these suggestions?";
+    case "createJobAlert":
+      return "Create this job alert? We'll email you new jobs that match it.";
+    case "updateJobAlert":
+      return "Change this job alert?";
     case "createJobPost":
       return "Create this job post as a draft?";
     case "updateJobPost":
@@ -711,6 +720,8 @@ function approvalDetails(name: string, input: unknown) {
   if (name === "submitApplication") return [];
   // Resume changes show a server preview with the before and after (ResumeEditApprovalDetails).
   if (isResumeEditTool(name)) return [];
+  // Job alerts show a server preview with the alert's name and sample jobs (JobAlertApprovalDetails).
+  if (isJobAlertTool(name)) return [];
   // Role changes show a server preview with the exact diff (RoleApprovalDetails).
   if (isRoleApprovalTool(name)) return [];
   // Interview plans and scheduling show a server preview (SchedulingApprovalDetails).
@@ -749,6 +760,7 @@ function ApprovalCard({
       {name === "deleteMyCandidates" && <DeleteCandidatesApprovalDetails input={part.input} />}
       {name === "submitApplication" && <ApplicationApprovalDetails input={part.input} />}
       {isResumeEditTool(name) && <ResumeEditApprovalDetails tool={name} input={part.input} />}
+      {isJobAlertTool(name) && <JobAlertApprovalDetails tool={name} input={part.input} />}
       {isRoleApprovalTool(name) && <RoleApprovalDetails tool={name} input={part.input} />}
       {isSchedulingPreviewTool(name) && <SchedulingApprovalDetails tool={name} input={part.input} />}
       {isPipelineApprovalTool(name) && <PipelineApprovalDetails tool={name} input={part.input} />}
@@ -1039,6 +1051,25 @@ function OutputStep({ name, output }: { name: string; output: unknown }) {
             Application sent.{" "}
             <Link {...NEW_TAB} href={result.url} className={inlineLink}>
               View the job
+            </Link>
+          </>
+        }
+      />
+    );
+  }
+
+  if (isJobAlertTool(name) && typeof result.manageUrl === "string" && isInAppHref(result.manageUrl)) {
+    const alert = result.alert as { name?: string; on?: boolean; frequency?: string } | undefined;
+    const state = alert?.on === false ? "paused" : alert?.frequency;
+    return (
+      <Step
+        tone="done"
+        label={
+          <>
+            Job alert saved{alert?.name ? `: “${alert.name}”` : ""}
+            {state ? ` (${state})` : ""}.{" "}
+            <Link {...NEW_TAB} href={result.manageUrl} className={inlineLink}>
+              Manage alerts
             </Link>
           </>
         }

@@ -28,8 +28,8 @@ export type CreateJobAlertResult = { ok: true; alert: JobAlert; resumed: boolean
 const fail = (reason: JobAlertFailure["reason"], error: string): JobAlertFailure => ({ ok: false, reason, error });
 
 /**
- * The one way to create a job alert (JA-REQ-020), shared by the action and,
- * later, the agent and MCP. A minimum salary without a currency takes the
+ * The one way to create a job alert (JA-REQ-020), shared by the action and the
+ * agent and MCP tools. A minimum salary without a currency takes the
  * profile's currency. An alert that already exists for the same search is
  * turned on, gets the new frequency and comes back with `resumed: true`.
  * Everything is written for `ctx.userId`.
@@ -41,17 +41,8 @@ export async function createJobAlert(
   if (!filters) return fail("not_alertable", JOB_ALERT_COPY.notAlertable);
   const { supabase, userId } = ctx;
 
-  let withCurrency = filters;
-  if (filters.minSalary !== undefined && !filters.salaryCurrency) {
-    const { data: profile } = await supabase
-      .from("user_info")
-      .select("salary_currency")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const currency = toIsoCurrency(profile?.salary_currency);
-    if (!currency) return fail("no_currency", JOB_ALERT_COPY.noCurrency);
-    withCurrency = { ...filters, salaryCurrency: currency };
-  }
+  const withCurrency = await withAlertCurrency(ctx, filters);
+  if (!withCurrency) return fail("no_currency", JOB_ALERT_COPY.noCurrency);
 
   const { filters: canonical, key } = await canonicalAlert(withCurrency);
 
@@ -94,6 +85,21 @@ export async function createJobAlert(
     return fail("failed", JOB_ALERT_COPY.failed);
   }
   return { ok: true, alert: toJobAlert(inserted), resumed: false };
+}
+
+/** A minimum salary without a currency takes the profile's. Null when the profile has none either. */
+export async function withAlertCurrency(
+  { supabase, userId }: JobAlertsContext,
+  filters: AlertFilters,
+): Promise<AlertFilters | null> {
+  if (filters.minSalary === undefined || filters.salaryCurrency) return filters;
+  const { data: profile } = await supabase
+    .from("user_info")
+    .select("salary_currency")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const currency = toIsoCurrency(profile?.salary_currency);
+  return currency ? { ...filters, salaryCurrency: currency } : null;
 }
 
 async function findByKey(ctx: JobAlertsContext, key: string): Promise<JobAlertRow | null> {

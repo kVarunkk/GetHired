@@ -68,7 +68,7 @@ export async function deleteJobAlert(ctx: JobAlertsContext, { id }: { id: string
   return { ok: true };
 }
 
-/** The user's alerts, newest first: Settings, and later the agent's `listJobAlerts`. */
+/** The user's alerts, newest first: Settings and the agent's `listJobAlerts`. */
 export async function listJobAlerts(ctx: JobAlertsContext): Promise<JobAlert[]> {
   const { data, error } = await ctx.supabase
     .from("bookmarks")

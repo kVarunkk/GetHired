@@ -50,6 +50,9 @@ const LEGACY_NAMES = [
 
 const NEW_NAMES = [
   "natural_language_job_search",
+  "create_job_alert",
+  "list_job_alerts",
+  "update_job_alert",
   "list_applications",
   "get_tracked_application",
   "track_application",
@@ -142,10 +145,12 @@ describe("MCP_TOOLS", () => {
       [
         "apply_review_suggestions",
         "complete_onboarding",
+        "create_job_alert",
         "create_resume",
         "delete_resume",
         "remove_tracked_application",
         "submit_application",
+        "update_job_alert",
         "update_my_preferences",
         "update_resume",
       ].sort(),

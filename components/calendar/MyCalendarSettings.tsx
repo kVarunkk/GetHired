@@ -32,6 +32,7 @@ import {
 } from "@/helpers/calendar/config";
 import { connectErrorMessage } from "@/helpers/calendar/copy";
 import { browserTimeZone, timeZoneOptions } from "@/helpers/companies/time-zone";
+import { formatDate } from "@/utils/date";
 
 const DAY_NAMES: Record<Weekday, string> = {
   mon: "Monday",
@@ -109,7 +110,7 @@ function ConnectionCard({ connection }: { connection: CalendarConnectionView | n
           )}
           <span className="truncate font-medium">{connection.accountEmail}</span>
           <span className="text-muted-foreground">
-            {broken ? "· needs reconnecting" : `· connected ${new Date(connection.connectedAt).toLocaleDateString()}`}
+            {broken ? "· needs reconnecting" : `· connected ${formatDate(connection.connectedAt)}`}
           </span>
         </div>
         <div className="flex gap-2">

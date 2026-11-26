@@ -28,6 +28,10 @@ export const ApplicationApprovalDetails = dynamic(
   () => import("./ApplicationApprovalCard").then((m) => m.ApplicationApprovalDetails),
   { loading: CardLoading },
 );
+export const JobAlertApprovalDetails = dynamic(
+  () => import("./JobAlertApprovalCard").then((m) => m.JobAlertApprovalDetails),
+  { loading: CardLoading },
+);
 export const SalaryApprovalWarning = dynamic(() =>
   import("./SalaryApprovalWarning").then((m) => m.SalaryApprovalWarning),
 );

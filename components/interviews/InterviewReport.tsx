@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/utils/utils";
 import type { ApplicationInterviewView, InterviewAttempt } from "@/helpers/interview/screening/application-interview";
+import { formatDate } from "@/utils/date";
 
 const END_REASON_LABELS: Record<string, string> = {
   completed: "Interviewer finished",
@@ -34,7 +35,7 @@ const formatDuration = (seconds: number | null) => {
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
 };
 
-const formatDate = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+const formatDateTime = (iso: string) => `${formatDate(iso, { dateStyle: "medium", timeStyle: "short" })} IST`;
 
 const turnElementId = (turnId: number) => `interview-turn-${turnId}`;
 
@@ -65,10 +66,10 @@ export default function InterviewReport({ interview }: { interview: ApplicationI
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            {interview.durationMinutes}-minute voice interview · invited {formatDate(interview.createdAt)} · attempts{" "}
+            {interview.durationMinutes}-minute voice interview · invited {formatDateTime(interview.createdAt)} · attempts{" "}
             {interview.attemptsUsed} of {interview.maxAttempts}
             {interview.status === "invited" || interview.status === "paused"
-              ? ` · due ${formatDate(interview.deadlineAt)}`
+              ? ` · due ${formatDateTime(interview.deadlineAt)}`
               : ""}
           </p>
         </CardHeader>
@@ -256,7 +257,7 @@ function AttemptRow({ attempt, n }: { attempt: InterviewAttempt; n: number }) {
   return (
     <li className="flex flex-wrap justify-between gap-2 text-muted-foreground">
       <span>
-        Attempt {n} · {formatDate(attempt.startedAt)}
+        Attempt {n} · {formatDateTime(attempt.startedAt)}
       </span>
       <span>
         {attempt.endReason ? (END_REASON_LABELS[attempt.endReason] ?? attempt.endReason) : "In progress"} ·{" "}

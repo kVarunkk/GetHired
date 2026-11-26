@@ -6,6 +6,8 @@
  */
 import "server-only";
 import { previewAgentApplication } from "@/helpers/applications/preview-agent-application";
+import { previewJobAlert, type JobAlertPreview, type JobAlertTool } from "@/helpers/job-alerts/preview";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { canonicalizeLocations } from "@/helpers/locations/aliases";
 import { PREFERENCE_COLUMNS } from "@/helpers/agent/tools/profile";
 import type { AgentToolContext } from "@/helpers/agent/tools/shared";
@@ -125,6 +127,51 @@ export const previewRemoveTrackedApplication: McpPreviewBuilder = async (ctx, in
     details: [
       { label: "Job", value: wrapInSandbox("tracked_job", JSON.stringify({ title: data.job_title, company: data.company_name })) },
       { label: "Status", value: trackedStatusLabel(data.status) },
+    ],
+  };
+};
+
+/** The same read the chat's approval card shows, for the context's user. */
+const readJobAlert = (ctx: AgentToolContext, tool: JobAlertTool, input: unknown) =>
+  previewJobAlert({ userId: ctx.user.id, supabase: createServiceRoleClient() }, tool, input);
+
+// The sample is posting text, so it's delimited as data.
+function sampleText(sample: Extract<JobAlertPreview, { action: "create" }>["sample"]) {
+  if (!sample) return "Couldn't load matching jobs.";
+  if (sample.jobs.length === 0) return "None right now.";
+  const jobs = sample.jobs.map(({ title, company }) => ({ title, company }));
+  return `${sample.total} in total, such as ${wrapInSandbox("matching_jobs", JSON.stringify(jobs))}`;
+}
+
+export const previewCreateJobAlert: McpPreviewBuilder = async (ctx, input) => {
+  const preview = await readJobAlert(ctx, "createJobAlert", input);
+  if (!preview.ok) return preview;
+  if (preview.action !== "create") throw new Error("Expected a new alert's preview.");
+  const { existing } = preview;
+  return {
+    ok: true,
+    summary: "Create this job alert? GetHired will email the user new jobs that match it.",
+    details: [
+      { label: "Alert", value: preview.name },
+      { label: "Emails", value: preview.frequency === "daily" ? "Daily" : "Weekly, on Mondays" },
+      ...(existing
+        ? [{ label: "Already saved", value: existing.on ? `On, sent ${existing.frequency}` : "Paused, so this turns it on" }]
+        : []),
+      { label: "Jobs matching now", value: sampleText(preview.sample) },
+    ],
+  };
+};
+
+export const previewUpdateJobAlert: McpPreviewBuilder = async (ctx, input) => {
+  const preview = await readJobAlert(ctx, "updateJobAlert", input);
+  if (!preview.ok) return preview;
+  if (preview.action !== "update") throw new Error("Expected an alert change's preview.");
+  return {
+    ok: true,
+    summary: "Change this job alert?",
+    details: [
+      { label: "Alert", value: preview.name },
+      ...preview.changes.map(({ label, before, after }) => ({ label, value: `${before} → ${after}` })),
     ],
   };
 };
