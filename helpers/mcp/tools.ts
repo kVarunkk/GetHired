@@ -26,10 +26,12 @@ import {
 import {
   previewApplySuggestions,
   previewCompleteOnboarding,
+  previewCreateJobAlert,
   previewCreateResume,
   previewDeleteResume,
   previewRemoveTrackedApplication,
   previewSubmitApplication,
+  previewUpdateJobAlert,
   previewUpdatePreferences,
   previewUpdateResume,
   type McpPreviewBuilder,
@@ -227,6 +229,27 @@ const ROWS: readonly McpToolDef[] = [
     preview: previewSubmitApplication,
     description:
       "Apply to a job on GetHired for the user (Easy Apply) with their answers to its application form. Costs 1 AI credit. Read the form with get_application_form first. Only use answers the user gave or that come from their profile; ask them for anything else.",
+  },
+
+  // --- Job alerts ---
+  {
+    name: "create_job_alert",
+    title: "Create a job alert",
+    annotations: SAFE_WRITE,
+    agentTools: ["createJobAlert"],
+    preview: previewCreateJobAlert,
+    description:
+      "Email the user new jobs matching a search, daily or weekly (a job alert). The filters are named as in search_jobs. An alert can't keep visa terms, posting date or experienceYears: tell the user, and use minExperience or maxExperience for a level they asked for. An alert already saved for the same search is turned on and gets the new frequency.",
+  },
+  { name: "list_job_alerts", title: "My job alerts", annotations: READ, agentTools: ["listJobAlerts"] },
+  {
+    name: "update_job_alert",
+    title: "Change a job alert",
+    annotations: SAFE_WRITE,
+    agentTools: ["updateJobAlert"],
+    preview: previewUpdateJobAlert,
+    description:
+      "Pause or resume one of the user's job alerts, or change how often it's emailed. Get its id from list_job_alerts. To change what an alert searches for, create a new one and pause the old one. Alerts are deleted on GetHired's settings page.",
   },
 
   // --- Profile ---

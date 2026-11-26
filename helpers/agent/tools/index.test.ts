@@ -20,6 +20,9 @@ describe("createAgentTools", () => {
         "saveJob",
         "unsaveJob",
         "listSavedJobs",
+        "createJobAlert",
+        "listJobAlerts",
+        "updateJobAlert",
         "listApplications",
         "getTrackedApplication",
         "trackApplication",
@@ -87,10 +90,12 @@ describe("createAgentTools", () => {
     expect(needingApproval).toEqual([
       "applyReviewSuggestions",
       "completeOnboarding",
+      "createJobAlert",
       "createResume",
       "deleteResume",
       "removeTrackedApplication",
       "submitApplication",
+      "updateJobAlert",
       "updateMyPreferences",
       "updateResume",
     ]);

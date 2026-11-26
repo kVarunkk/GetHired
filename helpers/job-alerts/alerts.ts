@@ -69,6 +69,7 @@ export const JOB_ALERT_COPY = {
   rowLimit: `You have ${MAX_JOB_ALERT_ROWS} job alerts. Delete one in Settings to add another.`,
   notFound: "Alert not found.",
   badName: "Give the alert a name of up to 80 characters.",
+  noChange: "Say whether to pause the alert, resume it or change how often it's emailed.",
   failed: "Couldn't save the alert. Please try again.",
   signIn: "Sign in first.",
   applicantsOnly: "Job alerts are for job seekers.",

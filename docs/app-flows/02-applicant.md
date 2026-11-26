@@ -79,6 +79,7 @@ flowchart TD
   RR --> G{{"Gemini (reasons)"}}
   RR --> CR["rpc deduct_user_credits"]
   J --> BM["Create alert (banner, bell, empty state): createJobAlertAction → bookmarks<br/>≤ 5 active alerts → A11 job-alert; managed in /settings#job-alerts"]
+  AG["agent / MCP: createJobAlert, listJobAlerts, updateJobAlert<br/>writes ask first (previewJobAlert)"] --> BM
 ```
 
 ## A3. Job page tools (`/jobs/[job_id]`)

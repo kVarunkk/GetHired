@@ -87,6 +87,26 @@ export const MCP_INPUT_DESCRIPTIONS: Readonly<Record<string, McpInputDescription
     jobId: `The job to save or unsave: an id from ${JOB_ID_SOURCES}.`,
     action: "save bookmarks the job for the user; unsave removes it from their saved jobs.",
   },
+  create_job_alert: {
+    filters: "The search to be alerted about. At least one filter.",
+    "filters.keywords": jobFilters("").keywords,
+    "filters.locations": jobFilters("").locations,
+    "filters.jobTypes": jobFilters("").jobTypes,
+    "filters.minSalary": "The lowest yearly salary the user would accept, as a plain whole number in salaryCurrency, e.g. 1500000.",
+    "filters.salaryCurrency":
+      "The ISO 4217 code of minSalary's currency, e.g. INR or USD. The user's profile currency when left out; ignored without minSalary.",
+    "filters.minExperience": "Only jobs whose experience range reaches at least this many years.",
+    "filters.maxExperience": "Only jobs asking for at most this many years.",
+    "filters.platforms":
+      "Only jobs found on these applicant tracking systems or job boards. gethired is jobs posted on GetHired itself.",
+    "filters.companies": jobFilters("").companies,
+    frequency: "How often new matching jobs are emailed: daily, or weekly on Mondays.",
+  },
+  update_job_alert: {
+    alertId: "The alert to change: an id from list_job_alerts.",
+    on: "false pauses the alert, true resumes it. Leave out to keep it as it is.",
+    frequency: "How often new matching jobs are emailed: daily, or weekly on Mondays. Leave out to keep it as it is.",
+  },
   list_applications: {
     status: "Only applications with this status, e.g. rejected to see the ones that were turned down. Leave out for all of them.",
     column: "Only applications in this board column: applied, in_review, interviewing, offer or closed.",
@@ -300,6 +320,14 @@ const confirmed = <T extends z.ZodRawShape>(shape: T) =>
 
 const output = <T extends z.ZodRawShape>(shape: T) => z.object(shape).passthrough();
 
+const jobAlert = output({
+  id: z.string().describe("Pass to update_job_alert."),
+  name: z.string(),
+  frequency: z.enum(["daily", "weekly"]),
+  on: z.boolean().describe("false when it's paused."),
+  jobsUrl: link.describe("The alert's search on GetHired."),
+});
+
 const review = output({
   id: z.string(),
   name: text,
@@ -374,6 +402,24 @@ export const MCP_OUTPUT_SCHEMAS: Readonly<Record<string, z.ZodTypeAny>> = {
   get_saved_jobs: output(jobList),
   get_applied_jobs: output(applicationList),
   favorite_job: output({ jobId: z.string(), saved: z.boolean().describe("Whether the job is saved now.") }),
+  create_job_alert: confirmed({
+    alreadyExisted: z.boolean().describe("true when an alert for the same search was already saved."),
+    alert: jobAlert,
+    manageUrl: link,
+  }),
+  list_job_alerts: output({
+    alerts: z.array(
+      jobAlert.extend({
+        filters: z.record(z.unknown()).describe("What the alert searches for."),
+        lastSentAt: text,
+        createdAt: z.string(),
+      }),
+    ),
+    activeCount: count.describe("How many alerts are on."),
+    maxActive: count.describe("The most that can be on at once."),
+    manageUrl: link,
+  }),
+  update_job_alert: confirmed({ alert: jobAlert, manageUrl: link }),
   list_applications: output(applicationList),
   get_tracked_application: output({
     id: z.string().optional(),

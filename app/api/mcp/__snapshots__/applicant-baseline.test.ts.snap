@@ -14,6 +14,10 @@ exports[`applicant MCP baseline > the confirm and credit flags of each applicant
     "confirm": false,
     "credit": false,
   },
+  "create_job_alert": {
+    "confirm": true,
+    "credit": false,
+  },
   "create_resume": {
     "confirm": true,
     "credit": false,
@@ -98,6 +102,10 @@ exports[`applicant MCP baseline > the confirm and credit flags of each applicant
     "confirm": false,
     "credit": false,
   },
+  "list_job_alerts": {
+    "confirm": false,
+    "credit": false,
+  },
   "list_screening_interviews": {
     "confirm": false,
     "credit": false,
@@ -128,6 +136,10 @@ exports[`applicant MCP baseline > the confirm and credit flags of each applicant
   },
   "track_application": {
     "confirm": false,
+    "credit": false,
+  },
+  "update_job_alert": {
+    "confirm": true,
     "credit": false,
   },
   "update_my_preferences": {
@@ -2272,6 +2284,401 @@ exports[`applicant MCP baseline > tools/list for an applicant 1`] = `
       "type": "object",
     },
     "title": "Apply to a job",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Create a job alert",
+    },
+    "description": "Email the user new jobs matching a search, daily or weekly (a job alert). The filters are named as in search_jobs. An alert can't keep visa terms, posting date or experienceYears: tell the user, and use minExperience or maxExperience for a level they asked for. An alert already saved for the same search is turned on and gets the new frequency. GetHired asks the user to confirm before it runs.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmation_token": {
+          "description": "Leave out on the first call, which returns a preview and this token. Once the user approves the preview, call again with the same input plus the token.",
+          "type": "string",
+        },
+        "filters": {
+          "additionalProperties": false,
+          "description": "The search to be alerted about. At least one filter.",
+          "properties": {
+            "companies": {
+              "description": "Only jobs at these companies, by company name, e.g. ['Stripe', 'Razorpay'].",
+              "items": {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string",
+              },
+              "maxItems": 10,
+              "type": "array",
+            },
+            "jobTypes": {
+              "description": "Only these kinds of employment: full-time, contract or internship.",
+              "items": {
+                "enum": [
+                  "Fulltime",
+                  "Contract",
+                  "Intern",
+                ],
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "keywords": {
+              "description": "Words to look for in the job title. Add the common spellings of the same role, e.g. ['frontend', 'front-end', 'front end']. Leave seniority (junior, senior, lead, fresher) out: use experienceYears, or minExperience/maxExperience for a level the user asked for.",
+              "items": {
+                "maxLength": 50,
+                "minLength": 1,
+                "type": "string",
+              },
+              "maxItems": 10,
+              "type": "array",
+            },
+            "locations": {
+              "description": "Where the user wants to work, e.g. ['Remote', 'Bengaluru']. Different spellings of a city, such as Bangalore and Bengaluru, find the same jobs.",
+              "items": {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string",
+              },
+              "maxItems": 10,
+              "type": "array",
+            },
+            "maxExperience": {
+              "description": "Only jobs asking for at most this many years.",
+              "maximum": 30,
+              "minimum": 0,
+              "type": "integer",
+            },
+            "minExperience": {
+              "description": "Only jobs whose experience range reaches at least this many years.",
+              "maximum": 30,
+              "minimum": 0,
+              "type": "integer",
+            },
+            "minSalary": {
+              "description": "The lowest yearly salary the user would accept, as a plain whole number in salaryCurrency, e.g. 1500000.",
+              "minimum": 0,
+              "type": "integer",
+            },
+            "platforms": {
+              "description": "Only jobs found on these applicant tracking systems or job boards. gethired is jobs posted on GetHired itself.",
+              "items": {
+                "enum": [
+                  "greenhouse",
+                  "jazzhr",
+                  "ashby",
+                  "rippling",
+                  "workable",
+                  "recruitee",
+                  "personio",
+                  "bamboohr",
+                  "jobvite",
+                  "workday",
+                  "keka",
+                  "gethired",
+                ],
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "salaryCurrency": {
+              "description": "The ISO 4217 code of minSalary's currency, e.g. INR or USD. The user's profile currency when left out; ignored without minSalary.",
+              "type": "string",
+            },
+          },
+          "type": "object",
+        },
+        "frequency": {
+          "description": "How often new matching jobs are emailed: daily, or weekly on Mondays.",
+          "enum": [
+            "daily",
+            "weekly",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "filters",
+        "frequency",
+      ],
+      "type": "object",
+    },
+    "name": "create_job_alert",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "alert": {
+          "additionalProperties": true,
+          "properties": {
+            "frequency": {
+              "enum": [
+                "daily",
+                "weekly",
+              ],
+              "type": "string",
+            },
+            "id": {
+              "description": "Pass to update_job_alert.",
+              "type": "string",
+            },
+            "jobsUrl": {
+              "description": "The alert's search on GetHired.",
+              "type": "string",
+            },
+            "name": {
+              "type": "string",
+            },
+            "on": {
+              "description": "false when it's paused.",
+              "type": "boolean",
+            },
+          },
+          "required": [
+            "id",
+            "name",
+            "frequency",
+            "on",
+            "jobsUrl",
+          ],
+          "type": "object",
+        },
+        "alreadyExisted": {
+          "description": "true when an alert for the same search was already saved.",
+          "type": "boolean",
+        },
+        "confirmation_token": {
+          "description": "Send back with the same input to run it after the user approves.",
+          "type": "string",
+        },
+        "instruction": {
+          "type": "string",
+        },
+        "manageUrl": {
+          "description": "A full https link into GetHired.",
+          "type": "string",
+        },
+        "message": {
+          "description": "What happened, e.g. that the user declined and nothing was done.",
+          "type": "string",
+        },
+        "needsConfirmation": {
+          "description": "true when nothing ran yet: show preview to the user, and call again with confirmation_token once they approve.",
+          "type": "boolean",
+        },
+        "preview": {
+          "description": "What will happen, for the user to approve.",
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
+    "title": "Create a job alert",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "My job alerts",
+    },
+    "description": "List the user's job alerts: each one's id, search, how often it's emailed, whether it's on or paused, and when it was last sent.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object",
+    },
+    "name": "list_job_alerts",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "activeCount": {
+          "description": "How many alerts are on.",
+          "type": "integer",
+        },
+        "alerts": {
+          "items": {
+            "additionalProperties": true,
+            "properties": {
+              "createdAt": {
+                "type": "string",
+              },
+              "filters": {
+                "additionalProperties": {},
+                "description": "What the alert searches for.",
+                "type": "object",
+              },
+              "frequency": {
+                "enum": [
+                  "daily",
+                  "weekly",
+                ],
+                "type": "string",
+              },
+              "id": {
+                "description": "Pass to update_job_alert.",
+                "type": "string",
+              },
+              "jobsUrl": {
+                "description": "The alert's search on GetHired.",
+                "type": "string",
+              },
+              "lastSentAt": {
+                "type": [
+                  "string",
+                  "null",
+                ],
+              },
+              "name": {
+                "type": "string",
+              },
+              "on": {
+                "description": "false when it's paused.",
+                "type": "boolean",
+              },
+            },
+            "required": [
+              "id",
+              "name",
+              "frequency",
+              "on",
+              "jobsUrl",
+              "filters",
+              "lastSentAt",
+              "createdAt",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "manageUrl": {
+          "description": "A full https link into GetHired.",
+          "type": "string",
+        },
+        "maxActive": {
+          "description": "The most that can be on at once.",
+          "type": "integer",
+        },
+      },
+      "required": [
+        "alerts",
+        "activeCount",
+        "maxActive",
+        "manageUrl",
+      ],
+      "type": "object",
+    },
+    "title": "My job alerts",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Change a job alert",
+    },
+    "description": "Pause or resume one of the user's job alerts, or change how often it's emailed. Get its id from list_job_alerts. To change what an alert searches for, create a new one and pause the old one. Alerts are deleted on GetHired's settings page. GetHired asks the user to confirm before it runs.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "alertId": {
+          "description": "The alert to change: an id from list_job_alerts.",
+          "format": "uuid",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "description": "Leave out on the first call, which returns a preview and this token. Once the user approves the preview, call again with the same input plus the token.",
+          "type": "string",
+        },
+        "frequency": {
+          "description": "How often new matching jobs are emailed: daily, or weekly on Mondays. Leave out to keep it as it is.",
+          "enum": [
+            "daily",
+            "weekly",
+          ],
+          "type": "string",
+        },
+        "on": {
+          "description": "false pauses the alert, true resumes it. Leave out to keep it as it is.",
+          "type": "boolean",
+        },
+      },
+      "required": [
+        "alertId",
+      ],
+      "type": "object",
+    },
+    "name": "update_job_alert",
+    "outputSchema": {
+      "additionalProperties": true,
+      "properties": {
+        "alert": {
+          "additionalProperties": true,
+          "properties": {
+            "frequency": {
+              "enum": [
+                "daily",
+                "weekly",
+              ],
+              "type": "string",
+            },
+            "id": {
+              "description": "Pass to update_job_alert.",
+              "type": "string",
+            },
+            "jobsUrl": {
+              "description": "The alert's search on GetHired.",
+              "type": "string",
+            },
+            "name": {
+              "type": "string",
+            },
+            "on": {
+              "description": "false when it's paused.",
+              "type": "boolean",
+            },
+          },
+          "required": [
+            "id",
+            "name",
+            "frequency",
+            "on",
+            "jobsUrl",
+          ],
+          "type": "object",
+        },
+        "confirmation_token": {
+          "description": "Send back with the same input to run it after the user approves.",
+          "type": "string",
+        },
+        "instruction": {
+          "type": "string",
+        },
+        "manageUrl": {
+          "description": "A full https link into GetHired.",
+          "type": "string",
+        },
+        "message": {
+          "description": "What happened, e.g. that the user declined and nothing was done.",
+          "type": "string",
+        },
+        "needsConfirmation": {
+          "description": "true when nothing ran yet: show preview to the user, and call again with confirmation_token once they approve.",
+          "type": "boolean",
+        },
+        "preview": {
+          "description": "What will happen, for the user to approve.",
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
+    "title": "Change a job alert",
   },
   {
     "annotations": {

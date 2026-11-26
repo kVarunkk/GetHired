@@ -9,6 +9,7 @@ import type { Database } from "@/utils/types/database.types";
 import { deploymentUrl } from "@/utils/formatters";
 import type { AlertFilters } from "./filters";
 import { alertWindowStart } from "./due";
+import { alertSearchParams } from "./search-params";
 import { jobAlertSearchUrl } from "./paths";
 import { alertOneClickPauseUrl, alertPauseUrl } from "./pause-token";
 
@@ -50,8 +51,6 @@ export type RunJobAlertResult =
   | { ok: true; sent: boolean; jobs: number; total: number }
   | { ok: false; error: string };
 
-const joined = (values: string[] | undefined) => (values?.length ? values.join("|") : null);
-const numeric = (value: number | undefined) => (value === undefined ? null : String(value));
 
 /**
  * One alert's run (JA-REQ-031–033): the new, unapplied jobs posted since the
@@ -73,19 +72,8 @@ export async function runJobAlert(alert: RunnableAlert, { now, supabase, send }:
   if (appliedError) return { ok: false, error: `applications: ${appliedError.message}` };
   const excludeJobIds = [...new Set((applied ?? []).map((a) => a.all_jobs_id).filter((id): id is string => !!id))];
 
-  const f = alert.filters;
   const result = await searchJobs(supabase, null, {
-    jobTitleKeywords: joined(f.jobTitleKeywords),
-    location: joined(f.location),
-    jobType: joined(f.jobType),
-    platform: joined(f.platform),
-    companyName: joined(f.companyName),
-    minSalary: numeric(f.minSalary),
-    salaryCurrency: f.salaryCurrency ?? null,
-    minExperience: numeric(f.minExperience),
-    maxExperience: numeric(f.maxExperience),
-    sortBy: "created_at",
-    sortOrder: "desc",
+    ...alertSearchParams(alert.filters),
     limit: ALERT_EMAIL_JOBS,
     createdSince: since,
     excludeJobIds,

@@ -1,6 +1,7 @@
 import { createApplicationTools } from "./applications";
 import { createAskUserTool } from "./ask-user";
 import { createInterviewTools } from "./interviews";
+import { createJobAlertTools } from "./job-alerts";
 import { createJobTools } from "./jobs";
 import { createMemoryTools } from "./memory";
 import { createOnboardingTools } from "./onboarding";
@@ -16,6 +17,7 @@ export function createAgentTools(ctx: AgentToolContext) {
     ...createProfileTools(ctx),
     ...createOnboardingTools(ctx),
     ...createJobTools(ctx),
+    ...createJobAlertTools(ctx),
     ...createApplicationTools(ctx),
     ...createResumeTools(ctx),
     ...createInterviewTools(ctx),
