@@ -494,6 +494,8 @@ export type Database = {
           attempt_granted: boolean
           attempts_used: number
           company_candidate_id: string | null
+          company_reviewed_at: string | null
+          company_reviewed_by: string | null
           company_id: string
           completed_at: string | null
           config_snapshot: Json
@@ -523,6 +525,8 @@ export type Database = {
           attempt_granted?: boolean
           attempts_used?: number
           company_candidate_id?: string | null
+          company_reviewed_at?: string | null
+          company_reviewed_by?: string | null
           company_id: string
           completed_at?: string | null
           config_snapshot: Json
@@ -552,6 +556,8 @@ export type Database = {
           attempt_granted?: boolean
           attempts_used?: number
           company_candidate_id?: string | null
+          company_reviewed_at?: string | null
+          company_reviewed_by?: string | null
           company_id?: string
           completed_at?: string | null
           config_snapshot?: Json
@@ -5744,6 +5750,7 @@ export type Database = {
         }
         Returns: string
       }
+      company_dashboard_summary: { Args: never; Returns: Json }
       company_effective_tier: {
         Args: { p_company_id: string }
         Returns: string
@@ -5996,6 +6003,7 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: Json
       }
+      get_company_funnel: { Args: never; Returns: Json }
       get_company_metrics: {
         Args: { company_id: string }
         Returns: {
@@ -6416,6 +6424,10 @@ export type Database = {
       }
       make_primary_owner: {
         Args: { p_actor_kind?: string; p_user_id: string }
+        Returns: Json
+      }
+      mark_screening_interview_reviewed: {
+        Args: { p_id: string }
         Returns: Json
       }
       manage_screening_interview: {
@@ -6954,6 +6966,12 @@ export type Database = {
       screening_turn_counts: {
         Args: { p_turns: Json }
         Returns: Record<string, unknown>
+      }
+      search_job_companies: {
+        Args: { p_limit?: number; p_query?: string }
+        Returns: {
+          company_name: string
+        }[]
       }
       seed_company_roles: { Args: { p_company_id: string }; Returns: undefined }
       seed_default_pipeline: {
