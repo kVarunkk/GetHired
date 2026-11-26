@@ -177,6 +177,8 @@ export const JOB_STATE_FILTERS = [
   { value: "drafts", label: "Drafts", states: ["draft"] },
   { value: "pending", label: "Waiting for approval", states: ["pending_approval"] },
   { value: "archive", label: "Closed and filled", states: ["closed", "filled"] },
+  // Archived posts (removed, but with applications) show only here, in any state; "All" leaves them out.
+  { value: "archived", label: "Archived", states: [...JOB_POST_STATES] },
   { value: "all", label: "All", states: [...JOB_POST_STATES] },
 ] as const satisfies readonly { value: string; label: string; states: readonly JobPostState[] }[];
 

@@ -59,6 +59,20 @@ describe("JobPostingsTable: the state filter (JLT-022, JL-REQ-029)", () => {
     expect(titles()).toEqual(expected);
   });
 
+  it("shows archived jobs only under ?state=archived", () => {
+    const data = [...JOBS, { ...job("Archived job", "closed"), archived_at: "2026-11-01T00:00:00Z" }];
+
+    search = "state=all";
+    const { unmount } = render(<JobPostingsTable data={data} />);
+    expect(screen.queryByText("Archived job")).toBeNull();
+    unmount();
+
+    search = "state=archived";
+    render(<JobPostingsTable data={data} />);
+    expect(screen.getByText("Archived job")).toBeInTheDocument();
+    expect(titles()).toEqual([]);
+  });
+
   it("writes the filter to the URL, dropping it for the default", () => {
     search = "state=drafts";
     render(<JobPostingsTable data={JOBS} />);

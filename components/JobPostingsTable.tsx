@@ -58,7 +58,8 @@ export default function JobPostingsTable({
 
   const rows = useMemo(() => {
     const states = statesForFilter(stateFilter) as readonly string[];
-    return data.filter((job) => states.includes(job.state));
+    const archived = stateFilter === "archived";
+    return data.filter((job) => !!job.archived_at === archived && states.includes(job.state));
   }, [data, stateFilter]);
 
   const jobTypes = useMemo(() => {
@@ -149,7 +150,6 @@ export default function JobPostingsTable({
         header: "Actions",
         cell: ({ row }) => (
           <ModifiedLink
-            prefetch={false}
             href={`/company/job-posts/${row.original.id}`}
             passHref
           >
