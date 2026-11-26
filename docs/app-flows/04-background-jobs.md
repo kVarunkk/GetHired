@@ -108,7 +108,10 @@ migration's cadence: several were turned on by hand with `*/5` instead of `* * *
 Still inactive, and applicant-side only: `recharge enqueue` / `recharge worker` and
 `weekly-onboarding-reminder` (kept off on purpose: they'd email ~700 and ~6,500 users), and
 `enqueue_pending_embedding_jobs` (not needed while every job has an embedding). The job digest and
-relevant-jobs pairs were turned on 2026-11-09 with two-weekly enqueues.
+relevant-jobs pairs were turned on 2026-11-09; the relevant-jobs enqueue has run twice a week since
+2026-11-26. `billing-daily` and the three recruiter interview jobs (`interviews-sync`,
+`interviews-feedback`, `interview-calendar-ops-worker`) were turned on the same day (migration
+`20261201130000`).
 
 **There is no external scheduler.** Nothing in this repo schedules anything (no `.github/workflows`;
 `cloudbuild.yaml` builds, pushes and deploys only). Every route below is reached by a pg_cron job
@@ -119,13 +122,13 @@ above, called by `enqueue_missing_job_embeddings`, or has no caller at all.
 | `POST /api/update-embedding/gemini/job`                  | `process-job-embedding-queue`, `*/5`                                                      |
 | `/api/worker/user/onboarding`                            | `onboarding-pipeline-worker`, `*/3`                                                       |
 | `/api/updates/applicants/digest/{enqueue,worker}`        | `weekly-job-digest-test` (`0 8 1,15 * *`, every two weeks), `job-digest-worker` (`*/5`); both active since 2026-11-09 (migration `20261109130000`) |
-| `/api/updates/applicants/relevant-jobs/{enqueue,worker}` | `relevant-jobs-update` (`0 8 2,16 * *`, every two weeks) / `relevance-worker` (`*/5`); both active since 2026-11-09 (migration `20261109130000`)                               |
+| `/api/updates/applicants/relevant-jobs/{enqueue,worker}` | `relevant-jobs-update` (`0 9 * * 1,4`, Monday and Thursday; migration `20261201130000`) / `relevance-worker` (`*/5`); both active since 2026-11-09                               |
 | `/api/updates/applicants/recharge/{enqueue,worker}`      | `recharge enqueue` / `recharge worker` (both inactive)                                    |
 | `/api/updates/applicants/applications`                   | `weekly-applications-reminder`, `0 8 * * 2`                                               |
 | `/api/updates/applicants/favorites`                      | `weekly-favorites-reminder`, `0 8 * * 6`                                                  |
 | `/api/updates/applicants/job-alert`                      | `job-alerts`, `30 3 * * *` (daily; weekly alerts send on Mondays). Replaces `weekly-bookmark-alert` in migration B |
 | `/api/updates/applicants/onboarding`                     | `weekly-onboarding-reminder`, `0 8 * * 0` (inactive)                                      |
-| **`/api/updates/billing`** (GET or POST)                          | `billing-daily`, `0 3 * * *` (migration `20261109120000`, inactive)                                                         |
+| **`/api/updates/billing`** (GET or POST)                          | `billing-daily`, `0 3 * * *` (migration `20261109120000`, active since 2026-11-26)                                                         |
 | **`/api/updates/knockouts/worker`**                      | `knockouts-worker`, `*/5` (migration `20261109120000`, active since 2026-11-09)                                                          |
 
 The last two are the only worker routes with no caller. Fix plan: `plan/unscheduled-routes-todo.md`.
