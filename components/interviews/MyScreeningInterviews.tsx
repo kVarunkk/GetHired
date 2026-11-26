@@ -9,11 +9,11 @@ import {
   visibleOnDashboard,
 } from "@/helpers/interview/screening/dashboard-state";
 import type { MyScreeningInterview } from "@/helpers/interview/screening/my-interviews";
+import { formatDate } from "@/utils/date";
 
 export const ALL_SCREENING_INTERVIEWS_PATH = "/interview?tab=companies";
 
-const invitedOn = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" });
+const invitedOn = (iso: string) => formatDate(iso);
 
 /**
  * The applicant's AI interviews from companies: status, deadline and what to

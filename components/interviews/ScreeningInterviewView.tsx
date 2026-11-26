@@ -33,6 +33,7 @@ import {
   micStatus,
   screeningFlowReducer,
 } from "./screening-interview-machine";
+import { formatDate } from "@/utils/date";
 
 type SessionSummary = { id: string; started_at: string; status: string; analysisStatus: string | null };
 
@@ -41,7 +42,7 @@ const POLL_MS = 3000;
 const POLL_TRIES = 40;
 
 const formatDeadline = (iso: string) =>
-  new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  `${formatDate(iso, { dateStyle: "medium", timeStyle: "short" })} IST`;
 
 /** What the closed states say (SIT-053). */
 const CLOSED_COPY: Record<string, { title: string; body: (company: string) => string }> = {

@@ -4,9 +4,10 @@ import Link from "next/link";
 import { Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ScreeningInviteSummary } from "@/helpers/interview/screening/my-interviews";
+import { formatDate } from "@/utils/date";
 
 const formatDeadline = (iso: string) =>
-  new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  `${formatDate(iso, { dateStyle: "medium", timeStyle: "short" })} IST`;
 
 /** The apply form's success state when the company invited the applicant to an AI interview (SIT-050). */
 export default function ScreeningInviteCard({
