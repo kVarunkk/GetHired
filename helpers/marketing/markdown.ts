@@ -4,7 +4,13 @@ import { createReader } from "@keystatic/core/reader";
 import keystaticConfig from "@/app/keystatic.config";
 import { BLOG_POST_TYPE_LABELS, formatPublishedAt } from "@/helpers/blog/post-types";
 import { formatPrice, listPublicPlans, type Plan } from "@/helpers/billing/plans";
-import { amountLine, ENTERPRISE_HREF, SHOWN_KEYS, SIGNUP_HREF } from "@/helpers/billing/plan-lines";
+import {
+  amountLine,
+  BOOK_DEMO_HREF,
+  ENTERPRISE_HREF,
+  SHOWN_KEYS,
+  SIGNUP_HREF,
+} from "@/helpers/billing/plan-lines";
 import { getPlatformStats } from "@/utils/platform-stats";
 import {
   ABOUT_DESCRIPTION,
@@ -141,6 +147,7 @@ async function pricingMarkdown() {
         ...(action ? [action] : []),
       ].join("\n\n");
     }),
+    `Not sure which plan fits? ${link("Book a demo", BOOK_DEMO_HREF)}`,
   ];
 }
 

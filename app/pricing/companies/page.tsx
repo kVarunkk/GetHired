@@ -5,6 +5,7 @@ import PricingViewed from "@/components/billing/PricingViewed";
 import Footer from "@/components/landing-page/Footer";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbJsonLd, pricingJsonLd, webPageJsonLd } from "@/helpers/seo/schema";
+import { BOOK_DEMO_HREF } from "@/helpers/billing/plan-lines";
 import { listPublicPlans, type Plan } from "@/helpers/billing/plans";
 import {
   markdownAlternate,
@@ -58,6 +59,17 @@ export default async function CompanyPricingPage() {
         ) : (
           <p className="text-sm text-muted-foreground">Plans couldn&apos;t be loaded. Please try again shortly.</p>
         )}
+        <p className="text-[15px] leading-7 text-muted-foreground">
+          Not sure which plan fits?{" "}
+          <a
+            href={BOOK_DEMO_HREF}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-foreground underline underline-offset-4 hover:text-brand"
+          >
+            Book a demo
+          </a>
+        </p>
       </div>
       <Footer />
     </main>

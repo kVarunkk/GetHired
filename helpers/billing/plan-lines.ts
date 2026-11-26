@@ -3,6 +3,8 @@ import { KEY_LABELS, type EntitlementKey } from "./keys";
 import type { Plan } from "./plans";
 
 export const SIGNUP_HREF = "/auth/sign-up?company=true";
+/** Where a company books a product demo. */
+export const BOOK_DEMO_HREF = "https://cal.com/varun-kumawat";
 export const ENTERPRISE_HREF = "mailto:varun@devhub.co.in?subject=GetHired%20Enterprise";
 
 /** The keys shown for each plan, in order. */
