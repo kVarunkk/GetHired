@@ -1,22 +1,23 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "./ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectLabel,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import { Loader2, PlusCircle, Search, Sparkle } from "lucide-react";
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "./ui/drawer";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { cn } from "@/utils/utils";
+import { Check, ChevronsUpDown, Loader2, Search, Sparkle } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import toast from "react-hot-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { SelectGroup } from "@radix-ui/react-select";
-import Link from "next/link";
 import { useProgress } from "react-transition-progress";
 import { Button } from "./ui/button";
 import { PostHogEvent } from "@/utils/types";
@@ -43,7 +44,11 @@ export default function FindSuitableJobs({
   currentPage: "jobs" | "profiles" | "companies";
   companyId?: string;
 }) {
-  const [suitableJobsSelectValue, setSuitableJobsSelectValue] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [jobSearch, setJobSearch] = useState("");
+  // The same breakpoint as the other searchable pickers (LocationSearchSelect).
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const selectedJobPost = useSearchParams()?.get("job_post");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const startProgress = useProgress();
@@ -54,7 +59,6 @@ export default function FindSuitableJobs({
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      staleTime: 10 * 60 * 1000,
     },
   );
 
@@ -89,52 +93,77 @@ export default function FindSuitableJobs({
   };
 
   if (currentPage === "profiles" && companyId) {
+    const trigger = (
+      <Button variant="brand" disabled={isPending} className="rounded-full whitespace-nowrap">
+        {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+        AI Smart Search
+        <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+      </Button>
+    );
+
+    const query = jobSearch.trim().toLowerCase();
+    const matches = jobPostings?.filter((job) => job.title.toLowerCase().includes(query));
+
+    const list = (
+      // Filtered here, like the other pickers. A row's value is its id, since titles can repeat.
+      <Command shouldFilter={false}>
+        <CommandInput placeholder="Search job posts..." value={jobSearch} onValueChange={setJobSearch} />
+        <CommandList>
+          {!matches ? (
+            <div className="h-60 w-full flex items-center justify-center">
+              <Loader2 className="animate-spin text-muted-foreground" aria-label="Loading job posts" />
+            </div>
+          ) : (
+            <div className="h-60 overflow-y-auto p-1">
+              <CommandEmpty className="text-muted-foreground text-center py-6 text-sm">
+                No matching items found
+              </CommandEmpty>
+              {matches.map((each) => (
+                <CommandItem
+                  key={each.id}
+                  value={each.id}
+                  onSelect={() => {
+                    setPickerOpen(false);
+                    handleAiSearch(each.id);
+                  }}
+                  className="cursor-pointer"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4 shrink-0",
+                      selectedJobPost === each.id ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  <span className="truncate">{each.title}</span>
+                </CommandItem>
+              ))}
+            </div>
+          )}
+        </CommandList>
+      </Command>
+    );
+
     return (
       <div className="flex items-center ">
-        <Select
-          value={suitableJobsSelectValue}
-          onValueChange={(value) => {
-            setSuitableJobsSelectValue(value);
-            handleAiSearch(value);
-            setTimeout(() => setSuitableJobsSelectValue(""), 100);
-          }}
-        >
-          <SelectTrigger
-            disabled={isPending}
-            className="rounded-full border-brand bg-brand hover:bg-brand/90 hover:border-brand"
-          >
-            {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            <SelectValue
-              placeholder={
-                <p className="flex items-center gap-2 text-brand-foreground">
-                  <Search className="w-4 h-4" /> AI Smart Search
-                </p>
-              }
-            />
-          </SelectTrigger>
-          <SelectGroup>
-            <SelectContent>
-              <SelectLabel className="flex items-center text-sm justify-between gap-4 ">
-                <div className="flex flex-col gap-1 w-[200px]">
-                  <p>Select a Job Posting</p>
-                  <p className="text-xs text-muted-foreground">
-                    Suitable Profiles will be found according to the selected
-                    job post
-                  </p>
-                </div>
-                <Link href={"/company/job-posts"}>
-                  <PlusCircle className="h-4 w-4" />
-                </Link>
-              </SelectLabel>
-              <SelectSeparator />
-              {jobPostings?.map((each) => (
-                <SelectItem key={each.id} value={each.id}>
-                  {each.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </SelectGroup>
-        </Select>
+        {isDesktop ? (
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+            <PopoverContent className="p-0" align="end" style={{ pointerEvents: "auto" }}>
+              {list}
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <Drawer open={pickerOpen} onOpenChange={setPickerOpen}>
+            <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle></DrawerTitle>
+                <DrawerDescription>Select a job post</DrawerDescription>
+              </DrawerHeader>
+              <div className="border-t">{list}</div>
+            </DrawerContent>
+          </Drawer>
+        )}
       </div>
     );
   }
