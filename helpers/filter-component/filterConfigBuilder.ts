@@ -1,5 +1,10 @@
 import { platformsArray } from "@/utils/platforms";
-import { commonJobTitles, commonSkills, mergeOptions } from "@/utils/profile-options";
+import {
+  commonJobTitleKeywords,
+  commonJobTitles,
+  commonSkills,
+  mergeOptions,
+} from "@/utils/profile-options";
 import { FilterConfig } from "@/utils/types";
 
 const toOptions = (names: string[]) => names.map((name) => ({ value: name, label: name }));
@@ -34,18 +39,7 @@ export const filterConfigBuilder = (
           label: "Job Title Keywords",
           type: "multi-select-input",
           placeholder: "Type or select from dropdown",
-          options: [
-            { value: "Engineer", label: "Engineer" },
-            { value: "Developer", label: "Developer" },
-            { value: "Manager", label: "Manager" },
-            { value: "Analyst", label: "Analyst" },
-            { value: "Lead", label: "Lead" },
-            { value: "Senior", label: "Senior" },
-            { value: "Junior", label: "Junior" },
-            { value: "Director", label: "Director" },
-            { value: "Architect", label: "Architect" },
-            { value: "Specialist", label: "Specialist" },
-          ],
+          options: toOptions(commonJobTitleKeywords),
         },
         {
           name: "location",

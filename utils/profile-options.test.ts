@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { filterConfigBuilder } from "@/helpers/filter-component/filterConfigBuilder";
-import { commonJobTitles, commonSkills, mergeOptions } from "./profile-options";
+import { commonJobTitleKeywords, commonJobTitles, commonSkills, mergeOptions } from "./profile-options";
 
 const optionsOf = (name: string, found: { job_role: string }[] = [], skills: { skill: string }[] = []) =>
   filterConfigBuilder("profiles", [], [], found, [], skills)
@@ -17,6 +17,7 @@ describe("mergeOptions", () => {
   });
 
   it.each([
+    ["job title keywords", commonJobTitleKeywords],
     ["job titles", commonJobTitles],
     ["skills", commonSkills],
   ])("has no repeated %s", (_label, list) => {
@@ -33,5 +34,15 @@ describe("talent search role and skill options", () => {
   it("adds the values found in profiles", () => {
     expect(optionsOf("jobRole", [{ job_role: "Beekeeper" }])).toContain("Beekeeper");
     expect(optionsOf("skills", [], [{ skill: "Beekeeping" }])).toContain("Beekeeping");
+  });
+});
+
+describe("job search title keyword options", () => {
+  it("offers the keywords and every common job title", () => {
+    const values = filterConfigBuilder("jobs")
+      .find((config) => config.name === "jobTitleKeywords")
+      ?.options?.map((option) => option.value);
+    expect(values).toEqual(commonJobTitleKeywords);
+    expect(values).toEqual(expect.arrayContaining(["Engineer", "Intern", "Full Stack", ...commonJobTitles]));
   });
 });
