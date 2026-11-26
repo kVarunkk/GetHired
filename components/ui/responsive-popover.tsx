@@ -6,9 +6,9 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/utils/utils";
 import {
   Drawer,
+  DrawerBandHeader,
   DrawerContent,
   DrawerDescription,
-  DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
 } from "./drawer";
@@ -70,16 +70,16 @@ export function ResponsivePopover({
     <Drawer open={isOpen} onOpenChange={setOpen}>
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent className="max-h-[85dvh]">
-        <DrawerHeader className="text-left">
+        <DrawerBandHeader>
           <DrawerTitle className="text-base">{title}</DrawerTitle>
           <DrawerDescription className={cn(!description && "sr-only")}>
             {description ?? title}
           </DrawerDescription>
-        </DrawerHeader>
+        </DrawerBandHeader>
         <div
           className={cn(
             className,
-            "w-full overflow-y-auto px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]",
+            "w-full overflow-y-auto px-4 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]",
           )}
         >
           {children}

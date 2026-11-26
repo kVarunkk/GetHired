@@ -8,8 +8,8 @@ import { cn } from "@/utils/utils";
 import {
   Drawer,
   DrawerContent,
+  DrawerBandHeader,
   DrawerDescription,
-  DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
 } from "./drawer";
@@ -71,16 +71,16 @@ function ResponsiveMenu({
         <Drawer open={open} onOpenChange={setOpen}>
           <DrawerTrigger asChild>{trigger}</DrawerTrigger>
           <DrawerContent className="max-h-[85dvh]">
-            <DrawerHeader className="pb-2 text-left">
+            <DrawerBandHeader>
               <DrawerTitle className="truncate text-base">{title}</DrawerTitle>
-              <DrawerDescription className={cn(!description && "sr-only")}>
+              <DrawerDescription className={cn("truncate", !description && "sr-only")}>
                 {description ?? "Actions"}
               </DrawerDescription>
-            </DrawerHeader>
+            </DrawerBandHeader>
             <div
               role="menu"
               aria-label={title}
-              className="flex min-h-0 flex-col overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))]"
+              className="flex min-h-0 flex-col overflow-y-auto px-2 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]"
             >
               {children}
             </div>
@@ -128,7 +128,7 @@ function ResponsiveMenuItem({
         onClick?.();
       }}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-3 py-3 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent",
+        "flex w-full items-center gap-2 rounded-md px-2 py-3 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent",
         destructive && "text-destructive",
         className,
       )}
@@ -158,7 +158,7 @@ function ResponsiveMenuSub({ label, children }: { label: string; children: React
   }
   return (
     <div role="group" aria-labelledby={id} className="flex flex-col">
-      <p id={id} className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+      <p id={id} className="px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground">
         {label}
       </p>
       {children}

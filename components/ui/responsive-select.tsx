@@ -8,8 +8,8 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/utils/utils";
 import {
   Drawer,
+  DrawerBandHeader,
   DrawerContent,
-  DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
   useInDrawer,
@@ -199,15 +199,17 @@ function MobileSelectContent({ children }: { children?: React.ReactNode }) {
     <>
       <CollectingContext.Provider value={true}>{children}</CollectingContext.Provider>
       <DrawerContent className="max-h-[85dvh]">
-        <DrawerHeader className="pb-2 text-left">
-          <DrawerTitle className={cn(!select.title && "sr-only")}>
-            {select.title ?? "Choose an option"}
-          </DrawerTitle>
-        </DrawerHeader>
+        {select.title ? (
+          <DrawerBandHeader>
+            <DrawerTitle className="text-base">{select.title}</DrawerTitle>
+          </DrawerBandHeader>
+        ) : (
+          <DrawerTitle className="sr-only">Choose an option</DrawerTitle>
+        )}
         <div
           role="listbox"
           aria-label={select.title}
-          className="flex min-h-0 flex-col overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))]"
+          className="flex min-h-0 flex-col overflow-y-auto px-2 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
           {children}
         </div>
@@ -261,7 +263,7 @@ function MobileSelectItem({
       disabled={disabled}
       onClick={() => select.choose(value)}
       className={cn(
-        "flex w-full items-center justify-between gap-3 rounded-md px-3 py-3 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent disabled:pointer-events-none disabled:opacity-50",
+        "flex w-full items-center justify-between gap-3 rounded-md px-2 py-3 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent disabled:pointer-events-none disabled:opacity-50",
         selected && "font-medium",
       )}
     >

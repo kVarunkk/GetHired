@@ -320,7 +320,7 @@ export default function Footer() {
         </div>
         <div className="container mx-auto mt-12 max-w-6xl text-center md:text-left">
           <h3 className="text-sm font-semibold mb-3">For Hiring Teams</h3>
-          <ul className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm text-muted-foreground md:grid-cols-4">
+          <ul className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm text-muted-foreground md:grid-cols-4">
             {COMPANY_NAV.map((link) => (
               <li key={link.href}>
                 <Link
