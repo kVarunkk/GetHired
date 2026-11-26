@@ -66,7 +66,6 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
         header: "Name",
         cell: ({ row }) => (
           <ModifiedLink
-            prefetch={false}
             href={`/interview/${row.original.id}`}
             className="block max-w-[14rem] truncate text-sm font-medium underline underline-offset-4 hover:underline sm:no-underline"
             title={row.original.name ?? undefined}
@@ -110,7 +109,7 @@ export default function InterviewsTable({ data }: InterviewsTableProps) {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <ModifiedLink prefetch={false} href={`/interview/${row.original.id}`}>
+          <ModifiedLink href={`/interview/${row.original.id}`}>
             <Button variant="ghost" size="sm">
               View Interview
               <ChevronRight className="ml-2 h-4 w-4" />

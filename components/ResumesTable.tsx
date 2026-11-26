@@ -69,7 +69,6 @@ export default function ResumesTable({ data }: ResumesTableProps) {
         cell: ({ row }) => (
           <div className="flex items-center gap-1">
             <ModifiedLink
-              prefetch={false}
               href={`/resume/${row.original.id}`}
               className="block max-w-[16rem] truncate text-sm font-medium underline underline-offset-4 hover:underline sm:no-underline"
               title={row.original.name ?? undefined}
@@ -105,7 +104,7 @@ export default function ResumesTable({ data }: ResumesTableProps) {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <ModifiedLink prefetch={false} href={`/resume/${row.original.id}`}>
+          <ModifiedLink href={`/resume/${row.original.id}`}>
             <Button variant="ghost" size="sm">
               View Resume
               <ChevronRight className="ml-2 h-4 w-4" />
