@@ -14,15 +14,49 @@ import { getToolName, isToolUIPart, type UIMessage } from "ai";
 import { BriefcaseBusiness, ChevronDown, Coins, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
-import ResumeUploadWidget, { type ResumeUploadOutput } from "./ResumeUploadWidget";
-import AskUserCard, { AskUserResult, type AskUserOutput } from "./AskUserCard";
+import type { ResumeUploadOutput } from "./ResumeUploadWidget";
+import type { AskUserOutput } from "./AskUserCard";
+import type { ResumeChangesOutput } from "./ResumeChangesCard";
+import type { CandidateResumeOutput } from "./recruiter/CandidateResumeWidget";
+import type { ResumeImportOutput } from "./recruiter/ResumeImportWidget";
+import type { SpreadsheetImportOutput } from "./recruiter/SpreadsheetImportWidget";
 import { askUserInputSchema } from "@/helpers/agent/ask-user";
-import { rehypeAnimateWords } from "./animate-words";
-import { ApplicationApprovalDetails } from "./ApplicationApprovalCard";
-import { SALARY_APPROVAL_TOOLS, SalaryApprovalWarning } from "./SalaryApprovalWarning";
 import { isSkippedApproval } from "@/helpers/agent/skipped-approvals";
-import ResumeChangesCard, { ResumeChangesResult, type ResumeChangesOutput } from "./ResumeChangesCard";
-import { ResumeEditApprovalDetails, isResumeEditTool } from "./ResumeEditApprovalCard";
+import { isSchedulingPreviewTool, schedulingApprovalTitle } from "@/helpers/interviews/agent-scheduling-schema";
+import { rehypeAnimateWords } from "./animate-words";
+import {
+  FORM_APPROVAL_TOOLS,
+  isPipelineApprovalTool,
+  isResumeEditTool,
+  isRoleApprovalTool,
+  SALARY_APPROVAL_TOOLS,
+} from "./approval-tools";
+import {
+  AddCandidateApprovalDetails,
+  AddToJobApprovalDetails,
+  ApplicationApprovalDetails,
+  ApplicationFormApprovalDetails,
+  AskUserCard,
+  AskUserResult,
+  CandidateResumeWidget,
+  DeleteCandidatesApprovalDetails,
+  ImportApprovalDetails,
+  InterviewConfigApprovalDetails,
+  InterviewInviteApprovalDetails,
+  JobDeleteApprovalDetails,
+  MoveApprovalDetails,
+  OutreachApprovalDetails,
+  PipelineApprovalDetails,
+  ResumeChangesCard,
+  ResumeChangesResult,
+  ResumeEditApprovalDetails,
+  ResumeImportWidget,
+  ResumeUploadWidget,
+  RoleApprovalDetails,
+  SalaryApprovalWarning,
+  SchedulingApprovalDetails,
+  SpreadsheetImportWidget,
+} from "./lazy-cards";
 import { inlineLink, isInAppHref, NEW_TAB, repairJobLinks } from "./links";
 import {
   ApplicantResults,
@@ -31,28 +65,7 @@ import {
   type CandidateRowData,
 } from "./recruiter/RecruiterResults";
 import { FunnelResult, type FunnelResultData } from "./recruiter/FunnelResult";
-import { JobDeleteApprovalDetails } from "./recruiter/JobDeleteApprovalCard";
-import { MoveApprovalDetails } from "./recruiter/MoveApprovalCard";
-import { OutreachApprovalDetails } from "./recruiter/OutreachApprovalCard";
-import { InterviewConfigApprovalDetails, InterviewInviteApprovalDetails } from "./recruiter/InterviewApprovalCard";
-import {
-  isSchedulingPreviewTool,
-  SchedulingApprovalDetails,
-  schedulingApprovalTitle,
-} from "./recruiter/SchedulingApprovalCard";
-import { AddToJobApprovalDetails } from "./recruiter/AddToJobApprovalDetails";
-import { ApplicationFormApprovalDetails, FORM_APPROVAL_TOOLS } from "./recruiter/ApplicationFormApprovalDetails";
-import CandidateResumeWidget, { type CandidateResumeOutput } from "./recruiter/CandidateResumeWidget";
-import {
-  AddCandidateApprovalDetails,
-  DeleteCandidatesApprovalDetails,
-  ImportApprovalDetails,
-  LawfulBasisNotice,
-} from "./recruiter/ImportApprovalDetails";
-import ResumeImportWidget, { type ResumeImportOutput } from "./recruiter/ResumeImportWidget";
-import SpreadsheetImportWidget, { type SpreadsheetImportOutput } from "./recruiter/SpreadsheetImportWidget";
-import { isRoleApprovalTool, RoleApprovalDetails } from "./recruiter/RoleApprovalCard";
-import { isPipelineApprovalTool, PipelineApprovalDetails } from "./recruiter/PipelineApprovalDetails";
+import { LawfulBasisNotice } from "./recruiter/LawfulBasisNotice";
 
 export { isInAppHref };
 

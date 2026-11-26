@@ -603,7 +603,7 @@ describe("ChatPane", () => {
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));
     expect(chat.addToolApprovalResponse).toHaveBeenCalledWith({ id: "ap1", approved: true });
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
     expect(chat.addToolOutput).toHaveBeenCalledWith({
       tool: "requestResumeUpload",
       toolCallId: "c-up",

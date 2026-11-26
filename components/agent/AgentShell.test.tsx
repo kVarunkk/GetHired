@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { UIMessage } from "ai";
 import { useRouter, useSearchParams } from "next/navigation";
 import AgentShell from "./AgentShell";
+import { settled } from "@/test/utils/settled";
 
 vi.mock("next/navigation", () => ({ useRouter: vi.fn(), useSearchParams: vi.fn() }));
 vi.mock("./MemoriesPanel", () => ({ default: () => <div>memories panel</div> }));
@@ -61,7 +62,7 @@ beforeEach(() => {
     <AgentShell
       initialSessions={SESSIONS}
       activeSessionId="s1"
-      initialMessages={MESSAGES}
+      chat={settled({ messages: MESSAGES, feedback: {}, messagesUsedToday: 0, memberCap: null })}
       titleRefreshDelayMs={0}
     />,
   );
@@ -168,7 +169,7 @@ describe("AgentShell: a reply in a chat opened with a prompt", () => {
     vi.mocked(useSearchParams).mockReturnValue(
       new URLSearchParams("prompt=remote%20Go%20jobs") as never,
     );
-    render(<AgentShell initialSessions={SESSIONS} activeSessionId="s2" initialMessages={[]} />);
+    render(<AgentShell initialSessions={SESSIONS} activeSessionId="s2" chat={settled({ messages: [], feedback: {}, messagesUsedToday: 0, memberCap: null })} />);
 
     await userEvent.click(screen.getAllByRole("button", { name: "finish reply" }).at(-1)!);
 

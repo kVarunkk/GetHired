@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { UIMessage } from "ai";
 import { PanelLeft } from "lucide-react";
 import toast from "react-hot-toast";
+import ErrorComponent from "@/components/Error";
+import Streamed from "@/components/Streamed";
+import { ChatAreaSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import type { AgentFeedbackState } from "@/helpers/agent/feedback";
@@ -18,29 +21,32 @@ import { AGENT_ROLE_UI, type AgentRoleId } from "./roles";
 /** Session titles are generated after the reply; wait before refreshing. */
 const TITLE_REFRESH_DELAY_MS = 2500;
 
+/** What the open chat needs. It loads after the session list. */
+export type AgentChatData = {
+  messages: UIMessage[];
+  /** The user's saved feedback on this session's replies (AF-REQ-031). */
+  feedback: AgentFeedbackState;
+  /** The user's messages so far today, toward the daily cap. */
+  messagesUsedToday: number;
+  /** Company members only: their role's monthly agent message cap (RP-REQ-044). */
+  memberCap: { limit: number; remaining: number } | null;
+};
+
 export default function AgentShell({
   role = "applicant",
   initialSessions,
   activeSessionId,
-  initialMessages,
-  initialFeedback = {},
+  chat,
   initialDraft = "",
-  messagesUsedToday = 0,
-  memberCap = null,
   titleRefreshDelayMs = TITLE_REFRESH_DELAY_MS,
 }: {
   role?: AgentRoleId;
   initialSessions: AgentSessionSummary[];
   activeSessionId: string;
-  initialMessages: UIMessage[];
-  /** The user's saved feedback on this session's replies (AF-REQ-031). */
-  initialFeedback?: AgentFeedbackState;
+  /** The open session's chat, or null if it couldn't load. Must not reject. */
+  chat: Promise<AgentChatData | null>;
   /** Text to start the message box with (from `?prompt=`). */
   initialDraft?: string;
-  /** The user's messages so far today, toward the daily cap. */
-  messagesUsedToday?: number;
-  /** Company members only: their role's monthly agent message cap (RP-REQ-044). */
-  memberCap?: { limit: number; remaining: number } | null;
   titleRefreshDelayMs?: number;
 }) {
   const router = useRouter();
@@ -71,9 +77,17 @@ export default function AgentShell({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialDraft]);
 
+  // Until the server answers for another chat, a skeleton stands in for the
+  // open one, which stays mounted.
+  const [navigating, startNavigation] = useTransition();
+  const [targetId, setTargetId] = useState<string | null>(null);
+  const switchingTo = navigating && targetId !== activeSessionId ? targetId : null;
+  const shownId = switchingTo ?? activeSessionId;
+
   const openSession = (id: string) => {
     setMobileOpen(false);
-    router.push(`${basePath}?session=${id}`);
+    setTargetId(id);
+    startNavigation(() => router.push(`${basePath}?session=${id}`));
   };
 
   const refreshSessions = async () => {
@@ -125,7 +139,7 @@ export default function AgentShell({
 
   const sidebarProps = {
     sessions,
-    activeId: activeSessionId,
+    activeId: shownId,
     onSelect: openSession,
     onCreate: createSession,
     onRename: renameSession,
@@ -167,34 +181,46 @@ export default function AgentShell({
               </SheetContent>
             </Sheet>
             <h1 className="truncate px-1 text-sm font-medium">
-              {sessions.find((s) => s.id === activeSessionId)?.title ?? "Agent"}
+              {sessions.find((s) => s.id === shownId)?.title ?? "Agent"}
             </h1>
           </div>
           <MemoriesPanel role={role} />
         </header>
 
-        <ChatPane
-          key={activeSessionId}
-          role={role}
-          sessionId={activeSessionId}
-          initialMessages={initialMessages}
-          initialFeedback={initialFeedback}
-          initialDraft={initialDraft}
-          messagesUsedToday={messagesUsedToday}
-          memberCap={memberCap}
-          onFinish={() => {
-            // The reply is saved before the stream closes. Drop the client
-            // Router Cache so coming back to this page loads the new turn
-            // instead of the payload from when the page was first opened.
-            // While the router still thinks the URL is ?prompt=…, a
-            // refresh would open yet another chat, so go to this session's
-            // URL instead (which loads it fresh too).
-            const sessionHref = `${basePath}?session=${activeSessionId}`;
-            if (searchParams.get("session") === activeSessionId) router.refresh();
-            else router.replace(sessionHref, { scroll: false });
-            setTimeout(refreshSessions, titleRefreshDelayMs);
-          }}
-        />
+        {switchingTo && <ChatAreaSkeleton />}
+        <div className={switchingTo ? "hidden" : "contents"}>
+          {/* ChatPane reads its messages only on mount, so it waits for them. A
+              refresh keeps it on screen while the new data loads. */}
+          <Streamed key={activeSessionId} promise={chat} fallback={<ChatAreaSkeleton />}>
+            {(data) =>
+              data ? (
+                <ChatPane
+                  role={role}
+                  sessionId={activeSessionId}
+                  initialMessages={data.messages}
+                  initialFeedback={data.feedback}
+                  initialDraft={initialDraft}
+                  messagesUsedToday={data.messagesUsedToday}
+                  memberCap={data.memberCap}
+                  onFinish={() => {
+                    // The reply is saved before the stream closes. Drop the client
+                    // Router Cache so coming back to this page loads the new turn
+                    // instead of the payload from when the page was first opened.
+                    // While the router still thinks the URL is ?prompt=…, a
+                    // refresh would open yet another chat, so go to this session's
+                    // URL instead (which loads it fresh too).
+                    const sessionHref = `${basePath}?session=${activeSessionId}`;
+                    if (searchParams.get("session") === activeSessionId) router.refresh();
+                    else router.replace(sessionHref, { scroll: false });
+                    setTimeout(refreshSessions, titleRefreshDelayMs);
+                  }}
+                />
+              ) : (
+                <ErrorComponent />
+              )
+            }
+          </Streamed>
+        </div>
       </div>
     </div>
   );

@@ -7,11 +7,7 @@ import type {
   AgentCustomizePipelinePreview,
   AgentPipelineSwitchPreview,
 } from "@/helpers/pipeline/preview-agent-pipeline";
-
-export type PipelineApprovalTool = "setJobPipeline" | "customizeJobPipeline";
-
-export const isPipelineApprovalTool = (name: string): name is PipelineApprovalTool =>
-  name === "setJobPipeline" || name === "customizeJobPipeline";
+import type { PipelineApprovalTool } from "../approval-tools";
 
 type Preview = AgentPipelineSwitchPreview | AgentCustomizePipelinePreview;
 

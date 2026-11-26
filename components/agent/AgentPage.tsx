@@ -57,8 +57,8 @@ export default async function AgentPage({
     } else {
       const { session, prompt: promptParam } = await searchParams;
       const prompt = readPromptParam(promptParam);
-      const [pageData, messagesUsedToday, memberCap] = await Promise.all([
-        loadAgentPageData(supabase, user.id, session, { newChat: prompt !== "", role }),
+      // Started alongside the session list. Only the chat area shows them.
+      const usage = Promise.all([
         countUserMessagesToday(supabase, user.id, new Date()),
         // RP-REQ-044: a company member's own cap, shown under the chat. A
         // failed read just hides the hint.
@@ -66,20 +66,36 @@ export default async function AgentPage({
           ? getMemberLimit(company.id, "agent_messages", user.id).catch(() => null)
           : Promise.resolve(null),
       ]);
+      usage.catch(() => {});
+      const pageData = await loadAgentPageData(supabase, user.id, session, {
+        newChat: prompt !== "",
+        role,
+      });
 
       if (pageData) {
-        const { sessions, activeSessionId, messages, feedback } = pageData;
+        const { sessions, activeSessionId } = pageData;
+        // Streams in after the session list. A failure resolves to null, so
+        // the chat area can say so.
+        const chat = Promise.all([pageData.chat, usage]).then(
+          ([{ messages, feedback }, [messagesUsedToday, memberCap]]) => ({
+            messages,
+            feedback,
+            messagesUsedToday,
+            memberCap: memberCap && { limit: memberCap.limit, remaining: memberCap.remaining },
+          }),
+          (error: unknown) => {
+            reportError("[agent] chat load failed", error);
+            return null;
+          },
+        );
 
         return (
           <AgentShell
             role={role}
             initialSessions={sessions}
             activeSessionId={activeSessionId}
-            initialMessages={messages}
-            initialFeedback={feedback}
+            chat={chat}
             initialDraft={prompt}
-            messagesUsedToday={messagesUsedToday}
-            memberCap={memberCap && { limit: memberCap.limit, remaining: memberCap.remaining }}
           />
         );
       }

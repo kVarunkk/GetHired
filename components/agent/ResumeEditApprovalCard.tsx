@@ -6,9 +6,9 @@ import ResumeDiffView from "@/components/resume/ResumeDiffView";
 import type { ResumeEditPreview, ResumeEditTool } from "@/helpers/resumes/preview-resume-edit";
 import { isUnprintedChange } from "@/helpers/resumes/resume-changes";
 import { diffResume } from "@/helpers/resumes/resume-diff";
+import { isResumeEditTool } from "./approval-tools";
 
-export const isResumeEditTool = (name: string): name is ResumeEditTool =>
-  ["createResume", "updateResume", "deleteResume", "applyReviewSuggestions"].includes(name);
+export { isResumeEditTool };
 
 /**
  * What the agent's resume change will do, for its approval card, from a server

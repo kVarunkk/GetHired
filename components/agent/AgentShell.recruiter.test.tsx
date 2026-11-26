@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter, useSearchParams } from "next/navigation";
 import AgentShell from "./AgentShell";
+import { settled } from "@/test/utils/settled";
 import { savePendingPrompt } from "@/helpers/agent/prompt-draft";
 
 vi.mock("next/navigation", () => ({ useRouter: vi.fn(), useSearchParams: vi.fn() }));
@@ -38,7 +39,7 @@ const renderShell = (initialDraft = "") =>
       role="company"
       initialSessions={SESSIONS}
       activeSessionId="s1"
-      initialMessages={[]}
+      chat={settled({ messages: [], feedback: {}, messagesUsedToday: 0, memberCap: null })}
       initialDraft={initialDraft}
       titleRefreshDelayMs={0}
     />,

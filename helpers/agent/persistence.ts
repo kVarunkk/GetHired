@@ -59,6 +59,33 @@ export async function loadSession(
   // A session of the other role isn't continued with this role's tools.
   if (role && session.role && session.role !== role) return null;
 
+  const chat = await loadSessionChat(supabase, userId, sessionId, { withFeedback });
+  return { session, ...chat };
+}
+
+/**
+ * A session's messages ordered by `seq`, with the user's feedback on them when
+ * asked for. It doesn't check the session itself: the caller must know it's the
+ * user's, or discard the result until it does.
+ */
+export async function loadSessionChat(
+  supabase: Client,
+  userId: string,
+  sessionId: string,
+  options: { withFeedback: true },
+): Promise<{ messages: UIMessage[]; feedback: AgentFeedbackState }>;
+export async function loadSessionChat(
+  supabase: Client,
+  userId: string,
+  sessionId: string,
+  options: { withFeedback: boolean },
+): Promise<{ messages: UIMessage[]; feedback?: AgentFeedbackState }>;
+export async function loadSessionChat(
+  supabase: Client,
+  userId: string,
+  sessionId: string,
+  { withFeedback }: { withFeedback: boolean },
+): Promise<{ messages: UIMessage[]; feedback?: AgentFeedbackState }> {
   const [{ data: rows, error }, feedback] = await Promise.all([
     supabase
       .from("agent_messages")
@@ -80,7 +107,7 @@ export async function loadSession(
       }) as UIMessage,
   );
 
-  return feedback ? { session, messages, feedback } : { session, messages };
+  return feedback ? { messages, feedback } : { messages };
 }
 
 /** The user's feedback on a session's replies; `{}` (reported) on an error. */

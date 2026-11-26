@@ -409,7 +409,7 @@ describe("MessageParts: recruiter approvals (RA-REQ-005)", () => {
     expect(screen.getByText("Visa sponsorship")).toBeInTheDocument();
   });
 
-  it("lists each form question on its own row with its type, options and knockout rule (AF-REQ-009)", () => {
+  it("lists each form question on its own row with its type, options and knockout rule (AF-REQ-009)", async () => {
     renderParts(
       assistant([
         approval("updateJobPost", {
@@ -440,7 +440,7 @@ describe("MessageParts: recruiter approvals (RA-REQ-005)", () => {
     );
 
     expect(screen.getByText("Update this job post?")).toBeInTheDocument();
-    const items = within(screen.getByText("Can you relocate?").closest("ol")!).getAllByRole("listitem");
+    const items = within((await screen.findByText("Can you relocate?")).closest("ol")!).getAllByRole("listitem");
     expect(items).toHaveLength(2);
     expect(within(items[0]).getByText("Can you relocate?")).toBeInTheDocument();
     expect(within(items[0]).getByText("Yes / no")).toBeInTheDocument();
@@ -455,10 +455,10 @@ describe("MessageParts: recruiter approvals (RA-REQ-005)", () => {
     expect(screen.getByText("Phone")).toBeInTheDocument();
   });
 
-  it("lists plain-text screening questions one per row", () => {
+  it("lists plain-text screening questions one per row", async () => {
     renderParts(assistant([approval("createJobPost", { title: "Founding Engineer", questions: ["Why us?", "What have you built?"] })]));
 
-    expect(screen.getByText("Why us?")).toBeInTheDocument();
+    expect(await screen.findByText("Why us?")).toBeInTheDocument();
     expect(screen.getByText("What have you built?")).toBeInTheDocument();
     expect(screen.queryByText("Why us?, What have you built?")).not.toBeInTheDocument();
   });
@@ -553,7 +553,7 @@ describe("MessageParts: screening interview approvals (SIT-071)", () => {
     approval: { id: "ap1" },
   });
 
-  it("shows the exact interview setup before approval", () => {
+  it("shows the exact interview setup before approval", async () => {
     renderParts(
       assistant([
         approval("configureScreeningInterview", {
@@ -570,7 +570,7 @@ describe("MessageParts: screening interview approvals (SIT-071)", () => {
     );
 
     expect(screen.getByText("Set up this AI interview?")).toBeInTheDocument();
-    expect(screen.getByText("Applicants scoring at least 75")).toBeInTheDocument();
+    expect(await screen.findByText("Applicants scoring at least 75")).toBeInTheDocument();
     expect(screen.getByText("System design")).toBeInTheDocument();
     expect(screen.getByText("Designs services that scale.")).toBeInTheDocument();
     expect(screen.getByText("Why this team?")).toBeInTheDocument();

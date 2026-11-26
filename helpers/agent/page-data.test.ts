@@ -1,10 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadAgentPageData } from "./page-data";
 import { createSupabaseMock, type SupabaseMock } from "@/test/utils/supabase-mock";
 
 const S1 = { id: "s1", title: "Newest", updated_at: "2026-10-11T00:00:00.000Z" };
 const S2 = { id: "s2", title: "Older", updated_at: "2026-10-10T00:00:00.000Z" };
-const FULL = (s: typeof S1) => ({ ...s, user_id: "u1", summary: null, summary_upto_message_id: null, created_at: "c" });
 
 let supabase: SupabaseMock;
 
@@ -15,7 +14,6 @@ beforeEach(() => {
 describe("loadAgentPageData", () => {
   it("opens the requested session when it belongs to the user", async () => {
     supabase.queue("agent_sessions", { data: [S1, S2], error: null });
-    supabase.queue("agent_sessions", { data: FULL(S2), error: null });
     supabase.queue("agent_messages", {
       data: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }], metadata: null }],
       error: null,
@@ -28,14 +26,14 @@ describe("loadAgentPageData", () => {
 
     const data = await loadAgentPageData(supabase.client, "u1", "s2");
 
-    expect(data).toEqual({
+    expect({ ...data, ...(await data!.chat), chat: undefined }).toEqual({
       sessions: [S1, S2],
       activeSessionId: "s2",
       messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] }],
       feedback: { m2: { reply: 1 } },
     });
     expect(supabase.callsFor("agent_sessions")[0].chain).toEqual([
-      { method: "select", args: ["id, title, updated_at"] },
+      { method: "select", args: ["id, title, updated_at, role"] },
       { method: "eq", args: ["user_id", "u1"] },
       { method: "order", args: ["updated_at", { ascending: false }] },
     ]);
@@ -43,12 +41,11 @@ describe("loadAgentPageData", () => {
 
   it("opens the newest session when none is requested", async () => {
     supabase.queue("agent_sessions", { data: [S1, S2], error: null });
-    supabase.queue("agent_sessions", { data: FULL(S1), error: null });
 
     const data = await loadAgentPageData(supabase.client, "u1", undefined);
 
     expect(data?.activeSessionId).toBe("s1");
-    expect(data?.messages).toEqual([]);
+    expect((await data!.chat).messages).toEqual([]);
   });
 
   it("returns null for a session that isn't the user's", async () => {
@@ -69,7 +66,6 @@ describe("loadAgentPageData", () => {
   it("creates a first session for new users", async () => {
     supabase.queue("agent_sessions", { data: [], error: null });
     supabase.queue("agent_sessions", { data: { id: "s9", title: "New chat", updated_at: "now" }, error: null });
-    supabase.queue("agent_sessions", { data: FULL({ id: "s9", title: "New chat", updated_at: "now" }), error: null });
 
     const data = await loadAgentPageData(supabase.client, "u1", undefined);
 
@@ -84,7 +80,6 @@ describe("loadAgentPageData", () => {
 
   it("opens a new chat for a prompt when the newest one has messages", async () => {
     supabase.queue("agent_sessions", { data: [S1, S2], error: null });
-    supabase.queue("agent_sessions", { data: FULL(S1), error: null });
     supabase.queue("agent_messages", {
       data: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }], metadata: null }],
       error: null,
@@ -94,22 +89,22 @@ describe("loadAgentPageData", () => {
 
     const data = await loadAgentPageData(supabase.client, "u1", undefined, { newChat: true });
 
-    expect(data).toEqual({ sessions: [created, S1, S2], activeSessionId: "s9", messages: [], feedback: {} });
+    expect(data).toMatchObject({ sessions: [created, S1, S2], activeSessionId: "s9" });
+    expect(await data!.chat).toEqual({ messages: [], feedback: {} });
   });
 
   it("reuses the newest chat for a prompt when it is still empty", async () => {
     supabase.queue("agent_sessions", { data: [S1, S2], error: null });
-    supabase.queue("agent_sessions", { data: FULL(S1), error: null });
 
     const data = await loadAgentPageData(supabase.client, "u1", undefined, { newChat: true });
 
-    expect(data).toEqual({ sessions: [S1, S2], activeSessionId: "s1", messages: [], feedback: {} });
-    expect(supabase.callsFor("agent_sessions")).toHaveLength(2);
+    expect(data).toMatchObject({ sessions: [S1, S2], activeSessionId: "s1" });
+    expect(await data!.chat).toEqual({ messages: [], feedback: {} });
+    expect(supabase.callsFor("agent_sessions")).toHaveLength(1);
   });
 
   it("keeps a requested session even with a prompt", async () => {
     supabase.queue("agent_sessions", { data: [S1, S2], error: null });
-    supabase.queue("agent_sessions", { data: FULL(S2), error: null });
     supabase.queue("agent_messages", {
       data: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }], metadata: null }],
       error: null,
@@ -118,7 +113,43 @@ describe("loadAgentPageData", () => {
     const data = await loadAgentPageData(supabase.client, "u1", "s2", { newChat: true });
 
     expect(data?.activeSessionId).toBe("s2");
-    expect(supabase.callsFor("agent_sessions")).toHaveLength(2);
+    expect(supabase.callsFor("agent_sessions")).toHaveLength(1);
+  });
+
+  it("loads a requested chat without waiting for the session list", async () => {
+    let answerList = () => {};
+    const list = new Promise<void>((resolve) => (answerList = resolve));
+    const from = supabase.client.from.bind(supabase.client);
+    vi.spyOn(supabase.client, "from").mockImplementation(((table: "agent_sessions") =>
+      table === "agent_sessions"
+        ? { select: () => ({ eq: () => ({ order: () => list.then(() => ({ data: [S1, S2], error: null })) }) }) }
+        : from(table)) as never);
+
+    const pending = loadAgentPageData(supabase.client, "u1", "s2");
+
+    await vi.waitFor(() => expect(supabase.callsFor("agent_messages")).toHaveLength(1));
+    answerList();
+    expect((await pending)?.activeSessionId).toBe("s2");
+  });
+
+  it("returns the sessions even when the chat fails, and rejects only the chat", async () => {
+    supabase.queue("agent_sessions", { data: [S1], error: null });
+    supabase.queue("agent_messages", { data: null, error: new Error("messages failed") });
+
+    const data = await loadAgentPageData(supabase.client, "u1", undefined);
+
+    expect(data?.sessions).toEqual([S1]);
+    await expect(data!.chat).rejects.toThrow("messages failed");
+  });
+
+  it("doesn't open the messages of the other role's session", async () => {
+    supabase.queue("agent_sessions", { data: [{ ...S1, role: "company" }], error: null });
+
+    const data = await loadAgentPageData(supabase.client, "u1", undefined, { role: "applicant" });
+
+    expect(data?.sessions).toEqual([S1]);
+    expect(await data!.chat).toEqual({ messages: [], feedback: {} });
+    expect(supabase.callsFor("agent_messages")).toHaveLength(0);
   });
 
   it("throws database errors", async () => {
@@ -141,7 +172,6 @@ describe("loadAgentPageData", () => {
   it("lists and creates only company sessions for a company user", async () => {
     supabase.queue("agent_sessions", { data: [], error: null });
     supabase.queue("agent_sessions", { data: S1, error: null });
-    supabase.queue("agent_sessions", { data: { ...FULL(S1), role: "company" }, error: null });
 
     const data = await loadAgentPageData(supabase.client, "u1", undefined, { role: "company" });
 

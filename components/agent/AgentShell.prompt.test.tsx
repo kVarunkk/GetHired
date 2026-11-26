@@ -3,6 +3,7 @@ import { render } from "@testing-library/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { savePendingPrompt } from "@/helpers/agent/prompt-draft";
 import AgentShell from "./AgentShell";
+import { settled } from "@/test/utils/settled";
 
 vi.mock("next/navigation", () => ({ useRouter: vi.fn(), useSearchParams: vi.fn() }));
 vi.mock("./MemoriesPanel", () => ({ default: () => null }));
@@ -20,7 +21,7 @@ const renderShell = (initialDraft?: string) =>
     <AgentShell
       initialSessions={SESSIONS}
       activeSessionId="s1"
-      initialMessages={[]}
+      chat={settled({ messages: [], feedback: {}, messagesUsedToday: 0, memberCap: null })}
       initialDraft={initialDraft}
     />,
   );
@@ -62,7 +63,7 @@ describe("AgentShell: starting with a prompt", () => {
     savePendingPrompt("remote Go jobs");
     window.history.replaceState(null, "", "/agent");
     const shell = (initialDraft?: string) => (
-      <AgentShell initialSessions={SESSIONS} activeSessionId="s1" initialMessages={[]} initialDraft={initialDraft} />
+      <AgentShell initialSessions={SESSIONS} activeSessionId="s1" chat={settled({ messages: [], feedback: {}, messagesUsedToday: 0, memberCap: null })} initialDraft={initialDraft} />
     );
     const { rerender, getByTestId } = render(shell());
     expect(replace).toHaveBeenCalledWith("/agent?prompt=remote%20Go%20jobs");

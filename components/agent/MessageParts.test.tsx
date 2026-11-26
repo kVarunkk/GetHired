@@ -485,7 +485,7 @@ describe("MessageParts", () => {
     });
   });
 
-  it("renders the upload widget for requestResumeUpload", () => {
+  it("renders the upload widget for requestResumeUpload", async () => {
     renderParts(
       assistant([
         {
@@ -497,7 +497,7 @@ describe("MessageParts", () => {
       ]),
     );
 
-    expect(screen.getByText("so I can review it")).toBeInTheDocument();
+    expect(await screen.findByText("so I can review it")).toBeInTheDocument();
     expect(screen.getByLabelText("Resume file")).toBeInTheDocument();
   });
 
