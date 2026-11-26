@@ -91,7 +91,6 @@ export default function JobApplicationForm({
   const { data, isLoading } = useSWR(PROFILE_API_KEY, fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
-    staleTime: 5 * 60 * 1000,
   });
   const existingResumes: TResumeReviewResume[] =
     data && data.profile ? data.profile.resumes : [];

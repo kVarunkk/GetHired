@@ -109,7 +109,6 @@ export default function JobsComponent({
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      staleTime: 5 * 60 * 1000,
     },
   );
 
@@ -121,7 +120,6 @@ export default function JobsComponent({
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      staleTime: 5 * 60 * 1000,
     },
   );
 
