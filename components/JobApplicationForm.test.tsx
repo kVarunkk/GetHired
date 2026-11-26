@@ -50,6 +50,8 @@ async function renderForm(job = JOB, props: { source?: "careers_page"; sourceRef
 const submit = () => fireEvent.click(screen.getByRole("button", { name: /submit application/i }));
 
 beforeEach(() => {
+  // jsdom has no scrollIntoView; a failed submit scrolls to the first error.
+  Element.prototype.scrollIntoView = vi.fn();
   vi.clearAllMocks();
   window.localStorage.clear();
   vi.mocked(submitApplicationAction).mockResolvedValue({ ok: true, applicationId: APPLICATION_ID, creditsDeducted: true, interview: null });
@@ -74,6 +76,7 @@ describe("JobApplicationForm one page (APT-003, AP-REQ-030/031/040)", () => {
     expect(await screen.findAllByText("This question is required.")).toHaveLength(2);
     expect(screen.getByText("Select a resume or upload a new one.")).toBeInTheDocument();
     expect(submitApplicationAction).not.toHaveBeenCalled();
+    await waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: "center" }));
     profile.value = { ...profile.value, resumes: [{ id: RESUME_ID, is_primary: true }] };
   });
 
