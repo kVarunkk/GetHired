@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProgress } from "react-transition-progress";
 import { User } from "@supabase/supabase-js";
-import type { JobAlertFeedProps } from "./job-alerts/JobAlertSlot";
 import { Loader2 } from "lucide-react";
 import { activeTabFrom, type TalentListTab } from "@/utils/talent-list-tabs";
 import ScrollMaskX from "./ScrollMaskX";
@@ -19,7 +18,6 @@ export function ClientTabs({
   isAISearch,
   page,
   talentLists = [],
-  jobAlert = null,
   children,
 }: {
   user: User | null;
@@ -28,8 +26,6 @@ export function ClientTabs({
   page: "jobs" | "profiles" | "companies";
   /** The company's talent lists, shown as tabs after Saved (profiles page). */
   talentLists?: TalentListTab[];
-  /** Jobs page: the viewer's alert state for this search (JA-REQ-017). */
-  jobAlert?: JobAlertFeedProps | null;
   children: React.ReactNode;
 }) {
   const router = useRouter();

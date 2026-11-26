@@ -264,7 +264,6 @@ export default async function JobsPage({
           isCompanyUser={isCompanyUser}
           isAISearch={isAISearch}
           page="jobs"
-          jobAlert={jobAlert}
         >
           <JobsComponent
             dynamicKey={params.toString()}
