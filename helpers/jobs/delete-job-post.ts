@@ -1,5 +1,6 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { careersCompanyTag } from "@/helpers/careers/cache-tags";
+import { JOBS_FEED_TAG } from "@/helpers/jobs/feed-tag";
 import { enqueueFeedRebuild } from "@/helpers/distribution/feed-queue";
 import { enqueueIndexPing } from "@/helpers/distribution/index-queue";
 import { forbiddenMessage } from "@/helpers/companies/permissions";
@@ -40,6 +41,7 @@ function revalidateJob(companyId: string, jobId: string | null | undefined) {
   if (jobId) {
     revalidateTag(`job-${jobId}`);
     revalidatePath(`/jobs/${jobId}`);
+    revalidateTag(JOBS_FEED_TAG);
   }
   revalidateTag(careersCompanyTag(companyId));
 }

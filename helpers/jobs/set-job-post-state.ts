@@ -6,6 +6,7 @@ import type { Database } from "@/utils/types/database.types";
 import type { MyCompany } from "@/helpers/companies/get-my-company";
 import { can } from "@/helpers/companies/permissions";
 import { careersCompanyTag } from "@/helpers/careers/cache-tags";
+import { JOBS_FEED_TAG } from "@/helpers/jobs/feed-tag";
 import { isUuid } from "@/helpers/agent/auth";
 import { assertLimit } from "@/helpers/billing/entitlements";
 import {
@@ -191,6 +192,7 @@ export async function announceJobStateChange(
   if (jobId && publicFlipped) {
     revalidateTag(`job-${jobId}`);
     revalidateTag(careersCompanyTag(companyId));
+    revalidateTag(JOBS_FEED_TAG);
     revalidatePath(`/jobs/${jobId}`);
     try {
       // MP-REQ-002/003: queued, so it never slows the request.

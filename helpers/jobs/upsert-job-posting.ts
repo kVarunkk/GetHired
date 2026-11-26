@@ -1,6 +1,7 @@
 import { reportError } from "@/helpers/posthog/report-error";
 import { revalidateTag } from "next/cache";
 import { careersCompanyTag } from "@/helpers/careers/cache-tags";
+import { JOBS_FEED_TAG } from "@/helpers/jobs/feed-tag";
 import { enqueueFeedRebuild } from "@/helpers/distribution/feed-queue";
 import { enqueueIndexPing } from "@/helpers/distribution/index-queue";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -255,6 +256,7 @@ export async function upsertJobPosting(
       if (updateError) throw new Error("Failed to update public job feed.");
 
       revalidateTag(`job-${existing.job_id}`);
+      revalidateTag(JOBS_FEED_TAG);
     }
 
     // Couldn't embed inline: the scheduled worker re-embeds both rows instead.
