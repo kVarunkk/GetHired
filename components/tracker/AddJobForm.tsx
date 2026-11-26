@@ -208,13 +208,8 @@ export default function AddJobForm({
   }
 
   return (
-    <form
-      className="flex max-w-2xl flex-col gap-6"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (canSubmit && !saving) submit();
-      }}
-    >
+    <div className="flex max-w-2xl flex-col gap-6">
+      {/* Outside the form: AgentHandoff is a form of its own. */}
       <AgentHandoff
         label="Or tell the agent"
         placeholder="I applied to a designer role at Acme yesterday…"
@@ -222,172 +217,180 @@ export default function AddJobForm({
         toPrompt={(text) => `Track this job for me: ${text.trim()}`}
       />
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="add-job-link">Link to the job (optional)</Label>
-        <div className="flex gap-2">
-          <Input
-            id="add-job-link"
-            type="url"
-            inputMode="url"
-            placeholder="https://boards.greenhouse.io/…"
-            value={link}
-            onChange={(event) => changeLink(event.target.value)}
-            onBlur={readLink}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                readLink();
-              }
-            }}
-          />
-          {reading && (
-            <Loader2
-              className="h-4 w-4 shrink-0 animate-spin self-center text-muted-foreground"
-              aria-label="Reading the link"
+      <form
+        className="flex flex-col gap-6"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (canSubmit && !saving) submit();
+        }}
+      >
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="add-job-link">Link to the job (optional)</Label>
+          <div className="flex gap-2">
+            <Input
+              id="add-job-link"
+              type="url"
+              inputMode="url"
+              placeholder="https://boards.greenhouse.io/…"
+              value={link}
+              onChange={(event) => changeLink(event.target.value)}
+              onBlur={readLink}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  readLink();
+                }
+              }}
             />
-          )}
+            {reading && (
+              <Loader2
+                className="h-4 w-4 shrink-0 animate-spin self-center text-muted-foreground"
+                aria-label="Reading the link"
+              />
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            We read the title and company from the page when you leave this field.
+            You can change them after.
+          </p>
+          {notice && <p className="text-sm text-muted-foreground">{notice}</p>}
         </div>
-        <p className="text-xs text-muted-foreground">
-          We read the title and company from the page when you leave this field.
-          You can change them after.
-        </p>
-        {notice && <p className="text-sm text-muted-foreground">{notice}</p>}
-      </div>
 
-      {/* Locked while the link is read, so nothing typed is overwritten. */}
-      <fieldset disabled={reading} className="contents">
-        {board ? (
-          <BoardJobCard
-            board={board}
-            jobTitle={jobTitle}
-            companyName={companyName}
-            location={location}
-          />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="add-job-title" label="Job title">
-              <Input
-                id="add-job-title"
-                value={jobTitle}
-                maxLength={TRACKER_LIMITS.title}
-                onChange={(e) => setJobTitle(e.target.value)}
-              />
-            </Field>
-            <Field id="add-job-company" label="Company">
-              <Input
-                id="add-job-company"
-                value={companyName}
-                maxLength={TRACKER_LIMITS.company}
-                onChange={(e) => setCompanyName(e.target.value)}
-              />
-            </Field>
-            <Field id="add-job-location" label="Location (optional)">
-              <Input
-                id="add-job-location"
-                value={location}
-                maxLength={TRACKER_LIMITS.location}
-                onChange={(e) => setLocation(e.target.value)}
-              />
-            </Field>
-            <div className="sm:col-span-2">
-              <Field id="add-job-description" label="Job description (optional)">
-                <Textarea
-                  id="add-job-description"
-                  value={description}
-                  maxLength={TRACKER_LIMITS.description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={6}
-                  placeholder="Paste it here, or leave the link above to fill it in."
+        {/* Locked while the link is read, so nothing typed is overwritten. */}
+        <fieldset disabled={reading} className="contents">
+          {board ? (
+            <BoardJobCard
+              board={board}
+              jobTitle={jobTitle}
+              companyName={companyName}
+              location={location}
+            />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="add-job-title" label="Job title">
+                <Input
+                  id="add-job-title"
+                  value={jobTitle}
+                  maxLength={TRACKER_LIMITS.title}
+                  onChange={(e) => setJobTitle(e.target.value)}
                 />
               </Field>
-            </div>
-          </div>
-        )}
-
-        {!appliedThere && (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="add-job-status" label="Status">
-                <Select
-                  title="Status"
-                  value={status}
-                  onValueChange={(value) => setStatus(value as TrackedStatus)}
-                >
-                  <SelectTrigger id="add-job-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {trackedStatusLabel(option)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <Field id="add-job-company" label="Company">
+                <Input
+                  id="add-job-company"
+                  value={companyName}
+                  maxLength={TRACKER_LIMITS.company}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                />
               </Field>
-              {status !== "saved" && (
-                <Field id="add-job-applied" label="Applied on">
-                  <Input
-                    id="add-job-applied"
-                    type="date"
-                    value={appliedAt}
-                    onChange={(e) => setAppliedAt(e.target.value)}
+              <Field id="add-job-location" label="Location (optional)">
+                <Input
+                  id="add-job-location"
+                  value={location}
+                  maxLength={TRACKER_LIMITS.location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+              </Field>
+              <div className="sm:col-span-2">
+                <Field id="add-job-description" label="Job description (optional)">
+                  <Textarea
+                    id="add-job-description"
+                    value={description}
+                    maxLength={TRACKER_LIMITS.description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={6}
+                    placeholder="Paste it here, or leave the link above to fill it in."
                   />
                 </Field>
-              )}
-              <Field id="add-job-followup" label="Follow up on (optional)">
-                <Input
-                  id="add-job-followup"
-                  type="date"
-                  value={followUp}
-                  onChange={(e) => setFollowUp(e.target.value)}
-                />
-              </Field>
-              {resumes.length > 0 && (
-                <Field id="add-job-resume" label="Resume used (optional)">
-                  <Select title="Resume used" value={resumeId} onValueChange={setResumeId}>
-                    <SelectTrigger id="add-job-resume">
+              </div>
+            </div>
+          )}
+
+          {!appliedThere && (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="add-job-status" label="Status">
+                  <Select
+                    title="Status"
+                    value={status}
+                    onValueChange={(value) => setStatus(value as TrackedStatus)}
+                  >
+                    <SelectTrigger id="add-job-status">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NO_RESUME}>None</SelectItem>
-                      {resumes.map((resume) => (
-                        <SelectItem key={resume.id} value={resume.id}>
-                          {resume.name?.trim() || "Untitled resume"}
+                      {STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {trackedStatusLabel(option)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </Field>
-              )}
-            </div>
-            <Field id="add-job-notes" label="Notes (optional)">
-              <Textarea
-                id="add-job-notes"
-                value={notes}
-                maxLength={TRACKER_LIMITS.notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={4}
-              />
-            </Field>
-          </>
-        )}
-      </fieldset>
+                {status !== "saved" && (
+                  <Field id="add-job-applied" label="Applied on">
+                    <Input
+                      id="add-job-applied"
+                      type="date"
+                      value={appliedAt}
+                      onChange={(e) => setAppliedAt(e.target.value)}
+                    />
+                  </Field>
+                )}
+                <Field id="add-job-followup" label="Follow up on (optional)">
+                  <Input
+                    id="add-job-followup"
+                    type="date"
+                    value={followUp}
+                    onChange={(e) => setFollowUp(e.target.value)}
+                  />
+                </Field>
+                {resumes.length > 0 && (
+                  <Field id="add-job-resume" label="Resume used (optional)">
+                    <Select title="Resume used" value={resumeId} onValueChange={setResumeId}>
+                      <SelectTrigger id="add-job-resume">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NO_RESUME}>None</SelectItem>
+                        {resumes.map((resume) => (
+                          <SelectItem key={resume.id} value={resume.id}>
+                            {resume.name?.trim() || "Untitled resume"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                )}
+              </div>
+              <Field id="add-job-notes" label="Notes (optional)">
+                <Textarea
+                  id="add-job-notes"
+                  value={notes}
+                  maxLength={TRACKER_LIMITS.notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={4}
+                />
+              </Field>
+            </>
+          )}
+        </fieldset>
 
-      <StickyActionBar>
-        <Button
-          type="submit"
-          variant="brand"
-          disabled={saving || reading || !canSubmit}
-        >
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {status === "saved" ? "Save job" : "Add application"}
-        </Button>
-        <Button asChild variant="ghost">
-          <Link href={backHref}>Cancel</Link>
-        </Button>
-      </StickyActionBar>
-    </form>
+        <StickyActionBar>
+          <Button
+            type="submit"
+            variant="brand"
+            disabled={saving || reading || !canSubmit}
+          >
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {status === "saved" ? "Save job" : "Add application"}
+          </Button>
+          <Button asChild variant="ghost">
+            <Link href={backHref}>Cancel</Link>
+          </Button>
+        </StickyActionBar>
+      </form>
+    </div>
   );
 }
 

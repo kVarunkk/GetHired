@@ -52,6 +52,12 @@ describe("AddJobForm: the link (AT-REQ-036)", () => {
     expect(screen.queryByRole("button", { name: "Fill from link" })).toBeNull();
   });
 
+  it("keeps the agent handoff, a form of its own, outside the add-job form", () => {
+    const { container } = open();
+    expect(screen.getByText("agent handoff").closest("form")).toBeNull();
+    expect(container.querySelector("form form")).toBeNull();
+  });
+
   it("fills the form from a link that could be read", async () => {
     vi.mocked(readJobFromUrlAction).mockResolvedValue({
       ok: true,
