@@ -43,10 +43,6 @@ const PROFILES = Array.from({ length: 20 }, (_, i) => ({ user_id: `u${i}` }));
 async function signIn(tier = TIER_FREE) {
   rls = createSupabaseMock({ user: COMPANY_A.user });
   rls.queueRpc("my_company_access", { data: OWNER_A.membership, error: null });
-  rls.queue("company_info", {
-    data: { id: COMPANY_A.id, ai_credits: 0, filled: true, job_postings: [] },
-    error: null,
-  });
   vi.mocked(getEntitlements).mockResolvedValue(mapped(entitlementsOf(tier)) as never);
   vi.mocked(listPublicPlans).mockResolvedValue(
     [TIER_FREE, TIER_STARTUP].map((t) => ({
@@ -96,12 +92,16 @@ describe("GET /api/profiles (BL-REQ-023, BL-TEST-006)", () => {
     expect(body.upgradePlan).toEqual({ slug: "startup", name: "Startup" });
   });
 
-  it("doesn't read company_tiers", async () => {
+  it("takes the company from the membership, reading no company row or job embedding", async () => {
     await signIn(TIER_FREE);
-    await get();
+    await get({ sortBy: "relevance", job_post: "b0000000-0000-4000-8000-000000000001" });
 
-    const select = String(rls.callsFor("company_info")[0].chain.find((m) => m.method === "select")?.args[0]);
-    expect(select).not.toContain("company_tiers");
+    expect(rls.callsFor("company_info")).toHaveLength(0);
+    expect(rls.callsFor("job_postings")).toHaveLength(0);
+    expect(vi.mocked(buildProfileQuery).mock.calls[0][0]).toMatchObject({
+      companyId: COMPANY_A.id,
+      jobEmbedding: null,
+    });
   });
 
   it("paginates normally when unlimited, with no hiddenCount", async () => {
@@ -164,10 +164,8 @@ describe("GET /api/profiles rerank scope (QF-REQ-003)", () => {
 
   it("passes the owner's company on an internal digest call", async () => {
     const admin = createSupabaseMock();
-    admin.queue("company_info", {
-      data: { id: COMPANY_A.id, ai_credits: 0, filled: true, job_postings: [] },
-      error: null,
-    });
+    admin.queue("company_info", { data: { id: COMPANY_A.id }, error: null });
+    admin.queue("job_postings", { data: { embedding_new: "[0.1,0.2]" }, error: null });
     Object.assign(admin.client.auth, {
       admin: { getUserById: vi.fn().mockResolvedValue({ data: { user: COMPANY_A.user }, error: null }) },
     });
@@ -188,6 +186,14 @@ describe("GET /api/profiles rerank scope (QF-REQ-003)", () => {
     expect(vi.mocked(rerankProfilesIfApplicable).mock.calls[0][0]).toMatchObject({
       companyId: COMPANY_A.id,
       relevanceSearchType: "digest",
+    });
+    // The job's vector is read for the digest only, within the company.
+    expect(admin.callsFor("job_postings")[0].chain).toContainEqual({
+      method: "eq",
+      args: ["company_id", COMPANY_A.id],
+    });
+    expect(vi.mocked(buildProfileQuery).mock.calls.at(-1)?.[0]).toMatchObject({
+      jobEmbedding: "[0.1,0.2]",
     });
   });
 });
